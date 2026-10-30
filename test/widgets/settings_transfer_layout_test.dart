@@ -62,11 +62,11 @@ Future<void> _page(
                     ],
                     importConfiguration: [
                       SettingsTransferPageTile(
-                        key: const ValueKey('test-parser'),
+                        key: const ValueKey('test-import-configuration'),
                         icon: Icons.tune,
-                        title: '解析 API',
-                        subtitle: '配置课表导入使用的接口',
-                        onTap: busy ? null : () => actions.add('parser'),
+                        title: '导入偏好',
+                        subtitle: '附加导入配置的布局测试项',
+                        onTap: busy ? null : () => actions.add('configuration'),
                       ),
                     ],
                   )
@@ -138,7 +138,7 @@ void main() {
               );
             }
             final rows = find.byType(SettingsTransferPageTile);
-            expect(rows, findsNWidgets(student ? 8 : 10));
+            expect(rows, findsNWidgets(student ? 7 : 10));
             for (final element in rows.evaluate()) {
               final row = find.byWidget(element.widget);
               expect(
@@ -190,7 +190,14 @@ void main() {
               await t.tap(row);
               await t.pumpAndSettle();
             }
-            expect(actions.toSet().length, student ? 8 : 10);
+            expect(actions.toSet().length, student ? 7 : 10);
+            if (student) {
+              expect(actions.toSet(), {
+                ...SettingsStudentDataAction.values,
+                'web',
+                'configuration',
+              });
+            }
             expect(t.takeException(), isNull);
           },
           variant: TargetPlatformVariant.only(

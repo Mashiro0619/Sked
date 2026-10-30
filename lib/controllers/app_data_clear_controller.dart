@@ -14,6 +14,8 @@ class AppDataClearController extends ChangeNotifier {
     required this._schoolSites,
     required this._quiescence,
     required this._notifyViewChanged,
+    this.prepareAgentClear,
+    this.onAgentClearFailed,
   });
 
   final AppDataMaintenance _maintenance;
@@ -21,6 +23,8 @@ class AppDataClearController extends ChangeNotifier {
   final SchoolSiteService _schoolSites;
   final AppQuiescence _quiescence;
   final VoidCallback _notifyViewChanged;
+  final Future<void> Function()? prepareAgentClear;
+  final VoidCallback? onAgentClearFailed;
   var _reserved = false;
   var _closed = false;
   Future<void>? _inFlight;
@@ -58,12 +62,15 @@ class AppDataClearController extends ChangeNotifier {
     final schoolSiteLeaseFuture = _schoolSites.reserveRestore();
     SchoolSiteRestoreLease? schoolSiteLease;
     var dataWasCleared = false;
+    var agentPrepared = false;
     try {
       await _maintenance.runWithLease(token, () async {
         // This lease blocks new writes synchronously and resolves after all
         // previously accepted school-site operations have completed.
         schoolSiteLease = await schoolSiteLeaseFuture;
         await _quiescence.drain(waitForSchoolSites: false);
+        agentPrepared = true;
+        await prepareAgentClear?.call();
         await clear();
 
         dataWasCleared = true;
@@ -80,6 +87,7 @@ class AppDataClearController extends ChangeNotifier {
         } finally {
           _maintenance.release(token);
           _reserved = false;
+          if (agentPrepared) onAgentClearFailed?.call();
           _publish();
         }
       }

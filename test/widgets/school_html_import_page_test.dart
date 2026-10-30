@@ -1,662 +1,354 @@
-import '../support/school_import_preparation.dart';
-
 import 'dart:async';
 
-import 'package:material_ui/material_ui.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:http/http.dart' as http;
-import 'package:sked/l10n/app_locale.dart';
-import 'package:sked/l10n/app_localization_delegates.dart';
-import 'package:sked/l10n/app_localizations.dart';
-import 'package:sked/models/school_import_models.dart';
-import 'package:sked/models/timetable_models.dart';
-import 'package:sked/providers/app_scope.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:sked/agent/conversations/conversation_repository.dart';
+import 'package:sked/agent/imports/school_web_handoff.dart';
+import 'package:sked/agent/connection/agent_credential_store.dart';
+import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/app_runtime.dart';
-import 'package:sked/controllers/app_data_maintenance.dart'
-    show AppBackupRestoreInProgressException;
+import 'package:sked/l10n/app_localizations.dart';
+import 'package:sked/models/agent_settings.dart';
 import 'package:sked/screens/school_html_import_page.dart';
-import 'package:sked/screens/school_import_parser_settings_page.dart';
-import 'package:sked/services/school_import_api.dart';
+import 'package:sked/screens/agent_page.dart';
 import 'package:sked/services/school_import_content_sanitizer.dart';
-import 'package:sked/services/school_import_http_consent.dart';
-import 'package:sked/widgets/school_web_import_result_sheet.dart';
 
-import '../support/data_transfer_codec.dart';
-import '../support/timetable_storage_fakes.dart';
+import '../support/school_import_preparation.dart';
+import '../support/workspace_harness.dart';
 
-class _RecordingSchoolImportApi extends SchoolImportApi {
-  var callCount = 0;
-
+class _MemoryConversations extends ConversationStorage {
+  _MemoryConversations() : super.base();
+  String? source;
+  bool fail = false;
   @override
-  Stream<SchoolImportStreamEvent> importCurrentPageStream(
-    SchoolImportPagePayload payload, {
-    AiApiSettings? parserSettings,
-    http.Client? client,
-  }) {
-    callCount += 1;
-    return Stream.value(const ParseError('synthetic stop'));
+  Future<ConversationStorageLoad> load() async =>
+      ConversationStorageLoad(source: source);
+  @override
+  Future<void> save(String value, {required int revision}) async {
+    if (fail) throw StateError('raw secret must not be shown');
+    source = value;
   }
 }
 
-class _CompletedSchoolImportApi extends SchoolImportApi {
-  _CompletedSchoolImportApi(this.response);
-
-  final SchoolImportResponse response;
-
-  @override
-  Stream<SchoolImportStreamEvent> importCurrentPageStream(
-    SchoolImportPagePayload payload, {
-    AiApiSettings? parserSettings,
-    http.Client? client,
-  }) {
-    return Stream.value(ParseDone(response: response));
-  }
-}
-
-class _CloseTrackingClient extends http.BaseClient {
-  final responseController = StreamController<List<int>>();
-  bool sendCalled = false;
-  bool closed = false;
-
-  @override
-  Future<http.StreamedResponse> send(http.BaseRequest request) async {
-    sendCalled = true;
-    return http.StreamedResponse(responseController.stream, 200);
-  }
-
-  @override
-  void close() {
-    if (closed) return;
-    closed = true;
-    unawaited(responseController.close());
-  }
-}
-
-AppData _buildConfiguredCustomParserData({
-  String baseUrl = 'https://api.example.com/v1',
-}) {
-  final baseData = buildInitialAppData(
-    buildDefaultPeriodTimes(),
-    localeCode: defaultLocaleCode,
+class _Fixture {
+  _Fixture(this.provider, this.repository, this.storage);
+  final AppRuntime provider;
+  final ConversationRepository repository;
+  final _MemoryConversations storage;
+  AgentSettings settings = const AgentSettings(
+    enabled: true,
+    endpoint: 'https://model.example/v1',
+    model: 'synthetic-model',
   );
-  return baseData.copyWith(
-    activeMode: AppMode.student,
-    aiApiSettings: AiApiSettings(
-      source: schoolImportParserSourceCustomOpenAi,
-      customBaseUrl: baseUrl,
-      customApiKey: 'sk-test',
-      customModel: 'gpt-4.1-mini',
-    ),
-  );
+  final starts = <String>[];
+  final opened = <String>[];
+  final configurations = <SchoolWebHandoffReadiness>[];
 }
 
-Future<AppRuntime> _createProvider({
-  String baseUrl = 'https://api.example.com/v1',
+Finder get _editor => find.byKey(const ValueKey('school-web-source-editor'));
+Finder get _compress => find.byKey(const ValueKey('school-web-compress'));
+Finder get _continue => find.byKey(const ValueKey('school-web-handoff'));
+String _text(WidgetTester tester) =>
+    tester.widget<TextField>(_editor).controller!.text;
+
+Future<_Fixture> _mount(
+  WidgetTester tester, {
+  Size size = const Size(393, 852),
+  double scale = 1,
+  String content = '<script>discard()</script><table><tr><td>Algebra Monday 08:00</td></tr></table>',
+  bool truncated = false,
+  AgentSettings? settings,
+  SchoolWebContentPreparer? prepare,
+  bool inRoute = false,
 }) async {
-  final provider = AppRuntime(
-    dataTransferCodec: inlineDataTransferCodec,
-    storage: WorkspaceMemoryStorage(
-      _buildConfiguredCustomParserData(baseUrl: baseUrl),
-      path: 'memory://school-html-import-test',
-    ),
-    systemLocaleCodeResolver: () => defaultLocaleCode,
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = size;
+  addTearDown(tester.view.reset);
+  final storage = _MemoryConversations();
+  final repository = ConversationRepository(storage: storage);
+  await repository.load();
+  final provider = await workspaceProvider(
+    agentConversationStorage: _MemoryConversations(),
   );
-  await provider.lifecycle.load();
-  return provider;
-}
-
-Future<AppRuntime> _createProviderWithoutActivePeriodTimeSet() async {
-  final provider = await _createProvider();
-  // Inspect an unresolved active reference through the real student view,
-  // retaining a live set that the import form can select as its fallback.
-  final data = provider.session.data;
-  provider.session.replaceData(
-    data.copyWith(
-      studentMode: data.studentMode.copyWith(
-        activeTimetableId: 'unresolved-active-timetable',
-        timetables: [
-          TimetableData(
-            id: 'unresolved-active-timetable',
-            config: TimetableConfig(
-              name: 'Unresolved period reference',
-              startDate: DateTime(2026, 5, 25),
-              totalWeeks: 18,
-              periodTimeSetId: 'removed-period-set',
-            ),
-            courses: const [],
-          ),
-        ],
-      ),
-    ),
+  final fixture = _Fixture(provider, repository, storage);
+  if (settings != null) fixture.settings = settings;
+  addTearDown(() {
+    repository.dispose();
+    provider.dispose();
+  });
+  final handoff = SchoolWebHandoffController(
+    repository: repository,
+    readSettings: () => fixture.settings,
+    initialize: () async {},
+    startHandoff: (id) async {
+      fixture.starts.add(id);
+    },
+    readGeneration: () => 'review-generation',
   );
-  return provider;
-}
-
-SchoolImportResponse _buildCompletedResponse() {
-  return SchoolImportResponse(
-    meta: const SchoolImportMeta(
-      sourceUrl: '',
-      pageTitle: '',
-      parser: '',
-      warnings: [],
-    ),
-    timetable: SchoolImportTimetableDraft(
-      name: 'Imported timetable',
-      startDate: DateTime(2026, 5, 25),
-      totalWeeks: 18,
-      periodTimeSet: const ImportedPeriodTimeSetDraft(
-        name: '',
-        periodTimes: [],
-      ),
-      courses: const [
-        ImportedCourseDraft(
-          name: 'Imported course',
-          teacher: '',
-          location: '',
-          dayOfWeek: 1,
-          semesterWeeks: [],
-          periods: [1],
-          startMinutes: 480,
-          endMinutes: 540,
-          credit: 0,
-          remarks: '',
-          customFields: <String, dynamic>{},
-        ),
-      ],
-    ),
+  final page = SchoolHtmlImportPage(
+    initialContent: content,
+    initialUrl:
+        'https://student:secret@school.test/timetable?token=secret#login',
+    initialTitle: 'School timetable',
+    initialContentTruncated: truncated,
+    initialDatasetGeneration: 'review-generation',
+    initialCapturedAt: DateTime.utc(2026, 10, 30),
+    showReturnToWebPageButton: inRoute,
+    contentPreparer: prepare ?? prepareSchoolImportContentForTest,
+    handoffController: handoff,
+    openConversation: (context, id) async {
+      fixture.opened.add(id);
+    },
+    openConfiguration: (context, readiness) async {
+      fixture.configurations.add(readiness);
+      fixture.settings = const AgentSettings(
+        enabled: true,
+        endpoint: 'https://model.example/v1',
+        model: 'synthetic-model',
+      );
+    },
   );
-}
-
-Future<AppLocalizations> _pumpAndCaptureL10n(WidgetTester tester) async {
-  AppLocalizations? captured;
   await tester.pumpWidget(
-    MaterialApp(
-      localizationsDelegates: appLocalizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Builder(
-        builder: (context) {
-          captured = AppLocalizations.of(context);
-          return const SizedBox();
-        },
-      ),
-    ),
-  );
-  await tester.pump();
-  return captured!;
-}
-
-Future<void> _pumpSchoolHtmlImportPage(
-  WidgetTester tester,
-  AppRuntime provider, {
-  SchoolImportApi? api,
-  SchoolImportHttpConsentStore? httpConsentStore,
-  http.Client Function()? httpClientFactory,
-  Future<SchoolImportSanitizationResult> Function(String)? contentPreparer,
-  String initialContent = '',
-  bool initialContentTruncated = false,
-}) async {
-  await tester.pumpWidget(
-    AppScope(
-      app: provider,
-      child: MaterialApp(
-        locale: const Locale('en'),
-        localizationsDelegates: appLocalizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: SchoolHtmlImportPage(
-          contentPreparer: contentPreparer ?? prepareSchoolImportContentForTest,
-          initialContent: initialContent,
-          initialContentTruncated: initialContentTruncated,
-          api: api,
-          httpConsentStore: httpConsentStore,
-          httpClientFactory: httpClientFactory,
-        ),
-      ),
-    ),
-  );
-  await tester.pumpAndSettle();
-}
-
-Future<void> _pumpSchoolHtmlImportPageHost(
-  WidgetTester tester,
-  AppRuntime provider,
-) async {
-  await tester.pumpWidget(
-    AppScope(
-      app: provider,
-      child: MaterialApp(
-        locale: const Locale('en'),
-        localizationsDelegates: appLocalizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Builder(
-          builder: (context) {
-            return Scaffold(
-              body: Center(
-                child: FilledButton(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const SchoolHtmlImportPage(
-                        contentPreparer: prepareSchoolImportContentForTest,
-                        showReturnToWebPageButton: true,
-                      ),
-                    ),
-                  ),
-                  child: const Text('Open import page'),
+    WorkspaceHarness(
+      provider: provider,
+      textScale: scale,
+      home: inRoute
+          ? Builder(
+              builder: (context) => Scaffold(
+                body: TextButton(
+                  onPressed: () => Navigator.of(
+                    context,
+                  ).push<void>(MaterialPageRoute<void>(builder: (_) => page)),
+                  child: const Text('Open source'),
                 ),
               ),
-            );
-          },
-        ),
-      ),
+            )
+          : page,
     ),
   );
   await tester.pumpAndSettle();
+  if (inRoute) {
+    await tester.tap(find.text('Open source'));
+    await tester.pumpAndSettle();
+  }
+  return fixture;
 }
 
-Future<void> _pumpRouteTransition(WidgetTester tester) async {
-  await tester.pump();
-  await tester.pump(const Duration(milliseconds: 500));
+Future<void> _press(WidgetTester tester, Finder button) async {
+  await tester.ensureVisible(button);
+  await tester.pumpAndSettle();
+  await tester.tap(button);
+  await tester.pumpAndSettle();
 }
 
 void main() {
   testWidgets(
-    'closing during content preparation cannot apply the late result',
+    'desktop handoff opens a visible real conversation above the source route',
     (tester) async {
-      final provider = await _createProvider();
-      addTearDown(provider.dispose);
-      final pending = Completer<SchoolImportSanitizationResult>();
-      var preparations = 0;
-      await _pumpSchoolHtmlImportPage(
-        tester,
-        provider,
-        initialContent: '<p>Original source</p>',
-        contentPreparer: (_) {
-          preparations++;
-          return pending.future;
-        },
+      addTearDown(tester.view.reset);
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(1280, 900);
+      final app = await workspaceProvider(
+        agentConversationStorage: _MemoryConversations(),
+        agentCredentialStore: MemoryAgentCredentialStore(),
       );
-      final l10n = AppLocalizations.of(
-        tester.element(find.byType(SchoolHtmlImportPage)),
-      );
-      final prepare = find.text(l10n.schoolHtmlImportCompress);
-      await tester.ensureVisible(prepare);
-      await tester.tap(prepare);
-      await tester.pump();
-      await tester.tap(prepare);
-      expect(preparations, 1);
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-      await tester.pumpWidget(const SizedBox.shrink());
-      pending.complete(
-        const SchoolImportSanitizationResult(
-          content: '<p>Late result</p>',
-          wasTruncated: false,
+      addTearDown(app.dispose);
+      await app.agent.configure(
+        const AgentSettings(
+          endpoint: 'https://fixture.example/v1',
+          model: 'fixture',
         ),
       );
-      await tester.pump();
-      expect(tester.takeException(), isNull);
+      await app.agent.setEnabled(true);
+      final started = <String>[];
+      await tester.pumpWidget(
+        WorkspaceHarness(
+          provider: app,
+          home: SchoolHtmlImportPage(
+            initialContent: '<table><tr><td>Reviewed Algebra</td></tr></table>',
+            initialTitle: 'School source',
+            contentPreparer: prepareSchoolImportContentForTest,
+            handoffController: SchoolWebHandoffController(
+              repository: app.agent.conversations,
+              readSettings: () => app.agent.settings,
+              initialize: app.agent.initialize,
+              startHandoff: (id) async => started.add(id),
+              readGeneration: () => app.agent.mutations.generation,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await _press(tester, _compress);
+      final reviewed = _text(tester);
+      await _press(tester, _continue);
+      expect(find.byType(AgentPage), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('agent-composer')).hitTestable(),
+        findsOneWidget,
+      );
+      expect(started, [app.agent.conversations.selectedId]);
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(_text(tester), reviewed);
+      expect(app.agent.conversations.conversations, hasLength(1));
+      await tester.pumpWidget(const SizedBox());
     },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
   );
 
-  testWidgets('mapSchoolImportApplyError returns FormatException message', (
+  for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
+    for (final scale in [1.0, 2.0]) {
+      testWidgets('review and handoff remain reachable at $scale×', (
+        tester,
+      ) async {
+        final fixture = await _mount(
+          tester,
+          scale: scale,
+          size: platform == TargetPlatform.android
+              ? const Size(393, 852)
+              : const Size(1280, 900),
+        );
+        expect(tester.widget<FilledButton>(_continue).onPressed, isNull);
+        expect(find.text('https://school.test/timetable'), findsOneWidget);
+        expect(find.textContaining('secret'), findsNothing);
+        await _press(tester, _compress);
+        expect(_text(tester), contains('Algebra'));
+        expect(_text(tester), contains('<table>'));
+        expect(_text(tester), isNot(contains('<script>')));
+        await _press(tester, _continue);
+        expect(fixture.repository.conversations.length, 1);
+        expect(fixture.starts.length, 1);
+        expect(fixture.opened, fixture.starts);
+        expect(
+          fixture.repository.conversations.single.sources.single.text,
+          _text(tester),
+        );
+        expect(tester.takeException(), isNull);
+      }, variant: TargetPlatformVariant.only(platform));
+    }
+  }
+
+  testWidgets('disabled Agent retains the source through configuration', (
     tester,
   ) async {
-    final l10n = await _pumpAndCaptureL10n(tester);
-
+    final fixture = await _mount(tester, settings: const AgentSettings());
+    await _press(tester, _compress);
+    final reviewed = _text(tester);
+    await _press(tester, _continue);
+    expect(fixture.configurations, [SchoolWebHandoffReadiness.disabled]);
+    expect(fixture.repository.conversations, isEmpty);
+    expect(_text(tester), reviewed);
+    await _press(tester, _continue);
     expect(
-      mapSchoolImportApplyError(const FormatException('bad payload'), l10n),
-      'bad payload',
+      fixture.repository.conversations.single.sources.single.text,
+      reviewed,
     );
   });
 
-  testWidgets('mapSchoolImportApplyError falls back to localized message for '
-      'non-FormatException errors', (tester) async {
-    final l10n = await _pumpAndCaptureL10n(tester);
-
-    expect(
-      mapSchoolImportApplyError(Exception('boom'), l10n),
-      l10n.saveFailedRetry,
-    );
-    expect(
-      mapSchoolImportApplyError(StateError('bad state'), l10n),
-      l10n.saveFailedRetry,
-    );
-    expect(
-      mapSchoolImportApplyError(
-        const AppBackupRestoreInProgressException(),
-        l10n,
+  testWidgets('plan mode parses a source without applying a timetable', (
+    tester,
+  ) async {
+    final fixture = await _mount(
+      tester,
+      settings: const AgentSettings(
+        enabled: true,
+        endpoint: 'https://model.example/v1',
+        model: 'synthetic-model',
+        permissionMode: AgentPermissionMode.plan,
       ),
-      l10n.backupRestoreInProgressMessage,
     );
-  });
-
-  testWidgets('parser settings are no longer nested in the import page', (
-    tester,
-  ) async {
-    final provider = await _createProvider();
-    await _pumpSchoolHtmlImportPage(tester, provider);
-
-    expect(find.text('AI API configuration'), findsNothing);
-    expect(find.byType(SchoolImportParserSettingsPage), findsNothing);
-    expect(find.byType(TextField), findsOneWidget);
+    final before = fixture.provider.session.data.toJson();
+    await _press(tester, _compress);
+    await _press(tester, _continue);
+    expect(
+      fixture.repository.conversations.single.mode,
+      AgentPermissionMode.plan,
+    );
+    expect(fixture.provider.session.data.toJson(), before);
   });
 
   testWidgets(
-    'uses the first live period-time set when no active set is available',
+    'failed handoff preserves the draft and retries without duplication',
     (tester) async {
-      final provider = await _createProviderWithoutActivePeriodTimeSet();
-      addTearDown(provider.dispose);
-      expect(provider.studentView.activePeriodTimeSetOrNull, isNull);
-      final fallback = provider.studentView.periodTimeSets.first;
-      await _pumpSchoolHtmlImportPage(
-        tester,
-        provider,
-        api: _CompletedSchoolImportApi(_buildCompletedResponse()),
-      );
-
-      await tester.enterText(find.byType(TextField), 'Monday period 1 Math');
-      final submitButton = find.text('Parse and import');
-      await tester.ensureVisible(submitButton);
-      await tester.tap(submitButton);
-      await _pumpRouteTransition(tester);
-
-      expect(
-        find.byKey(const ValueKey('school-import-parse-timetable-name')),
-        findsOneWidget,
-      );
-      expect(
-        find.byKey(const ValueKey('school-import-parse-start-date')),
-        findsOneWidget,
-      );
-      expect(
-        find.byKey(const ValueKey('school-import-parse-total-weeks')),
-        findsOneWidget,
-      );
-      expect(
-        find.byKey(const ValueKey('school-import-parse-period-time-set')),
-        findsOneWidget,
-      );
-      final l10n = AppLocalizations.of(
-        tester.element(
-          find.byKey(const ValueKey('school-import-parse-timetable-name')),
-        ),
-      );
-      expect(
-        find.widgetWithText(OutlinedButton, l10n.schoolImportResultEditorTitle),
-        findsOneWidget,
-      );
-      expect(find.text('Continue import'), findsNothing);
-
-      await tester.tap(
-        find.widgetWithText(FilledButton, 'Import as new timetable'),
-      );
-      await _pumpRouteTransition(tester);
-      await tester.pumpAndSettle();
-
-      expect(find.byType(SchoolWebImportResultSheet), findsNothing);
-      expect(provider.studentView.hasTimetables, isTrue);
-      expect(
-        provider.studentView.activeTimetableOrNull!.config.periodTimeSetId,
-        fallback.id,
-      );
-      expect(tester.takeException(), isNull);
+      final fixture = await _mount(tester);
+      await _press(tester, _compress);
+      final reviewed = _text(tester);
+      fixture.storage.fail = true;
+      await _press(tester, _continue);
+      expect(fixture.starts, isEmpty);
+      expect(_text(tester), reviewed);
+      expect(find.textContaining('raw secret'), findsNothing);
+      fixture.storage.fail = false;
+      await fixture.repository.load();
+      await _press(tester, _continue);
+      await _press(tester, _continue);
+      expect(fixture.repository.conversations.length, 1);
+      expect(fixture.repository.conversations.single.messages.length, 1);
     },
   );
 
-  testWidgets('unconfigured parser offers a direct settings shortcut', (
+  testWidgets('edits require compression again and keep capture truncation', (
     tester,
   ) async {
-    final provider = await _createProvider(baseUrl: '');
-    await _pumpSchoolHtmlImportPage(tester, provider);
-
-    final openSettingsButton = find.widgetWithText(
-      OutlinedButton,
-      'Configure parsing API',
+    final fixture = await _mount(tester, truncated: true);
+    final l10n = AppLocalizations.of(tester.element(_editor));
+    expect(find.text(l10n.schoolImportContentTruncated), findsOneWidget);
+    await _press(tester, _compress);
+    await tester.enterText(_editor, '${_text(tester)}\nA correction');
+    await tester.pump();
+    expect(tester.widget<FilledButton>(_continue).onPressed, isNull);
+    await _press(tester, _compress);
+    await _press(tester, _continue);
+    expect(
+      fixture.repository.conversations.single.sources.single.truncated,
+      isTrue,
     );
-    expect(openSettingsButton, findsOneWidget);
-
-    await tester.ensureVisible(openSettingsButton);
-    await tester.pumpAndSettle();
-    await tester.tap(openSettingsButton);
-    await tester.pumpAndSettle();
-
-    expect(find.byType(SchoolImportParserSettingsPage), findsOneWidget);
   });
 
-  testWidgets('import actions stay usable in a narrow viewport', (
+  testWidgets('bounded source input keeps surrogate pairs intact', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(320, 640));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-
-    final provider = await _createProvider();
-    await _pumpSchoolHtmlImportPage(
-      tester,
-      provider,
-      initialContent: 'Monday period 1 Mathematics',
+    await _mount(tester, content: '');
+    await tester.enterText(
+      _editor,
+      '😀' * (SchoolImportContentSanitizer.maxInputLength ~/ 2 + 1),
     );
+    await tester.pump();
+    expect(
+      _text(tester).length,
+      lessThanOrEqualTo(SchoolImportContentSanitizer.maxInputLength),
+    );
+    expect(
+      _text(tester).runes.any((rune) => rune >= 0xd800 && rune <= 0xdfff),
+      isFalse,
+    );
+  });
 
-    expect(find.text('Prepare content'), findsOneWidget);
-    expect(find.text('Parse and import'), findsOneWidget);
+  testWidgets('return during preparation accepts no late handoff', (
+    tester,
+  ) async {
+    final prepared = Completer<SchoolImportSanitizationResult>();
+    final fixture = await _mount(
+      tester,
+      inRoute: true,
+      prepare: (_) => prepared.future,
+    );
+    await tester.ensureVisible(_compress);
+    await tester.tap(_compress);
+    await tester.pump();
+    final l10n = AppLocalizations.of(tester.element(_editor));
+    final back = find.text(l10n.schoolHtmlImportReturnToWebPage);
+    await tester.tap(back);
+    await tester.tap(back, warnIfMissed: false);
+    await tester.pump();
+    prepared.complete(
+      SchoolImportContentSanitizer.sanitizeWithResult('Algebra'),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Open source'), findsOneWidget);
+    expect(fixture.starts, isEmpty);
+    expect(fixture.repository.conversations, isEmpty);
     expect(tester.takeException(), isNull);
   });
-
-  testWidgets('return to webpage button cannot pop the parent route twice', (
-    tester,
-  ) async {
-    final provider = await _createProvider();
-    await _pumpSchoolHtmlImportPageHost(tester, provider);
-
-    final openButton = find.widgetWithText(FilledButton, 'Open import page');
-    expect(openButton, findsOneWidget);
-
-    await tester.tap(openButton);
-    await _pumpRouteTransition(tester);
-
-    final returnButton = find.widgetWithText(TextButton, 'Back to webpage');
-    expect(returnButton, findsOneWidget);
-
-    await tester.tap(returnButton);
-    await tester.tap(returnButton, warnIfMissed: false);
-    await _pumpRouteTransition(tester);
-
-    expect(find.byType(SchoolHtmlImportPage), findsNothing);
-    expect(openButton, findsOneWidget);
-  });
-
-  testWidgets('HTTP parsing never starts before explicit confirmation', (
-    tester,
-  ) async {
-    final provider = await _createProvider(
-      baseUrl: 'http://api.example.com/v1',
-    );
-    final api = _RecordingSchoolImportApi();
-    await _pumpSchoolHtmlImportPage(
-      tester,
-      provider,
-      api: api,
-      httpConsentStore: SchoolImportHttpConsentStore(),
-    );
-
-    await tester.enterText(
-      find.byType(TextField),
-      '<table><tr><td>A</td></tr></table>',
-    );
-    final submitButton = find.text('Parse and import');
-    await tester.ensureVisible(submitButton);
-    await tester.pumpAndSettle();
-    await tester.tap(submitButton);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-
-    expect(find.text('Use an unencrypted HTTP endpoint?'), findsOneWidget);
-    expect(api.callCount, 0);
-
-    await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
-    await tester.pumpAndSettle();
-    expect(api.callCount, 0);
-
-    await tester.ensureVisible(submitButton);
-    await tester.pumpAndSettle();
-    await tester.tap(submitButton);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-    await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(api.callCount, 1);
-  });
-
-  testWidgets('disposing the page closes an in-flight parser client', (
-    tester,
-  ) async {
-    final provider = await _createProvider();
-    final client = _CloseTrackingClient();
-    await _pumpSchoolHtmlImportPage(
-      tester,
-      provider,
-      httpClientFactory: () => client,
-    );
-
-    await tester.enterText(find.byType(TextField), 'Monday period 1 Math');
-    final submitButton = find.text('Parse and import');
-    await tester.ensureVisible(submitButton);
-    await tester.pumpAndSettle();
-    await tester.tap(submitButton);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-    expect(client.sendCalled, isTrue);
-    expect(client.closed, isFalse);
-
-    await tester.pumpWidget(const SizedBox());
-    await tester.pump();
-
-    expect(client.closed, isTrue);
-  });
-
-  testWidgets('shows when webpage capture reached the safe limit', (
-    tester,
-  ) async {
-    final provider = await _createProvider();
-    await _pumpSchoolHtmlImportPage(
-      tester,
-      provider,
-      initialContent: '<table><tr><td>Captured</td></tr></table>',
-      initialContentTruncated: true,
-    );
-
-    expect(
-      find.text(
-        'This page reached the safe import limit. Only the captured portion will be sent for parsing.',
-      ),
-      findsOneWidget,
-    );
-  });
-
-  testWidgets('clears the capture limit warning after replacing the content', (
-    tester,
-  ) async {
-    final provider = await _createProvider();
-    await _pumpSchoolHtmlImportPage(
-      tester,
-      provider,
-      initialContent: '<table><tr><td>Captured</td></tr></table>',
-      initialContentTruncated: true,
-    );
-    const warning =
-        'This page reached the safe import limit. Only the captured portion will be sent for parsing.';
-    expect(find.text(warning), findsOneWidget);
-
-    final textField = tester.widget<TextField>(find.byType(TextField));
-    final controller = textField.controller!;
-    controller.selection = TextSelection(
-      baseOffset: 0,
-      extentOffset: controller.text.length,
-    );
-    await tester.enterText(find.byType(TextField), 'Monday period 1 Math');
-    await tester.pump();
-
-    expect(find.text(warning), findsNothing);
-  });
-
-  testWidgets('restores the capture warning when undo restores its content', (
-    tester,
-  ) async {
-    const captured = '<table><tr><td>Captured</td></tr></table>';
-    const warning =
-        'This page reached the safe import limit. Only the captured portion will be sent for parsing.';
-    final provider = await _createProvider();
-    await _pumpSchoolHtmlImportPage(
-      tester,
-      provider,
-      initialContent: captured,
-      initialContentTruncated: true,
-    );
-
-    final finder = find.byType(TextField);
-    final controller = tester.widget<TextField>(finder).controller!;
-    await tester.tap(finder);
-    await tester.pump(const Duration(milliseconds: 500));
-    controller.selection = TextSelection(
-      baseOffset: 0,
-      extentOffset: controller.text.length,
-    );
-    await tester.enterText(finder, 'Monday period 1 Math');
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(find.text(warning), findsNothing);
-
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
-    await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
-    await tester.pump();
-
-    expect(controller.text, captured);
-    expect(find.text(warning), findsOneWidget);
-  });
-
-  testWidgets(
-    'keeps pasted-content truncation warning after a one-character deletion',
-    (tester) async {
-      final provider = await _createProvider();
-      await _pumpSchoolHtmlImportPage(tester, provider);
-      const emoji = '\u{1f600}';
-      final oversizedInput =
-          emoji * (SchoolImportContentSanitizer.maxInputLength ~/ 2 + 1);
-
-      await tester.enterText(find.byType(TextField), oversizedInput);
-      await tester.pumpAndSettle();
-
-      final textField = tester.widget<TextField>(find.byType(TextField));
-      expect(
-        textField.controller?.text.length,
-        SchoolImportContentSanitizer.maxInputLength,
-      );
-      expect(
-        textField.controller?.text.runes.length,
-        SchoolImportContentSanitizer.maxInputLength ~/ 2,
-      );
-      expect(
-        find.text(
-          'This page reached the safe import limit. Only the captured portion will be sent for parsing.',
-        ),
-        findsOneWidget,
-      );
-
-      final controller = textField.controller!;
-      controller.selection = TextSelection.collapsed(
-        offset: controller.text.length,
-      );
-      await tester.enterText(
-        find.byType(TextField),
-        controller.text.substring(0, controller.text.length - emoji.length),
-      );
-      await tester.pump();
-
-      expect(
-        find.text(
-          'This page reached the safe import limit. Only the captured portion will be sent for parsing.',
-        ),
-        findsOneWidget,
-      );
-    },
-  );
 }

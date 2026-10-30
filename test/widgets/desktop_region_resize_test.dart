@@ -8,7 +8,7 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/school_site_models.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/app_runtime.dart';
-import 'package:sked/screens/school_import_result_editor_page.dart';
+import 'package:sked/screens/school_html_import_page.dart';
 import 'package:sked/screens/school_sites_page.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/theme_settings_page.dart';
@@ -258,7 +258,7 @@ void main() {
 
   for (final direction in TextDirection.values) {
     testWidgets(
-      'JSON preview boundary retains exact draft and caps content ($direction)',
+      'school source review retains its exact draft across reflow ($direction)',
       (t) async {
         _viewport(t, const Size(1440, 900));
         final p = await workspaceProvider();
@@ -269,7 +269,7 @@ void main() {
           t,
           p,
           preferences,
-          home: SchoolImportResultEditorPage(initialText: _importDraft()),
+          home: SchoolHtmlImportPage(initialContent: _importDraft()),
           direction: direction,
         );
         final field = find.byType(TextField);
@@ -279,31 +279,12 @@ void main() {
         final editable = t.widget<EditableText>(find.byType(EditableText));
         final selection = editable.controller.selection;
         expect(editable.focusNode.hasFocus, isTrue);
-        final handle = _key('school-import-preview-resize');
-        final sign = direction == TextDirection.ltr ? -1.0 : 1.0;
-        final originalWidth = t
-            .getSize(_key('school-import-json-preview'))
-            .width;
-        await _dragBeforeFrame(t, handle, Offset(80 * sign, 0));
-        expect(
-          t.getSize(_key('school-import-json-preview')).width,
-          closeTo(originalWidth + 80, .01),
-        );
-        expect(editable.controller.selection, selection);
-        expect(editable.focusNode.hasFocus, isTrue);
-        await _drag(t, handle, Offset(3000 * sign, 0));
-        expect(t.getSize(field).width, greaterThanOrEqualTo(624));
-        final widthAtLimit = t
-            .getSize(_key('school-import-json-preview'))
-            .width;
-        await _drag(t, handle, Offset(-80 * sign, 0));
-        expect(
-          t.getSize(_key('school-import-json-preview')).width,
-          lessThan(widthAtLimit),
-        );
+        t.view.physicalSize = const Size(650, 800);
+        await t.pumpAndSettle();
         expect(t.element(field), same(element));
         expect(t.widget<TextField>(field).controller!.text, draft);
-        t.view.physicalSize = const Size(650, 800);
+        expect(editable.controller.selection, selection);
+        t.view.physicalSize = const Size(1440, 900);
         await t.pumpAndSettle();
         expect(t.element(field), same(element));
         expect(t.widget<TextField>(field).controller!.text, draft);

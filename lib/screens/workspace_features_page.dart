@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
+import '../agent/agent_application.dart';
 import '../controllers/app_session.dart';
 import '../controllers/settings_commands.dart';
 import '../controllers/settings_view_state.dart';
@@ -17,6 +18,7 @@ import '../services/agenda_notification_service.dart';
 import '../widgets/settings_list.dart';
 import '../widgets/settings_page_header.dart';
 import '../widgets/ui_command.dart';
+import 'agent_settings_page.dart';
 
 class WorkspaceFeaturesPage extends StatefulWidget {
   const WorkspaceFeaturesPage({
@@ -125,11 +127,19 @@ class _WorkspaceFeaturesPageState extends State<WorkspaceFeaturesPage>
     );
   }
 
+  Future<void> _setAgentEnabled(bool enabled) async {
+    await runUiCommand(
+      debugLabel: 'Change Agent availability',
+      command: () => context.read<AgentApplication>().setEnabled(enabled),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final workspace = context.watch<WorkspaceViewState>();
     final settings = context.watch<SettingsViewState>();
     final commands = context.read<SettingsCommands>();
+    final agent = context.watch<AgentApplication?>();
     final hasMultipleWorkspaces = workspace.enabledWorkspaces.length > 1;
     final l = AppLocalizations.of(context);
     final controls = <Widget>[
@@ -154,6 +164,23 @@ class _WorkspaceFeaturesPageState extends State<WorkspaceFeaturesPage>
               ? null
               : (value) => unawaited(_set(mode, value)),
         ),
+      if (agent != null) ...[
+        SettingsSwitchTile(
+          key: const ValueKey('agent-enabled'),
+          icon: Icons.chat_bubble_outline,
+          title: l.agentTitle,
+          value: agent.settings.enabled,
+          onChanged: (value) => unawaited(_setAgentEnabled(value)),
+        ),
+        SettingsConnectedTile(
+          key: const ValueKey('agent-model-settings-entry'),
+          leading: const Icon(Icons.settings_outlined),
+          title: l.agentModelSettings,
+          value: agent.settings.model.isEmpty ? null : agent.settings.model,
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () => unawaited(AgentSettingsPage.open(context)),
+        ),
+      ],
       if (hasMultipleWorkspaces)
         SettingsSwitchTile(
           icon: Icons.navigation_outlined,

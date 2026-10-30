@@ -578,8 +578,6 @@
   "@privacyGateTitle": {},
   "privacyGateSummaryStorage": "Az órarendek, az általános ütemtervek, a tanórák időpontkészletei és az iskolai webhelyek beállításai csak helyileg tárolódnak, és nem töltődnek fel automatikusan a fejlesztő szerverére.",
   "@privacyGateSummaryStorage": {},
-  "privacyGateSummaryImportExport": "Az importálás, az exportálás, a teljes biztonsági mentés és a megosztás csak akkor történik meg, ha kifejezetten elindítja. Az alkalmazás teljes biztonsági mentése nem tartalmaz egyéni API-kulcsokat, az órarend szövegének / HTML-tartalmának elemzése pedig csak a beküldött tartalmat küldi el az Ön által beállított elemzési végpontra.",
-  "@privacyGateSummaryImportExport": {},
   "privacyGateSummaryUpdates": "Ha egy későbbi verzió megváltoztatja az adatok kezelésének módját, az alkalmazás megkérheti Önt, hogy újra ellenőrizze a frissített adatvédelmi szabályzatot.",
   "@privacyGateSummaryUpdates": {},
   "schoolWebImportEntry": "Importálás az iskola weboldaláról",

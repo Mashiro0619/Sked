@@ -578,8 +578,6 @@
   "@privacyGateTitle": {},
   "privacyGateSummaryStorage": "Urniki, splošni načrti, nabori časov učnih ur in nastavitve šolskih spletnih mest se shranjujejo samo lokalno in se ne nalagajo samodejno na strežnik razvijalca.",
   "@privacyGateSummaryStorage": {},
-  "privacyGateSummaryImportExport": "Uvoz, izvoz, popolne varnostne kopije in deljenje se izvedejo le, ko jih izrecno zaženete. Popolne varnostne kopije aplikacije ne vključujejo prilagojenih ključev API, razčlenjevanje besedila / HTML urnika pa pošlje samo oddano vsebino na nastavljeno končno točko za razčlenjevanje.",
-  "@privacyGateSummaryImportExport": {},
   "privacyGateSummaryUpdates": "Če poznejša različica spremeni način ravnanja s podatki, vas lahko aplikacija zahteva, da znova pregledate posodobljeni pravilnik o zasebnosti.",
   "@privacyGateSummaryUpdates": {},
   "schoolWebImportEntry": "Uvozi s spletne strani šole",

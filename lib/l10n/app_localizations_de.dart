@@ -887,7 +887,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get privacyGateSummaryImportExport =>
-      'Import, Export, vollständige Sicherungen und Teilen erfolgen nur, wenn du sie ausdrücklich startest. Vollständige App-Sicherungen enthalten keine benutzerdefinierten API-Schlüssel. Die Analyse von Stundenplantext / HTML sendet nur die eingereichten Inhalte an den von dir konfigurierten Analyse-Endpunkt.';
+      'Imports, exports, backups, and sharing happen when you request them. Full backups exclude API keys and chats. When you use Agent, your messages, attachments, and task-related app data returned by tools are sent to your configured API service.';
 
   @override
   String get privacyGateSummaryUpdates =>
@@ -3342,4 +3342,360 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get noPendingReminders => 'No pending reminders.';
+
+  @override
+  String get agentTitle => 'Agent';
+
+  @override
+  String get agentNewConversation => 'New conversation';
+
+  @override
+  String get agentConversations => 'Conversations';
+
+  @override
+  String get agentRenameConversation => 'Rename conversation';
+
+  @override
+  String get agentDeleteConversation => 'Delete conversation?';
+
+  @override
+  String get agentDeleteConversationMessage =>
+      'This stops its active run and deletes its messages, source material and draft. Changes already made to your schedules remain.';
+
+  @override
+  String get agentConversationActions => 'Conversation actions';
+
+  @override
+  String get agentEmptyHistory => 'No conversations yet.';
+
+  @override
+  String get agentEmptyConversation =>
+      'Describe what you want to view or change in Sked.';
+
+  @override
+  String get agentMessageHint => 'Message Agent';
+
+  @override
+  String get agentSend => 'Send';
+
+  @override
+  String get agentStop => 'Stop';
+
+  @override
+  String get agentRunning => 'Working…';
+
+  @override
+  String get agentStopped => 'Stopped. Completed changes remain saved.';
+
+  @override
+  String get agentRunFailed => 'This run could not finish.';
+
+  @override
+  String get agentOperationFailed =>
+      'Could not save or complete this action. Your input is kept here.';
+
+  @override
+  String get agentRetry => 'Retry';
+
+  @override
+  String get agentDisabled => 'Agent is disabled in Feature management.';
+
+  @override
+  String get agentMaintenance =>
+      'Data maintenance is in progress. Wait before starting another action.';
+
+  @override
+  String get agentConfigureFirst =>
+      'Configure the model connection before sending a message.';
+
+  @override
+  String get agentModePlan => 'Plan';
+
+  @override
+  String get agentModeAsk => 'Ask';
+
+  @override
+  String get agentModeFull => 'Full';
+
+  @override
+  String get agentModePlanDescription =>
+      'View data and propose changes without applying them.';
+
+  @override
+  String get agentModeAskDescription =>
+      'Ask for approval before applying changes.';
+
+  @override
+  String get agentModeFullDescription =>
+      'Apply changes without asking each time.';
+
+  @override
+  String get agentAssistant => 'Agent';
+
+  @override
+  String get agentYou => 'You';
+
+  @override
+  String get agentNotice => 'Notice';
+
+  @override
+  String get agentToolResponse => 'Tool response';
+
+  @override
+  String get agentToolArguments => 'Tool arguments';
+
+  @override
+  String get agentSourceMaterial => 'Source material';
+
+  @override
+  String get agentSourceTruncated =>
+      'This source was shortened before it was attached.';
+
+  @override
+  String get agentApprovalRequired => 'Review the proposed changes';
+
+  @override
+  String get agentPlanDetails => 'Change details';
+
+  @override
+  String get agentApprove => 'Approve these changes';
+
+  @override
+  String get agentReject => 'Reject';
+
+  @override
+  String get agentApiDataNotice =>
+      'Agent sends your messages, attachments, and task-related app data returned by tools to the API service you configure.';
+
+  @override
+  String get agentModelSettings => 'Agent model settings';
+
+  @override
+  String get agentEndpoint => 'API endpoint';
+
+  @override
+  String get agentModel => 'Model';
+
+  @override
+  String get agentProtocol => 'API protocol';
+
+  @override
+  String get agentApiKey => 'API key';
+
+  @override
+  String get agentKeyHint => 'Leave blank to keep the saved key.';
+
+  @override
+  String get agentShowKey => 'Show key';
+
+  @override
+  String get agentHideKey => 'Hide key';
+
+  @override
+  String get agentClearKey => 'Remove the saved key';
+
+  @override
+  String get agentInvalidEndpoint =>
+      'Enter a valid HTTP or HTTPS endpoint without credentials or a fragment.';
+
+  @override
+  String get agentRequiredField => 'Enter a value.';
+
+  @override
+  String get agentSaveFailed =>
+      'Could not save the connection. Your input is kept for retry.';
+
+  @override
+  String get agentSaving => 'Saving…';
+
+  @override
+  String get schoolWebAgentReviewTitle => 'Review school page';
+
+  @override
+  String get schoolWebAgentReviewHint =>
+      'Review the prepared page content. Agent will use it as source material in a new conversation.';
+
+  @override
+  String get schoolWebAgentHandoff => 'Continue with Agent';
+
+  @override
+  String get agentChangesSaved => 'Changes saved';
+
+  @override
+  String get agentActionApplied => 'Action completed';
+
+  @override
+  String get agentActionUncertain => 'Result needs checking';
+
+  @override
+  String get agentPlanReady => 'Changes prepared';
+
+  @override
+  String get agentActionFailed => 'Action not completed';
+
+  @override
+  String agentChangeCount(int count) {
+    return '$count changes';
+  }
+
+  @override
+  String get agentChangeCreated => 'Added';
+
+  @override
+  String get agentChangeDeleted => 'Deleted';
+
+  @override
+  String get agentChangeUpdated => 'Updated';
+
+  @override
+  String get agentViewObject => 'View item';
+
+  @override
+  String get agentMoreChanges =>
+      'More changes are included in the saved operation record.';
+
+  @override
+  String get agentUndo => 'Undo these changes';
+
+  @override
+  String get agentValueBefore => 'Before';
+
+  @override
+  String get agentValueAfter => 'After';
+
+  @override
+  String get agentShowMoreChanges => 'Show more changes';
+
+  @override
+  String get agentConnectionChanged =>
+      'The model connection has changed. Start a new conversation before sending content to the new endpoint.';
+
+  @override
+  String get agentLimitsReached =>
+      'This run reached its limit. Try a smaller task or continue in another run.';
+
+  @override
+  String get agentSensitiveContent =>
+      'The message contains an API key. Remove the key before sending.';
+
+  @override
+  String get agentRequestFailed =>
+      'The model request failed. Check the connection and selected model, then retry.';
+
+  @override
+  String get agentQueueFollowUp => 'Queue next message';
+
+  @override
+  String get agentSteer => 'Update current request';
+
+  @override
+  String get agentContinue => 'Continue';
+
+  @override
+  String agentQueuedMessages(int count) {
+    return '$count queued messages';
+  }
+
+  @override
+  String get agentRunPreferences => 'Run preferences';
+
+  @override
+  String get agentSystemInstructions => 'Instructions for all conversations';
+
+  @override
+  String get agentMaxModelRounds => 'Maximum model requests per run';
+
+  @override
+  String get agentMaxToolCalls => 'Maximum tool calls per run';
+
+  @override
+  String get agentMaxTotalTokens => 'Maximum reported tokens per run';
+
+  @override
+  String get agentHistoryRetentionDays =>
+      'History retention (days; 0 keeps history)';
+
+  @override
+  String get agentPreferenceLimitHint =>
+      'Keep forever, or choose 7–3650 days. Only finished conversations without drafts or queued input are removed.';
+
+  @override
+  String get agentPreferencesSaved => 'Preferences saved';
+
+  @override
+  String get agentInvalidPreference =>
+      'Enter a value within the displayed range.';
+
+  @override
+  String get agentBackupConnectionPreserved =>
+      'The local Agent connection, permissions and credentials are preserved. This backup will not change the model connection.';
+
+  @override
+  String get agentArchiveConversation => 'Archive conversation';
+
+  @override
+  String get agentArchivedConversations => 'Archived conversations';
+
+  @override
+  String get agentRestoreConversation => 'Restore conversation';
+
+  @override
+  String get agentExportConversation => 'Export conversation';
+
+  @override
+  String agentSavedConnectionHint(String endpoint) {
+    return 'Diagnostics use the saved connection: $endpoint. Unsaved edits are not sent.';
+  }
+
+  @override
+  String get agentTestConnection => 'Test saved connection';
+
+  @override
+  String get agentLoadModels => 'Get models';
+
+  @override
+  String get agentConnectionOk => 'Connection succeeded';
+
+  @override
+  String get agentToolsObserved => 'Valid tool call received';
+
+  @override
+  String get agentToolsUnverified =>
+      'Connected, but tool calling was not verified';
+
+  @override
+  String get agentModelsPartial => 'The service returned a partial model list.';
+
+  @override
+  String get agentChooseModel => 'Choose a model';
+
+  @override
+  String get agentRecoveryRequired =>
+      'Check the previous operation result first. Only reading is currently allowed.';
+
+  @override
+  String get agentAttachFile => 'Attach a text file';
+
+  @override
+  String get agentRemoveAttachment => 'Remove attachment';
+
+  @override
+  String get agentAttachmentTooLarge =>
+      'This attachment exceeds the 512 KiB limit.';
+
+  @override
+  String get agentAttachmentFailed =>
+      'Could not attach the file. Your conversation is unchanged.';
+
+  @override
+  String get agentHttpTransportWarning =>
+      'This connection uses HTTP. Testing, getting models or sending a request transmits the API key and request content without transport encryption.';
+
+  @override
+  String get agentHttpTransportApproval =>
+      'Allow HTTP requests to this connection?';
+
+  @override
+  String get agentHttpTransportScope =>
+      'This permission can be reused for the same saved connection until the app closes. It does not approve changes to your data.';
 }

@@ -27,7 +27,6 @@ String _title(SettingsDestination destination, AppLocalizations l) =>
       SettingsDestination.general => l.generalScheduleImportExport,
       SettingsDestination.studentPreferences => l.timetableDisplaySettings,
       SettingsDestination.generalPreferences => l.generalDisplaySettings,
-      SettingsDestination.parser => l.schoolImportParserSettingsTitle,
       SettingsDestination.notificationPermissions =>
         l.notificationTroubleshooting,
     };
@@ -522,7 +521,6 @@ void main() {
 
   for (final destination in [
     SettingsDestination.student,
-    SettingsDestination.parser,
     SettingsDestination.language,
   ]) {
     testWidgets(
@@ -654,10 +652,7 @@ void main() {
     );
   }
 
-  for (final destination in [
-    SettingsDestination.student,
-    SettingsDestination.parser,
-  ]) {
+  for (final destination in [SettingsDestination.student]) {
     testWidgets(
       'direct ${destination.name} refreshes status bar styling without owning the navigation bar',
       (tester) async {

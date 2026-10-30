@@ -12,7 +12,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
-import 'package:sked/models/school_import_models.dart';
 import 'package:sked/models/school_site_models.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/app_runtime.dart';
@@ -21,16 +20,13 @@ import 'package:sked/screens/developer_mode_page.dart';
 import 'package:sked/screens/notification_settings_page.dart';
 import 'package:sked/screens/period_times_page.dart';
 import 'package:sked/screens/school_html_import_page.dart';
-import 'package:sked/screens/school_import_parse_page.dart';
-import 'package:sked/screens/school_import_parser_settings_page.dart';
-import 'package:sked/screens/school_import_result_editor_page.dart';
+import 'package:sked/screens/agent_settings_page.dart';
 import 'package:sked/screens/school_sites_page.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/timetable_display_settings_page.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/android_productivity_bridge.dart';
 import 'package:sked/services/desktop_window_bridge.dart';
-import 'package:sked/services/school_import_api.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/school_site_store.dart';
 import 'package:sked/widgets/period_time_set_manager.dart';
@@ -163,7 +159,7 @@ void registerCaptureScenarios() {
               siteService: SchoolSiteService(store: _PreviewSites()),
             ),
           ),
-          ('parser-settings', (p, n) => const SchoolImportParserSettingsPage()),
+          ('agent-settings', (p, n) => const AgentSettingsPage()),
           (
             'import-source',
             (p, n) => const SchoolHtmlImportPage(
@@ -174,27 +170,8 @@ void registerCaptureScenarios() {
             ),
           ),
           (
-            'import-result-json',
-            (p, n) =>
-                const SchoolImportResultEditorPage(initialText: _importJson),
-          ),
-          (
-            'import-review',
-            (p, n) => SchoolImportParsePage(
-              configureImport: true,
-              stream: Stream.value(
-                ParseDone(
-                  response: SchoolImportResponse.fromJson(<String, dynamic>{
-                    'ok': true,
-                    'meta': {
-                      'parser': '本地视觉样例（未联网）',
-                      'warnings': ['请校对学期周次与节次时间。'],
-                    },
-                    'timetable': jsonDecode(_importJson),
-                  }),
-                ),
-              ),
-            ),
+            'import-source-json',
+            (p, n) => const SchoolHtmlImportPage(initialContent: _importJson),
           ),
           (
             'notification-troubleshooting',
@@ -225,17 +202,6 @@ void registerCaptureScenarios() {
             locale: 'zh',
             mode: name == 'category-editor' ? AppMode.general : AppMode.student,
           );
-          if (name == 'import-source') {
-            await provider.settingsCommands
-                .updateCustomSchoolImportTextSettings(
-                  baseUrl: 'https://example.invalid/v1',
-                  model: 'visual-fixture-model',
-                  prompt: provider.settingsView.customSchoolImportPrompt,
-                );
-            await provider.schoolImportSecrets.update(
-              'visual-fixture-not-a-real-key',
-            );
-          }
           final notifications = AgendaNotificationService(
             enabled: true,
             gateway: MemoryAgendaNotificationGateway()

@@ -578,8 +578,6 @@
   "@privacyGateTitle": {},
   "privacyGateSummaryStorage": "Rozvrhy, obecné plány, sady časů vyučovacích hodin a nastavení školních webů se ukládají pouze místně a automaticky se neodesílají na server vývojáře.",
   "@privacyGateSummaryStorage": {},
-  "privacyGateSummaryImportExport": "Import, export, úplné zálohy a sdílení se provádějí pouze tehdy, když je výslovně spustíte. Úplné zálohy aplikace neobsahují vlastní klíče API a analýza textu / HTML rozvrhu odesílá pouze vámi zadaný obsah na nastavený koncový bod pro analýzu.",
-  "@privacyGateSummaryImportExport": {},
   "privacyGateSummaryUpdates": "Pokud pozdější verze změní způsob zpracování dat, aplikace vás může požádat, abyste znovu přezkoumali aktualizované zásady ochrany osobních údajů.",
   "@privacyGateSummaryUpdates": {},
   "schoolWebImportEntry": "Import ze školní stránky",

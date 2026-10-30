@@ -578,8 +578,6 @@
   "@privacyGateTitle": {},
   "privacyGateSummaryStorage": "시간표, 일반 일정, 교시 시간 세트 및 학교 사이트 설정은 로컬에만 저장되며 개발자 서버에 자동으로 업로드되지 않습니다.",
   "@privacyGateSummaryStorage": {},
-  "privacyGateSummaryImportExport": "가져오기, 내보내기, 전체 백업 및 공유는 사용자가 명시적으로 시작할 때만 수행됩니다. 앱의 전체 백업에는 사용자 지정 API 키가 포함되지 않으며, 시간표 텍스트 / HTML 분석은 제출한 내용만 설정된 분석 엔드포인트로 전송합니다.",
-  "@privacyGateSummaryImportExport": {},
   "privacyGateSummaryUpdates": "이후 버전에서 데이터 처리 방식이 바뀌면 앱이 업데이트된 개인정보 처리방침을 다시 검토하도록 요청할 수 있습니다.",
   "@privacyGateSummaryUpdates": {},
   "schoolWebImportEntry": "학교 웹페이지에서 가져오기",

@@ -578,8 +578,6 @@
   "@privacyGateTitle": {},
   "privacyGateSummaryStorage": "時間割、汎用予定、授業時刻セット、学校サイトの設定はローカルにのみ保存され、開発者のサーバーに自動アップロードされることはありません。",
   "@privacyGateSummaryStorage": {},
-  "privacyGateSummaryImportExport": "インポート、エクスポート、完全バックアップ、共有は、ユーザーが明示的に開始した場合にのみ行われます。アプリの完全バックアップにはカスタム API キーは含まれません。時間割のテキスト / HTML の解析では、送信した内容のみが設定済みの解析エンドポイントに送られます。",
-  "@privacyGateSummaryImportExport": {},
   "privacyGateSummaryUpdates": "今後のバージョンでデータの取り扱いが変わる場合、更新後のプライバシーポリシーの再確認をお願いすることがあります。",
   "@privacyGateSummaryUpdates": {},
   "schoolWebImportEntry": "学校Webページからインポート",

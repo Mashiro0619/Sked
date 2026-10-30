@@ -580,8 +580,6 @@
   "@privacyGateTitle": {},
   "privacyGateSummaryStorage": "Stundenpläne, allgemeine Termine, Unterrichtszeitsätze und die Konfiguration von Schulwebseiten werden nur lokal gespeichert und nicht automatisch auf einen Entwicklerserver hochgeladen.",
   "@privacyGateSummaryStorage": {},
-  "privacyGateSummaryImportExport": "Import, Export, vollständige Sicherungen und Teilen erfolgen nur, wenn du sie ausdrücklich startest. Vollständige App-Sicherungen enthalten keine benutzerdefinierten API-Schlüssel. Die Analyse von Stundenplantext / HTML sendet nur die eingereichten Inhalte an den von dir konfigurierten Analyse-Endpunkt.",
-  "@privacyGateSummaryImportExport": {},
   "privacyGateSummaryUpdates": "Wenn eine spätere Version die Datenverarbeitung ändert, fordert die App Sie möglicherweise auf, die aktualisierte Datenschutzrichtlinie erneut zu prüfen.",
   "@privacyGateSummaryUpdates": {},
   "schoolWebImportEntry": "Von Schulwebseite importieren",

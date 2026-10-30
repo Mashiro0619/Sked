@@ -578,8 +578,6 @@
   "@privacyGateTitle": {},
   "privacyGateSummaryStorage": "Lukujärjestykset, yleiset aikataulut, oppituntien aikajoukot ja koulusivustojen asetukset tallennetaan vain paikallisesti eikä niitä lähetetä automaattisesti kehittäjän palvelimelle.",
   "@privacyGateSummaryStorage": {},
-  "privacyGateSummaryImportExport": "Tuonti, vienti, täydelliset varmuuskopiot ja jakaminen tapahtuvat vain, kun käynnistät ne nimenomaisesti. Sovelluksen täydelliset varmuuskopiot eivät sisällä omia API-avaimia. Lukujärjestyksen tekstin / HTML:n jäsennys lähettää vain lähettämäsi sisällön määrittämääsi jäsennyspalvelun osoitteeseen.",
-  "@privacyGateSummaryImportExport": {},
   "privacyGateSummaryUpdates": "Jos myöhempi versio muuttaa tietojen käsittelyä, sovellus saattaa pyytää sinua tarkistamaan päivitetyn tietosuojakäytännön uudelleen.",
   "@privacyGateSummaryUpdates": {},
   "schoolWebImportEntry": "Tuo koulun verkkosivulta",

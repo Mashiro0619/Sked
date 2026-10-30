@@ -578,8 +578,6 @@
   "@privacyGateTitle": {},
   "privacyGateSummaryStorage": "Los horarios de clases, las agendas generales, los conjuntos de horas de clase y la configuración de sitios escolares solo se guardan localmente y no se suben automáticamente a un servidor del desarrollador.",
   "@privacyGateSummaryStorage": {},
-  "privacyGateSummaryImportExport": "La importación, la exportación, las copias de seguridad completas y el uso compartido solo se realizan cuando los inicias expresamente. Las copias completas de la aplicación excluyen las claves API personalizadas, y el análisis de texto / HTML de horarios solo envía el contenido presentado al punto de acceso del analizador que has configurado.",
-  "@privacyGateSummaryImportExport": {},
   "privacyGateSummaryUpdates": "Si una versión posterior cambia la forma en que se manejan los datos, la app puede pedirte que revises la política de privacidad actualizada de nuevo.",
   "@privacyGateSummaryUpdates": {},
   "schoolWebImportEntry": "Importar desde página web escolar",

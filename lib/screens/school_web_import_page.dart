@@ -17,7 +17,7 @@ import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/school_site_models.dart';
-import '../controllers/settings_view_state.dart';
+import '../agent/agent_application.dart';
 import '../providers/app_scope.dart';
 import '../screens/school_html_import_page.dart';
 import '../services/school_site_service.dart';
@@ -26,7 +26,6 @@ import '../services/school_web_session_service.dart';
 import '../utils/platform_capabilities.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_empty_state.dart';
-import '../widgets/school_import_config_required_view.dart';
 
 /// Factory seam for driving the real browser callbacks in widget tests.
 ///
@@ -227,8 +226,6 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
   Widget build(BuildContext context) {
     if (!routeWorkspaceEnabled) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
-    final settings = context.watch<SettingsViewState?>()?.aiApiSettings;
-    final isConfigured = isSchoolImportParserConfigured(settings);
     final pane = _activePane;
     return PopScope<void>(
       canPop: _allowRouteExit,
@@ -305,10 +302,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
               // fact by the generation check below. A browser load must never
               // make the user's Import action unavailable.
               onPressed:
-                  !isConfigured ||
-                      pane.controller == null ||
-                      _isParsing ||
-                      _hasBlockingDialog
+                  pane.controller == null || _isParsing || _hasBlockingDialog
                   ? null
                   : () => _importCurrentPage(pane),
               icon: _isParsing
@@ -344,11 +338,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
             ),
           ],
         ),
-        body: !isConfigured
-            ? SchoolImportConfigRequiredView(
-                message: schoolImportConfigMessage(settings, l10n),
-              )
-            : !_supportsWebView
+        body: !_supportsWebView
             ? _buildMessage(l10n.schoolWebImportUnsupportedPlatform)
             : _schoolLoadError != null
             ? _buildMessage(
@@ -1482,6 +1472,11 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
       return;
     }
     final scope = AppScope.capture(context);
+    final sourceGeneration = context
+        .read<AgentApplication?>()
+        ?.mutations
+        .generation;
+    final capturedAt = DateTime.now().toUtc();
     final extractionGeneration = pane.loadGeneration;
     final extractionDocumentRevision = pane.documentRevision;
     setState(() => _isParsing = true);
@@ -1515,6 +1510,8 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
               initialUrl: source.url,
               initialTitle: source.title,
               initialContentTruncated: source.wasTruncated,
+              initialCapturedAt: capturedAt,
+              initialDatasetGeneration: sourceGeneration,
               showReturnToWebPageButton: true,
             );
             return scope?.wrap(page) ?? page;

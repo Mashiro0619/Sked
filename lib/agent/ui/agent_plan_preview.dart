@@ -1,0 +1,97 @@
+import 'dart:convert';
+
+import 'package:material_ui/material_ui.dart';
+
+import '../../l10n/app_localizations.dart';
+
+/// Every affected object can be inspected before approval, without eagerly
+/// laying out a thousand expanded JSON records on a phone.
+class AgentPlanPreview extends StatefulWidget {
+  const AgentPlanPreview({super.key, required this.details});
+  final Map<String, Object?> details;
+
+  @override
+  State<AgentPlanPreview> createState() => _AgentPlanPreviewState();
+}
+
+class _AgentPlanPreviewState extends State<AgentPlanPreview> {
+  var _shown = 20;
+
+  @override
+  void didUpdateWidget(AgentPlanPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.details['planId'] != widget.details['planId']) _shown = 20;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    if (widget.details['kind'] == 'httpTransport') {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(l.agentHttpTransportWarning),
+          const SizedBox(height: 8),
+          Text(l.agentHttpTransportScope),
+          const SizedBox(height: 8),
+          Text(l.agentEndpoint, style: Theme.of(context).textTheme.labelLarge),
+          SelectableText(widget.details['endpoint'] as String? ?? ''),
+        ],
+      );
+    }
+    final changes = (widget.details['changes'] as List? ?? const [])
+        .whereType<Map>()
+        .toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          l.agentChangeCount(
+            widget.details['changeCount'] as int? ?? changes.length,
+          ),
+        ),
+        for (final change in changes.take(_shown))
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: Text(_label(change)),
+            subtitle: Text(
+              change['before'] == null
+                  ? l.agentChangeCreated
+                  : change['after'] == null
+                  ? l.agentChangeDeleted
+                  : l.agentChangeUpdated,
+            ),
+            children: [
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: SelectableText(
+                  const JsonEncoder.withIndent('  ').convert({
+                    l.agentValueBefore: change['before'],
+                    l.agentValueAfter: change['after'],
+                  }),
+                ),
+              ),
+            ],
+          ),
+        if (_shown < changes.length)
+          TextButton(
+            onPressed: () => setState(() => _shown += 50),
+            child: Text(l.agentShowMoreChanges),
+          ),
+      ],
+    );
+  }
+
+  String _label(Map change) {
+    for (final value in [change['after'], change['before']]) {
+      if (value is! Map) continue;
+      final config = value['config'];
+      final label =
+          value['title'] ??
+          value['name'] ??
+          (config is Map ? config['name'] : null);
+      if (label is String && label.trim().isNotEmpty) return label;
+    }
+    return change['label'] as String? ?? change['key'] as String? ?? '';
+  }
+}

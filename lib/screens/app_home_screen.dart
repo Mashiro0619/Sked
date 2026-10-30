@@ -17,6 +17,20 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../data/timetable_storage.dart';
+import '../agent/agent_application.dart';
+import '../agent/ui/agent_resource_view.dart';
+import '../agent/ui/agent_credential_input.dart';
+import '../agent/tools/agent_control_tool_adapters.dart';
+import '../agent/tools/workflow_tool_adapters.dart';
+import '../application/external_operation_coordinator.dart';
+import '../application/operation_contracts.dart';
+import '../application/resource_queries.dart';
+import '../controllers/app_data_clear_controller.dart';
+import '../controllers/app_persistence.dart';
+import '../controllers/developer_commands.dart';
+import '../controllers/general_commands.dart';
+import '../controllers/general_navigation_controller.dart';
+import '../controllers/student_commands.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../controllers/app_data_maintenance.dart';
@@ -30,14 +44,22 @@ import '../controllers/workspace_commands.dart';
 import '../controllers/workspace_view_state.dart';
 import '../providers/app_scope.dart';
 import '../services/desktop_window_bridge.dart';
+import '../services/agenda_coordinator.dart';
+import '../services/agenda_notification_service.dart';
+import '../services/android_productivity_bridge.dart';
+import '../services/app_data_clear_coordinator.dart';
+import '../services/desktop_layout_preferences.dart';
+import '../services/developer_ui_preferences.dart';
+import '../services/school_web_session_service.dart';
 import '../services/export_service.dart';
 import '../widgets/desktop_window_host.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/workbench_chrome_metrics.dart';
-import '../widgets/school_import_recovery_draft.dart';
 import 'adaptive_sked_shell.dart';
 import 'settings_page.dart';
+
+final _agentHostOwners = Expando<Object>();
 
 class AppHomeScreen extends StatefulWidget {
   const AppHomeScreen({
@@ -45,11 +67,15 @@ class AppHomeScreen extends StatefulWidget {
     this.recoveryExportService = const ExportService(),
     this.updateService = const UpdateService(),
     this.updateDistribution,
+    this.agentExportService = const ExportService(),
+    this.agentDataClearCoordinator,
   });
 
   final ExportService recoveryExportService;
   final UpdateService updateService;
   final UpdateDistribution? updateDistribution;
+  final ExportService agentExportService;
+  final AppDataClearCoordinator? agentDataClearCoordinator;
 
   @override
   State<AppHomeScreen> createState() => _AppHomeScreenState();
@@ -65,7 +91,11 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
   AppLifecycle? _lastLifecycle;
   Listenable? _readinessChanges;
   bool? _lastObservedCanWrite;
-  Route<dynamic>? _retainedRecoveryDraftRoute;
+  AgentApplication? _boundAgent;
+  AgendaCoordinator? _boundAgenda;
+  DesktopLayoutPreferences? _boundLayout;
+  DeveloperUiPreferences? _boundDeveloperUi;
+  final _agentAndroid = AndroidProductivityBridge();
 
   @override
   void didChangeDependencies() {
@@ -85,11 +115,264 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
       ])..addListener(_onLifecycleReady);
       _hasShownRecoveryBanner = false;
     }
+    _bindAgentServices();
     _onLifecycleReady();
+  }
+
+  void _bindAgentServices() {
+    final application = context.read<AgentApplication?>();
+    if (application == null) {
+      _unbindAgentServices();
+      return;
+    }
+    final agenda = context.read<AgendaCoordinator?>();
+    final layout = context.read<DesktopLayoutPreferences?>();
+    final developerUi = context.read<DeveloperUiPreferences?>();
+    if (identical(_boundAgent, application) &&
+        identical(_boundAgenda, agenda) &&
+        identical(_boundLayout, layout) &&
+        identical(_boundDeveloperUi, developerUi)) {
+      return;
+    }
+    _unbindAgentServices();
+    _boundAgent = application;
+    _boundAgenda = agenda;
+    _boundLayout = layout;
+    _boundDeveloperUi = developerUi;
+    _agentHostOwners[application] = this;
+    application.controlTools.bindCredentialInput((endpoint) async {
+      if (!mounted) return null;
+      final key = await requestAgentCredential(context, endpoint);
+      return key == null ? null : AgentCredentialInput(key);
+    });
+    application.platformTools.bindServices(
+      notifications:
+          agenda?.notificationService ??
+          context.read<AgendaNotificationService?>(),
+      schoolWebSession: SchoolWebSessionService.instance,
+      schoolWebSessionSupported:
+          !kIsWeb &&
+          const {
+            TargetPlatform.android,
+            TargetPlatform.iOS,
+            TargetPlatform.macOS,
+            TargetPlatform.windows,
+          }.contains(defaultTargetPlatform),
+      android: _agentAndroid,
+      desktopWindow: DesktopWindowBridge.instance,
+      layout: layout,
+      developerUi: developerUi,
+      closeWindow: (scope) =>
+          application.runMaintenanceFromAgent(scope, () async {
+            await DesktopWindowBridge.instance.requestClose();
+            return ExternalEffectResult(
+              state: ExternalEffectState.unknown,
+              details: {'closeRequested': true, 'processExitObserved': false},
+            );
+          }),
+    );
+    final session = context.read<AppSession>();
+    final developer = context.read<DeveloperCommands>();
+    Future<AgentArtifactWriteResult> saveArtifact(
+      AgentDataArtifact artifact,
+    ) async {
+      final result = await widget.agentExportService.saveFile(
+        ExportPayload(
+          fileName: artifact.name,
+          content: artifact.text,
+          mimeType: artifact.mimeType,
+        ),
+      );
+      return AgentArtifactWriteResult(
+        saved: result.isSuccess,
+        cancelled: result.status == ExportSaveStatus.cancelled,
+        destination: result.path,
+      );
+    }
+
+    application.conversationTools.bindServices(saveArtifact: saveArtifact);
+    application.workflowTools.bindServices(
+      saveArtifact: saveArtifact,
+      clearData: !kIsWeb && defaultTargetPlatform != TargetPlatform.iOS
+          ? (scope) => application.runMaintenanceFromAgent(scope, () async {
+              final clear = context.read<AppDataClearController>();
+              final coordinator =
+                  widget.agentDataClearCoordinator ??
+                  AppDataClearCoordinator(
+                    agendaCoordinator: agenda,
+                    desktopLayoutPreferences: layout,
+                  );
+              try {
+                await coordinator.clearAndExit(clear);
+              } catch (_) {
+                return ExternalEffectResult(
+                  state: ExternalEffectState.unknown,
+                  dataStatus: clear.isCommitted
+                      ? ExternalDataState.committed
+                      : ExternalDataState.unknown,
+                  details: {
+                    'dataCleared': clear.isCommitted,
+                    'processExitObserved': false,
+                  },
+                );
+              }
+              return ExternalEffectResult(
+                state: ExternalEffectState.unknown,
+                dataStatus: ExternalDataState.committed,
+                details: {'dataCleared': true, 'processExitObserved': false},
+              );
+            })
+          : null,
+      navigation: _navigateAgentTarget,
+      developerSample: (language) async {
+        await developer.addSampleData(language);
+        return ExternalEffectResult(
+          state: ExternalEffectState.applied,
+          dataStatus: ExternalDataState.committed,
+          details: {
+            'timetableId': session.committedData.studentMode.activeTimetableId,
+            'calendarId': session.committedData.generalMode.activeScheduleId,
+          },
+        );
+      },
+    );
+  }
+
+  void _unbindAgentServices() {
+    final previous = _boundAgent;
+    if (previous != null && identical(_agentHostOwners[previous], this)) {
+      previous.platformTools.bindServices();
+      previous.workflowTools.bindServices();
+      previous.conversationTools.bindServices();
+      previous.controlTools.bindCredentialInput(null);
+      _agentHostOwners[previous] = null;
+    }
+    _boundAgent = null;
+  }
+
+  Future<ExternalEffectResult> _navigateAgentTarget(
+    AgentNavigationTarget target,
+  ) async {
+    if (!mounted) {
+      throw const OperationProblem(
+        OperationErrorCode.cancelled,
+        'The navigation host was closed.',
+      );
+    }
+    final session = context.read<AppSession>();
+    final workspaces = context.read<WorkspaceCommands>();
+    final student = context.read<StudentCommands>();
+    final studentView = context.read<StudentViewState>();
+    final general = context.read<GeneralCommands>();
+    final navigation = context.read<GeneralNavigationController>();
+    final persistence = context.read<AppPersistence>();
+    final data = session.committedData;
+    if (!data.isWorkspaceEnabled(target.workspace)) {
+      throw const OperationProblem(
+        OperationErrorCode.disabled,
+        'The requested workspace is disabled.',
+      );
+    }
+    final ref = target.ref;
+    if (ref != null) {
+      ResourceQueries(
+        snapshot: data,
+        datasetGeneration: 'navigation',
+        snapshotRevision: 0,
+      ).get(ref);
+    }
+    TimetableData? timetable;
+    CourseItem? course;
+    GeneralEvent? event;
+    if (target.workspace == AppMode.student &&
+        ref?.kind != ResourceKind.periodTimeSet) {
+      final id = ref == null
+          ? data.studentMode.activeTimetableId
+          : ref.kind == ResourceKind.timetable
+          ? ref.id
+          : ref.parentId;
+      timetable = data.studentMode.timetables
+          .where((value) => value.id == id)
+          .firstOrNull;
+      if (timetable == null) {
+        throw const OperationProblem(
+          OperationErrorCode.notFound,
+          'The requested timetable does not exist.',
+        );
+      }
+      if (ref?.kind == ResourceKind.course) {
+        course = timetable.courses.singleWhere((value) => value.id == ref!.id);
+      }
+    }
+    if (ref?.kind == ResourceKind.event) {
+      event = data.generalMode.schedules
+          .singleWhere((value) => value.id == ref!.parentId)
+          .events
+          .singleWhere((value) => value.id == ref!.id);
+    }
+    final week =
+        target.week ??
+        (target.date != null && timetable != null
+            ? currentWeekFor(timetable.config, now: target.date)
+            : course?.semesterWeeks.firstOrNull);
+    if (week != null &&
+        timetable != null &&
+        (week < 1 || week > timetable.config.totalWeeks)) {
+      throw const OperationProblem(
+        OperationErrorCode.invalidArgument,
+        'The requested week is outside this timetable.',
+      );
+    }
+    await workspaces.switchMode(target.workspace);
+    if (timetable != null) {
+      await student.switchTimetable(timetable.id);
+      if (week != null) await student.setSelectedWeek(week);
+    }
+    if (target.workspace == AppMode.general) {
+      if (ref != null) {
+        await general.switchSchedule(
+          ref.kind == ResourceKind.calendar ? ref.id : ref.parentId!,
+        );
+      }
+      final date =
+          target.date ??
+          (event == null
+              ? null
+              : DateTime.parse(event.startDateTimeIso).toLocal());
+      if (date != null) await navigation.setSelectedDate(date);
+    }
+    await persistence.flushPendingUiStateSaves();
+    if (ref != null) {
+      ResourceQueries(
+        snapshot: session.committedData,
+        datasetGeneration: 'navigation',
+        snapshotRevision: 0,
+      ).get(ref);
+      if (!mounted) {
+        throw const OperationProblem(
+          OperationErrorCode.cancelled,
+          'The navigation host was closed.',
+        );
+      }
+      AgentResourceView.open(context, ref.toJson()).ignore();
+    }
+    return ExternalEffectResult(
+      state: ExternalEffectState.applied,
+      dataStatus: ExternalDataState.committed,
+      details: {
+        'workspace': session.committedData.activeMode.name,
+        'timetableId': session.committedData.studentMode.activeTimetableId,
+        'week': studentView.selectedWeek,
+        'calendarId': session.committedData.generalMode.activeScheduleId,
+        'date': session.committedData.generalMode.selectedDateIso,
+        if (ref != null) 'ref': ref.toJson(),
+      },
+    );
   }
 
   @override
   void dispose() {
+    _unbindAgentServices();
     _readinessChanges?.removeListener(_onLifecycleReady);
     super.dispose();
   }
@@ -139,7 +422,7 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     final wasWritable = _lastObservedCanWrite;
     _lastObservedCanWrite = lifecycle.canWrite;
     if (lifecycle.isLoaded && !lifecycle.canWrite) {
-      if (wasWritable == true || _retainedRecoveryDraftRoute != null) {
+      if (wasWritable == true) {
         _clearRoutesForRecovery(lifecycle);
       }
       return;
@@ -150,7 +433,6 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
   }
 
   void _clearRoutesForRecovery(AppLifecycle lifecycle) {
-    final maintenance = context.read<AppDataMaintenance>();
     if (_isClearingRoutesForRecovery) return;
     _isClearingRoutesForRecovery = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -158,41 +440,14 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
         if (!mounted || _lastLifecycle != lifecycle || lifecycle.canWrite) {
           return;
         }
-        retireSkedTaskRoutesUntil(Navigator.of(context, rootNavigator: true), (
-          route,
-        ) {
-          if (route.isFirst) return true;
-          final draft = route.settings.arguments;
-          if (draft is! SchoolImportRecoveryDraft ||
-              !draft.canRetainFor(maintenance)) {
-            return false;
-          }
-          _observeRetainedRecoveryDraft(route, lifecycle);
-          return true;
-        });
+        retireSkedTaskRoutesUntil(
+          Navigator.of(context, rootNavigator: true),
+          (route) => route.isFirst,
+        );
       } finally {
         _isClearingRoutesForRecovery = false;
       }
     });
-  }
-
-  void _observeRetainedRecoveryDraft(
-    Route<dynamic> route,
-    AppLifecycle lifecycle,
-  ) {
-    if (identical(_retainedRecoveryDraftRoute, route)) return;
-    _retainedRecoveryDraftRoute = route;
-    unawaited(
-      route.popped.then<void>((_) {
-        if (!mounted || !identical(_retainedRecoveryDraftRoute, route)) return;
-        _retainedRecoveryDraftRoute = null;
-        // Leaving the protected draft while writes remain blocked must reveal
-        // the global recovery screen, not stale settings/source routes below it.
-        if (identical(_lastLifecycle, lifecycle) && !lifecycle.canWrite) {
-          _clearRoutesForRecovery(lifecycle);
-        }
-      }),
-    );
   }
 
   void _ensurePrivacyConsentDialog(AppLifecycle lifecycle) {

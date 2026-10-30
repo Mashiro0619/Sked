@@ -578,8 +578,6 @@
   "@privacyGateTitle": {},
   "privacyGateSummaryStorage": "Gli orari delle lezioni, le agende generali, i gruppi di orari delle lezioni e la configurazione dei siti scolastici sono memorizzati solo localmente e non vengono caricati automaticamente su un server dello sviluppatore.",
   "@privacyGateSummaryStorage": {},
-  "privacyGateSummaryImportExport": "L’importazione, l’esportazione, i backup completi e la condivisione avvengono solo quando li avvii esplicitamente. I backup completi dell’app escludono le chiavi API personalizzate e l’analisi di testo / HTML dell’orario invia solo il contenuto fornito all’endpoint di analisi configurato.",
-  "@privacyGateSummaryImportExport": {},
   "privacyGateSummaryUpdates": "Se una versione successiva cambia il modo in cui vengono gestiti i dati, l'app potrebbe chiederti di rivedere di nuovo l'informativa aggiornata.",
   "@privacyGateSummaryUpdates": {},
   "schoolWebImportEntry": "Importa dalla pagina web della scuola",

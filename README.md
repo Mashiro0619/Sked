@@ -62,7 +62,7 @@ Sked 是一款用 Flutter 开发的课表与日程应用。它既可以按学期
 - 记录课程名称、教师、地点、节次、备注和自定义字段。
 - 保存多套节次时间，供不同课表使用。
 - 自定义课程颜色、描边、显示内容和课表布局。
-- 从 JSON、普通文本、HTML 或学校网页导入课表，并在保存前检查和修改结果。
+- 直接导入 JSON 课表；普通文字交给 Agent 解析，学校网页经过本地压缩与校对后交给新会话处理。
 
 ### 通用日程
 
@@ -81,11 +81,21 @@ Sked 是一款用 Flutter 开发的课表与日程应用。它既可以按学期
 - 桌面两个工作区共用完整侧栏、图标侧栏与隐藏入口的响应式规则；窄窗可临时打开资源抽屉，添加课程／日程始终保留直接入口。
 - 课表、日历和编辑面板按手机、平板及桌面窗口的实际空间调整，并提供多语言界面；资源校验、英文回退和人工复核要求见[本地化检查与复核](docs/LOCALIZATION_CHECKS.md)。
 
+### 内置 Agent
+
+- 在功能管理中开启一个内置 Agent，可建立多个会话，共用模型连接和操作能力。
+- 手机使用独立会话页面，桌面可以与课表、日程并排使用，窄窗口切换为覆盖面板。
+- 自选兼容 Chat Completions 或 Responses 的模型 API，支持安全输入密钥、测试连接和读取模型列表。
+- 选择只读计划、每次修改前询问或完全权限；通过工具查询和管理课表、日程、设置、导入导出及设备支持的操作。
+- 修改前可查看具体目标和变化，结果区分已保存、未完成和需要核对；可撤销的业务变更按对象检查后撤销。
+
+具体能力、会话保留和系统权限边界见[使用逻辑](docs/USAGE_LOGIC.md)。API 是否支持工具调用需由实际连接核验；设备操作仍受所在平台支持与系统授权限制。
+
 ## 开始使用
 
 首次启动时选择「仅课表」「仅日程」或「两者」，选择两者默认进入课表。日常在主界面切换已启用的工作区；在「设置 → 功能管理」中可以停用或重新启用工作区。停用会保留数据、隐藏相关入口并停止对应提醒，至少保留一个工作区。双工作区下仍可单独隐藏导航，这不等于停用。手机隐藏底部导航后，可在「更多」中直接选择工作区；若将「工作区」配置为顶栏显示，则点击切换按钮选择。
 
-使用学生课表时，可以先新建课表和节次时间集，再手动添加课程；已有课表也可以直接通过文件、文本、HTML 或学校网页导入。使用通用日程时，先建立日历，然后添加日程或导入 JSON、ICS 文件。
+使用学生课表时，可以先新建课表和节次时间集，再手动添加课程；已有 JSON 课表可直接导入，普通文字和学校网页可通过 Agent 整理。首次使用 Agent 时，在功能管理中开启并配置自己的模型 API。使用通用日程时，先建立日历，然后添加日程或导入 JSON、ICS 文件。
 
 ## 下载与平台支持
 
@@ -123,7 +133,7 @@ Sked 通过 `/models` 获取模型列表，通过 `/chat/completions` 解析课�
 
 环境准备、原子提交、本地化和验证流程见 [贡献指南](CONTRIBUTING.md)。
 
-全软件 Agent 的后续设计见 [架构提案](docs/AGENT_ARCHITECTURE.md)、[能力全集](docs/AGENT_CAPABILITIES.md)、[数据与应用重构](docs/AGENT_DATA_REFACTOR.md)、[共享 Skills](docs/AGENT_SKILLS.md)、[开源 harness 研究](docs/AGENT_HARNESS_RESEARCH.md)和[实施计划](docs/AGENT_IMPLEMENTATION_PLAN.md)。方案为单 Agent、多会话，统一现有 AI 解析业务；这些文档是待实施方案，不是当前版本的功能说明。
+内置 Agent 的当前行为见[运行说明](docs/AGENT_RUNTIME.md)和[使用逻辑](docs/USAGE_LOGIC.md)。设计依据与验收边界见[架构](docs/AGENT_ARCHITECTURE.md)、[能力全集](docs/AGENT_CAPABILITIES.md)、[数据与应用重构](docs/AGENT_DATA_REFACTOR.md)、[共享 Skills](docs/AGENT_SKILLS.md)、[开源 harness 研究](docs/AGENT_HARNESS_RESEARCH.md)和[实施计划](docs/AGENT_IMPLEMENTATION_PLAN.md)；其中的后续设计与尚未完成的外部验收均单独标明。
 
 学校站点配置位于 [`assets/school_sites.json`](assets/school_sites.json)，也欢迎补充尚未收录的学校。
 
@@ -134,3 +144,5 @@ Sked 基于 [GNU Affero General Public License v3.0](LICENSE) 开源。图标等
 - [版本发布](https://github.com/Mashiro0619/Sked/releases)
 - [问题反馈](https://github.com/Mashiro0619/Sked/issues)
 - [隐私政策](https://sked.mashiro.tech/privacy.html)
+
+友链 [Linux Do](https://linux.do)

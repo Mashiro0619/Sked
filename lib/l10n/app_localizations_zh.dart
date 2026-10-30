@@ -832,7 +832,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get privacyGateSummaryImportExport =>
-      '导入、导出、完整备份和分享仅在你主动操作时触发；完整应用备份不包含自定义 API 密钥，课表文本 / HTML 解析只会把你提交的内容发送到你配置的解析接口。';
+      '导入、导出、备份和分享按你的请求执行；完整备份不包含 API 密钥和聊天记录。使用 Agent 时，你的消息、附件及工具为任务读取的相关应用数据会发送到你配置的 API 服务。';
 
   @override
   String get privacyGateSummaryUpdates =>
@@ -3088,6 +3088,339 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get noPendingReminders => '暂无待处理提醒';
+
+  @override
+  String get agentTitle => 'Agent';
+
+  @override
+  String get agentNewConversation => '新建会话';
+
+  @override
+  String get agentConversations => '会话记录';
+
+  @override
+  String get agentRenameConversation => '重命名会话';
+
+  @override
+  String get agentDeleteConversation => '删除会话？';
+
+  @override
+  String get agentDeleteConversationMessage =>
+      '这会停止正在运行的任务，并删除此会话的消息、来源资料和草稿。已经修改的课表与日程会保留。';
+
+  @override
+  String get agentConversationActions => '会话操作';
+
+  @override
+  String get agentEmptyHistory => '暂无会话。';
+
+  @override
+  String get agentEmptyConversation => '描述你想查看或修改的课表、日程或设置。';
+
+  @override
+  String get agentMessageHint => '向 Agent 发送消息';
+
+  @override
+  String get agentSend => '发送';
+
+  @override
+  String get agentStop => '停止';
+
+  @override
+  String get agentRunning => '正在处理…';
+
+  @override
+  String get agentStopped => '已停止。已完成的修改仍然保留。';
+
+  @override
+  String get agentRunFailed => '本次任务未能完成。';
+
+  @override
+  String get agentOperationFailed => '无法保存或完成此操作。输入仍保留在此处。';
+
+  @override
+  String get agentRetry => '重试';
+
+  @override
+  String get agentDisabled => 'Agent 已在功能管理中停用。';
+
+  @override
+  String get agentMaintenance => '正在维护应用数据，请稍后再操作。';
+
+  @override
+  String get agentConfigureFirst => '发送消息前，请先配置模型连接。';
+
+  @override
+  String get agentModePlan => '规划';
+
+  @override
+  String get agentModeAsk => '确认';
+
+  @override
+  String get agentModeFull => '完全';
+
+  @override
+  String get agentModePlanDescription => '只查看数据并提出方案，不执行修改。';
+
+  @override
+  String get agentModeAskDescription => '每次修改前先请求确认。';
+
+  @override
+  String get agentModeFullDescription => '允许直接执行修改，无需逐次确认。';
+
+  @override
+  String get agentAssistant => 'Agent';
+
+  @override
+  String get agentYou => '你';
+
+  @override
+  String get agentNotice => '提示';
+
+  @override
+  String get agentToolResponse => '工具返回';
+
+  @override
+  String get agentToolArguments => '工具参数';
+
+  @override
+  String get agentSourceMaterial => '来源资料';
+
+  @override
+  String get agentSourceTruncated => '此来源资料在添加前已缩短。';
+
+  @override
+  String get agentApprovalRequired => '确认具体修改';
+
+  @override
+  String get agentPlanDetails => '修改详情';
+
+  @override
+  String get agentApprove => '批准这些修改';
+
+  @override
+  String get agentReject => '拒绝';
+
+  @override
+  String get agentApiDataNotice =>
+      'Agent 会将你的消息、附件及工具为任务读取的相关应用数据发送到你配置的 API 服务。';
+
+  @override
+  String get agentModelSettings => 'Agent 模型设置';
+
+  @override
+  String get agentEndpoint => 'API 地址';
+
+  @override
+  String get agentModel => '模型';
+
+  @override
+  String get agentProtocol => 'API 协议';
+
+  @override
+  String get agentApiKey => 'API 密钥';
+
+  @override
+  String get agentKeyHint => '留空以保留已保存的密钥。';
+
+  @override
+  String get agentShowKey => '显示密钥';
+
+  @override
+  String get agentHideKey => '隐藏密钥';
+
+  @override
+  String get agentClearKey => '删除已保存的密钥';
+
+  @override
+  String get agentInvalidEndpoint => '请输入有效的 HTTP 或 HTTPS 地址，不含内嵌凭据或片段。';
+
+  @override
+  String get agentRequiredField => '请填写此项。';
+
+  @override
+  String get agentSaveFailed => '连接设置未能保存。输入已保留，可重试。';
+
+  @override
+  String get agentSaving => '正在保存…';
+
+  @override
+  String get schoolWebAgentReviewTitle => '校对学校网页';
+
+  @override
+  String get schoolWebAgentReviewHint =>
+      '请校对整理后的网页内容。Agent 将在新会话中使用这些内容作为导入材料。';
+
+  @override
+  String get schoolWebAgentHandoff => '交给 Agent 继续';
+
+  @override
+  String get agentChangesSaved => '更改已保存';
+
+  @override
+  String get agentActionApplied => '操作已完成';
+
+  @override
+  String get agentActionUncertain => '需要核对操作结果';
+
+  @override
+  String get agentPlanReady => '更改已准备好';
+
+  @override
+  String get agentActionFailed => '操作未完成';
+
+  @override
+  String agentChangeCount(int count) {
+    return '共 $count 项更改';
+  }
+
+  @override
+  String get agentChangeCreated => '已添加';
+
+  @override
+  String get agentChangeDeleted => '已删除';
+
+  @override
+  String get agentChangeUpdated => '已更新';
+
+  @override
+  String get agentViewObject => '查看对象';
+
+  @override
+  String get agentMoreChanges => '其余更改已保存在操作记录中。';
+
+  @override
+  String get agentUndo => '撤销这些更改';
+
+  @override
+  String get agentValueBefore => '修改前';
+
+  @override
+  String get agentValueAfter => '修改后';
+
+  @override
+  String get agentShowMoreChanges => '查看更多更改';
+
+  @override
+  String get agentConnectionChanged => '模型连接已更换。请新建会话，再向新的接口发送内容。';
+
+  @override
+  String get agentLimitsReached => '本次运行已达到限制。请缩小任务范围，或分次继续。';
+
+  @override
+  String get agentSensitiveContent => '消息中包含 API 密钥。请移除密钥后再发送。';
+
+  @override
+  String get agentRequestFailed => '模型请求失败。请检查连接和所选模型后重试。';
+
+  @override
+  String get agentQueueFollowUp => '排队发送';
+
+  @override
+  String get agentSteer => '补充当前要求';
+
+  @override
+  String get agentContinue => '继续';
+
+  @override
+  String agentQueuedMessages(int count) {
+    return '$count 条消息待处理';
+  }
+
+  @override
+  String get agentRunPreferences => '运行偏好';
+
+  @override
+  String get agentSystemInstructions => '所有会话共用的指令';
+
+  @override
+  String get agentMaxModelRounds => '每次运行最多请求次数';
+
+  @override
+  String get agentMaxToolCalls => '每次运行最多工具调用次数';
+
+  @override
+  String get agentMaxTotalTokens => '每次运行最多报告 token 数';
+
+  @override
+  String get agentHistoryRetentionDays => '历史保留天数（0 为永久保留）';
+
+  @override
+  String get agentPreferenceLimitHint =>
+      '可永久保留，或选择 7–3650 天。只清理已结束且没有草稿或待处理输入的会话。';
+
+  @override
+  String get agentPreferencesSaved => '偏好已保存';
+
+  @override
+  String get agentInvalidPreference => '请输入所示范围内的值。';
+
+  @override
+  String get agentBackupConnectionPreserved =>
+      '保留本机 Agent 连接、权限和凭据；恢复备份不会切换模型连接。';
+
+  @override
+  String get agentArchiveConversation => '归档会话';
+
+  @override
+  String get agentArchivedConversations => '已归档会话';
+
+  @override
+  String get agentRestoreConversation => '恢复会话';
+
+  @override
+  String get agentExportConversation => '导出会话';
+
+  @override
+  String agentSavedConnectionHint(String endpoint) {
+    return '诊断使用已保存的连接：$endpoint。尚未保存的修改不会发送。';
+  }
+
+  @override
+  String get agentTestConnection => '测试已保存连接';
+
+  @override
+  String get agentLoadModels => '获取模型';
+
+  @override
+  String get agentConnectionOk => '连接成功';
+
+  @override
+  String get agentToolsObserved => '已收到有效的工具调用';
+
+  @override
+  String get agentToolsUnverified => '连接成功，但尚未验证工具调用';
+
+  @override
+  String get agentModelsPartial => '服务返回了部分模型列表。';
+
+  @override
+  String get agentChooseModel => '选择模型';
+
+  @override
+  String get agentRecoveryRequired => '请先核对上次操作结果，当前只能读取。';
+
+  @override
+  String get agentAttachFile => '附加文本文件';
+
+  @override
+  String get agentRemoveAttachment => '移除附件';
+
+  @override
+  String get agentAttachmentTooLarge => '附件超过 512 KiB 上限。';
+
+  @override
+  String get agentAttachmentFailed => '无法附加文件，会话内容未改变。';
+
+  @override
+  String get agentHttpTransportWarning =>
+      '此连接使用 HTTP。测试、获取模型或发送请求时，API 密钥和请求内容会以明文传输。';
+
+  @override
+  String get agentHttpTransportApproval => '允许向此连接发送 HTTP 请求？';
+
+  @override
+  String get agentHttpTransportScope => '此许可可在本次应用运行期间用于同一已保存连接，不代表批准修改数据。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -3916,7 +4249,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get privacyGateSummaryImportExport =>
-      '匯入、匯出、完整備份和分享僅在你主動操作時觸發；完整應用備份不包含自訂 API 金鑰，課表文字 / HTML 解析只會把你提交的內容發送到你設定的解析介面。';
+      '匯入、匯出、備份和分享依你的請求執行；完整備份不包含 API 金鑰和聊天記錄。使用 Agent 時，你的訊息、附件及工具為任務讀取的相關應用程式資料會傳送到你設定的 API 服務。';
 
   @override
   String get privacyGateSummaryUpdates =>
@@ -6175,4 +6508,337 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get noPendingReminders => '暫無待處理提醒';
+
+  @override
+  String get agentTitle => 'Agent';
+
+  @override
+  String get agentNewConversation => '新增對話';
+
+  @override
+  String get agentConversations => '對話記錄';
+
+  @override
+  String get agentRenameConversation => '重新命名對話';
+
+  @override
+  String get agentDeleteConversation => '刪除對話？';
+
+  @override
+  String get agentDeleteConversationMessage =>
+      '這會停止執行中的任務，並刪除此對話的訊息、來源資料和草稿。已修改的課表與日程會保留。';
+
+  @override
+  String get agentConversationActions => '對話操作';
+
+  @override
+  String get agentEmptyHistory => '尚無對話。';
+
+  @override
+  String get agentEmptyConversation => '描述你想查看或修改的課表、日程或設定。';
+
+  @override
+  String get agentMessageHint => '傳送訊息給 Agent';
+
+  @override
+  String get agentSend => '傳送';
+
+  @override
+  String get agentStop => '停止';
+
+  @override
+  String get agentRunning => '正在處理…';
+
+  @override
+  String get agentStopped => '已停止。已完成的修改仍然保留。';
+
+  @override
+  String get agentRunFailed => '本次任務未能完成。';
+
+  @override
+  String get agentOperationFailed => '無法儲存或完成此操作。輸入仍保留在此處。';
+
+  @override
+  String get agentRetry => '重試';
+
+  @override
+  String get agentDisabled => 'Agent 已在功能管理中停用。';
+
+  @override
+  String get agentMaintenance => '正在維護應用程式資料，請稍後再操作。';
+
+  @override
+  String get agentConfigureFirst => '傳送訊息前，請先設定模型連線。';
+
+  @override
+  String get agentModePlan => '規劃';
+
+  @override
+  String get agentModeAsk => '確認';
+
+  @override
+  String get agentModeFull => '完全';
+
+  @override
+  String get agentModePlanDescription => '僅查看資料並提出方案，不執行修改。';
+
+  @override
+  String get agentModeAskDescription => '每次修改前先請求確認。';
+
+  @override
+  String get agentModeFullDescription => '允許直接執行修改，無需逐次確認。';
+
+  @override
+  String get agentAssistant => 'Agent';
+
+  @override
+  String get agentYou => '你';
+
+  @override
+  String get agentNotice => '提示';
+
+  @override
+  String get agentToolResponse => '工具回應';
+
+  @override
+  String get agentToolArguments => '工具參數';
+
+  @override
+  String get agentSourceMaterial => '來源資料';
+
+  @override
+  String get agentSourceTruncated => '此來源資料在加入前已縮短。';
+
+  @override
+  String get agentApprovalRequired => '確認具體修改';
+
+  @override
+  String get agentPlanDetails => '修改詳情';
+
+  @override
+  String get agentApprove => '批准這些修改';
+
+  @override
+  String get agentReject => '拒絕';
+
+  @override
+  String get agentApiDataNotice =>
+      'Agent 會將你的訊息、附件及工具為任務讀取的相關應用程式資料傳送到你設定的 API 服務。';
+
+  @override
+  String get agentModelSettings => 'Agent 模型設定';
+
+  @override
+  String get agentEndpoint => 'API 位址';
+
+  @override
+  String get agentModel => '模型';
+
+  @override
+  String get agentProtocol => 'API 協定';
+
+  @override
+  String get agentApiKey => 'API 金鑰';
+
+  @override
+  String get agentKeyHint => '留空以保留已儲存的金鑰。';
+
+  @override
+  String get agentShowKey => '顯示金鑰';
+
+  @override
+  String get agentHideKey => '隱藏金鑰';
+
+  @override
+  String get agentClearKey => '刪除已儲存的金鑰';
+
+  @override
+  String get agentInvalidEndpoint => '請輸入有效的 HTTP 或 HTTPS 位址，不含內嵌憑證或片段。';
+
+  @override
+  String get agentRequiredField => '請填寫此項。';
+
+  @override
+  String get agentSaveFailed => '連線設定未能儲存。輸入已保留，可重試。';
+
+  @override
+  String get agentSaving => '正在儲存…';
+
+  @override
+  String get schoolWebAgentReviewTitle => '校對學校網頁';
+
+  @override
+  String get schoolWebAgentReviewHint =>
+      '請校對整理後的網頁內容。Agent 將在新對話中使用這些內容作為匯入素材。';
+
+  @override
+  String get schoolWebAgentHandoff => '交給 Agent 繼續';
+
+  @override
+  String get agentChangesSaved => '變更已儲存';
+
+  @override
+  String get agentActionApplied => '操作已完成';
+
+  @override
+  String get agentActionUncertain => '需要核對操作結果';
+
+  @override
+  String get agentPlanReady => '變更已準備好';
+
+  @override
+  String get agentActionFailed => '操作未完成';
+
+  @override
+  String agentChangeCount(int count) {
+    return '共 $count 項變更';
+  }
+
+  @override
+  String get agentChangeCreated => '已新增';
+
+  @override
+  String get agentChangeDeleted => '已刪除';
+
+  @override
+  String get agentChangeUpdated => '已更新';
+
+  @override
+  String get agentViewObject => '查看項目';
+
+  @override
+  String get agentMoreChanges => '其餘變更已儲存在操作記錄中。';
+
+  @override
+  String get agentUndo => '復原這些變更';
+
+  @override
+  String get agentValueBefore => '修改前';
+
+  @override
+  String get agentValueAfter => '修改後';
+
+  @override
+  String get agentShowMoreChanges => '查看更多變更';
+
+  @override
+  String get agentConnectionChanged => '模型連線已變更。請新增對話，再向新的端點傳送內容。';
+
+  @override
+  String get agentLimitsReached => '本次執行已達到限制。請縮小任務範圍，或分次繼續。';
+
+  @override
+  String get agentSensitiveContent => '訊息中包含 API 金鑰。請移除金鑰後再傳送。';
+
+  @override
+  String get agentRequestFailed => '模型請求失敗。請檢查連線和所選模型後重試。';
+
+  @override
+  String get agentQueueFollowUp => '排隊傳送';
+
+  @override
+  String get agentSteer => '補充目前要求';
+
+  @override
+  String get agentContinue => '繼續';
+
+  @override
+  String agentQueuedMessages(int count) {
+    return '$count 則訊息待處理';
+  }
+
+  @override
+  String get agentRunPreferences => '執行偏好';
+
+  @override
+  String get agentSystemInstructions => '所有對話共用的指令';
+
+  @override
+  String get agentMaxModelRounds => '每次執行的請求次數上限';
+
+  @override
+  String get agentMaxToolCalls => '每次執行的工具呼叫次數上限';
+
+  @override
+  String get agentMaxTotalTokens => '每次執行的回報 token 上限';
+
+  @override
+  String get agentHistoryRetentionDays => '歷史保留天數（0 為永久保留）';
+
+  @override
+  String get agentPreferenceLimitHint =>
+      '可永久保留，或選擇 7–3650 天。只清理已結束且沒有草稿或待處理輸入的對話。';
+
+  @override
+  String get agentPreferencesSaved => '偏好已儲存';
+
+  @override
+  String get agentInvalidPreference => '請輸入所示範圍內的值。';
+
+  @override
+  String get agentBackupConnectionPreserved =>
+      '保留本機 Agent 連線、權限與憑據；還原備份不會切換模型連線。';
+
+  @override
+  String get agentArchiveConversation => '封存對話';
+
+  @override
+  String get agentArchivedConversations => '已封存的對話';
+
+  @override
+  String get agentRestoreConversation => '還原對話';
+
+  @override
+  String get agentExportConversation => '匯出對話';
+
+  @override
+  String agentSavedConnectionHint(String endpoint) {
+    return '診斷使用已儲存的連線：$endpoint。尚未儲存的修改不會傳送。';
+  }
+
+  @override
+  String get agentTestConnection => '測試已儲存連線';
+
+  @override
+  String get agentLoadModels => '取得模型';
+
+  @override
+  String get agentConnectionOk => '連線成功';
+
+  @override
+  String get agentToolsObserved => '已收到有效的工具呼叫';
+
+  @override
+  String get agentToolsUnverified => '連線成功，但尚未驗證工具呼叫';
+
+  @override
+  String get agentModelsPartial => '服務回傳了部分模型清單。';
+
+  @override
+  String get agentChooseModel => '選擇模型';
+
+  @override
+  String get agentRecoveryRequired => '請先核對上次操作結果，目前只能讀取。';
+
+  @override
+  String get agentAttachFile => '附加文字檔案';
+
+  @override
+  String get agentRemoveAttachment => '移除附件';
+
+  @override
+  String get agentAttachmentTooLarge => '附件超過 512 KiB 上限。';
+
+  @override
+  String get agentAttachmentFailed => '無法附加檔案，對話內容未變更。';
+
+  @override
+  String get agentHttpTransportWarning =>
+      '此連線使用 HTTP。測試、取得模型或傳送請求時，API 密鑰與請求內容會以明文傳輸。';
+
+  @override
+  String get agentHttpTransportApproval => '允許向此連線傳送 HTTP 請求？';
+
+  @override
+  String get agentHttpTransportScope => '此許可可在本次應用程式執行期間用於同一已儲存連線，不代表批准修改資料。';
 }

@@ -10,7 +10,6 @@ import 'package:sked/models/school_site_models.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
 import 'package:sked/app_runtime.dart';
-import 'package:sked/screens/school_html_import_page.dart';
 import 'package:sked/screens/school_sites_page.dart';
 import 'package:sked/screens/school_web_import_page.dart';
 import 'package:sked/services/export_service.dart';
@@ -205,6 +204,13 @@ Future<void> _pumpSchoolSitesPage(
           siteService: resolvedSiteService,
           exportService: exportService,
           pickJsonSource: pickJsonSource,
+          webImportPageBuilder: (site) => SchoolWebImportPage(
+            site: site,
+            supportsPopupWindows: false,
+            loadSites: resolvedSiteService.loadSites,
+            webViewBuilder: (_) =>
+                const SizedBox(key: ValueKey('site-route-browser-placeholder')),
+          ),
         ),
       ),
     ),
@@ -212,11 +218,6 @@ Future<void> _pumpSchoolSitesPage(
   for (var frame = 0; frame < 30; frame += 1) {
     await tester.pump(const Duration(milliseconds: 100));
   }
-}
-
-Future<void> _pumpRouteTransition(WidgetTester tester) async {
-  await tester.pump();
-  await tester.pump(const Duration(milliseconds: 500));
 }
 
 void main() {
@@ -299,7 +300,14 @@ void main() {
           );
           expect(opened.site.name, sites[0].name);
           expect(opened.site.loginUrl, sites[0].loginUrl);
+          expect(
+            find.byKey(const ValueKey('site-route-browser-placeholder')),
+            findsOneWidget,
+          );
           expect(tester.takeException(), isNull);
+          Navigator.of(tester.element(find.byType(SchoolWebImportPage))).pop();
+          await tester.pumpAndSettle();
+          expect(find.byType(SchoolSitesPage), findsOneWidget);
           await tester.pumpWidget(const SizedBox.shrink());
         } finally {
           semantics.dispose();
@@ -504,23 +512,15 @@ void main() {
     expect(find.text('Add school'), findsWidgets);
   });
 
-  testWidgets('text / HTML parsing entry ignores rapid duplicate taps', (
+  testWidgets('school list no longer offers a separate text / HTML parser', (
     tester,
   ) async {
     final provider = await _createProvider();
     await _pumpSchoolSitesPage(tester, provider);
 
     final htmlImportButton = find.byTooltip('Parse timetable from text / HTML');
-    expect(htmlImportButton, findsOneWidget);
-
-    await tester.tap(htmlImportButton);
-    await tester.tap(htmlImportButton, warnIfMissed: false);
-    await _pumpRouteTransition(tester);
-
-    expect(
-      find.byType(SchoolHtmlImportPage, skipOffstage: false),
-      findsOneWidget,
-    );
+    expect(htmlImportButton, findsNothing);
+    expect(find.byTooltip('Add school'), findsOneWidget);
   });
 
   testWidgets('JSON save retry and sharing keep the original site snapshot', (

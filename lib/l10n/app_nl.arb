@@ -572,8 +572,6 @@
   "@privacyGateTitle": {},
   "privacyGateSummaryStorage": "Lesroosters, algemene agenda’s, sets met lestijden en instellingen voor schoolwebsites worden alleen lokaal opgeslagen en niet automatisch naar een server van de ontwikkelaar geüpload.",
   "@privacyGateSummaryStorage": {},
-  "privacyGateSummaryImportExport": "Importeren, exporteren, volledige back-ups en delen gebeuren alleen wanneer je ze uitdrukkelijk start. Volledige app-back-ups bevatten geen aangepaste API-sleutels. Het analyseren van roostertekst / HTML stuurt alleen de ingediende inhoud naar het analyse-eindpunt dat je hebt ingesteld.",
-  "@privacyGateSummaryImportExport": {},
   "privacyGateSummaryUpdates": "Als een latere versie de verwerking van gegevens verandert, kan de app je vragen het aangepaste privacybeleid opnieuw te bekijken.",
   "@privacyGateSummaryUpdates": {},
   "schoolWebImportEntry": "Importeren van een schoolwebsite",

@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../l10n/app_localizations.dart';
 import '../models/workspace_context_snapshot.dart';
 import '../models/timetable_models.dart';
+import '../screens/agent_page.dart';
 import 'app_layout_tokens.dart';
 import 'sked_panel_header.dart';
 import 'workbench_chrome_metrics.dart';
@@ -51,10 +52,12 @@ class AssistantPaneScope extends InheritedWidget {
     this.onToggle,
     this.interactive = true,
     this.visible = false,
+    this.title,
   });
   final VoidCallback? onToggle;
   final bool interactive;
   final bool visible;
+  final String? title;
   final AssistantPaneController controller;
   final bool enabled;
   static AssistantPaneScope? of(BuildContext context) =>
@@ -64,7 +67,9 @@ class AssistantPaneScope extends InheritedWidget {
       controller != oldWidget.controller ||
       enabled != oldWidget.enabled ||
       interactive != oldWidget.interactive ||
-      visible != oldWidget.visible;
+      visible != oldWidget.visible ||
+      title != oldWidget.title ||
+      onToggle != oldWidget.onToggle;
 }
 
 class AssistantPaneToggle extends StatelessWidget {
@@ -75,13 +80,36 @@ class AssistantPaneToggle extends StatelessWidget {
     if (scope == null || !scope.enabled) return const SizedBox.shrink();
     return IconButton(
       key: const ValueKey('assistant-toggle'),
-      tooltip: AppLocalizations.of(context).assistantLayoutPreview,
+      tooltip:
+          scope.title ?? AppLocalizations.of(context).assistantLayoutPreview,
       icon: const Icon(Icons.chat_bubble_outline),
       onPressed: scope.interactive
           ? (scope.onToggle ?? scope.controller.toggle)
           : null,
     );
   }
+}
+
+class AgentAssistantPane extends StatelessWidget {
+  const AgentAssistantPane({super.key, required this.onClose});
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) => SkedSurface(
+    child: Column(
+      children: [
+        Padding(
+          padding: skedPanelHeaderPadding,
+          child: SkedPanelHeader(
+            title: Text(AppLocalizations.of(context).agentTitle),
+            onClose: onClose,
+          ),
+        ),
+        const Divider(height: 1),
+        const Expanded(child: AgentConversationHost()),
+      ],
+    ),
+  );
 }
 
 class AssistantPreviewPane extends StatelessWidget {

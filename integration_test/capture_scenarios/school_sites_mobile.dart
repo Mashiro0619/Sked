@@ -227,10 +227,6 @@ void registerCaptureScenarios() {
             find.byTooltip(l.schoolSitesAdd).hitTestable(),
             findsOneWidget,
           );
-          expect(
-            find.byTooltip(l.schoolHtmlImportEntry).hitTestable(),
-            findsOneWidget,
-          );
           await capture('two-sites');
 
           await showEditor(0, _shortSite);

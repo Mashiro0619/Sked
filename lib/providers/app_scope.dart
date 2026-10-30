@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 
+import '../agent/agent_application.dart';
 import '../controllers/app_backup_controller.dart';
 import '../controllers/app_data_maintenance.dart';
 import '../controllers/app_data_clear_controller.dart';
@@ -42,6 +43,7 @@ class AppScope extends StatelessWidget {
 
   static List<SingleChildWidget> providersFor(AppRuntime app) => [
     _AppScopeAnchor(app: app),
+    ChangeNotifierProvider<AgentApplication>.value(value: app.agent),
     Provider<AppSession>.value(value: app.session),
     ChangeNotifierProvider<AppLifecycle>.value(value: app.lifecycle),
     ListenableProvider<ValueListenable<AppSessionReadiness>>.value(

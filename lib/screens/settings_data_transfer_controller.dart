@@ -10,7 +10,6 @@ import '../widgets/workbench_chrome_metrics.dart';
 enum SettingsStudentDataAction {
   importTimetables,
   importTimetablesText,
-  importSchoolHtml,
   exportTimetablesShare,
   exportTimetablesSave,
   exportTimetablesText,
@@ -132,12 +131,6 @@ class SettingsDataTransferController {
             icon: Icons.paste_outlined,
             title: l10n.importTimetableText,
             subtitle: l10n.importTimetableTextDesc,
-          ),
-          _TransferAction(
-            value: SettingsStudentDataAction.importSchoolHtml,
-            icon: Icons.html_outlined,
-            title: l10n.schoolHtmlImportEntry,
-            subtitle: l10n.schoolHtmlImportEntryDesc,
           ),
         ],
         [

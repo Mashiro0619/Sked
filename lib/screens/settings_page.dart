@@ -41,7 +41,6 @@ import '../services/desktop_layout_preferences.dart';
 import '../services/agenda_notification_service.dart';
 import '../services/export_service.dart';
 import '../services/general_calendar_ics_service.dart';
-import '../services/school_import_error_redactor.dart';
 import '../services/text_file_picker.dart';
 import '../services/update_service.dart';
 import '../services/update_distribution.dart';
@@ -60,8 +59,6 @@ import 'general_display_settings_page.dart';
 import 'developer_mode_page.dart';
 import 'language_settings_page.dart';
 import 'notification_settings_page.dart';
-import 'school_html_import_page.dart';
-import 'school_import_parser_settings_page.dart';
 import 'settings_data_transfer_controller.dart';
 import 'theme_settings_page.dart';
 import 'timetable_display_settings_page.dart';
@@ -87,7 +84,6 @@ List<String> _defaultGeneralScheduleSelectionIds(
 
 enum _SettingsFlow {
   schoolSitesPage,
-  parserSettingsPage,
   studentDataActions,
   generalDataActions,
   appDataActions,
@@ -461,9 +457,6 @@ class _SettingsPageState extends State<SettingsPage>
     if (destination == SettingsDestination.generalPreferences) {
       return const GeneralDisplaySettingsPage();
     }
-    if (destination == SettingsDestination.parser) {
-      return const SchoolImportParserSettingsPage();
-    }
     if (destination == SettingsDestination.notificationPermissions) {
       return NotificationSettingsPage(
         troubleshooting: true,
@@ -515,17 +508,6 @@ class _SettingsPageState extends State<SettingsPage>
                               onTap: busy || maintenance.isReserved
                                   ? null
                                   : () => _openSchoolSitesPage(),
-                            ),
-                          ],
-                          importConfiguration: [
-                            SettingsTransferPageTile(
-                              key: const ValueKey('transfer-parser-settings'),
-                              icon: Icons.tune,
-                              title: l10n.schoolImportParserSettingsTitle,
-                              subtitle: l10n.schoolImportParserSettingsDesc,
-                              onTap: busy
-                                  ? null
-                                  : () => _openParserSettingsPage(),
                             ),
                           ],
                         )
@@ -737,17 +719,6 @@ class _SettingsPageState extends State<SettingsPage>
     } finally {
       _setFlowOpen(flow, false);
     }
-  }
-
-  Future<void> _openParserSettingsPage() async {
-    final scope = AppScope.capture(context)!;
-    await _guardFlow(_SettingsFlow.parserSettingsPage, () async {
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => scope.wrap(const SchoolImportParserSettingsPage()),
-        ),
-      );
-    });
   }
 
   Future<void> _openPrivacyPolicyPage() async {
@@ -1038,8 +1009,6 @@ class _SettingsPageState extends State<SettingsPage>
             await TimetableImportFlow.importTimetables(context);
           case SettingsStudentDataAction.importTimetablesText:
             await _importTimetablesFromText();
-          case SettingsStudentDataAction.importSchoolHtml:
-            await _openSchoolHtmlImportPage();
           case SettingsStudentDataAction.exportTimetablesShare:
             await _exportTimetables(share: true);
           case SettingsStudentDataAction.exportTimetablesSave:
@@ -1332,24 +1301,11 @@ class _SettingsPageState extends State<SettingsPage>
                 children: [
                   Text(l10n.restoreBackupConfirmMessage),
                   const SizedBox(height: 16),
-                  Consumer<SettingsViewState>(
-                    builder: (_, settings, _) {
-                      String endpoint(String value) => value.trim().isEmpty
-                          ? l10n.backupParserEndpointUnset
-                          : redactSchoolImportError(
-                              value,
-                              apiKey: settings.customSchoolImportApiKey,
-                            );
-                      return Text(
-                        l10n.restoreBackupParserSettingsSummary(
-                          endpoint(settings.customSchoolImportBaseUrl),
-                          endpoint(restored.aiApiSettings.customBaseUrl),
-                        ),
-                        key: const ValueKey(
-                          'restore-backup-parser-settings-summary',
-                        ),
-                      );
-                    },
+                  Text(
+                    l10n.agentBackupConnectionPreserved,
+                    key: const ValueKey(
+                      'restore-backup-agent-settings-summary',
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Text(l10n.backupWorkspaceSelection),
@@ -1540,15 +1496,6 @@ class _SettingsPageState extends State<SettingsPage>
     } finally {
       task.dispose();
     }
-  }
-
-  Future<void> _openSchoolHtmlImportPage() async {
-    final scope = AppScope.capture(context)!;
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => scope.wrap(const SchoolHtmlImportPage()),
-      ),
-    );
   }
 
   Future<void> _exportTimetablesAsText() async {

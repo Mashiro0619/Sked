@@ -1702,7 +1702,7 @@ abstract class AppLocalizations {
   /// No description provided for @privacyGateSummaryImportExport.
   ///
   /// In en, this message translates to:
-  /// **'Import, export, full backups, and sharing only happen when you explicitly start them; full app backups exclude custom API keys, and timetable text / HTML parsing only sends submitted content to your configured parser endpoint.'**
+  /// **'Imports, exports, backups, and sharing happen when you request them. Full backups exclude API keys and chats. When you use Agent, your messages, attachments, and task-related app data returned by tools are sent to your configured API service.'**
   String get privacyGateSummaryImportExport;
 
   /// No description provided for @privacyGateSummaryUpdates.
@@ -5867,6 +5867,648 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No pending reminders.'**
   String get noPendingReminders;
+
+  /// No description provided for @agentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Agent'**
+  String get agentTitle;
+
+  /// No description provided for @agentNewConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'New conversation'**
+  String get agentNewConversation;
+
+  /// No description provided for @agentConversations.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversations'**
+  String get agentConversations;
+
+  /// No description provided for @agentRenameConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename conversation'**
+  String get agentRenameConversation;
+
+  /// No description provided for @agentDeleteConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete conversation?'**
+  String get agentDeleteConversation;
+
+  /// No description provided for @agentDeleteConversationMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This stops its active run and deletes its messages, source material and draft. Changes already made to your schedules remain.'**
+  String get agentDeleteConversationMessage;
+
+  /// No description provided for @agentConversationActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation actions'**
+  String get agentConversationActions;
+
+  /// No description provided for @agentEmptyHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'No conversations yet.'**
+  String get agentEmptyHistory;
+
+  /// No description provided for @agentEmptyConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe what you want to view or change in Sked.'**
+  String get agentEmptyConversation;
+
+  /// No description provided for @agentMessageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Message Agent'**
+  String get agentMessageHint;
+
+  /// No description provided for @agentSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get agentSend;
+
+  /// No description provided for @agentStop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get agentStop;
+
+  /// No description provided for @agentRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Working…'**
+  String get agentRunning;
+
+  /// No description provided for @agentStopped.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped. Completed changes remain saved.'**
+  String get agentStopped;
+
+  /// No description provided for @agentRunFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'This run could not finish.'**
+  String get agentRunFailed;
+
+  /// No description provided for @agentOperationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save or complete this action. Your input is kept here.'**
+  String get agentOperationFailed;
+
+  /// No description provided for @agentRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get agentRetry;
+
+  /// No description provided for @agentDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Agent is disabled in Feature management.'**
+  String get agentDisabled;
+
+  /// No description provided for @agentMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'Data maintenance is in progress. Wait before starting another action.'**
+  String get agentMaintenance;
+
+  /// No description provided for @agentConfigureFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Configure the model connection before sending a message.'**
+  String get agentConfigureFirst;
+
+  /// No description provided for @agentModePlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan'**
+  String get agentModePlan;
+
+  /// No description provided for @agentModeAsk.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask'**
+  String get agentModeAsk;
+
+  /// No description provided for @agentModeFull.
+  ///
+  /// In en, this message translates to:
+  /// **'Full'**
+  String get agentModeFull;
+
+  /// No description provided for @agentModePlanDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'View data and propose changes without applying them.'**
+  String get agentModePlanDescription;
+
+  /// No description provided for @agentModeAskDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask for approval before applying changes.'**
+  String get agentModeAskDescription;
+
+  /// No description provided for @agentModeFullDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply changes without asking each time.'**
+  String get agentModeFullDescription;
+
+  /// No description provided for @agentAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'Agent'**
+  String get agentAssistant;
+
+  /// No description provided for @agentYou.
+  ///
+  /// In en, this message translates to:
+  /// **'You'**
+  String get agentYou;
+
+  /// No description provided for @agentNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Notice'**
+  String get agentNotice;
+
+  /// No description provided for @agentToolResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'Tool response'**
+  String get agentToolResponse;
+
+  /// No description provided for @agentToolArguments.
+  ///
+  /// In en, this message translates to:
+  /// **'Tool arguments'**
+  String get agentToolArguments;
+
+  /// No description provided for @agentSourceMaterial.
+  ///
+  /// In en, this message translates to:
+  /// **'Source material'**
+  String get agentSourceMaterial;
+
+  /// No description provided for @agentSourceTruncated.
+  ///
+  /// In en, this message translates to:
+  /// **'This source was shortened before it was attached.'**
+  String get agentSourceTruncated;
+
+  /// No description provided for @agentApprovalRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Review the proposed changes'**
+  String get agentApprovalRequired;
+
+  /// No description provided for @agentPlanDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Change details'**
+  String get agentPlanDetails;
+
+  /// No description provided for @agentApprove.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve these changes'**
+  String get agentApprove;
+
+  /// No description provided for @agentReject.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get agentReject;
+
+  /// No description provided for @agentApiDataNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Agent sends your messages, attachments, and task-related app data returned by tools to the API service you configure.'**
+  String get agentApiDataNotice;
+
+  /// No description provided for @agentModelSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Agent model settings'**
+  String get agentModelSettings;
+
+  /// No description provided for @agentEndpoint.
+  ///
+  /// In en, this message translates to:
+  /// **'API endpoint'**
+  String get agentEndpoint;
+
+  /// No description provided for @agentModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model'**
+  String get agentModel;
+
+  /// No description provided for @agentProtocol.
+  ///
+  /// In en, this message translates to:
+  /// **'API protocol'**
+  String get agentProtocol;
+
+  /// No description provided for @agentApiKey.
+  ///
+  /// In en, this message translates to:
+  /// **'API key'**
+  String get agentApiKey;
+
+  /// No description provided for @agentKeyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave blank to keep the saved key.'**
+  String get agentKeyHint;
+
+  /// No description provided for @agentShowKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Show key'**
+  String get agentShowKey;
+
+  /// No description provided for @agentHideKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide key'**
+  String get agentHideKey;
+
+  /// No description provided for @agentClearKey.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove the saved key'**
+  String get agentClearKey;
+
+  /// No description provided for @agentInvalidEndpoint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid HTTP or HTTPS endpoint without credentials or a fragment.'**
+  String get agentInvalidEndpoint;
+
+  /// No description provided for @agentRequiredField.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a value.'**
+  String get agentRequiredField;
+
+  /// No description provided for @agentSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save the connection. Your input is kept for retry.'**
+  String get agentSaveFailed;
+
+  /// No description provided for @agentSaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving…'**
+  String get agentSaving;
+
+  /// No description provided for @schoolWebAgentReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review school page'**
+  String get schoolWebAgentReviewTitle;
+
+  /// No description provided for @schoolWebAgentReviewHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Review the prepared page content. Agent will use it as source material in a new conversation.'**
+  String get schoolWebAgentReviewHint;
+
+  /// No description provided for @schoolWebAgentHandoff.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Agent'**
+  String get schoolWebAgentHandoff;
+
+  /// No description provided for @agentChangesSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes saved'**
+  String get agentChangesSaved;
+
+  /// No description provided for @agentActionApplied.
+  ///
+  /// In en, this message translates to:
+  /// **'Action completed'**
+  String get agentActionApplied;
+
+  /// No description provided for @agentActionUncertain.
+  ///
+  /// In en, this message translates to:
+  /// **'Result needs checking'**
+  String get agentActionUncertain;
+
+  /// No description provided for @agentPlanReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes prepared'**
+  String get agentPlanReady;
+
+  /// No description provided for @agentActionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Action not completed'**
+  String get agentActionFailed;
+
+  /// No description provided for @agentChangeCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} changes'**
+  String agentChangeCount(int count);
+
+  /// No description provided for @agentChangeCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Added'**
+  String get agentChangeCreated;
+
+  /// No description provided for @agentChangeDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted'**
+  String get agentChangeDeleted;
+
+  /// No description provided for @agentChangeUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated'**
+  String get agentChangeUpdated;
+
+  /// No description provided for @agentViewObject.
+  ///
+  /// In en, this message translates to:
+  /// **'View item'**
+  String get agentViewObject;
+
+  /// No description provided for @agentMoreChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'More changes are included in the saved operation record.'**
+  String get agentMoreChanges;
+
+  /// No description provided for @agentUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo these changes'**
+  String get agentUndo;
+
+  /// No description provided for @agentValueBefore.
+  ///
+  /// In en, this message translates to:
+  /// **'Before'**
+  String get agentValueBefore;
+
+  /// No description provided for @agentValueAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'After'**
+  String get agentValueAfter;
+
+  /// No description provided for @agentShowMoreChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Show more changes'**
+  String get agentShowMoreChanges;
+
+  /// No description provided for @agentConnectionChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'The model connection has changed. Start a new conversation before sending content to the new endpoint.'**
+  String get agentConnectionChanged;
+
+  /// No description provided for @agentLimitsReached.
+  ///
+  /// In en, this message translates to:
+  /// **'This run reached its limit. Try a smaller task or continue in another run.'**
+  String get agentLimitsReached;
+
+  /// No description provided for @agentSensitiveContent.
+  ///
+  /// In en, this message translates to:
+  /// **'The message contains an API key. Remove the key before sending.'**
+  String get agentSensitiveContent;
+
+  /// No description provided for @agentRequestFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The model request failed. Check the connection and selected model, then retry.'**
+  String get agentRequestFailed;
+
+  /// No description provided for @agentQueueFollowUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Queue next message'**
+  String get agentQueueFollowUp;
+
+  /// No description provided for @agentSteer.
+  ///
+  /// In en, this message translates to:
+  /// **'Update current request'**
+  String get agentSteer;
+
+  /// No description provided for @agentContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get agentContinue;
+
+  /// No description provided for @agentQueuedMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} queued messages'**
+  String agentQueuedMessages(int count);
+
+  /// No description provided for @agentRunPreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Run preferences'**
+  String get agentRunPreferences;
+
+  /// No description provided for @agentSystemInstructions.
+  ///
+  /// In en, this message translates to:
+  /// **'Instructions for all conversations'**
+  String get agentSystemInstructions;
+
+  /// No description provided for @agentMaxModelRounds.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum model requests per run'**
+  String get agentMaxModelRounds;
+
+  /// No description provided for @agentMaxToolCalls.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum tool calls per run'**
+  String get agentMaxToolCalls;
+
+  /// No description provided for @agentMaxTotalTokens.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum reported tokens per run'**
+  String get agentMaxTotalTokens;
+
+  /// No description provided for @agentHistoryRetentionDays.
+  ///
+  /// In en, this message translates to:
+  /// **'History retention (days; 0 keeps history)'**
+  String get agentHistoryRetentionDays;
+
+  /// No description provided for @agentPreferenceLimitHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep forever, or choose 7–3650 days. Only finished conversations without drafts or queued input are removed.'**
+  String get agentPreferenceLimitHint;
+
+  /// No description provided for @agentPreferencesSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferences saved'**
+  String get agentPreferencesSaved;
+
+  /// No description provided for @agentInvalidPreference.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a value within the displayed range.'**
+  String get agentInvalidPreference;
+
+  /// No description provided for @agentBackupConnectionPreserved.
+  ///
+  /// In en, this message translates to:
+  /// **'The local Agent connection, permissions and credentials are preserved. This backup will not change the model connection.'**
+  String get agentBackupConnectionPreserved;
+
+  /// No description provided for @agentArchiveConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive conversation'**
+  String get agentArchiveConversation;
+
+  /// No description provided for @agentArchivedConversations.
+  ///
+  /// In en, this message translates to:
+  /// **'Archived conversations'**
+  String get agentArchivedConversations;
+
+  /// No description provided for @agentRestoreConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore conversation'**
+  String get agentRestoreConversation;
+
+  /// No description provided for @agentExportConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Export conversation'**
+  String get agentExportConversation;
+
+  /// No description provided for @agentSavedConnectionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Diagnostics use the saved connection: {endpoint}. Unsaved edits are not sent.'**
+  String agentSavedConnectionHint(String endpoint);
+
+  /// No description provided for @agentTestConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Test saved connection'**
+  String get agentTestConnection;
+
+  /// No description provided for @agentLoadModels.
+  ///
+  /// In en, this message translates to:
+  /// **'Get models'**
+  String get agentLoadModels;
+
+  /// No description provided for @agentConnectionOk.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection succeeded'**
+  String get agentConnectionOk;
+
+  /// No description provided for @agentToolsObserved.
+  ///
+  /// In en, this message translates to:
+  /// **'Valid tool call received'**
+  String get agentToolsObserved;
+
+  /// No description provided for @agentToolsUnverified.
+  ///
+  /// In en, this message translates to:
+  /// **'Connected, but tool calling was not verified'**
+  String get agentToolsUnverified;
+
+  /// No description provided for @agentModelsPartial.
+  ///
+  /// In en, this message translates to:
+  /// **'The service returned a partial model list.'**
+  String get agentModelsPartial;
+
+  /// No description provided for @agentChooseModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a model'**
+  String get agentChooseModel;
+
+  /// No description provided for @agentRecoveryRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the previous operation result first. Only reading is currently allowed.'**
+  String get agentRecoveryRequired;
+
+  /// No description provided for @agentAttachFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach a text file'**
+  String get agentAttachFile;
+
+  /// No description provided for @agentRemoveAttachment.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove attachment'**
+  String get agentRemoveAttachment;
+
+  /// No description provided for @agentAttachmentTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'This attachment exceeds the 512 KiB limit.'**
+  String get agentAttachmentTooLarge;
+
+  /// No description provided for @agentAttachmentFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not attach the file. Your conversation is unchanged.'**
+  String get agentAttachmentFailed;
+
+  /// No description provided for @agentHttpTransportWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This connection uses HTTP. Testing, getting models or sending a request transmits the API key and request content without transport encryption.'**
+  String get agentHttpTransportWarning;
+
+  /// No description provided for @agentHttpTransportApproval.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow HTTP requests to this connection?'**
+  String get agentHttpTransportApproval;
+
+  /// No description provided for @agentHttpTransportScope.
+  ///
+  /// In en, this message translates to:
+  /// **'This permission can be reused for the same saved connection until the app closes. It does not approve changes to your data.'**
+  String get agentHttpTransportScope;
 }
 
 class _AppLocalizationsDelegate

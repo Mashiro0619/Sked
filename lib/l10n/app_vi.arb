@@ -578,8 +578,6 @@
   "@privacyGateTitle": {},
   "privacyGateSummaryStorage": "Thời khóa biểu, lịch trình chung, các bộ thời gian tiết học và cấu hình trang web trường chỉ được lưu cục bộ và không tự động tải lên máy chủ của nhà phát triển.",
   "@privacyGateSummaryStorage": {},
-  "privacyGateSummaryImportExport": "Việc nhập, xuất, sao lưu đầy đủ và chia sẻ chỉ diễn ra khi bạn chủ động bắt đầu. Bản sao lưu đầy đủ của ứng dụng không chứa khóa API tùy chỉnh; việc phân tích văn bản / HTML thời khóa biểu chỉ gửi nội dung bạn cung cấp đến điểm cuối phân tích mà bạn đã cấu hình.",
-  "@privacyGateSummaryImportExport": {},
   "privacyGateSummaryUpdates": "Nếu một phiên bản mới hơn thay đổi cách xử lý dữ liệu, ứng dụng có thể yêu cầu bạn xem lại chính sách bảo mật được cập nhật.",
   "@privacyGateSummaryUpdates": {},
   "schoolWebImportEntry": "Nhập từ trang web trường",

@@ -3,6 +3,10 @@ import 'dart:ui' show PlatformDispatcher;
 
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
+import 'agent/agent_application.dart';
+import 'agent/connection/agent_credential_store.dart';
+import 'agent/conversations/conversation_storage.dart';
+import 'agent/provider/provider.dart';
 import 'controllers/app_backup_controller.dart';
 import 'controllers/app_data_clear_controller.dart';
 import 'controllers/app_data_defaults.dart';
@@ -53,10 +57,14 @@ final class AppRuntime {
     @visibleForTesting Duration? uiStateSaveDelay,
     @visibleForTesting
     Future<void> Function(Future<void> Function())? workspaceMutationLock,
+    @visibleForTesting ConversationStorage? agentConversationStorage,
+    @visibleForTesting AgentCredentialStore? agentCredentialStore,
+    @visibleForTesting ProviderClient? agentProvider,
   }) {
     final localeCodeResolver =
         systemLocaleCodeResolver ?? _defaultSystemLocaleCodeResolver;
     final schoolSites = schoolSiteService ?? SchoolSiteService();
+    final secrets = secretStore ?? SecretStore();
     final journal = backupRestoreJournal ?? AppBackupRestoreJournal();
     final mutationLock =
         workspaceMutationLock ?? withAgendaRuntimeMutationLock<void>;
@@ -86,7 +94,7 @@ final class AppRuntime {
     );
     schoolImportSecrets = SchoolImportSecretController(
       session: session,
-      store: secretStore ?? SecretStore(),
+      store: secrets,
       notifyViewChanged: publishViews,
     );
     final defaults = AppDataDefaults(
@@ -177,12 +185,27 @@ final class AppRuntime {
       codec: dataTransferCodec,
       notifyViewChanged: publishViews,
     );
+    agent = AgentApplication(
+      session: session,
+      persistence: persistence,
+      maintenance: maintenance,
+      legacySecrets: schoolImportSecrets,
+      legacyStore: secrets,
+      publishViews: publishViews,
+      conversationStorage: agentConversationStorage,
+      credentialStore: agentCredentialStore,
+      provider: agentProvider,
+      schoolSites: schoolSites,
+      backups: backups,
+      workspaces: workspaces,
+    );
     final quiescence = AppQuiescence(
       session: session,
       persistence: persistence,
       secrets: schoolImportSecrets,
       schoolSites: schoolSites,
       transactions: transactions,
+      drainAgent: agent.quiesce,
     );
     dataClear = AppDataClearController(
       maintenance: maintenance,
@@ -190,6 +213,8 @@ final class AppRuntime {
       schoolSites: schoolSites,
       quiescence: quiescence,
       notifyViewChanged: publishViews,
+      prepareAgentClear: agent.prepareDataClear,
+      onAgentClearFailed: agent.resumeAfterFailedDataClear,
     );
     shutdown = AppShutdownController(
       session: session,
@@ -218,6 +243,7 @@ final class AppRuntime {
   }
 
   late final AppSession session;
+  late final AgentApplication agent;
   late final AppDataMaintenance maintenance;
   late final AppPersistence persistence;
   late final StudentViewState studentView;
@@ -242,6 +268,7 @@ final class AppRuntime {
   void dispose() {
     if (_isDisposed) return;
     _isDisposed = true;
+    agent.dispose();
     persistence.flushScheduledUiStateSave();
     studentView.dispose();
     generalView.dispose();

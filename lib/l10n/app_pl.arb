@@ -578,8 +578,6 @@
   "@privacyGateTitle": {},
   "privacyGateSummaryStorage": "Plany zajęć, ogólne harmonogramy, zestawy godzin lekcyjnych i konfiguracja stron szkolnych są przechowywane wyłącznie lokalnie i nie są automatycznie przesyłane na serwer dewelopera.",
   "@privacyGateSummaryStorage": {},
-  "privacyGateSummaryImportExport": "Import, eksport, pełne kopie zapasowe i udostępnianie odbywają się tylko po ich wyraźnym uruchomieniu. Pełne kopie zapasowe aplikacji nie zawierają niestandardowych kluczy API, a analiza tekstu / HTML planu zajęć wysyła wyłącznie przesłaną treść do skonfigurowanego punktu końcowego analizy.",
-  "@privacyGateSummaryImportExport": {},
   "privacyGateSummaryUpdates": "Jeśli w późniejszej wersji zmieni się sposób przetwarzania danych, aplikacja może poprosić Cię o ponowne zapoznanie się z zaktualizowaną polityką prywatności.",
   "@privacyGateSummaryUpdates": {},
   "schoolWebImportEntry": "Import ze strony internetowej szkoły",

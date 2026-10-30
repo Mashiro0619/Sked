@@ -4,8 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/school_sites_page.dart';
-import 'package:sked/screens/school_html_import_page.dart';
-import 'package:sked/screens/school_import_parser_settings_page.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/school_site_store.dart';
 import 'package:sked/widgets/adaptive_navigation_scope.dart';
@@ -207,19 +205,12 @@ void main() {
       }
       await t.tap(find.byType(BackButton).hitTestable());
       await t.pumpAndSettle();
-      await _open(
-        t,
+      expect(
         k('transfer-action-SettingsStudentDataAction.importSchoolHtml'),
+        findsNothing,
       );
-      expect(find.byType(SchoolHtmlImportPage), findsOneWidget);
-      expect(find.byType(BackButton).hitTestable(), findsOneWidget);
-      await t.tap(find.byType(BackButton).hitTestable());
-      await t.pumpAndSettle();
-      await _open(t, k('transfer-parser-settings'));
-      expect(find.byType(SchoolImportParserSettingsPage), findsOneWidget);
-      expect(find.byType(BackButton).hitTestable(), findsOneWidget);
-      await t.tap(find.byType(BackButton).hitTestable());
-      await t.pumpAndSettle();
+      expect(k('transfer-parser-settings'), findsNothing);
+      expect(k('transfer-school-web'), findsOneWidget);
       expect(k('transfer-page-content'), findsOneWidget);
       expect(t.takeException(), isNull);
     },

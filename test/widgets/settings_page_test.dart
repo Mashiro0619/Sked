@@ -1295,7 +1295,8 @@ void main() {
       );
       final l = AppLocalizations.of(tester.element(find.byType(SettingsPage)));
       expect(find.text(l.importTimetableTextDesc), findsOneWidget);
-      expect(find.text(l.schoolImportParserSettingsTitle), findsOneWidget);
+      expect(find.text(l.schoolImportParserSettingsTitle), findsNothing);
+      expect(find.text(l.schoolHtmlImportEntry), findsNothing);
       expect(find.text('课程显示、横向布局、切周手势和快捷添加'), findsNothing);
       expect(find.text('视图、工具栏、日期格式和快捷添加'), findsNothing);
     },

@@ -708,9 +708,9 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
         if (assistant?.enabled == true)
           WorkbenchOverflowAction(
             id: 'assistant-toggle',
-            label: l.assistantLayoutPreview,
+            label: assistant!.title ?? l.assistantLayoutPreview,
             icon: Icons.chat_bubble_outline,
-            onSelected: assistant!.interactive
+            onSelected: assistant.interactive
                 ? (_) => (assistant.onToggle ?? assistant.controller.toggle)()
                 : null,
           ),

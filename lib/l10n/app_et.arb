@@ -578,8 +578,6 @@
   "@privacyGateTitle": {},
   "privacyGateSummaryStorage": "Tunniplaanid, üldised ajakavad, tundide ajakomplektid ja kooliveebide seadistused salvestatakse ainult kohalikult ning neid ei laadita automaatselt arendaja serverisse.",
   "@privacyGateSummaryStorage": {},
-  "privacyGateSummaryImportExport": "Import, eksport, täielikud varukoopiad ja jagamine toimuvad ainult siis, kui need ise käivitate. Rakenduse täielikud varukoopiad ei sisalda kohandatud API-võtmeid ning tunniplaani teksti / HTML-i analüüs saadab ainult esitatud sisu teie seadistatud analüüsi lõpp-punkti.",
-  "@privacyGateSummaryImportExport": {},
   "privacyGateSummaryUpdates": "Kui hilisem versioon muudab andmete töötlemise viisi, võib rakendus paluda teil uuendatud privaatsuspoliitikat uuesti vaadata.",
   "@privacyGateSummaryUpdates": {},
   "schoolWebImportEntry": "Import kooli veebilehelt",

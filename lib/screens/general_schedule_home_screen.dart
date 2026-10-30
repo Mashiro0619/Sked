@@ -1478,7 +1478,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                 key: const ValueKey('assistant-toggle'),
                 value: 'assistant',
                 enabled: assistant!.interactive,
-                child: Text(l.assistantLayoutPreview),
+                child: Text(assistant.title ?? l.assistantLayoutPreview),
               ),
           ],
         ),
@@ -1632,9 +1632,9 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
           if (assistant?.enabled == true)
             WorkbenchOverflowAction(
               id: 'assistant-toggle',
-              label: l.assistantLayoutPreview,
+              label: assistant!.title ?? l.assistantLayoutPreview,
               icon: Icons.chat_bubble_outline,
-              onSelected: assistant!.interactive
+              onSelected: assistant.interactive
                   ? (_) => (assistant.onToggle ?? assistant.controller.toggle)()
                   : null,
             ),

@@ -15,6 +15,7 @@ class AppQuiescence {
     required this._secrets,
     required this._schoolSites,
     required this._transactions,
+    this._drainAgent,
   });
 
   final AppSession _session;
@@ -22,8 +23,10 @@ class AppQuiescence {
   final SchoolImportSecretController _secrets;
   final SchoolSiteService _schoolSites;
   final WorkspaceTransactions _transactions;
+  final Future<void> Function()? _drainAgent;
 
   Future<void> drain({required bool waitForSchoolSites}) async {
+    await _drainAgent?.call();
     while (true) {
       final dataEpoch = _session.mutationEpoch;
       final secretEpoch = _secrets.mutationEpoch;

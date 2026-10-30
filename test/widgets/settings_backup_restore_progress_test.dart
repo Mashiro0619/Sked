@@ -211,17 +211,9 @@ void main() {
 
         await openConfirmation();
         String summary() => tester
-            .widget<Text>(_key('restore-backup-parser-settings-summary'))
+            .widget<Text>(_key('restore-backup-agent-settings-summary'))
             .data!;
-        expect(
-          summary(),
-          l10n.restoreBackupParserSettingsSummary(
-            scenario.empty
-                ? l10n.backupParserEndpointUnset
-                : 'https://local.example/v1',
-            'https://backup.example/v1',
-          ),
-        );
+        expect(summary(), l10n.agentBackupConnectionPreserved);
         for (final secret in [
           'local-password',
           'backup-password',
@@ -243,13 +235,7 @@ void main() {
                 .customSchoolImportEndpointChange(retainedUrl),
           );
           await tester.pump();
-          expect(
-            summary(),
-            l10n.restoreBackupParserSettingsSummary(
-              retainedUrl,
-              'https://backup.example/v1',
-            ),
-          );
+          expect(summary(), l10n.agentBackupConnectionPreserved);
         }
         final writesBeforeCancel = storage.writes;
         await _open(tester, find.widgetWithText(TextButton, l10n.cancel).last);

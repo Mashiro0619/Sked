@@ -578,8 +578,6 @@
   "@privacyGateTitle": {},
   "privacyGateSummaryStorage": "Les emplois du temps, les agendas généraux, les ensembles d’horaires des cours et la configuration des sites scolaires sont uniquement stockés localement et ne sont pas automatiquement envoyés à un serveur du développeur.",
   "@privacyGateSummaryStorage": {},
-  "privacyGateSummaryImportExport": "L’importation, l’exportation, les sauvegardes complètes et le partage n’ont lieu que lorsque vous les lancez explicitement. Les sauvegardes complètes de l’application excluent les clés API personnalisées, et l’analyse de texte / HTML d’emploi du temps n’envoie que le contenu soumis au point d’accès d’analyse que vous avez configuré.",
-  "@privacyGateSummaryImportExport": {},
   "privacyGateSummaryUpdates": "Si une version ultérieure modifie la manière dont les données sont traitées, l'application peut vous demander de revoir à nouveau la politique de confidentialité mise à jour.",
   "@privacyGateSummaryUpdates": {},
   "schoolWebImportEntry": "Importer depuis la page web de l'établissement",

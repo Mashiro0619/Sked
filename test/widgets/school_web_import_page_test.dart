@@ -13,10 +13,8 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/providers/app_scope.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/school_html_import_page.dart';
-import 'package:sked/screens/school_import_parser_settings_page.dart';
 import 'package:sked/screens/school_web_import_page.dart';
 import 'package:sked/services/school_web_session_service.dart';
-import 'package:sked/widgets/expressive_empty_state.dart';
 
 import '../support/data_transfer_codec.dart';
 import '../support/timetable_storage_fakes.dart';
@@ -197,19 +195,38 @@ class _WebViewHarness {
       configurations.lastWhere((item) => item.windowId == windowId);
 }
 
-Widget _browserRouteHost() {
+Widget _browserRouteHost(_WebViewHarness harness) {
   return Builder(
     builder: (context) => TextButton(
       onPressed: () {
         Navigator.of(context).push(
           MaterialPageRoute<void>(
-            builder: (_) => const SchoolWebImportPage(site: _site),
+            builder: (_) => SchoolWebImportPage(
+              site: _site,
+              webViewBuilder: harness.build,
+              supportsPopupWindows: false,
+              loadSites: () async => [_site],
+            ),
           ),
         );
       },
       child: const Text('open'),
     ),
   );
+}
+
+Future<void> _finishBrowserLoad(
+  WidgetTester tester,
+  _WebViewHarness harness,
+  _FakeWebViewController controller,
+) async {
+  for (var frame = 0; frame < 30 && harness.configurations.isEmpty; frame++) {
+    await tester.pump();
+  }
+  expect(harness.configurations, isNotEmpty);
+  harness.pane().onWebViewCreated(controller);
+  await tester.pump();
+  harness.pane().onLoadStop(controller, WebUri(_site.loginUrl));
 }
 
 void main() {
@@ -947,8 +964,11 @@ void main() {
       (tester) async {
         debugDefaultTargetPlatformOverride = TargetPlatform.windows;
         addTearDown(() => debugDefaultTargetPlatformOverride = null);
-        await tester.pumpWidget(_browserApp(home: _browserRouteHost()));
+        final harness = _WebViewHarness();
+        final controller = _FakeWebViewController();
+        await tester.pumpWidget(_browserApp(home: _browserRouteHost(harness)));
         await tester.tap(find.text('open'));
+        await _finishBrowserLoad(tester, harness, controller);
         await tester.pumpAndSettle();
 
         final context = tester.element(find.byType(SchoolWebImportPage));
@@ -974,8 +994,11 @@ void main() {
       (tester) async {
         debugDefaultTargetPlatformOverride = TargetPlatform.android;
         addTearDown(() => debugDefaultTargetPlatformOverride = null);
-        await tester.pumpWidget(_browserApp(home: _browserRouteHost()));
+        final harness = _WebViewHarness();
+        final controller = _FakeWebViewController();
+        await tester.pumpWidget(_browserApp(home: _browserRouteHost(harness)));
         await tester.tap(find.text('open'));
+        await _finishBrowserLoad(tester, harness, controller);
         await tester.pumpAndSettle();
 
         final context = tester.element(find.byType(SchoolWebImportPage));
@@ -997,7 +1020,7 @@ void main() {
     );
 
     testWidgets(
-      'captured school HTML survives parser guidance and a settings round trip',
+      'captured school HTML survives Agent guidance and a settings round trip',
       (tester) async {
         const content = '<p>Captured mathematics course</p>';
         final provider = await _createConfiguredProvider();
@@ -1034,27 +1057,15 @@ void main() {
         expect(tester.widget<TextField>(field).controller!.text, content);
         const edited = '<p>Reviewed captured course</p>';
         await tester.enterText(field, edited);
-        await provider.settingsCommands.updateCustomSchoolImportTextSettings(
-          baseUrl: provider.settingsView.customSchoolImportBaseUrl,
-          model: '',
-          prompt: '',
-        );
         await tester.pumpAndSettle();
         final settings = find.widgetWithText(
           OutlinedButton,
-          l10n.schoolImportConfigureAction,
+          l10n.workspaceFeatures,
         );
         await tester.ensureVisible(settings);
         await tester.pumpAndSettle();
         await tester.tap(settings);
         await tester.pumpAndSettle();
-        final model = find.byWidgetPredicate(
-          (widget) =>
-              widget is TextField &&
-              widget.decoration?.labelText == l10n.schoolImportParserModel,
-        );
-        await tester.ensureVisible(model);
-        await tester.enterText(model, 'synthetic-model');
         await tester.pageBack();
         await tester.pumpAndSettle();
         expect(tester.widget<TextField>(field).controller!.text, edited);
@@ -1066,94 +1077,49 @@ void main() {
       },
     );
 
-    testWidgets(
-      'missing API configuration keeps a readable shortcut on a narrow screen',
-      (tester) async {
-        tester.view.physicalSize = const Size(640, 1136);
-        tester.view.devicePixelRatio = 2;
-        addTearDown(tester.view.resetPhysicalSize);
-        addTearDown(tester.view.resetDevicePixelRatio);
-
-        final provider = AppRuntime(dataTransferCodec: inlineDataTransferCodec);
-        addTearDown(provider.dispose);
-
-        await tester.pumpWidget(
-          _browserApp(
-            locale: const Locale('zh'),
-            textScaler: const TextScaler.linear(2),
-            provider: provider,
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        final context = tester.element(find.byType(SchoolWebImportPage));
-        final l10n = AppLocalizations.of(context);
-        final message = find.text(
-          l10n.schoolImportParserCustomConfigIncomplete,
-        );
-        final settingsButton = find.widgetWithText(
-          OutlinedButton,
-          l10n.schoolImportConfigureAction,
-        );
-        final importButton = find.ancestor(
-          of: find.byIcon(Icons.file_download_outlined),
-          matching: find.byType(IconButton),
-        );
-
-        expect(message, findsOneWidget);
-        expect(settingsButton, findsOneWidget);
-        expect(find.byType(ExpressiveEmptyState), findsNothing);
-        expect(find.byType(SingleChildScrollView), findsOneWidget);
-        expect(tester.widget<IconButton>(importButton).onPressed, isNull);
-        expect(tester.widget<Text>(message).maxLines, isNull);
-        expect(tester.getRect(settingsButton).height, greaterThanOrEqualTo(48));
-
-        await tester.ensureVisible(settingsButton);
-        await tester.pumpAndSettle();
-        await tester.tap(settingsButton);
-        await tester.pumpAndSettle();
-
-        expect(find.byType(SchoolImportParserSettingsPage), findsOneWidget);
-        expect(tester.takeException(), isNull);
-      },
-    );
-
-    testWidgets('missing API configuration stays centered on wide screens', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(1440, 900);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-
-      final provider = AppRuntime(dataTransferCodec: inlineDataTransferCodec);
-      addTearDown(provider.dispose);
-
-      await tester.pumpWidget(
-        _browserApp(locale: const Locale('zh'), provider: provider),
+    for (final size in [const Size(393, 852), const Size(1440, 900)]) {
+      testWidgets(
+        'school browsing and capture do not require an Agent connection: $size',
+        (tester) async {
+          tester.view.physicalSize = size;
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
+          final provider = await _createConfiguredProvider();
+          addTearDown(provider.dispose);
+          await provider.settingsCommands.updateCustomSchoolImportTextSettings(
+            baseUrl: '',
+            model: '',
+            prompt: '',
+          );
+          final harness = _WebViewHarness();
+          final controller = _FakeWebViewController();
+          await tester.pumpWidget(
+            _browserApp(
+              provider: provider,
+              loadSites: () async => [_site],
+              webViewBuilder: harness.build,
+              supportsPopupWindows: false,
+            ),
+          );
+          await tester.pumpAndSettle();
+          harness.pane().onWebViewCreated(controller);
+          harness.pane().onLoadStop(controller, WebUri(_site.loginUrl));
+          await tester.pumpAndSettle();
+          final l10n = AppLocalizations.of(
+            tester.element(find.byType(SchoolWebImportPage)),
+          );
+          expect(
+            tester
+                .widget<IconButton>(
+                  _iconButtonWithTooltip(l10n.schoolWebImportImportCurrentPage),
+                )
+                .onPressed,
+            isNotNull,
+          );
+          expect(tester.takeException(), isNull);
+        },
       );
-      await tester.pumpAndSettle();
-
-      final context = tester.element(find.byType(SchoolWebImportPage));
-      final l10n = AppLocalizations.of(context);
-      final message = find.text(l10n.schoolImportParserCustomConfigIncomplete);
-      final settingsButton = find.widgetWithText(
-        OutlinedButton,
-        l10n.schoolImportConfigureAction,
-      );
-      final screenCenter =
-          tester.view.physicalSize.width / tester.view.devicePixelRatio / 2;
-
-      expect(tester.getRect(message).center.dx, closeTo(screenCenter, 1));
-      expect(
-        tester.getRect(settingsButton).left,
-        closeTo(tester.getRect(message).left, 1),
-      );
-      expect(tester.getRect(settingsButton).width, lessThan(280));
-      expect(tester.getRect(settingsButton).height, greaterThanOrEqualTo(48));
-      expect(tester.takeException(), isNull);
-    });
-
+    }
     testWidgets(
       'Windows terminal completion enables importing when controller URL lags the callback',
       (tester) async {

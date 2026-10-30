@@ -578,8 +578,6 @@
   "@privacyGateTitle": {},
   "privacyGateSummaryStorage": "Scheman, allmänna kalendrar, uppsättningar med lektionstider och inställningar för skolwebbplatser lagras endast lokalt och laddas inte automatiskt upp till utvecklarens server.",
   "@privacyGateSummaryStorage": {},
-  "privacyGateSummaryImportExport": "Import, export, fullständiga säkerhetskopior och delning sker bara när du uttryckligen startar dem. Fullständiga säkerhetskopior av appen innehåller inga anpassade API-nycklar, och analys av schematext / HTML skickar endast det inskickade innehållet till den analysadress du har konfigurerat.",
-  "@privacyGateSummaryImportExport": {},
   "privacyGateSummaryUpdates": "Om en senare version ändrar hur data hanteras kan appen be dig att granska den uppdaterade sekretesspolicyn igen.",
   "@privacyGateSummaryUpdates": {},
   "schoolWebImportEntry": "Importera från skolans webbsida",

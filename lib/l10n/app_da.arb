@@ -578,8 +578,6 @@
   "@privacyGateTitle": {},
   "privacyGateSummaryStorage": "Skemaer, generelle planer, sæt med lektionstider og indstillinger for skolers websteder gemmes kun lokalt og uploades ikke automatisk til udviklerens server.",
   "@privacyGateSummaryStorage": {},
-  "privacyGateSummaryImportExport": "Import, eksport, fulde sikkerhedskopier og deling udføres kun, når du udtrykkeligt starter dem. Fulde sikkerhedskopier af appen indeholder ikke brugerdefinerede API-nøgler, og analyse af skematekst / HTML sender kun det indsendte indhold til det analyseendepunkt, du har konfigureret.",
-  "@privacyGateSummaryImportExport": {},
   "privacyGateSummaryUpdates": "Hvis en senere version ændrer, hvordan data håndteres, kan appen bede dig om at gennemgå den opdaterede fortrolighedspolitik igen.",
   "@privacyGateSummaryUpdates": {},
   "schoolWebImportEntry": "Import fra skolens hjemmeside",

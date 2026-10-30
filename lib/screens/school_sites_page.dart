@@ -29,7 +29,6 @@ import '../widgets/expressive_dialog.dart';
 import '../widgets/export_save_flow.dart';
 import '../widgets/expressive_empty_state.dart';
 import '../widgets/sked_popup_menu.dart';
-import 'school_html_import_page.dart';
 import 'school_web_import_page.dart';
 
 enum _SchoolSitesMenuAction {
@@ -54,6 +53,7 @@ class SchoolSitesPage extends StatefulWidget {
     SchoolSiteService? siteService,
     ExportService? exportService,
     Future<String?> Function()? pickJsonSource,
+    @visibleForTesting this.webImportPageBuilder,
   }) : siteService = siteService ?? SchoolSiteService(),
        exportService = exportService ?? const ExportService(),
        pickJsonSource = pickJsonSource ?? _pickSchoolSiteJson;
@@ -61,6 +61,8 @@ class SchoolSitesPage extends StatefulWidget {
   final SchoolSiteService siteService;
   final ExportService exportService;
   final Future<String?> Function() pickJsonSource;
+  @visibleForTesting
+  final Widget Function(SchoolSite)? webImportPageBuilder;
 
   @override
   State<SchoolSitesPage> createState() => _SchoolSitesPageState();
@@ -84,7 +86,6 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
   var _loading = true;
   var _isEditMode = false;
   var _siteEditorOpen = false;
-  var _htmlImportOpen = false;
   var _webImportOpen = false;
   var _jsonImportInProgress = false;
   var _jsonShareInProgress = false;
@@ -122,13 +123,6 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
               ? null
               : _addSite,
           icon: const Icon(Icons.add),
-        ),
-        IconButton(
-          tooltip: l10n.schoolHtmlImportEntry,
-          onPressed: !canUsePageActions || _htmlImportOpen
-              ? null
-              : _openHtmlImport,
-          icon: const Icon(Icons.code),
         ),
         SkedPopupMenuButton<_SchoolSitesMenuAction>(
           tooltip: l10n.importExport,
@@ -196,7 +190,6 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
                     onAdd: (_siteEditorOpen || _siteMutationInProgress)
                         ? null
                         : _addSite,
-                    onHtmlImport: _htmlImportOpen ? null : _openHtmlImport,
                   )
                 : _buildSiteBrowser(
                     l10n,
@@ -798,15 +791,6 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
     }
   }
 
-  void _setHtmlImportOpen(bool value) {
-    if (_htmlImportOpen == value) return;
-    if (mounted) {
-      setState(() => _htmlImportOpen = value);
-    } else {
-      _htmlImportOpen = value;
-    }
-  }
-
   void _setWebImportOpen(bool value) {
     if (_webImportOpen == value) return;
     if (mounted) {
@@ -843,39 +827,18 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
     }
   }
 
-  Future<void> _openHtmlImport() async {
-    if (_htmlImportOpen || !mounted) {
-      return;
-    }
-    _setHtmlImportOpen(true);
-    final scope = AppScope.capture(context);
-    try {
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) =>
-              scope?.wrap(const SchoolHtmlImportPage()) ??
-              const SchoolHtmlImportPage(),
-        ),
-      );
-    } finally {
-      _setHtmlImportOpen(false);
-    }
-  }
-
   Future<void> _openWebImportForSite(SchoolSite site) async {
     if (_webImportOpen || !mounted) {
       return;
     }
     _setWebImportOpen(true);
     final scope = AppScope.capture(context);
+    final page =
+        widget.webImportPageBuilder?.call(site) ??
+        SchoolWebImportPage(site: site);
     try {
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) =>
-              scope?.wrap(SchoolWebImportPage(site: site)) ??
-              SchoolWebImportPage(site: site),
-        ),
-      );
+      await Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => scope?.wrap(page) ?? page));
     } finally {
       _setWebImportOpen(false);
     }
@@ -1420,15 +1383,10 @@ class _SchoolSitesRecoveryView extends StatelessWidget {
 }
 
 class _SchoolSitesEmptyState extends StatelessWidget {
-  const _SchoolSitesEmptyState({
-    required this.onAdd,
-    required this.onHtmlImport,
-    this.headerSliver,
-  });
+  const _SchoolSitesEmptyState({required this.onAdd, this.headerSliver});
 
   final Widget? headerSliver;
   final VoidCallback? onAdd;
-  final VoidCallback? onHtmlImport;
 
   @override
   Widget build(BuildContext context) {
@@ -1443,11 +1401,6 @@ class _SchoolSitesEmptyState extends StatelessWidget {
             onPressed: onAdd,
             icon: const Icon(Icons.add),
             label: Text(l10n.schoolSitesAdd),
-          ),
-          FilledButton.tonalIcon(
-            onPressed: onHtmlImport,
-            icon: const Icon(Icons.code),
-            label: Text(l10n.schoolHtmlImportEntry),
           ),
         ],
       ),

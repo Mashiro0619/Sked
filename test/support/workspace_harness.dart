@@ -11,6 +11,10 @@ import 'dart:typed_data';
 import 'package:material_ui/material_ui.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:sked/agent/agent_application.dart';
+import 'package:sked/agent/connection/agent_credential_store.dart';
+import 'package:sked/agent/conversations/conversation_storage.dart';
+import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
@@ -89,6 +93,9 @@ Future<AppRuntime> workspaceProvider({
   WorkspaceMemoryStorage? storage,
   Future<void> Function(Future<void> Function())? workspaceMutationLock,
   DataTransferCodec codec = inlineDataTransferCodec,
+  ConversationStorage? agentConversationStorage,
+  AgentCredentialStore? agentCredentialStore,
+  ProviderClient? agentProvider,
 }) async {
   final sample = DeveloperSampleDataService.append(
     current: buildInitialAppData(buildDefaultPeriodTimes(), localeCode: locale),
@@ -99,6 +106,9 @@ Future<AppRuntime> workspaceProvider({
   );
   final provider = AppRuntime(
     dataTransferCodec: codec,
+    agentConversationStorage: agentConversationStorage,
+    agentCredentialStore: agentCredentialStore,
+    agentProvider: agentProvider,
     storage:
         storage ??
         WorkspaceMemoryStorage(sample.data.copyWith(activeMode: mode)),
@@ -183,6 +193,10 @@ class _WorkspaceHarnessState extends State<WorkspaceHarness> {
           ),
         ),
         ...AppScope.providersFor(provider),
+        // Explicit preview preferences identify the historical layout fixture.
+        // Product and Agent tests use the application-owned Agent instead.
+        if (developerUiPreferences != null)
+          Provider<AgentApplication?>.value(value: null),
         if (developerUiPreferences != null)
           ChangeNotifierProvider<DeveloperUiPreferences>.value(
             value: developerUiPreferences,

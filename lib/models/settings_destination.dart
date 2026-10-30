@@ -13,11 +13,10 @@ enum SettingsDestination {
   schoolImport,
   studentPreferences,
   generalPreferences,
-  parser,
   notificationPermissions;
 
   AppMode? get workspace => switch (this) {
-    student || schoolImport || studentPreferences || parser => AppMode.student,
+    student || schoolImport || studentPreferences => AppMode.student,
     general || generalPreferences => AppMode.general,
     _ => null,
   };

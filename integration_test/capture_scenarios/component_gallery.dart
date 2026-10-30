@@ -13,17 +13,16 @@ import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/models/school_import_models.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/screens/home_screen.dart';
 import 'package:sked/screens/settings_page.dart';
+import 'package:sked/screens/school_html_import_page.dart';
+import 'package:sked/providers/app_scope.dart';
 import 'package:sked/services/desktop_window_bridge.dart';
-import 'package:sked/widgets/app_modal_sheet.dart';
 import 'package:sked/widgets/course_details_sheet.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/widgets/general_event_details_sheet.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
-import 'package:sked/widgets/school_web_import_result_sheet.dart';
 import 'package:sked/widgets/timetable_information_form.dart';
 import 'package:sked/widgets/workspace_editor_form.dart';
 
@@ -210,35 +209,9 @@ Future<void> _openSettings(WidgetTester tester) async {
   expect(find.byType(SettingsPage), findsOneWidget);
 }
 
-SchoolImportResponse _reviewFixture() => SchoolImportResponse(
-  meta: const SchoolImportMeta(
-    sourceUrl: 'https://example.edu/timetable',
-    pageTitle: '示例学校课表',
-    parser: 'visual-fixture',
-    warnings: [],
-  ),
-  timetable: SchoolImportTimetableDraft(
-    name: '待导入的示例课表',
-    startDate: DateTime(2026, 9, 21),
-    totalWeeks: 18,
-    periodTimeSet: const ImportedPeriodTimeSetDraft(name: '', periodTimes: []),
-    courses: const [
-      ImportedCourseDraft(
-        name: '高等数学',
-        teacher: '张老师',
-        location: 'A101',
-        dayOfWeek: 1,
-        semesterWeeks: [1, 2, 3, 4],
-        periods: [1, 2],
-        startMinutes: 480,
-        endMinutes: 580,
-        credit: 3,
-        remarks: '',
-        customFields: {},
-      ),
-    ],
-  ),
-);
+const _reviewSource =
+    '2026 秋季学期，2026-09-21 开学，共18周。\n'
+    '高等数学：周一第1–2节，第1–4周，08:00–09:40，张老师，A101。';
 
 void registerCaptureScenarios() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -353,9 +326,9 @@ void registerCaptureScenarios() {
                   'baseline': baseline,
                   if (name == 'import-review')
                     'entryEvidence':
-                        'Local parsed-response fixture in the production '
-                        'review sheet. The source page, parser and network '
-                        'are not exercised by this capture.',
+                        'Local source fixture in the production school-page '
+                        'review screen. Browser extraction, model inference '
+                        'and business writes are not exercised by this capture.',
                   'capturedAtUtc': DateTime.now().toUtc().toIso8601String(),
                   'evidence':
                       'Native Windows Flutter renderer and production widgets. '
@@ -383,20 +356,23 @@ void registerCaptureScenarios() {
               await capture(scene);
               continue;
             } else if (scene == 'import-review') {
+              final context = tester.element(find.byType(HomeScreen));
+              final scope = AppScope.capture(context)!;
               unawaited(
-                showAppModalSheet<SchoolImportApplyRequest>(
-                  context: tester.element(find.byType(HomeScreen)),
-                  workspace: AppMode.student,
-                  builder: (_) => SchoolWebImportResultSheet(
-                    response: _reviewFixture(),
-                    canReplaceCurrent: true,
-                    initialPeriodTimeSetId:
-                        provider.studentView.periodTimeSets.first.id,
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(
+                    builder: (_) => scope.wrap(
+                      const SchoolHtmlImportPage(
+                        initialContent: _reviewSource,
+                        initialTitle: '示例学校课表',
+                        initialUrl: 'https://example.edu/timetable',
+                      ),
+                    ),
                   ),
                 ),
               );
               await tester.pumpAndSettle();
-              expect(find.byType(SchoolWebImportResultSheet), findsOneWidget);
+              expect(find.byType(SchoolHtmlImportPage), findsOneWidget);
               await capture(scene);
               continue;
             } else if (scene.endsWith('-details')) {

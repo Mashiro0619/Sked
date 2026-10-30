@@ -12,25 +12,43 @@
 | --- | --- |
 | 快照恢复 | 普通候选按已刷新的 temporary → main → backup 处理，不按 mtime 猜测新旧。未来 schema 或 I/O 不确定状态阻止写入；已有隔离文件时不能误判为首次启动。见 [恢复矩阵](../test/data/timetable_storage_recovery_matrix_test.dart) 与 [存储测试](../test/data/timetable_storage_io_test.dart)。 |
 | 密钥清理事务 | `.secret-scrub.rollback` / `.secret-scrub.tmp` 属于迁移事务，先处理事务恢复，再选择普通快照；rollback 不是第四个普通候选。不删除唯一可恢复的旧原件。见 [密钥存储测试](../test/services/app_storage_secret_io_test.dart)。 |
-| 完整备份恢复 | 恢复必须保留本机解析 Base URL、模型和提示词，忽略备份中的这三项配置；它们取自恢复实际开始时的本机数据，并与目标快照一起写入恢复日志。备份密钥始终不导入，本机密钥仍在数据事务提交后按原策略清除。确认页说明保留的接口与清除密钥；取消不改变任何数据。恢复日志重放必须沿用已经确定的目标，不从外部备份重新取接口配置。见 [备份流程测试](../test/controllers/app_backup_workflow_test.dart)。 |
+| 完整备份恢复 | 保留恢复实际开始时的本机 Agent 连接、权限与偏好，并将目标数据的新世代一起固定到恢复日志。便携备份不带本机 Agent 配置、回执、聊天或原始密钥，不从备份补入本机连接；旧解析字段仅作兼容处理，其旧密钥按恢复日志的策略清理。恢复重放沿用已固定目标，不重新生成执行身份或激活旧入口。见 [备份流程测试](../test/controllers/app_backup_workflow_test.dart) 与 [Agent 迁移测试](../test/data/migrations/agent_state_migration_test.dart)。 |
 | 保存与退出 | 显式退出入口等待 `quiesceForShutdown()`；暂停请求 flush，同步 `dispose()` 只能发起最佳努力保存。用明确开始/完成信号验证并发与最新快照，不用固定等待推测完成。见 [保存竞争测试](../test/controllers/app_persistence_race_test.dart)。 |
-| 敏感数据 | 普通 AppData 和备份不包含 API Key 值；错误展示需脱敏认证头、URL 凭据及已知密钥的编码/截断形式，同时保持正常认证、成功响应和取消语义。见 [密钥持久化](../test/controllers/school_import_secret_persistence_test.dart) 与 [错误脱敏测试](../test/services/school_import_error_redactor_test.dart)。 |
+| 敏感数据 | 普通 AppData、聊天、工具记录和备份不包含 API Key 值。宿主安全输入只给模型一个绑定运行与目的地的短期句柄，使用、取消和到期后清理；更换目的地不能保留旧凭据。错误不得带出认证头、原始网络错误体或密钥。见 [连接持久化](../test/agent/connection/agent_connection_manager_test.dart)、[安全输入工具](../test/agent/tools/agent_control_tool_adapters_test.dart) 与 [旧密钥兼容](../test/controllers/school_import_secret_persistence_test.dart)。 |
 | 学校网页会话清除 | 清除应用数据前先关闭学校浏览器的原生页面并清除 Cookie、站点存储及缓存；Android/iOS 使用对应 WebView 数据接口，Windows 使用同一默认 WebView2 profile 的 `ClearBrowsingDataAll`。清理失败时保留主存档和 API 密钥，不假报成功；页面重开使用新的文档，不复用旧登录上下文。见 [清除服务测试](../test/services/app_data_clear_service_io_test.dart) 与 [网页会话测试](../test/services/school_web_session_service_test.dart)。 |
-| HTTP Endpoint | 所有 HTTP Endpoint，包括 loopback、私网和公网，都需要发送前确认；同意按端点保留于当前进程，HTTPS 不触发该确认。确认和请求必须使用同一设置快照，并保留重定向防护。见 [导入流程测试](../test/services/school_import_workflow_test.dart)。 |
+| HTTP Endpoint | 询问和只读计划模式使用独立的 HTTP 传输确认，完全权限模式允许按该模式发送；传输确认不产生业务修改票据。人工连接诊断通过明确风险提示与该次按钮操作授权。确认与请求绑定同一端点和凭据快照，任何模式都不跟随重定向。见 [运行时测试](../test/agent/runtime/agent_runtime_controller_test.dart)、[诊断协议](../test/agent/connection/agent_connection_diagnostics_test.dart) 与 [协议测试](../test/agent/provider/provider_client_test.dart)。 |
 | 原生安全 | Android 云备份和旧版整包备份关闭；设备间迁移仅使用先过滤当前及旧版密钥的受控主数据工件，恢复不覆盖已有存档。通知 receiver 不导出；可配置 HTTP Endpoint 的网络策略需与前述确认配合。Apple 权限与 Windows 通知身份也需检查。见 [设备迁移约定](ANDROID_DEVICE_TRANSFER.md)、[平台测试](../test/platform) 和 [产物检查器](../tool/platform_artifact_check.dart)。 |
 | 日视图末卡 | 手机添加按钮的避让空间属于可滚动内容，不压缩日视图视口；末卡尾部可滚到真实按钮上方并打开正确课程详情，关闭按钮后释放避让空间。可容纳的卡片验证整卡可见，超过可用高度的大字卡片验证顶部和尾部能分别完整阅读。见 [真实主页日视图测试](../test/widgets/student_day_agenda_workflow_test.dart)。 |
 
-自定义解析接口继续兼容 HTTP 与 HTTPS，不用固定域名白名单限制用户的学校或自建服务，也不新增默认明文请求。Android 的动态端点网络配置保留明文兼容；这项平台能力不代替应用发送前的确认。HTTP 提示说明 API 密钥和提交内容在传输途中可能被读取或篡改，取消不发送；确认页隐藏地址中的凭据、查询和片段，许可只对当前进程内已确认的规范化端点有效。
+统一 Agent 连接兼容 HTTP 与 HTTPS，不用固定域名白名单限制用户的自建服务，也不设置默认明文地址。Android 的动态端点网络配置保留明文兼容；这项平台能力不能代替宿主的授权判断。HTTP 提示说明 API 密钥和提交内容在传输途中可能被读取或篡改；取消传输确认不发送，接受也不改变只读计划模式或授权其他业务操作。显式同意只在当前运行时中复用于相同端点、协议、模型和凭据快照，连接变化或功能关闭后失效；完全权限的放行不产生可被之后只读／询问模式复用的同意。设置页的人工诊断使用已保存连接，HTTP 风险提示与测试／获取模型按钮一起呈现，点击只授权该次请求。
 
-获取模型列表与提交解析内容都使用已经确认的设置快照，并禁止敏感请求自动跟随重定向；返回 3xx 时报告失败，不将密钥或内容转发到新地址。HTTPS 不需要明文传输确认，但使用相同的重定向保护。学校网页进入解析前也经过同一提交页面，网页可访问不等于已同意向解析接口发送内容。见 [端点确认](../test/services/school_import_http_consent_test.dart)、[请求保护](../test/services/school_import_api_test.dart)、[模型列表入口](../test/widgets/school_import_parser_settings_page_test.dart) 与 [内容提交入口](../test/widgets/school_html_import_page_test.dart)。
+Agent 请求使用已经确认的连接快照，禁止敏感请求自动跟随重定向；返回 3xx 时报告失败，不将密钥或内容转发到新地址。HTTPS 不需要明文传输确认，但使用相同的重定向保护。学校网页访问和内容压缩不请求模型；用户继续时先原子保存来源、首条消息与交接标识，再由统一运行时发起请求。见 [协议边界](../test/agent/provider/provider_client_test.dart)、[来源交接](../test/agent/imports/school_web_handoff_test.dart) 与 [来源页](../test/widgets/school_html_import_page_test.dart)。
 
 Windows 学校页面清理需要等待锁定 WebView 插件 `dispose` 通道的原生回复，不能用一帧结束代替原生页面销毁。尚在创建的页面或销毁失败会阻止数据清理；失败后重试仍需完成销毁确认。清理期间新打开的学校页面保持挂起，新登记的浏览器必须纳入清理后才能报告成功。
 
-学校网页页头提供“退出登录”，确认后清理 Sked 内学校页面的 Cookie、站点存储与缓存，并重新建立网页；保留已经导入的课表、应用设置和解析接口配置。取消确认不清理，清理失败不显示成功并保留重试入口，解析进行中不允许同时退出登录。
+学校网页页头提供“退出登录”，确认后清理 Sked 内学校页面的 Cookie、站点存储与缓存，并重新建立网页；保留已经导入的课表、应用设置及 Agent 连接。取消确认不清理，清理失败不显示成功并保留重试入口。此动作只影响本机内嵌浏览器，不声称学校服务端的所有会话都已退出。
 
-解析设置已保存 API Key 时，更改非空接口地址需要确认新目的地；输入期间保留草稿，失焦、返回或获取模型时显示当前与新地址，并说明之后解析或获取模型会发送已保存的密钥。确认页隐藏 URL 凭据、查询参数、片段和已知密钥。取消保留原接口且中止本次返回或请求；后台与销毁流程不能确认新地址。确认绑定当时的原地址和新地址，期间配置改变后必须重新确认。HTTP 发送前的独立确认与重定向保护继续生效。见 [解析设置测试](../test/widgets/school_import_parser_settings_page_test.dart) 与 [设置持久化测试](../test/controllers/school_import_secret_persistence_test.dart)。
+统一连接中的凭据绑定实际端点；更换目的地不得自动转移旧密钥或发送旧会话。连接草稿在保存成功前保留，后台、销毁或模型工具不得伪造用户同意。旧本机解析连接仅在新连接字段尚未配置时迁移，单独修改统一指令或预算不阻止迁移。旧密钥只有同一端点的新安全存储写入并读回成功后才退役，失败保留恢复材料。旧专用提示词不变成 Agent 系统指令。暂存密钥期间发生的偏好变更必须从最新提交继承，不能随旧连接草稿覆盖。见 [连接迁移测试](../test/agent/connection/agent_connection_manager_test.dart)、[连接表单](../test/agent/ui/agent_model_settings_form_test.dart) 与 [旧密钥兼容](../test/controllers/school_import_secret_persistence_test.dart)。
 
-本机未配置的解析地址、模型或提示词在恢复后仍保持未配置，不从备份补入。恢复确认页列出保留的本机接口与不采用的备份接口，并说明模型、提示词保留而密钥清除；两种地址均隐藏凭据、查询参数、片段与已知密钥，本机接口变动时同步显示。恢复预览之后保存的本机解析配置，以恢复事务实际开始时的值为准；目标写入恢复日志后，失败重试沿用该目标。
+本机未配置的 Agent 连接在恢复后仍保持未配置。统一 Agent 凭据不参加便携备份；兼容存留的旧解析密钥与新凭据分别处理，不能把旧密钥的清除策略描述成所有 Agent 凭据都会清除。恢复预览之后保存的本机配置，以恢复事务实际开始时的值为准；目标写入恢复日志后，失败重试沿用该目标。
+
+## Agent 保存、会话与外部效果
+
+课程冲突显示和自定义日期范围由确定性适配器生成主数据计划，复用课程投影及普通日期导航的纯变换，经 `mutation.commit` 保存。显示选择核对指定课表、周次、实际完整冲突键与可选课程；日期范围和必要焦点变化一起记入回执。停用工作区、非当前课表、旧格式冲突重置、三种权限模式、保存失败、重复操作和撤销冲突由[适配器专项](../test/agent/tools/display_range_tool_adapters_test.dart)验证。
+
+手机页面和桌面面板共享 [应用级 Agent](../lib/agent/agent_application.dart)，界面销毁不拥有或终止唯一执行器。功能关闭、停止、维护预约和退出都会阻止未接受的新步骤；已接受的主数据写入或外部效果必须完成核对。外部队列中尚未开始的操作可以因取消立即返回，避免清空或退出等待另一个排在自己后面的会话；已经开始的操作仍等待真实结果。见 [运行时](../test/agent/runtime/agent_runtime_controller_test.dart)、[双会话维护队列](../test/agent/runtime/agent_maintenance_queue_test.dart) 与 [工作台入口](../test/widgets/agent_workspace_entry_test.dart)。
+
+主数据候选与持久回执一次保存。旧操作 ID 配不同参数会拒绝，淘汰回执之后的旧请求不能重新执行。跨主库、学校站点、安全存储、设备偏好和原生系统的动作使用独立的 pending/结果回执；不能把多个存储当成一个原子事务。停止或回复保存失败后先读取已有回执，平台状态未知不能改成成功。外部重试使用原请求与原版本，只核对结果，不再次发送通知、保存文件或清空数据。见 [操作协调器](../test/application/mutation_coordinator_test.dart)、[外部效果](../test/application/external_operation_coordinator_test.dart) 和 [设备适配器](../test/agent/tools/device_tool_adapters_test.dart)。
+
+清空前先停止运行并排空已接受写入，冻结会话存储，再处理网页会话、通知运行时、设备偏好、应用数据及安全存储。安全存储删除要读回确认；退出回调返回或失败后，独立会话库也不能重新写回已删除内容。清理失败可能留下部分结果，不能自动把旧内存快照当作完整存档继续写入；会话恢复需重新读取存储。见 [组合层回归](../test/agent/agent_application_test.dart) 与 [清空服务](../test/services/app_data_clear_service_io_test.dart)。
+
+学校网页交接的来源、首条消息和交接标识一起持久化，普通文件附件按本地添加流程单独保存到会话。成功删除同步两个存储副本，迟到模型响应不能复活会话。归档和删除先处理当前运行，删除聊天不撤销业务操作。保留策略只清理超过期限、无草稿、无运行或排队输入的已完成会话；中断运行与需要核对的结果不自动重放。上下文摘要不改写原始消息，不冒充实时数据查询。见 [会话仓库](../test/agent/conversations/conversation_repository_test.dart)、[上下文](../test/agent/runtime/conversation_context_test.dart) 与 [会话工具](../test/agent/tools/conversation_tool_adapters_test.dart)。
+
+会话附件只做本地持久化，不自动调用模型。JSON／ICS／TXT／HTML／HTM 文件采用 512 KiB 单份字节上限和严格 UTF-8 解码；原生文件选择预检及实际读取都遵守该预算。保存失败复用当前页面持有的来源 ID 重试，不能重复追加；待重试来源绑定会话、消息边界和数据世代，边界变化后拒绝写入。尚未落盘的输入不保证跨页面退出或进程重启恢复，不能将页面内暂存描述成已保存。见 [附件存储](../test/agent/imports/conversation_file_attachments_test.dart)、[附件界面](../test/agent/ui/agent_conversation_attachments_test.dart) 与 [文本文件读取](../test/services/text_file_picker_test.dart)。
+
+连接诊断使用合成小请求，分别报告收到有效响应与观察到工具调用，不使用私人课表或聊天。模型目录只使用已配置来源的已知路径或明确的同源地址，拒绝重定向、超时、超量和无效响应；完整目录保存在操作回执中，分页读取不重复联网。诊断测试覆盖协议、取消与输出边界，不能代替具体服务、账号、原生 keyring 或实体设备验收。见 [诊断协议](../test/agent/connection/agent_connection_diagnostics_test.dart) 与 [连接工具](../test/agent/tools/agent_control_tool_adapters_test.dart)。
+
+系统通知的兼容接口返回值不作为权限事实。打开设置不表示授权成功，OEM 自启动状态可保持 unknown。稍后提醒只作用于当前有效通知身份，读回保存的时间也不证明系统已投递；诊断通知与清除诊断通知不改变生产提醒。Windows 原生状态、Android 通知/后台行为及构建结果分别验收。见 [平台适配](../test/agent/tools/platform_tool_adapters_test.dart) 与 [通知服务](../test/services/agenda_notification_service_test.dart)。
 
 文件夹具不能证明真实断电恢复或原生 keyring 迁移；显式退出保存不能保证操作系统强杀前落盘。通知重排、权限撤回、后台回收与厂商限制应结合 [通知验收矩阵](ANDROID_NOTIFICATION_ACCEPTANCE.md) 验证。
 

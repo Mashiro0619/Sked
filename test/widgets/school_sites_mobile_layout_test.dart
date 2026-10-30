@@ -189,11 +189,7 @@ List<SchoolSite> _manySites() => [
 ];
 
 void _expectHeaderActions(WidgetTester t, AppLocalizations l, double width) {
-  for (final tooltip in [
-    l.schoolSitesAdd,
-    l.schoolHtmlImportEntry,
-    l.importExport,
-  ]) {
+  for (final tooltip in [l.schoolSitesAdd, l.importExport]) {
     final action = find.byTooltip(tooltip).hitTestable();
     expect(action, findsOneWidget, reason: tooltip);
     final rect = t.getRect(action);
