@@ -57,7 +57,9 @@ ConversationStorageLoad decodeConversationSlots(List<String?> slots) {
         throw const FormatException('Conversation checksum mismatch.');
       }
       final raw = jsonDecode(source);
-      if (raw is Map && raw['version'] is int && (raw['version'] as int) > 1) {
+      if (raw is Map &&
+          raw['version'] is int &&
+          (raw['version'] as int) > ConversationArchive.currentVersion) {
         throw const ConversationStorageException(
           'A newer app is required to read conversations.',
         );

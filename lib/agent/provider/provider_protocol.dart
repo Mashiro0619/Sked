@@ -361,12 +361,14 @@ class ProviderResponseDecoder {
       inputTokens: input,
       outputTokens: output,
       totalTokens: total,
-      cachedInputTokens: inputDetails is Map
-          ? _count(inputDetails['cached_tokens'] ?? 0)
-          : 0,
-      reasoningTokens: outputDetails is Map
-          ? _count(outputDetails['reasoning_tokens'] ?? 0)
-          : 0,
+      cachedInputTokens:
+          inputDetails is Map && inputDetails['cached_tokens'] != null
+          ? _count(inputDetails['cached_tokens'])
+          : null,
+      reasoningTokens:
+          outputDetails is Map && outputDetails['reasoning_tokens'] != null
+          ? _count(outputDetails['reasoning_tokens'])
+          : null,
     );
     if (total > request.limits.maxTotalTokens) {
       throw const ProviderException(ProviderError.tokenBudgetExceeded);

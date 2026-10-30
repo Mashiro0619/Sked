@@ -63,6 +63,7 @@ class ConversationToolAdapters {
     'runId': 'runtime_lifecycle',
     'messages': 'current_conversation_history_or_approved_export',
     'sources': 'current_conversation_sources_or_approved_export',
+    'runs': 'runtime_usage_or_approved_export',
   };
   Future<AgentArtifactWriteResult> Function(AgentDataArtifact)? _saveArtifact;
   int _binding = 0;
@@ -186,7 +187,7 @@ class ConversationToolAdapters {
     }
     _add(
       'runs.status',
-      'Read actual runtime ownership, stored state, stop request and queued input count for an explicit conversation.',
+      'Read actual runtime ownership, stored state, queued inputs and persisted usage for the latest run. Missing provider usage and monetary cost remain unknown; reported tokens are never a price quote.',
       {'conversationId': _string},
       (args, _, _) async {
         _keys(args, {'conversationId'});
@@ -525,6 +526,7 @@ class ConversationToolAdapters {
     'sourceCount': item.sources.length,
     'hasDraft': item.draft.isNotEmpty,
     'runActive': _runtime.isRunning(item.id),
+    'usage': summarizeConversationUsage(item.runs),
   };
 
   AgentDataArtifact _artifact(
@@ -546,6 +548,8 @@ class ConversationToolAdapters {
         'draft': conversation.draft,
         'messages': conversation.messages.map((item) => item.toJson()).toList(),
         'sources': conversation.sources.map((item) => item.toJson()).toList(),
+        'runs': conversation.runs.map((item) => item.toJson()).toList(),
+        'usage': summarizeConversationUsage(conversation.runs),
       },
     }),
   );

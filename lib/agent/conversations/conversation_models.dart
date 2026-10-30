@@ -4,6 +4,9 @@ import 'package:crypto/crypto.dart';
 
 import '../../application/operation_contracts.dart';
 import '../../utils/time_utils.dart' show tryParseStrictIsoDateTime;
+import 'conversation_usage.dart';
+
+export 'conversation_usage.dart';
 
 enum ConversationStatus { idle, running, waitingApproval, interrupted }
 
@@ -308,8 +311,10 @@ class AgentConversation {
     this.runId,
     Iterable<ConversationMessage> messages = const [],
     Iterable<ConversationSource> sources = const [],
+    Iterable<ConversationRunUsage> runs = const [],
   }) : messages = List.unmodifiable(messages),
-       sources = List.unmodifiable(sources);
+       sources = List.unmodifiable(sources),
+       runs = List.unmodifiable(runs);
 
   final String id;
   final String title;
@@ -323,6 +328,7 @@ class AgentConversation {
   final String? runId;
   final List<ConversationMessage> messages;
   final List<ConversationSource> sources;
+  final List<ConversationRunUsage> runs;
 
   AgentConversation copyWith({
     String? title,
@@ -335,6 +341,7 @@ class AgentConversation {
     String? runId,
     Iterable<ConversationMessage>? messages,
     Iterable<ConversationSource>? sources,
+    Iterable<ConversationRunUsage>? runs,
   }) => AgentConversation(
     id: id,
     title: title ?? this.title,
@@ -348,6 +355,7 @@ class AgentConversation {
     runId: runId ?? this.runId,
     messages: messages ?? this.messages,
     sources: sources ?? this.sources,
+    runs: runs ?? this.runs,
   );
 
   Map<String, Object?> toJson() => {
@@ -364,6 +372,7 @@ class AgentConversation {
     if (runId != null) 'runId': runId,
     'messages': messages.map((message) => message.toJson()).toList(),
     'sources': sources.map((source) => source.toJson()).toList(),
+    'runs': runs.map((run) => run.toJson()).toList(),
   };
 
   factory AgentConversation.fromJson(Map<String, dynamic> json) {
@@ -380,9 +389,21 @@ class AgentConversation {
       'sources',
       max: 20,
     ).map(ConversationSource.fromJson).toList();
+    final runs = _objects(
+      json,
+      'runs',
+      max: 1000,
+    ).map(ConversationRunUsage.fromJson).toList();
     if (messages.map((message) => message.id).toSet().length !=
             messages.length ||
-        sources.map((source) => source.id).toSet().length != sources.length) {
+        sources.map((source) => source.id).toSet().length != sources.length ||
+        runs.map((run) => run.id).toSet().length != runs.length ||
+        runs
+                .expand((run) => run.requests)
+                .map((request) => request.id)
+                .toSet()
+                .length !=
+            runs.fold<int>(0, (count, run) => count + run.requests.length)) {
       throw const FormatException('Duplicate conversation item ID.');
     }
     return AgentConversation(
@@ -402,6 +423,7 @@ class AgentConversation {
       runId: _optionalString(json, 'runId', max: 256),
       messages: messages,
       sources: sources,
+      runs: runs,
     );
   }
 }
@@ -447,6 +469,7 @@ class ConversationArchive {
        terminatedIds = Set.unmodifiable(terminatedIds);
 
   static const maxBytes = 16 * 1024 * 1024;
+  static const currentVersion = 2;
   final int revision;
   final String? selectedId;
   final List<AgentConversation> conversations;
@@ -455,7 +478,7 @@ class ConversationArchive {
 
   String encode() {
     final encoded = jsonEncode({
-      'version': 1,
+      'version': currentVersion,
       'revision': revision,
       'selectedId': selectedId,
       'conversations': conversations.map((item) => item.toJson()).toList(),
@@ -477,7 +500,7 @@ class ConversationArchive {
       );
     }
     final json = _object(jsonDecode(source));
-    if (json['version'] != 1 ||
+    if ((json['version'] != 1 && json['version'] != currentVersion) ||
         json['revision'] is! int ||
         (json['revision'] as int) < 0) {
       throw const FormatException('Unsupported conversation archive version.');

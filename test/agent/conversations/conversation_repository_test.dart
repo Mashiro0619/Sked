@@ -367,7 +367,7 @@ void main() {
       prompt: 'Parse',
     );
     final future = jsonDecode(storage.source!) as Map<String, dynamic>;
-    future['version'] = 2;
+    future['version'] = ConversationArchive.currentVersion + 1;
     expect(
       () => ConversationArchive.decode(jsonEncode(future)),
       throwsFormatException,

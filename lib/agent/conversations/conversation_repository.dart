@@ -62,15 +62,23 @@ class ConversationRepository extends ChangeNotifier {
       _loaded = true;
       _blocked = false;
       recovered = result.recovered;
-      final interrupted = next.conversations
-          .map(
-            (item) =>
-                item.status == ConversationStatus.running ||
-                    item.status == ConversationStatus.waitingApproval
-                ? item.copyWith(status: ConversationStatus.interrupted)
-                : item,
-          )
-          .toList();
+      final interrupted = next.conversations.map((item) {
+        final interruptedRun = item.runs.any(
+          (run) => run.status == ConversationRunStatus.running,
+        );
+        return item.status == ConversationStatus.running ||
+                item.status == ConversationStatus.waitingApproval ||
+                interruptedRun
+            ? item.copyWith(
+                status: ConversationStatus.interrupted,
+                runs: item.runs.map(
+                  (run) => run.status == ConversationRunStatus.running
+                      ? run.interrupt()
+                      : run,
+                ),
+              )
+            : item;
+      }).toList();
       if (interrupted.asMap().entries.any(
         (entry) => !identical(entry.value, next.conversations[entry.key]),
       )) {

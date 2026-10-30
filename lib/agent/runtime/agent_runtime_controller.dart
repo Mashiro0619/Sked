@@ -243,6 +243,10 @@ class AgentRuntimeController implements AgentUiDelegate {
       'status': conversation.status.name,
       'phase': state.value.runFor(conversationId).phase.name,
       'pendingInputs': pendingInputCount(conversationId),
+      'usage': conversation.runs
+          .where((item) => item.id == (run?.id ?? conversation.runId))
+          .firstOrNull
+          ?.summary(),
     };
   }
 
@@ -396,9 +400,13 @@ class AgentRuntimeController implements AgentUiDelegate {
       fingerprint: '',
       mode: conversation.mode,
       hostAction: true,
+      startedAt: _clock().toUtc(),
     );
     final callId = _id();
     run.hostToolCallId = callId;
+    run.usage = run.usage.withTool(
+      ConversationToolUsage(id: callId, name: 'host.action'),
+    );
     _runs[conversationId] = run;
     run.deadline = Timer(
       limits.toolTimeout,
@@ -417,6 +425,7 @@ class AgentRuntimeController implements AgentUiDelegate {
         return current.copyWith(
           runId: run.id,
           status: ConversationStatus.running,
+          runs: _runRecords(current, run),
           messages: [
             ...recovered,
             ConversationMessage(
@@ -439,8 +448,10 @@ class AgentRuntimeController implements AgentUiDelegate {
       run.started.complete(true);
       Map<String, Object?> result;
       Object? failure;
+      var invoked = false;
       try {
         _checkRun(run);
+        invoked = true;
         result = await action(run.scope, (plan) => _requestApproval(run, plan));
       } catch (error) {
         failure = error;
@@ -459,6 +470,13 @@ class AgentRuntimeController implements AgentUiDelegate {
           AgentRuntimeError.resultBudgetExceeded,
         );
       }
+      run.usage = run.usage.withTool(
+        run.usage.tools.single.settle(
+          invoked
+              ? _toolOutcome(result, failure)
+              : ConversationAttemptOutcome.notStarted,
+        ),
+      );
       await _append(
         run,
         ConversationMessage(
@@ -472,6 +490,12 @@ class AgentRuntimeController implements AgentUiDelegate {
       );
       run.outcomeUnknown = requiresAgentOutcomeReview(result);
       run.succeeded = failure == null && !run.outcomeUnknown;
+      run.usage = run.succeeded
+          ? run.usage.copyWith(
+              status: ConversationRunStatus.completed,
+              settledAt: _clock().toUtc(),
+            )
+          : run.usage.interrupt(settledAt: _clock().toUtc());
       if (repository.find(conversationId) != null && repository.canWrite) {
         await repository.update(
           conversationId,
@@ -479,6 +503,7 @@ class AgentRuntimeController implements AgentUiDelegate {
             status: run.succeeded
                 ? ConversationStatus.idle
                 : ConversationStatus.interrupted,
+            runs: _runRecords(current, run),
           ),
           expectedRunId: run.id,
         );
@@ -499,6 +524,17 @@ class AgentRuntimeController implements AgentUiDelegate {
       rethrow;
     } finally {
       _finishApproval(run);
+      if (run.accepted &&
+          run.usage.status == ConversationRunStatus.running &&
+          repository.canWrite &&
+          repository.find(conversationId)?.runId == run.id) {
+        run.usage = run.usage.interrupt(settledAt: _clock().toUtc());
+        try {
+          await _saveUsage(run, allowCancelled: true);
+        } catch (_) {
+          _failDisplay(conversationId, 'storageUnavailable');
+        }
+      }
       if (identical(_runs[conversationId], run)) _runs.remove(conversationId);
       run.deadline?.cancel();
       run.scope.cancel();
@@ -670,6 +706,8 @@ class AgentRuntimeController implements AgentUiDelegate {
       endpoint: endpoint,
       fingerprint: fingerprint,
       mode: conversation.mode,
+      startedAt: _clock().toUtc(),
+      continuedFromRunId: resume || consumeQueued ? conversation.runId : null,
     );
     _runs[conversationId] = run;
     run.deadline = Timer(
@@ -691,6 +729,9 @@ class AgentRuntimeController implements AgentUiDelegate {
       final recovered = await _recoverHistory(run);
       await repository.update(conversationId, (current) {
         if (handoff && current.runId != null) {
+          throw const AgentRuntimeException(AgentRuntimeError.busy);
+        }
+        if (current.runs.any((item) => item.id == run.id)) {
           throw const AgentRuntimeException(AgentRuntimeError.busy);
         }
         var messages = recovered;
@@ -726,6 +767,7 @@ class AgentRuntimeController implements AgentUiDelegate {
           status: ConversationStatus.running,
           runId: run.id,
           connectionFingerprint: fingerprint,
+          runs: _runRecords(current, run),
         );
       });
       run.accepted = true;
@@ -781,50 +823,13 @@ class AgentRuntimeController implements AgentUiDelegate {
         final conversation = _current(run);
         run.tools = List.unmodifiable(readTools(run.scope));
         final messages = _context(conversation, run);
-        var allowInsecureHttp = await _authorizeHttpTransport(run);
+        final response = await _modelResponse(run, messages);
         _checkRun(run);
-        ProviderResponse? response;
-        final text = StringBuffer();
-        _setDisplay(run, const AgentUiRunState(phase: AgentUiPhase.running));
-        while (!_hasHttpTransportPermission(run)) {
-          allowInsecureHttp = await _authorizeHttpTransport(run);
-          _checkRun(run);
-        }
-        _checkRun(run);
-        await for (final event in provider.stream(
-          ProviderRequest(
-            endpoint: run.endpoint,
-            model: run.settings.model,
-            protocol: _protocol(run.settings.protocol),
-            messages: messages,
-            tools: run.tools,
-            limits: limits.providerLimits,
-            allowInsecureHttp: allowInsecureHttp,
-          ),
-          apiKey: run.apiKey,
-          cancellation: run.cancellation,
-        )) {
-          _checkRun(run);
-          if (event is ProviderTextDelta) {
-            text.write(event.text);
-            _rejectSecret(text.toString(), run.apiKey);
-            _setDisplay(
-              run,
-              AgentUiRunState(
-                phase: AgentUiPhase.running,
-                streamingText: text.toString(),
-              ),
-            );
-          } else if (event is ProviderCompleted) {
-            response = event.response;
-          }
-        }
-        _checkRun(run);
-        if (response == null) {
-          throw const ProviderException(ProviderError.incompleteResponse);
-        }
         _validateResponse(response, conversation, run);
-        run.totalTokens += response.usage?.totalTokens ?? 0;
+        run.totalTokens = run.usage.requests.fold(
+          0,
+          (total, request) => total + (request.usage?.totalTokens ?? 0),
+        );
         await _append(
           run,
           ConversationMessage(
@@ -876,18 +881,24 @@ class AgentRuntimeController implements AgentUiDelegate {
           }
           _checkRun(run);
           run.toolCalls++;
+          final toolUsage = ConversationToolUsage(id: call.id, name: call.name);
+          run.usage = run.usage.withTool(toolUsage);
+          await _saveUsage(run);
           Map<String, Object?> result;
           Object? toolFailure;
+          var invoked = false;
           final toolDeadline = Timer(
             limits.toolTimeout,
             () => _cancel(run, AgentRuntimeError.toolTimeout),
           );
           try {
+            _checkRun(run);
             if (run.recoveryRequired && !isAgentRecoveryRead(call.name)) {
               throw const AgentRuntimeException(
                 AgentRuntimeError.interruptedRunNeedsReview,
               );
             }
+            invoked = true;
             result = await executeTool(
               call,
               run.scope,
@@ -932,6 +943,13 @@ class AgentRuntimeController implements AgentUiDelegate {
                   toolFailure.code == OperationErrorCode.outcomeUnknown) {
             run.outcomeUnknown = true;
           }
+          run.usage = run.usage.withTool(
+            toolUsage.settle(
+              invoked
+                  ? _toolOutcome(result, toolFailure)
+                  : ConversationAttemptOutcome.notStarted,
+            ),
+          );
           await _append(
             run,
             ConversationMessage(
@@ -980,6 +998,12 @@ class AgentRuntimeController implements AgentUiDelegate {
       if (failure == null && run.stopReason != null) {
         failure = AgentRuntimeException(run.stopReason!);
       }
+      run.usage = failure == null && !run.recoveryRequired
+          ? run.usage.copyWith(
+              status: ConversationRunStatus.completed,
+              settledAt: _clock().toUtc(),
+            )
+          : run.usage.interrupt(settledAt: _clock().toUtc());
       final current = repository.find(run.conversationId);
       if (current != null && current.runId == run.id && repository.canWrite) {
         try {
@@ -989,6 +1013,7 @@ class AgentRuntimeController implements AgentUiDelegate {
               status: failure == null && !run.recoveryRequired
                   ? ConversationStatus.idle
                   : ConversationStatus.interrupted,
+              runs: _runRecords(item, run),
             ),
             expectedRunId: run.id,
           );
@@ -1015,9 +1040,113 @@ class AgentRuntimeController implements AgentUiDelegate {
     if (!allowCancelled) _checkRun(run);
     await repository.update(
       run.conversationId,
-      (item) => item.copyWith(messages: [...item.messages, message]),
+      (item) => item.copyWith(
+        messages: [...item.messages, message],
+        runs: _runRecords(item, run),
+      ),
       expectedRunId: run.id,
     );
+  }
+
+  List<ConversationRunUsage> _runRecords(AgentConversation item, _Run run) => [
+    for (final record in item.runs)
+      if (record.id == run.id) run.usage else record,
+    if (!item.runs.any((record) => record.id == run.id)) run.usage,
+  ];
+
+  Future<void> _saveUsage(_Run run, {bool allowCancelled = false}) async {
+    if (!allowCancelled) _checkRun(run);
+    await repository.update(
+      run.conversationId,
+      (item) => item.copyWith(runs: _runRecords(item, run)),
+      expectedRunId: run.id,
+    );
+  }
+
+  Future<ProviderResponse> _modelResponse(
+    _Run run,
+    List<ProviderMessage> messages,
+  ) async {
+    var allowInsecureHttp = await _authorizeHttpTransport(run);
+    _checkRun(run);
+    final request = ConversationRequestUsage(
+      id: _id(),
+      startedAt: _clock().toUtc(),
+    );
+    run.usage = run.usage.withRequest(request);
+    await _saveUsage(run);
+    ProviderResponse? response;
+    ConversationTokenUsage? usage;
+    var invoked = false;
+    final text = StringBuffer();
+    _setDisplay(run, const AgentUiRunState(phase: AgentUiPhase.running));
+    try {
+      // A mode change while saving the attempt cannot reuse a Full-mode HTTP
+      // decision after the user has selected Ask or Plan.
+      while (!_hasHttpTransportPermission(run)) {
+        allowInsecureHttp = await _authorizeHttpTransport(run);
+        _checkRun(run);
+      }
+      _checkRun(run);
+      invoked = true;
+      await for (final event in provider.stream(
+        ProviderRequest(
+          endpoint: run.endpoint,
+          model: run.settings.model,
+          protocol: _protocol(run.settings.protocol),
+          messages: messages,
+          tools: run.tools,
+          limits: limits.providerLimits,
+          allowInsecureHttp: allowInsecureHttp,
+        ),
+        apiKey: run.apiKey,
+        cancellation: run.cancellation,
+      )) {
+        // Usage events are snapshots for this request, not token deltas.
+        if (event is ProviderUsageEvent) usage = _reportedUsage(event.usage);
+        if (event is ProviderCompleted) {
+          response = event.response;
+          usage = _reportedUsage(response.usage) ?? usage;
+        }
+        _checkRun(run);
+        if (event is ProviderTextDelta) {
+          text.write(event.text);
+          _rejectSecret(text.toString(), run.apiKey);
+          _setDisplay(
+            run,
+            AgentUiRunState(
+              phase: AgentUiPhase.running,
+              streamingText: text.toString(),
+            ),
+          );
+        }
+      }
+      if (response == null) {
+        throw const ProviderException(ProviderError.incompleteResponse);
+      }
+      run.usage = run.usage.withRequest(
+        request.settle(
+          outcome: ConversationAttemptOutcome.completed,
+          usage: usage,
+        ),
+      );
+      return response;
+    } catch (error) {
+      run.usage = run.usage.withRequest(
+        request.settle(
+          outcome: response != null
+              ? ConversationAttemptOutcome.completed
+              : !invoked
+              ? ConversationAttemptOutcome.notStarted
+              : _providerRejected(error)
+              ? ConversationAttemptOutcome.failed
+              : ConversationAttemptOutcome.unknown,
+          usage: usage,
+          errorCode: _safeError(error),
+        ),
+      );
+      rethrow;
+    }
   }
 
   Future<void> _recordUnexecuted(
@@ -1574,8 +1703,20 @@ class _Run {
     required this.endpoint,
     required this.fingerprint,
     required AgentPermissionMode mode,
+    required DateTime startedAt,
+    String? continuedFromRunId,
     this.hostAction = false,
-  }) : scope = OperationScope(
+  }) : usage = ConversationRunUsage(
+         id: id,
+         startedAt: startedAt,
+         kind: hostAction
+             ? ConversationRunKind.host
+             : ConversationRunKind.model,
+         protocol: hostAction ? null : settings.protocol.name,
+         model: hostAction ? null : settings.model,
+         continuedFromRunId: continuedFromRunId,
+       ),
+       scope = OperationScope(
          id: id,
          policy: OperationPolicy(enabled: settings.enabled, mode: mode),
        );
@@ -1585,6 +1726,7 @@ class _Run {
   final Uri endpoint;
   final String fingerprint;
   final bool hostAction;
+  ConversationRunUsage usage;
   List<ToolDefinition> tools = const [];
   final OperationScope scope;
   final cancellation = ProviderCancellationToken();
@@ -1604,6 +1746,40 @@ class _Run {
   _PendingApproval? approval;
   _PendingHttpTransport? httpApproval;
 }
+
+ConversationTokenUsage? _reportedUsage(ProviderUsage? value) => value == null
+    ? null
+    : ConversationTokenUsage.fromJson({
+        'inputTokens': value.inputTokens,
+        'outputTokens': value.outputTokens,
+        'totalTokens': value.totalTokens,
+        'cachedInputTokens': value.cachedInputTokens,
+        'reasoningTokens': value.reasoningTokens,
+      });
+
+ConversationAttemptOutcome _toolOutcome(
+  Map<String, Object?> result,
+  Object? failure,
+) =>
+    requiresAgentOutcomeReview(result) ||
+        failure is OperationProblem &&
+            failure.code == OperationErrorCode.outcomeUnknown
+    ? ConversationAttemptOutcome.unknown
+    : failure == null
+    ? ConversationAttemptOutcome.completed
+    : ConversationAttemptOutcome.failed;
+
+bool _providerRejected(Object error) =>
+    error is ProviderException &&
+    const {
+      ProviderError.invalidRequest,
+      ProviderError.insecureEndpoint,
+      ProviderError.requestBudgetExceeded,
+      ProviderError.redirectRejected,
+      ProviderError.authentication,
+      ProviderError.rateLimited,
+      ProviderError.httpFailure,
+    }.contains(error.code);
 
 class _PendingHttpTransport {
   _PendingHttpTransport({required this.id, required this.connection});

@@ -235,6 +235,54 @@ void main() {
     expect(provider.requests, 0);
   });
 
+  test(
+    'recorded usage is available in metadata, run status and approved export',
+    () async {
+      provider.handler = (_, _) => Stream.value(
+        ProviderCompleted(
+          ProviderResponse(
+            text: 'done',
+            toolCalls: [],
+            finishReason: 'stop',
+            usage: const ProviderUsage(
+              inputTokens: 8,
+              outputTokens: 3,
+              totalTokens: 11,
+            ),
+          ),
+        ),
+      );
+      await runtime.continueConversation(targetId);
+      final metadata = await h.call('conversations.get', {'id': targetId});
+      final status = await h.call('runs.status', {'conversationId': targetId});
+      expect((metadata['usage'] as Map)['modelRequests'], 1);
+      expect(
+        ((status['usage'] as Map)['reportedTokens'] as Map)['totalTokens'],
+        11,
+      );
+      expect(jsonEncode(metadata), isNot(contains('Private meeting notes')));
+      AgentDataArtifact? saved;
+      adapter.bindServices(
+        saveArtifact: (artifact) async {
+          saved = artifact;
+          return const AgentArtifactWriteResult(
+            saved: true,
+            destination: 'usage.json',
+          );
+        },
+      );
+      await adapter.exportConversation(targetId);
+      final exported = jsonDecode(saved!.text)['conversation'] as Map;
+      expect((exported['runs'] as List), hasLength(1));
+      expect((exported['usage'] as Map)['cost'], null);
+      expect(
+        ((exported['usage'] as Map)['reportedTokens'] as Map)['totalTokens'],
+        11,
+      );
+      expect(saved!.text, isNot(contains('https://model.example')));
+    },
+  );
+
   test('export writes the reviewed snapshot through the host without returning body', () async {
     AgentDataArtifact? saved;
     adapter.bindServices(

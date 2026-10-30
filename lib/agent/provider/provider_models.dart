@@ -111,15 +111,15 @@ class ProviderUsage {
     required this.inputTokens,
     required this.outputTokens,
     required this.totalTokens,
-    this.cachedInputTokens = 0,
-    this.reasoningTokens = 0,
+    this.cachedInputTokens,
+    this.reasoningTokens,
   });
 
   final int inputTokens;
   final int outputTokens;
   final int totalTokens;
-  final int cachedInputTokens;
-  final int reasoningTokens;
+  final int? cachedInputTokens;
+  final int? reasoningTokens;
 }
 
 class ProviderResponse {

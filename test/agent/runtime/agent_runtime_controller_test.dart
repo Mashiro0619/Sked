@@ -56,6 +56,7 @@ class _OperationHarness {
 
 void main() {
   registerRecoveryTests();
+  registerUsageTests();
   test(
     'persists accepted message and run before request, tokens only update UI',
     () async {
@@ -396,6 +397,10 @@ void main() {
         'operationId': 'op-real',
       });
       expect(jsonDecode(results.last.text)['status'], 'not_executed');
+      final usage = h.repository.find(h.id)!.runs.single;
+      expect(usage.tools.map((tool) => tool.id), ['accepted']);
+      expect(usage.tools.single.outcome, ConversationAttemptOutcome.completed);
+      expect(usage.status, ConversationRunStatus.interrupted);
       expect(h.provider.requests, hasLength(1));
       expect(h.runtime.state.value.runFor(h.id).phase, AgentUiPhase.stopped);
     },
@@ -980,6 +985,232 @@ void main() {
     expect(h.repository.find(h.id)!.messages, isEmpty);
     key.complete(_key);
   });
+}
+
+void registerUsageTests() {
+  const reported = ProviderUsage(
+    inputTokens: 10,
+    outputTokens: 5,
+    totalTokens: 15,
+    cachedInputTokens: 3,
+    reasoningTokens: 2,
+  );
+  ProviderResponse reply({List<ProviderToolCall> calls = const []}) =>
+      ProviderResponse(
+        text: 'metered reply',
+        toolCalls: calls,
+        finishReason: calls.isEmpty ? 'stop' : 'tool_calls',
+        usage: reported,
+      );
+
+  test(
+    'usage snapshots count once per request and persist with their reply',
+    () async {
+      var round = 0;
+      final h = await _Harness.create(
+        handler: (_, _) async* {
+          if (round++ == 0) {
+            yield const ProviderUsageEvent(reported);
+            yield const ProviderUsageEvent(reported);
+            yield ProviderCompleted(reply(calls: [_call('read')]));
+          } else {
+            yield ProviderCompleted(_response('unmetered reply'));
+          }
+        },
+        execute: (_, _, _) async => throw const OperationProblem(
+          OperationErrorCode.conflict,
+          'Synthetic version conflict.',
+        ),
+      );
+      addTearDown(h.dispose);
+      var verifiedAtomicReply = false;
+      h.storage.beforeSave = (source) async {
+        final saved = ConversationArchive.decode(source).conversations.single;
+        final request = saved.runs.lastOrNull?.requests.firstOrNull;
+        if (request?.outcome == ConversationAttemptOutcome.completed) {
+          expect(saved.messages.any((m) => m.text == 'metered reply'), true);
+          verifiedAtomicReply = true;
+        }
+      };
+      await h.runtime.send(h.id, 'run a query');
+      final run = ConversationArchive.decode(h.storage.source!)
+          .conversations
+          .single
+          .runs
+          .single;
+      expect(verifiedAtomicReply, true);
+      expect(run.requests, hasLength(2));
+      expect(run.requests.map((item) => item.id).toSet(), hasLength(2));
+      expect(run.requests.first.usage!.totalTokens, 15);
+      expect(run.requests.last.usage, null);
+      expect(run.tools.single.outcome, ConversationAttemptOutcome.failed);
+      final summary = run.summary();
+      expect(summary['modelRequests'], 2);
+      expect(summary['automaticRetries'], 0);
+      expect(summary['tokenUsageStatus'], 'partial');
+      expect(summary['unreportedUsageRequests'], 1);
+      expect((summary['reportedTokens'] as Map)['totalTokens'], 15);
+      expect((summary['reportedTokens'] as Map)['cachedInputTokens'], 3);
+      expect(summary['cost'], null);
+      expect(summary['costStatus'], 'unknown');
+      expect(
+        (h.runtime.describeRun(h.id)['usage'] as Map)['reportedTokens'],
+        summary['reportedTokens'],
+      );
+      expect(
+        jsonEncode(
+          h.provider.requests.last.messages.map((m) => m.text).toList(),
+        ),
+        isNot(contains('reportedTokens')),
+      );
+    },
+  );
+
+  test(
+    'cancellation retains observed usage without claiming request completion',
+    () async {
+      final receivedUsage = Completer<void>();
+      final h = await _Harness.create(
+        handler: (_, cancellation) async* {
+          yield const ProviderUsageEvent(reported);
+          receivedUsage.complete();
+          await cancellation!.whenCancelled;
+          throw const ProviderException(ProviderError.cancelled);
+        },
+      );
+      addTearDown(h.dispose);
+      final send = h.runtime.send(h.id, 'start');
+      await receivedUsage.future;
+      await h.runtime.stop(h.id);
+      await send;
+      final run = ConversationArchive.decode(h.storage.source!)
+          .conversations
+          .single
+          .runs
+          .single;
+      expect(run.status, ConversationRunStatus.interrupted);
+      expect(run.requests.single.outcome, ConversationAttemptOutcome.unknown);
+      expect(run.requests.single.usage!.totalTokens, 15);
+      expect(run.requests.single.errorCode, 'provider.cancelled');
+      expect(h.repository.find(h.id)!.messages, hasLength(1));
+    },
+  );
+
+  test(
+    'failed pending-request persistence prevents calling the provider',
+    () async {
+      final h = await _Harness.create();
+      addTearDown(h.dispose);
+      h.storage.beforeSave = (source) async {
+        final saved = ConversationArchive.decode(source).conversations.single;
+        if (saved.runs.lastOrNull?.requests.isNotEmpty ?? false) {
+          throw StateError('Synthetic pending-request save failure.');
+        }
+      };
+      await h.runtime.send(h.id, 'start');
+      expect(h.provider.requests, isEmpty);
+      expect(
+        ConversationArchive.decode(h.storage.source!)
+            .conversations
+            .single
+            .runs
+            .single
+            .requests,
+        isEmpty,
+      );
+      expect(h.repository.canWrite, false);
+    },
+  );
+
+  test('lost completed-response save stays unknown after restart and is not replayed', () async {
+    final h = await _Harness.create(handler: (_, _) => _events(reply()));
+    addTearDown(h.dispose);
+    h.storage.beforeSave = (source) async {
+      final saved = ConversationArchive.decode(source).conversations.single;
+      if (saved.runs.lastOrNull?.requests.lastOrNull?.outcome ==
+          ConversationAttemptOutcome.completed) {
+        throw StateError('Synthetic reply save failure.');
+      }
+    };
+    await h.runtime.send(h.id, 'start');
+    expect(h.provider.requests, hasLength(1));
+    final original = ConversationArchive.decode(h.storage.source!)
+        .conversations
+        .single
+        .runs
+        .single;
+    expect(
+      original.requests.single.outcome,
+      ConversationAttemptOutcome.pending,
+    );
+    expect(original.requests.single.usage, null);
+    h.storage.beforeSave = null;
+    final restarted = ConversationRepository(storage: h.storage);
+    addTearDown(restarted.dispose);
+    await restarted.load();
+    final recovered = restarted.find(h.id)!.runs.single;
+    expect(recovered.id, original.id);
+    expect(recovered.requests.single.id, original.requests.single.id);
+    expect(
+      recovered.requests.single.outcome,
+      ConversationAttemptOutcome.unknown,
+    );
+    expect(recovered.requests.single.usage, null);
+    expect(recovered.summary()['reportedTokens'], null);
+    expect(recovered.summary()['tokenUsageStatus'], 'unreported');
+    final saved = h.storage.source;
+    await restarted.load();
+    expect(h.storage.source, saved);
+    expect(h.provider.requests, hasLength(1));
+  });
+
+  test(
+    'explicit continuation has a new run and never re-counts old usage',
+    () async {
+      var attempt = 0;
+      final h = await _Harness.create(
+        handler: (_, _) async* {
+          if (attempt++ == 0) {
+            yield const ProviderUsageEvent(reported);
+            throw const ProviderException(ProviderError.transportFailure);
+          }
+          yield ProviderCompleted(reply());
+        },
+      );
+      addTearDown(h.dispose);
+      await h.runtime.send(h.id, 'start');
+      final first = h.repository.find(h.id)!.runs.single;
+      await h.runtime.continueConversation(h.id);
+      final runs = h.repository.find(h.id)!.runs;
+      expect(runs, hasLength(2));
+      expect(runs.first.toJson(), first.toJson());
+      expect(runs.last.continuedFromRunId, first.id);
+      expect(runs.last.requests.single.id, isNot(first.requests.single.id));
+      final summary = summarizeConversationUsage(runs);
+      expect(summary['continuedRuns'], 1);
+      expect(summary['modelRequests'], 2);
+      expect((summary['reportedTokens'] as Map)['totalTokens'], 30);
+      expect(summary['automaticRetries'], 0);
+      expect(h.provider.requests, hasLength(2));
+    },
+  );
+
+  test(
+    'host actions retain their tool outcome without inventing model usage',
+    () async {
+      final h = await _Harness.create(mode: AgentPermissionMode.full);
+      addTearDown(h.dispose);
+      await h.runtime.runHostAction(h.id, (_, _) async => {'status': 'read'});
+      final run = h.repository.find(h.id)!.runs.single;
+      expect(run.kind, ConversationRunKind.host);
+      expect(run.requests, isEmpty);
+      expect(run.tools.single.outcome, ConversationAttemptOutcome.completed);
+      expect(run.summary()['reportedTokens'], null);
+      expect(run.summary()['tokenUsageStatus'], 'notRequested');
+      expect(run.status, ConversationRunStatus.completed);
+      expect(h.provider.requests, isEmpty);
+    },
+  );
 }
 
 void registerRecoveryTests() {

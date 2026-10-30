@@ -204,6 +204,8 @@ void main() {
       expect(result.toolCalls.single.id, 'call-1');
       expect(result.toolCalls.single.decodedArguments, {'a': 1});
       expect(result.usage?.totalTokens, 19);
+      expect(result.usage?.cachedInputTokens, null);
+      expect(result.usage?.reasoningTokens, null);
       final body = encodeProviderRequest(
         request(
           protocol: ProviderProtocol.responses,

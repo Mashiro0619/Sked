@@ -815,7 +815,7 @@ class ApplicationToolHost {
 
     _add(
       'conversation.get',
-      'Read only this conversation metadata and attached source identifiers.',
+      'Read this conversation metadata, source identifiers and recorded run usage. Missing usage and monetary cost remain unknown.',
       {},
       (_, scope, _) async {
         final conversation = _conversation(scope);
@@ -824,6 +824,7 @@ class ApplicationToolHost {
           'title': conversation.title,
           'mode': conversation.mode.name,
           'status': conversation.status.name,
+          'usage': summarizeConversationUsage(conversation.runs),
           'sources': [
             for (final source in conversation.sources) _sourceSummary(source),
           ],
