@@ -28,6 +28,17 @@ Future<void> _expectFileExcludes(File file, String sentinel) async {
   );
 }
 
+Future<void> _disposeRuntimeWhenIdle(AppRuntime runtime) async {
+  try {
+    // Readiness can start Agent migration after lifecycle.load has returned.
+    // Finish that work before the outer teardown removes this test's files.
+    await runtime.shutdown.quiesce();
+  } finally {
+    runtime.dispose();
+    await runtime.session.close();
+  }
+}
+
 class _MemorySecretStore implements SecretStore {
   String value = '';
 
@@ -186,7 +197,7 @@ void main() {
         secretStore: secrets,
         systemLocaleCodeResolver: () => 'en',
       );
-      addTearDown(provider.dispose);
+      addTearDown(() => _disposeRuntimeWhenIdle(provider));
 
       await provider.lifecycle.load();
 
@@ -228,7 +239,7 @@ void main() {
         secretStore: secrets,
         systemLocaleCodeResolver: () => 'en',
       );
-      addTearDown(provider.dispose);
+      addTearDown(() => _disposeRuntimeWhenIdle(provider));
 
       await provider.lifecycle.load();
       expect(provider.session.canWrite, isFalse);
@@ -520,7 +531,7 @@ void main() {
       secretStore: _MemorySecretStore(),
       systemLocaleCodeResolver: () => 'en',
     );
-    addTearDown(provider.dispose);
+    addTearDown(() => _disposeRuntimeWhenIdle(provider));
 
     await provider.lifecycle.load();
 
