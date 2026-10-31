@@ -9,8 +9,9 @@ import 'package:sked/services/school_import_content_sanitizer.dart';
 import 'benchmark_fixtures.dart';
 import 'benchmark_runner.dart';
 
-// Dataset 7 adds the five declared Agent preference defaults to local AppData.
-// Portable backup, event, cache and sanitizer contracts remain unchanged.
+// Dataset 8 advances AppData to schema 6 and records enabled Agent defaults
+// with an empty model directory. Workload records and timing protocol remain
+// unchanged; the fixture test reconstructs all four dataset 7 checksums.
 const _expectedChecksums = <String, String>{
   'occurrence.1000_7d_cold': 'fnv1a64-utf16le:cf98943344242498',
   'occurrence.5000_42d_cold': 'fnv1a64-utf16le:de23b67a384a1d3e',
@@ -19,10 +20,10 @@ const _expectedChecksums = <String, String>{
   'cache.1000_churn': 'fnv1a64-utf16le:41afccfcf48cf9ee',
   'sanitizer.table_full': 'fnv1a64-utf16le:e8d76fa6544f75cd',
   'sanitizer.table_240k': 'fnv1a64-utf16le:3f7220f07decc524',
-  'app_data.5000_encode': 'fnv1a64-utf16le:400c59aa8aa32636',
-  'app_data.5000_decode_storage': 'fnv1a64-utf16le:2a92e1e31fa7a902',
-  'app_backup.5000_encode': 'fnv1a64-utf16le:d3ef07ee399f46bd',
-  'app_backup.5000_decode': 'fnv1a64-utf16le:a54d89150e360202',
+  'app_data.5000_encode': 'fnv1a64-utf16le:41138787e26eb567',
+  'app_data.5000_decode_storage': 'fnv1a64-utf16le:7d17b9c7ab307747',
+  'app_backup.5000_encode': 'fnv1a64-utf16le:e5333b9b4bb7ed76',
+  'app_backup.5000_decode': 'fnv1a64-utf16le:db3a0eb536199d79',
 };
 
 List<PerformanceBenchmarkCase> buildPerformanceBenchmarkCases(

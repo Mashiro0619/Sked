@@ -20,6 +20,7 @@ void main() {
   });
 
   test('fixture has the fixed large-data shape', () {
+    expect(performanceDatasetVersion, 8);
     expect(fixtures.generalData1000.schedules, hasLength(8));
     expect(
       fixtures.generalData1000.schedules.expand((schedule) => schedule.events),
@@ -103,64 +104,94 @@ void main() {
     expect(actual, expectedPerformanceFixtureChecksums);
   });
 
-  test('Agent preference defaults account for the entire dataset 7 change', () {
-    String asDataset6(String source) {
-      final app = jsonDecode(source) as Map<String, dynamic>;
-      expect(app['schemaVersion'], 5);
-      expect(app['applicationLedger'], isNull);
-      final agent = app['agentSettings'] as Map<String, dynamic>;
-      const preferences = {
-        'systemInstructions': '',
-        'maxModelRounds': 24,
-        'maxToolCalls': 128,
-        'maxTotalTokens': 100000,
-        'historyRetentionDays': 0,
-      };
-      for (final entry in preferences.entries) {
-        expect(agent.remove(entry.key), entry.value, reason: entry.key);
-      }
-      expect(agent, {
-        'enabled': false,
-        'permissionMode': 'ask',
-        'protocol': 'chatCompletions',
-        'endpoint': '',
-        'model': '',
-        'credentialRef': null,
-      });
-      // Keep the schema, original Agent fields and every workload byte. Only
-      // the five newly serialized local preferences may explain the new hash.
-      return jsonEncode(app);
-    }
-
-    expect(
-      checksumString(asDataset6(fixtures.appData.encode())),
-      'fnv1a64-utf16le:a71d5570d44903ea',
-    );
-    expect(
-      checksumString(
-        asDataset6(
-          AppData.decodeStorageSnapshot(fixtures.appDataSnapshot).encode(),
+  test(
+    'schema 6 and Agent model defaults account for the entire dataset 8 change',
+    () {
+      expect(
+        checksumString(_asDataset7(fixtures.appData.encode())),
+        'fnv1a64-utf16le:400c59aa8aa32636',
+      );
+      expect(
+        checksumString(
+          _asDataset7(
+            AppData.decodeStorageSnapshot(fixtures.appDataSnapshot).encode(),
+          ),
         ),
-      ),
-      'fnv1a64-utf16le:f4e6665006565eab',
-    );
-  });
+        'fnv1a64-utf16le:2a92e1e31fa7a902',
+      );
+      expect(
+        checksumString(
+          _asDataset7(encodeAppBackup(fixtures.appData, fixtures.schoolSites)),
+        ),
+        'fnv1a64-utf16le:d3ef07ee399f46bd',
+      );
+      final decoded = decodeAppBackup(fixtures.appBackupSnapshot);
+      final checksum = StableChecksum()
+        ..addBool(decoded.includesSchoolSites)
+        ..addString(
+          _asDataset7(encodeAppBackup(decoded.appData, decoded.schoolSites)),
+        );
+      expect(checksum.finish(), 'fnv1a64-utf16le:a54d89150e360202');
+    },
+  );
+
+  test(
+    'dataset 7 preference normalization preserves the dataset 6 workload',
+    () {
+      String asDataset6(String source) {
+        final app = jsonDecode(_asDataset7(source)) as Map<String, dynamic>;
+        expect(app['schemaVersion'], 5);
+        expect(app['applicationLedger'], isNull);
+        final agent = app['agentSettings'] as Map<String, dynamic>;
+        const preferences = {
+          'systemInstructions': '',
+          'maxModelRounds': 24,
+          'maxToolCalls': 128,
+          'maxTotalTokens': 100000,
+          'historyRetentionDays': 0,
+        };
+        for (final entry in preferences.entries) {
+          expect(agent.remove(entry.key), entry.value, reason: entry.key);
+        }
+        expect(agent, {
+          'enabled': false,
+          'permissionMode': 'ask',
+          'protocol': 'chatCompletions',
+          'endpoint': '',
+          'model': '',
+          'credentialRef': null,
+        });
+        // Keep the schema, original Agent fields and every workload byte. Only
+        // the five newly serialized local preferences may explain the new hash.
+        return jsonEncode(app);
+      }
+
+      expect(
+        checksumString(asDataset6(fixtures.appData.encode())),
+        'fnv1a64-utf16le:a71d5570d44903ea',
+      );
+      expect(
+        checksumString(
+          asDataset6(
+            AppData.decodeStorageSnapshot(fixtures.appDataSnapshot).encode(),
+          ),
+        ),
+        'fnv1a64-utf16le:f4e6665006565eab',
+      );
+    },
+  );
 
   test(
     'schema and preference additions do not change fixture workload data',
     () {
       String asV4(String source) {
-        expect(
-          RegExp('"schemaVersion":$generalScheduleSchemaVersion')
-              .allMatches(source),
-          hasLength(1),
-        );
-        final root = jsonDecode(source) as Map<String, dynamic>;
+        final root = jsonDecode(_asDataset7(source)) as Map<String, dynamic>;
         final app =
             (root['data'] == null
                     ? root
                     : (root['data'] as Map<String, dynamic>)['appData'])
                 as Map<String, dynamic>;
+        expect(app['schemaVersion'], 5);
         expect(app.remove('includePrereleaseUpdates'), isTrue);
         // Compare the historical workload after removing only new navigation
         // preferences and restoring its old AppData schema envelope.
@@ -175,6 +206,7 @@ void main() {
           mode['hiddenToolbarNavigationIds'] = [];
         }
         final general = app['generalMode'] as Map<String, dynamic>;
+        expect(general['schemaVersion'], generalScheduleSchemaVersion);
         for (final calendar in general['schedules'] as List<dynamic>) {
           for (final event
               in (calendar as Map<String, dynamic>)['events']
@@ -219,4 +251,28 @@ void main() {
       expect(checksum.finish(), 'fnv1a64-utf16le:7401c4a42a54dc73');
     },
   );
+}
+
+/// Reverse only the exact dataset 8 serialization changes. Portable backups
+/// omit local Agent configuration, but retain the owning AppData schema.
+String _asDataset7(String source) {
+  final root = jsonDecode(source) as Map<String, dynamic>;
+  final portable = root.containsKey('data');
+  final app = portable
+      ? (root['data'] as Map<String, dynamic>)['appData']
+            as Map<String, dynamic>
+      : root;
+  expect(app['schemaVersion'], 6);
+  app['schemaVersion'] = 5;
+  if (portable) {
+    expect(app.containsKey('agentSettings'), isFalse);
+    expect(app.containsKey('applicationLedger'), isFalse);
+  } else {
+    expect(app['applicationLedger'], isNull);
+    final agent = app['agentSettings'] as Map<String, dynamic>;
+    expect(agent['enabled'], isTrue);
+    agent['enabled'] = false;
+    expect(agent.remove('models'), <Object>[]);
+  }
+  return jsonEncode(root);
 }

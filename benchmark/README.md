@@ -460,3 +460,24 @@ cannot be accepted merely by replacing the expected hashes. The older schema
 normalization regression remains separate. Existing timing reports retain their
 original dataset versions; this contract update adds no performance evidence
 and does not make samples from different dataset versions directly comparable.
+
+## Dataset version 8: enabled Agent and model directory
+
+AppData schema 6 enables the Agent entry by default and local configuration now
+serializes an empty `models` list. Dataset version 8 updates the four
+serialization checksums. Portable backups still omit Agent configuration and
+the operation ledger; their change comes from the owning AppData schema alone.
+The event, course and school-site records, seven non-serialization checksums,
+record counts and measurement protocol remain unchanged.
+
+The regression reverses exactly schema 6 to 5, local `enabled: true` to false,
+and the empty model list before requiring all four dataset 7 checksums. It also
+retains the dataset 7-to-6 preference checks and earlier workload checksums.
+Nested calendar schema validation uses its owning JSON object, independently
+of the AppData schema; both currently use the number 6. No workload is removed
+or regenerated to justify replacing a checksum.
+
+Earlier timing reports retain their recorded dataset and source versions. This
+serialization contract update supplies no timing, memory or device evidence;
+new comparisons must freeze the same dataset version on both sides and repeat
+the documented protocol in an exclusive measurement window.
