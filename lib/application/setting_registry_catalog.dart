@@ -180,6 +180,7 @@ Map<String, _SettingBinding> _buildSettingBindings(
     'protocol',
     'endpoint',
     'model',
+    'models',
     'credentialRef',
     ...agentPreferences.keys,
   };
@@ -193,6 +194,7 @@ Map<String, _SettingBinding> _buildSettingBindings(
           switch (entry.key) {
             'enabled' => SettingValueType.boolean,
             'permissionMode' || 'protocol' => SettingValueType.enumeration,
+            'models' => SettingValueType.objectList,
             _ => SettingValueType.string,
           },
       entry.value,
@@ -849,6 +851,7 @@ String? _settingAdapterTool(String key) {
     'agent.protocol' ||
     'agent.endpoint' ||
     'agent.model' ||
+    'agent.models' ||
     'agent.credentialRef' => 'connection.prepare',
     'student.activeTimetableId' ||
     'general.activeScheduleId' ||

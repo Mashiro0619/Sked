@@ -1060,7 +1060,7 @@ void main() {
         await tester.pumpAndSettle();
         final settings = find.widgetWithText(
           OutlinedButton,
-          l10n.workspaceFeatures,
+          l10n.agentModelSettings,
         );
         await tester.ensureVisible(settings);
         await tester.pumpAndSettle();

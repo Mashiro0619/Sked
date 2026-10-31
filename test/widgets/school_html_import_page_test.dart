@@ -232,7 +232,10 @@ void main() {
   testWidgets('disabled Agent retains the source through configuration', (
     tester,
   ) async {
-    final fixture = await _mount(tester, settings: const AgentSettings());
+    final fixture = await _mount(
+      tester,
+      settings: const AgentSettings(enabled: false),
+    );
     await _press(tester, _compress);
     final reviewed = _text(tester);
     await _press(tester, _continue);

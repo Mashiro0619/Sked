@@ -79,11 +79,27 @@ void main() {
     () {
       final before = _data();
       final configured = before.copyWith(
-        agentSettings: const AgentSettings(enabled: true),
+        agentSettings: before.agentSettings.copyWith(
+          enabled: !before.agentSettings.enabled,
+        ),
       );
       expect(changedAppDataDomains(before, configured), {
         AppDataDomain.settings,
       });
+      expect(changedAppDataDomains(configured, before), {
+        AppDataDomain.settings,
+      });
+      expect(
+        changedAppDataDomains(
+          before,
+          before.copyWith(
+            agentSettings: AgentSettings.fromJson(
+              before.agentSettings.toJson(),
+            ),
+          ),
+        ),
+        isEmpty,
+      );
       final ledger =
           ApplicationLedger(generation: '797b806b-bb3e-42cb-bbc7-6b7732d3df45')
               .append(

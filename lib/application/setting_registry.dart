@@ -17,6 +17,7 @@ enum SettingValueType {
   string,
   enumeration,
   stringList,
+  objectList,
   colorMap,
   object,
 }
@@ -354,6 +355,8 @@ class SettingRegistry {
       SettingValueType.enumeration => value is String,
       SettingValueType.stringList =>
         value is List && value.every((item) => item is String),
+      SettingValueType.objectList =>
+        value is List && value.every((item) => item is Map),
       SettingValueType.colorMap =>
         value is Map &&
             value.entries.every(

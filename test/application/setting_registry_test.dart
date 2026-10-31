@@ -142,11 +142,21 @@ void main() {
       SettingEdit.reset('agent.historyRetentionDays'),
     ]);
     expect(reset.candidate.agentSettings, before.agentSettings);
-    final enabled = registry.prepare(before, const [
-      SettingEdit.set('agent.enabled', true),
+    final toggled = registry.prepare(before, [
+      SettingEdit.set('agent.enabled', !before.agentSettings.enabled),
     ]);
-    expect(enabled.changes.single.key, 'agent.enabled');
-    expect(enabled.candidate.agentSettings.enabled, isTrue);
+    expect(toggled.changes.single.key, 'agent.enabled');
+    expect(
+      toggled.candidate.agentSettings.enabled,
+      !before.agentSettings.enabled,
+    );
+    final resetEnabled = registry.prepare(toggled.candidate, const [
+      SettingEdit.reset('agent.enabled'),
+    ]);
+    expect(
+      resetEnabled.candidate.agentSettings.enabled,
+      const AgentSettings().enabled,
+    );
     expect(
       () => registry.prepare(before, const [
         SettingEdit.set('agent.historyRetentionDays', 2),
@@ -159,6 +169,43 @@ void main() {
       ]),
       rejectsSetting(SettingValidationCode.readOnly),
     );
+  });
+
+  test('model directory metadata routes structured choices exclusively through the connection adapter', () {
+    const models = [
+      AgentModelConfig(
+        id: 'model-a',
+        reasoningEfforts: [
+          AgentReasoningEffort.auto,
+          AgentReasoningEffort.high,
+        ],
+        defaultReasoningEffort: AgentReasoningEffort.high,
+      ),
+      AgentModelConfig(id: 'model-b'),
+    ];
+    final before = sample().copyWith(
+      agentSettings: const AgentSettings(model: 'model-a', models: models),
+    );
+    final descriptor = registry.descriptor('agent.models');
+    expect(descriptor.type, SettingValueType.objectList);
+    expect(descriptor.requiresAdapter, isTrue);
+    expect(descriptor.adapterTool, 'connection.prepare');
+    expect(descriptor.canPrepare, isFalse);
+    expect(descriptor.defaultValue, isEmpty);
+    expect(
+      registry.read(before, 'agent.models'),
+      models.map((model) => model.toJson()).toList(),
+    );
+    for (final edit in [
+      const SettingEdit.set('agent.models', []),
+      const SettingEdit.reset('agent.models'),
+    ]) {
+      expect(
+        () => registry.prepare(before, [edit]),
+        rejectsSetting(SettingValidationCode.requiresAdapter),
+      );
+    }
+    expect(before.agentSettings.models, models);
   });
 
   test('every current workspace preference has an explicit descriptor', () {
