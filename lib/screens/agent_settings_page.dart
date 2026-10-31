@@ -31,6 +31,20 @@ class AgentSettingsPage extends StatefulWidget {
 
 class _AgentSettingsPageState extends State<AgentSettingsPage> {
   bool _saving = false;
+  AgentApplication? _initializationAttempt;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final application = context.read<AgentApplication>();
+    if (identical(_initializationAttempt, application)) return;
+    _initializationAttempt = application;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && identical(context.read<AgentApplication>(), application)) {
+        application.initialize().ignore();
+      }
+    });
+  }
 
   Future<void> _save(AgentModelSettingsChange change) async {
     if (_saving) throw StateError('Agent settings are already being saved.');

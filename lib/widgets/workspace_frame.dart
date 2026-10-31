@@ -1109,7 +1109,10 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
             child: !previewEnabled
                 ? const SizedBox.shrink()
                 : _agentApplication != null
-                ? AgentAssistantPane(onClose: () => _setAssistantOpen(false))
+                ? AgentAssistantPane(
+                    active: interactive,
+                    onClose: () => _setAssistantOpen(false),
+                  )
                 : AssistantPreviewPane(
                     onClose: () => _setAssistantOpen(false),
                     controller: _assistant,

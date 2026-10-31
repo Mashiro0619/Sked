@@ -80,7 +80,8 @@ class AgentPage extends StatelessWidget {
 /// Keeps navigation local to this visible host. Other retained workspaces can
 /// render the same runtime without replacing a global settings callback.
 class AgentConversationHost extends StatefulWidget {
-  const AgentConversationHost({super.key});
+  const AgentConversationHost({super.key, this.active = true});
+  final bool active;
 
   @override
   State<AgentConversationHost> createState() => _AgentConversationHostState();
@@ -89,6 +90,41 @@ class AgentConversationHost extends StatefulWidget {
 class _AgentConversationHostState extends State<AgentConversationHost> {
   bool _settingsOpen = false;
   bool _retrying = false;
+  AgentApplication? _initializationAttempt;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _initializeVisibleHost();
+  }
+
+  @override
+  void didUpdateWidget(AgentConversationHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !oldWidget.active) _initializeVisibleHost();
+  }
+
+  void _initializeVisibleHost() {
+    final application = context.read<AgentApplication>();
+    if (!widget.active ||
+        application.isInitialized ||
+        application.initializationError ||
+        identical(_initializationAttempt, application)) {
+      return;
+    }
+    _initializationAttempt = application;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          !widget.active ||
+          !identical(context.read<AgentApplication>(), application)) {
+        _initializationAttempt = null;
+        return;
+      }
+      // The application owns both the shared in-flight load and its failure
+      // state. Retained, hidden hosts must never start this work at startup.
+      application.initialize().ignore();
+    });
+  }
 
   Future<void> _retryInitialization() async {
     if (_retrying) return;
@@ -116,6 +152,9 @@ class _AgentConversationHostState extends State<AgentConversationHost> {
   Widget build(BuildContext context) {
     final application = context.watch<AgentApplication>();
     final l = AppLocalizations.of(context);
+    if (!widget.active && !application.isInitialized) {
+      return const SizedBox.shrink();
+    }
     if (!application.isInitialized) {
       return Center(
         child: application.initializationError && !_retrying

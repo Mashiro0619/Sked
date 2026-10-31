@@ -91,8 +91,13 @@ class AssistantPaneToggle extends StatelessWidget {
 }
 
 class AgentAssistantPane extends StatelessWidget {
-  const AgentAssistantPane({super.key, required this.onClose});
+  const AgentAssistantPane({
+    super.key,
+    required this.onClose,
+    this.active = true,
+  });
   final VoidCallback onClose;
+  final bool active;
 
   @override
   Widget build(BuildContext context) => SkedSurface(
@@ -106,7 +111,7 @@ class AgentAssistantPane extends StatelessWidget {
           ),
         ),
         const Divider(height: 1),
-        const Expanded(child: AgentConversationHost()),
+        Expanded(child: AgentConversationHost(active: active)),
       ],
     ),
   );

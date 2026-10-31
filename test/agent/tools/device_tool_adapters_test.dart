@@ -226,6 +226,14 @@ void main() {
   });
 
   test('legacy developer preview preference does not enable Agent', () async {
+    final data = h.session.committedData;
+    await h.close();
+    h = PlatformToolHarness();
+    await h.initialize(
+      data: data.copyWith(
+        agentSettings: data.agentSettings.copyWith(enabled: false),
+      ),
+    );
     final preferences = DeveloperUiPreferences.memory();
     addTearDown(preferences.dispose);
     h.platform.bindServices(developerUi: preferences);

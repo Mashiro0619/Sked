@@ -500,6 +500,7 @@ void main() {
           credentialAction: AgentCredentialAction.replace,
           rawKey: 'fixture-key',
         );
+        await app.agent.setEnabled(false);
         expect(app.agent.settings.enabled, isFalse);
         final workspaces = app.workspaceView.enabledWorkspaces;
         await tester.pumpWidget(
