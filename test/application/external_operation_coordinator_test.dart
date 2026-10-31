@@ -136,6 +136,49 @@ void main() {
   });
 
   test(
+    'approval can show owner content without persisting it in the ledger',
+    () async {
+      final plan = h.coordinator.prepare(
+        scope: h.scope,
+        action: 'knowledge.save',
+        arguments: const {'proposalId': 'proposal-1'},
+        version: 0,
+        changes: [
+          ResourceChange(
+            key: 'memory:1',
+            before: null,
+            after: {'body': 'private memory body'},
+          ),
+        ],
+        receiptChanges: [
+          ResourceChange(key: 'memory:1', before: null, after: {'revision': 1}),
+        ],
+        validate: () {},
+        execute: (_) async => ExternalEffectResult(
+          state: ExternalEffectState.applied,
+          details: {'recordId': 'memory:1', 'revision': 1},
+        ),
+      );
+      expect(plan.summary().toString(), contains('private memory body'));
+      await h.commit(plan);
+      expect(
+        h.storage.data.applicationLedger!.toJson().toString(),
+        isNot(contains('private memory body')),
+      );
+      expect(
+        h.storage.data.applicationLedger!.receipts.single.result['changes'],
+        [
+          {
+            'key': 'memory:1',
+            'before': null,
+            'after': {'revision': 1},
+          },
+        ],
+      );
+    },
+  );
+
+  test(
     'prepare freezes real preview; pending precedes effect and final receipt',
     () async {
       final arguments = <String, Object?>{'enabled': true};

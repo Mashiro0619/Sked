@@ -231,6 +231,7 @@ class ExternalOperationCoordinator {
     required Map<String, Object?> arguments,
     required Object? version,
     required List<ResourceChange> changes,
+    List<ResourceChange>? receiptChanges,
     required void Function() validate,
     required ExternalEffect execute,
     ExternalEffect? readBack,
@@ -303,7 +304,9 @@ class ExternalOperationCoordinator {
             'dataStatus': 'unchanged',
             'effectStatus': ExternalEffectState.pending.name,
             'effectResult': <String, Object?>{},
-            'changes': [for (final change in changes) change.toJson()],
+            'changes': [
+              for (final change in receiptChanges ?? changes) change.toJson(),
+            ],
           },
         );
     final prepared = PreparedExternalMutation._(
