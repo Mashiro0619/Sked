@@ -463,6 +463,7 @@ IconData _icon(SettingsDestination destination) => switch (destination) {
   SettingsDestination.language => Icons.language,
   SettingsDestination.data => Icons.shield_outlined,
   SettingsDestination.features => Icons.dashboard_customize_outlined,
+  SettingsDestination.agent => Icons.auto_awesome_outlined,
   SettingsDestination.about => Icons.info_outline,
   SettingsDestination.student => Icons.school_outlined,
   SettingsDestination.general => Icons.event_outlined,

@@ -368,6 +368,8 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
       context,
       width: compactWidth ? 0 : null,
     );
+    final assistant = AssistantPaneScope.of(context);
+    final assistantInMenu = mobile && assistant?.enabled == true;
     final showWorkspace = mobile
         ? needsMobileWorkspaceMenu(context)
         : needsWorkspaceMenu(context);
@@ -383,7 +385,8 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
       hiddenBehavior: hiddenItemsBehavior,
       defaultOrder: studentToolbarNavigationDefaultOrder,
       hasFixedMenuItems:
-          !timetableInResources && onManagePeriodTimeSets != null,
+          (!timetableInResources && onManagePeriodTimeSets != null) ||
+          assistantInMenu,
       availableIds: {
         if (!timetableInResources) 'timetable',
         'week',
@@ -426,6 +429,10 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
                 onOpenSettings?.call();
               case 'periods':
                 onManagePeriodTimeSets?.call();
+              case 'assistant':
+                if (assistant?.enabled == true && assistant!.interactive) {
+                  (assistant.onToggle ?? assistant.controller.toggle)();
+                }
               case 'student':
                 selectWorkspace(context, AppMode.student);
               case 'general':
@@ -464,6 +471,13 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
                 value: 'today',
                 child: Text(l10n.today),
               ),
+            if (assistantInMenu)
+              SkedPopupMenuItem<String>(
+                key: const ValueKey('assistant-toggle'),
+                value: 'assistant',
+                enabled: assistant!.interactive,
+                child: Text(assistant.title ?? l10n.assistantLayoutPreview),
+              ),
           ],
         ),
       ),
@@ -473,9 +487,7 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
       key: const ValueKey('student-workspace-toolbar'),
       leading: !mobile && showWorkspace ? const WorkspaceModeMenu() : null,
       actions: [
-        if (!WorkbenchChromeMetrics.compactTouch(context) ||
-            AssistantPaneScope.of(context)?.enabled == true)
-          const AssistantPaneToggle(),
+        if (!mobile) const AssistantPaneToggle(),
         if (onAddCourse != null)
           Builder(
             builder: (anchor) => SkedTooltip(
@@ -2160,12 +2172,14 @@ class _EmptyTimetableToolbar extends StatelessWidget {
               hiddenBehavior: view.studentToolbarHiddenItemsBehavior,
             ),
           );
+      final assistant = AssistantPaneScope.of(context);
       final placement = MobileToolbarLayout.resolve(
         order: navigation.order,
         hiddenIds: navigation.hiddenIds,
         hiddenBehavior: navigation.hiddenBehavior,
         defaultOrder: studentToolbarNavigationDefaultOrder,
-        hasFixedMenuItems: onManagePeriodTimeSets != null,
+        hasFixedMenuItems:
+            onManagePeriodTimeSets != null || assistant?.enabled == true,
         availableIds: {
           if (needsMobileWorkspaceMenu(context)) 'workspace',
           if (showSettingsAction) 'settings',
@@ -2205,6 +2219,11 @@ class _EmptyTimetableToolbar extends StatelessWidget {
                         onOpenSettings?.call();
                       case 'periods':
                         onManagePeriodTimeSets?.call();
+                      case 'assistant':
+                        if (assistant?.enabled == true &&
+                            assistant!.interactive) {
+                          (assistant.onToggle ?? assistant.controller.toggle)();
+                        }
                       case 'student':
                         selectWorkspace(context, AppMode.student);
                       case 'general':
@@ -2232,6 +2251,15 @@ class _EmptyTimetableToolbar extends StatelessWidget {
                           enabled: onOpenSettings != null,
                           child: Text(l10n.settings),
                         ),
+                    if (assistant?.enabled == true)
+                      SkedPopupMenuItem<String>(
+                        key: const ValueKey('assistant-toggle'),
+                        value: 'assistant',
+                        enabled: assistant!.interactive,
+                        child: Text(
+                          assistant.title ?? l10n.assistantLayoutPreview,
+                        ),
+                      ),
                   ],
                 ),
               },

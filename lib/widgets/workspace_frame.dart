@@ -662,10 +662,20 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
     }
     _agentRouteOpen = true;
     _closeResources(restoreFocus: false);
+    final restorePane =
+        WorkbenchChromeMetrics.of(context).desktop && _assistant.isOpen;
+    if (restorePane) _setAssistantOpen(false);
     try {
       await AgentPage.open(context);
     } finally {
       _agentRouteOpen = false;
+      if (mounted &&
+          restorePane &&
+          widget.active &&
+          _agentApplication?.settings.enabled == true) {
+        _setAssistantOpen(true);
+        _requestAssistantFocus();
+      }
     }
   }
 
@@ -1112,6 +1122,7 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                 ? AgentAssistantPane(
                     active: interactive,
                     onClose: () => _setAssistantOpen(false),
+                    onExpand: () => unawaited(_openAgentPage()),
                   )
                 : AssistantPreviewPane(
                     onClose: () => _setAssistantOpen(false),

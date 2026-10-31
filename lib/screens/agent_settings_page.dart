@@ -7,7 +7,6 @@ import '../agent/ui/agent_preferences_form.dart';
 import '../models/agent_settings.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/settings_page_header.dart';
-import '../widgets/workbench_chrome_metrics.dart';
 
 /// The model connection is edited separately from conversation drafts.
 class AgentSettingsPage extends StatefulWidget {
@@ -92,88 +91,75 @@ class _AgentSettingsPageState extends State<AgentSettingsPage> {
     }
 
     final l = AppLocalizations.of(context);
+    final tabs = TabBar(
+      isScrollable: true,
+      tabs: [
+        Tab(text: l.agentModelSettings),
+        Tab(text: l.agentRunPreferences),
+      ],
+    );
     return DefaultTabController(
       length: 2,
       child: PopScope<void>(
         canPop: !_saving,
-        child: Scaffold(
-          body: SafeArea(
-            child: Column(
+        child: SettingsPageScaffold(
+          title: l.agentSettingsTitle,
+          headerBottom: PreferredSize(
+            preferredSize: tabs.preferredSize,
+            child: AbsorbPointer(
+              absorbing: _saving,
+              child: ExcludeFocus(excluding: _saving, child: tabs),
+            ),
+          ),
+          bodyBuilder: (context, header) => NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) => [?header],
+            body: TabBarView(
+              physics: _saving ? const NeverScrollableScrollPhysics() : null,
               children: [
-                SizedBox(
-                  height: WorkbenchChromeMetrics.of(context).toolbarHeight,
-                  child: SettingsPageHeader(
-                    title: l.agentTitle,
-                    toolbar: true,
-                    onBack: _saving ? () {} : null,
-                  ),
-                ),
-                AbsorbPointer(
-                  absorbing: _saving,
-                  child: ExcludeFocus(
-                    excluding: _saving,
-                    child: TabBar(
-                      isScrollable: true,
-                      tabs: [
-                        Tab(text: l.agentModelSettings),
-                        Tab(text: l.agentRunPreferences),
-                      ],
+                _KeptSettingsForm(
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 720),
+                      child: AgentModelSettingsForm(
+                        settings: displayedSettings,
+                        showTitle: false,
+                        onSave: _save,
+                        onSaved: _saved,
+                        onProbe: (cancellation) {
+                          checkDisplayedConnection();
+                          return application.probeConnection(
+                            allowInsecureHttp:
+                                Uri.tryParse(displayedSettings.endpoint)
+                                    ?.scheme ==
+                                'http',
+                            cancellation: cancellation,
+                          );
+                        },
+                        onListModels: (cancellation) {
+                          checkDisplayedConnection();
+                          return application.listConnectionModels(
+                            allowInsecureHttp:
+                                Uri.tryParse(displayedSettings.endpoint)
+                                    ?.scheme ==
+                                'http',
+                            cancellation: cancellation,
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),
-                Expanded(
-                  child: TabBarView(
-                    physics: _saving
-                        ? const NeverScrollableScrollPhysics()
-                        : null,
-                    children: [
-                      _KeptSettingsForm(
-                        child: Align(
-                          alignment: Alignment.topCenter,
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 720),
-                            child: AgentModelSettingsForm(
-                              settings: displayedSettings,
-                              showTitle: false,
-                              onSave: _save,
-                              onSaved: _saved,
-                              onProbe: (cancellation) {
-                                checkDisplayedConnection();
-                                return application.probeConnection(
-                                  allowInsecureHttp:
-                                      Uri.tryParse(displayedSettings.endpoint)
-                                          ?.scheme ==
-                                      'http',
-                                  cancellation: cancellation,
-                                );
-                              },
-                              onListModels: (cancellation) {
-                                checkDisplayedConnection();
-                                return application.listConnectionModels(
-                                  allowInsecureHttp:
-                                      Uri.tryParse(displayedSettings.endpoint)
-                                          ?.scheme ==
-                                      'http',
-                                  cancellation: cancellation,
-                                );
-                              },
-                            ),
-                          ),
-                        ),
+                _KeptSettingsForm(
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 720),
+                      child: AgentPreferencesForm(
+                        settings: application.settings,
+                        onSave: _savePreferences,
                       ),
-                      _KeptSettingsForm(
-                        child: Align(
-                          alignment: Alignment.topCenter,
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 720),
-                            child: AgentPreferencesForm(
-                              settings: application.settings,
-                              onSave: _savePreferences,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ],

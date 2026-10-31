@@ -24,6 +24,7 @@ List<SettingsCatalogEntry> settingsCatalog(
   AppLocalizations l,
   Set<AppMode> enabled, {
   bool canClearData = true,
+  bool hasAgent = false,
 }) => [
   if (enabled.contains(AppMode.student))
     SettingsCatalogEntry(
@@ -57,6 +58,13 @@ List<SettingsCatalogEntry> settingsCatalog(
     SettingsDestination.features,
     category: true,
   ),
+  if (hasAgent)
+    SettingsCatalogEntry(
+      'agent',
+      l.agentSettingsTitle,
+      SettingsDestination.agent,
+      category: true,
+    ),
   SettingsCatalogEntry(
     'data',
     l.settingsDataPrivacy,

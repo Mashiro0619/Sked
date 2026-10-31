@@ -21,6 +21,7 @@ String _title(SettingsDestination destination, AppLocalizations l) =>
       SettingsDestination.language => l.language,
       SettingsDestination.data => l.settingsDataPrivacy,
       SettingsDestination.features => l.workspaceFeatures,
+      SettingsDestination.agent => l.agentSettingsTitle,
       SettingsDestination.about => l.settingsSectionAbout,
       SettingsDestination.student ||
       SettingsDestination.schoolImport => l.dataImportExport,
@@ -58,7 +59,7 @@ int _headingCount(WidgetTester t, String title) {
 ScrollPosition _settingsPosition(WidgetTester tester) {
   final list = find.descendant(
     of: find.byType(SettingsPageScaffold),
-    matching: find.byType(CustomScrollView),
+    matching: find.byWidgetPredicate((widget) => widget is CustomScrollView),
   );
   return tester
       .state<ScrollableState>(

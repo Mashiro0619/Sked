@@ -3772,4 +3772,49 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get agentManualModelId => 'Model ID';
+
+  @override
+  String get agentSettingsTitle => 'Agent settings';
+
+  @override
+  String get agentSettingsSummary => 'Manage models and Agent preferences';
+
+  @override
+  String get agentOpenWorkspace => 'Open full chat';
+
+  @override
+  String get agentSearchConversations => 'Search conversations';
+
+  @override
+  String get agentHideConversations => 'Hide conversations';
+
+  @override
+  String get agentShowConversations => 'Show conversations';
+
+  @override
+  String get agentJumpToLatest => 'Latest messages';
+
+  @override
+  String get agentCopyMessage => 'Copy message';
+
+  @override
+  String get agentCopyCode => 'Copy code';
+
+  @override
+  String get agentCopied => 'Copied';
+
+  @override
+  String get agentCopyFailed => 'Could not copy. Try again.';
+
+  @override
+  String get agentChatWelcome => 'What can I help with?';
+
+  @override
+  String get agentActivityDetails => 'Activity details';
+
+  @override
+  String get agentConversationSearchEmpty => 'No matching conversations';
+
+  @override
+  String get agentPermissionMode => 'Permission mode';
 }

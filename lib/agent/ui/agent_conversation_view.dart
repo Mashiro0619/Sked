@@ -8,10 +8,18 @@ import 'package:material_ui/material_ui.dart';
 import '../../application/operation_contracts.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/sked_surface.dart';
+import '../../theme/sked_expressive_theme.dart';
+import '../../widgets/desktop_window_host.dart';
+import '../../widgets/expressive_dialog.dart';
+import '../../widgets/sked_expressive_loading_indicator.dart';
+import '../../widgets/sked_popup_menu.dart';
+import '../../widgets/sked_spring_builder.dart';
+import 'agent_conversation_list.dart';
+import 'agent_message_content.dart';
+import 'agent_transcript.dart';
 import '../conversations/conversation_repository.dart';
 import '../imports/conversation_file_attachments.dart';
 import 'agent_ui_delegate.dart';
-import 'agent_model_picker.dart';
 import 'agent_operation_card.dart';
 import 'agent_plan_preview.dart';
 
@@ -24,6 +32,7 @@ class _AgentDraftBuffer {
   final drafts = <String, String>{};
   final saved = <String, String>{};
   final writes = <String, Future<void>>{};
+  final reading = <String, AgentReadingPosition>{};
 }
 
 /// Shared content for a desktop panel or a phone route. The host owns routing,
@@ -34,6 +43,9 @@ class AgentConversationView extends StatefulWidget {
     required this.repository,
     required this.delegate,
     this.showTitle = true,
+    this.fullWorkspace = false,
+    this.modelPickerBuilder,
+    this.canSendToModel,
     this.operationChanges,
     this.describeOperation,
     this.onUndoOperation,
@@ -46,6 +58,10 @@ class AgentConversationView extends StatefulWidget {
   final ConversationRepository repository;
   final AgentUiDelegate delegate;
   final bool showTitle;
+  final bool fullWorkspace;
+  final Widget Function(AgentConversation conversation, AgentUiRunState state)?
+  modelPickerBuilder;
+  final bool Function(String conversationId)? canSendToModel;
   final Listenable? operationChanges;
   final Map<String, Object?> Function(Map<String, Object?> receipt)?
   describeOperation;
@@ -69,7 +85,13 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   Map<String, String> get _drafts => _draftBuffer.drafts;
   Map<String, String> get _savedDrafts => _draftBuffer.saved;
   Map<String, Future<void>> get _draftWrites => _draftBuffer.writes;
-  final _scrolls = <String, ScrollController>{};
+  final _transcripts = <String, GlobalKey<AgentTranscriptState>>{};
+  final _transcriptVersions = <String, (int, String?, String?, int, String)>{};
+  bool _historyVisible = true;
+  bool _hostActive = true;
+
+  AgentReadingPosition _reading(String id) =>
+      _draftBuffer.reading.putIfAbsent(id, AgentReadingPosition.new);
   final _busy = <String>{};
   bool _failed = false;
   bool _loading = false;
@@ -158,12 +180,26 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final active =
+        TickerMode.valuesOf(context).enabled &&
+        FocusScope.of(context).canRequestFocus &&
+        (ModalRoute.of(context)?.isCurrent ?? true);
+    final becameActive = active && !_hostActive;
+    _hostActive = active;
+    if (becameActive) _restoreReading(_repository.selectedId);
+  }
+
+  @override
   void didUpdateWidget(AgentConversationView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.repository != _repository) {
       oldWidget.repository.removeListener(_changed);
       _repository.addListener(_changed);
       _draftBuffer = _draftBuffers[_repository] ??= _AgentDraftBuffer();
+      _transcripts.clear();
+      _transcriptVersions.clear();
       _shownId = null;
       _synchronizeDraft();
       if (!_repository.isLoaded) unawaited(_load());
@@ -180,9 +216,6 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     widget.delegate.state.removeListener(_changed);
     _composer.dispose();
     _composerFocus.dispose();
-    for (final scroll in _scrolls.values) {
-      scroll.dispose();
-    }
     super.dispose();
   }
 
@@ -222,24 +255,55 @@ class _AgentConversationViewState extends State<AgentConversationView> {
 
   void _changed() {
     if (!mounted) return;
-    final id = _repository.selectedId;
-    final scroll = id == null ? null : _scrolls[id];
-    final nearEnd =
-        scroll == null ||
-        !scroll.hasClients ||
-        scroll.position.maxScrollExtent - scroll.offset < 100;
+    final conversation = _repository.selected;
+    final id = conversation?.id;
+    final switched = id != _shownId;
+    var changedContent = false;
+    if (id != null) {
+      final state = _runtime.runFor(id);
+      final version = (
+        conversation!.messages.length,
+        conversation.messages.lastOrNull?.id,
+        conversation.messages.lastOrNull?.text,
+        conversation.sources.length,
+        state.streamingText,
+      );
+      changedContent = _transcriptVersions[id] != version;
+      _transcriptVersions[id] = version;
+      if (!switched && changedContent && !_reading(id).followLatest) {
+        _reading(id).unread = true;
+      }
+    }
     setState(_synchronizeDraft);
-    if (nearEnd) _scrollToEnd(id);
+    if (switched) {
+      _restoreReading(id);
+    } else if (id != null && changedContent && _reading(id).followLatest) {
+      _scrollToEnd(id);
+    }
+  }
+
+  void _restoreReading(String? id) {
+    if (id == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_hostActive || _repository.selectedId != id) return;
+      _transcripts[id]?.currentState?.restore();
+    });
   }
 
   void _scrollToEnd(String? id) {
+    if (id == null) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _repository.selectedId != id) return;
-      final scroll = _scrolls[id];
-      if (scroll != null && scroll.hasClients) {
-        scroll.jumpTo(scroll.position.maxScrollExtent);
-      }
+      if (!mounted || !_hostActive || _repository.selectedId != id) return;
+      _transcripts[id]?.currentState?.followLatest();
     });
+  }
+
+  void _jumpToLatest(String id) {
+    setState(() {
+      _reading(id).followLatest = true;
+      _reading(id).unread = false;
+    });
+    _scrollToEnd(id);
   }
 
   Future<void> _load() async {
@@ -336,6 +400,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final delegate = widget.delegate;
     final text = _composer.text;
     if (text.trim().isEmpty) return;
+    _jumpToLatest(conversation.id);
     await _perform('send-${conversation.id}', () async {
       await _flushDraft(conversation.id);
       if (!identical(repository, _repository)) return;
@@ -364,7 +429,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
 
   Future<void> _rename(AgentConversation conversation) async {
     final repository = _repository;
-    final title = await showDialog<String>(
+    final title = await showExpressiveDialog<String>(
       context: context,
       builder: (context) =>
           _RenameConversationDialog(title: conversation.title),
@@ -384,7 +449,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final repository = _repository;
     final delegate = widget.delegate;
     final l = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showExpressiveDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l.agentDeleteConversation),
@@ -411,78 +476,100 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       _drafts.remove(conversation.id);
       _savedDrafts.remove(conversation.id);
       unawaited(_draftWrites.remove(conversation.id));
+      _draftBuffer.reading.remove(conversation.id);
     });
   }
 
+  AgentConversationList _historyList(
+    ValueChanged<String> onSelected, {
+    Widget? header,
+  }) => AgentConversationList(
+    repository: _repository,
+    onSelected: onSelected,
+    header: header,
+    onRestore: _repository.canWrite && _runtime.enabled && !_runtime.maintenance
+        ? (id) => _perform(
+            'archive-$id',
+            () => widget.delegate.setArchived(id, false),
+          )
+        : null,
+  );
+
   Future<void> _showHistory() async {
     final l = AppLocalizations.of(context);
-    var showArchived = false;
-    final selected = await showDialog<String>(
+    final repository = _repository;
+    final motion = SkedMotionPolicy.of(context);
+    final direction = Directionality.of(context);
+    final selected = await showGeneralDialog<String>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, updateHistory) => AlertDialog(
-          title: Text(l.agentConversations),
-          content: SizedBox(
-            width: 420,
-            child: ListenableBuilder(
-              listenable: _repository,
-              builder: (context, _) => ListView(
-                shrinkWrap: true,
-                children: [
-                  SwitchListTile(
-                    key: const ValueKey('agent-history-archived'),
-                    title: Text(l.agentArchivedConversations),
-                    value: showArchived,
-                    onChanged: (value) =>
-                        updateHistory(() => showArchived = value),
-                  ),
-                  for (final conversation
-                      in _repository.conversations.reversed.where(
-                        (item) => item.archived == showArchived,
-                      ))
-                    ListTile(
-                      key: ValueKey('agent-history-${conversation.id}'),
-                      title: Text(conversation.title),
-                      selected: conversation.id == _repository.selectedId,
-                      onTap: () => Navigator.of(context).pop(conversation.id),
-                      trailing: conversation.archived
-                          ? IconButton(
-                              key: ValueKey('agent-restore-${conversation.id}'),
-                              tooltip: l.agentRestoreConversation,
-                              onPressed:
-                                  _repository.canWrite &&
-                                      _runtime.enabled &&
-                                      !_runtime.maintenance
-                                  ? () => _perform(
-                                      'archive-${conversation.id}',
-                                      () => widget.delegate.setArchived(
-                                        conversation.id,
-                                        false,
-                                      ),
-                                    )
-                                  : null,
-                              icon: const Icon(Icons.unarchive_outlined),
-                            )
-                          : null,
+      barrierDismissible: true,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      transitionDuration: motion.effects(SkedMotionSpeed.standard),
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = animation.drive(
+          CurveTween(curve: motion.scheme.enterCurve),
+        );
+        return FadeTransition(
+          opacity: curved,
+          child: motion.reduceMotion
+              ? child
+              : SlideTransition(
+                  position: Tween<Offset>(
+                    begin: Offset(direction == TextDirection.ltr ? -1 : 1, 0),
+                    end: Offset.zero,
+                  ).animate(curved),
+                  child: child,
+                ),
+        );
+      },
+      pageBuilder: (sheetContext, _, _) => InheritedTheme.captureAll(
+        context,
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
+            ),
+            child: Drawer(
+              key: const ValueKey('agent-history-drawer'),
+              width: (MediaQuery.sizeOf(sheetContext).width - 24).clamp(
+                0.0,
+                420.0,
+              ),
+              child: SafeArea(
+                child: _historyList(
+                  (id) => Navigator.of(sheetContext).pop(id),
+                  header: Padding(
+                    padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 8, 4),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            l.agentConversations,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(sheetContext).textTheme.titleLarge,
+                          ),
+                        ),
+                        IconButton(
+                          key: const ValueKey('agent-history-close'),
+                          tooltip: l.cancel,
+                          onPressed: () => Navigator.of(sheetContext).pop(),
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                      ],
                     ),
-                  if (!_repository.conversations.any(
-                    (item) => item.archived == showArchived,
-                  ))
-                    Text(l.agentEmptyHistory),
-                ],
+                  ),
+                ),
               ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(l.cancel),
-            ),
-          ],
         ),
       ),
     );
-    if (selected != null && mounted) await _select(selected);
+    if (selected != null && mounted && identical(repository, _repository)) {
+      await _select(selected);
+    }
   }
 
   @override
@@ -495,22 +582,38 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final state = conversation == null
         ? const AgentUiRunState()
         : runtime.runFor(conversation.id);
+    final colors = Theme.of(context).colorScheme;
+    if (conversation != null) {
+      _transcriptVersions.putIfAbsent(
+        conversation.id,
+        () => (
+          conversation.messages.length,
+          conversation.messages.lastOrNull?.id,
+          conversation.messages.lastOrNull?.text,
+          conversation.sources.length,
+          state.streamingText,
+        ),
+      );
+    }
     return SkedSurface(
       child: SafeArea(
         top: false,
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final smallHeight =
-                constraints.maxHeight < 520 ||
-                (MediaQuery.textScalerOf(context).scale(14) > 22 &&
-                    (constraints.maxHeight < 740 ||
-                        constraints.maxWidth < 600));
-            final header = _header(l, conversation, writable);
+            final wideHistory =
+                widget.fullWorkspace &&
+                constraints.maxWidth >=
+                    980 * MediaQuery.textScalerOf(context).scale(14) / 14;
+            final header = _header(l, conversation, writable, wideHistory);
             final body = <Widget>[
               if (_loading)
-                const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Center(child: CircularProgressIndicator()),
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Center(
+                    child: SkedExpressiveLoadingIndicator(
+                      semanticsLabel: l.agentRunning,
+                    ),
+                  ),
                 ),
               if (_failed || (!_repository.canWrite && !_loading))
                 Padding(
@@ -520,9 +623,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                     children: [
                       Text(
                         l.agentOperationFailed,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
+                        style: TextStyle(color: colors.error),
                       ),
                       if (!_repository.canWrite)
                         TextButton(
@@ -568,17 +669,52 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                 _notice(l.agentConfigureFirst),
               if (conversation == null || conversation.messages.isEmpty)
                 Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Text(l.agentEmptyConversation),
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.auto_awesome_rounded,
+                        size: 36,
+                        color: colors.primary,
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        l.agentChatWelcome,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        l.agentEmptyConversation,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                    ],
+                  ),
                 ),
               if (conversation != null) ..._messageWidgets(conversation, l),
               if (state.streamingText.isNotEmpty)
                 _messageText(
                   l.agentAssistant,
                   state.streamingText,
+                  streaming: true,
                   key: const ValueKey('agent-streaming-text'),
                 ),
-              if (state.phase == AgentUiPhase.running) _notice(l.agentRunning),
+              if (state.phase == AgentUiPhase.running)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.auto_awesome_outlined,
+                        size: 18,
+                        color: colors.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(child: Text(l.agentRunning)),
+                    ],
+                  ),
+                ),
               if (state.phase == AgentUiPhase.stopped ||
                   (state.phase == AgentUiPhase.idle &&
                       conversation?.status == ConversationStatus.interrupted))
@@ -596,43 +732,126 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                       onPressed: writable && !_busy.contains('new')
                           ? _newConversation
                           : null,
-                      icon: const Icon(Icons.add),
+                      icon: const Icon(Icons.edit_square),
                       label: Text(l.agentNewConversation),
                     ),
                   )
                 : _composerWidget(
                     conversation,
                     state,
-                    writable && runtime.configured && !conversation.archived,
+                    writable &&
+                        runtime.configured &&
+                        !conversation.archived &&
+                        (widget.canSendToModel?.call(conversation.id) ?? true),
                     l,
                   );
-            final scroll = _scrolls.putIfAbsent(
-              conversation?.id ?? '',
-              ScrollController.new,
+            final id = conversation?.id ?? '';
+            Widget transcript(List<Widget> children) => AgentTranscript(
+              key: _transcripts.putIfAbsent(id, GlobalKey.new),
+              scrollViewKey: ValueKey('agent-transcript-$id'),
+              position: _reading(id),
+              active: _hostActive,
+              onReadingChanged: () {
+                if (mounted) setState(() {});
+              },
+              children: children,
             );
-            if (smallHeight) {
-              return SingleChildScrollView(
-                controller: scroll,
-                keyboardDismissBehavior:
-                    ScrollViewKeyboardDismissBehavior.onDrag,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [header, ...body, composer],
-                ),
+            Widget content;
+            if (constraints.maxHeight < 220) {
+              content = transcript([...body, composer]);
+            } else {
+              content = Column(
+                children: [
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        Positioned.fill(child: transcript(body)),
+                        if (!_reading(id).followLatest)
+                          PositionedDirectional(
+                            bottom: 12,
+                            end: 20,
+                            child: IconButton.filledTonal(
+                              key: const ValueKey('agent-jump-latest'),
+                              tooltip: l.agentJumpToLatest,
+                              onPressed: () => _jumpToLatest(id),
+                              icon: Badge(
+                                isLabelVisible: _reading(id).unread,
+                                child: const Icon(Icons.arrow_downward_rounded),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxHeight: constraints.maxHeight * 0.58,
+                    ),
+                    child: SingleChildScrollView(
+                      primary: false,
+                      child: Align(
+                        alignment: Alignment.topCenter,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 812),
+                          child: composer,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               );
             }
             return Column(
               children: [
                 header,
                 Expanded(
-                  child: ListView(
-                    controller: scroll,
-                    keyboardDismissBehavior:
-                        ScrollViewKeyboardDismissBehavior.onDrag,
-                    children: body,
+                  child: Row(
+                    children: [
+                      if (wideHistory)
+                        SkedSpringBuilder(
+                          value: _historyVisible ? 1 : 0,
+                          speed: SkedMotionSpeed.fast,
+                          builder: (context, value, child) => SizedBox(
+                            width: 273 * value.clamp(0.0, 1.0),
+                            child: ClipRect(
+                              child: OverflowBox(
+                                alignment: AlignmentDirectional.centerStart,
+                                minWidth: 273,
+                                maxWidth: 273,
+                                child: child,
+                              ),
+                            ),
+                          ),
+                          child: ExcludeFocus(
+                            excluding: !_historyVisible,
+                            child: ExcludeSemantics(
+                              excluding: !_historyVisible,
+                              child: IgnorePointer(
+                                ignoring: !_historyVisible,
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Material(
+                                        key: const ValueKey(
+                                          'agent-workspace-history',
+                                        ),
+                                        color: colors.surfaceContainerLow,
+                                        child: _historyList(
+                                          (id) => unawaited(_select(id)),
+                                        ),
+                                      ),
+                                    ),
+                                    const VerticalDivider(width: 1),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      Expanded(child: content),
+                    ],
                   ),
                 ),
-                composer,
               ],
             );
           },
@@ -658,155 +877,204 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     AppLocalizations l,
     AgentConversation? conversation,
     bool writable,
+    bool wideHistory,
   ) {
+    final title =
+        conversation?.title ??
+        (widget.showTitle || widget.fullWorkspace ? l.agentTitle : '');
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: widget.showTitle
-                    ? Text(
-                        l.agentTitle,
-                        style: Theme.of(context).textTheme.titleLarge,
-                      )
-                    : const SizedBox.shrink(),
+          if (widget.fullWorkspace) const BackButton(),
+          IconButton(
+            key: const ValueKey('agent-history'),
+            tooltip: wideHistory
+                ? (_historyVisible
+                      ? l.agentHideConversations
+                      : l.agentShowConversations)
+                : l.agentConversations,
+            onPressed: !_repository.isLoaded
+                ? null
+                : wideHistory
+                ? () => setState(() => _historyVisible = !_historyVisible)
+                : _showHistory,
+            icon: const Icon(Icons.view_sidebar_outlined),
+          ),
+          Expanded(
+            child: DesktopDragRegion(
+              child: Tooltip(
+                message: title,
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
               ),
-              IconButton(
-                key: const ValueKey('agent-new'),
-                tooltip: l.agentNewConversation,
-                onPressed: writable && !_busy.contains('new')
-                    ? _newConversation
-                    : null,
-                icon: const Icon(Icons.add),
-              ),
-              IconButton(
-                key: const ValueKey('agent-history'),
-                tooltip: l.agentConversations,
-                onPressed: _repository.isLoaded ? _showHistory : null,
-                icon: const Icon(Icons.history),
-              ),
-              IconButton(
+            ),
+          ),
+          IconButton.filledTonal(
+            key: const ValueKey('agent-new'),
+            tooltip: l.agentNewConversation,
+            onPressed: writable && !_busy.contains('new')
+                ? _newConversation
+                : null,
+            icon: const Icon(Icons.edit_square),
+          ),
+          SkedPopupMenuButton<String>(
+            key: const ValueKey('agent-conversation-menu'),
+            tooltip: l.agentConversationActions,
+            enabled: !_runtime.maintenance,
+            onSelected: (value) {
+              switch (value) {
+                case 'settings':
+                  widget.delegate.openSettings();
+                case 'rename':
+                  if (conversation != null) unawaited(_rename(conversation));
+                case 'delete':
+                  if (conversation != null) unawaited(_delete(conversation));
+                case 'archive':
+                  if (conversation != null) {
+                    unawaited(
+                      _perform(
+                        'archive-${conversation.id}',
+                        () => widget.delegate.setArchived(
+                          conversation.id,
+                          !conversation.archived,
+                        ),
+                      ),
+                    );
+                  }
+                case 'export':
+                  if (conversation != null &&
+                      widget.onExportConversation != null) {
+                    unawaited(
+                      _perform('export-${conversation.id}', () async {
+                        final saved = await widget.onExportConversation!(
+                          conversation.id,
+                        );
+                        if (mounted) {
+                          setState(
+                            () => _exportedId = saved ? conversation.id : null,
+                          );
+                        }
+                      }),
+                    );
+                  }
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
                 key: const ValueKey('agent-settings'),
-                tooltip: l.agentModelSettings,
-                onPressed: _runtime.maintenance
-                    ? null
-                    : widget.delegate.openSettings,
-                icon: const Icon(Icons.settings_outlined),
+                value: 'settings',
+                child: Text(l.agentSettingsTitle),
               ),
+              if (conversation != null) ...[
+                const PopupMenuDivider(),
+                PopupMenuItem(
+                  value: 'rename',
+                  enabled: writable && !_busy.contains('rename'),
+                  child: Text(l.rename),
+                ),
+                PopupMenuItem(
+                  value: 'archive',
+                  enabled: writable,
+                  child: Text(
+                    conversation.archived
+                        ? l.agentRestoreConversation
+                        : l.agentArchiveConversation,
+                  ),
+                ),
+                if (widget.onExportConversation != null)
+                  PopupMenuItem(
+                    value: 'export',
+                    enabled: writable,
+                    child: Text(l.agentExportConversation),
+                  ),
+                PopupMenuItem(
+                  value: 'delete',
+                  enabled: writable && !_busy.contains('delete'),
+                  child: Text(l.delete),
+                ),
+              ],
             ],
           ),
-          if (conversation != null) ...[
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    conversation.title,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-                PopupMenuButton<String>(
-                  key: const ValueKey('agent-conversation-menu'),
-                  tooltip: l.agentConversationActions,
-                  enabled:
-                      writable &&
-                      !_busy.contains('delete') &&
-                      !_busy.contains('rename'),
-                  onSelected: (value) {
-                    switch (value) {
-                      case 'rename':
-                        unawaited(_rename(conversation));
-                      case 'delete':
-                        unawaited(_delete(conversation));
-                      case 'archive':
-                        unawaited(
-                          _perform(
-                            'archive-${conversation.id}',
-                            () => widget.delegate.setArchived(
-                              conversation.id,
-                              !conversation.archived,
-                            ),
-                          ),
-                        );
-                      case 'export':
-                        unawaited(
-                          _perform('export-${conversation.id}', () async {
-                            final saved = await widget.onExportConversation!(
-                              conversation.id,
-                            );
-                            if (mounted) {
-                              setState(
-                                () => _exportedId = saved
-                                    ? conversation.id
-                                    : null,
-                              );
-                            }
-                          }),
-                        );
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    PopupMenuItem(value: 'rename', child: Text(l.rename)),
-                    PopupMenuItem(
-                      value: 'archive',
-                      child: Text(
-                        conversation.archived
-                            ? l.agentRestoreConversation
-                            : l.agentArchiveConversation,
-                      ),
-                    ),
-                    if (widget.onExportConversation != null)
-                      PopupMenuItem(
-                        value: 'export',
-                        child: Text(l.agentExportConversation),
-                      ),
-                    PopupMenuItem(value: 'delete', child: Text(l.delete)),
-                  ],
-                ),
-              ],
-            ),
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: [
-                for (final mode in AgentPermissionMode.values)
-                  ChoiceChip(
-                    key: ValueKey('agent-mode-${mode.name}'),
-                    label: Text(_modeLabel(l, mode)),
-                    selected: conversation.mode == mode,
-                    materialTapTargetSize: MaterialTapTargetSize.padded,
-                    onSelected:
-                        !writable ||
-                            conversation.archived ||
-                            _busy.contains('mode-${conversation.id}')
-                        ? null
-                        : (_) => _perform(
-                            'mode-${conversation.id}',
-                            () =>
-                                widget.delegate.setMode(conversation.id, mode),
-                          ),
-                  ),
-              ],
-            ),
-            Text(
-              _modeDescription(l, conversation.mode),
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
+          if (widget.fullWorkspace) const DesktopCaptionSpacer(),
         ],
       ),
     );
   }
 
+  Widget _permissionPicker(
+    AgentConversation conversation,
+    AppLocalizations l,
+  ) => SkedPopupMenuButton<AgentPermissionMode>(
+    key: const ValueKey('agent-mode-picker'),
+    tooltip: l.agentPermissionMode,
+    enabled:
+        _repository.canWrite &&
+        _runtime.enabled &&
+        !_runtime.maintenance &&
+        !conversation.archived &&
+        !_busy.contains('mode-${conversation.id}'),
+    initialValue: conversation.mode,
+    onSelected: (mode) => _perform(
+      'mode-${conversation.id}',
+      () => widget.delegate.setMode(conversation.id, mode),
+    ),
+    itemBuilder: (context) => [
+      for (final mode in AgentPermissionMode.values)
+        PopupMenuItem(
+          key: ValueKey('agent-mode-${mode.name}'),
+          value: mode,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(_modeLabel(l, mode)),
+              Text(
+                _modeDescription(l, mode),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+    ],
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(switch (conversation.mode) {
+            AgentPermissionMode.plan => Icons.visibility_outlined,
+            AgentPermissionMode.ask => Icons.verified_user_outlined,
+            AgentPermissionMode.full => Icons.bolt_rounded,
+          }, size: 18),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              _modeLabel(l, conversation.mode),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const Icon(Icons.expand_more_rounded, size: 18),
+        ],
+      ),
+    ),
+  );
+
   List<Widget> _messageWidgets(
     AgentConversation conversation,
     AppLocalizations l,
   ) {
-    final toolNames = {
+    final toolCalls = {
       for (final message in conversation.messages)
-        for (final call in message.toolCalls) call.id: call.name,
+        for (final call in message.toolCalls) call.id: call,
+    };
+    final completedCalls = {
+      for (final message in conversation.messages)
+        if (message.role == ConversationRole.tool) message.toolCallId,
     };
     return [
       for (final source in conversation.sources)
@@ -886,15 +1154,22 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         else if (message.role == ConversationRole.tool)
           ExpansionTile(
             key: ValueKey('agent-message-${message.id}'),
-            title: Text(l.agentToolResponse),
-            subtitle: Text(
-              toolNames[message.toolCallId] ?? message.toolCallId ?? '',
-            ),
+            title: Text(l.agentActivityDetails),
+            leading: const Icon(Icons.check_circle_outline, size: 20),
             childrenPadding: const EdgeInsets.all(16),
-            children: [SelectableText(_prettyJson(message.text))],
+            children: [
+              if (toolCalls[message.toolCallId] case final call?) ...[
+                SelectableText(call.name),
+                const SizedBox(height: 8),
+                SelectableText(_prettyJson(call.arguments)),
+                const SizedBox(height: 12),
+              ],
+              SelectableText(_prettyJson(message.text)),
+            ],
           )
         else
           Column(
+            key: ValueKey('agent-message-group-${message.id}'),
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (message.text.isNotEmpty)
@@ -907,31 +1182,41 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                   message.text,
                   key: ValueKey('agent-message-${message.id}'),
                 ),
-              for (final call in message.toolCalls)
+              for (final call in message.toolCalls.where(
+                (call) => !completedCalls.contains(call.id),
+              ))
                 ExpansionTile(
                   key: ValueKey('agent-tool-${call.id}'),
-                  title: Text(call.name),
-                  subtitle: Text(l.agentToolArguments),
+                  title: Text(l.agentActivityDetails),
+                  leading: const Icon(Icons.bolt_outlined, size: 20),
                   childrenPadding: const EdgeInsets.all(16),
-                  children: [SelectableText(_prettyJson(call.arguments))],
+                  children: [
+                    SelectableText(call.name),
+                    const SizedBox(height: 8),
+                    SelectableText(_prettyJson(call.arguments)),
+                  ],
                 ),
             ],
           ),
     ];
   }
 
-  Widget _messageText(String role, String text, {Key? key}) => Padding(
-    key: key,
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(role, style: Theme.of(context).textTheme.labelLarge),
-        const SizedBox(height: 4),
-        SelectableText(text),
-      ],
-    ),
-  );
+  Widget _messageText(
+    String role,
+    String text, {
+    Key? key,
+    bool streaming = false,
+  }) {
+    final l = AppLocalizations.of(context);
+    return AgentMessageContent(
+      key: key,
+      text: text,
+      roleLabel: role,
+      isUser: role == l.agentYou,
+      isNotice: role != l.agentYou && role != l.agentAssistant,
+      streaming: streaming,
+    );
+  }
 
   String _errorMessage(String? code, AppLocalizations l) {
     if (code == 'connectionChanged') return l.agentConnectionChanged;
@@ -951,7 +1236,6 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         code == 'timeout') {
       return l.agentLimitsReached;
     }
-    if (code == 'modelSelectionRequired') return l.agentModelSelectionRequired;
     if (code == 'sensitiveContent') return l.agentSensitiveContent;
     if (code?.startsWith('provider.') ?? false) return l.agentRequestFailed;
     return l.agentRunFailed;
@@ -1053,6 +1337,11 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         ),
       );
     }
+    final continued =
+        !active &&
+        (state.phase == AgentUiPhase.stopped ||
+            conversation.status == ConversationStatus.interrupted ||
+            widget.delegate.pendingInputCount(conversation.id) > 0);
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
       child: Shortcuts(
@@ -1064,7 +1353,10 @@ class _AgentConversationViewState extends State<AgentConversationView> {
           actions: {
             _SendAgentMessageIntent: CallbackAction<_SendAgentMessageIntent>(
               onInvoke: (_) {
-                if (canSend && !sending) {
+                final composing = _composer.value.composing;
+                if (canSend &&
+                    !sending &&
+                    !(composing.isValid && !composing.isCollapsed)) {
                   unawaited(
                     active
                         ? _queue(conversation, steering: false)
@@ -1078,118 +1370,189 @@ class _AgentConversationViewState extends State<AgentConversationView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (_runtime.availableModels.isNotEmpty)
-                AgentModelPicker(
-                  conversationId: conversation.id,
-                  delegate: widget.delegate,
-                  enabled: enabled,
-                ),
-              if (_runtime.availableModels.isNotEmpty)
-                const SizedBox(height: 8),
-              TextField(
-                key: const ValueKey('agent-composer'),
-                controller: _composer,
-                focusNode: _composerFocus,
-                enabled: enabled,
-                minLines: 1,
-                maxLines: 4,
-                maxLength: 128 * 1024,
-                textInputAction: TextInputAction.newline,
-                decoration: InputDecoration(
-                  filled: true,
-                  labelText: l.agentMessageHint,
-                  counterText: '',
-                ),
-                onChanged: (value) => _draftChanged(conversation.id, value),
-              ),
-              const SizedBox(height: 8),
               if (widget.delegate.pendingInputCount(conversation.id) > 0)
-                Text(
-                  l.agentQueuedMessages(
-                    widget.delegate.pendingInputCount(conversation.id),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text(
+                    l.agentQueuedMessages(
+                      widget.delegate.pendingInputCount(conversation.id),
+                    ),
                   ),
                 ),
-              Align(
-                alignment: AlignmentDirectional.centerEnd,
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.end,
-                  children: [
-                    if (widget.readDatasetGeneration != null)
-                      IconButton(
-                        key: const ValueKey('agent-attach-file'),
-                        tooltip: l.agentAttachFile,
-                        icon: const Icon(Icons.attach_file),
-                        onPressed:
-                            _canModifyAttachments(conversation.id) &&
-                                _attachments.pending(conversation.id) == null &&
-                                !_busy.contains('attachment-${conversation.id}')
-                            ? () => _attachFile(conversation.id)
-                            : null,
+              if (continued)
+                Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: TextButton.icon(
+                    key: const ValueKey('agent-continue'),
+                    onPressed:
+                        canSend &&
+                            !sending &&
+                            !_busy.contains('continue-${conversation.id}')
+                        ? () => _perform(
+                            'continue-${conversation.id}',
+                            () => widget.delegate.continueConversation(
+                              conversation.id,
+                            ),
+                          )
+                        : null,
+                    icon: const Icon(Icons.play_arrow_rounded),
+                    label: Text(l.agentContinue),
+                  ),
+                ),
+              ListenableBuilder(
+                listenable: _composerFocus,
+                builder: (context, child) => Material(
+                  animationDuration: SkedMotionPolicy.of(context)
+                      .effects(SkedMotionSpeed.fast),
+                  color: Theme.of(context).colorScheme.surfaceContainer,
+                  shape: skedShapeSchemeOf(context).container.copyWith(
+                    side: BorderSide(
+                      color: _composerFocus.hasFocus
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.transparent,
+                      width: 1.5,
+                    ),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: child,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextField(
+                        key: const ValueKey('agent-composer'),
+                        controller: _composer,
+                        focusNode: _composerFocus,
+                        enabled: enabled,
+                        minLines: 1,
+                        maxLines: 5,
+                        maxLength: 128 * 1024,
+                        textInputAction: TextInputAction.newline,
+                        style: Theme.of(context).textTheme.bodyLarge,
+                        decoration: InputDecoration(
+                          filled: false,
+                          hintText: l.agentMessageHint,
+                          counterText: '',
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 8,
+                          ),
+                        ),
+                        onChanged: (value) =>
+                            _draftChanged(conversation.id, value),
                       ),
-                    if (active && _composer.text.trim().isNotEmpty) ...[
-                      TextButton(
-                        key: const ValueKey('agent-steer'),
-                        onPressed: canSend && !sending
-                            ? () => _queue(conversation, steering: true)
-                            : null,
-                        child: Text(l.agentSteer),
-                      ),
-                      FilledButton.tonal(
-                        key: const ValueKey('agent-queue'),
-                        onPressed: canSend && !sending
-                            ? () => _queue(conversation, steering: false)
-                            : null,
-                        child: Text(l.agentQueueFollowUp),
+                      if (widget.modelPickerBuilder != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: widget.modelPickerBuilder!(
+                            conversation,
+                            state,
+                          ),
+                        ),
+                      if (active && _composer.text.trim().isNotEmpty)
+                        Wrap(
+                          spacing: 4,
+                          runSpacing: 4,
+                          alignment: WrapAlignment.end,
+                          children: [
+                            TextButton(
+                              key: const ValueKey('agent-steer'),
+                              onPressed: canSend && !sending
+                                  ? () => _queue(conversation, steering: true)
+                                  : null,
+                              child: Text(l.agentSteer),
+                            ),
+                            FilledButton.tonal(
+                              key: const ValueKey('agent-queue'),
+                              onPressed: canSend && !sending
+                                  ? () => _queue(conversation, steering: false)
+                                  : null,
+                              child: Text(l.agentQueueFollowUp),
+                            ),
+                          ],
+                        ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          if (widget.readDatasetGeneration != null)
+                            IconButton(
+                              key: const ValueKey('agent-attach-file'),
+                              tooltip: l.agentAttachFile,
+                              icon: const Icon(Icons.add_rounded),
+                              onPressed:
+                                  _canModifyAttachments(conversation.id) &&
+                                      _attachments.pending(conversation.id) ==
+                                          null &&
+                                      !_busy.contains(
+                                        'attachment-${conversation.id}',
+                                      )
+                                  ? () => _attachFile(conversation.id)
+                                  : null,
+                            ),
+                          Expanded(
+                            child: Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: _permissionPicker(conversation, l),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          SkedSpringBuilder(
+                            value: active ? 1 : 0,
+                            speed: SkedMotionSpeed.fast,
+                            builder: (context, value, _) {
+                              final progress = value.clamp(0.0, 1.0);
+                              return IconButton.filled(
+                                key: ValueKey(
+                                  active ? 'agent-stop' : 'agent-send',
+                                ),
+                                tooltip: active ? l.agentStop : l.agentSend,
+                                onPressed: active
+                                    ? _busy.contains('stop-${conversation.id}')
+                                          ? null
+                                          : () => _perform(
+                                              'stop-${conversation.id}',
+                                              () => widget.delegate.stop(
+                                                conversation.id,
+                                              ),
+                                            )
+                                    : canSend &&
+                                          !sending &&
+                                          _composer.text.trim().isNotEmpty
+                                    ? () => _send(conversation)
+                                    : null,
+                                icon: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    Opacity(
+                                      opacity: 1 - progress,
+                                      child: Transform.scale(
+                                        scale: 1 - 0.25 * progress,
+                                        child: const Icon(
+                                          Icons.arrow_upward_rounded,
+                                        ),
+                                      ),
+                                    ),
+                                    Opacity(
+                                      opacity: progress,
+                                      child: Transform.scale(
+                                        scale: 0.75 + 0.25 * progress,
+                                        child: const Icon(Icons.stop_rounded),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ],
                       ),
                     ],
-                    if (!active &&
-                        (state.phase == AgentUiPhase.stopped ||
-                            conversation.status ==
-                                ConversationStatus.interrupted ||
-                            widget.delegate.pendingInputCount(conversation.id) >
-                                0))
-                      OutlinedButton(
-                        key: const ValueKey('agent-continue'),
-                        onPressed:
-                            canSend &&
-                                !sending &&
-                                !_busy.contains('continue-${conversation.id}')
-                            ? () => _perform(
-                                'continue-${conversation.id}',
-                                () => widget.delegate.continueConversation(
-                                  conversation.id,
-                                ),
-                              )
-                            : null,
-                        child: Text(l.agentContinue),
-                      ),
-                    if (active)
-                      OutlinedButton.icon(
-                        key: const ValueKey('agent-stop'),
-                        onPressed: _busy.contains('stop-${conversation.id}')
-                            ? null
-                            : () => _perform(
-                                'stop-${conversation.id}',
-                                () => widget.delegate.stop(conversation.id),
-                              ),
-                        icon: const Icon(Icons.stop),
-                        label: Text(l.agentStop),
-                      )
-                    else
-                      FilledButton.icon(
-                        key: const ValueKey('agent-send'),
-                        onPressed:
-                            canSend &&
-                                !sending &&
-                                _composer.text.trim().isNotEmpty
-                            ? () => _send(conversation)
-                            : null,
-                        icon: const Icon(Icons.arrow_upward),
-                        label: Text(l.agentSend),
-                      ),
-                  ],
+                  ),
                 ),
               ),
             ],

@@ -32,6 +32,21 @@ const offeredLocaleCodes = <String>{
 /// Explicit untranslated messages use the current English template at build
 /// time. Removing a locale entry prevents a copied English sentence going stale.
 const commonEnglishFallbacks = <String>{
+  'agentActivityDetails',
+  'agentChatWelcome',
+  'agentConversationSearchEmpty',
+  'agentCopied',
+  'agentCopyCode',
+  'agentCopyFailed',
+  'agentCopyMessage',
+  'agentHideConversations',
+  'agentJumpToLatest',
+  'agentOpenWorkspace',
+  'agentPermissionMode',
+  'agentSearchConversations',
+  'agentSettingsSummary',
+  'agentSettingsTitle',
+  'agentShowConversations',
   'agentAddModel',
   'agentAllowedEfforts',
   'agentDefaultEffort',

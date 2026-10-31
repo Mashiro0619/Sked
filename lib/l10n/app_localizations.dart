@@ -6647,6 +6647,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Model ID'**
   String get agentManualModelId;
+
+  /// No description provided for @agentSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Agent settings'**
+  String get agentSettingsTitle;
+
+  /// No description provided for @agentSettingsSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage models and Agent preferences'**
+  String get agentSettingsSummary;
+
+  /// No description provided for @agentOpenWorkspace.
+  ///
+  /// In en, this message translates to:
+  /// **'Open full chat'**
+  String get agentOpenWorkspace;
+
+  /// No description provided for @agentSearchConversations.
+  ///
+  /// In en, this message translates to:
+  /// **'Search conversations'**
+  String get agentSearchConversations;
+
+  /// No description provided for @agentHideConversations.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide conversations'**
+  String get agentHideConversations;
+
+  /// No description provided for @agentShowConversations.
+  ///
+  /// In en, this message translates to:
+  /// **'Show conversations'**
+  String get agentShowConversations;
+
+  /// No description provided for @agentJumpToLatest.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest messages'**
+  String get agentJumpToLatest;
+
+  /// No description provided for @agentCopyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy message'**
+  String get agentCopyMessage;
+
+  /// No description provided for @agentCopyCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy code'**
+  String get agentCopyCode;
+
+  /// No description provided for @agentCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied'**
+  String get agentCopied;
+
+  /// No description provided for @agentCopyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not copy. Try again.'**
+  String get agentCopyFailed;
+
+  /// No description provided for @agentChatWelcome.
+  ///
+  /// In en, this message translates to:
+  /// **'What can I help with?'**
+  String get agentChatWelcome;
+
+  /// No description provided for @agentActivityDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity details'**
+  String get agentActivityDetails;
+
+  /// No description provided for @agentConversationSearchEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching conversations'**
+  String get agentConversationSearchEmpty;
+
+  /// No description provided for @agentPermissionMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Permission mode'**
+  String get agentPermissionMode;
 }
 
 class _AppLocalizationsDelegate

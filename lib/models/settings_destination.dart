@@ -7,6 +7,7 @@ enum SettingsDestination {
   language,
   data,
   features,
+  agent,
   about,
   student,
   general,

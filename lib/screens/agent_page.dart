@@ -8,17 +8,17 @@ import 'package:provider/provider.dart';
 import '../agent/agent_application.dart';
 import '../agent/ui/agent_conversation_view.dart';
 import '../agent/ui/agent_ui_delegate.dart';
+import '../agent/ui/agent_model_picker.dart';
 import '../agent/ui/agent_resource_view.dart';
 import '../agent/provider/provider.dart';
 import '../application/operation_contracts.dart';
 import '../l10n/app_localizations.dart';
 import '../models/agent_settings.dart';
-import '../widgets/settings_page_header.dart';
 import '../widgets/workbench_chrome_metrics.dart';
 import 'agent_settings_page.dart';
 
-/// A phone destination for the same application-owned conversation repository
-/// and runtime used by the desktop pane. Popping it does not stop a run.
+/// A full conversation workspace using the same application-owned repository
+/// and runtime as the desktop pane. Popping it does not stop a run.
 class AgentPage extends StatelessWidget {
   const AgentPage({super.key});
 
@@ -60,20 +60,7 @@ class AgentPage extends StatelessWidget {
       });
     }
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            SizedBox(
-              height: WorkbenchChromeMetrics.of(context).toolbarHeight,
-              child: SettingsPageHeader(
-                title: AppLocalizations.of(context).agentTitle,
-                toolbar: true,
-              ),
-            ),
-            const Expanded(child: AgentConversationHost()),
-          ],
-        ),
-      ),
+      body: SafeArea(child: const AgentConversationHost(fullWorkspace: true)),
     );
   }
 }
@@ -81,7 +68,12 @@ class AgentPage extends StatelessWidget {
 /// Keeps navigation local to this visible host. Other retained workspaces can
 /// render the same runtime without replacing a global settings callback.
 class AgentConversationHost extends StatefulWidget {
-  const AgentConversationHost({super.key, this.active = true});
+  const AgentConversationHost({
+    super.key,
+    this.fullWorkspace = false,
+    this.active = true,
+  });
+  final bool fullWorkspace;
   final bool active;
 
   @override
@@ -179,6 +171,14 @@ class _AgentConversationHostState extends State<AgentConversationHost> {
     return AgentConversationView(
       repository: application.conversations,
       showTitle: false,
+      fullWorkspace: widget.fullWorkspace,
+      modelPickerBuilder: (conversation, _) => AgentModelPicker(
+        conversationId: conversation.id,
+        delegate: application.runtime,
+        enabled: !conversation.archived,
+      ),
+      canSendToModel: (id) =>
+          agentConversationModelReady(application.runtime.state.value, id),
       operationChanges: application.tools.notificationEffectChanges,
       describeOperation: application.tools.describeCommitResult,
       delegate: _RoutedAgentDelegate(
@@ -271,10 +271,10 @@ class _RoutedAgentDelegate implements AgentUiDelegate {
   Future<void> setMode(String conversationId, AgentPermissionMode mode) =>
       runtime.setMode(conversationId, mode);
   @override
-  void openSettings() => onOpenSettings();
-  @override
   Future<void> setModelSelection(
     String conversationId,
     AgentModelSelection selection,
   ) => runtime.setModelSelection(conversationId, selection);
+  @override
+  void openSettings() => onOpenSettings();
 }

@@ -3503,6 +3503,51 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentManualModelId => '模型 ID';
+
+  @override
+  String get agentSettingsTitle => 'Agent 设置';
+
+  @override
+  String get agentSettingsSummary => '管理模型与 Agent 偏好';
+
+  @override
+  String get agentOpenWorkspace => '展开完整对话';
+
+  @override
+  String get agentSearchConversations => '搜索会话';
+
+  @override
+  String get agentHideConversations => '收起会话列表';
+
+  @override
+  String get agentShowConversations => '展开会话列表';
+
+  @override
+  String get agentJumpToLatest => '回到最新消息';
+
+  @override
+  String get agentCopyMessage => '复制消息';
+
+  @override
+  String get agentCopyCode => '复制代码';
+
+  @override
+  String get agentCopied => '已复制';
+
+  @override
+  String get agentCopyFailed => '复制失败，请重试。';
+
+  @override
+  String get agentChatWelcome => '有什么需要帮忙？';
+
+  @override
+  String get agentActivityDetails => '执行详情';
+
+  @override
+  String get agentConversationSearchEmpty => '没有匹配的会话';
+
+  @override
+  String get agentPermissionMode => '权限模式';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -7005,4 +7050,49 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentManualModelId => '模型 ID';
+
+  @override
+  String get agentSettingsTitle => 'Agent 設定';
+
+  @override
+  String get agentSettingsSummary => '管理模型與 Agent 偏好';
+
+  @override
+  String get agentOpenWorkspace => '展開完整對話';
+
+  @override
+  String get agentSearchConversations => '搜尋對話';
+
+  @override
+  String get agentHideConversations => '收合對話清單';
+
+  @override
+  String get agentShowConversations => '展開對話清單';
+
+  @override
+  String get agentJumpToLatest => '回到最新訊息';
+
+  @override
+  String get agentCopyMessage => '複製訊息';
+
+  @override
+  String get agentCopyCode => '複製程式碼';
+
+  @override
+  String get agentCopied => '已複製';
+
+  @override
+  String get agentCopyFailed => '複製失敗，請重試。';
+
+  @override
+  String get agentChatWelcome => '有什麼需要幫忙？';
+
+  @override
+  String get agentActivityDetails => '執行詳情';
+
+  @override
+  String get agentConversationSearchEmpty => '沒有符合的對話';
+
+  @override
+  String get agentPermissionMode => '權限模式';
 }

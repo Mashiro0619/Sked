@@ -94,9 +94,11 @@ class AgentAssistantPane extends StatelessWidget {
   const AgentAssistantPane({
     super.key,
     required this.onClose,
+    this.onExpand,
     this.active = true,
   });
   final VoidCallback onClose;
+  final VoidCallback? onExpand;
   final bool active;
 
   @override
@@ -107,6 +109,14 @@ class AgentAssistantPane extends StatelessWidget {
           padding: skedPanelHeaderPadding,
           child: SkedPanelHeader(
             title: Text(AppLocalizations.of(context).agentTitle),
+            action: onExpand == null
+                ? null
+                : IconButton(
+                    key: const ValueKey('agent-open-workspace'),
+                    tooltip: AppLocalizations.of(context).agentOpenWorkspace,
+                    onPressed: onExpand,
+                    icon: const Icon(Icons.open_in_full_rounded),
+                  ),
             onClose: onClose,
           ),
         ),

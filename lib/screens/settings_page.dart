@@ -13,6 +13,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../widgets/text_transfer_widgets.dart';
+import '../agent/agent_application.dart';
 import '../widgets/sked_task_session.dart';
 import '../controllers/app_backup_controller.dart';
 
@@ -55,6 +56,7 @@ import '../widgets/adaptive_settings_scaffold.dart';
 import '../models/settings_destination.dart';
 import '../models/settings_catalog.dart';
 import 'workspace_features_page.dart';
+import 'agent_settings_page.dart';
 import 'general_display_settings_page.dart';
 import 'developer_mode_page.dart';
 import 'language_settings_page.dart';
@@ -205,6 +207,7 @@ class _SettingsPageState extends State<SettingsPage>
             final catalog = settingsCatalog(
               l,
               workspace.enabledWorkspaces,
+              hasAgent: context.read<AgentApplication?>() != null,
               canClearData:
                   !kIsWeb && defaultTargetPlatform != TargetPlatform.iOS,
             );
@@ -383,6 +386,16 @@ class _SettingsPageState extends State<SettingsPage>
             subtitle: l.settingsFeaturesSummary,
           ),
         ]),
+        if (pageContext.read<AgentApplication?>() != null)
+          group('agent', l.agentTitle, [
+            link(
+              'settings-agent',
+              l.agentSettingsTitle,
+              Icons.auto_awesome_outlined,
+              SettingsDestination.agent,
+              subtitle: l.agentSettingsSummary,
+            ),
+          ]),
         group('data', l.settingsDataPrivacy, [
           if (workspace.isEnabled(AppMode.student))
             link(
@@ -440,6 +453,11 @@ class _SettingsPageState extends State<SettingsPage>
     }
     if (destination == SettingsDestination.language) {
       return const LanguageSettingsPage();
+    }
+    if (destination == SettingsDestination.agent) {
+      return context.read<AgentApplication?>() == null
+          ? const SizedBox.shrink()
+          : const AgentSettingsPage();
     }
     if (destination == SettingsDestination.features) {
       return WorkspaceFeaturesPage(

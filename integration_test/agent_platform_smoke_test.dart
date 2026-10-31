@@ -80,7 +80,7 @@ Future<void> _sendRequest(WidgetTester tester, String text) async {
   // button state before tapping, as an injected tap does not pump the frame.
   await _until(
     tester,
-    () => tester.widget<FilledButton>(_key('agent-send')).onPressed != null,
+    () => tester.widget<IconButton>(_key('agent-send')).onPressed != null,
     'the Send button to become enabled',
   );
   await _tap(tester, _key('agent-send'));

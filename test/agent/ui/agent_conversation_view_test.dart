@@ -9,6 +9,7 @@ import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/l10n/app_localizations.dart';
+import 'package:sked/models/agent_settings.dart';
 
 import 'agent_ui_test_support.dart';
 
@@ -40,6 +41,54 @@ void main() {
     await repository.waitForPendingWrites();
     await tester.pumpAndSettle();
   }
+
+  testWidgets(
+    'new conversations save their own initial model and thinking choice',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      await initialize();
+      const firstSelection = AgentModelSelection(
+        modelId: 'model-a',
+        reasoningEffort: AgentReasoningEffort.high,
+      );
+      const secondSelection = AgentModelSelection(modelId: 'model-b');
+      const models = [
+        AgentModelConfig(
+          id: 'model-a',
+          reasoningEfforts: [
+            AgentReasoningEffort.auto,
+            AgentReasoningEffort.high,
+          ],
+        ),
+        AgentModelConfig(id: 'model-b'),
+      ];
+      delegate.state.value = AgentUiState(
+        enabled: true,
+        configured: true,
+        availableModels: models,
+        defaultModelSelection: firstSelection,
+      );
+      await mountAgentUi(tester, view());
+      await tester.tap(find.byKey(const ValueKey('agent-new')));
+      await settle(tester);
+      final firstId = repository.selectedId!;
+      expect(repository.find(firstId)!.modelSelection, firstSelection);
+
+      delegate.state.value = AgentUiState(
+        enabled: true,
+        configured: true,
+        availableModels: models,
+        defaultModelSelection: secondSelection,
+        modelSelections: {firstId: firstSelection},
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('agent-new')));
+      await settle(tester);
+      expect(repository.selected!.modelSelection, secondSelection);
+      expect(repository.find(firstId)!.modelSelection, firstSelection);
+      expect(delegate.calls, isEmpty);
+    },
+  );
 
   testWidgets(
     'HTTP transport approval describes transmission and does not present a business mutation',
@@ -138,7 +187,7 @@ void main() {
       await tester.tap(find.byKey(ValueKey('agent-restore-${first.id}')));
       await settle(tester);
       expect(repository.find(first.id)!.archived, isFalse);
-      await tester.tap(find.text('Cancel'));
+      await tester.tap(find.byKey(const ValueKey('agent-history-close')));
       await tester.pumpAndSettle();
       expect(
         tester
@@ -417,6 +466,8 @@ void main() {
       );
       await mountAgentUi(tester, view());
       expect(find.text('Real streamed text'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('agent-mode-picker')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('agent-mode-plan')));
       await settle(tester);
       expect(repository.selected!.mode, AgentPermissionMode.plan);
@@ -548,6 +599,42 @@ void main() {
     await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
     await settle(tester);
     expect(delegate.calls, ['send:${conversation.id}:Keyboard request']);
+  });
+
+  testWidgets('shortcut waits until the input method finishes composing', (
+    tester,
+  ) async {
+    addTearDown(tester.view.reset);
+    await initialize();
+    final conversation = await repository.create(title: 'Input method');
+    await mountAgentUi(tester, view());
+    await tester.showKeyboard(find.byKey(const ValueKey('agent-composer')));
+    tester.testTextInput.updateEditingValue(
+      const TextEditingValue(
+        text: '下周课表',
+        selection: TextSelection.collapsed(offset: 4),
+        composing: TextRange(start: 0, end: 4),
+      ),
+    );
+    await settle(tester);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await settle(tester);
+    expect(delegate.calls, isEmpty);
+    expect(repository.selected!.draft, '下周课表');
+    tester.testTextInput.updateEditingValue(
+      const TextEditingValue(
+        text: '下周课表',
+        selection: TextSelection.collapsed(offset: 4),
+      ),
+    );
+    await tester.pump();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await settle(tester);
+    expect(delegate.calls, ['send:${conversation.id}:下周课表']);
   });
 
   testWidgets(

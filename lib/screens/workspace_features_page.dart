@@ -18,7 +18,6 @@ import '../services/agenda_notification_service.dart';
 import '../widgets/settings_list.dart';
 import '../widgets/settings_page_header.dart';
 import '../widgets/ui_command.dart';
-import 'agent_settings_page.dart';
 
 class WorkspaceFeaturesPage extends StatefulWidget {
   const WorkspaceFeaturesPage({
@@ -171,14 +170,6 @@ class _WorkspaceFeaturesPageState extends State<WorkspaceFeaturesPage>
           title: l.agentTitle,
           value: agent.settings.enabled,
           onChanged: (value) => unawaited(_setAgentEnabled(value)),
-        ),
-        SettingsConnectedTile(
-          key: const ValueKey('agent-model-settings-entry'),
-          leading: const Icon(Icons.settings_outlined),
-          title: l.agentModelSettings,
-          value: agent.settings.model.isEmpty ? null : agent.settings.model,
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => unawaited(AgentSettingsPage.open(context)),
         ),
       ],
       if (hasMultipleWorkspaces)

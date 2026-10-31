@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/app_runtime.dart';
+import 'package:sked/screens/agent_page.dart';
 import 'package:sked/widgets/sked_calendar_day_label.dart';
 import 'package:sked/widgets/sked_date_picker.dart';
 import 'package:sked/widgets/sked_expressive_components.dart';
@@ -141,6 +142,7 @@ void main() {
         (t) async {
           size(t, Size(width, 900));
           final (p, storage) = await home(t, scale: scale);
+          expect(p.agent.settings.enabled, isTrue);
           final before = storage.writes;
           expectReadableDates(t);
           final row = t.getRect(key('general-compact-toolbar-single-row'));
@@ -185,6 +187,7 @@ void main() {
           expect(storage.writes, before);
           await p.workspaces.switchMode(AppMode.student);
           await t.pumpAndSettle();
+          expect(key('assistant-toggle'), findsNothing);
           expectReadableDates(t);
           expect(p.settingsView.fitWeekColumnsToWidth, isTrue);
           final toolbar = find.byType(SkedWorkspaceToolbar).hitTestable().first;
@@ -266,6 +269,8 @@ void main() {
         );
         await t.pumpAndSettle();
         expect(p.studentView.timetables, isEmpty);
+        expect(p.agent.settings.enabled, isTrue);
+        expect(key('assistant-toggle'), findsNothing);
         final toolbar = t.getRect(key('student-workspace-toolbar'));
         final settings = t.getRect(key('student-toolbar-more-button'));
         final title = t.getRect(
@@ -284,6 +289,13 @@ void main() {
         expect(settings.size, const Size.square(48));
         expect(settings.center.dy, closeTo(toolbar.center.dy, .1));
         expect(storage.writes, before);
+        await t.tap(key('student-toolbar-more-button'));
+        await t.pumpAndSettle();
+        expect(key('assistant-toggle'), findsOneWidget);
+        await t.ensureVisible(key('assistant-toggle'));
+        await t.tap(key('assistant-toggle'));
+        await t.pumpAndSettle();
+        expect(find.byType(AgentPage), findsOneWidget);
         expect(t.takeException(), isNull);
       },
       variant: TargetPlatformVariant.only(TargetPlatform.android),

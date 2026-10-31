@@ -264,6 +264,9 @@ void main() {
       await tester.binding.setSurfaceSize(const Size(900, 800));
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final provider = await _createProvider();
+      final initialDate = DateTime(2026, 6, 19);
+      await provider.generalCommands.updateDisplaySettings(showWeekends: true);
+      await provider.generalNavigation.setSelectedDate(initialDate);
       await _pumpGeneralScheduleHomeScreen(tester, provider);
 
       expect(find.byType(SkedPrimaryFab), findsNothing);
@@ -279,7 +282,27 @@ void main() {
       );
       expect(find.byTooltip('Previous page'), findsOneWidget);
       expect(find.byTooltip('Next page'), findsOneWidget);
-      expect(find.byKey(const ValueKey('general-go-today')), findsOneWidget);
+      // Keep the complete date ahead of a separate Today shortcut when the
+      // toolbar width is limited. The date's long press still performs Today.
+      expect(find.byKey(const ValueKey('general-go-today')), findsNothing);
+      expect(provider.generalView.selectedDate, initialDate);
+      await tester.longPress(
+        find.byKey(const ValueKey('general-date-title-button')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        provider.generalView.selectedDate,
+        normalizeDateOnly(DateTime.now()),
+      );
+      expect(provider.generalView.selectedDate, isNot(initialDate));
+      expect(
+        find.byKey(const ValueKey('general-date-navigation')),
+        findsOneWidget,
+      );
+      expect(find.byTooltip('Previous page'), findsOneWidget);
+      expect(find.byTooltip('Next page'), findsOneWidget);
+      expect(find.byTooltip('Add event'), findsOneWidget);
+      expect(find.byType(SkedPrimaryFab), findsNothing);
       expect(find.byType(Scaffold), findsOneWidget);
       expect(tester.takeException(), isNull);
     },

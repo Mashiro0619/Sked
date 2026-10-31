@@ -19,6 +19,7 @@ import 'package:sked/models/app_mode.dart';
 import 'package:sked/screens/adaptive_sked_shell.dart';
 import 'package:sked/screens/agent_page.dart';
 import 'package:sked/screens/agent_settings_page.dart';
+import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/workspace_features_page.dart';
 import 'package:sked/widgets/assistant_pane.dart';
 import 'package:sked/widgets/workspace_frame.dart';
@@ -385,7 +386,7 @@ void main() {
             desktop ? findsNothing : findsOneWidget,
           );
           expect(find.byType(AssistantPreviewPane), findsNothing);
-          expect(find.text('Agent'), findsOneWidget);
+          expect(find.text('First conversation'), findsOneWidget);
           final first = application.conversations.selectedId!;
           await tester.ensureVisible(_key('agent-composer'));
           await tester.enterText(_key('agent-composer'), 'Read my schedule');
@@ -397,6 +398,9 @@ void main() {
             application.conversations.find(first)!.messages.single.text,
             'Read my schedule',
           );
+          await tester.ensureVisible(_key('agent-mode-picker'));
+          await tester.tap(_key('agent-mode-picker'));
+          await tester.pumpAndSettle();
           await tester.ensureVisible(_key('agent-mode-full'));
           await tester.tap(_key('agent-mode-full'));
           await tester.pumpAndSettle();
@@ -404,6 +408,9 @@ void main() {
             application.conversations.find(first)!.mode,
             AgentPermissionMode.full,
           );
+          await tester.ensureVisible(_key('agent-mode-picker'));
+          await tester.tap(_key('agent-mode-picker'));
+          await tester.pumpAndSettle();
           await tester.ensureVisible(_key('agent-mode-plan'));
           await tester.tap(_key('agent-mode-plan'));
           await tester.pumpAndSettle();
@@ -494,6 +501,7 @@ void main() {
             : const Size(390, 844);
         await app.agent.configure(
           const AgentSettings(
+            enabled: false,
             endpoint: 'https://fixture.example/v1',
             model: 'fixture-model',
           ),
@@ -516,10 +524,12 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byType(AgentAssistantPane), findsNothing);
         final entry = _key('assistant-toggle');
+        if (!desktop) expect(entry, findsNothing);
         if (entry.evaluate().isEmpty) {
           await tester.tap(_key('student-toolbar-more-button'));
           await tester.pumpAndSettle();
         }
+        expect(entry, findsOneWidget);
         await tester.tap(entry);
         await tester.pumpAndSettle();
         expect(find.byType(AssistantPreviewPane), findsNothing);
@@ -531,16 +541,11 @@ void main() {
         await tester.tap(_key('agent-new'));
         await tester.pumpAndSettle();
         final conversation = app.agent.conversations.selectedId!;
+        await tester.tap(_key('agent-mode-picker'));
+        await tester.pumpAndSettle();
         for (final mode in AgentPermissionMode.values) {
           expect(_key('agent-mode-${mode.name}'), findsOneWidget);
         }
-        expect(
-          find.descendant(
-            of: find.byType(AgentConversationHost),
-            matching: find.byType(ChoiceChip),
-          ),
-          findsNWidgets(3),
-        );
         await tester.tap(_key('agent-mode-plan'));
         await tester.pumpAndSettle();
         await tester.enterText(_key('agent-composer'), 'Read my calendar');
@@ -597,6 +602,75 @@ void main() {
       ),
     );
   }
+
+  testWidgets(
+    'desktop full workspace and side pane share one running conversation',
+    (tester) async {
+      final application = await _Application.create();
+      final assistant = AssistantPaneController();
+      final workspace = WorkspacePaneController();
+      addTearDown(application.dispose);
+      addTearDown(assistant.dispose);
+      addTearDown(workspace.dispose);
+      addTearDown(tester.view.reset);
+      await _mountFrame(
+        tester,
+        application,
+        assistant,
+        workspace,
+        size: const Size(1440, 1000),
+      );
+      await tester.tap(_key('assistant-toggle'));
+      await tester.pumpAndSettle();
+      final id = application.conversations.selectedId!;
+      await tester.enterText(_key('agent-composer'), 'Read my schedule');
+      await tester.pump();
+      await tester.tap(_key('agent-send'));
+      await _until(tester, () => application.provider.requests.isNotEmpty);
+      await tester.enterText(_key('agent-composer'), 'Keep this next question');
+      await tester.pumpAndSettle();
+      await tester.tap(_key('agent-open-workspace'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AgentPage), findsOneWidget);
+      expect(_key('agent-workspace-history'), findsOneWidget);
+      expect(_key('agent-composer'), findsOneWidget);
+      expect(application.conversations.selectedId, id);
+      expect(application.provider.requests.length, 1);
+      expect(application.provider.cancellations.single!.isCancelled, isFalse);
+      expect(
+        tester.widget<TextField>(_key('agent-composer')).controller!.text,
+        'Keep this next question',
+      );
+      await tester.enterText(_key('agent-composer'), 'Edited in full chat');
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AgentPage),
+          matching: find.byType(BackButton),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(AgentPage), findsNothing);
+      expect(find.byType(AgentAssistantPane), findsOneWidget);
+      expect(assistant.isOpen, isTrue);
+      expect(
+        tester.widget<TextField>(_key('agent-composer')).controller!.text,
+        'Edited in full chat',
+      );
+      expect(application.runtime.state.value.runFor(id).isActive, isTrue);
+      await application.provider.finish(0);
+      await _until(
+        tester,
+        () => !application.runtime.state.value.runFor(id).isActive,
+      );
+      expect(
+        application.conversations.find(id)!.messages.last.text,
+        'Fixture response',
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
 
   testWidgets(
     'disabling hides desktop entry and enabling preserves closed state and draft',
@@ -657,6 +731,8 @@ void main() {
       size: const Size(390, 844),
       scale: 2,
     );
+    await tester.tap(_key('agent-conversation-menu'));
+    await tester.pumpAndSettle();
     await tester.tap(_key('agent-settings'));
     await tester.pumpAndSettle();
     expect(find.byType(AgentSettingsPage), findsOneWidget);
@@ -665,10 +741,16 @@ void main() {
     await tester.enterText(_key('agent-model'), 'changed-model');
     await tester.ensureVisible(_key('agent-api-key'));
     await tester.enterText(_key('agent-api-key'), 'transient-fixture-key');
+    await tester.pumpAndSettle();
     await tester.ensureVisible(_key('agent-save-model'));
+    await tester.pumpAndSettle();
     await tester.tap(_key('agent-save-model'));
     await tester.pumpAndSettle();
-    expect(application.settings.model, 'changed-model');
+    expect(application.settings.model, 'fixture-model');
+    expect(
+      application.settings.availableModels.map((model) => model.id),
+      contains('changed-model'),
+    );
     expect(application.suppliedKey, 'transient-fixture-key');
     expect(application.credentialAction, AgentCredentialAction.replace);
     expect(
@@ -713,8 +795,22 @@ void main() {
       await tester.tap(_key('agent-enabled'));
       await tester.pumpAndSettle();
       expect(application.enabledChanges, [false, true]);
-      await tester.ensureVisible(_key('agent-model-settings-entry'));
-      await tester.tap(_key('agent-model-settings-entry'));
+      expect(_key('agent-model-settings-entry'), findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(
+        WorkspaceHarness(
+          provider: app,
+          textScale: 2,
+          home: ChangeNotifierProvider<AgentApplication>.value(
+            value: application,
+            child: const SettingsPage(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(_key('settings-agent'));
+      await tester.pumpAndSettle();
+      await tester.tap(_key('settings-agent'));
       await tester.pumpAndSettle();
       expect(find.byType(AgentSettingsPage), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -741,6 +837,8 @@ void main() {
         child: const AgentPage(),
       ),
     );
+    await tester.tap(_key('agent-conversation-menu'));
+    await tester.pumpAndSettle();
     await tester.tap(_key('agent-settings'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(_key('agent-save-model'));

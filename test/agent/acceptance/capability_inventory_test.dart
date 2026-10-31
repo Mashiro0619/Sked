@@ -45,6 +45,10 @@ import 'acceptance_harness.dart';
     settings: {'agent.enabled'},
     tools: {'workspaces.prepare', 'settings.prepare'},
   ),
+  SettingsDestination.agent => (
+    settings: {'agent.protocol', 'agent.endpoint', 'agent.model'},
+    tools: {'connection.prepare', 'credentials.request_input'},
+  ),
   SettingsDestination.about => (
     settings: {'app.includePrereleaseUpdates', 'app.ignoredUpdateVersion'},
     tools: {'settings.get', 'settings.prepare'},
