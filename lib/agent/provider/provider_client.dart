@@ -216,6 +216,18 @@ class ProviderClient {
 }
 
 void _validate(ProviderRequest request, String apiKey) {
+  if (request.reasoningEffort != null &&
+      !const {
+        'none',
+        'minimal',
+        'low',
+        'medium',
+        'high',
+        'xhigh',
+        'max',
+      }.contains(request.reasoningEffort)) {
+    throw const ProviderException(ProviderError.invalidRequest);
+  }
   final uri = request.endpoint;
   if (!uri.isAbsolute ||
       uri.host.isEmpty ||

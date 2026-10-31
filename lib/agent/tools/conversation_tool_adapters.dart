@@ -239,7 +239,15 @@ class ConversationToolAdapters {
     _requireStorage();
     if (action == 'conversations.create') {
       final title = _title(args), id = _id();
-      final mode = _host.session.committedData.agentSettings.permissionMode;
+      final settings = _host.session.committedData.agentSettings;
+      final mode = settings.permissionMode;
+      final modelSelection = settings.defaultModelSelection;
+      bool defaultsChanged() {
+        final current = _host.session.committedData.agentSettings;
+        return current.permissionMode != mode ||
+            current.defaultModelSelection != modelSelection;
+      }
+
       final plan = _external.prepare(
         scope: scope,
         action: action,
@@ -249,20 +257,27 @@ class ConversationToolAdapters {
           'conversationId': id,
           'title': title,
           'mode': mode.name,
+          'modelSelection': modelSelection?.toJson(),
         },
-        version: {'mode': mode.name},
+        version: {
+          'mode': mode.name,
+          'modelSelection': modelSelection?.toJson(),
+        },
         changes: [
           ResourceChange(
             key: 'conversation.create',
             before: null,
-            after: {'id': id, 'title': title, 'permissionMode': mode.name},
+            after: {
+              'id': id,
+              'title': title,
+              'permissionMode': mode.name,
+              'modelSelection': modelSelection?.toJson(),
+            },
           ),
         ],
         validate: () {
           _requireStorage();
-          if (_repository.find(id) != null ||
-              _host.session.committedData.agentSettings.permissionMode !=
-                  mode) {
+          if (_repository.find(id) != null || defaultsChanged()) {
             _conflict();
           }
         },
@@ -270,9 +285,7 @@ class ConversationToolAdapters {
           final acceptedMode = scope.policy.mode;
           void checkQueuedCreate() {
             scope.checkActive();
-            if (scope.policy.mode != acceptedMode ||
-                _host.session.committedData.agentSettings.permissionMode !=
-                    mode) {
+            if (scope.policy.mode != acceptedMode || defaultsChanged()) {
               _conflict();
             }
           }
@@ -281,6 +294,7 @@ class ConversationToolAdapters {
           final value = await _repository.create(
             title: title,
             mode: mode,
+            modelSelection: modelSelection,
             id: id,
             validate: checkQueuedCreate,
           );

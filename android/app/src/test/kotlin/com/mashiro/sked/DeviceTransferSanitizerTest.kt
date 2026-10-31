@@ -45,7 +45,7 @@ class DeviceTransferSanitizerTest {
     @Test
     fun agentAuthorityAndReceiptsAreLocalEvenWithEscapedOrDuplicateNames() {
         val source = """{"schemaVersion":5,"agentSettings":{"enabled":true,"permissionMode":"full","endpoint":"PRIVATE_ENDPOINT","credentialRef":"PRIVATE_REF"},"agent\u0053ettings":{"model":"PRIVATE_MODEL"},"applicationLedger":{"receipts":[{"result":"PRIVATE_RESULT"}]},"metadata":{"agentSettings":{"name":"ordinary"},"applicationLedger":"ordinary"}}"""
-        val defaults = """{"enabled":true,"permissionMode":"ask","protocol":"chatCompletions","endpoint":"","model":"","credentialRef":null}"""
+        val defaults = """{"enabled":true,"permissionMode":"ask","protocol":"chatCompletions","endpoint":"","model":"","models":[],"credentialRef":null}"""
         val result = sanitize(source)
         assertFalse(result.contains("PRIVATE_"))
         assertEquals(

@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 
 import '../../application/operation_contracts.dart';
+import '../../models/agent_settings.dart';
 import 'conversation_models.dart';
 import 'conversation_storage.dart';
 
@@ -95,12 +96,18 @@ class ConversationRepository extends ChangeNotifier {
   Future<AgentConversation> create({
     required String title,
     AgentPermissionMode mode = AgentPermissionMode.ask,
+    AgentModelSelection? modelSelection,
     String? id,
     void Function()? validate,
   }) => _enqueue(() async {
     _checkWritable();
     validate?.call();
-    final conversation = _newConversation(title, mode, id: id);
+    final conversation = _newConversation(
+      title,
+      mode,
+      id: id,
+      modelSelection: modelSelection,
+    );
     await _save(
       _next(
         conversations: [...conversations, conversation],
@@ -228,6 +235,7 @@ class ConversationRepository extends ChangeNotifier {
     required String title,
     required String prompt,
     AgentPermissionMode mode = AgentPermissionMode.ask,
+    AgentModelSelection? modelSelection,
   }) => _enqueue(() async {
     _checkWritable();
     final existing = _archive.handoffs
@@ -257,10 +265,12 @@ class ConversationRepository extends ChangeNotifier {
       role: ConversationRole.user,
       text: prompt,
       createdAt: _clock().toUtc(),
+      modelSelection: modelSelection,
     );
     final conversation = _newConversation(
       title,
       mode,
+      modelSelection: modelSelection,
     ).copyWith(messages: [message], sources: [source]);
     await _save(
       _next(
@@ -289,6 +299,7 @@ class ConversationRepository extends ChangeNotifier {
     String title,
     AgentPermissionMode mode, {
     String? id,
+    AgentModelSelection? modelSelection,
   }) {
     final resolvedId = id ?? _id();
     if (resolvedId.isEmpty || resolvedId.length > 256) {
@@ -309,6 +320,7 @@ class ConversationRepository extends ChangeNotifier {
       id: resolvedId,
       title: title,
       mode: mode,
+      modelSelection: modelSelection,
       createdAt: now,
       updatedAt: now,
     );

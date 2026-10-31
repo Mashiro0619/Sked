@@ -6,6 +6,7 @@ import '../../theme/sked_surface.dart';
 import '../connection/agent_credential_action.dart';
 import '../connection/agent_connection_diagnostics.dart';
 import '../provider/provider.dart' show ProviderCancellationToken;
+import 'agent_model_labels.dart';
 
 export '../connection/agent_credential_action.dart';
 
@@ -52,7 +53,13 @@ class AgentModelSettingsForm extends StatefulWidget {
 class _AgentModelSettingsFormState extends State<AgentModelSettingsForm> {
   final _formKey = GlobalKey<FormState>();
   late final _endpoint = TextEditingController(text: widget.settings.endpoint);
-  late final _model = TextEditingController(text: widget.settings.model);
+  final _model = TextEditingController();
+  final _modelSearch = TextEditingController();
+  late String _defaultModel = widget.settings.model;
+  late final _models = <String, AgentModelConfig>{
+    for (final model in widget.settings.availableModels) model.id: model,
+  };
+  final _removedModels = <String, AgentModelConfig>{};
   final _key = TextEditingController();
   late AgentModelProtocol _protocol = widget.settings.protocol;
   bool _showKey = false;
@@ -116,6 +123,7 @@ class _AgentModelSettingsFormState extends State<AgentModelSettingsForm> {
     _key.dispose();
     _endpoint.dispose();
     _model.dispose();
+    _modelSearch.dispose();
     super.dispose();
   }
 
@@ -126,10 +134,13 @@ class _AgentModelSettingsFormState extends State<AgentModelSettingsForm> {
       _failed = false;
     });
     try {
+      final manualModel = _model.text.trim();
+      if (manualModel.isNotEmpty) _setModelEnabled(manualModel, true);
       final change = AgentModelSettingsChange(
         settings: widget.settings.copyWith(
           endpoint: _endpoint.text.trim(),
-          model: _model.text.trim(),
+          model: _defaultModel,
+          models: _models.values.toList(),
           protocol: _protocol,
         ),
         credentialAction: _clearKey
@@ -142,6 +153,7 @@ class _AgentModelSettingsFormState extends State<AgentModelSettingsForm> {
       await widget.onSave(change);
       if (!mounted) return;
       _key.clear();
+      _model.clear();
       setState(() => _clearKey = false);
       widget.onSaved?.call();
     } catch (_) {
@@ -151,6 +163,118 @@ class _AgentModelSettingsFormState extends State<AgentModelSettingsForm> {
       if (mounted) setState(() => _saving = false);
     }
   }
+
+  void _setModelEnabled(String id, bool enabled) {
+    if (enabled) {
+      _models.putIfAbsent(
+        id,
+        () => _removedModels.remove(id) ?? AgentModelConfig(id: id),
+      );
+      if (_defaultModel.isEmpty) _defaultModel = id;
+    } else {
+      final removed = _models.remove(id);
+      if (removed != null) _removedModels[id] = removed;
+      if (_defaultModel == id) _defaultModel = _models.keys.firstOrNull ?? '';
+    }
+  }
+
+  void _addManualModel() {
+    if (!_formKey.currentState!.validate()) return;
+    final id = _model.text.trim();
+    if (id.isEmpty) return;
+    setState(() {
+      _setModelEnabled(id, true);
+      _model.clear();
+    });
+  }
+
+  Widget _modelOptions(
+    AgentModelConfig model,
+    AppLocalizations l,
+  ) => ExpansionTile(
+    key: ValueKey('agent-model-options-${model.id}'),
+    title: Text(model.id),
+    subtitle: model.id == _defaultModel ? Text(l.agentDefaultModel) : null,
+    trailing: IconButton(
+      key: ValueKey('agent-remove-model-${model.id}'),
+      tooltip: l.agentRemoveModel,
+      onPressed: _saving
+          ? null
+          : () => setState(() => _setModelEnabled(model.id, false)),
+      icon: const Icon(Icons.close),
+    ),
+    childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+    expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Text(l.agentAllowedEfforts),
+      const SizedBox(height: 8),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final effort in AgentReasoningEffort.values)
+            FilterChip(
+              key: ValueKey('agent-model-effort-${model.id}-${effort.name}'),
+              label: Text(agentReasoningEffortLabel(l, effort)),
+              selected: model.reasoningEfforts.contains(effort),
+              onSelected: _saving || effort == AgentReasoningEffort.auto
+                  ? null
+                  : (selected) {
+                      setState(() {
+                        final efforts = AgentReasoningEffort.values
+                            .where(
+                              (value) =>
+                                  value == AgentReasoningEffort.auto ||
+                                  (value == effort
+                                      ? selected
+                                      : model.reasoningEfforts.contains(value)),
+                            )
+                            .toList();
+                        _models[model.id] = AgentModelConfig(
+                          id: model.id,
+                          reasoningEfforts: List.unmodifiable(efforts),
+                          defaultReasoningEffort:
+                              efforts.contains(model.defaultReasoningEffort)
+                              ? model.defaultReasoningEffort
+                              : AgentReasoningEffort.auto,
+                        );
+                      });
+                    },
+            ),
+        ],
+      ),
+      const SizedBox(height: 12),
+      DropdownButtonFormField<AgentReasoningEffort>(
+        key: ValueKey(
+          'agent-default-effort-${model.id}-${model.defaultReasoningEffort.name}',
+        ),
+        initialValue: model.defaultReasoningEffort,
+        isExpanded: true,
+        decoration: InputDecoration(
+          filled: true,
+          labelText: l.agentDefaultEffort,
+        ),
+        items: [
+          for (final effort in model.reasoningEfforts)
+            DropdownMenuItem(
+              value: effort,
+              child: Text(agentReasoningEffortLabel(l, effort)),
+            ),
+        ],
+        onChanged: _saving
+            ? null
+            : (effort) => setState(() {
+                if (effort != null) {
+                  _models[model.id] = AgentModelConfig(
+                    id: model.id,
+                    reasoningEfforts: model.reasoningEfforts,
+                    defaultReasoningEffort: effort,
+                  );
+                }
+              }),
+      ),
+    ],
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -240,26 +364,47 @@ class _AgentModelSettingsFormState extends State<AgentModelSettingsForm> {
                 ],
                 if (_catalog case final catalog?) ...[
                   if (!catalog.complete) Text(l.agentModelsPartial),
-                  DropdownButton<String>(
+                  TextField(
+                    key: const ValueKey('agent-model-search'),
+                    controller: _modelSearch,
+                    decoration: InputDecoration(
+                      filled: true,
+                      labelText: l.agentModelSearch,
+                      prefixIcon: const Icon(Icons.search),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  SizedBox(
                     key: const ValueKey('agent-model-catalog'),
-                    isExpanded: true,
-                    hint: Text(l.agentChooseModel),
-                    items: [
-                      for (final model in catalog.models)
-                        DropdownMenuItem(
-                          value: model,
-                          child: Text(
-                            model,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                    ],
-                    onChanged: _saving
-                        ? null
-                        : (value) {
-                            if (value != null) _model.text = value;
+                    height: 240,
+                    child: Builder(
+                      builder: (context) {
+                        final filtered = catalog.models
+                            .where(
+                              (id) => id.toLowerCase().contains(
+                                _modelSearch.text.trim().toLowerCase(),
+                              ),
+                            )
+                            .toList();
+                        return ListView.builder(
+                          primary: false,
+                          itemCount: filtered.length,
+                          itemBuilder: (context, index) {
+                            final id = filtered[index];
+                            return CheckboxListTile(
+                              key: ValueKey('agent-catalog-model-$id'),
+                              value: _models.containsKey(id),
+                              title: Text(id),
+                              onChanged: _saving
+                                  ? null
+                                  : (enabled) => setState(
+                                      () => _setModelEnabled(id, enabled!),
+                                    ),
+                            );
                           },
+                        );
+                      },
+                    ),
                   ),
                 ],
                 const SizedBox(height: 20),
@@ -295,12 +440,56 @@ class _AgentModelSettingsFormState extends State<AgentModelSettingsForm> {
                 autocorrect: false,
                 decoration: InputDecoration(
                   filled: true,
-                  labelText: l.agentModel,
+                  labelText: l.agentManualModelId,
                 ),
-                validator: (value) => value == null || value.trim().isEmpty
+                validator: (value) => (value?.trim().length ?? 0) > 256
                     ? l.agentRequiredField
                     : null,
+                onFieldSubmitted: (_) {
+                  if (!_saving) _addManualModel();
+                },
               ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: FilledButton.tonalIcon(
+                  key: const ValueKey('agent-add-model'),
+                  onPressed: _saving ? null : _addManualModel,
+                  icon: const Icon(Icons.add),
+                  label: Text(l.agentAddModel),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                l.agentEnabledModels,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              if (_models.isEmpty) Text(l.agentNoModelsSelected),
+              if (_models.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  key: ValueKey('agent-default-model-$_defaultModel'),
+                  initialValue: _defaultModel,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    filled: true,
+                    labelText: l.agentDefaultModel,
+                  ),
+                  items: [
+                    for (final id in _models.keys)
+                      DropdownMenuItem(
+                        value: id,
+                        child: Text(id, overflow: TextOverflow.ellipsis),
+                      ),
+                  ],
+                  onChanged: _saving
+                      ? null
+                      : (id) => setState(() => _defaultModel = id!),
+                ),
+                const SizedBox(height: 8),
+                Text(l.agentModelCapabilityHint),
+                for (final model in _models.values) _modelOptions(model, l),
+              ],
               const SizedBox(height: 16),
               DropdownButtonFormField<AgentModelProtocol>(
                 key: const ValueKey('agent-protocol'),

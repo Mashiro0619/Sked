@@ -15,6 +15,7 @@ class ProviderRequest {
     List<ToolDefinition> tools = const [],
     this.limits = const ProviderLimits(),
     this.allowInsecureHttp = false,
+    this.reasoningEffort,
   }) : messages = List.unmodifiable(messages),
        tools = List.unmodifiable(tools);
 
@@ -26,6 +27,9 @@ class ProviderRequest {
   final List<ToolDefinition> tools;
   final ProviderLimits limits;
   final bool allowInsecureHttp;
+
+  /// Null omits the parameter, leaving the model/service default untouched.
+  final String? reasoningEffort;
 }
 
 class ProviderLimits {

@@ -34,6 +34,8 @@ Map<String, Object?> encodeProviderRequest(ProviderRequest request) {
   if (request.protocol == ProviderProtocol.chatCompletions) {
     return {
       'model': request.model,
+      if (request.reasoningEffort != null)
+        'reasoning_effort': request.reasoningEffort,
       'stream': true,
       'stream_options': {'include_usage': true},
       'max_completion_tokens': request.limits.maxOutputTokens,
@@ -92,6 +94,8 @@ Map<String, Object?> encodeProviderRequest(ProviderRequest request) {
   }
   return {
     'model': request.model,
+    if (request.reasoningEffort != null)
+      'reasoning': {'effort': request.reasoningEffort},
     'stream': true,
     'store': false,
     'max_output_tokens': request.limits.maxOutputTokens,

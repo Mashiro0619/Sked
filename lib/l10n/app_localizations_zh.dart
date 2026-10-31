@@ -3436,6 +3436,73 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentHttpTransportScope => '此许可可在本次应用运行期间用于同一已保存连接，不代表批准修改数据。';
+
+  @override
+  String get agentModelSelection => '模型';
+
+  @override
+  String get agentThinkingEffort => '思考强度';
+
+  @override
+  String get agentEffortAuto => '自动';
+
+  @override
+  String get agentEffortNone => '关闭';
+
+  @override
+  String get agentEffortMinimal => '最低';
+
+  @override
+  String get agentEffortLow => '低';
+
+  @override
+  String get agentEffortMedium => '中';
+
+  @override
+  String get agentEffortHigh => '高';
+
+  @override
+  String get agentEffortXhigh => '极高';
+
+  @override
+  String get agentEffortMax => '最高';
+
+  @override
+  String get agentModelNextRunHint => '修改用于下一次请求，当前请求继续使用开始时的模型和思考强度。';
+
+  @override
+  String get agentModelSelectionRequired => '此请求的模型或思考强度已被停用。请重新选择，再继续处理。';
+
+  @override
+  String get agentEnabledModels => '可用模型';
+
+  @override
+  String get agentAddModel => '添加模型';
+
+  @override
+  String get agentModelSearch => '搜索模型 ID';
+
+  @override
+  String get agentDefaultModel => '默认模型';
+
+  @override
+  String get agentDefaultEffort => '默认思考强度';
+
+  @override
+  String get agentAllowedEfforts => '可选思考强度';
+
+  @override
+  String get agentNoModelsSelected => '请至少勾选或添加一个模型。';
+
+  @override
+  String get agentModelCapabilityHint =>
+      '模型列表不包含可靠的思考档位信息。请选择服务支持的档位；选择“自动”时不发送思考参数。';
+
+  @override
+  String get agentRemoveModel => '移除模型';
+
+  @override
+  String get agentManualModelId => '模型 ID';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -6871,4 +6938,71 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentHttpTransportScope => '此許可可在本次應用程式執行期間用於同一已儲存連線，不代表批准修改資料。';
+
+  @override
+  String get agentModelSelection => '模型';
+
+  @override
+  String get agentThinkingEffort => '思考強度';
+
+  @override
+  String get agentEffortAuto => '自動';
+
+  @override
+  String get agentEffortNone => '關閉';
+
+  @override
+  String get agentEffortMinimal => '最低';
+
+  @override
+  String get agentEffortLow => '低';
+
+  @override
+  String get agentEffortMedium => '中';
+
+  @override
+  String get agentEffortHigh => '高';
+
+  @override
+  String get agentEffortXhigh => '極高';
+
+  @override
+  String get agentEffortMax => '最高';
+
+  @override
+  String get agentModelNextRunHint => '修改用於下一次請求，目前請求繼續使用開始時的模型和思考強度。';
+
+  @override
+  String get agentModelSelectionRequired => '此請求的模型或思考強度已被停用。請重新選擇，再繼續處理。';
+
+  @override
+  String get agentEnabledModels => '可用模型';
+
+  @override
+  String get agentAddModel => '新增模型';
+
+  @override
+  String get agentModelSearch => '搜尋模型 ID';
+
+  @override
+  String get agentDefaultModel => '預設模型';
+
+  @override
+  String get agentDefaultEffort => '預設思考強度';
+
+  @override
+  String get agentAllowedEfforts => '可選思考強度';
+
+  @override
+  String get agentNoModelsSelected => '請至少勾選或新增一個模型。';
+
+  @override
+  String get agentModelCapabilityHint =>
+      '模型清單不包含可靠的思考檔位資訊。請選擇服務支援的檔位；選擇「自動」時不傳送思考參數。';
+
+  @override
+  String get agentRemoveModel => '移除模型';
+
+  @override
+  String get agentManualModelId => '模型 ID';
 }

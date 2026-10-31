@@ -73,6 +73,13 @@ void main() {
   test(
     'a source, first message and handoff persist before starting inference',
     () async {
+      settings = settings.copyWith(
+        models: const [
+          AgentModelConfig(id: 'test-model'),
+          AgentModelConfig(id: 'later-default'),
+        ],
+      );
+      final originalSelection = settings.defaultModelSelection;
       final saving = Completer<void>();
       final release = Completer<void>();
       storage.beforeSave = () async {
@@ -83,6 +90,7 @@ void main() {
       await saving.future;
       expect(starts, isEmpty);
       expect(repository.conversations, isEmpty);
+      settings = settings.copyWith(model: 'later-default');
       release.complete();
       final result = await pending;
       final archive = ConversationArchive.decode(storage.source!);
@@ -95,6 +103,11 @@ void main() {
       expect(source.url, 'https://school.test/courses');
       expect(source.truncated, isTrue);
       expect(source.provenance!.datasetGeneration, generation);
+      expect(archive.conversations.single.modelSelection, originalSelection);
+      expect(
+        archive.conversations.single.messages.single.modelSelection,
+        originalSelection,
+      );
       expect(starts, [result.conversationId]);
     },
   );
@@ -138,7 +151,7 @@ void main() {
   test(
     'disabled and missing configuration preserve a retriable source',
     () async {
-      settings = const AgentSettings();
+      settings = const AgentSettings(enabled: false);
       await expectLater(
         handoff.handoff(draft, isCurrent: () => true),
         throwsA(_problem(OperationErrorCode.disabled)),

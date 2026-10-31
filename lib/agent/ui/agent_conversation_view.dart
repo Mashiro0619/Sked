@@ -11,6 +11,7 @@ import '../../theme/sked_surface.dart';
 import '../conversations/conversation_repository.dart';
 import '../imports/conversation_file_attachments.dart';
 import 'agent_ui_delegate.dart';
+import 'agent_model_picker.dart';
 import 'agent_operation_card.dart';
 import 'agent_plan_preview.dart';
 
@@ -315,7 +316,11 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final title = AppLocalizations.of(context).agentNewConversation;
     await _flushDraft(_repository.selectedId);
     if (!mounted || !identical(repository, _repository)) return;
-    await repository.create(title: title, mode: _runtime.defaultMode);
+    await repository.create(
+      title: title,
+      mode: _runtime.defaultMode,
+      modelSelection: _runtime.defaultModelSelection,
+    );
     if (mounted) _composerFocus.requestFocus();
   });
 
@@ -946,6 +951,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         code == 'timeout') {
       return l.agentLimitsReached;
     }
+    if (code == 'modelSelectionRequired') return l.agentModelSelectionRequired;
     if (code == 'sensitiveContent') return l.agentSensitiveContent;
     if (code?.startsWith('provider.') ?? false) return l.agentRequestFailed;
     return l.agentRunFailed;
@@ -1072,6 +1078,14 @@ class _AgentConversationViewState extends State<AgentConversationView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (_runtime.availableModels.isNotEmpty)
+                AgentModelPicker(
+                  conversationId: conversation.id,
+                  delegate: widget.delegate,
+                  enabled: enabled,
+                ),
+              if (_runtime.availableModels.isNotEmpty)
+                const SizedBox(height: 8),
               TextField(
                 key: const ValueKey('agent-composer'),
                 controller: _composer,

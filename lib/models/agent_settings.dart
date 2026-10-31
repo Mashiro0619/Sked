@@ -1,6 +1,133 @@
+import 'package:flutter/foundation.dart' show listEquals;
+
 import '../application/operation_contracts.dart';
 
 enum AgentModelProtocol { chatCompletions, responses }
+
+/// Auto delegates to the service by omitting its reasoning parameter.
+enum AgentReasoningEffort { auto, none, minimal, low, medium, high, xhigh, max }
+
+class AgentModelSelection {
+  const AgentModelSelection({
+    required this.modelId,
+    this.reasoningEffort = AgentReasoningEffort.auto,
+  });
+
+  final String modelId;
+  final AgentReasoningEffort reasoningEffort;
+
+  String? get wireReasoningEffort =>
+      reasoningEffort == AgentReasoningEffort.auto
+      ? null
+      : reasoningEffort.name;
+
+  Map<String, Object?> toJson() => {
+    'modelId': modelId,
+    'reasoningEffort': reasoningEffort.name,
+  };
+
+  factory AgentModelSelection.fromJson(Object? value) {
+    if (value is! Map ||
+        value.length != 2 ||
+        value['modelId'] is! String ||
+        !_validModelId(value['modelId'] as String)) {
+      throw const FormatException('Invalid model selection.');
+    }
+    final efforts = AgentReasoningEffort.values.where(
+      (effort) => effort.name == value['reasoningEffort'],
+    );
+    if (efforts.isEmpty) {
+      throw const FormatException('Invalid reasoning effort.');
+    }
+    return AgentModelSelection(
+      modelId: value['modelId'] as String,
+      reasoningEffort: efforts.single,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is AgentModelSelection &&
+      modelId == other.modelId &&
+      reasoningEffort == other.reasoningEffort;
+
+  @override
+  int get hashCode => Object.hash(modelId, reasoningEffort);
+}
+
+/// User-enabled model choices. Catalog membership is not capability evidence.
+class AgentModelConfig {
+  const AgentModelConfig({
+    required this.id,
+    this.reasoningEfforts = const [AgentReasoningEffort.auto],
+    this.defaultReasoningEffort = AgentReasoningEffort.auto,
+  });
+
+  final String id;
+  final List<AgentReasoningEffort> reasoningEfforts;
+  final AgentReasoningEffort defaultReasoningEffort;
+
+  AgentModelSelection get defaultSelection =>
+      AgentModelSelection(modelId: id, reasoningEffort: defaultReasoningEffort);
+
+  void validate() {
+    if (!_validModelId(id) ||
+        !reasoningEfforts.contains(AgentReasoningEffort.auto) ||
+        reasoningEfforts.toSet().length != reasoningEfforts.length ||
+        !reasoningEfforts.contains(defaultReasoningEffort)) {
+      throw const FormatException('Invalid enabled model configuration.');
+    }
+  }
+
+  Map<String, Object?> toJson() {
+    validate();
+    return {
+      'id': id,
+      'reasoningEfforts': reasoningEfforts.map((value) => value.name).toList(),
+      'defaultReasoningEffort': defaultReasoningEffort.name,
+    };
+  }
+
+  factory AgentModelConfig.fromJson(Object? value) {
+    if (value is! Map ||
+        value.length != 3 ||
+        value['id'] is! String ||
+        value['reasoningEfforts'] is! List) {
+      throw const FormatException('Invalid enabled model configuration.');
+    }
+    AgentReasoningEffort decodeEffort(Object? raw) {
+      final matches = AgentReasoningEffort.values.where((e) => e.name == raw);
+      if (matches.isEmpty) {
+        throw const FormatException('Invalid reasoning effort.');
+      }
+      return matches.single;
+    }
+
+    final result = AgentModelConfig(
+      id: value['id'] as String,
+      reasoningEfforts: List.unmodifiable(
+        (value['reasoningEfforts'] as List).map(decodeEffort),
+      ),
+      defaultReasoningEffort: decodeEffort(value['defaultReasoningEffort']),
+    );
+    result.validate();
+    return result;
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is AgentModelConfig &&
+      id == other.id &&
+      listEquals(reasoningEfforts, other.reasoningEfforts) &&
+      defaultReasoningEffort == other.defaultReasoningEffort;
+
+  @override
+  int get hashCode =>
+      Object.hash(id, Object.hashAll(reasoningEfforts), defaultReasoningEffort);
+}
+
+bool _validModelId(String value) =>
+    value.isNotEmpty && value == value.trim() && value.length <= 256;
 
 const _keepCredential = Object();
 
@@ -13,6 +140,7 @@ class AgentSettings {
     this.protocol = AgentModelProtocol.chatCompletions,
     this.endpoint = '',
     this.model = '',
+    this.models = const [],
     this.credentialRef,
     this.systemInstructions = '',
     this.maxModelRounds = 24,
@@ -26,6 +154,24 @@ class AgentSettings {
   final AgentModelProtocol protocol;
   final String endpoint;
   final String model;
+  final List<AgentModelConfig> models;
+
+  /// The old single-model field remains the default ID. Legacy constructors
+  /// and saved settings without a model list expose that one configured model.
+  List<AgentModelConfig> get availableModels => models.isNotEmpty
+      ? List.unmodifiable(models)
+      : [if (model.isNotEmpty) AgentModelConfig(id: model)];
+
+  AgentModelConfig? modelConfig(String id) =>
+      availableModels.where((value) => value.id == id).firstOrNull;
+
+  AgentModelSelection? get defaultModelSelection =>
+      modelConfig(model)?.defaultSelection;
+
+  bool allowsSelection(AgentModelSelection selection) =>
+      modelConfig(selection.modelId)?.reasoningEfforts
+          .contains(selection.reasoningEffort) ??
+      false;
   final String? credentialRef;
   final String systemInstructions;
   final int maxModelRounds;
@@ -41,6 +187,7 @@ class AgentSettings {
     AgentModelProtocol? protocol,
     String? endpoint,
     String? model,
+    List<AgentModelConfig>? models,
     Object? credentialRef = _keepCredential,
     String? systemInstructions,
     int? maxModelRounds,
@@ -48,12 +195,27 @@ class AgentSettings {
     int? maxTotalTokens,
     int? historyRetentionDays,
   }) {
+    if (models != null && models.isEmpty && model != null && model.isNotEmpty) {
+      throw const FormatException('A default model must be enabled.');
+    }
+    var nextModels = models ?? this.models;
+    // Legacy callers explicitly setting a new default also enable that model.
+    // A supplied list is authoritative and must agree with its default.
+    if (models == null && model != null) {
+      if (model.isEmpty) {
+        nextModels = const [];
+      } else if (nextModels.isNotEmpty &&
+          !nextModels.any((value) => value.id == model)) {
+        nextModels = [...nextModels, AgentModelConfig(id: model)];
+      }
+    }
     final result = AgentSettings(
       enabled: enabled ?? this.enabled,
       permissionMode: permissionMode ?? this.permissionMode,
       protocol: protocol ?? this.protocol,
       endpoint: endpoint ?? this.endpoint,
-      model: model ?? this.model,
+      model: model ?? (models != null && models.isEmpty ? '' : this.model),
+      models: List.unmodifiable(nextModels),
       credentialRef: identical(credentialRef, _keepCredential)
           ? this.credentialRef
           : credentialRef as String?,
@@ -68,6 +230,17 @@ class AgentSettings {
   }
 
   void validate() {
+    if (models.length > 256 ||
+        models.map((value) => value.id).toSet().length != models.length ||
+        (models.isNotEmpty && !models.any((value) => value.id == model)) ||
+        (model.isNotEmpty && !_validModelId(model))) {
+      throw const FormatException(
+        'Enabled models or default model are invalid.',
+      );
+    }
+    for (final value in models) {
+      value.validate();
+    }
     if (systemInstructions.length > 16000 ||
         maxModelRounds < 1 ||
         maxModelRounds > 100 ||
@@ -113,6 +286,7 @@ class AgentSettings {
       'protocol': protocol.name,
       'endpoint': endpoint,
       'model': model,
+      'models': availableModels.map((value) => value.toJson()).toList(),
       'credentialRef': credentialRef,
       'systemInstructions': systemInstructions,
       'maxModelRounds': maxModelRounds,
@@ -129,6 +303,7 @@ class AgentSettings {
       'maxToolCalls',
       'maxTotalTokens',
       'historyRetentionDays',
+      'models',
     };
     const keys = {
       'enabled',
@@ -154,9 +329,17 @@ class AgentSettings {
     if ((value.containsKey('systemInstructions') &&
             value['systemInstructions'] is! String) ||
         preferenceKeys
-            .where((key) => key != 'systemInstructions')
+            .where((key) => key != 'systemInstructions' && key != 'models')
             .any((key) => value.containsKey(key) && value[key] is! int)) {
       throw const FormatException('Agent preference types are invalid.');
+    }
+    if (value.containsKey('models') && value['models'] is! List) {
+      throw const FormatException('Enabled model list is invalid.');
+    }
+    if (value['models'] is List &&
+        (value['models'] as List).isEmpty &&
+        value['model'] != '') {
+      throw const FormatException('A default model must be enabled.');
     }
     final permissions = AgentPermissionMode.values.where(
       (entry) => entry.name == value['permissionMode'],
@@ -175,6 +358,9 @@ class AgentSettings {
       protocol: protocols.single,
       endpoint: value['endpoint'] as String,
       model: value['model'] as String,
+      models: List.unmodifiable(
+        ((value['models'] as List?) ?? const []).map(AgentModelConfig.fromJson),
+      ),
       credentialRef: value['credentialRef'] as String?,
       systemInstructions: value['systemInstructions'] as String? ?? '',
       maxModelRounds: value['maxModelRounds'] as int? ?? 24,
@@ -194,6 +380,7 @@ class AgentSettings {
       protocol == other.protocol &&
       endpoint == other.endpoint &&
       model == other.model &&
+      listEquals(availableModels, other.availableModels) &&
       credentialRef == other.credentialRef &&
       systemInstructions == other.systemInstructions &&
       maxModelRounds == other.maxModelRounds &&
@@ -208,6 +395,7 @@ class AgentSettings {
     protocol,
     endpoint,
     model,
+    Object.hashAll(availableModels),
     credentialRef,
     systemInstructions,
     maxModelRounds,

@@ -82,6 +82,7 @@ class AgentConnectionDiagnostics {
       ProviderRequest(
         endpoint: resolveConfiguredAgentEndpoint(settings),
         model: settings.model,
+        reasoningEffort: settings.defaultModelSelection?.wireReasoningEffort,
         protocol: settings.protocol == AgentModelProtocol.responses
             ? ProviderProtocol.responses
             : ProviderProtocol.chatCompletions,

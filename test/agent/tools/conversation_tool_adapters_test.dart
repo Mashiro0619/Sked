@@ -134,6 +134,10 @@ void main() {
     final created = conversations.conversations.last;
     expect(created.title, 'Second');
     expect(created.mode, AgentPermissionMode.ask);
+    expect(
+      created.modelSelection,
+      const AgentModelSelection(modelId: 'fixture'),
+    );
     expect(created.messages, isEmpty);
     expect(result['effectResult'], containsPair('started', false));
     await conversations.update(
@@ -152,6 +156,64 @@ void main() {
       throwsA(_problem(OperationErrorCode.invalidArgument)),
     );
   });
+
+  test(
+    'creation freezes the default model and revalidates it before commit',
+    () async {
+      final prepared = await h.call('conversations.create', {
+        'title': 'Prepared',
+      });
+      await h.session.commitMutation(
+        (data) => data.copyWith(
+          agentSettings: data.agentSettings.copyWith(
+            model: 'model-b',
+            models: const [
+              AgentModelConfig(id: 'fixture'),
+              AgentModelConfig(
+                id: 'model-b',
+                reasoningEfforts: [
+                  AgentReasoningEffort.auto,
+                  AgentReasoningEffort.low,
+                ],
+                defaultReasoningEffort: AgentReasoningEffort.low,
+              ),
+            ],
+          ),
+        ),
+        expectedEpoch: h.session.mutationEpoch,
+      );
+      await expectLater(
+        h.externalCommit(prepared),
+        throwsA(_problem(OperationErrorCode.conflict)),
+      );
+      expect(conversations.conversations, hasLength(1));
+
+      final next = await h.call('conversations.create', {
+        'title': 'New default',
+      });
+      await h.externalCommit(next);
+      final created = conversations.conversations.last;
+      const selection = AgentModelSelection(
+        modelId: 'model-b',
+        reasoningEffort: AgentReasoningEffort.low,
+      );
+      expect(created.modelSelection, selection);
+      await h.session.commitMutation(
+        (data) => data.copyWith(
+          agentSettings: data.agentSettings.copyWith(model: 'fixture'),
+        ),
+        expectedEpoch: h.session.mutationEpoch,
+      );
+      expect(conversations.find(created.id)!.modelSelection, selection);
+      expect(
+        ConversationArchive.decode(memory.source!)
+            .conversations
+            .last
+            .modelSelection,
+        selection,
+      );
+    },
+  );
 
   test('plan mode cannot alter conversations and ask mode requires a concrete approval', () async {
     h.scope.policy.update(mode: AgentPermissionMode.plan);
@@ -584,11 +646,18 @@ class _Repository extends ConversationRepository {
   Future<AgentConversation> create({
     required String title,
     AgentPermissionMode mode = AgentPermissionMode.ask,
+    AgentModelSelection? modelSelection,
     String? id,
     void Function()? validate,
   }) {
     onMutationQueued?.call();
-    return super.create(title: title, mode: mode, id: id, validate: validate);
+    return super.create(
+      title: title,
+      mode: mode,
+      modelSelection: modelSelection,
+      id: id,
+      validate: validate,
+    );
   }
 
   @override

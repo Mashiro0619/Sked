@@ -324,7 +324,9 @@ class AgentConnectionManager {
     final pending = records[1];
     if (pending != null &&
         pending.keyMatches(current) &&
-        pending.connectionDigest == _connectionDigest(current)) {
+        (pending.connectionDigest == _connectionDigest(current) ||
+            pending.connectionDigest ==
+                _connectionDigest(current, legacy: true))) {
       await _writeVerified(AgentCredentialSlot.active, pending);
       active = pending;
       await _writeVerified(AgentCredentialSlot.pending, null);
@@ -412,6 +414,7 @@ class AgentConnectionManager {
     var desired = original.copyWith(
       endpoint: canonical,
       model: input.model.trim(),
+      models: input.availableModels,
       protocol: input.protocol,
       credentialRef: reference,
     );
@@ -433,6 +436,7 @@ class AgentConnectionManager {
     desired = latest.copyWith(
       endpoint: desired.endpoint,
       model: desired.model,
+      models: desired.models,
       protocol: desired.protocol,
       credentialRef: desired.credentialRef,
     );
@@ -632,10 +636,12 @@ bool _hasConnectionConfiguration(AgentSettings settings) =>
     settings.credentialRef != null ||
     settings.protocol != AgentModelProtocol.chatCompletions;
 
-String _connectionDigest(AgentSettings value) => _digest(
+String _connectionDigest(AgentSettings value, {bool legacy = false}) => _digest(
   jsonEncode({
     'endpoint': normalizeAgentEndpoint(value.endpoint),
     'model': value.model,
+    if (!legacy)
+      'models': value.availableModels.map((model) => model.toJson()).toList(),
     'protocol': value.protocol.name,
     'credentialRef': value.credentialRef,
   }),

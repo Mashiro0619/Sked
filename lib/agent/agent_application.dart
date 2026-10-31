@@ -281,8 +281,14 @@ class AgentApplication extends ChangeNotifier {
     AgentCredentialAction credentialAction = AgentCredentialAction.keep,
     String? rawKey,
   }) {
-    _disableRequests++;
-    runtime.refreshSettings();
+    final changesTransport =
+        value.endpoint != settings.endpoint ||
+        value.protocol != settings.protocol ||
+        credentialAction != AgentCredentialAction.keep;
+    if (changesTransport) {
+      _disableRequests++;
+      runtime.refreshSettings();
+    }
     return _configureSerially(() async {
       await initialize();
       await connections.save(
@@ -291,7 +297,7 @@ class AgentApplication extends ChangeNotifier {
         rawKey: rawKey,
       );
     }).whenComplete(() {
-      _disableRequests--;
+      if (changesTransport) _disableRequests--;
       runtime.refreshSettings();
       _notify();
     });

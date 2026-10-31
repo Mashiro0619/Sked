@@ -129,7 +129,10 @@ class AgentControlToolAdapters {
           'protocols': AgentModelProtocol.values
               .map((value) => value.name)
               .toList(),
-          'writableFields': ['protocol', 'endpoint', 'model'],
+          'writableFields': ['protocol', 'endpoint', 'model', 'models'],
+          'reasoningEfforts': AgentReasoningEffort.values
+              .map((value) => value.name)
+              .toList(),
           'credentialActions': ['keep', 'replace', 'clear'],
           'inputAvailable': _requestInput != null,
           'initialized': _connections.status.initialized,
@@ -203,7 +206,7 @@ class AgentControlToolAdapters {
     );
     _add(
       'connection.prepare',
-      'Prepare updating or resetting the shared connection; commit with external.commit. Replacement requires a credential handle from this run and endpoint. Keeping a credential while changing destination is rejected. The host stops the old run after saving.',
+      'Prepare updating or resetting the shared connection; commit with external.commit. The model field is the default ID; models enables IDs with their selected reasoning levels. Automatic omits the parameter. Replacement requires a credential handle from this run and endpoint. Keeping a credential while changing destination is rejected. Model-list edits apply to future runs; changing the endpoint or credential stops old requests.',
       {
         'action': {
           'type': 'string',
@@ -215,6 +218,36 @@ class AgentControlToolAdapters {
         },
         'endpoint': _string,
         'model': _string,
+        'models': {
+          'type': 'array',
+          'maxItems': 256,
+          'items': {
+            'type': 'object',
+            'properties': {
+              'id': {'type': 'string', 'minLength': 1, 'maxLength': 256},
+              'reasoningEfforts': {
+                'type': 'array',
+                'minItems': 1,
+                'uniqueItems': true,
+                'items': {
+                  'type': 'string',
+                  'enum': AgentReasoningEffort.values
+                      .map((value) => value.name)
+                      .toList(),
+                },
+                'description': 'Include auto; enable only levels supported by the service.',
+              },
+              'defaultReasoningEffort': {
+                'type': 'string',
+                'enum': AgentReasoningEffort.values
+                    .map((value) => value.name)
+                    .toList(),
+              },
+            },
+            'required': ['id', 'reasoningEfforts', 'defaultReasoningEffort'],
+            'additionalProperties': false,
+          },
+        },
         'credentialAction': {
           'type': 'string',
           'enum': ['keep', 'replace', 'clear'],
@@ -228,6 +261,7 @@ class AgentControlToolAdapters {
           'protocol',
           'endpoint',
           'model',
+          'models',
           'credentialAction',
           'credentialHandle',
           'operationId',
@@ -270,19 +304,45 @@ class AgentControlToolAdapters {
                   .where((value) => value.name == args['protocol'])
                   .firstOrNull;
         if (protocol == null) _invalid('Unknown model protocol.');
-        final desired = before.copyWith(
-          protocol: protocol,
-          endpoint: action == 'reset'
-              ? ''
-              : args.containsKey('endpoint')
-              ? _endpoint(_text(args, 'endpoint'))
-              : before.endpoint,
-          model: action == 'reset'
-              ? ''
-              : args.containsKey('model')
-              ? _text(args, 'model')
-              : before.model,
-        );
+        List<AgentModelConfig>? models;
+        if (action == 'reset') {
+          models = const [];
+        } else if (args.containsKey('models')) {
+          final raw = args['models'];
+          if (raw is! List || raw.length > 256) {
+            _invalid('Invalid enabled model list.');
+          }
+          try {
+            models = raw.map(AgentModelConfig.fromJson).toList();
+          } on FormatException {
+            _invalid(
+              'Model IDs, reasoning levels, or their defaults are invalid.',
+            );
+          }
+        }
+        late final AgentSettings desired;
+        try {
+          desired = before.copyWith(
+            protocol: protocol,
+            endpoint: action == 'reset'
+                ? ''
+                : args.containsKey('endpoint')
+                ? _endpoint(_text(args, 'endpoint'))
+                : before.endpoint,
+            model: action == 'reset'
+                ? ''
+                : args.containsKey('model')
+                ? _text(args, 'model')
+                : models?.isEmpty == true
+                ? ''
+                : before.model,
+            models: models,
+          );
+        } on FormatException {
+          _invalid(
+            'The default model must be enabled with valid thinking levels.',
+          );
+        }
         final endpoint = normalizeAgentEndpoint(desired.endpoint);
         if (credentialAction == AgentCredentialAction.keep &&
             before.credentialRef != null &&
@@ -637,7 +697,10 @@ class AgentControlToolAdapters {
         status.initialized &&
         !status.needsRecovery &&
         credential &&
-        _configuration(current) == operation.arguments['expectedConfiguration'];
+        (_configuration(current) ==
+                operation.arguments['expectedConfiguration'] ||
+            _configuration(current, legacy: true) ==
+                operation.arguments['expectedConfiguration']);
     return ExternalEffectResult(
       state: applied
           ? ExternalEffectState.applied
@@ -706,13 +769,19 @@ Map<String, Object?> _publicConnection(AgentSettings settings) => {
   'protocol': settings.protocol.name,
   'endpoint': _publicEndpoint(settings.endpoint),
   'model': settings.model,
+  'models': settings.availableModels.map((value) => value.toJson()).toList(),
   'credentialConfigured': settings.credentialRef != null,
 };
-String _configuration(AgentSettings settings) => mutationDigest({
-  'protocol': settings.protocol.name,
-  'endpoint': normalizeAgentEndpoint(settings.endpoint),
-  'model': settings.model,
-});
+String _configuration(AgentSettings settings, {bool legacy = false}) =>
+    mutationDigest({
+      'protocol': settings.protocol.name,
+      'endpoint': normalizeAgentEndpoint(settings.endpoint),
+      'model': settings.model,
+      if (!legacy)
+        'models': settings.availableModels
+            .map((value) => value.toJson())
+            .toList(),
+    });
 String _identity(AgentSettings settings) => mutationDigest({
   'configuration': _configuration(settings),
   'credential': settings.credentialRef,

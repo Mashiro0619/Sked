@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 
 import '../../application/operation_contracts.dart';
+import '../../models/agent_settings.dart';
 import '../../utils/time_utils.dart' show tryParseStrictIsoDateTime;
 import 'conversation_usage.dart';
 
@@ -44,6 +45,8 @@ class ConversationMessage {
     required this.createdAt,
     Iterable<ConversationToolCall> toolCalls = const [],
     this.toolCallId,
+    this.modelSelection,
+    this.providerProtocol,
     Iterable<Map<String, Object?>> responseItems = const [],
   }) : toolCalls = List.unmodifiable(toolCalls),
        responseItems = _freezeResponseItems(responseItems) {
@@ -60,6 +63,8 @@ class ConversationMessage {
   final DateTime createdAt;
   final List<ConversationToolCall> toolCalls;
   final String? toolCallId;
+  final AgentModelSelection? modelSelection;
+  final AgentModelProtocol? providerProtocol;
 
   /// Bounded, immutable Responses continuation data; never request headers or
   /// credentials. The model endpoint remains bound at conversation level.
@@ -74,6 +79,8 @@ class ConversationMessage {
       'toolCalls': toolCalls.map((call) => call.toJson()).toList(),
     if (toolCallId != null) 'toolCallId': toolCallId,
     if (responseItems.isNotEmpty) 'responseItems': responseItems,
+    if (modelSelection != null) 'modelSelection': modelSelection!.toJson(),
+    if (providerProtocol != null) 'providerProtocol': providerProtocol!.name,
   };
 
   factory ConversationMessage.fromJson(Map<String, dynamic> json) {
@@ -97,6 +104,12 @@ class ConversationMessage {
       toolCalls: calls,
       toolCallId: toolCallId,
       responseItems: _objects(json, 'responseItems', max: 64),
+      modelSelection: json['modelSelection'] == null
+          ? null
+          : AgentModelSelection.fromJson(json['modelSelection']),
+      providerProtocol: json['providerProtocol'] == null
+          ? null
+          : _enumValue(AgentModelProtocol.values, json['providerProtocol']),
     );
   }
 }
@@ -309,6 +322,7 @@ class AgentConversation {
     this.draft = '',
     this.connectionFingerprint,
     this.runId,
+    this.modelSelection,
     Iterable<ConversationMessage> messages = const [],
     Iterable<ConversationSource> sources = const [],
     Iterable<ConversationRunUsage> runs = const [],
@@ -326,6 +340,7 @@ class AgentConversation {
   final String draft;
   final String? connectionFingerprint;
   final String? runId;
+  final AgentModelSelection? modelSelection;
   final List<ConversationMessage> messages;
   final List<ConversationSource> sources;
   final List<ConversationRunUsage> runs;
@@ -339,6 +354,7 @@ class AgentConversation {
     String? draft,
     String? connectionFingerprint,
     String? runId,
+    AgentModelSelection? modelSelection,
     Iterable<ConversationMessage>? messages,
     Iterable<ConversationSource>? sources,
     Iterable<ConversationRunUsage>? runs,
@@ -353,6 +369,7 @@ class AgentConversation {
     draft: draft ?? this.draft,
     connectionFingerprint: connectionFingerprint ?? this.connectionFingerprint,
     runId: runId ?? this.runId,
+    modelSelection: modelSelection ?? this.modelSelection,
     messages: messages ?? this.messages,
     sources: sources ?? this.sources,
     runs: runs ?? this.runs,
@@ -370,6 +387,7 @@ class AgentConversation {
     if (connectionFingerprint != null)
       'connectionFingerprint': connectionFingerprint,
     if (runId != null) 'runId': runId,
+    if (modelSelection != null) 'modelSelection': modelSelection!.toJson(),
     'messages': messages.map((message) => message.toJson()).toList(),
     'sources': sources.map((source) => source.toJson()).toList(),
     'runs': runs.map((run) => run.toJson()).toList(),
@@ -421,6 +439,9 @@ class AgentConversation {
         max: 256,
       ),
       runId: _optionalString(json, 'runId', max: 256),
+      modelSelection: json['modelSelection'] == null
+          ? null
+          : AgentModelSelection.fromJson(json['modelSelection']),
       messages: messages,
       sources: sources,
       runs: runs,
@@ -469,7 +490,7 @@ class ConversationArchive {
        terminatedIds = Set.unmodifiable(terminatedIds);
 
   static const maxBytes = 16 * 1024 * 1024;
-  static const currentVersion = 2;
+  static const currentVersion = 3;
   final int revision;
   final String? selectedId;
   final List<AgentConversation> conversations;
@@ -500,7 +521,7 @@ class ConversationArchive {
       );
     }
     final json = _object(jsonDecode(source));
-    if ((json['version'] != 1 && json['version'] != currentVersion) ||
+    if ((!const [1, 2, currentVersion].contains(json['version'])) ||
         json['revision'] is! int ||
         (json['revision'] as int) < 0) {
       throw const FormatException('Unsupported conversation archive version.');

@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/agent/connection/agent_connection_manager.dart';
@@ -151,6 +154,37 @@ void main() {
       AgentCredentialStorageKind.platformSecureStorage,
     );
   });
+
+  test(
+    'legacy pending credential digest survives the model-list schema migration',
+    () async {
+      await seeded();
+      final oldRecord = jsonDecode(
+        vault.values[AgentCredentialSlot.active]!,
+      ) as Map<String, dynamic>;
+      oldRecord['connectionDigest'] = sha256
+          .convert(
+            utf8.encode(
+              jsonEncode({
+                'endpoint': normalizeAgentEndpoint(current.endpoint),
+                'model': current.model,
+                'protocol': current.protocol.name,
+                'credentialRef': current.credentialRef,
+              }),
+            ),
+          )
+          .toString();
+      vault.values
+        ..remove(AgentCredentialSlot.active)
+        ..[AgentCredentialSlot.pending] = jsonEncode(oldRecord);
+      current = AgentSettings.fromJson(current.toJson());
+      final recovered = manager();
+      await recovered.initialize(migrateLegacy: false);
+      expect(await recovered.readKeyFor(current), 'old-key');
+      expect(vault.values.keys, [AgentCredentialSlot.active]);
+      expect(recovered.status.needsRecovery, isFalse);
+    },
+  );
 
   test('connection writes preserve preferences edited while the credential is staged', () async {
     final connection = await seeded();
@@ -445,7 +479,7 @@ void main() {
     };
     final connection = manager();
     final status = await connection.initialize();
-    expect(current.enabled, isFalse);
+    expect(current.enabled, isTrue);
     expect(current.permissionMode, AgentPermissionMode.ask);
     expect(current.model, 'legacy-model');
     expect(await connection.readKeyFor(current), 'stored-legacy-key');

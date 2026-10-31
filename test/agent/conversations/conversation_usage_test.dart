@@ -34,7 +34,10 @@ void main() {
     (legacy['conversations'] as List).single.remove('runs');
     final migrated = ConversationArchive.decode(jsonEncode(legacy));
     expect(migrated.conversations.single.runs, isEmpty);
-    expect(jsonDecode(migrated.encode())['version'], 2);
+    expect(
+      jsonDecode(migrated.encode())['version'],
+      ConversationArchive.currentVersion,
+    );
   });
 
   test('a future usage archive blocks fallback to an older storage slot', () {

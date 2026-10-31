@@ -478,6 +478,44 @@ void main() {
   );
 
   test(
+    'saving a new model list keeps an already started request on its model',
+    () async {
+      final conversation = await ready(AgentPermissionMode.full);
+      final started = Completer<void>();
+      final response = Completer<ProviderResponse>();
+      provider.respond = (_) {
+        started.complete();
+        return response.future;
+      };
+      final sending = app.agent.runtime.send(conversation.id, 'Answer once');
+      await started.future.timeout(const Duration(seconds: 5));
+      try {
+        await app.agent.configure(
+          app.agent.settings.copyWith(
+            model: 'next-model',
+            models: const [AgentModelConfig(id: 'next-model')],
+          ),
+        );
+        expect(app.agent.settings.model, 'next-model');
+        expect(provider.requests.single.model, 'fixture');
+        expect(
+          app.agent.runtime.state.value.runFor(conversation.id).isActive,
+          isTrue,
+        );
+        response.complete(_done());
+        await sending;
+        expect(
+          app.agent.conversations.find(conversation.id)!.messages.last.text,
+          'Done',
+        );
+      } finally {
+        if (!response.isCompleted) response.complete(_done());
+        await sending;
+      }
+    },
+  );
+
+  test(
     'feature disable revokes a run before its settings save finishes',
     () async {
       final conversation = await ready(AgentPermissionMode.ask);

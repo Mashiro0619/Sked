@@ -57,7 +57,7 @@ void main() {
   );
 
   testWidgets(
-    'saved connection diagnostics distinguish text success and fill model choices into the draft',
+    'saved diagnostics provide independently selected model choices without replacing the default',
     (tester) async {
       addTearDown(tester.view.reset);
       var probes = 0;
@@ -110,23 +110,31 @@ void main() {
       await tester.ensureVisible(
         find.byKey(const ValueKey('agent-model-catalog')),
       );
-      await tester.tap(find.byKey(const ValueKey('agent-model-catalog')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('model-two').last);
-      await tester.pumpAndSettle();
-      expect(
-        tester
-            .widget<TextFormField>(find.byKey(const ValueKey('agent-model')))
-            .controller!
-            .text,
-        'model-two',
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('agent-catalog-model-model-two')),
       );
+      await tester.tap(
+        find.byKey(const ValueKey('agent-catalog-model-model-two')),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('agent-catalog-model-model-one')),
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('agent-catalog-model-model-one')),
+      );
+      await tester.pumpAndSettle();
       await tester.ensureVisible(
         find.byKey(const ValueKey('agent-save-model')),
       );
       await tester.tap(find.byKey(const ValueKey('agent-save-model')));
       await tester.pumpAndSettle();
-      expect(saved!.settings.model, 'model-two');
+      expect(saved!.settings.model, 'test-model');
+      expect(saved!.settings.availableModels.map((model) => model.id), [
+        'test-model',
+        'model-two',
+        'model-one',
+      ]);
       expect(saved!.settings.endpoint, 'https://unsaved.example/v1');
       expect(tester.takeException(), isNull);
     },
@@ -175,6 +183,72 @@ void main() {
         const AgentConnectionProbeResult(toolCallingObserved: true),
       );
       await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets(
+    'manual models save independently chosen thinking levels and defaults',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      AgentModelSettingsChange? saved;
+      await mountAgentUi(
+        tester,
+        AgentModelSettingsForm(
+          settings: configured,
+          onSave: (change) async => saved = change,
+        ),
+      );
+      final manual = find.byKey(const ValueKey('agent-model'));
+      await tester.ensureVisible(manual);
+      await tester.enterText(manual, 'manual-model');
+      await tester.ensureVisible(find.byKey(const ValueKey('agent-add-model')));
+      await tester.tap(find.byKey(const ValueKey('agent-add-model')));
+      await tester.pumpAndSettle();
+      final defaultModel = find.byKey(
+        const ValueKey('agent-default-model-test-model'),
+      );
+      await tester.ensureVisible(defaultModel);
+      await tester.tap(defaultModel);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('manual-model').last);
+      await tester.pumpAndSettle();
+      final options = find.byKey(
+        const ValueKey('agent-model-options-manual-model'),
+      );
+      await tester.ensureVisible(options);
+      await tester.tap(options);
+      await tester.pumpAndSettle();
+      final high = find.byKey(
+        const ValueKey('agent-model-effort-manual-model-high'),
+      );
+      await tester.ensureVisible(high);
+      await tester.tap(high);
+      await tester.pumpAndSettle();
+      final defaultEffort = find.byKey(
+        const ValueKey('agent-default-effort-manual-model-auto'),
+      );
+      await tester.ensureVisible(defaultEffort);
+      await tester.tap(defaultEffort);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('High').last);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('agent-save-model')),
+      );
+      await tester.tap(find.byKey(const ValueKey('agent-save-model')));
+      await tester.pumpAndSettle();
+      expect(saved!.settings.model, 'manual-model');
+      expect(
+        saved!.settings.defaultModelSelection,
+        const AgentModelSelection(
+          modelId: 'manual-model',
+          reasoningEffort: AgentReasoningEffort.high,
+        ),
+      );
+      expect(saved!.settings.modelConfig('test-model')!.reasoningEfforts, [
+        AgentReasoningEffort.auto,
+      ]);
+      expect(tester.takeException(), isNull);
     },
   );
 

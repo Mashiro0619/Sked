@@ -33,6 +33,7 @@ enum AgentRuntimeError {
   conversationMissing,
   conversationArchived,
   connectionChanged,
+  modelSelectionRequired,
   invalidMessage,
   storageUnavailable,
   contextBudgetExceeded,
@@ -142,6 +143,7 @@ class AgentRuntimeController implements AgentUiDelegate {
   final _state = ValueNotifier(AgentUiState());
   final _runs = <String, _Run>{};
   final _display = <String, AgentUiRunState>{};
+  final _selectionRequirements = <String, bool>{};
   final _queueDrains = <String, Future<void>>{};
   final _automaticQueues = <String>{};
   final _queueEpochs = <String, int>{};
@@ -298,6 +300,10 @@ class AgentRuntimeController implements AgentUiDelegate {
     }
     _checkRun(run);
     _rejectSecret(text, run.apiKey);
+    final selection = _selectionForRequest(
+      repository.find(conversationId)!,
+      readSettings(),
+    );
     final queueEpoch = _queueEpochs[conversationId] ?? 0;
     await repository.update(conversationId, (current) {
       _checkRun(run);
@@ -318,6 +324,7 @@ class AgentRuntimeController implements AgentUiDelegate {
               'text': text,
             }),
             createdAt: _clock().toUtc(),
+            modelSelection: selection,
           ),
         ],
       );
@@ -670,7 +677,24 @@ class AgentRuntimeController implements AgentUiDelegate {
             conversation.messages.last.role != ConversationRole.user)) {
       throw const AgentRuntimeException(AgentRuntimeError.invalidMessage);
     }
-    final settings = readSettings();
+    final configuredSettings = readSettings();
+    final pendingAtStart = resume || consumeQueued
+        ? conversation.messages
+              .where((m) => _queuedInput(m) != null)
+              .firstOrNull
+        : null;
+    late AgentModelSelection selection;
+    try {
+      selection = _selectionForRequest(
+        conversation,
+        configuredSettings,
+        pendingInput: pendingAtStart,
+      );
+    } on AgentRuntimeException catch (error) {
+      _failDisplay(conversationId, error.code.name);
+      rethrow;
+    }
+    final settings = configuredSettings.copyWith(model: selection.modelId);
     Uri endpoint;
     try {
       settings.validate();
@@ -703,6 +727,8 @@ class AgentRuntimeController implements AgentUiDelegate {
       id: reservedRunId ?? _id(),
       conversationId: conversationId,
       settings: settings,
+      modelSelection: selection,
+      pendingInputId: pendingAtStart?.id,
       endpoint: endpoint,
       fingerprint: fingerprint,
       mode: conversation.mode,
@@ -739,6 +765,10 @@ class AgentRuntimeController implements AgentUiDelegate {
             ? messages.where((m) => _queuedInput(m) != null).firstOrNull
             : null;
         if (pending != null) {
+          if (pending.id != pendingAtStart?.id ||
+              pending.modelSelection != pendingAtStart?.modelSelection) {
+            throw const AgentRuntimeException(AgentRuntimeError.busy);
+          }
           final input = _queuedInput(pending)!;
           _rejectSecret(input, run.apiKey);
           messages = [
@@ -748,6 +778,7 @@ class AgentRuntimeController implements AgentUiDelegate {
               role: ConversationRole.user,
               text: input,
               createdAt: pending.createdAt,
+              modelSelection: selection,
             ),
           ];
         }
@@ -761,12 +792,14 @@ class AgentRuntimeController implements AgentUiDelegate {
                     role: ConversationRole.user,
                     text: userText,
                     createdAt: _clock().toUtc(),
+                    modelSelection: selection,
                   ),
                 ],
           draft: userText == null ? current.draft : '',
           status: ConversationStatus.running,
           runId: run.id,
           connectionFingerprint: fingerprint,
+          modelSelection: current.modelSelection ?? selection,
           runs: _runRecords(current, run),
         );
       });
@@ -838,6 +871,8 @@ class AgentRuntimeController implements AgentUiDelegate {
             text: response.text,
             createdAt: _clock().toUtc(),
             responseItems: response.responseItems,
+            modelSelection: run.modelSelection,
+            providerProtocol: run.settings.protocol,
             toolCalls: response.toolCalls.map(
               (call) => ConversationToolCall(
                 id: call.id,
@@ -1098,6 +1133,7 @@ class AgentRuntimeController implements AgentUiDelegate {
           tools: run.tools,
           limits: limits.providerLimits,
           allowInsecureHttp: allowInsecureHttp,
+          reasoningEffort: run.modelSelection?.wireReasoningEffort,
         ),
         apiKey: run.apiKey,
         cancellation: run.cancellation,
@@ -1277,6 +1313,7 @@ class AgentRuntimeController implements AgentUiDelegate {
       if (_transportConnection(
             readSettings(),
             resolveEndpoint(readSettings()),
+            modelId: run.modelSelection?.modelId,
           ) !=
           connection) {
         throw const AgentRuntimeException(AgentRuntimeError.connectionChanged);
@@ -1377,6 +1414,116 @@ class AgentRuntimeController implements AgentUiDelegate {
   }
 
   @override
+  Future<void> setModelSelection(
+    String conversationId,
+    AgentModelSelection selection,
+  ) async {
+    if (_disposed || !repository.canWrite) {
+      throw const AgentRuntimeException(AgentRuntimeError.storageUnavailable);
+    }
+    if (readMaintenance()) {
+      throw const AgentRuntimeException(AgentRuntimeError.maintenance);
+    }
+    await repository.update(conversationId, (current) {
+      final settings = readSettings();
+      if (!settings.allowsSelection(selection)) {
+        throw const AgentRuntimeException(
+          AgentRuntimeError.modelSelectionRequired,
+        );
+      }
+      if (current.archived) {
+        throw const AgentRuntimeException(
+          AgentRuntimeError.conversationArchived,
+        );
+      }
+      final reservedInput = _runs[conversationId]?.pendingInputId;
+      bool needsRepair(ConversationMessage message) =>
+          message.id != reservedInput &&
+          _queuedInput(message) != null &&
+          message.modelSelection != null &&
+          !settings.allowsSelection(message.modelSelection!);
+      if (current.messages.any(needsRepair)) {
+        // Releasing the durable update can also release a settling run. Stop
+        // its queue before persistence yields, so repair never means Send.
+        _automaticQueues.remove(conversationId);
+      }
+      return current.copyWith(
+        modelSelection: selection,
+        messages: current.messages.map((message) {
+          if (!needsRepair(message)) return message;
+          return ConversationMessage(
+            id: message.id,
+            role: message.role,
+            text: message.text,
+            createdAt: message.createdAt,
+            toolCalls: message.toolCalls,
+            toolCallId: message.toolCallId,
+            responseItems: message.responseItems,
+            providerProtocol: message.providerProtocol,
+            modelSelection: selection,
+          );
+        }),
+      );
+    });
+    if (_display[conversationId]?.errorMessage == 'modelSelectionRequired') {
+      _display[conversationId] = const AgentUiRunState();
+    }
+    _publish();
+  }
+
+  AgentModelSelection _selectionForRequest(
+    AgentConversation conversation,
+    AgentSettings settings, {
+    ConversationMessage? pendingInput,
+  }) {
+    if (!settings.enabled) {
+      throw const AgentRuntimeException(AgentRuntimeError.disabled);
+    }
+    final selection =
+        pendingInput?.modelSelection ??
+        conversation.modelSelection ??
+        settings.defaultModelSelection;
+    if (selection == null) {
+      throw const AgentRuntimeException(AgentRuntimeError.unconfigured);
+    }
+    if (!settings.allowsSelection(selection)) {
+      throw const AgentRuntimeException(
+        AgentRuntimeError.modelSelectionRequired,
+      );
+    }
+    return selection;
+  }
+
+  AgentUiRunState _selectionState(AgentConversation conversation) {
+    final previous = _display[conversation.id] ?? const AgentUiRunState();
+    return AgentUiRunState(
+      phase: previous.phase,
+      streamingText: previous.streamingText,
+      errorMessage: previous.errorMessage,
+      pendingApproval: previous.pendingApproval,
+      recoveryRequired: previous.recoveryRequired,
+      modelSelection: previous.modelSelection,
+      requiresModelSelection: _selectionRequirements[conversation.id] ?? false,
+    );
+  }
+
+  /// Queue validation follows durable/settings changes, never each token delta.
+  void _refreshSelectionRequirements(AgentSettings settings) {
+    _selectionRequirements.clear();
+    for (final conversation in repository.conversations) {
+      final pending = conversation.messages
+          .where((message) => _queuedInput(message) != null)
+          .firstOrNull
+          ?.modelSelection;
+      final selected =
+          conversation.modelSelection ?? settings.defaultModelSelection;
+      _selectionRequirements[conversation.id] =
+          (pending != null && !settings.allowsSelection(pending)) ||
+          (selected != null && !settings.allowsSelection(selected));
+    }
+  }
+
+  @override
   Future<void> stop(String conversationId) async {
     _queueEpochs.update(
       conversationId,
@@ -1420,9 +1567,10 @@ class AgentRuntimeController implements AgentUiDelegate {
   void refreshSettings() {
     if (_disposed) return;
     final settings = readSettings();
+    _refreshSelectionRequirements(settings);
     String? transportConnection;
     try {
-      transportConnection = _transportConnection(
+      transportConnection = _connectionIdentity(
         settings,
         resolveEndpoint(settings),
       );
@@ -1469,6 +1617,7 @@ class AgentRuntimeController implements AgentUiDelegate {
       }
     }
     _display.removeWhere((id, _) => repository.find(id) == null);
+    _refreshSelectionRequirements(readSettings());
     _publish();
   }
 
@@ -1508,8 +1657,7 @@ class AgentRuntimeController implements AgentUiDelegate {
     try {
       return _fingerprint(settings, resolveEndpoint(settings)) ==
               run.fingerprint &&
-          settings.credentialRef == run.settings.credentialRef &&
-          settings.model == run.settings.model;
+          settings.credentialRef == run.settings.credentialRef;
     } catch (_) {
       return false;
     }
@@ -1549,6 +1697,8 @@ class AgentRuntimeController implements AgentUiDelegate {
         errorMessage: value.errorMessage,
         pendingApproval: value.pendingApproval,
         recoveryRequired: run.recoveryRequired,
+        modelSelection: run.modelSelection,
+        requiresModelSelection: value.requiresModelSelection,
       );
       _publish();
     }
@@ -1563,6 +1713,9 @@ class AgentRuntimeController implements AgentUiDelegate {
             _runs[id]?.recoveryRequired ??
             _display[id]?.recoveryRequired ??
             false,
+        modelSelection:
+            _runs[id]?.modelSelection ?? _display[id]?.modelSelection,
+        requiresModelSelection: error == 'modelSelectionRequired',
       );
       _publish();
     }
@@ -1585,7 +1738,17 @@ class AgentRuntimeController implements AgentUiDelegate {
       configured: configured,
       maintenance: readMaintenance(),
       defaultMode: settings.permissionMode,
-      runs: _display,
+      availableModels: settings.availableModels,
+      defaultModelSelection: settings.defaultModelSelection,
+      modelSelections: {
+        for (final conversation in repository.conversations)
+          if (conversation.modelSelection != null)
+            conversation.id: conversation.modelSelection!,
+      },
+      runs: {
+        for (final conversation in repository.conversations)
+          conversation.id: _selectionState(conversation),
+      },
     );
   }
 
@@ -1634,7 +1797,11 @@ class AgentRuntimeController implements AgentUiDelegate {
           },
           text: message.text,
           toolCallId: message.toolCallId,
-          responseItems: message.responseItems,
+          responseItems:
+              message.modelSelection?.modelId == run.modelSelection?.modelId &&
+                  message.providerProtocol == run.settings.protocol
+              ? message.responseItems
+              : const [],
           toolCalls: message.toolCalls
               .map(
                 (call) => ProviderToolCall(
@@ -1700,6 +1867,8 @@ class _Run {
     required this.id,
     required this.conversationId,
     required this.settings,
+    this.modelSelection,
+    this.pendingInputId,
     required this.endpoint,
     required this.fingerprint,
     required AgentPermissionMode mode,
@@ -1714,6 +1883,7 @@ class _Run {
              : ConversationRunKind.model,
          protocol: hostAction ? null : settings.protocol.name,
          model: hostAction ? null : settings.model,
+         reasoningEffort: hostAction ? null : modelSelection?.reasoningEffort,
          continuedFromRunId: continuedFromRunId,
        ),
        scope = OperationScope(
@@ -1723,6 +1893,8 @@ class _Run {
   final String id;
   final String conversationId;
   final AgentSettings settings;
+  final AgentModelSelection? modelSelection;
+  final String? pendingInputId;
   final Uri endpoint;
   final String fingerprint;
   final bool hostAction;
@@ -1815,18 +1987,25 @@ String _fingerprint(AgentSettings settings, Uri endpoint) => sha256
     )
     .toString();
 
-String _transportConnection(AgentSettings settings, Uri endpoint) => sha256
+String _transportConnection(
+  AgentSettings settings,
+  Uri endpoint, {
+  String? modelId,
+}) => sha256
     .convert(
       utf8.encode(
         jsonEncode({
           'endpoint': endpoint.toString(),
           'protocol': settings.protocol.name,
-          'model': settings.model,
+          'model': modelId ?? settings.model,
           'credentialRef': settings.credentialRef,
         }),
       ),
     )
     .toString();
+
+String _connectionIdentity(AgentSettings settings, Uri endpoint) =>
+    '${_fingerprint(settings, endpoint)}:${settings.credentialRef ?? ''}';
 
 ProviderProtocol _protocol(AgentModelProtocol protocol) =>
     protocol == AgentModelProtocol.responses

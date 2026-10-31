@@ -1,4 +1,5 @@
 import '../../utils/time_utils.dart' show tryParseStrictIsoDateTime;
+import '../../models/agent_settings.dart' show AgentReasoningEffort;
 
 enum ConversationRunKind { model, host }
 
@@ -144,6 +145,7 @@ class ConversationRunUsage {
     required this.kind,
     this.protocol,
     this.model,
+    this.reasoningEffort,
     this.continuedFromRunId,
     this.status = ConversationRunStatus.running,
     this.settledAt,
@@ -157,6 +159,7 @@ class ConversationRunUsage {
   final ConversationRunKind kind;
   final String? protocol;
   final String? model;
+  final AgentReasoningEffort? reasoningEffort;
   final String? continuedFromRunId;
   final ConversationRunStatus status;
   final DateTime? settledAt;
@@ -174,6 +177,7 @@ class ConversationRunUsage {
     kind: kind,
     protocol: protocol,
     model: model,
+    reasoningEffort: reasoningEffort,
     continuedFromRunId: continuedFromRunId,
     status: status ?? this.status,
     settledAt: settledAt ?? this.settledAt,
@@ -213,6 +217,7 @@ class ConversationRunUsage {
     'kind': kind.name,
     if (protocol != null) 'protocol': protocol,
     if (model != null) 'model': model,
+    if (reasoningEffort != null) 'reasoningEffort': reasoningEffort!.name,
     if (continuedFromRunId != null) 'continuedFromRunId': continuedFromRunId,
     'status': status.name,
     if (settledAt != null) 'settledAt': settledAt!.toUtc().toIso8601String(),
@@ -224,6 +229,9 @@ class ConversationRunUsage {
     'id': id,
     'kind': kind.name,
     'status': status.name,
+    if (model != null) 'model': model,
+    if (protocol != null) 'protocol': protocol,
+    if (reasoningEffort != null) 'reasoningEffort': reasoningEffort!.name,
     if (continuedFromRunId != null) 'continuedFromRunId': continuedFromRunId,
     ...summarizeConversationUsage([this]),
   };
@@ -263,6 +271,9 @@ class ConversationRunUsage {
       kind: kind,
       protocol: protocol,
       model: model,
+      reasoningEffort: json['reasoningEffort'] == null
+          ? null
+          : _enum(AgentReasoningEffort.values, json['reasoningEffort']),
       continuedFromRunId: _optionalText(json, 'continuedFromRunId'),
       status: status,
       settledAt: json['settledAt'] == null ? null : _date(json, 'settledAt'),

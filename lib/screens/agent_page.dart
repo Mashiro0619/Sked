@@ -12,6 +12,7 @@ import '../agent/ui/agent_resource_view.dart';
 import '../agent/provider/provider.dart';
 import '../application/operation_contracts.dart';
 import '../l10n/app_localizations.dart';
+import '../models/agent_settings.dart';
 import '../widgets/settings_page_header.dart';
 import '../widgets/workbench_chrome_metrics.dart';
 import 'agent_settings_page.dart';
@@ -271,4 +272,9 @@ class _RoutedAgentDelegate implements AgentUiDelegate {
       runtime.setMode(conversationId, mode);
   @override
   void openSettings() => onOpenSettings();
+  @override
+  Future<void> setModelSelection(
+    String conversationId,
+    AgentModelSelection selection,
+  ) => runtime.setModelSelection(conversationId, selection);
 }

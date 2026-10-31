@@ -6515,6 +6515,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This permission can be reused for the same saved connection until the app closes. It does not approve changes to your data.'**
   String get agentHttpTransportScope;
+
+  /// No description provided for @agentModelSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Model'**
+  String get agentModelSelection;
+
+  /// No description provided for @agentThinkingEffort.
+  ///
+  /// In en, this message translates to:
+  /// **'Thinking effort'**
+  String get agentThinkingEffort;
+
+  /// No description provided for @agentEffortAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic'**
+  String get agentEffortAuto;
+
+  /// No description provided for @agentEffortNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get agentEffortNone;
+
+  /// No description provided for @agentEffortMinimal.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimal'**
+  String get agentEffortMinimal;
+
+  /// No description provided for @agentEffortLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Low'**
+  String get agentEffortLow;
+
+  /// No description provided for @agentEffortMedium.
+  ///
+  /// In en, this message translates to:
+  /// **'Medium'**
+  String get agentEffortMedium;
+
+  /// No description provided for @agentEffortHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High'**
+  String get agentEffortHigh;
+
+  /// No description provided for @agentEffortXhigh.
+  ///
+  /// In en, this message translates to:
+  /// **'Extra high'**
+  String get agentEffortXhigh;
+
+  /// No description provided for @agentEffortMax.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum'**
+  String get agentEffortMax;
+
+  /// No description provided for @agentModelNextRunHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes apply to the next request. The current request keeps its model and thinking effort.'**
+  String get agentModelNextRunHint;
+
+  /// No description provided for @agentModelSelectionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'This request\'s model or thinking effort is no longer enabled. Choose another option, then continue.'**
+  String get agentModelSelectionRequired;
+
+  /// No description provided for @agentEnabledModels.
+  ///
+  /// In en, this message translates to:
+  /// **'Available models'**
+  String get agentEnabledModels;
+
+  /// No description provided for @agentAddModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Add model'**
+  String get agentAddModel;
+
+  /// No description provided for @agentModelSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search model IDs'**
+  String get agentModelSearch;
+
+  /// No description provided for @agentDefaultModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Default model'**
+  String get agentDefaultModel;
+
+  /// No description provided for @agentDefaultEffort.
+  ///
+  /// In en, this message translates to:
+  /// **'Default thinking effort'**
+  String get agentDefaultEffort;
+
+  /// No description provided for @agentAllowedEfforts.
+  ///
+  /// In en, this message translates to:
+  /// **'Available thinking efforts'**
+  String get agentAllowedEfforts;
+
+  /// No description provided for @agentNoModelsSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Select or add at least one model.'**
+  String get agentNoModelsSelected;
+
+  /// No description provided for @agentModelCapabilityHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A model list does not describe supported thinking levels. Enable the levels your service supports. Automatic sends no thinking parameter.'**
+  String get agentModelCapabilityHint;
+
+  /// No description provided for @agentRemoveModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove model'**
+  String get agentRemoveModel;
+
+  /// No description provided for @agentManualModelId.
+  ///
+  /// In en, this message translates to:
+  /// **'Model ID'**
+  String get agentManualModelId;
 }
 
 class _AppLocalizationsDelegate

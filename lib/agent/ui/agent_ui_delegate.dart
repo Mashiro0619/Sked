@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../application/operation_contracts.dart';
+import '../../models/agent_settings.dart';
 
 enum AgentUiPhase { idle, running, waitingApproval, stopped, failed }
 
@@ -24,6 +25,8 @@ class AgentUiRunState {
     this.errorMessage,
     this.pendingApproval,
     this.recoveryRequired = false,
+    this.modelSelection,
+    this.requiresModelSelection = false,
   });
 
   final AgentUiPhase phase;
@@ -35,6 +38,8 @@ class AgentUiRunState {
   final String? errorMessage;
   final AgentUiApproval? pendingApproval;
   final bool recoveryRequired;
+  final AgentModelSelection? modelSelection;
+  final bool requiresModelSelection;
 
   bool get isActive =>
       phase == AgentUiPhase.running || phase == AgentUiPhase.waitingApproval;
@@ -46,14 +51,25 @@ class AgentUiState {
     this.configured = false,
     this.maintenance = false,
     this.defaultMode = AgentPermissionMode.ask,
+    List<AgentModelConfig> availableModels = const [],
+    this.defaultModelSelection,
+    Map<String, AgentModelSelection> modelSelections = const {},
     Map<String, AgentUiRunState> runs = const {},
-  }) : runs = Map.unmodifiable(runs);
+  }) : runs = Map.unmodifiable(runs),
+       availableModels = List.unmodifiable(availableModels),
+       modelSelections = Map.unmodifiable(modelSelections);
 
   final bool enabled;
   final bool configured;
   final bool maintenance;
   final AgentPermissionMode defaultMode;
   final Map<String, AgentUiRunState> runs;
+  final List<AgentModelConfig> availableModels;
+  final AgentModelSelection? defaultModelSelection;
+  final Map<String, AgentModelSelection> modelSelections;
+
+  AgentModelSelection? selectionFor(String conversationId) =>
+      modelSelections[conversationId] ?? defaultModelSelection;
 
   AgentUiRunState runFor(String conversationId) =>
       runs[conversationId] ?? const AgentUiRunState();
@@ -81,5 +97,13 @@ abstract class AgentUiDelegate {
   /// Applied immediately by the host so tightening a policy also affects an
   /// in-flight run. The host persists the conversation's selected mode.
   Future<void> setMode(String conversationId, AgentPermissionMode mode);
+
+  /// Persists the next request's selection without changing an active run.
+  /// An explicit new selection also repairs queued requests whose old choice
+  /// is no longer enabled; continuing them remains a separate user action.
+  Future<void> setModelSelection(
+    String conversationId,
+    AgentModelSelection selection,
+  ) async {}
   void openSettings();
 }

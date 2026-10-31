@@ -228,7 +228,12 @@ void main() {
             'New secret slots need replacement, recovery and clear ownership.',
       );
       expect(connection['credentialActions'], ['keep', 'replace', 'clear']);
-      expect(connection['writableFields'], ['protocol', 'endpoint', 'model']);
+      expect(connection['writableFields'], [
+        'protocol',
+        'endpoint',
+        'model',
+        'models',
+      ]);
       final credential = SettingRegistry().descriptor('agent.credentialRef');
       expect(credential.sensitive, isTrue);
       expect(credential.requiresAdapter, isTrue);

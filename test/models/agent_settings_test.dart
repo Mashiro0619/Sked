@@ -3,17 +3,125 @@ import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/models/agent_settings.dart';
 
 void main() {
+  test('default configuration enables the entry without credentials or elevated authority', () {
+    const settings = AgentSettings();
+    expect(settings.enabled, isTrue);
+    expect(settings.permissionMode, AgentPermissionMode.ask);
+    expect(settings.protocol, AgentModelProtocol.chatCompletions);
+    expect(settings.endpoint, isEmpty);
+    expect(settings.model, isEmpty);
+    expect(settings.credentialRef, isNull);
+    expect(AgentSettings.fromJson(settings.toJson()), settings);
+  });
+
   test(
-    'default entry is enabled without credentials or elevated authority',
+    'legacy single model becomes a selected model with automatic thinking',
     () {
-      const settings = AgentSettings();
-      expect(settings.enabled, isTrue);
-      expect(settings.permissionMode, AgentPermissionMode.ask);
-      expect(settings.protocol, AgentModelProtocol.chatCompletions);
-      expect(settings.endpoint, isEmpty);
-      expect(settings.model, isEmpty);
-      expect(settings.credentialRef, isNull);
-      expect(AgentSettings.fromJson(settings.toJson()), settings);
+      final legacy = const AgentSettings(model: 'legacy-model').toJson()
+        ..remove('models');
+      final settings = AgentSettings.fromJson(legacy);
+      expect(settings.availableModels, [
+        const AgentModelConfig(id: 'legacy-model'),
+      ]);
+      expect(
+        settings.defaultModelSelection,
+        const AgentModelSelection(modelId: 'legacy-model'),
+      );
+      expect(settings.toJson()['models'], [
+        {
+          'id': 'legacy-model',
+          'reasoningEfforts': ['auto'],
+          'defaultReasoningEffort': 'auto',
+        },
+      ]);
+    },
+  );
+
+  test('enabled models retain independent supported levels and defaults', () {
+    const settings = AgentSettings(
+      model: 'first',
+      models: [
+        AgentModelConfig(
+          id: 'first',
+          reasoningEfforts: [
+            AgentReasoningEffort.auto,
+            AgentReasoningEffort.high,
+          ],
+          defaultReasoningEffort: AgentReasoningEffort.high,
+        ),
+        AgentModelConfig(id: 'second'),
+      ],
+    );
+    final decoded = AgentSettings.fromJson(settings.toJson());
+    expect(decoded, settings);
+    expect(decoded.defaultModelSelection!.wireReasoningEffort, 'high');
+    expect(
+      decoded.allowsSelection(
+        const AgentModelSelection(
+          modelId: 'first',
+          reasoningEffort: AgentReasoningEffort.high,
+        ),
+      ),
+      isTrue,
+    );
+    expect(
+      decoded.allowsSelection(
+        const AgentModelSelection(
+          modelId: 'second',
+          reasoningEffort: AgentReasoningEffort.high,
+        ),
+      ),
+      isFalse,
+    );
+    expect(
+      decoded
+          .copyWith(model: 'second')
+          .defaultModelSelection!
+          .wireReasoningEffort,
+      isNull,
+    );
+    expect(decoded.copyWith(model: '', models: []).availableModels, isEmpty);
+  });
+
+  test(
+    'model lists reject duplicates and defaults outside their allowed choices',
+    () {
+      for (final settings in [
+        const AgentSettings(
+          model: 'missing',
+          models: [AgentModelConfig(id: 'first')],
+        ),
+        const AgentSettings(
+          model: 'first',
+          models: [
+            AgentModelConfig(id: 'first'),
+            AgentModelConfig(id: 'first'),
+          ],
+        ),
+        const AgentSettings(
+          model: 'first',
+          models: [
+            AgentModelConfig(
+              id: 'first',
+              defaultReasoningEffort: AgentReasoningEffort.high,
+            ),
+          ],
+        ),
+        const AgentSettings(
+          model: 'first',
+          models: [
+            AgentModelConfig(
+              id: 'first',
+              reasoningEfforts: [AgentReasoningEffort.high],
+            ),
+          ],
+        ),
+      ]) {
+        expect(settings.validate, throwsFormatException);
+      }
+      final invalid = const AgentSettings(model: 'first').toJson()
+        ..['models'] = [];
+      expect(() => AgentSettings.fromJson(invalid), throwsFormatException);
     },
   );
 

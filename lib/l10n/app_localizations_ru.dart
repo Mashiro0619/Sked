@@ -3703,4 +3703,73 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get agentHttpTransportScope =>
       'This permission can be reused for the same saved connection until the app closes. It does not approve changes to your data.';
+
+  @override
+  String get agentModelSelection => 'Model';
+
+  @override
+  String get agentThinkingEffort => 'Thinking effort';
+
+  @override
+  String get agentEffortAuto => 'Automatic';
+
+  @override
+  String get agentEffortNone => 'None';
+
+  @override
+  String get agentEffortMinimal => 'Minimal';
+
+  @override
+  String get agentEffortLow => 'Low';
+
+  @override
+  String get agentEffortMedium => 'Medium';
+
+  @override
+  String get agentEffortHigh => 'High';
+
+  @override
+  String get agentEffortXhigh => 'Extra high';
+
+  @override
+  String get agentEffortMax => 'Maximum';
+
+  @override
+  String get agentModelNextRunHint =>
+      'Changes apply to the next request. The current request keeps its model and thinking effort.';
+
+  @override
+  String get agentModelSelectionRequired =>
+      'This request\'s model or thinking effort is no longer enabled. Choose another option, then continue.';
+
+  @override
+  String get agentEnabledModels => 'Available models';
+
+  @override
+  String get agentAddModel => 'Add model';
+
+  @override
+  String get agentModelSearch => 'Search model IDs';
+
+  @override
+  String get agentDefaultModel => 'Default model';
+
+  @override
+  String get agentDefaultEffort => 'Default thinking effort';
+
+  @override
+  String get agentAllowedEfforts => 'Available thinking efforts';
+
+  @override
+  String get agentNoModelsSelected => 'Select or add at least one model.';
+
+  @override
+  String get agentModelCapabilityHint =>
+      'A model list does not describe supported thinking levels. Enable the levels your service supports. Automatic sends no thinking parameter.';
+
+  @override
+  String get agentRemoveModel => 'Remove model';
+
+  @override
+  String get agentManualModelId => 'Model ID';
 }

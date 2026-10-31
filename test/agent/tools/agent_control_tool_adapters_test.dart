@@ -174,6 +174,97 @@ void main() {
     expect(writes, 1);
   });
 
+  test('model-list changes retain all enabled choices and their reasoning defaults', () async {
+    final models = [
+      const AgentModelConfig(id: 'model-a').toJson(),
+      const AgentModelConfig(
+        id: 'model-b',
+        reasoningEfforts: [
+          AgentReasoningEffort.auto,
+          AgentReasoningEffort.high,
+        ],
+        defaultReasoningEffort: AgentReasoningEffort.high,
+      ).toJson(),
+    ];
+    final plan = await h.call('connection.prepare', {
+      'action': 'set',
+      'model': 'model-b',
+      'models': models,
+    });
+    h.scope.policy.update(mode: AgentPermissionMode.full);
+    expect((await h.externalCommit(plan))['effectStatus'], 'applied');
+    final actual = h.session.committedData.agentSettings;
+    expect(actual.model, 'model-b');
+    expect(actual.defaultModelSelection!.wireReasoningEffort, 'high');
+    final described = await h.call('connection.describe');
+    expect(described['models'], models);
+    expect(described['writableFields'], contains('models'));
+    expect(actual.credentialRef, isNull);
+  });
+
+  test(
+    'invalid model lists fail preparation without writing configuration',
+    () async {
+      for (final models in [
+        [
+          {
+            'id': 'model-a',
+            'reasoningEfforts': ['high'],
+            'defaultReasoningEffort': 'high',
+          },
+        ],
+        [
+          {
+            'id': 'model-a',
+            'reasoningEfforts': ['auto'],
+            'defaultReasoningEffort': 'high',
+          },
+        ],
+        [
+          {
+            'id': 'model-b',
+            'reasoningEfforts': ['auto'],
+            'defaultReasoningEffort': 'auto',
+          },
+        ],
+      ]) {
+        await expectLater(
+          h.call('connection.prepare', {'action': 'set', 'models': models}),
+          throwsA(_problem(OperationErrorCode.invalidArgument)),
+        );
+      }
+      expect(writes, 0);
+      expect(h.session.committedData.agentSettings.model, 'model-a');
+    },
+  );
+
+  test(
+    'an empty model list cannot silently discard an explicit default',
+    () async {
+      final before = h.session.committedData.agentSettings;
+      await expectLater(
+        h.call('connection.prepare', {
+          'action': 'set',
+          'model': 'model-a',
+          'models': <Object?>[],
+        }),
+        throwsA(_problem(OperationErrorCode.invalidArgument)),
+      );
+      expect(writes, 0);
+      expect(h.session.committedData.agentSettings, before);
+
+      final plan = await h.call('connection.prepare', {
+        'action': 'set',
+        'models': <Object?>[],
+      });
+      h.scope.policy.update(mode: AgentPermissionMode.full);
+      expect((await h.externalCommit(plan))['effectStatus'], 'applied');
+      expect(h.session.committedData.agentSettings.availableModels, isEmpty);
+      expect(h.session.committedData.agentSettings.model, isEmpty);
+      expect(h.session.committedData.agentSettings.endpoint, before.endpoint);
+    },
+  );
+
   test('secure replacement uses an opaque handle and never returns or records the key', () async {
     const key = 'private-input-never-serialize';
     control.bindCredentialInput((endpoint) async {
