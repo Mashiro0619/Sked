@@ -303,9 +303,11 @@ class AppData {
   };
 
   factory AppData.fromJson(Map<String, dynamic> json) {
-    // Inspect v5 state before the generic migration runner copies maps, so
+    // Inspect Agent state before the generic migration runner copies maps, so
     // non-string JSON keys cannot acquire valid meaning through coercion.
-    if (tryDecodeAppDataVersion(json['schemaVersion']) == 5) {
+    if ((tryDecodeAppDataVersion(json['schemaVersion']) ?? 0) >= 5 &&
+        (tryDecodeAppDataVersion(json['schemaVersion']) ?? 0) <=
+            appDataCurrentSchemaVersion) {
       validateAppDataAgentState(json);
     }
     if ((tryDecodeAppDataVersion(json['schemaVersion']) ?? 0) >= 3 &&
@@ -540,7 +542,9 @@ class AppData {
 
   factory AppData.decodeStorageSnapshot(String source) {
     final json = decodeAppDataJsonObject(source);
-    if (tryDecodeAppDataVersion(json['schemaVersion']) == 5) {
+    if ((tryDecodeAppDataVersion(json['schemaVersion']) ?? 0) >= 5 &&
+        (tryDecodeAppDataVersion(json['schemaVersion']) ?? 0) <=
+            appDataCurrentSchemaVersion) {
       validateAppDataAgentState(json);
     }
     final migrated = appDataMigrationRunner.run(json);

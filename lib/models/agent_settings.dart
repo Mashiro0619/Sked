@@ -8,7 +8,7 @@ const _keepCredential = Object();
 /// the credential store; only its opaque reference may be persisted here.
 class AgentSettings {
   const AgentSettings({
-    this.enabled = false,
+    this.enabled = true,
     this.permissionMode = AgentPermissionMode.ask,
     this.protocol = AgentModelProtocol.chatCompletions,
     this.endpoint = '',

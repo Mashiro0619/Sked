@@ -29,7 +29,7 @@ void main() {
       final fresh = buildInitialAppData(buildDefaultPeriodTimes());
       final upgraded = AppData.fromJson(old());
       for (final p in [fresh, upgraded]) {
-        expect(p.toJson()['schemaVersion'], 5);
+        expect(p.toJson()['schemaVersion'], 6);
         expect(
           p.studentMode.toolbarNavigationOrder,
           studentToolbarNavigationDefaultOrder,

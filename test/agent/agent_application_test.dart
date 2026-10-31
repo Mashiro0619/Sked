@@ -134,19 +134,16 @@ void main() {
     };
   }
 
-  test(
-    'disabled never-configured Agent stays dormant until explicitly opened',
-    () async {
-      expect(app.agent.settings.enabled, isFalse);
-      expect(app.agent.isInitialized, isFalse);
-      expect(conversations.loads, 0);
-      expect(provider.requests, isEmpty);
-      await app.agent.initialize();
-      expect(conversations.loads, 1);
-      expect(app.agent.isInitialized, isTrue);
-      expect(app.agent.runtime.state.value.enabled, isFalse);
-    },
-  );
+  test('default-on Agent stays dormant until explicitly opened', () async {
+    expect(app.agent.settings.enabled, isTrue);
+    expect(app.agent.isInitialized, isFalse);
+    expect(conversations.loads, 0);
+    expect(provider.requests, isEmpty);
+    await app.agent.initialize();
+    expect(conversations.loads, 1);
+    expect(app.agent.isInitialized, isTrue);
+    expect(app.agent.runtime.state.value.enabled, isTrue);
+  });
 
   test(
     'all bundled Skills load against the real application tool registry',

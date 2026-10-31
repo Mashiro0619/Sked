@@ -477,17 +477,9 @@ class AgentApplication extends ChangeNotifier {
   void _readinessChanged() {
     if (_disposed) return;
     runtime.refreshSettings();
-    if (_session.isLoaded &&
-        !_session.isLoading &&
-        _session.canWrite &&
-        !_maintenance.isReserved &&
-        !_initialized &&
-        !_initializationError &&
-        (settings.enabled ||
-            settings.endpoint.isNotEmpty ||
-            _session.committedData.aiApiSettings.customBaseUrl.isNotEmpty)) {
-      initialize().ignore();
-    }
+    // Opening the feature or its settings owns side-store initialization.
+    // A default-on entry must not decode all chat history at app startup.
+    _notify();
   }
 
   void _maintenanceChanged() {

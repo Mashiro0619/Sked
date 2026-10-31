@@ -28,6 +28,42 @@ void main() {
     credentialRef: 'local-reference',
   );
 
+  test('v4 to v5 retains its historical disabled defaults', () {
+    final migrated = const AppDataMigrationV4ToV5().apply({});
+    final legacy = migrated['agentSettings'] as Map;
+    expect(legacy['enabled'], isFalse);
+    expect(legacy['permissionMode'], 'ask');
+    expect(legacy, isNot(contains('models')));
+  });
+
+  test('v5 enables once and preserves the previous connection and policy', () {
+    final old = data().copyWith(agentSettings: settings).toJson()
+      ..['schemaVersion'] = 5;
+    final legacy = old['agentSettings'] as Map;
+    legacy['enabled'] = false;
+    legacy.remove('models');
+    final upgraded = AppData.decodeStorageSnapshot(jsonEncode(old));
+    expect(upgraded.agentSettings.enabled, isTrue);
+    expect(upgraded.agentSettings.endpoint, settings.endpoint);
+    expect(upgraded.agentSettings.model, settings.model);
+    expect(upgraded.agentSettings.permissionMode, AgentPermissionMode.full);
+    expect(upgraded.agentSettings.credentialRef, settings.credentialRef);
+    final disabled = upgraded.copyWith(
+      agentSettings: upgraded.agentSettings.copyWith(enabled: false),
+    );
+    expect(
+      AppData.decodeStorageSnapshot(disabled.encode()).agentSettings.enabled,
+      isFalse,
+    );
+    expect(
+      decodeAppBackupForRecovery(encodeAppBackupForRecovery(disabled, const []))
+          .appData
+          .agentSettings
+          .enabled,
+      isFalse,
+    );
+  });
+
   test(
     'v4 migration is deterministic and cannot adopt unknown Agent authority',
     () {
@@ -42,7 +78,7 @@ void main() {
       expect(jsonEncode(old), before);
       expect(first['agentSettings'], const AgentSettings().toJson());
       expect(first['applicationLedger'], isNull);
-      expect(first['schemaVersion'], 5);
+      expect(first['schemaVersion'], 6);
       expect(appDataMigrationRunner.run(first), first);
       final decoded = AppData.decodeStorageSnapshot(jsonEncode(old));
       expect(decoded.agentSettings, const AgentSettings());
@@ -51,7 +87,7 @@ void main() {
   );
 
   test(
-    'local v5 snapshots round trip exact settings and retained receipts',
+    'current local snapshots round trip exact settings and retained receipts',
     () {
       final original = data().copyWith(
         agentSettings: settings,
@@ -68,7 +104,7 @@ void main() {
     },
   );
 
-  test('v5 local decoding refuses missing and malformed Agent state', () {
+  test('local decoding refuses missing and malformed Agent state', () {
     for (final key in ['agentSettings', 'applicationLedger']) {
       final missing = data().toJson()..remove(key);
       expect(

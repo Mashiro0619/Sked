@@ -3,16 +3,19 @@ import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/models/agent_settings.dart';
 
 void main() {
-  test('default configuration has no enabled authority or credential', () {
-    const settings = AgentSettings();
-    expect(settings.enabled, isFalse);
-    expect(settings.permissionMode, AgentPermissionMode.ask);
-    expect(settings.protocol, AgentModelProtocol.chatCompletions);
-    expect(settings.endpoint, isEmpty);
-    expect(settings.model, isEmpty);
-    expect(settings.credentialRef, isNull);
-    expect(AgentSettings.fromJson(settings.toJson()), settings);
-  });
+  test(
+    'default entry is enabled without credentials or elevated authority',
+    () {
+      const settings = AgentSettings();
+      expect(settings.enabled, isTrue);
+      expect(settings.permissionMode, AgentPermissionMode.ask);
+      expect(settings.protocol, AgentModelProtocol.chatCompletions);
+      expect(settings.endpoint, isEmpty);
+      expect(settings.model, isEmpty);
+      expect(settings.credentialRef, isNull);
+      expect(AgentSettings.fromJson(settings.toJson()), settings);
+    },
+  );
 
   test('configuration round trips and nullable credential can be removed', () {
     final settings = const AgentSettings().copyWith(

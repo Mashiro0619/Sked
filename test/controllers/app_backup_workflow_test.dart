@@ -226,6 +226,36 @@ Future<AppRuntime> _provider({
 }
 
 void main() {
+  test(
+    'restoring a v5 portable backup preserves a locally disabled Agent',
+    () async {
+      final storage = _MemoryTimetableStorage(
+        _appData('en')
+            .copyWith(agentSettings: const AgentSettings(enabled: false)),
+      );
+      final provider = await _provider(
+        appStorage: storage,
+        siteStore: _MemorySchoolSiteStore(encodeSchoolSites(const [])),
+        secrets: _MemorySecretStore(''),
+      );
+      addTearDown(provider.dispose);
+      final backup =
+          jsonDecode(encodeAppBackup(_appData('zh'), const [])) as Map;
+      ((backup['data'] as Map)['appData'] as Map)['schemaVersion'] = 5;
+      await provider.backups.importJson(
+        jsonEncode(backup),
+        mode: AppImportMode.replaceAll,
+      );
+      expect(storage.data!.agentSettings.enabled, isFalse);
+      expect(
+        AppData.decodeStorageSnapshot(storage.data!.encode())
+            .agentSettings
+            .enabled,
+        isFalse,
+      );
+    },
+  );
+
   test('full restore preserves local Agent configuration and starts one new data generation', () async {
     const config = AgentSettings(
       enabled: true,

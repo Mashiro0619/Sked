@@ -1,5 +1,4 @@
 import '../../utils/constants.dart';
-import '../../models/agent_settings.dart';
 import 'migration.dart';
 import 'migration_runner.dart';
 
@@ -9,7 +8,7 @@ import 'migration_runner.dart';
 /// 1. 把这里的常量 +1。
 /// 2. 在 [appDataMigrations] 注册新的 `from: 旧版本, to: 新版本` 实现。
 /// 3. 编写对应的单元测试，确认旧数据能升级、新数据 round-trip 保版本号。
-const int appDataCurrentSchemaVersion = 5;
+const int appDataCurrentSchemaVersion = 6;
 
 const _legacyThemeFieldKeys = <String>{
   'themeMode',
@@ -146,9 +145,42 @@ class AppDataMigrationV4ToV5 extends Migration {
   @override
   Map<String, dynamic> apply(Map<String, dynamic> json) => {
     ...json,
-    'agentSettings': const AgentSettings().toJson(),
+    // Freeze the historical v5 defaults. Later constructors must not change
+    // what this migration meant when v5 was released.
+    'agentSettings': {
+      'enabled': false,
+      'permissionMode': 'ask',
+      'protocol': 'chatCompletions',
+      'endpoint': '',
+      'model': '',
+      'credentialRef': null,
+      'systemInstructions': '',
+      'maxModelRounds': 24,
+      'maxToolCalls': 128,
+      'maxTotalTokens': 100000,
+      'historyRetentionDays': 0,
+    },
     'applicationLedger': null,
   };
+}
+
+/// The one-time product opt-in applies only to an old local storage version.
+/// Portable restores retain the receiving device's activation choice.
+class AppDataMigrationV5ToV6 extends Migration {
+  const AppDataMigrationV5ToV6();
+  @override
+  int get from => 5;
+  @override
+  int get to => 6;
+
+  @override
+  Map<String, dynamic> apply(Map<String, dynamic> json) {
+    final raw = Map<String, dynamic>.from(json['agentSettings'] as Map);
+    return {
+      ...json,
+      'agentSettings': {...raw, 'enabled': true},
+    };
+  }
 }
 
 const List<Migration> appDataMigrations = <Migration>[
@@ -156,6 +188,7 @@ const List<Migration> appDataMigrations = <Migration>[
   AppDataMigrationV2ToV3(),
   AppDataMigrationV3ToV4(),
   AppDataMigrationV4ToV5(),
+  AppDataMigrationV5ToV6(),
 ];
 
 /// AppData 加载路径统一使用的 runner。

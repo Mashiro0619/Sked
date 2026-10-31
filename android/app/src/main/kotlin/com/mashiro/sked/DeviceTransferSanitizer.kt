@@ -14,8 +14,8 @@ import java.util.ArrayDeque
 
 /** Copies business data while removing device-local credentials and Agent authority. */
 internal object DeviceTransferSanitizer {
-    // Schema-5 migration defaults; raw credentials never enter this object.
-    private const val DEFAULT_AGENT_SETTINGS = """{"enabled":false,"permissionMode":"ask","protocol":"chatCompletions","endpoint":"","model":"","credentialRef":null}"""
+    // Portable defaults only expose the Agent entry; no connection or authority.
+    private const val DEFAULT_AGENT_SETTINGS = """{"enabled":true,"permissionMode":"ask","protocol":"chatCompletions","endpoint":"","model":"","credentialRef":null}"""
     private enum class Scope { ROOT, STUDENT, SETTINGS, OTHER }
     private data class Frame(val objectValue: Boolean, val scope: Scope)
 
