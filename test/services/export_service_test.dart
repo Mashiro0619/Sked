@@ -1,7 +1,54 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/services/export_service.dart';
+
+class _BinaryExportHost {
+  _BinaryExportHost(this.directory);
+
+  final Directory directory;
+  final calls = <MethodCall>[];
+  final saveStarted = Completer<void>();
+  Future<String?> Function(File source)? save;
+  bool discardFails = false;
+  int preparations = 0;
+  String? _id;
+  String? _fileName;
+  File? source;
+
+  Future<Object?> handle(MethodCall call) async {
+    calls.add(call);
+    final arguments = Map<String, Object?>.from(call.arguments as Map);
+    switch (call.method) {
+      case 'prepareBinaryFile':
+        if (_id != null) throw PlatformException(code: 'busy');
+        _id = 'prepared-${++preparations}';
+        _fileName = arguments['fileName']! as String;
+        source = File.fromUri(directory.uri.resolve('payload-$preparations'));
+        await source!.create();
+        return {'id': _id, 'path': source!.path};
+      case 'savePreparedBinaryFile':
+        expect(arguments, {'id': _id});
+        if (!saveStarted.isCompleted) saveStarted.complete();
+        return save == null ? _fileName : save!(source!);
+      case 'discardBinaryFile':
+        if (discardFails) throw PlatformException(code: 'failed');
+        if (arguments['id'] == _id) {
+          await source!.delete();
+          _id = null;
+        }
+        return null;
+      case 'saveTextFile':
+        if (_id != null) throw PlatformException(code: 'busy');
+        return arguments['fileName'];
+      default:
+        throw MissingPluginException();
+    }
+  }
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -134,5 +181,239 @@ void main() {
 
       expect(result.status, ExportSaveStatus.failed);
     });
+  });
+
+  group('ExportService Android binary export', () {
+    const channel = MethodChannel('com.mashiro.sked/export_file');
+    const fileName = 'Sked_备份.zip';
+    final bytes = Uint8List.fromList([
+      0x50,
+      0x4b,
+      0x03,
+      0x04,
+      for (var i = 0; i < 131137; i++) i % 256,
+    ]);
+    late Directory directory;
+    late _BinaryExportHost host;
+
+    setUp(() async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      directory = await Directory.systemTemp.createTemp('sked-binary-export-');
+      host = _BinaryExportHost(directory);
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, host.handle);
+    });
+
+    tearDown(() async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+      debugDefaultTargetPlatformOverride = null;
+      await directory.delete(recursive: true);
+    });
+
+    Future<ExportSaveResult> saveBytes([Uint8List? content]) =>
+        const ExportService().saveBytes(
+          fileName: fileName,
+          bytes: content ?? bytes,
+          mimeType: 'application/zip',
+        );
+
+    test(
+      'writes exact bytes before offering only the native export token',
+      () async {
+        host.save = (source) async {
+          expect(await source.readAsBytes(), bytes);
+          return fileName;
+        };
+
+        final result = await saveBytes();
+
+        expect(result.status, ExportSaveStatus.saved);
+        expect(result.path, fileName);
+        expect(host.calls.map((call) => call.method), [
+          'prepareBinaryFile',
+          'savePreparedBinaryFile',
+          'discardBinaryFile',
+        ]);
+        expect(host.calls.first.arguments, {
+          'fileName': fileName,
+          'mimeType': 'application/zip',
+          'byteLength': bytes.length,
+        });
+        expect(host.calls[1].arguments, {'id': 'prepared-1'});
+        expect(host.calls[2].arguments, {'id': 'prepared-1'});
+        expect(await directory.list().toList(), isEmpty);
+      },
+    );
+
+    test(
+      'cancelled destination selection releases the prepared source',
+      () async {
+        host.save = (source) async {
+          expect(await source.readAsBytes(), bytes);
+          return null;
+        };
+
+        final result = await saveBytes();
+
+        expect(result.status, ExportSaveStatus.cancelled);
+        expect(result.path, isNull);
+        expect(await directory.list().toList(), isEmpty);
+      },
+    );
+
+    for (final (code, status) in [
+      ('permissionDenied', ExportSaveStatus.permissionDenied),
+      ('unsupported', ExportSaveStatus.unsupported),
+      ('failed', ExportSaveStatus.failed),
+      ('busy', ExportSaveStatus.failed),
+    ]) {
+      test('preserves $code and cleans the prepared source', () async {
+        host.save = (source) async {
+          expect(await source.readAsBytes(), bytes);
+          throw PlatformException(code: code);
+        };
+
+        final result = await saveBytes();
+
+        expect(result.status, status);
+        expect(result.path, isNull);
+        expect(await directory.list().toList(), isEmpty);
+      });
+    }
+
+    test(
+      'holds one export while Android is still completing its copy',
+      () async {
+        final completion = Completer<String?>();
+        host.save = (_) => completion.future;
+        var completed = false;
+        final first = saveBytes().then((value) {
+          completed = true;
+          return value;
+        });
+        await host.saveStarted.future;
+        expect(completed, isFalse);
+        expect(await host.source!.readAsBytes(), bytes);
+
+        expect((await saveBytes()).status, ExportSaveStatus.failed);
+        expect(
+          (await const ExportService().saveFile(
+            const ExportPayload(fileName: 'other.json', content: '{}'),
+          )).status,
+          ExportSaveStatus.failed,
+        );
+        expect(host.preparations, 1);
+        expect(await host.source!.exists(), isTrue);
+        expect(completed, isFalse);
+
+        completion.complete(fileName);
+        expect((await first).status, ExportSaveStatus.saved);
+        expect(completed, isTrue);
+        expect(await directory.list().toList(), isEmpty);
+      },
+    );
+
+    test(
+      'local staging failure releases the token without opening a picker',
+      () async {
+        final calls = <MethodCall>[];
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (call) async {
+              calls.add(call);
+              if (call.method == 'prepareBinaryFile') {
+                return {
+                  'id': 'failed-write',
+                  'path': File.fromUri(directory.uri.resolve('missing/payload'))
+                      .path,
+                };
+              }
+              expect(call.method, 'discardBinaryFile');
+              expect(call.arguments, {'id': 'failed-write'});
+              return null;
+            });
+
+        expect((await saveBytes()).status, ExportSaveStatus.failed);
+        expect(calls.map((call) => call.method), [
+          'prepareBinaryFile',
+          'discardBinaryFile',
+        ]);
+        expect(await directory.list().toList(), isEmpty);
+      },
+    );
+
+    test(
+      'invalid preparation path is rejected and its token released',
+      () async {
+        final calls = <MethodCall>[];
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (call) async {
+              calls.add(call);
+              return call.method == 'prepareBinaryFile'
+                  ? {'id': 'invalid-preparation'}
+                  : null;
+            });
+
+        expect((await saveBytes()).status, ExportSaveStatus.failed);
+        expect(calls.map((call) => call.method), [
+          'prepareBinaryFile',
+          'discardBinaryFile',
+        ]);
+        expect(calls.last.arguments, {'id': 'invalid-preparation'});
+      },
+    );
+
+    test(
+      'zero-byte export still saves and cleans the allocated file',
+      () async {
+        host.save = (source) async {
+          expect(await source.readAsBytes(), isEmpty);
+          return fileName;
+        };
+
+        expect((await saveBytes(Uint8List(0))).status, ExportSaveStatus.saved);
+        expect(host.calls.first.arguments, containsPair('byteLength', 0));
+        expect(await directory.list().toList(), isEmpty);
+      },
+    );
+
+    test('cancelled preparation never writes or opens a destination', () async {
+      final calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            calls.add(call);
+            return null;
+          });
+
+      expect((await saveBytes()).status, ExportSaveStatus.cancelled);
+      expect(calls.single.method, 'prepareBinaryFile');
+      expect(await directory.list().toList(), isEmpty);
+    });
+
+    test(
+      'missing native binary support is reported without a cache artifact',
+      () async {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (_) async {
+              throw MissingPluginException();
+            });
+
+        expect((await saveBytes()).status, ExportSaveStatus.unsupported);
+        expect(await directory.list().toList(), isEmpty);
+      },
+    );
+
+    test(
+      'cleanup failure is not reported as a fully completed export',
+      () async {
+        host.discardFails = true;
+
+        final result = await saveBytes();
+
+        expect(result.status, ExportSaveStatus.failed);
+        expect(result.path, isNull);
+        expect(await host.source!.readAsBytes(), bytes);
+      },
+    );
   });
 }

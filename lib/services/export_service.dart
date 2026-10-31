@@ -90,7 +90,12 @@ class ExportService {
       }
     }
     if (isAndroid) {
-      return const ExportSaveResult(status: ExportSaveStatus.unsupported);
+      return _saveAndroidBytes(
+        file: file,
+        fileName: fileName,
+        mimeType: mimeType,
+        byteLength: bytes.length,
+      );
     }
     try {
       final location = await getSaveLocation(suggestedName: fileName);
@@ -105,6 +110,72 @@ class ExportService {
     } catch (_) {
       return const ExportSaveResult(status: ExportSaveStatus.failed);
     }
+  }
+
+  Future<ExportSaveResult> _saveAndroidBytes({
+    required XFile file,
+    required String fileName,
+    required String mimeType,
+    required int byteLength,
+  }) async {
+    String? preparationId;
+    var outcome = const ExportSaveResult(status: ExportSaveStatus.failed);
+    try {
+      final prepared = await _androidChannel.invokeMapMethod<String, dynamic>(
+        'prepareBinaryFile',
+        {'fileName': fileName, 'mimeType': mimeType, 'byteLength': byteLength},
+      );
+      if (prepared == null) {
+        outcome = const ExportSaveResult(status: ExportSaveStatus.cancelled);
+      } else {
+        final id = prepared['id'];
+        if (id is! String || id.isEmpty) {
+          throw const FormatException('Missing export preparation identity.');
+        }
+        preparationId = id;
+        final path = prepared['path'];
+        if (path is! String || path.isEmpty) {
+          throw const FormatException('Missing export preparation path.');
+        }
+        // The native owner allocates this private cache file. Send only its
+        // token back after the write closes; binary content never crosses the
+        // channel as a string, and native does not accept arbitrary paths.
+        await file.saveTo(path);
+        final savedName = await _androidChannel.invokeMethod<String>(
+          'savePreparedBinaryFile',
+          {'id': id},
+        );
+        outcome = savedName == null
+            ? const ExportSaveResult(status: ExportSaveStatus.cancelled)
+            : ExportSaveResult(status: ExportSaveStatus.saved, path: savedName);
+      }
+    } on MissingPluginException {
+      outcome = const ExportSaveResult(status: ExportSaveStatus.unsupported);
+    } on PlatformException catch (error) {
+      outcome = ExportSaveResult(
+        status: switch (error.code) {
+          'permissionDenied' => ExportSaveStatus.permissionDenied,
+          'unsupported' => ExportSaveStatus.unsupported,
+          _ => ExportSaveStatus.failed,
+        },
+      );
+    } catch (_) {
+      outcome = const ExportSaveResult(status: ExportSaveStatus.failed);
+    } finally {
+      if (preparationId != null) {
+        try {
+          // Also releases a preparation if writing the local file failed.
+          // Completion/cancellation already cleans it natively; this is an
+          // idempotent fallback bound to the same preparation identity.
+          await _androidChannel.invokeMethod<void>('discardBinaryFile', {
+            'id': preparationId,
+          });
+        } catch (_) {
+          outcome = const ExportSaveResult(status: ExportSaveStatus.failed);
+        }
+      }
+    }
+    return outcome;
   }
 
   Future<ExportSaveResult> saveFile(ExportPayload payload) async {

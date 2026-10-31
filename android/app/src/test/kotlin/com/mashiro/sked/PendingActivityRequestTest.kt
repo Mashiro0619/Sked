@@ -22,6 +22,25 @@ class PendingActivityRequestTest {
     }
 
     @Test
+    fun inspectingForStreamCopyKeepsTheSlotUntilActualCompletion() {
+        val pending = PendingActivityRequest<Any>()
+        val caller = Any()
+        val request = pending.begin(caller)!!
+
+        assertSame(caller, pending.peek(request))
+        assertSame(caller, pending.peek(request))
+        assertTrue(pending.isPending)
+        assertNull(pending.begin(Any()))
+        assertSame(caller, pending.complete(request))
+        assertNull(pending.peek(request))
+
+        val replacement = pending.begin(Any())!!
+        assertNull(pending.peek(request))
+        assertTrue(pending.isPending)
+        pending.complete(replacement)
+    }
+
+    @Test
     fun lateCallbackFromRetiredEngineCannotConsumeItsReplacement() {
         val pending = PendingActivityRequest<Any>()
         val oldCaller = Any()

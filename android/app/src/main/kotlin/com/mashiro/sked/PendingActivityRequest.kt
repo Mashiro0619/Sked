@@ -36,6 +36,8 @@ internal class PendingActivityRequest<T : Any> {
         current.release = release
     }
 
+    fun peek(request: Request): T? = pending?.takeIf { it.request === request }?.value
+
     fun complete(request: Request): T? {
         val current = pending ?: return null
         if (current.request !== request) return null

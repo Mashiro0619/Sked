@@ -13,6 +13,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.util.Log
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -24,6 +25,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.io.IOException
 import java.util.ArrayDeque
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
 private data class AppInstanceLeaseOwner(
@@ -61,11 +63,21 @@ private object AppInstanceLeaseGuard {
     }
 }
 
-private data class SaveTextFileRequest(
+private class SaveFileRequest(
     val fileName: String,
-    val content: String,
-    val result: MethodChannel.Result,
-)
+    val content: String? = null,
+    val binary: BinaryExportStaging.Prepared? = null,
+    var result: MethodChannel.Result?,
+) {
+    val cancelled = AtomicBoolean(false)
+    var copyStarted = false
+}
+
+private sealed interface SaveFileOutcome {
+    data object Saved : SaveFileOutcome
+    data object Cancelled : SaveFileOutcome
+    data class Failure(val code: String, val message: String) : SaveFileOutcome
+}
 
 class MainActivity : FlutterFragmentActivity() {
     private val appInstanceLeaseEngineId = AppInstanceLeaseGuard.createEngineId()
@@ -75,7 +87,9 @@ class MainActivity : FlutterFragmentActivity() {
     private var exportFileChannel: MethodChannel? = null
     private var appInstanceLeaseChannel: MethodChannel? = null
     private var productivityChannel: MethodChannel? = null
-    private val pendingSave = PendingActivityRequest<SaveTextFileRequest>()
+    private val pendingSave = PendingActivityRequest<SaveFileRequest>()
+    private val binaryExportStaging by lazy { BinaryExportStaging(cacheDir) }
+    private var binaryCopyInFlight: SaveFileRequest? = null
     private var activityDestroying = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -91,10 +105,9 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun onDestroy() {
         activityDestroying = true
-        // Complete live calls before Flutter detaches. Activity recreation
-        // cannot carry a MethodChannel.Result or an export payload to the new
-        // engine, even when Android restores a pending platform result.
-        pendingSave.cancel()?.result?.success(null)
+        // Picker cancellation can complete now. An accepted stream copy must
+        // first close on its worker; teardown never reports it saved early.
+        cancelFileExports(completeCall = true)
         super.onDestroy()
     }
 
@@ -117,6 +130,24 @@ class MainActivity : FlutterFragmentActivity() {
                         fileName = call.argument<String>("fileName"),
                         content = call.argument<String>("content"),
                         mimeType = call.argument<String>("mimeType"),
+                        result = result,
+                    )
+                    "prepareBinaryFile" -> prepareBinaryFile(
+                        fileName = call.argument<String>("fileName"),
+                        mimeType = call.argument<String>("mimeType"),
+                        byteLength = when (val length = call.argument<Any>("byteLength")) {
+                            is Int -> length.toLong()
+                            is Long -> length
+                            else -> null
+                        },
+                        result = result,
+                    )
+                    "savePreparedBinaryFile" -> savePreparedBinaryFile(
+                        id = call.argument<String>("id"),
+                        result = result,
+                    )
+                    "discardBinaryFile" -> discardBinaryFile(
+                        id = call.argument<String>("id"),
                         result = result,
                     )
                     else -> result.notImplemented()
@@ -203,7 +234,7 @@ class MainActivity : FlutterFragmentActivity() {
         // Platform surfaces can outlive their initiating engine. Invalidate
         // the request tokens as well as dropping their results/content so a
         // late callback cannot consume a new engine's pending request.
-        pendingSave.cancel()
+        cancelFileExports(completeCall = false)
         exportFileChannel?.setMethodCallHandler(null)
         exportFileChannel = null
         appInstanceLeaseChannel?.setMethodCallHandler(null)
@@ -376,7 +407,7 @@ class MainActivity : FlutterFragmentActivity() {
             result.success(null)
             return
         }
-        if (pendingSave.isPending) {
+        if (pendingSave.isPending || binaryExportStaging.isPending || binaryExportCopyActive.get()) {
             result.error("busy", "Another save operation is already in progress.", null)
             return
         }
@@ -385,11 +416,106 @@ class MainActivity : FlutterFragmentActivity() {
             return
         }
 
-        val request = pendingSave.begin(SaveTextFileRequest(fileName, content, result))!!
+        val request = pendingSave.begin(
+            SaveFileRequest(fileName = fileName, content = content, result = result),
+        )!!
+        launchSaveFile(request, fileName, mimeType?.takeIf { it.isNotBlank() } ?: "text/plain")
+    }
 
+    private fun prepareBinaryFile(
+        fileName: String?,
+        mimeType: String?,
+        byteLength: Long?,
+        result: MethodChannel.Result,
+    ) {
+        if (activityDestroying || isFinishing || isDestroyed) {
+            result.success(null)
+            return
+        }
+        if (pendingSave.isPending || binaryExportStaging.isPending || binaryExportCopyActive.get()) {
+            result.error("busy", "Another save operation is already in progress.", null)
+            return
+        }
+        if (fileName.isNullOrBlank() || byteLength == null || byteLength < 0) {
+            result.error("invalidArguments", "Missing fileName or byteLength.", null)
+            return
+        }
+        try {
+            val prepared = binaryExportStaging.prepare(
+                fileName,
+                mimeType?.takeIf { it.isNotBlank() } ?: "application/octet-stream",
+                byteLength,
+            )!!
+            result.success(mapOf("id" to prepared.id, "path" to prepared.path))
+        } catch (_: SecurityException) {
+            result.error("permissionDenied", "Permission denied while preparing the export.", null)
+        } catch (_: IOException) {
+            result.error("failed", "Unable to prepare the export.", null)
+        }
+    }
+
+    private fun savePreparedBinaryFile(id: String?, result: MethodChannel.Result) {
+        if (activityDestroying || isFinishing || isDestroyed) {
+            result.success(null)
+            return
+        }
+        if (pendingSave.isPending || binaryExportCopyActive.get()) {
+            result.error("busy", "Another save operation is already in progress.", null)
+            return
+        }
+        // Only an opaque token allocated by prepareBinaryFile is accepted.
+        // No method on this channel accepts a source path to read.
+        val prepared = binaryExportStaging.find(id)
+        if (prepared == null) {
+            result.error("invalidArguments", "The prepared export is no longer available.", null)
+            return
+        }
+        val request = pendingSave.begin(
+            SaveFileRequest(fileName = prepared.fileName, binary = prepared, result = result),
+        )!!
+        try {
+            prepared.verify()
+        } catch (_: SecurityException) {
+            finishSaveFile(
+                request,
+                SaveFileOutcome.Failure("permissionDenied", "Unable to read the export."),
+            )
+            return
+        } catch (_: IOException) {
+            finishSaveFile(
+                request,
+                SaveFileOutcome.Failure("failed", "The prepared export is incomplete."),
+            )
+            return
+        }
+        launchSaveFile(request, prepared.fileName, prepared.mimeType)
+    }
+
+    private fun discardBinaryFile(id: String?, result: MethodChannel.Result) {
+        if (binaryExportStaging.find(id) != null &&
+            (pendingSave.isPending || binaryCopyInFlight != null)
+        ) {
+            result.error("busy", "The prepared export is still in use.", null)
+            return
+        }
+        try {
+            // Idempotent for a completed/retired token; an old Dart finally
+            // block must not discard another engine's new preparation.
+            binaryExportStaging.discard(id)
+            result.success(null)
+        } catch (_: Exception) {
+            result.error("failed", "Unable to remove the prepared export.", null)
+        }
+    }
+
+    private fun launchSaveFile(
+        request: PendingActivityRequest.Request,
+        fileName: String,
+        mimeType: String,
+    ) {
         val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
-            type = mimeType?.takeIf { it.isNotBlank() } ?: "text/plain"
+            type = mimeType
             putExtra(Intent.EXTRA_TITLE, fileName)
         }
 
@@ -400,61 +526,165 @@ class MainActivity : FlutterFragmentActivity() {
             val launcher = activityResultRegistry.register(
                 request.key,
                 ActivityResultContracts.StartActivityForResult(),
-            ) { activityResult -> completeSaveTextFile(request, activityResult) }
+            ) { activityResult -> completeSaveFile(request, activityResult) }
             pendingSave.releaseWhenComplete(request) {
                 mainHandler.post { launcher.unregister() }
             }
             launcher.launch(intent)
         } catch (_: ActivityNotFoundException) {
-            pendingSave.complete(request)?.result?.error(
-                "unsupported", "No document provider is available.", null,
+            finishSaveFile(
+                request,
+                SaveFileOutcome.Failure("unsupported", "No document provider is available."),
             )
         } catch (_: SecurityException) {
-            pendingSave.complete(request)?.result?.error(
-                "permissionDenied", "Permission denied while opening document provider.", null,
+            finishSaveFile(
+                request,
+                SaveFileOutcome.Failure(
+                    "permissionDenied", "Permission denied while opening document provider.",
+                ),
             )
         } catch (_: RuntimeException) {
-            pendingSave.complete(request)?.result?.error(
-                "failed", "Unable to open document provider.", null,
+            finishSaveFile(
+                request,
+                SaveFileOutcome.Failure("failed", "Unable to open document provider."),
             )
         }
     }
 
-    private fun completeSaveTextFile(
+    private fun completeSaveFile(
         request: PendingActivityRequest.Request,
         activityResult: ActivityResult,
     ) {
-        val pending = pendingSave.complete(request) ?: return
-        val result = pending.result
+        val pending = pendingSave.peek(request) ?: return
+        if (pending.copyStarted) return
 
         val uri = activityResult.data?.data
         if (activityDestroying || isFinishing || isDestroyed ||
             activityResult.resultCode != Activity.RESULT_OK || uri == null
         ) {
-            result.success(null)
+            finishSaveFile(request, SaveFileOutcome.Cancelled)
             return
         }
 
-        val streamOpened = try {
-            contentResolver.openOutputStream(uri)?.use { output ->
-                output.write(pending.content.toByteArray(Charsets.UTF_8))
-                output.flush()
-                true
-            } ?: false
-        } catch (_: SecurityException) {
-            result.error("permissionDenied", "Permission denied while saving file.", null)
-            return
-        } catch (_: IOException) {
-            result.error("failed", "Failed to save file.", null)
-            return
-        } catch (_: RuntimeException) {
-            result.error("failed", "Document provider failed while saving file.", null)
+        val binary = pending.binary
+        if (binary != null) {
+            // A recreated Activity must also wait for an older owner's worker
+            // to close, even though it owns a different request registry.
+            if (!binaryExportCopyActive.compareAndSet(false, true)) {
+                finishSaveFile(
+                    request,
+                    SaveFileOutcome.Failure("busy", "Another file export is still finishing."),
+                )
+                return
+            }
+            pending.copyStarted = true
+            binaryCopyInFlight = pending
+            val resolver = applicationContext.contentResolver
+            try {
+                Thread({
+                    val outcome = try {
+                        val copied = copyExportStream(
+                            byteLength = binary.byteLength,
+                            openInput = binary::openInput,
+                            openOutput = { resolver.openOutputStream(uri) },
+                            isCancelled = pending.cancelled::get,
+                        )
+                        if (copied) SaveFileOutcome.Saved else SaveFileOutcome.Cancelled
+                    } catch (_: SecurityException) {
+                        SaveFileOutcome.Failure(
+                            "permissionDenied", "Permission denied while saving file.",
+                        )
+                    } catch (_: IOException) {
+                        SaveFileOutcome.Failure("failed", "Failed to save file.")
+                    } catch (_: RuntimeException) {
+                        SaveFileOutcome.Failure("failed", "Document provider failed while saving file.")
+                    }
+                    mainHandler.post {
+                        try {
+                            if (binaryCopyInFlight === pending) binaryCopyInFlight = null
+                            if (pendingSave.peek(request) === pending) {
+                                finishSaveFile(request, outcome)
+                            } else {
+                                // The old Flutter owner has detached. Close/copy
+                                // completion still owns cleanup, never a new call.
+                                try {
+                                    binaryExportStaging.discard(binary.id)
+                                } catch (_: Exception) {
+                                    Log.w("SkedExport", "Unable to remove a retired export preparation.")
+                                }
+                            }
+                        } finally {
+                            binaryExportCopyActive.set(false)
+                        }
+                    }
+                }, "sked-file-export").start()
+            } catch (_: RuntimeException) {
+                binaryCopyInFlight = null
+                binaryExportCopyActive.set(false)
+                finishSaveFile(
+                    request,
+                    SaveFileOutcome.Failure("failed", "Unable to start file export."),
+                )
+            }
             return
         }
-        if (streamOpened) {
-            result.success(pending.fileName)
-        } else {
-            result.error("failed", "Unable to open output stream.", null)
+
+        val outcome = try {
+            contentResolver.openOutputStream(uri)?.use { output ->
+                output.write(pending.content!!.toByteArray(Charsets.UTF_8))
+                output.flush()
+                SaveFileOutcome.Saved
+            } ?: SaveFileOutcome.Failure("failed", "Unable to open output stream.")
+        } catch (_: SecurityException) {
+            SaveFileOutcome.Failure("permissionDenied", "Permission denied while saving file.")
+        } catch (_: IOException) {
+            SaveFileOutcome.Failure("failed", "Failed to save file.")
+        } catch (_: RuntimeException) {
+            SaveFileOutcome.Failure("failed", "Document provider failed while saving file.")
+        }
+        finishSaveFile(request, outcome)
+    }
+
+    private fun finishSaveFile(
+        request: PendingActivityRequest.Request,
+        outcome: SaveFileOutcome,
+    ) {
+        val pending = pendingSave.peek(request) ?: return
+        val completedOutcome = try {
+            pending.binary?.let { binaryExportStaging.discard(it.id) }
+            outcome
+        } catch (_: Exception) {
+            SaveFileOutcome.Failure("failed", "Unable to remove the prepared export.")
+        }
+        pendingSave.complete(request)
+        val result = pending.result ?: return
+        pending.result = null
+        when (completedOutcome) {
+            SaveFileOutcome.Saved -> result.success(pending.fileName)
+            SaveFileOutcome.Cancelled -> result.success(null)
+            is SaveFileOutcome.Failure ->
+                result.error(completedOutcome.code, completedOutcome.message, null)
+        }
+    }
+
+    private fun cancelFileExports(completeCall: Boolean) {
+        val pending = pendingSave.cancel()
+        pending?.cancelled?.set(true)
+        val result = pending?.result
+        pending?.result = null
+        if (binaryCopyInFlight != null) {
+            // Keep the busy slot until the worker actually closes its streams.
+            // There is no truthful completed result to send before that point.
+            return
+        }
+        try {
+            binaryExportStaging.discardCurrent()
+            if (completeCall) result?.success(null)
+        } catch (_: Exception) {
+            if (completeCall) {
+                result?.error("failed", "Unable to remove the prepared export.", null)
+            }
+            Log.w("SkedExport", "Unable to remove an interrupted export preparation.")
         }
     }
 
@@ -462,6 +692,7 @@ class MainActivity : FlutterFragmentActivity() {
         const val EXPORT_FILE_CHANNEL = "com.mashiro.sked/export_file"
         const val APP_INSTANCE_LEASE_CHANNEL = "com.mashiro.sked/app_instance_lease"
         const val MAX_PENDING_AGENDA_INTENTS = 16
+        val binaryExportCopyActive = AtomicBoolean(false)
     }
 }
 

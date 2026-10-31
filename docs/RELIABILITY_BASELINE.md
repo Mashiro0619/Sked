@@ -18,6 +18,7 @@
 | 学校网页会话清除 | 清除应用数据前先关闭学校浏览器的原生页面并清除 Cookie、站点存储及缓存；Android/iOS 使用对应 WebView 数据接口，Windows 使用同一默认 WebView2 profile 的 `ClearBrowsingDataAll`。清理失败时保留主存档和 API 密钥，不假报成功；页面重开使用新的文档，不复用旧登录上下文。见 [清除服务测试](../test/services/app_data_clear_service_io_test.dart) 与 [网页会话测试](../test/services/school_web_session_service_test.dart)。 |
 | HTTP Endpoint | 询问和只读计划模式使用独立的 HTTP 传输确认，完全权限模式允许按该模式发送；传输确认不产生业务修改票据。人工连接诊断通过明确风险提示与该次按钮操作授权。确认与请求绑定同一端点和凭据快照，任何模式都不跟随重定向。见 [运行时测试](../test/agent/runtime/agent_runtime_controller_test.dart)、[诊断协议](../test/agent/connection/agent_connection_diagnostics_test.dart) 与 [协议测试](../test/agent/provider/provider_client_test.dart)。 |
 | 原生安全 | Android 云备份和旧版整包备份关闭；设备间迁移仅使用先过滤当前及旧版密钥的受控主数据工件，恢复不覆盖已有存档。通知 receiver 不导出；可配置 HTTP Endpoint 的网络策略需与前述确认配合。Apple 权限与 Windows 通知身份也需检查。见 [设备迁移约定](ANDROID_DEVICE_TRANSFER.md)、[平台测试](../test/platform) 和 [产物检查器](../tool/platform_artifact_check.dart)。 |
+| Android 文件导出 | 二进制内容先写入原生分配的私有缓存文件，再凭一次性令牌流式复制到用户选择的目标；源路径不从通道传入。准备、选择和复制共用一个名额，成功、取消与失败保留实际结果并清理源文件。见 [导出约定与验证入口](ANDROID_FILE_EXPORT.md)。 |
 | 日视图末卡 | 手机添加按钮的避让空间属于可滚动内容，不压缩日视图视口；末卡尾部可滚到真实按钮上方并打开正确课程详情，关闭按钮后释放避让空间。可容纳的卡片验证整卡可见，超过可用高度的大字卡片验证顶部和尾部能分别完整阅读。见 [真实主页日视图测试](../test/widgets/student_day_agenda_workflow_test.dart)。 |
 
 统一 Agent 连接兼容 HTTP 与 HTTPS，不用固定域名白名单限制用户的自建服务，也不设置默认明文地址。Android 的动态端点网络配置保留明文兼容；这项平台能力不能代替宿主的授权判断。HTTP 提示说明 API 密钥和提交内容在传输途中可能被读取或篡改；取消传输确认不发送，接受也不改变只读计划模式或授权其他业务操作。显式同意只在当前运行时中复用于相同端点、协议、模型和凭据快照，连接变化或功能关闭后失效；完全权限的放行不产生可被之后只读／询问模式复用的同意。设置页的人工诊断使用已保存连接，HTTP 风险提示与测试／获取模型按钮一起呈现，点击只授权该次请求。
