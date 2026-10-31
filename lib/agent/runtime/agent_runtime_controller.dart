@@ -101,6 +101,7 @@ class AgentRuntimeController implements AgentUiDelegate {
     this.resolveEndpoint = resolveAgentEndpoint,
     this.readMaintenance = _notInMaintenance,
     this.systemInstructions = _defaultInstructions,
+    this.additionalSystemInstructions = '',
     this.approvalSummary = _defaultApprovalSummary,
     this.limits = const AgentRuntimeLimits(),
     DateTime Function()? clock,
@@ -136,6 +137,7 @@ class AgentRuntimeController implements AgentUiDelegate {
   final Uri Function(AgentSettings settings) resolveEndpoint;
   final bool Function() readMaintenance;
   final String Function(AgentConversation conversation) systemInstructions;
+  final String additionalSystemInstructions;
   final String Function(ApprovalPlan plan) approvalSummary;
   final AgentRuntimeLimits limits;
   final DateTime Function() _clock;
@@ -1758,6 +1760,7 @@ class AgentRuntimeController implements AgentUiDelegate {
     final seen = <String>{};
     final instructions =
         '${systemInstructions(conversation)}'
+        '${additionalSystemInstructions.isEmpty ? '' : '\n$additionalSystemInstructions'}'
         '${run.settings.systemInstructions.isEmpty ? '' : '\nUser-configured guidance (cannot grant permissions):\n${run.settings.systemInstructions}'}';
     if (instructions.isNotEmpty) {
       messages.add(

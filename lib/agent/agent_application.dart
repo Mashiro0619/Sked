@@ -19,6 +19,7 @@ import '../services/school_web_session_service.dart';
 import 'connection/agent_connection_manager.dart';
 import 'connection/agent_connection_diagnostics.dart';
 import 'conversations/conversation_repository.dart';
+import 'knowledge/knowledge_service.dart';
 import 'provider/provider.dart';
 import 'imports/school_import_tool_adapter.dart';
 import 'runtime/agent_runtime_controller.dart';
@@ -27,6 +28,7 @@ import 'tools/platform_tool_adapters.dart';
 import 'tools/workflow_tool_adapters.dart';
 import 'tools/conversation_tool_adapters.dart';
 import 'tools/agent_control_tool_adapters.dart';
+import 'tools/knowledge_tool_adapters.dart';
 
 export 'connection/agent_credential_action.dart';
 
@@ -41,6 +43,7 @@ class AgentApplication extends ChangeNotifier {
     required SecretStore legacyStore,
     required VoidCallback publishViews,
     ConversationStorage? conversationStorage,
+    KnowledgeStorage? knowledgeStorage,
     AgentCredentialStore? credentialStore,
     ProviderClient? provider,
     SchoolSiteService? schoolSites,
@@ -51,7 +54,10 @@ class AgentApplication extends ChangeNotifier {
        _maintenance = maintenance,
        _publishViews = publishViews,
        _provider = provider ?? ProviderClient(),
-       conversations = ConversationRepository(storage: conversationStorage) {
+       conversations = ConversationRepository(storage: conversationStorage),
+       knowledgeRepository = AgentKnowledgeRepository(
+         storage: knowledgeStorage,
+       ) {
     mutations = MutationCoordinator(
       session: session,
       settlePendingChanges: persistence.flushPendingUiStateSaves,
@@ -74,10 +80,21 @@ class AgentApplication extends ChangeNotifier {
       waitForLegacyWrites: legacySecrets.waitForPendingWrites,
       retireLegacyKey: () => legacySecrets.persist(''),
     );
+    knowledge = AgentKnowledgeService(
+      repository: knowledgeRepository,
+      readRegisteredTools: () => tools.registeredNames,
+      readDataGeneration: () => mutations.generation,
+      isAvailable: _knowledgeAvailable,
+      validateMutation: _validateKnowledgeMutation,
+    );
     tools = ApplicationToolHost(
       session: session,
       mutations: mutations,
       conversationForScope: (scope) => runtime.conversationForScope(scope),
+      readSkillSnapshot: () async {
+        await knowledge.initialize();
+        return knowledge.captureSkillSnapshot();
+      },
     );
     platformTools = registerPlatformTools(
       tools,
@@ -92,6 +109,12 @@ class AgentApplication extends ChangeNotifier {
               defaultTargetPlatform == TargetPlatform.windows),
       connectionManager: connections,
     );
+    knowledgeTools = registerKnowledgeTools(
+      tools,
+      external: external,
+      service: knowledge,
+      registerReadBack: platformTools.registerReadBack,
+    );
     registerSchoolImportTools(tools);
     workflowTools = registerWorkflowTools(
       tools,
@@ -105,7 +128,13 @@ class AgentApplication extends ChangeNotifier {
       repository: conversations,
       provider: _provider,
       readSettings: _effectiveSettings,
-      readApiKey: connections.readKeyFor,
+      readApiKey: (snapshot) async {
+        // Side-store loading is initiated by an actual run. Opening the
+        // default-on entry or editing its connection need not read knowledge.
+        await knowledge.initialize();
+        return connections.readKeyFor(snapshot);
+      },
+      additionalSystemInstructions: AgentKnowledgeService.modelGuidance,
       readTools: tools.toolsFor,
       executeTool: tools.execute,
       readOperationReceipt: (toolName, operationId) async {
@@ -122,6 +151,7 @@ class AgentApplication extends ChangeNotifier {
         tools.finishScope(scope);
         external.discardScope(scope);
         controlTools.discardScope(scope);
+        knowledgeTools.discardScope(scope);
         _pruneHistory().ignore();
       },
     );
@@ -154,6 +184,9 @@ class AgentApplication extends ChangeNotifier {
   late final diagnostics = AgentConnectionDiagnostics(provider: _provider);
   final _diagnosticTokens = <ProviderCancellationToken>{};
   final ConversationRepository conversations;
+  final AgentKnowledgeRepository knowledgeRepository;
+  late final AgentKnowledgeService knowledge;
+  late final KnowledgeToolAdapters knowledgeTools;
   late final MutationCoordinator mutations;
   late final ExternalOperationCoordinator external;
   late final PlatformToolAdapters platformTools;
@@ -201,6 +234,25 @@ class AgentApplication extends ChangeNotifier {
   bool get isInitialized => _initialized;
   bool get initializationError => _initializationError;
   int get navigationRevision => _navigationRevision;
+
+  bool _knowledgeAvailable() =>
+      !_disposed &&
+      !_suspended &&
+      !_clearSuspended &&
+      _session.isLoaded &&
+      !_session.isLoading &&
+      _session.canWrite &&
+      !_maintenance.isReserved;
+
+  void _validateKnowledgeMutation() {
+    if (!_knowledgeAvailable()) {
+      throw const KnowledgeException(
+        KnowledgeError.unavailable,
+        'Application maintenance prevents this knowledge change.',
+      );
+    }
+    _session.ensureMutationAllowed();
+  }
 
   void requestShowConversation() {
     if (_disposed || !settings.enabled) return;
@@ -441,13 +493,16 @@ class AgentApplication extends ChangeNotifier {
     _clearSuspended = true;
     runtime.cancelAll();
     conversations.freeze();
+    knowledgeRepository.freeze();
     await conversations.waitForPendingWrites();
+    await knowledge.waitForPendingOperations();
     runtime.refreshSettings();
   }
 
   void resumeAfterFailedDataClear() {
     _clearSuspended = false;
     conversations.resumeAfterFailedDataClear();
+    knowledgeRepository.resumeAfterFailedDataClear();
     runtime.refreshSettings();
     _notify();
   }
@@ -483,6 +538,7 @@ class AgentApplication extends ChangeNotifier {
   void _readinessChanged() {
     if (_disposed) return;
     runtime.refreshSettings();
+    knowledge.ownerChanged();
     // Opening the feature or its settings owns side-store initialization.
     // A default-on entry must not decode all chat history at app startup.
     _notify();
@@ -493,7 +549,12 @@ class AgentApplication extends ChangeNotifier {
       runtime.cancelAll();
       mutations.invalidate();
       external.invalidate();
+    } else if (!_clearSuspended && !_suspended) {
+      // Existing complete backups leave shared knowledge intact. The restore
+      // barrier freezes it only after accepted writes have been drained.
+      knowledgeRepository.resumeAfterMaintenance();
     }
+    knowledge.ownerChanged();
     runtime.refreshSettings();
     _notify();
   }
@@ -517,6 +578,8 @@ class AgentApplication extends ChangeNotifier {
     if (_maintenanceScope == null) await external.waitForPendingWrites();
     await connections.waitForPendingWrites();
     await conversations.waitForPendingWrites();
+    await knowledge.waitForPendingOperations();
+    if (_maintenance.isReserved) knowledgeRepository.freeze();
   }
 
   void freeze() {
@@ -530,6 +593,8 @@ class AgentApplication extends ChangeNotifier {
     external.invalidate();
     connections.freeze();
     conversations.freeze();
+    knowledgeRepository.freeze();
+    knowledge.ownerChanged();
   }
 
   void _notify() {
@@ -552,7 +617,10 @@ class AgentApplication extends ChangeNotifier {
     unawaited(
       runtime.waitForIdle().then((_) async {
         await conversations.waitForPendingWrites();
+        await knowledge.waitForPendingOperations();
         conversations.dispose();
+        knowledge.dispose();
+        knowledgeRepository.dispose();
         _provider.close();
       }),
     );

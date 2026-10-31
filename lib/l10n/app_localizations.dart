@@ -6737,6 +6737,198 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Permission mode'**
   String get agentPermissionMode;
+
+  /// No description provided for @agentSkills.
+  ///
+  /// In en, this message translates to:
+  /// **'Skills'**
+  String get agentSkills;
+
+  /// No description provided for @agentMemories.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory'**
+  String get agentMemories;
+
+  /// No description provided for @agentKnowledgeAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get agentKnowledgeAdd;
+
+  /// No description provided for @agentKnowledgeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Content'**
+  String get agentKnowledgeBody;
+
+  /// No description provided for @agentKnowledgeBuiltin.
+  ///
+  /// In en, this message translates to:
+  /// **'Built-in'**
+  String get agentKnowledgeBuiltin;
+
+  /// No description provided for @agentKnowledgeConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'This item changed. Reopen it before saving.'**
+  String get agentKnowledgeConflict;
+
+  /// No description provided for @agentKnowledgeCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get agentKnowledgeCustom;
+
+  /// No description provided for @agentKnowledgeDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get agentKnowledgeDelete;
+
+  /// No description provided for @agentKnowledgeDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this item? Recent local history may retain a copy for undo.'**
+  String get agentKnowledgeDeleteConfirm;
+
+  /// No description provided for @agentKnowledgeEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get agentKnowledgeEdit;
+
+  /// No description provided for @agentKnowledgeEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing saved yet'**
+  String get agentKnowledgeEmpty;
+
+  /// No description provided for @agentKnowledgeEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled'**
+  String get agentKnowledgeEnabled;
+
+  /// No description provided for @agentKnowledgeHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Skills guide how the Agent handles tasks. You and the Agent share them. Changes apply to future runs.'**
+  String get agentKnowledgeHelp;
+
+  /// No description provided for @agentKnowledgeInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Check the content, tool names and size limits.'**
+  String get agentKnowledgeInvalid;
+
+  /// No description provided for @agentKnowledgeMemoryHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared notes and preferences. The Agent may update them during a conversation using its current permissions. Check current data before relying on older details.'**
+  String get agentKnowledgeMemoryHelp;
+
+  /// No description provided for @agentKnowledgeModified.
+  ///
+  /// In en, this message translates to:
+  /// **'Customized built-in'**
+  String get agentKnowledgeModified;
+
+  /// No description provided for @agentKnowledgeOriginalChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'The built-in version changed. Your edits are kept until you restore the original.'**
+  String get agentKnowledgeOriginalChanged;
+
+  /// No description provided for @agentKnowledgeReload.
+  ///
+  /// In en, this message translates to:
+  /// **'Reload'**
+  String get agentKnowledgeReload;
+
+  /// No description provided for @agentKnowledgeRestoreOriginal.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore original'**
+  String get agentKnowledgeRestoreOriginal;
+
+  /// No description provided for @agentKnowledgeSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get agentKnowledgeSaved;
+
+  /// No description provided for @agentKnowledgeSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get agentKnowledgeSearch;
+
+  /// No description provided for @agentKnowledgeSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Source or context'**
+  String get agentKnowledgeSource;
+
+  /// No description provided for @agentKnowledgeStaleReference.
+  ///
+  /// In en, this message translates to:
+  /// **'Referenced data may have changed. Check current data before using this note.'**
+  String get agentKnowledgeStaleReference;
+
+  /// No description provided for @agentKnowledgeStorageFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The saved state could not be confirmed. Reload to check it before making more changes.'**
+  String get agentKnowledgeStorageFailed;
+
+  /// No description provided for @agentKnowledgeSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get agentKnowledgeSummary;
+
+  /// No description provided for @agentKnowledgeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get agentKnowledgeTitle;
+
+  /// No description provided for @agentKnowledgeUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get agentKnowledgeUnavailable;
+
+  /// No description provided for @agentKnowledgeUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get agentKnowledgeUndo;
+
+  /// No description provided for @agentSkillAdvanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Skill options'**
+  String get agentSkillAdvanced;
+
+  /// No description provided for @agentSkillOptionalTools.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional tools, one name per line'**
+  String get agentSkillOptionalTools;
+
+  /// No description provided for @agentSkillRequiredTools.
+  ///
+  /// In en, this message translates to:
+  /// **'Required tools, one name per line'**
+  String get agentSkillRequiredTools;
+
+  /// No description provided for @agentSkillTriggers.
+  ///
+  /// In en, this message translates to:
+  /// **'When to use this skill, one hint per line'**
+  String get agentSkillTriggers;
 }
 
 class _AppLocalizationsDelegate

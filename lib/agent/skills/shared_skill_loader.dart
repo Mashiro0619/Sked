@@ -7,6 +7,7 @@ typedef SkillAssetLoader = Future<String> Function(String assetPath);
 
 enum SkillStatus {
   available,
+  disabled,
   loaded,
   notFound,
   missingDependencies,
@@ -61,6 +62,30 @@ class SkillDescriptor {
   final List<String> requiredTools;
   final List<String> optionalTools;
 
+  /// Editable local text is data, not an application-signed asset or plugin.
+  factory SkillDescriptor.editable({
+    required String id,
+    required String title,
+    required String summary,
+    required String body,
+    required int revision,
+    Iterable<String> triggers = const [],
+    Iterable<String> sourceKinds = const [],
+    Iterable<String> requiredTools = const [],
+    Iterable<String> optionalTools = const [],
+  }) => SkillDescriptor._(
+    id: id,
+    version: '0.0.$revision',
+    title: title,
+    summary: summary,
+    asset: '',
+    contentSha256: sha256.convert(utf8.encode(body)).toString(),
+    triggers: List.unmodifiable(triggers),
+    sourceKinds: List.unmodifiable(sourceKinds),
+    requiredTools: List.unmodifiable(requiredTools),
+    optionalTools: List.unmodifiable(optionalTools),
+  );
+
   Map<String, Object?> toSummary() => {
     'id': id,
     'version': version,
@@ -68,6 +93,29 @@ class SkillDescriptor {
     'summary': summary,
     'sourceKinds': sourceKinds,
   };
+}
+
+class SkillOverlay {
+  const SkillOverlay({
+    required this.skill,
+    required this.enabled,
+    required this.builtIn,
+    this.body,
+  });
+  final SkillDescriptor skill;
+  final bool enabled;
+  final bool builtIn;
+
+  /// Null means the currently installed original, with an independent switch.
+  final String? body;
+}
+
+class SkillOverlaySnapshot {
+  SkillOverlaySnapshot(Iterable<SkillOverlay> overlays)
+    : entries = Map.unmodifiable({
+        for (final overlay in overlays) overlay.skill.id: overlay,
+      });
+  final Map<String, SkillOverlay> entries;
 }
 
 class SkillAvailability {
@@ -115,7 +163,9 @@ class SharedSkillLoader {
     this.runtimeContractVersion = 1,
     this.toolApiVersion = '1.0.0',
     this.budgets = const SkillBudgets(),
-  }) : _registeredTools = Set.unmodifiable(registeredTools) {
+    SkillOverlaySnapshot? overlays,
+  }) : _registeredTools = Set.unmodifiable(registeredTools),
+       _overlays = overlays?.entries ?? const {} {
     _Version.parse(toolApiVersion);
     if (runtimeContractVersion <= 0 ||
         [
@@ -132,6 +182,7 @@ class SharedSkillLoader {
   static const manifestAsset = '${assetRoot}manifest.json';
   final SkillAssetLoader loadString;
   final Set<String> _registeredTools;
+  final Map<String, SkillOverlay> _overlays;
   final int runtimeContractVersion;
   final String toolApiVersion;
   final SkillBudgets budgets;
@@ -169,6 +220,11 @@ class SharedSkillLoader {
         continue;
       }
       var score = request.contains(skill.id) ? 100 : 0;
+      final searchable = '${skill.title} ${skill.summary}'.toLowerCase();
+      if (searchable.contains(request)) score += request.length;
+      for (final term in request.split(RegExp(r'\s+'))) {
+        if (term.length >= 2 && searchable.contains(term)) score += term.length;
+      }
       for (final trigger in skill.triggers) {
         if (request.contains(trigger.toLowerCase())) score += trigger.length;
       }
@@ -237,7 +293,8 @@ class SharedSkillLoader {
     }
     String body;
     try {
-      body = await loadString('$assetRoot${skill.asset}');
+      body =
+          _overlay(skill)?.body ?? await loadString('$assetRoot${skill.asset}');
     } catch (_) {
       return SkillLoadResult(
         id: id,
@@ -255,7 +312,7 @@ class SharedSkillLoader {
       );
     }
     if (sha256.convert(bytes).toString() != skill.contentSha256 ||
-        !_validBody(body, skill)) {
+        (_overlay(skill)?.body == null && !_validBody(body, skill))) {
       return SkillLoadResult(
         id: id,
         skill: skill,
@@ -274,6 +331,9 @@ class SharedSkillLoader {
   }
 
   SkillAvailability _availability(_Manifest manifest, SkillDescriptor skill) {
+    if (_overlay(skill)?.enabled == false) {
+      return SkillAvailability(skill: skill, status: SkillStatus.disabled);
+    }
     if (manifest.runtimeContractVersion != runtimeContractVersion ||
         !manifest.compatibility.includes(_Version.parse(toolApiVersion))) {
       return SkillAvailability(skill: skill, status: SkillStatus.incompatible);
@@ -291,6 +351,14 @@ class SharedSkillLoader {
   }
 
   Future<_Manifest> _manifest() => _manifestFuture ??= _readManifest();
+
+  SkillOverlay? _overlay(SkillDescriptor skill) {
+    final overlay = _overlays[skill.id];
+    if (overlay != null && !overlay.builtIn && skill.asset.isNotEmpty) {
+      return null;
+    }
+    return overlay;
+  }
 
   Future<_Manifest> _readManifest() async {
     String body;
@@ -359,10 +427,20 @@ class SharedSkillLoader {
           ),
         );
       }
+      final effective = [
+        for (final entry in _overlays.values)
+          if (!entry.builtIn && !ids.contains(entry.skill.id)) entry.skill,
+        for (final skill in skills)
+          if (_overlays[skill.id]?.builtIn == true &&
+              _overlays[skill.id]?.body != null)
+            _overlays[skill.id]!.skill
+          else
+            skill,
+      ];
       return _Manifest(
         value['runtimeContractVersion'] as int,
         compatibility,
-        List.unmodifiable(skills),
+        List.unmodifiable(effective),
       );
     } catch (_) {
       throw const SkillPackException(SkillPackError.invalidManifest);

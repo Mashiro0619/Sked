@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
+import 'package:sked/agent/knowledge/knowledge_models.dart';
+import 'package:sked/agent/knowledge/knowledge_storage.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/services/desktop_layout_preferences.dart';
 
@@ -9,11 +11,20 @@ import 'write_tool_coverage.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late AcceptanceHarness h;
+  late _TrackingKnowledgeStorage knowledgeStorage;
   setUp(() async {
+    knowledgeStorage = _TrackingKnowledgeStorage();
+    debugSetKnowledgeStorageFactory(() => knowledgeStorage);
     h = AcceptanceHarness();
     await h.initialize();
   });
-  tearDown(() => h.close());
+  tearDown(() async {
+    try {
+      await h.close();
+    } finally {
+      debugSetKnowledgeStorageFactory(null);
+    }
+  });
 
   test('all actual tools have an explicit effect and regression owner', () {
     expect(
@@ -32,8 +43,22 @@ void main() {
 
   test('every write entry rejects unknown fields before any persisted or native effect', () async {
     await h.run(() async {
+      final knowledge = h.app.agent.knowledge;
+      await knowledge.initialize();
+      await knowledge.saveFromUi(
+        knowledge.prepareSave(
+          knowledge.newRecord(
+            KnowledgeKind.memory,
+            title: 'Keep this memory',
+            body: 'Invalid tool input must preserve this saved content.',
+          ),
+        ),
+      );
       final before = h.saved.encode();
       final beforeConversations = h.conversations.source;
+      final beforeKnowledge = knowledgeStorage.source;
+      final beforeKnowledgeWrites = knowledgeStorage.writeCount;
+      final beforeKnowledgeSnapshot = knowledge.repository.snapshot.encode();
       final beforePermission = h.gateway.permission;
       final beforeCredentials = {
         for (final slot in AgentCredentialSlot.values)
@@ -53,6 +78,17 @@ void main() {
         );
         expect(h.saved.encode(), before, reason: name);
         expect(h.conversations.source, beforeConversations, reason: name);
+        expect(knowledgeStorage.source, beforeKnowledge, reason: name);
+        expect(
+          knowledgeStorage.writeCount,
+          beforeKnowledgeWrites,
+          reason: name,
+        );
+        expect(
+          knowledge.repository.snapshot.encode(),
+          beforeKnowledgeSnapshot,
+          reason: name,
+        );
         expect(h.gateway.permission, beforePermission, reason: name);
         expect(h.writtenArtifacts, isEmpty, reason: name);
         expect(h.navigationTargets, isEmpty, reason: name);
@@ -71,4 +107,13 @@ void main() {
       expect((await h.call('school_sites.list'))['items'], isEmpty);
     });
   });
+}
+
+class _TrackingKnowledgeStorage extends MemoryKnowledgeStorage {
+  int writeCount = 0;
+  @override
+  Future<void> save(KnowledgeArchive archive) async {
+    writeCount++;
+    await super.save(archive);
+  }
 }

@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/agent/agent_application.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
+import 'package:sked/agent/knowledge/knowledge_service.dart';
 import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/runtime/agent_runtime_controller.dart';
 import 'package:sked/agent/tools/application_tool_host.dart';
@@ -85,6 +86,12 @@ class _Application extends ChangeNotifier implements AgentApplication {
   final provider = _Provider();
   @override
   final ApplicationToolHost tools = _ReadOnlyToolHost();
+  @override
+  final knowledgeRepository = AgentKnowledgeRepository(
+    storage: MemoryKnowledgeStorage(),
+  );
+  @override
+  late final knowledge = AgentKnowledgeService(repository: knowledgeRepository);
   @override
   late final ConversationRepository conversations;
   @override
@@ -167,6 +174,8 @@ class _Application extends ChangeNotifier implements AgentApplication {
   void dispose() {
     runtime.dispose();
     tools.dispose();
+    knowledge.dispose();
+    knowledgeRepository.dispose();
     provider.close();
     conversations.dispose();
     super.dispose();
@@ -210,7 +219,11 @@ Future<void> _mountFrame(
 );
 
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues({}));
+  setUp(() {
+    // Asset futures must belong to this test's async zone.
+    rootBundle.clear();
+    SharedPreferences.setMockInitialValues({});
+  });
 
   testWidgets('model and run preference tabs retain separate unsaved drafts', (
     tester,
@@ -519,6 +532,7 @@ void main() {
         await _until(tester, () => app.agent.settings.enabled);
         expect(app.workspaceView.enabledWorkspaces, workspaces);
         expect(provider.requests, isEmpty);
+        expect(app.agent.knowledge.isLoaded, isFalse);
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pumpWidget(WorkspaceHarness(provider: app));
         await tester.pumpAndSettle();

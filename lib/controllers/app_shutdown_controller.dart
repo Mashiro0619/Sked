@@ -22,6 +22,7 @@ class AppShutdownController {
     required this._workspaces,
     required this._dataClear,
     required this._quiescence,
+    this.onBeginShutdown,
   });
 
   final AppSession _session;
@@ -33,6 +34,7 @@ class AppShutdownController {
   final WorkspaceCommands _workspaces;
   final AppDataClearController _dataClear;
   final AppQuiescence _quiescence;
+  final VoidCallback? onBeginShutdown;
 
   Future<bool> prepareForWindowClose() async {
     if (_dataClear.isCommitted) {
@@ -51,6 +53,9 @@ class AppShutdownController {
   }
 
   Future<void> quiesce() async {
+    // Final shutdown closes request and side-store gates before awaiting
+    // accepted work. The earlier cancellable close checks do not freeze them.
+    onBeginShutdown?.call();
     final clearing = _dataClear.inFlight;
     if (clearing != null) {
       try {

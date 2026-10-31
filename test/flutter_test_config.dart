@@ -7,6 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/agent/conversations/conversation_storage.dart';
+import 'package:sked/agent/knowledge/knowledge_storage.dart';
 import 'package:sked/services/app_backup_restore_journal.dart';
 
 class _TestConversationStorage extends ConversationStorage {
@@ -101,18 +102,22 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   // Defaults remain isolated even when a test constructs AppRuntime directly.
   // Each test captures a fresh store so late work retains its own old state.
   debugSetConversationStorageFactory(_TestConversationStorage.new);
+  debugSetKnowledgeStorageFactory(MemoryKnowledgeStorage.new);
   debugSetAppBackupRestoreJournalFactory(
     () => _TestAppBackupRestoreJournal(appBackupRestoreJournalState),
   );
   setUp(() {
     final conversations = _TestConversationStorage();
     debugSetConversationStorageFactory(() => conversations);
+    final knowledge = MemoryKnowledgeStorage();
+    debugSetKnowledgeStorageFactory(() => knowledge);
     appBackupRestoreJournalState.reset();
     FlutterSecureStorage.setMockInitialValues({});
     SharedPreferences.setMockInitialValues({});
   });
   tearDownAll(() {
     debugSetConversationStorageFactory(null);
+    debugSetKnowledgeStorageFactory(null);
     debugSetAppBackupRestoreJournalFactory(null);
   });
   await testMain();

@@ -3801,4 +3801,108 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get agentPermissionMode => 'Permission mode';
+
+  @override
+  String get agentSkills => 'Skills';
+
+  @override
+  String get agentMemories => 'Memory';
+
+  @override
+  String get agentKnowledgeAdd => 'Add';
+
+  @override
+  String get agentKnowledgeBody => 'Content';
+
+  @override
+  String get agentKnowledgeBuiltin => 'Built-in';
+
+  @override
+  String get agentKnowledgeConflict =>
+      'This item changed. Reopen it before saving.';
+
+  @override
+  String get agentKnowledgeCustom => 'Custom';
+
+  @override
+  String get agentKnowledgeDelete => 'Delete';
+
+  @override
+  String get agentKnowledgeDeleteConfirm =>
+      'Delete this item? Recent local history may retain a copy for undo.';
+
+  @override
+  String get agentKnowledgeEdit => 'Edit';
+
+  @override
+  String get agentKnowledgeEmpty => 'Nothing saved yet';
+
+  @override
+  String get agentKnowledgeEnabled => 'Enabled';
+
+  @override
+  String get agentKnowledgeHelp =>
+      'Skills guide how the Agent handles tasks. You and the Agent share them. Changes apply to future runs.';
+
+  @override
+  String get agentKnowledgeInvalid =>
+      'Check the content, tool names and size limits.';
+
+  @override
+  String get agentKnowledgeMemoryHelp =>
+      'Shared notes and preferences. The Agent may update them during a conversation using its current permissions. Check current data before relying on older details.';
+
+  @override
+  String get agentKnowledgeModified => 'Customized built-in';
+
+  @override
+  String get agentKnowledgeOriginalChanged =>
+      'The built-in version changed. Your edits are kept until you restore the original.';
+
+  @override
+  String get agentKnowledgeReload => 'Reload';
+
+  @override
+  String get agentKnowledgeRestoreOriginal => 'Restore original';
+
+  @override
+  String get agentKnowledgeSaved => 'Saved';
+
+  @override
+  String get agentKnowledgeSearch => 'Search';
+
+  @override
+  String get agentKnowledgeSource => 'Source or context';
+
+  @override
+  String get agentKnowledgeStaleReference =>
+      'Referenced data may have changed. Check current data before using this note.';
+
+  @override
+  String get agentKnowledgeStorageFailed =>
+      'The saved state could not be confirmed. Reload to check it before making more changes.';
+
+  @override
+  String get agentKnowledgeSummary => 'Summary';
+
+  @override
+  String get agentKnowledgeTitle => 'Title';
+
+  @override
+  String get agentKnowledgeUnavailable => 'Unavailable';
+
+  @override
+  String get agentKnowledgeUndo => 'Undo';
+
+  @override
+  String get agentSkillAdvanced => 'Skill options';
+
+  @override
+  String get agentSkillOptionalTools => 'Optional tools, one name per line';
+
+  @override
+  String get agentSkillRequiredTools => 'Required tools, one name per line';
+
+  @override
+  String get agentSkillTriggers => 'When to use this skill, one hint per line';
 }

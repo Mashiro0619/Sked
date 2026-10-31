@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'agent/agent_application.dart';
 import 'agent/connection/agent_credential_store.dart';
 import 'agent/conversations/conversation_storage.dart';
+import 'agent/knowledge/knowledge_storage.dart';
 import 'agent/provider/provider.dart';
 import 'controllers/app_backup_controller.dart';
 import 'controllers/app_data_clear_controller.dart';
@@ -58,6 +59,7 @@ final class AppRuntime {
     @visibleForTesting
     Future<void> Function(Future<void> Function())? workspaceMutationLock,
     @visibleForTesting ConversationStorage? agentConversationStorage,
+    @visibleForTesting KnowledgeStorage? agentKnowledgeStorage,
     @visibleForTesting AgentCredentialStore? agentCredentialStore,
     @visibleForTesting ProviderClient? agentProvider,
   }) {
@@ -193,12 +195,14 @@ final class AppRuntime {
       legacyStore: secrets,
       publishViews: publishViews,
       conversationStorage: agentConversationStorage,
+      knowledgeStorage: agentKnowledgeStorage,
       credentialStore: agentCredentialStore,
       provider: agentProvider,
       schoolSites: schoolSites,
       backups: backups,
       workspaces: workspaces,
     );
+    backups.drainAgent = agent.quiesce;
     final quiescence = AppQuiescence(
       session: session,
       persistence: persistence,
@@ -226,6 +230,7 @@ final class AppRuntime {
       workspaces: workspaces,
       dataClear: dataClear,
       quiescence: quiescence,
+      onBeginShutdown: agent.freeze,
     );
     developer = DeveloperCommands(
       session: session,

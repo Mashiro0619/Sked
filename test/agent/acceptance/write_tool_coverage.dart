@@ -132,6 +132,15 @@ final writeToolCoverage = <String, WriteToolCoverage>{
       WriteBoundary.externalCommit,
       'test/agent/tools/agent_control_tool_adapters_test.dart',
     ),
+  for (final name in [
+    'skills.prepare',
+    'memories.prepare',
+    'knowledge.undo.prepare',
+  ])
+    name: const WriteToolCoverage(
+      WriteBoundary.externalCommit,
+      'test/agent/tools/knowledge_tool_adapters_test.dart',
+    ),
   'credentials.request_input': const WriteToolCoverage(
     WriteBoundary.credentialInput,
     'test/agent/tools/agent_control_tool_adapters_test.dart',
@@ -147,6 +156,10 @@ final readOnlyToolInventory = <String>{
   'capabilities.describe',
   'skills.search',
   'skills.load',
+  'skills.get',
+  'memories.search',
+  'memories.get',
+  'knowledge.changes.get',
   for (final family in [
     'timetables',
     'courses',

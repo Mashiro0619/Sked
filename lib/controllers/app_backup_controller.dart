@@ -87,6 +87,12 @@ class AppBackupController {
   final Future<void> Function(Future<void> Function()) _runtimeMutationLock;
   final VoidCallback _notifyViewChanged;
   final DataTransferCodec _codec;
+
+  /// Bound by the application after constructing the Agent. A restore stops
+  /// new work at reservation time and drains accepted side-store writes before
+  /// changing the main archive. The initiating Agent scope is excluded by its
+  /// owner to avoid waiting for this restore from inside itself.
+  Future<void> Function()? drainAgent;
   SchoolSiteRestoreLease? _activeSchoolSiteRestoreLease;
   StorageLoadStatus? _journalRecoveryLoadStatus;
   List<String> _journalRecoveryArtifacts = const [];
@@ -699,6 +705,7 @@ class AppBackupController {
         schoolSiteLease = await schoolSiteLeaseFuture;
         _activeSchoolSiteRestoreLease = schoolSiteLease;
         return await _maintenance.runWithLease(token, () async {
+          await drainAgent?.call();
           late T value;
           await _runtimeMutationLock(() async {
             value = await action();

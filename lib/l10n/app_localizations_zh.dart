@@ -3548,6 +3548,104 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentPermissionMode => '权限模式';
+
+  @override
+  String get agentSkills => '技能';
+
+  @override
+  String get agentMemories => '记忆';
+
+  @override
+  String get agentKnowledgeAdd => '添加';
+
+  @override
+  String get agentKnowledgeBody => '正文';
+
+  @override
+  String get agentKnowledgeBuiltin => '内置';
+
+  @override
+  String get agentKnowledgeConflict => '此条目已更改，请重新打开后再保存。';
+
+  @override
+  String get agentKnowledgeCustom => '自定义';
+
+  @override
+  String get agentKnowledgeDelete => '删除';
+
+  @override
+  String get agentKnowledgeDeleteConfirm => '删除此条目？近期本地历史可能保留用于撤销的副本。';
+
+  @override
+  String get agentKnowledgeEdit => '编辑';
+
+  @override
+  String get agentKnowledgeEmpty => '尚未保存内容';
+
+  @override
+  String get agentKnowledgeEnabled => '启用';
+
+  @override
+  String get agentKnowledgeHelp =>
+      '技能指导 Agent 如何处理任务，由你和 Agent 共同维护。修改供后续运行使用。';
+
+  @override
+  String get agentKnowledgeInvalid => '请检查内容、工具名称和大小限制。';
+
+  @override
+  String get agentKnowledgeMemoryHelp =>
+      '你和 Agent 共用的笔记与偏好。Agent 可在会话中按当前权限维护；使用旧信息前仍需核对当前数据。';
+
+  @override
+  String get agentKnowledgeModified => '已修改的内置技能';
+
+  @override
+  String get agentKnowledgeOriginalChanged => '内置版本已更新。恢复原版前，你的修改会继续保留。';
+
+  @override
+  String get agentKnowledgeReload => '重新加载';
+
+  @override
+  String get agentKnowledgeRestoreOriginal => '恢复原版';
+
+  @override
+  String get agentKnowledgeSaved => '已保存';
+
+  @override
+  String get agentKnowledgeSearch => '搜索';
+
+  @override
+  String get agentKnowledgeSource => '来源或背景';
+
+  @override
+  String get agentKnowledgeStaleReference => '引用的数据可能已更改，使用此记忆前请重新核对。';
+
+  @override
+  String get agentKnowledgeStorageFailed => '无法确认保存状态，请重新加载核对后再继续修改。';
+
+  @override
+  String get agentKnowledgeSummary => '摘要';
+
+  @override
+  String get agentKnowledgeTitle => '标题';
+
+  @override
+  String get agentKnowledgeUnavailable => '暂不可用';
+
+  @override
+  String get agentKnowledgeUndo => '撤销';
+
+  @override
+  String get agentSkillAdvanced => '技能选项';
+
+  @override
+  String get agentSkillOptionalTools => '可选工具，每行一个名称';
+
+  @override
+  String get agentSkillRequiredTools => '必需工具，每行一个名称';
+
+  @override
+  String get agentSkillTriggers => '使用此技能的时机，每行一项';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -7095,4 +7193,102 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentPermissionMode => '權限模式';
+
+  @override
+  String get agentSkills => '技能';
+
+  @override
+  String get agentMemories => '記憶';
+
+  @override
+  String get agentKnowledgeAdd => '新增';
+
+  @override
+  String get agentKnowledgeBody => '內文';
+
+  @override
+  String get agentKnowledgeBuiltin => '內建';
+
+  @override
+  String get agentKnowledgeConflict => '此項目已變更，請重新開啟後再儲存。';
+
+  @override
+  String get agentKnowledgeCustom => '自訂';
+
+  @override
+  String get agentKnowledgeDelete => '刪除';
+
+  @override
+  String get agentKnowledgeDeleteConfirm => '刪除此項目？近期本機歷史可能保留供復原使用的副本。';
+
+  @override
+  String get agentKnowledgeEdit => '編輯';
+
+  @override
+  String get agentKnowledgeEmpty => '尚未儲存內容';
+
+  @override
+  String get agentKnowledgeEnabled => '啟用';
+
+  @override
+  String get agentKnowledgeHelp =>
+      '技能指引 Agent 如何處理任務，由你和 Agent 共同維護。修改供後續執行使用。';
+
+  @override
+  String get agentKnowledgeInvalid => '請檢查內容、工具名稱和大小限制。';
+
+  @override
+  String get agentKnowledgeMemoryHelp =>
+      '你和 Agent 共用的筆記與偏好。Agent 可在對話中依目前權限維護；使用舊資訊前仍須核對目前資料。';
+
+  @override
+  String get agentKnowledgeModified => '已修改的內建技能';
+
+  @override
+  String get agentKnowledgeOriginalChanged => '內建版本已更新。還原原版前，你的修改會繼續保留。';
+
+  @override
+  String get agentKnowledgeReload => '重新載入';
+
+  @override
+  String get agentKnowledgeRestoreOriginal => '還原原版';
+
+  @override
+  String get agentKnowledgeSaved => '已儲存';
+
+  @override
+  String get agentKnowledgeSearch => '搜尋';
+
+  @override
+  String get agentKnowledgeSource => '來源或背景';
+
+  @override
+  String get agentKnowledgeStaleReference => '引用的資料可能已變更，使用此記憶前請重新核對。';
+
+  @override
+  String get agentKnowledgeStorageFailed => '無法確認儲存狀態，請重新載入核對後再繼續修改。';
+
+  @override
+  String get agentKnowledgeSummary => '摘要';
+
+  @override
+  String get agentKnowledgeTitle => '標題';
+
+  @override
+  String get agentKnowledgeUnavailable => '暫時無法使用';
+
+  @override
+  String get agentKnowledgeUndo => '復原';
+
+  @override
+  String get agentSkillAdvanced => '技能選項';
+
+  @override
+  String get agentSkillOptionalTools => '選用工具，每行一個名稱';
+
+  @override
+  String get agentSkillRequiredTools => '必要工具，每行一個名稱';
+
+  @override
+  String get agentSkillTriggers => '使用此技能的時機，每行一項';
 }

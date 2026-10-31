@@ -2,6 +2,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
 import '../agent/agent_application.dart';
+import '../agent/knowledge/knowledge_models.dart';
+import '../agent/ui/agent_knowledge_view.dart';
 import '../agent/ui/agent_model_settings_form.dart';
 import '../agent/ui/agent_preferences_form.dart';
 import '../models/agent_settings.dart';
@@ -96,10 +98,15 @@ class _AgentSettingsPageState extends State<AgentSettingsPage> {
       tabs: [
         Tab(text: l.agentModelSettings),
         Tab(text: l.agentRunPreferences),
+        Tab(key: const ValueKey('agent-settings-skills'), text: l.agentSkills),
+        Tab(
+          key: const ValueKey('agent-settings-memories'),
+          text: l.agentMemories,
+        ),
       ],
     );
     return DefaultTabController(
-      length: 2,
+      length: 4,
       child: PopScope<void>(
         canPop: !_saving,
         child: SettingsPageScaffold(
@@ -159,6 +166,22 @@ class _AgentSettingsPageState extends State<AgentSettingsPage> {
                         settings: application.settings,
                         onSave: _savePreferences,
                       ),
+                    ),
+                  ),
+                ),
+                _KeptSettingsForm(
+                  child: Builder(
+                    builder: (_) => AgentKnowledgeView(
+                      service: application.knowledge,
+                      kind: KnowledgeKind.skill,
+                    ),
+                  ),
+                ),
+                _KeptSettingsForm(
+                  child: Builder(
+                    builder: (_) => AgentKnowledgeView(
+                      service: application.knowledge,
+                      kind: KnowledgeKind.memory,
                     ),
                   ),
                 ),

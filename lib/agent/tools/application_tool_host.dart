@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -35,6 +36,7 @@ class ApplicationToolHost {
     required this.conversationForScope,
     SettingRegistry? settings,
     SkillAssetLoader? loadSkillAsset,
+    this.readSkillSnapshot,
   }) : settings = settings ?? SettingRegistry(),
        _loadAsset = loadSkillAsset ?? rootBundle.loadString {
     _registerCore();
@@ -45,9 +47,10 @@ class ApplicationToolHost {
   final AgentConversation? Function(OperationScope) conversationForScope;
   final SettingRegistry settings;
   final SkillAssetLoader _loadAsset;
+  final FutureOr<SkillOverlaySnapshot> Function()? readSkillSnapshot;
   final _tools = <String, (ToolDefinition, ApplicationToolAction)>{};
   final _exposed = <String, Set<String>>{};
-  final _skills = <String, SharedSkillLoader>{};
+  final _skills = <String, Future<SharedSkillLoader>>{};
   final _selections = ResourceSelectionRegistry();
   AppData? _querySnapshot;
   ResourceQueries? _reader;
@@ -138,13 +141,19 @@ class ApplicationToolHost {
     _tools[definition.name] = (definition, action);
   }
 
-  List<ToolDefinition> toolsFor(OperationScope scope) => List.unmodifiable(
-    (_exposed[scope.id] ?? _bootstrap).map((name) => _tools[name]!.$1),
-  );
+  List<ToolDefinition> toolsFor(OperationScope scope) {
+    // Capture before the first model request, including runs that discover or
+    // edit knowledge before loading their first Skill. Later tool rounds reuse
+    // this loader even when another conversation changes the shared records.
+    _loader(scope).ignore();
+    return List.unmodifiable(
+      (_exposed[scope.id] ?? _bootstrap).map((name) => _tools[name]!.$1),
+    );
+  }
 
   void finishScope(OperationScope scope) {
     _exposed.remove(scope.id);
-    _skills.remove(scope.id);
+    unawaited(_skills.remove(scope.id));
     mutations.discardScope(scope);
     _selections.discardScope(scope);
   }
@@ -163,6 +172,8 @@ class ApplicationToolHost {
       );
     }
     try {
+      await _loader(scope);
+      scope.checkActive();
       final result = await tool.$2(
         call.decodedArguments,
         scope,
@@ -236,13 +247,15 @@ class ApplicationToolHost {
     return _reader!;
   }
 
-  SharedSkillLoader _loader(OperationScope scope) => _skills.putIfAbsent(
-    scope.id,
-    () => SharedSkillLoader(
-      loadString: _loadAsset,
-      registeredTools: registeredNames,
-    ),
-  );
+  Future<SharedSkillLoader> _loader(OperationScope scope) =>
+      _skills.putIfAbsent(
+        scope.id,
+        () async => SharedSkillLoader(
+          loadString: _loadAsset,
+          registeredTools: registeredNames,
+          overlays: await readSkillSnapshot?.call(),
+        ),
+      );
   void _expose(OperationScope scope, Iterable<String> names) =>
       (_exposed[scope.id] ??= {
         ..._bootstrap,
@@ -388,7 +401,7 @@ class ApplicationToolHost {
       (args, scope, _) async {
         _keys(args, {'query', 'limit'});
         final query = args['query'] as String? ?? '';
-        final loader = _loader(scope);
+        final loader = await _loader(scope);
         final entries = query.isEmpty
             ? await loader.catalog()
             : await loader.search(
@@ -416,7 +429,8 @@ class ApplicationToolHost {
       {'id': _stringSchema},
       (args, scope, _) async {
         _keys(args, {'id'});
-        final result = await _loader(scope).load(_requiredString(args, 'id'));
+        final result = await (await _loader(scope))
+            .load(_requiredString(args, 'id'));
         if (result.isLoaded) {
           _expose(scope, [
             ...result.skill!.requiredTools,

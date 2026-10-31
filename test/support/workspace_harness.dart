@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 import 'package:sked/agent/agent_application.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
 import 'package:sked/agent/conversations/conversation_storage.dart';
+import 'package:sked/agent/knowledge/knowledge_storage.dart';
 import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
@@ -94,6 +95,7 @@ Future<AppRuntime> workspaceProvider({
   Future<void> Function(Future<void> Function())? workspaceMutationLock,
   DataTransferCodec codec = inlineDataTransferCodec,
   ConversationStorage? agentConversationStorage,
+  KnowledgeStorage? agentKnowledgeStorage,
   AgentCredentialStore? agentCredentialStore,
   ProviderClient? agentProvider,
 }) async {
@@ -107,6 +109,7 @@ Future<AppRuntime> workspaceProvider({
   final provider = AppRuntime(
     dataTransferCodec: codec,
     agentConversationStorage: agentConversationStorage,
+    agentKnowledgeStorage: agentKnowledgeStorage,
     agentCredentialStore: agentCredentialStore,
     agentProvider: agentProvider,
     storage:
