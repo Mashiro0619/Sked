@@ -327,14 +327,21 @@ class MutationCoordinator {
     final ledger = _session.committedData.applicationLedger;
     final digest = mutationDigest({'undoOf': operationId});
     final previous = ledger?.receipts
-        .where((receipt) => receipt.result['undoOf'] == operationId)
+        .where(
+          (receipt) =>
+              receipt.result['undoOf'] == operationId ||
+              (receipt.result['undoOperationIds'] is List &&
+                  (receipt.result['undoOperationIds'] as List).contains(
+                    operationId,
+                  )),
+        )
         .firstOrNull;
     if (previous != null) {
       return _register(
         scope,
         baseline,
         const [],
-        digest,
+        previous.commandDigest,
         previous,
         replay: true,
       );
@@ -376,6 +383,107 @@ class MutationCoordinator {
         ],
       },
     );
+    return _register(scope, draft.candidate, draft.changes, digest, receipt);
+  }
+
+  /// Reverses every selected operation as one application-data write. The
+  /// caller supplies a durable batch identity, never model-generated state.
+  PreparedMutation prepareUndoMany({
+    required OperationScope scope,
+    required String batchId,
+    required Iterable<String> operationIds,
+  }) {
+    scope.checkActive();
+    _requireKnownStorage();
+    final ids = operationIds.toList();
+    if (batchId.isEmpty ||
+        batchId.length > 256 ||
+        ids.isEmpty ||
+        ids.length > applicationLedgerMaxReceipts ||
+        ids.toSet().length != ids.length) {
+      throw const OperationProblem(
+        OperationErrorCode.invalidArgument,
+        'Select a bounded, unique set of operations and one batch identity.',
+      );
+    }
+    ids.sort(
+      (a, b) =>
+          _operationIdentity(a).sequence
+              .compareTo(_operationIdentity(b).sequence),
+    );
+    final digest = mutationDigest({'undoBatchId': batchId, 'operations': ids});
+    final baseline = _session.data;
+    final ledger = _session.committedData.applicationLedger;
+    final previous = ledger?.receipts
+        .where((receipt) => receipt.result['undoBatchId'] == batchId)
+        .firstOrNull;
+    if (previous != null) {
+      if (previous.commandDigest != digest) _mismatch();
+      return _register(
+        scope,
+        baseline,
+        const [],
+        digest,
+        previous,
+        replay: true,
+      );
+    }
+    final originals = <OperationReceipt>[];
+    for (final id in ids) {
+      if (_operationIdentity(id).generation != generation) _expired();
+      final original = status(id);
+      if (original == null) {
+        throw const OperationProblem(
+          OperationErrorCode.notFound,
+          'A selected operation has no confirmed receipt.',
+        );
+      }
+      final alreadyUndone = ledger!.receipts.any(
+        (receipt) =>
+            receipt.result['undoOf'] == id ||
+            (receipt.result['undoOperationIds'] is List &&
+                (receipt.result['undoOperationIds'] as List).contains(id)),
+      );
+      if (alreadyUndone) {
+        throw const OperationProblem(
+          OperationErrorCode.conflict,
+          'A selected operation was already undone. Refresh the replay range.',
+        );
+      }
+      originals.add(original);
+    }
+    final draft = MutationUndoCompiler(settings: _settings)
+        .prepareSequence(baseline, originals);
+    final sequence = ledger!.nextSequence;
+    final inverseId = '$generation/$sequence/${_id()}';
+    final receipt = OperationReceipt(
+      operationId: inverseId,
+      sequence: sequence,
+      commandDigest: digest,
+      completedAtIso: _clock().toUtc().toIso8601String(),
+      result: {
+        'status': 'committed',
+        'operationId': inverseId,
+        'generation': generation,
+        'sequence': sequence,
+        'undoBatchId': batchId,
+        'undoOperationIds': ids,
+        'changeCount': draft.changes.length,
+        'changes': [for (final change in draft.changes) _changeSummary(change)],
+      },
+      undo: {
+        'changes': [
+          for (final change in draft.changes)
+            {
+              ...change.toJson(),
+              if (change.ref != null)
+                'beforeIndex': _resourceIndex(baseline, change.ref!),
+            },
+        ],
+      },
+    );
+    // Admission is checked for the whole range before any inverse is saved.
+    ledger.append(receipt);
     return _register(scope, draft.candidate, draft.changes, digest, receipt);
   }
 

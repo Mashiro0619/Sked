@@ -16,6 +16,61 @@ class MutationUndoCompiler {
 
   final SettingRegistry _settings;
 
+  /// Preflights an entire chronological range in reverse order. No persistent
+  /// state changes until the caller commits this final, normalized draft.
+  MutationDraft prepareSequence(
+    AppData base,
+    Iterable<OperationReceipt> receipts,
+  ) {
+    final ordered = receipts.toList()
+      ..sort((a, b) => b.sequence.compareTo(a.sequence));
+    var candidate = base;
+    final touched = <String, ResourceChange>{};
+    for (final receipt in ordered) {
+      final draft = prepare(candidate, receipt);
+      candidate = draft.candidate;
+      for (final change in draft.changes) {
+        touched[change.key] = change;
+      }
+    }
+    final before = base.toJson();
+    final after = candidate.toJson();
+    final combined = <String, _UndoChange>{};
+    for (final entry in touched.entries) {
+      final change = entry.value;
+      final lookup = _UndoChange(change.key, change.ref, null, null, null);
+      final ref = change.ref;
+      final oldValue = _read(base, before, lookup);
+      final newValue = _read(candidate, after, lookup);
+      if (_sameUndoJson(oldValue, newValue)) continue;
+      final index = ref == null || oldValue == null
+          ? null
+          : (_resourceList(before, ref) ?? const <Object?>[]).indexWhere(
+              (item) => _undoObject(item)['id'] == ref.id,
+            );
+      combined[entry.key] = _UndoChange(
+        change.key,
+        ref,
+        oldValue,
+        newValue,
+        index,
+      );
+    }
+    return MutationDraft(
+      candidate: candidate,
+      changes: _withoutCoveredChildren(combined)
+          .map(
+            (change) => ResourceChange(
+              key: change.key,
+              ref: change.ref,
+              before: change.before,
+              after: change.after,
+            ),
+          )
+          .toList(),
+    );
+  }
+
   MutationDraft prepare(AppData base, OperationReceipt receipt) {
     final undo = receipt.undo;
     if (undo == null) {

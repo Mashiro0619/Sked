@@ -220,6 +220,92 @@ void main() {
     },
   );
 
+  test('a replay inverse preflights the whole range and saves once', () async {
+    final first = coordinator.prepare(scope: scope, resources: [createEvent()]);
+    await coordinator.commit(planId: first.id, scope: scope);
+    final created = storage.data.generalMode.schedules.single.events.single;
+    final second = coordinator.prepare(
+      scope: scope,
+      resources: [
+        ResourceMutation(
+          kind: ResourceKind.event,
+          action: ResourceMutationAction.patch,
+          target: ResourceRef(
+            kind: ResourceKind.event,
+            id: created.id,
+            parentId: 'calendar',
+          ),
+          values: {'title': 'Changed'},
+        ),
+      ],
+    );
+    await coordinator.commit(planId: second.id, scope: scope);
+    final inverse = coordinator.prepareUndoMany(
+      scope: scope,
+      batchId: 'replay-1',
+      operationIds: [first.operationId, second.operationId],
+    );
+    expect(storage.saves, 2);
+    expect(
+      storage.data.generalMode.schedules.single.events.single.title,
+      'Changed',
+    );
+    await coordinator.commit(planId: inverse.id, scope: scope);
+    expect(storage.saves, 3);
+    expect(storage.data.generalMode.schedules.single.events, isEmpty);
+    final restarted = newCoordinator(await newSession());
+    final repeat = restarted.prepareUndoMany(
+      scope: scope,
+      batchId: 'replay-1',
+      operationIds: [second.operationId, first.operationId],
+    );
+    expect(
+      (await restarted.commit(planId: repeat.id, scope: scope)).replayed,
+      isTrue,
+    );
+    expect(storage.saves, 3);
+  });
+
+  test('a conflict in any inverse prevents the entire replay range', () async {
+    final first = coordinator.prepare(
+      scope: scope,
+      resources: [createEvent('One')],
+    );
+    await coordinator.commit(planId: first.id, scope: scope);
+    final second = coordinator.prepare(
+      scope: scope,
+      resources: [createEvent('Two')],
+    );
+    await coordinator.commit(planId: second.id, scope: scope);
+    final calendar = session.data.generalMode.schedules.single;
+    await saveUiData(
+      session.data.copyWith(
+        generalMode: session.data.generalMode.copyWith(
+          schedules: [
+            calendar.copyWith(
+              events: [
+                calendar.events.first.copyWith(title: 'Manual'),
+                calendar.events.last,
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    final before = storage.data.encode();
+    final saves = storage.saves;
+    expect(
+      () => coordinator.prepareUndoMany(
+        scope: scope,
+        batchId: 'replay-conflict',
+        operationIds: [first.operationId, second.operationId],
+      ),
+      throwsA(problem(OperationErrorCode.conflict)),
+    );
+    expect(storage.data.encode(), before);
+    expect(storage.saves, saves);
+  });
+
   test('restarting after business commit returns the original result without creating again', () async {
     final plan = coordinator.prepare(scope: scope, resources: [createEvent()]);
     final first = await coordinator.commit(planId: plan.id, scope: scope);
