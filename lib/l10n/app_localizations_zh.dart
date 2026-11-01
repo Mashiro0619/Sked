@@ -3709,6 +3709,28 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentFileReceivedHint => '服务接受仅表示收到了请求，不表示模型已读完所有文件。';
+
+  @override
+  String get agentEditAndRedo => '编辑并重做';
+
+  @override
+  String get agentRegenerateReply => '重新生成回复';
+
+  @override
+  String get agentHistoryVersions => '消息历史';
+
+  @override
+  String get agentRedoExplanation =>
+      '这会撤销从本轮开始的 Agent 操作，然后仅执行编辑后的请求。手动编辑和其他会话保持不变。';
+
+  @override
+  String get agentRedoPending => '历史重做尚未完成，请先继续此操作再发送新请求。';
+
+  @override
+  String get agentRedoConflict => '无法安全撤销完整轮次。请保留当前数据重新调整请求，或取消。';
+
+  @override
+  String get agentKeepAndRevise => '保留数据并修改';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -7417,4 +7439,26 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentFileReceivedHint => '服務接受僅表示收到了請求，不表示模型已讀完所有檔案。';
+
+  @override
+  String get agentEditAndRedo => '編輯並重做';
+
+  @override
+  String get agentRegenerateReply => '重新產生回覆';
+
+  @override
+  String get agentHistoryVersions => '訊息歷史';
+
+  @override
+  String get agentRedoExplanation =>
+      '這會撤銷從本輪開始的 Agent 操作，然後僅執行編輯後的請求。手動編輯和其他會話保持不變。';
+
+  @override
+  String get agentRedoPending => '歷史重做尚未完成，請先繼續此操作再傳送新請求。';
+
+  @override
+  String get agentRedoConflict => '無法安全撤銷完整輪次。請保留目前資料重新調整請求，或取消。';
+
+  @override
+  String get agentKeepAndRevise => '保留資料並修改';
 }

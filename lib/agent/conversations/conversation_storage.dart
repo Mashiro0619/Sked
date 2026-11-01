@@ -38,4 +38,22 @@ abstract class ConversationStorage {
 
   Future<ConversationStorageLoad> load();
   Future<void> save(String source, {required int revision});
+
+  String? _memoryPendingHistoryBatch;
+
+  /// A small durable admission marker keeps ordinary startup independent of
+  /// the potentially large conversation archive. Platform owners override it.
+  Future<String?> pendingHistoryBatch() async => _memoryPendingHistoryBatch;
+  Future<void> writePendingHistoryBatch(String? batchId) async {
+    validatePendingHistoryBatch(batchId);
+    _memoryPendingHistoryBatch = batchId;
+  }
+}
+
+void validatePendingHistoryBatch(Object? value) {
+  if (value != null &&
+      (value is! String ||
+          !RegExp(r'^[A-Za-z0-9:_-]{1,256}$').hasMatch(value))) {
+    throw const ConversationStorageException('Invalid pending history marker.');
+  }
 }

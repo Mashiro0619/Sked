@@ -2579,5 +2579,19 @@
   "agentFilePreviewFailed": "无法显示此图片。",
   "@agentFilePreviewFailed": {},
   "agentFileReceivedHint": "服务接受仅表示收到了请求，不表示模型已读完所有文件。",
-  "@agentFileReceivedHint": {}
+  "@agentFileReceivedHint": {},
+  "agentEditAndRedo": "编辑并重做",
+  "@agentEditAndRedo": {},
+  "agentRegenerateReply": "重新生成回复",
+  "@agentRegenerateReply": {},
+  "agentHistoryVersions": "消息历史",
+  "@agentHistoryVersions": {},
+  "agentRedoExplanation": "这会撤销从本轮开始的 Agent 操作，然后仅执行编辑后的请求。手动编辑和其他会话保持不变。",
+  "@agentRedoExplanation": {},
+  "agentRedoPending": "历史重做尚未完成，请先继续此操作再发送新请求。",
+  "@agentRedoPending": {},
+  "agentRedoConflict": "无法安全撤销完整轮次。请保留当前数据重新调整请求，或取消。",
+  "@agentRedoConflict": {},
+  "agentKeepAndRevise": "保留数据并修改",
+  "@agentKeepAndRevise": {}
 }

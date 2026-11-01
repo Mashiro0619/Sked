@@ -2649,5 +2649,19 @@
   "agentFilePreviewFailed": "This image could not be displayed.",
   "@agentFilePreviewFailed": {},
   "agentFileReceivedHint": "Acceptance confirms the service received the request; it does not confirm that the model read every file.",
-  "@agentFileReceivedHint": {}
+  "@agentFileReceivedHint": {},
+  "agentEditAndRedo": "Edit and redo",
+  "@agentEditAndRedo": {},
+  "agentRegenerateReply": "Regenerate reply",
+  "@agentRegenerateReply": {},
+  "agentHistoryVersions": "Message history",
+  "@agentHistoryVersions": {},
+  "agentRedoExplanation": "This undoes Agent changes from this entire turn onward, then runs only the edited request. Manual edits and other conversations are preserved.",
+  "@agentRedoExplanation": {},
+  "agentRedoPending": "History redo is unfinished. Continue this operation before sending another request.",
+  "@agentRedoPending": {},
+  "agentRedoConflict": "The complete turn cannot be safely undone. Keep the current data and revise your request, or cancel.",
+  "@agentRedoConflict": {},
+  "agentKeepAndRevise": "Keep data and revise",
+  "@agentKeepAndRevise": {}
 }

@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import '../history/conversation_history.dart';
+
 import 'package:crypto/crypto.dart';
 
 import '../../application/operation_contracts.dart';
@@ -364,16 +366,31 @@ class AgentConversation {
     this.connectionFingerprint,
     this.runId,
     this.modelSelection,
+    this.executionHistoryStart = 0,
     Iterable<ConversationMessage> messages = const [],
     Iterable<ConversationSource> sources = const [],
     Iterable<ConversationRunUsage> runs = const [],
     Iterable<ConversationAttachment> attachments = const [],
     Iterable<String> draftAttachmentIds = const [],
+    Iterable<ConversationTurn> turns = const [],
+    Iterable<ConversationHistoryVersion> historyVersions = const [],
+    Iterable<ConversationReplyRevision> replyRevisions = const [],
+    Iterable<ConversationRedoBatch> redoBatches = const [],
   }) : messages = List.unmodifiable(messages),
        sources = List.unmodifiable(sources),
        runs = List.unmodifiable(runs),
        attachments = List.unmodifiable(attachments),
-       draftAttachmentIds = List.unmodifiable(draftAttachmentIds);
+       draftAttachmentIds = List.unmodifiable(draftAttachmentIds),
+       turns = List.unmodifiable(turns),
+       historyVersions = List.unmodifiable(historyVersions),
+       replyRevisions = List.unmodifiable(replyRevisions),
+       redoBatches = List.unmodifiable(redoBatches) {
+    if (executionHistoryStart < 0 ||
+        executionHistoryStart > this.messages.length) {
+      throw const FormatException('Invalid executable history boundary.');
+    }
+    validateConversationTurns(this.messages, this.runs, this.turns);
+  }
 
   final String id;
   final String title;
@@ -386,11 +403,20 @@ class AgentConversation {
   final String? connectionFingerprint;
   final String? runId;
   final AgentModelSelection? modelSelection;
+  final int executionHistoryStart;
+  Iterable<ConversationMessage> get executionMessages =>
+      messages.skip(executionHistoryStart);
   final List<ConversationMessage> messages;
   final List<ConversationSource> sources;
   final List<ConversationRunUsage> runs;
   final List<ConversationAttachment> attachments;
   final List<String> draftAttachmentIds;
+  final List<ConversationTurn> turns;
+  final List<ConversationHistoryVersion> historyVersions;
+  final List<ConversationReplyRevision> replyRevisions;
+  final List<ConversationRedoBatch> redoBatches;
+  ConversationRedoBatch? get pendingRedo =>
+      redoBatches.where((batch) => !batch.isComplete).firstOrNull;
 
   AgentConversation copyWith({
     String? title,
@@ -402,11 +428,18 @@ class AgentConversation {
     String? connectionFingerprint,
     String? runId,
     AgentModelSelection? modelSelection,
+    int? executionHistoryStart,
+    bool clearRunId = false,
+    bool clearConnectionFingerprint = false,
     Iterable<ConversationMessage>? messages,
     Iterable<ConversationSource>? sources,
     Iterable<ConversationRunUsage>? runs,
     Iterable<ConversationAttachment>? attachments,
     Iterable<String>? draftAttachmentIds,
+    Iterable<ConversationTurn>? turns,
+    Iterable<ConversationHistoryVersion>? historyVersions,
+    Iterable<ConversationReplyRevision>? replyRevisions,
+    Iterable<ConversationRedoBatch>? redoBatches,
   }) => AgentConversation(
     id: id,
     title: title ?? this.title,
@@ -416,14 +449,21 @@ class AgentConversation {
     status: status ?? this.status,
     archived: archived ?? this.archived,
     draft: draft ?? this.draft,
-    connectionFingerprint: connectionFingerprint ?? this.connectionFingerprint,
-    runId: runId ?? this.runId,
+    connectionFingerprint: clearConnectionFingerprint
+        ? null
+        : connectionFingerprint ?? this.connectionFingerprint,
+    runId: clearRunId ? null : runId ?? this.runId,
     modelSelection: modelSelection ?? this.modelSelection,
+    executionHistoryStart: executionHistoryStart ?? this.executionHistoryStart,
     messages: messages ?? this.messages,
     sources: sources ?? this.sources,
     runs: runs ?? this.runs,
     attachments: attachments ?? this.attachments,
     draftAttachmentIds: draftAttachmentIds ?? this.draftAttachmentIds,
+    turns: turns ?? this.turns,
+    historyVersions: historyVersions ?? this.historyVersions,
+    replyRevisions: replyRevisions ?? this.replyRevisions,
+    redoBatches: redoBatches ?? this.redoBatches,
   );
 
   Map<String, Object?> toJson() => {
@@ -439,6 +479,7 @@ class AgentConversation {
       'connectionFingerprint': connectionFingerprint,
     if (runId != null) 'runId': runId,
     if (modelSelection != null) 'modelSelection': modelSelection!.toJson(),
+    'executionHistoryStart': executionHistoryStart,
     'messages': messages.map((message) => message.toJson()).toList(),
     'sources': sources.map((source) => source.toJson()).toList(),
     'runs': runs.map((run) => run.toJson()).toList(),
@@ -447,6 +488,10 @@ class AgentConversation {
           .map((attachment) => attachment.toJson())
           .toList(),
     if (draftAttachmentIds.isNotEmpty) 'draftAttachmentIds': draftAttachmentIds,
+    'turns': turns.map((item) => item.toJson()).toList(),
+    'historyVersions': historyVersions.map((item) => item.toJson()).toList(),
+    'replyRevisions': replyRevisions.map((item) => item.toJson()).toList(),
+    'redoBatches': redoBatches.map((item) => item.toJson()).toList(),
   };
 
   factory AgentConversation.fromJson(Map<String, dynamic> json) {
@@ -474,11 +519,49 @@ class AgentConversation {
       max: 1000,
     ).map(ConversationAttachment.fromJson).toList();
     final draftAttachmentIds = _attachmentIds(json['draftAttachmentIds']);
+    final turns = _objects(
+      json,
+      'turns',
+      max: 1000,
+    ).map(ConversationTurn.fromJson).toList();
+    final historyVersions = _objects(
+      json,
+      'historyVersions',
+      max: 32,
+    ).map(ConversationHistoryVersion.fromJson).toList();
+    final replyRevisions = _objects(
+      json,
+      'replyRevisions',
+      max: 1000,
+    ).map(ConversationReplyRevision.fromJson).toList();
+    final redoBatches = _objects(
+      json,
+      'redoBatches',
+      max: 32,
+    ).map(ConversationRedoBatch.fromJson).toList();
+    final executionHistoryStart = json['executionHistoryStart'] ?? 0;
+    if (executionHistoryStart is! int ||
+        executionHistoryStart < 0 ||
+        executionHistoryStart > messages.length ||
+        historyVersions.map((item) => item.id).toSet().length !=
+            historyVersions.length ||
+        replyRevisions.map((item) => item.id).toSet().length !=
+            replyRevisions.length ||
+        redoBatches.map((item) => item.id).toSet().length !=
+            redoBatches.length ||
+        redoBatches.where((item) => !item.isComplete).length > 1 ||
+        redoBatches.any((item) => item.conversationId != json['id'])) {
+      throw const FormatException('Invalid conversation history references.');
+    }
     final attachmentIds = attachments.map((a) => a.id).toSet();
     if (attachmentIds.length != attachments.length ||
         [
           ...draftAttachmentIds,
           ...messages.expand((m) => m.attachmentIds),
+          ...historyVersions
+              .expand((v) => v.messages)
+              .expand((m) => m.attachmentIds),
+          ...redoBatches.expand((batch) => batch.attachmentIds),
         ].any((id) => !attachmentIds.contains(id))) {
       throw const FormatException(
         'Missing or duplicate attachment references.',
@@ -519,6 +602,11 @@ class AgentConversation {
       runs: runs,
       attachments: attachments,
       draftAttachmentIds: draftAttachmentIds,
+      executionHistoryStart: executionHistoryStart,
+      turns: turns,
+      historyVersions: historyVersions,
+      replyRevisions: replyRevisions,
+      redoBatches: redoBatches,
     );
   }
 }
@@ -564,7 +652,7 @@ class ConversationArchive {
        terminatedIds = Set.unmodifiable(terminatedIds);
 
   static const maxBytes = 16 * 1024 * 1024;
-  static const currentVersion = 4;
+  static const currentVersion = 5;
   final int revision;
   final String? selectedId;
   final List<AgentConversation> conversations;
@@ -595,7 +683,7 @@ class ConversationArchive {
       );
     }
     final json = _object(jsonDecode(source));
-    if ((!const [1, 2, 3, currentVersion].contains(json['version'])) ||
+    if ((!const [1, 2, 3, 4, currentVersion].contains(json['version'])) ||
         json['revision'] is! int ||
         (json['revision'] as int) < 0) {
       throw const FormatException('Unsupported conversation archive version.');
@@ -648,7 +736,10 @@ class ConversationArchive {
           .where((c) => c.id == handoff.conversationId)
           .firstOrNull;
       if (conversation != null &&
-          (!conversation.messages.any((m) => m.id == handoff.messageId) ||
+          (![
+                ...conversation.messages,
+                ...conversation.historyVersions.expand((v) => v.messages),
+              ].any((m) => m.id == handoff.messageId) ||
               !conversation.sources.any(
                 (asset) => asset.digest == handoff.sourceDigest,
               ))) {
@@ -679,6 +770,10 @@ List<String> _attachmentIds(Object? value) {
 Set<String> conversationAttachmentIds(AgentConversation conversation) => {
   ...conversation.draftAttachmentIds,
   ...conversation.messages.expand((message) => message.attachmentIds),
+  ...conversation.historyVersions
+      .expand((version) => version.messages)
+      .expand((message) => message.attachmentIds),
+  ...conversation.redoBatches.expand((batch) => batch.attachmentIds),
 };
 
 Map<String, dynamic> _object(Object? value) {

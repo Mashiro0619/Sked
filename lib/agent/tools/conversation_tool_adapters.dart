@@ -61,9 +61,14 @@ class ConversationToolAdapters {
     'draft': 'user_input_queue',
     'connectionFingerprint': 'private_endpoint_binding',
     'runId': 'runtime_lifecycle',
+    'executionHistoryStart': 'host_history_execution_boundary',
     'messages': 'current_conversation_history_or_approved_export',
     'sources': 'current_conversation_sources_or_approved_export',
     'runs': 'runtime_usage_or_approved_export',
+    'turns': 'runtime_turn_ownership',
+    'historyVersions': 'user_history_redo',
+    'replyRevisions': 'user_reply_regeneration',
+    'redoBatches': 'host_history_recovery',
   };
   Future<AgentArtifactWriteResult> Function(AgentDataArtifact)? _saveArtifact;
   int _binding = 0;

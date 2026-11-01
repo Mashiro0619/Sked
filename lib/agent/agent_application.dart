@@ -21,6 +21,7 @@ import 'connection/agent_connection_diagnostics.dart';
 import 'attachments/attachment_repository.dart';
 import 'attachments/conversation_attachments.dart';
 import 'conversations/conversation_repository.dart';
+import 'history/conversation_history_service.dart';
 import 'knowledge/knowledge_service.dart';
 import 'provider/provider.dart';
 import 'imports/school_import_tool_adapter.dart';
@@ -156,6 +157,13 @@ class AgentApplication extends ChangeNotifier {
             ? {'status': 'notRecorded', 'operationId': operationId}
             : tools.describeCommitResult(receipt.result);
       },
+      readPreparedOperation: (call) {
+        final id = call.decodedArguments['planId'];
+        if (id is! String) return null;
+        return call.name == 'mutation.commit'
+            ? mutations.plan(id)
+            : external.plan(id);
+      },
       onOpenSettings: () => onOpenSettings?.call(),
       readMaintenance: () => maintenance.isReserved || !_session.canWrite,
       onRunSettled: (scope) {
@@ -167,6 +175,17 @@ class AgentApplication extends ChangeNotifier {
         if (_attachmentCleanupError) _scheduleAttachmentCollection();
       },
     );
+    history = ConversationHistoryService(
+      conversations: conversations,
+      runtime: runtime,
+      knowledge: knowledgeRepository,
+      session: session,
+      persistence: persistence,
+      maintenance: maintenance,
+      mutations: mutations,
+      external: external,
+    );
+    runtime.onContinueHistoryRedo = history.continueRedo;
     conversationTools = registerConversationTools(
       tools,
       external: external,
@@ -211,6 +230,7 @@ class AgentApplication extends ChangeNotifier {
   late final AgentConnectionManager connections;
   late final ApplicationToolHost tools;
   late final AgentRuntimeController runtime;
+  late final ConversationHistoryService history;
   late final StreamSubscription<AppDataCommit> _commits;
   VoidCallback? onOpenSettings;
   Future<void>? _initializing;
@@ -258,6 +278,7 @@ class AgentApplication extends ChangeNotifier {
   AgentSettings get settings => _session.committedData.agentSettings;
   bool get isInitialized => _initialized;
   bool get initializationError => _initializationError;
+  Future<void> recoverHistoryBeforeWrites() => history.recoverBeforeWrites();
   int get navigationRevision => _navigationRevision;
 
   bool _knowledgeAvailable() =>

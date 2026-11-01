@@ -206,6 +206,12 @@ final class AppRuntime {
       workspaces: workspaces,
     );
     backups.drainAgent = agent.quiesce;
+    lifecycle.beforeOpeningWrites = agent.recoverHistoryBeforeWrites;
+    lifecycle.beforeRetryStorageLoad = () async {
+      if (agent.history.ownsMaintenance) {
+        await agent.recoverHistoryBeforeWrites();
+      }
+    };
     final quiescence = AppQuiescence(
       session: session,
       persistence: persistence,

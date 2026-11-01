@@ -21,6 +21,8 @@ import 'agent_transcript.dart';
 import 'agent_attachment_view.dart';
 import '../attachments/conversation_attachments.dart';
 import '../conversations/conversation_repository.dart';
+import '../history/conversation_history.dart';
+import '../history/conversation_history_service.dart';
 import '../imports/conversation_file_attachments.dart';
 import 'agent_ui_delegate.dart';
 import 'agent_operation_card.dart';
@@ -36,6 +38,7 @@ class _AgentDraftBuffer {
   final saved = <String, String>{};
   final writes = <String, Future<void>>{};
   final reading = <String, AgentReadingPosition>{};
+  final historyDrafts = <String, String>{};
 }
 
 /// Shared content for a desktop panel or a phone route. The host owns routing,
@@ -59,6 +62,8 @@ class AgentConversationView extends StatefulWidget {
     this.pickAttachment = ConversationFileAttachments.pickFile,
     this.binaryAttachments,
     this.pickBinaryAttachment = ConversationAttachments.pickFile,
+    this.history,
+    this.onRegenerateReply,
   });
   final ConversationRepository repository;
   final AgentUiDelegate delegate;
@@ -79,6 +84,9 @@ class AgentConversationView extends StatefulWidget {
   final Future<PickedTextFile?> Function() pickAttachment;
   final ConversationAttachments? binaryAttachments;
   final Future<XFile?> Function() pickBinaryAttachment;
+  final ConversationHistoryService? history;
+  final Future<void> Function(String conversationId, String messageId)?
+  onRegenerateReply;
 
   @override
   State<AgentConversationView> createState() => _AgentConversationViewState();
@@ -567,6 +575,111 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     });
   }
 
+  Future<void> _editHistory(
+    AgentConversation conversation,
+    ConversationMessage message,
+  ) async {
+    final l = AppLocalizations.of(context);
+    final key = '${conversation.id}:${message.id}';
+    final edited = await showExpressiveDialog<String>(
+      context: context,
+      builder: (context) => _EditHistoryDialog(
+        text: _draftBuffer.historyDrafts[key] ?? message.text,
+        hasAttachments: message.attachmentIds.isNotEmpty,
+        onChanged: (text) => _draftBuffer.historyDrafts[key] = text,
+      ),
+    );
+    if (edited == null || !mounted) return;
+    await _perform('history-${conversation.id}', () async {
+      await _flushDraft(conversation.id);
+      try {
+        await widget.history!.editAndRedo(conversation.id, message.id, edited);
+        _draftBuffer.historyDrafts.remove(key);
+      } catch (_) {
+        if (!mounted) rethrow;
+        final pending = _repository.find(conversation.id)?.pendingRedo;
+        if (pending != null &&
+            pending.phase != ConversationRedoPhase.prepared) {
+          rethrow;
+        }
+        final keep = await showExpressiveDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(l.agentEditAndRedo),
+            content: Text(l.agentRedoConflict),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text(l.cancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text(l.agentKeepAndRevise),
+              ),
+            ],
+          ),
+        );
+        if (pending != null) {
+          await widget.history!.cancelPrepared(conversation.id);
+        }
+        if (keep == true && mounted) {
+          _draftChanged(conversation.id, edited);
+          _composerFocus.requestFocus();
+        }
+      }
+    });
+  }
+
+  Future<void> _showMessageHistory(AgentConversation conversation) =>
+      showExpressiveDialog<void>(
+        context: context,
+        builder: (context) {
+          final l = AppLocalizations.of(context);
+          return AlertDialog(
+            title: Text(l.agentHistoryVersions),
+            content: SizedBox(
+              width: 600,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final version in conversation.historyVersions)
+                      ExpansionTile(
+                        title: Text(version.createdAt.toLocal().toString()),
+                        children: [
+                          for (final message in version.messages)
+                            if (message.text.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: SelectableText(message.text),
+                              ),
+                        ],
+                      ),
+                    for (final revision in conversation.replyRevisions)
+                      ExpansionTile(
+                        title: Text(revision.createdAt.toLocal().toString()),
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: SelectableText(revision.text),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(l.confirm),
+              ),
+            ],
+          );
+        },
+      );
+
   AgentConversationList _historyList(
     ValueChanged<String> onSelected, {
     Widget? header,
@@ -805,6 +918,22 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                   ),
                 ),
               if (conversation != null) ..._messageWidgets(conversation, l),
+              if (conversation?.pendingRedo != null) ...[
+                _notice(l.agentRedoPending),
+                TextButton.icon(
+                  key: const ValueKey('agent-continue-history-redo'),
+                  onPressed:
+                      widget.history == null ||
+                          _busy.contains('history-${conversation!.id}')
+                      ? null
+                      : () => _perform(
+                          'history-${conversation.id}',
+                          () => widget.history!.continueRedo(conversation.id),
+                        ),
+                  icon: const Icon(Icons.replay),
+                  label: Text(l.agentContinue),
+                ),
+              ],
               if (state.streamingText.isNotEmpty)
                 _messageText(
                   l.agentAssistant,
@@ -854,6 +983,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                     writable &&
                         runtime.configured &&
                         !conversation.archived &&
+                        conversation.pendingRedo == null &&
                         widget.binaryAttachments?.isImporting(
                               conversation.id,
                             ) !=
@@ -1050,6 +1180,10 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                   widget.delegate.openSettings();
                 case 'rename':
                   if (conversation != null) unawaited(_rename(conversation));
+                case 'message-history':
+                  if (conversation != null) {
+                    unawaited(_showMessageHistory(conversation));
+                  }
                 case 'delete':
                   if (conversation != null) unawaited(_delete(conversation));
                 case 'archive':
@@ -1090,6 +1224,12 @@ class _AgentConversationViewState extends State<AgentConversationView> {
               ),
               if (conversation != null) ...[
                 const PopupMenuDivider(),
+                if (conversation.historyVersions.isNotEmpty ||
+                    conversation.replyRevisions.isNotEmpty)
+                  PopupMenuItem(
+                    value: 'message-history',
+                    child: Text(l.agentHistoryVersions),
+                  ),
                 PopupMenuItem(
                   value: 'rename',
                   enabled: writable && !_busy.contains('rename'),
@@ -1311,6 +1451,50 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                   },
                   message.text,
                   key: ValueKey('agent-message-${message.id}'),
+                ),
+              if (conversation.pendingRedo == null &&
+                  !conversation.archived &&
+                  !_runtime.runFor(conversation.id).isActive &&
+                  _repository.canWrite &&
+                  !_runtime.maintenance)
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Wrap(
+                    children: [
+                      if (message.role == ConversationRole.user &&
+                          widget.history != null &&
+                          conversation.turns.any(
+                            (turn) => turn.requestMessageId == message.id,
+                          ))
+                        TextButton.icon(
+                          key: ValueKey('agent-edit-redo-${message.id}'),
+                          onPressed:
+                              _busy.contains('history-${conversation.id}')
+                              ? null
+                              : () => _editHistory(conversation, message),
+                          icon: const Icon(Icons.edit_outlined, size: 18),
+                          label: Text(l.agentEditAndRedo),
+                        ),
+                      if (message.role == ConversationRole.assistant &&
+                          message.toolCalls.isEmpty &&
+                          widget.onRegenerateReply != null)
+                        TextButton.icon(
+                          key: ValueKey('agent-regenerate-${message.id}'),
+                          onPressed:
+                              _busy.contains('regenerate-${conversation.id}')
+                              ? null
+                              : () => _perform(
+                                  'regenerate-${conversation.id}',
+                                  () => widget.onRegenerateReply!(
+                                    conversation.id,
+                                    message.id,
+                                  ),
+                                ),
+                          icon: const Icon(Icons.refresh, size: 18),
+                          label: Text(l.agentRegenerateReply),
+                        ),
+                    ],
+                  ),
                 ),
               for (final call in message.toolCalls.where(
                 (call) => !completedCalls.contains(call.id),
@@ -1785,6 +1969,78 @@ class _AgentConversationViewState extends State<AgentConversationView> {
 
 class _SendAgentMessageIntent extends Intent {
   const _SendAgentMessageIntent();
+}
+
+class _EditHistoryDialog extends StatefulWidget {
+  const _EditHistoryDialog({
+    required this.text,
+    required this.hasAttachments,
+    required this.onChanged,
+  });
+  final String text;
+  final bool hasAttachments;
+  final ValueChanged<String> onChanged;
+  @override
+  State<_EditHistoryDialog> createState() => _EditHistoryDialogState();
+}
+
+class _EditHistoryDialogState extends State<_EditHistoryDialog> {
+  late final _controller = TextEditingController(text: widget.text);
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return AlertDialog(
+      title: Text(l.agentEditAndRedo),
+      content: SizedBox(
+        width: 560,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(l.agentRedoExplanation),
+              const SizedBox(height: 16),
+              TextField(
+                key: const ValueKey('agent-redo-input'),
+                controller: _controller,
+                minLines: 3,
+                maxLines: 10,
+                maxLength: 128 * 1024,
+                autofocus: true,
+                onChanged: widget.onChanged,
+                decoration: InputDecoration(
+                  filled: true,
+                  labelText: l.agentYou,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l.cancel),
+        ),
+        ListenableBuilder(
+          listenable: _controller,
+          builder: (context, _) => FilledButton(
+            key: const ValueKey('agent-confirm-redo'),
+            onPressed: _controller.text.trim().isEmpty && !widget.hasAttachments
+                ? null
+                : () => Navigator.of(context).pop(_controller.text),
+            child: Text(l.agentEditAndRedo),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _RenameConversationDialog extends StatefulWidget {

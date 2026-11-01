@@ -10,6 +10,7 @@ import 'package:sked/agent/attachments/attachment_repository.dart';
 import 'package:sked/agent/attachments/conversation_attachments.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
+import 'package:sked/agent/history/conversation_history_service.dart';
 import 'package:sked/agent/knowledge/knowledge_service.dart';
 import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/runtime/agent_runtime_controller.dart';
@@ -80,6 +81,14 @@ class _ReadOnlyToolHost extends ChangeNotifier implements ApplicationToolHost {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+/// These navigation fixtures never invoke history mutations. The application
+/// history suite exercises those commands with the actual storage owners.
+class _NavigationHistory implements ConversationHistoryService {
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw StateError('Navigation fixtures cannot execute history commands.');
+}
+
 /// Only application composition and storage are substituted. User messages,
 /// run state, mode changes and cancellation use the real runtime controller.
 class _Application extends ChangeNotifier implements AgentApplication {
@@ -88,6 +97,8 @@ class _Application extends ChangeNotifier implements AgentApplication {
   final provider = _Provider();
   @override
   final ApplicationToolHost tools = _ReadOnlyToolHost();
+  @override
+  final ConversationHistoryService history = _NavigationHistory();
   @override
   final attachmentStore = AttachmentRepository(
     storage: MemoryAttachmentStorage(),

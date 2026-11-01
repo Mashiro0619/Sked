@@ -7055,6 +7055,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Acceptance confirms the service received the request; it does not confirm that the model read every file.'**
   String get agentFileReceivedHint;
+
+  /// No description provided for @agentEditAndRedo.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit and redo'**
+  String get agentEditAndRedo;
+
+  /// No description provided for @agentRegenerateReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Regenerate reply'**
+  String get agentRegenerateReply;
+
+  /// No description provided for @agentHistoryVersions.
+  ///
+  /// In en, this message translates to:
+  /// **'Message history'**
+  String get agentHistoryVersions;
+
+  /// No description provided for @agentRedoExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'This undoes Agent changes from this entire turn onward, then runs only the edited request. Manual edits and other conversations are preserved.'**
+  String get agentRedoExplanation;
+
+  /// No description provided for @agentRedoPending.
+  ///
+  /// In en, this message translates to:
+  /// **'History redo is unfinished. Continue this operation before sending another request.'**
+  String get agentRedoPending;
+
+  /// No description provided for @agentRedoConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'The complete turn cannot be safely undone. Keep the current data and revise your request, or cancel.'**
+  String get agentRedoConflict;
+
+  /// No description provided for @agentKeepAndRevise.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep data and revise'**
+  String get agentKeepAndRevise;
 }
 
 class _AppLocalizationsDelegate

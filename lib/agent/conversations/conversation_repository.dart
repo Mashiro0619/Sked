@@ -33,9 +33,55 @@ class ConversationRepository extends ChangeNotifier {
   bool _frozen = false;
   final _shutdownRunIds = <String>{};
   bool recovered = false;
+  static final _historyZoneKey = Object();
+  String? _historyOwner;
 
   bool get isLoaded => _loaded;
-  bool get canWrite => _loaded && !_blocked && !_frozen && !_disposed;
+  bool get blocked => _blocked;
+  bool get canWrite =>
+      _loaded && !_blocked && !_frozen && !_disposed && _historyOwner == null;
+
+  Future<String?> pendingHistoryBatch() => _storage.pendingHistoryBatch();
+  Future<void> writePendingHistoryBatch(String? value) =>
+      _storage.writePendingHistoryBatch(value);
+
+  Future<void> reserveHistoryUndo(String batchId) async {
+    if (_historyOwner != null && _historyOwner != batchId) {
+      throw const ConversationStorageException(
+        'Another history batch owns storage.',
+      );
+    }
+    _historyOwner = batchId;
+    await _tail;
+    _notify();
+  }
+
+  Future<T> withHistoryUndo<T>(String batchId, Future<T> Function() action) {
+    if (_historyOwner != batchId) {
+      throw const ConversationStorageException('History reservation is stale.');
+    }
+    return runZoned(action, zoneValues: {_historyZoneKey: batchId});
+  }
+
+  void releaseHistoryUndo(String batchId) {
+    if (_historyOwner != batchId) {
+      throw const ConversationStorageException('History reservation is stale.');
+    }
+    _historyOwner = null;
+    _notify();
+  }
+
+  /// Validates eventual publication before any participant changes live data.
+  void validateHistoryCandidate(AgentConversation candidate) {
+    ConversationArchive.decode(
+      _next(
+        conversations: [
+          for (final item in conversations)
+            if (item.id == candidate.id) candidate else item,
+        ],
+      ).encode(),
+    );
+  }
 
   /// A failed clear may have removed some files. Explicit load/recovery must
   /// establish the surviving archive before any in-memory content can be saved.
@@ -160,6 +206,7 @@ class ConversationRepository extends ChangeNotifier {
         .where(
           (item) =>
               item.status == ConversationStatus.idle &&
+              item.pendingRedo == null &&
               item.draft.isEmpty &&
               item.draftAttachmentIds.isEmpty &&
               item.updatedAt.isBefore(cutoff) &&
@@ -232,6 +279,11 @@ class ConversationRepository extends ChangeNotifier {
           );
         }
         validate?.call(find(id)!);
+        if (find(id)!.pendingRedo != null) {
+          throw const ConversationStorageException(
+            'Finish or cancel the pending history redo before deleting this conversation.',
+          );
+        }
         final remaining = conversations.where((item) => item.id != id).toList();
         await _save(
           ConversationArchive(
@@ -270,9 +322,10 @@ class ConversationRepository extends ChangeNotifier {
         );
       }
       final conversation = _requireConversation(existing.conversationId);
-      final message = conversation.messages
-          .where((item) => item.id == existing.messageId)
-          .first;
+      final message = [
+        ...conversation.messages,
+        ...conversation.historyVersions.expand((version) => version.messages),
+      ].where((item) => item.id == existing.messageId).first;
       if (message.text != prompt) {
         throw const OperationProblem(
           OperationErrorCode.duplicateMismatch,
@@ -331,8 +384,13 @@ class ConversationRepository extends ChangeNotifier {
   ) {
     Map<String, Object?> fixedFields(AgentConversation value) => value.toJson()
       ..removeWhere(
-        (key, _) =>
-            const {'updatedAt', 'status', 'messages', 'runs'}.contains(key),
+        (key, _) => const {
+          'updatedAt',
+          'status',
+          'messages',
+          'runs',
+          'turns',
+        }.contains(key),
       );
     final runIds = current.runs.map((run) => run.id).toList();
     final otherRuns = current.runs
@@ -461,9 +519,13 @@ class ConversationRepository extends ChangeNotifier {
         !(_loaded &&
             !_blocked &&
             !_disposed &&
-            _frozen &&
-            expectedRunId != null &&
-            _shutdownRunIds.contains(expectedRunId))) {
+            ((!_frozen &&
+                    _historyOwner != null &&
+                    Zone.current[_historyZoneKey] == _historyOwner) ||
+                (_frozen &&
+                    _historyOwner == null &&
+                    expectedRunId != null &&
+                    _shutdownRunIds.contains(expectedRunId))))) {
       throw const ConversationStorageException(
         'Conversation storage is unavailable; load or recover it before writing.',
       );

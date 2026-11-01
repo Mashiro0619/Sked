@@ -1,4 +1,10 @@
 import 'dart:async';
+
+import '../history/conversation_history.dart';
+import '../history/conversation_history_preflight.dart';
+import '../history/conversation_redo_coordinator.dart';
+import '../history/conversation_reply_regeneration.dart';
+
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
@@ -99,6 +105,7 @@ class AgentRuntimeController implements AgentUiDelegate {
     required this.onOpenSettings,
     this.onRunSettled,
     this.readOperationReceipt,
+    this.readPreparedOperation,
     this.resolveEndpoint = resolveAgentEndpoint,
     this.readMaintenance = _notInMaintenance,
     this.systemInstructions = _defaultInstructions,
@@ -137,6 +144,7 @@ class AgentRuntimeController implements AgentUiDelegate {
   final VoidCallback onOpenSettings;
   final void Function(OperationScope scope)? onRunSettled;
   final AgentOperationReceiptReader? readOperationReceipt;
+  final ApprovalPlan? Function(ProviderToolCall call)? readPreparedOperation;
   final Uri Function(AgentSettings settings) resolveEndpoint;
   final bool Function() readMaintenance;
   final String Function(AgentConversation conversation) systemInstructions;
@@ -158,6 +166,7 @@ class AgentRuntimeController implements AgentUiDelegate {
   final _httpTransportGrants = <String>{};
   String? _lastTransportConnection;
   var _disposed = false;
+  Future<void> Function(String conversationId)? onContinueHistoryRedo;
 
   @override
   ValueListenable<AgentUiState> get state => _state;
@@ -177,8 +186,16 @@ class AgentRuntimeController implements AgentUiDelegate {
     return null;
   }
 
+  String? requestMessageIdForScope(OperationScope scope) => _runs.values
+      .where((run) => identical(run.scope, scope))
+      .firstOrNull
+      ?.inputMessageId;
+
   @override
   Future<void> send(String conversationId, String text) {
+    if (repository.find(conversationId)?.pendingRedo != null) {
+      return Future.error(const AgentRuntimeException(AgentRuntimeError.busy));
+    }
     if ((text.trim().isEmpty &&
             (repository.find(conversationId)?.draftAttachmentIds.isEmpty ??
                 true)) ||
@@ -198,8 +215,69 @@ class AgentRuntimeController implements AgentUiDelegate {
   /// Resume is an explicit user action. Loading an archive never calls it.
   /// Missing tool replies are recorded as unknown, never executed again here.
   @override
-  Future<void> continueConversation(String conversationId) =>
-      _resumeConversation(conversationId);
+  Future<void> continueConversation(String conversationId) {
+    if (repository.find(conversationId)?.pendingRedo != null) {
+      final continueRedo = onContinueHistoryRedo;
+      return continueRedo == null
+          ? Future.error(const AgentRuntimeException(AgentRuntimeError.busy))
+          : continueRedo(conversationId);
+    }
+    return _resumeConversation(conversationId);
+  }
+
+  Future<void> regenerateReply(String conversationId, String messageId) =>
+      _start(conversationId, replyMessageId: messageId);
+
+  Future<ConversationReplayOutcome> replayHistoryBatch(
+    ConversationRedoBatch batch,
+  ) async {
+    final conversation = repository.find(batch.conversationId);
+    if (conversation?.pendingRedo?.id != batch.id ||
+        batch.phase != ConversationRedoPhase.running) {
+      throw const ConversationHistoryException(
+        ConversationHistoryError.invalidSelection,
+      );
+    }
+    final previous = conversation!.runs
+        .where((run) => run.id == batch.replayRunId)
+        .firstOrNull;
+    if (previous?.status == ConversationRunStatus.completed) {
+      return ConversationReplayOutcome.completed;
+    }
+    await _start(
+      batch.conversationId,
+      reservedRunId: batch.replayRunId,
+      replayBatchId: batch.id,
+      reuseReservedRun: previous != null,
+    );
+    return repository
+                .find(batch.conversationId)
+                ?.runs
+                .where((run) => run.id == batch.replayRunId)
+                .firstOrNull
+                ?.status ==
+            ConversationRunStatus.completed
+        ? ConversationReplayOutcome.completed
+        : ConversationReplayOutcome.interrupted;
+  }
+
+  Future<void> stopForHistoryRedo(String conversationId) async {
+    await stop(conversationId);
+    await _runs[conversationId]?.done;
+    await _queueDrains[conversationId];
+    await repository.update(conversationId, (current) {
+      final removed = current.executionMessages
+          .where((message) => _queuedInput(message) != null)
+          .map((message) => message.id)
+          .toSet();
+      return current.copyWith(
+        messages: current.messages.where(
+          (message) => !removed.contains(message.id),
+        ),
+        status: ConversationStatus.interrupted,
+      );
+    });
+  }
 
   Future<void> _resumeConversation(
     String conversationId, {
@@ -296,7 +374,7 @@ class AgentRuntimeController implements AgentUiDelegate {
   int pendingInputCount(String conversationId) =>
       repository
           .find(conversationId)
-          ?.messages
+          ?.executionMessages
           .where((message) => _queuedInput(message) != null)
           .length ??
       0;
@@ -314,6 +392,10 @@ class AgentRuntimeController implements AgentUiDelegate {
     }
     final run = _runs[conversationId];
     if (run == null) return send(conversationId, text);
+    if (run.replyMessageId != null ||
+        repository.find(conversationId)?.pendingRedo != null) {
+      throw const AgentRuntimeException(AgentRuntimeError.busy);
+    }
     if (!run.accepted) {
       throw const AgentRuntimeException(AgentRuntimeError.busy);
     }
@@ -330,7 +412,10 @@ class AgentRuntimeController implements AgentUiDelegate {
       if (attachmentIds.any((id) => !current.draftAttachmentIds.contains(id))) {
         throw const AgentRuntimeException(AgentRuntimeError.busy);
       }
-      if (current.messages.where((m) => _queuedInput(m) != null).length >= 16) {
+      if (current.executionMessages
+              .where((m) => _queuedInput(m) != null)
+              .length >=
+          16) {
         throw const AgentRuntimeException(AgentRuntimeError.busy);
       }
       return current.copyWith(
@@ -456,26 +541,30 @@ class AgentRuntimeController implements AgentUiDelegate {
       }
       await repository.update(conversationId, (current) {
         _checkRun(run);
+        run.inputMessageId = current.executionMessages
+            .where((message) => message.role == ConversationRole.user)
+            .lastOrNull
+            ?.id;
+        final message = ConversationMessage(
+          id: _id(),
+          role: ConversationRole.assistant,
+          text: '',
+          createdAt: _clock().toUtc(),
+          toolCalls: [
+            ConversationToolCall(
+              id: callId,
+              name: 'host.action',
+              arguments: '{}',
+            ),
+          ],
+        );
+        final messages = [...recovered, message];
         return current.copyWith(
           runId: run.id,
           status: ConversationStatus.running,
           runs: _runRecords(current, run),
-          messages: [
-            ...recovered,
-            ConversationMessage(
-              id: _id(),
-              role: ConversationRole.assistant,
-              text: '',
-              createdAt: _clock().toUtc(),
-              toolCalls: [
-                ConversationToolCall(
-                  id: callId,
-                  name: 'host.action',
-                  arguments: '{}',
-                ),
-              ],
-            ),
-          ],
+          messages: messages,
+          turns: _turnsForStartedRun(current, messages, run, newRequest: false),
         );
       });
       run.accepted = true;
@@ -617,6 +706,12 @@ class AgentRuntimeController implements AgentUiDelegate {
       'planId': plan.id,
       'operationId': operationId,
     };
+    await _bindOperation(
+      run,
+      run.hostToolCallId!,
+      plan,
+      external: summary['action'] is String,
+    );
     final encoded = jsonEncode(record);
     for (final message in _current(run).messages) {
       if (message.role != ConversationRole.notice) continue;
@@ -652,7 +747,7 @@ class AgentRuntimeController implements AgentUiDelegate {
       before.messages.map((m) => m.toJson()).toList(),
     );
     final recovered = await recoverAgentOperationHistory(
-      before.messages,
+      before.executionMessages.toList(),
       readReceipt: readOperationReceipt,
       id: _id,
       clock: _clock,
@@ -671,7 +766,14 @@ class AgentRuntimeController implements AgentUiDelegate {
             signature) {
           throw const AgentRuntimeException(AgentRuntimeError.busy);
         }
-        return current.copyWith(messages: recovered.messages);
+        final messages = [
+          ...current.messages.take(current.executionHistoryStart),
+          ...recovered.messages,
+        ];
+        return current.copyWith(
+          messages: messages,
+          turns: _includeRecoveredMessages(current, messages),
+        );
       });
     }
     return _current(run).messages;
@@ -684,6 +786,9 @@ class AgentRuntimeController implements AgentUiDelegate {
     bool resume = false,
     bool consumeQueued = false,
     String? reservedRunId,
+    String? replayBatchId,
+    bool reuseReservedRun = false,
+    String? replyMessageId,
   }) async {
     if (_disposed) {
       throw const AgentRuntimeException(AgentRuntimeError.disabled);
@@ -699,6 +804,20 @@ class AgentRuntimeController implements AgentUiDelegate {
     if (conversation.archived) {
       throw const AgentRuntimeException(AgentRuntimeError.conversationArchived);
     }
+    if (conversation.pendingRedo != null &&
+        conversation.pendingRedo!.id != replayBatchId) {
+      throw const AgentRuntimeException(AgentRuntimeError.busy);
+    }
+    if (replyMessageId != null) {
+      final reply = conversation.messages
+          .where((m) => m.id == replyMessageId)
+          .firstOrNull;
+      if (reply == null ||
+          reply.role != ConversationRole.assistant ||
+          reply.toolCalls.isNotEmpty) {
+        throw const AgentRuntimeException(AgentRuntimeError.invalidMessage);
+      }
+    }
     if (handoff && conversation.runId != null) return;
     if (handoff &&
         (conversation.messages.isEmpty ||
@@ -710,17 +829,33 @@ class AgentRuntimeController implements AgentUiDelegate {
         ? const <String>[]
         : conversation.draftAttachmentIds;
     final pendingAtStart = resume || consumeQueued
-        ? conversation.messages
+        ? conversation.executionMessages
               .where((m) => _queuedInput(m) != null)
               .firstOrNull
         : null;
     late AgentModelSelection selection;
     try {
-      selection = _selectionForRequest(
-        conversation,
-        configuredSettings,
-        pendingInput: pendingAtStart,
-      );
+      final previous = reuseReservedRun
+          ? conversation.runs
+                .where((item) => item.id == reservedRunId)
+                .firstOrNull
+          : null;
+      selection = previous?.model == null
+          ? _selectionForRequest(
+              conversation,
+              configuredSettings,
+              pendingInput: pendingAtStart,
+            )
+          : AgentModelSelection(
+              modelId: previous!.model!,
+              reasoningEffort:
+                  previous.reasoningEffort ?? AgentReasoningEffort.auto,
+            );
+      if (!configuredSettings.allowsSelection(selection)) {
+        throw const AgentRuntimeException(
+          AgentRuntimeError.modelSelectionRequired,
+        );
+      }
     } on AgentRuntimeException catch (error) {
       _failDisplay(conversationId, error.code.name);
       rethrow;
@@ -765,7 +900,28 @@ class AgentRuntimeController implements AgentUiDelegate {
       mode: conversation.mode,
       startedAt: _clock().toUtc(),
       continuedFromRunId: resume || consumeQueued ? conversation.runId : null,
+      replyMessageId: replyMessageId,
     );
+    if (reuseReservedRun) {
+      final previous = conversation.runs
+          .where((item) => item.id == run.id)
+          .firstOrNull;
+      if (previous == null) {
+        throw const AgentRuntimeException(AgentRuntimeError.busy);
+      }
+      run.usage = ConversationRunUsage(
+        id: previous.id,
+        startedAt: previous.startedAt,
+        kind: previous.kind,
+        protocol: previous.protocol,
+        model: previous.model,
+        reasoningEffort: previous.reasoningEffort,
+        continuedFromRunId: previous.continuedFromRunId,
+        requests: previous.requests,
+        tools: previous.tools,
+      );
+      run.toolCalls = previous.tools.length;
+    }
     _runs[conversationId] = run;
     run.deadline = Timer(
       limits.totalTimeout,
@@ -793,12 +949,16 @@ class AgentRuntimeController implements AgentUiDelegate {
         if (handoff && current.runId != null) {
           throw const AgentRuntimeException(AgentRuntimeError.busy);
         }
-        if (current.runs.any((item) => item.id == run.id)) {
+        if (!reuseReservedRun &&
+            current.runs.any((item) => item.id == run.id)) {
           throw const AgentRuntimeException(AgentRuntimeError.busy);
         }
         var messages = recovered;
         final pending = resume || consumeQueued
-            ? messages.where((m) => _queuedInput(m) != null).firstOrNull
+            ? messages
+                  .skip(current.executionHistoryStart)
+                  .where((m) => _queuedInput(m) != null)
+                  .firstOrNull
             : null;
         if (pending != null) {
           if (pending.id != pendingAtStart?.id ||
@@ -819,20 +979,38 @@ class AgentRuntimeController implements AgentUiDelegate {
             ),
           ];
         }
+        if (userText != null) {
+          messages = [
+            ...messages,
+            ConversationMessage(
+              id: _id(),
+              role: ConversationRole.user,
+              text: userText,
+              createdAt: _clock().toUtc(),
+              modelSelection: selection,
+              attachmentIds: attachmentIds,
+            ),
+          ];
+        }
+        run.inputMessageId = replyMessageId != null
+            ? null
+            : messages
+                  .skip(current.executionHistoryStart)
+                  .where((message) => message.role == ConversationRole.user)
+                  .lastOrNull
+                  ?.id;
+        final turns = _turnsForStartedRun(
+          current,
+          messages,
+          run,
+          newRequest:
+              userText != null ||
+              handoff ||
+              (replayBatchId != null && !reuseReservedRun) ||
+              (pending != null && !_isSteering(pending)),
+        );
         return current.copyWith(
-          messages: userText == null
-              ? messages
-              : [
-                  ...messages,
-                  ConversationMessage(
-                    id: _id(),
-                    role: ConversationRole.user,
-                    text: userText,
-                    createdAt: _clock().toUtc(),
-                    modelSelection: selection,
-                    attachmentIds: attachmentIds,
-                  ),
-                ],
+          messages: messages,
           draft: userText == null ? current.draft : '',
           draftAttachmentIds: current.draftAttachmentIds.where(
             (id) => !attachmentIds.contains(id),
@@ -842,14 +1020,9 @@ class AgentRuntimeController implements AgentUiDelegate {
           connectionFingerprint: fingerprint,
           modelSelection: current.modelSelection ?? selection,
           runs: _runRecords(current, run),
+          turns: turns,
         );
       });
-      run.inputMessageId = repository
-          .find(conversationId)!
-          .messages
-          .where((message) => message.role == ConversationRole.user)
-          .lastOrNull
-          ?.id;
       run.accepted = true;
       run.started.complete(true);
       await _execute(run);
@@ -889,6 +1062,10 @@ class AgentRuntimeController implements AgentUiDelegate {
     Object? failure;
     try {
       _checkRun(run);
+      if (run.replyMessageId != null) {
+        await _executeReplyRegeneration(run);
+        return;
+      }
       final maxRounds = run.settings.maxModelRounds < limits.maxModelRounds
           ? run.settings.maxModelRounds
           : limits.maxModelRounds;
@@ -898,7 +1075,7 @@ class AgentRuntimeController implements AgentUiDelegate {
       final maxCalls = run.settings.maxToolCalls < limits.maxToolCalls
           ? run.settings.maxToolCalls
           : limits.maxToolCalls;
-      for (var round = 0; round < maxRounds; round++) {
+      for (var round = run.usage.requests.length; round < maxRounds; round++) {
         _checkRun(run);
         if (run.recoveryRequired) await _recoverHistory(run);
         final conversation = _current(run);
@@ -979,6 +1156,21 @@ class AgentRuntimeController implements AgentUiDelegate {
             if (run.recoveryRequired && !isAgentRecoveryRead(call.name)) {
               throw const AgentRuntimeException(
                 AgentRuntimeError.interruptedRunNeedsReview,
+              );
+            }
+            if (call.name == 'mutation.commit' ||
+                call.name == 'external.commit') {
+              final plan = readPreparedOperation?.call(call);
+              if (readPreparedOperation != null && plan == null) {
+                throw const AgentRuntimeException(
+                  AgentRuntimeError.invalidToolCall,
+                );
+              }
+              await _bindOperation(
+                run,
+                call.id,
+                plan,
+                external: call.name == 'external.commit',
               );
             }
             invoked = true;
@@ -1126,6 +1318,7 @@ class AgentRuntimeController implements AgentUiDelegate {
       (item) => item.copyWith(
         messages: [...item.messages, message],
         runs: _runRecords(item, run),
+        turns: _appendTurnMessage(item, run, message.id),
       ),
       expectedRunId: run.id,
     );
@@ -1136,6 +1329,242 @@ class AgentRuntimeController implements AgentUiDelegate {
       if (record.id == run.id) run.usage else record,
     if (!item.runs.any((record) => record.id == run.id)) run.usage,
   ];
+
+  List<ConversationTurn> _turnsForStartedRun(
+    AgentConversation current,
+    List<ConversationMessage> messages,
+    _Run run, {
+    required bool newRequest,
+  }) {
+    if (run.replyMessageId != null || run.inputMessageId == null) {
+      return current.turns;
+    }
+    if (newRequest) {
+      run.turnId = run.id;
+      final start = messages.indexWhere(
+        (message) => message.id == run.inputMessageId,
+      );
+      return [
+        ...current.turns,
+        ConversationTurn(
+          id: run.id,
+          requestMessageId: run.inputMessageId!,
+          ownershipComplete: true,
+          messageIds: messages
+              .skip(start)
+              .where((m) => _queuedInput(m) == null)
+              .map((m) => m.id),
+          runIds: [run.id],
+        ),
+      ];
+    }
+    final turn = current.turns
+        .where(
+          (item) =>
+              item.runIds.contains(run.id) ||
+              item.runIds.contains(current.runId) ||
+              item.messageIds.contains(run.inputMessageId),
+        )
+        .lastOrNull;
+    if (turn == null) return current.turns;
+    run.turnId = turn.id;
+    final oldIds = current.messages.map((m) => m.id).toSet();
+    final added = messages.where(
+      (message) =>
+          !oldIds.contains(message.id) && _queuedInput(message) == null,
+    );
+    final ids = {
+      ...turn.messageIds,
+      ...added.map((message) => message.id),
+      run.inputMessageId!,
+    };
+    return [
+      for (final item in current.turns)
+        if (item.id == turn.id)
+          item.copyWith(
+            messageIds: messages
+                .where((message) => ids.contains(message.id))
+                .map((message) => message.id),
+            runIds: {...item.runIds, run.id},
+          )
+        else
+          item,
+    ];
+  }
+
+  List<ConversationTurn> _appendTurnMessage(
+    AgentConversation item,
+    _Run run,
+    String messageId,
+  ) => [
+    for (final turn in item.turns)
+      if (turn.id == run.turnId)
+        turn.copyWith(messageIds: [...turn.messageIds, messageId])
+      else
+        turn,
+  ];
+
+  List<ConversationTurn> _includeRecoveredMessages(
+    AgentConversation current,
+    List<ConversationMessage> messages,
+  ) {
+    final oldIds = current.messages.map((message) => message.id).toSet();
+    return [
+      for (final turn in current.turns)
+        () {
+          final calls = current.messages
+              .where((message) => turn.messageIds.contains(message.id))
+              .expand((message) => message.toolCalls)
+              .map((call) => call.id)
+              .toSet();
+          final ids = {
+            ...turn.messageIds,
+            ...messages
+                .where(
+                  (message) =>
+                      !oldIds.contains(message.id) &&
+                      calls.contains(message.toolCallId),
+                )
+                .map((message) => message.id),
+          };
+          return turn.copyWith(
+            messageIds: messages
+                .where((message) => ids.contains(message.id))
+                .map((message) => message.id),
+          );
+        }(),
+    ];
+  }
+
+  Future<void> _bindOperation(
+    _Run run,
+    String callId,
+    ApprovalPlan? plan, {
+    required bool external,
+  }) async {
+    if (run.turnId == null) return;
+    final operationId = plan?.summary()['operationId'];
+    if (plan != null &&
+        (operationId is! String ||
+            operationId.isEmpty ||
+            operationId.length > 256)) {
+      throw const AgentRuntimeException(AgentRuntimeError.invalidToolCall);
+    }
+    await repository.update(run.conversationId, (current) {
+      _checkRun(run);
+      final currentTurn = current.turns
+          .where((turn) => turn.id == run.turnId)
+          .single;
+      final duplicate = current.turns
+          .expand((turn) => turn.operations)
+          .where((item) => item.operationId == operationId)
+          .firstOrNull;
+      if (duplicate != null &&
+          duplicate.toolCallId == callId &&
+          duplicate.runId == run.id) {
+        return current;
+      }
+      return current.copyWith(
+        turns: [
+          for (final turn in current.turns)
+            if (turn.id == currentTurn.id)
+              turn.copyWith(
+                ownershipComplete:
+                    turn.ownershipComplete &&
+                    operationId != null &&
+                    duplicate == null,
+                operations: [
+                  ...turn.operations,
+                  if (operationId is String && duplicate == null)
+                    ConversationOperationBinding(
+                      operationId: operationId,
+                      store: external
+                          ? ConversationOperationStore.external
+                          : ConversationOperationStore.main,
+                      runId: run.id,
+                      toolCallId: callId,
+                    ),
+                ],
+              )
+            else
+              turn,
+        ],
+      );
+    }, expectedRunId: run.id);
+    _checkRun(run);
+  }
+
+  Future<void> _executeReplyRegeneration(_Run run) async {
+    final conversation = _current(run);
+    final original = conversation.messages.firstWhere(
+      (m) => m.id == run.replyMessageId,
+    );
+    run.tools = const [];
+    final response = await _modelResponse(
+      run,
+      _context(conversation, run, throughMessageId: original.id),
+    );
+    _checkRun(run);
+    validateConversationReplyResponse(response);
+    final totalTokens = run.usage.requests.fold<int>(
+      0,
+      (total, request) => total + (request.usage?.totalTokens ?? 0),
+    );
+    if (totalTokens > run.settings.maxTotalTokens ||
+        totalTokens > limits.maxTotalTokens) {
+      throw const AgentRuntimeException(AgentRuntimeError.tokenBudgetExceeded);
+    }
+    await repository.update(run.conversationId, (current) {
+      _checkRun(run);
+      if (current.messages.firstWhere((m) => m.id == original.id).text !=
+          original.text) {
+        throw const AgentRuntimeException(AgentRuntimeError.busy);
+      }
+      final revisions = [
+        ...current.replyRevisions,
+        if (!current.replyRevisions.any(
+          (item) => item.messageId == original.id,
+        ))
+          ConversationReplyRevision(
+            id: _id(),
+            messageId: original.id,
+            runId: 'original-${original.id}',
+            createdAt: original.createdAt,
+            text: original.text,
+            modelSelection: original.modelSelection ?? run.modelSelection!,
+            providerProtocol:
+                original.providerProtocol ?? run.settings.protocol,
+          ),
+        ConversationReplyRevision(
+          id: _id(),
+          messageId: original.id,
+          runId: run.id,
+          createdAt: _clock().toUtc(),
+          text: response.text,
+          modelSelection: run.modelSelection!,
+          providerProtocol: run.settings.protocol,
+        ),
+      ];
+      return current.copyWith(
+        messages: [
+          for (final message in current.messages)
+            if (message.id == original.id)
+              ConversationMessage(
+                id: original.id,
+                role: original.role,
+                text: response.text,
+                createdAt: original.createdAt,
+                modelSelection: run.modelSelection,
+                providerProtocol: run.settings.protocol,
+              )
+            else
+              message,
+        ],
+        replyRevisions: revisions,
+        runs: _runRecords(current, run),
+      );
+    }, expectedRunId: run.id);
+  }
 
   Future<void> _saveUsage(_Run run, {bool allowCancelled = false}) async {
     if (!allowCancelled) _checkRun(run);
@@ -1178,15 +1607,18 @@ class AgentRuntimeController implements AgentUiDelegate {
       if (hasAttachments) await _setAttachmentDelivery(run, delivery);
       invoked = true;
       await for (final event in provider.stream(
-        ProviderRequest(
-          endpoint: run.endpoint,
-          model: run.settings.model,
-          protocol: _protocol(run.settings.protocol),
-          messages: messages,
-          tools: run.tools,
-          limits: limits.providerLimits,
-          allowInsecureHttp: allowInsecureHttp,
-          reasoningEffort: run.modelSelection?.wireReasoningEffort,
+        _replyRequest(
+          run,
+          ProviderRequest(
+            endpoint: run.endpoint,
+            model: run.settings.model,
+            protocol: _protocol(run.settings.protocol),
+            messages: messages,
+            tools: run.tools,
+            limits: limits.providerLimits,
+            allowInsecureHttp: allowInsecureHttp,
+            reasoningEffort: run.modelSelection?.wireReasoningEffort,
+          ),
         ),
         apiKey: run.apiKey,
         cancellation: run.cancellation,
@@ -1365,7 +1797,21 @@ class AgentRuntimeController implements AgentUiDelegate {
     if (messages.isEmpty || repository.find(run.conversationId) == null) return;
     await repository.update(
       run.conversationId,
-      (item) => item.copyWith(messages: [...item.messages, ...messages]),
+      (item) => item.copyWith(
+        messages: [...item.messages, ...messages],
+        turns: [
+          for (final turn in item.turns)
+            if (turn.id == run.turnId)
+              turn.copyWith(
+                messageIds: [
+                  ...turn.messageIds,
+                  ...messages.map((message) => message.id),
+                ],
+              )
+            else
+              turn,
+        ],
+      ),
       expectedRunId: run.id,
     );
   }
@@ -1660,7 +2106,7 @@ class AgentRuntimeController implements AgentUiDelegate {
   void _refreshSelectionRequirements(AgentSettings settings) {
     _selectionRequirements.clear();
     for (final conversation in repository.conversations) {
-      final pending = conversation.messages
+      final pending = conversation.executionMessages
           .where((message) => _queuedInput(message) != null)
           .firstOrNull
           ?.modelSelection;
@@ -1901,7 +2347,21 @@ class AgentRuntimeController implements AgentUiDelegate {
     );
   }
 
-  List<ProviderMessage> _context(AgentConversation conversation, _Run run) {
+  ProviderRequest _replyRequest(_Run run, ProviderRequest request) =>
+      run.replyMessageId == null
+      ? request
+      : conversationReplyRequest(
+          request,
+          verifiedContext: request.messages
+              .where((message) => message.role != ProviderRole.system)
+              .toList(),
+        );
+
+  List<ProviderMessage> _context(
+    AgentConversation conversation,
+    _Run run, {
+    String? throughMessageId,
+  }) {
     final messages = <ProviderMessage>[];
     final pending = <String>{};
     final seen = <String>{};
@@ -1914,7 +2374,28 @@ class AgentRuntimeController implements AgentUiDelegate {
         ProviderMessage(role: ProviderRole.system, text: instructions),
       );
     }
-    for (final message in conversation.messages) {
+    final through = throughMessageId == null
+        ? conversation.messages.length
+        : conversation.messages.indexWhere(
+                (message) => message.id == throughMessageId,
+              ) +
+              1;
+    for (var index = 0; index < through; index++) {
+      final message = conversation.messages[index];
+      if (index < conversation.executionHistoryStart) {
+        if (message.role != ConversationRole.notice) {
+          messages.add(
+            ProviderMessage(
+              role: message.role == ConversationRole.user
+                  ? ProviderRole.user
+                  : ProviderRole.assistant,
+              text:
+                  '[Imported history; no current operation or permission]\n${message.text}',
+            ),
+          );
+        }
+        continue;
+      }
       if (message.role == ConversationRole.notice) continue;
       if (message.role == ConversationRole.tool) {
         if (!pending.remove(message.toolCallId)) {
@@ -2032,6 +2513,7 @@ class _Run {
     required DateTime startedAt,
     String? continuedFromRunId,
     this.hostAction = false,
+    this.replyMessageId,
   }) : usage = ConversationRunUsage(
          id: id,
          startedAt: startedAt,
@@ -2055,6 +2537,8 @@ class _Run {
   final Uri endpoint;
   final String fingerprint;
   final bool hostAction;
+  final String? replyMessageId;
+  String? turnId;
   ConversationRunUsage usage;
   List<ToolDefinition> tools = const [];
   String? inputMessageId;
@@ -2208,6 +2692,10 @@ String? _queuedInput(ConversationMessage message) {
   }
   return null;
 }
+
+bool _isSteering(ConversationMessage message) =>
+    _queuedInput(message) != null &&
+    (jsonDecode(message.text) as Map)['mode'] == 'steering';
 
 Map<String, Object?> _toolFailureResult(Object error, String key) => {
   'status':

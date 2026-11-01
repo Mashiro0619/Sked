@@ -3992,4 +3992,28 @@ class AppLocalizationsHu extends AppLocalizations {
   @override
   String get agentFileReceivedHint =>
       'Acceptance confirms the service received the request; it does not confirm that the model read every file.';
+
+  @override
+  String get agentEditAndRedo => 'Edit and redo';
+
+  @override
+  String get agentRegenerateReply => 'Regenerate reply';
+
+  @override
+  String get agentHistoryVersions => 'Message history';
+
+  @override
+  String get agentRedoExplanation =>
+      'This undoes Agent changes from this entire turn onward, then runs only the edited request. Manual edits and other conversations are preserved.';
+
+  @override
+  String get agentRedoPending =>
+      'History redo is unfinished. Continue this operation before sending another request.';
+
+  @override
+  String get agentRedoConflict =>
+      'The complete turn cannot be safely undone. Keep the current data and revise your request, or cancel.';
+
+  @override
+  String get agentKeepAndRevise => 'Keep data and revise';
 }

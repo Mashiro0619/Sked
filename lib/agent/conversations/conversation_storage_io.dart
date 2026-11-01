@@ -15,6 +15,44 @@ class PlatformConversationStorage extends ConversationStorage {
 
   final AppStorageLayout _layout;
 
+  Future<File> _historyMarker() async => File(
+    path.join(
+      (await _layout.directory()).path,
+      'Sked_agent_conversations.pending',
+    ),
+  );
+
+  @override
+  Future<String?> pendingHistoryBatch() async {
+    final file = await _historyMarker();
+    if (!await file.exists()) return null;
+    if (await file.length() > 256) {
+      throw const ConversationStorageException(
+        'Invalid pending history marker.',
+      );
+    }
+    final value = await file.readAsString();
+    validatePendingHistoryBatch(value);
+    return value;
+  }
+
+  @override
+  Future<void> writePendingHistoryBatch(String? batchId) async {
+    validatePendingHistoryBatch(batchId);
+    final file = await _historyMarker();
+    if (batchId == null) {
+      if (await file.exists()) await file.delete();
+    } else {
+      await file.writeAsString(batchId, flush: true);
+    }
+    if (await pendingHistoryBatch() != batchId) {
+      throw const ConversationStorageException(
+        'History admission could not be verified.',
+        outcomeUnknown: true,
+      );
+    }
+  }
+
   Future<File> _file(int slot) async => File(
     path.join(
       (await _layout.directory()).path,

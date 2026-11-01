@@ -2581,5 +2581,19 @@
   "agentFilePreviewFailed": "無法顯示此圖片。",
   "@agentFilePreviewFailed": {},
   "agentFileReceivedHint": "服務接受僅表示收到了請求，不表示模型已讀完所有檔案。",
-  "@agentFileReceivedHint": {}
+  "@agentFileReceivedHint": {},
+  "agentEditAndRedo": "編輯並重做",
+  "@agentEditAndRedo": {},
+  "agentRegenerateReply": "重新產生回覆",
+  "@agentRegenerateReply": {},
+  "agentHistoryVersions": "訊息歷史",
+  "@agentHistoryVersions": {},
+  "agentRedoExplanation": "這會撤銷從本輪開始的 Agent 操作，然後僅執行編輯後的請求。手動編輯和其他會話保持不變。",
+  "@agentRedoExplanation": {},
+  "agentRedoPending": "歷史重做尚未完成，請先繼續此操作再傳送新請求。",
+  "@agentRedoPending": {},
+  "agentRedoConflict": "無法安全撤銷完整輪次。請保留目前資料重新調整請求，或取消。",
+  "@agentRedoConflict": {},
+  "agentKeepAndRevise": "保留資料並修改",
+  "@agentKeepAndRevise": {}
 }

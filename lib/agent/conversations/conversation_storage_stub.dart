@@ -14,6 +14,31 @@ class PlatformConversationStorage extends ConversationStorage {
   final Future<SharedPreferences> Function() _preferences;
 
   @override
+  Future<String?> pendingHistoryBatch() async {
+    final prefs = await _preferences();
+    await prefs.reload();
+    final value = prefs.get('${storageKeyPrefix}pending');
+    validatePendingHistoryBatch(value);
+    return value as String?;
+  }
+
+  @override
+  Future<void> writePendingHistoryBatch(String? batchId) async {
+    validatePendingHistoryBatch(batchId);
+    final prefs = await _preferences();
+    final key = '${storageKeyPrefix}pending';
+    final saved = batchId == null
+        ? await prefs.remove(key)
+        : await prefs.setString(key, batchId);
+    if (!saved || await pendingHistoryBatch() != batchId) {
+      throw const ConversationStorageException(
+        'History admission could not be verified.',
+        outcomeUnknown: true,
+      );
+    }
+  }
+
+  @override
   Future<ConversationStorageLoad> load() async {
     final prefs = await _preferences();
     await prefs.reload();

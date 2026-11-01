@@ -231,6 +231,8 @@ class _AgentConversationHostState extends State<AgentConversationHost> {
       readDatasetGeneration: () => application.mutations.generation,
       recoverConversations: application.recoverConversations,
       binaryAttachments: application.binaryAttachments,
+      history: application.history,
+      onRegenerateReply: application.runtime.regenerateReply,
     );
   }
 }

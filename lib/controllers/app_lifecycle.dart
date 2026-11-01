@@ -42,6 +42,15 @@ class AppLifecycle extends ObservableViewState {
   final SchoolImportSecretController _secrets;
   final VoidCallback _notifyViewChanged;
   final DataTransferCodec _codec;
+
+  /// Side-store recovery runs while the loading gate still prevents ordinary
+  /// writes. The application binds this after constructing its store owners.
+  Future<void> Function()? beforeOpeningWrites;
+
+  /// An interrupted side-store transaction may still own the maintenance
+  /// lease. Its owner reconciles that transaction before an ordinary reload
+  /// attempts to acquire a different lease or replace the visible snapshot.
+  Future<void> Function()? beforeRetryStorageLoad;
   String? _storagePath;
 
   AppRepository get _repository => _session.repository;
@@ -142,6 +151,7 @@ class AppLifecycle extends ObservableViewState {
       await _hydrateFromStorage(retry: false);
       if (_repository.canWrite) {
         await _backups.resumePendingRestore();
+        await beforeOpeningWrites?.call();
       }
     } catch (e, st) {
       debugPrint(
@@ -151,10 +161,12 @@ class AppLifecycle extends ObservableViewState {
       final loaded = _repository.current;
       if (loaded != null) {
         final runtimeApiKey = _data.aiApiSettings.customApiKey;
-        _data = withRuntimeSchoolImportApiKey(loaded, runtimeApiKey);
+        _session.restoreData(
+          withRuntimeSchoolImportApiKey(loaded, runtimeApiKey),
+        );
       } else {
         try {
-          _data = await _defaults.build();
+          _session.restoreData(await _defaults.build());
         } catch (fallbackError, fallbackStackTrace) {
           debugPrint(
             'App fallback initialization failed: '
@@ -171,21 +183,25 @@ class AppLifecycle extends ObservableViewState {
   }
 
   Future<void> retryStorageLoad() async {
-    _session.ensureMutationAllowed();
     if (_session.isLoading) return;
+    await beforeRetryStorageLoad?.call();
+    _session.ensureMutationAllowed();
     _session.updateLoadState(isLoading: true);
     _notifyViewChanged();
     try {
       await _hydrateFromStorage(retry: true);
       if (_repository.canWrite) {
         await _backups.resumePendingRestore();
+        await beforeOpeningWrites?.call();
       }
     } catch (error, stackTrace) {
       _session.blockWritesAfterInitializationFailure();
       final loaded = _repository.current;
       if (loaded != null) {
         final runtimeApiKey = _data.aiApiSettings.customApiKey;
-        _data = withRuntimeSchoolImportApiKey(loaded, runtimeApiKey);
+        _session.restoreData(
+          withRuntimeSchoolImportApiKey(loaded, runtimeApiKey),
+        );
       }
       debugPrint('Storage retry initialization failed: $error\n$stackTrace');
       rethrow;
@@ -204,6 +220,7 @@ class AppLifecycle extends ObservableViewState {
     try {
       if (_backups.journalLoadStatus == StorageLoadStatus.corrupt) {
         await _backups.startFreshAfterCorruptJournal();
+        await beforeOpeningWrites?.call();
         return;
       }
       var fresh = await _defaults.build();
@@ -220,6 +237,10 @@ class AppLifecycle extends ObservableViewState {
         if (_backups.journalLoadStatus != StorageLoadStatus.corrupt) rethrow;
         await _backups.startFreshAfterCorruptJournal();
       }
+      await beforeOpeningWrites?.call();
+    } catch (_) {
+      _session.blockWritesAfterInitializationFailure();
+      rethrow;
     } finally {
       _student.selectedWeek = _student.currentWeek();
       _session.updateLoadState(isLoading: false);
