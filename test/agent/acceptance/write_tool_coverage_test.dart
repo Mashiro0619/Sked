@@ -14,16 +14,11 @@ void main() {
   late _TrackingKnowledgeStorage knowledgeStorage;
   setUp(() async {
     knowledgeStorage = _TrackingKnowledgeStorage();
-    debugSetKnowledgeStorageFactory(() => knowledgeStorage);
     h = AcceptanceHarness();
-    await h.initialize();
+    await h.initialize(knowledgeStorage: knowledgeStorage);
   });
   tearDown(() async {
-    try {
-      await h.close();
-    } finally {
-      debugSetKnowledgeStorageFactory(null);
-    }
+    await h.close();
   });
 
   test('all actual tools have an explicit effect and regression owner', () {
@@ -54,6 +49,8 @@ void main() {
           ),
         ),
       );
+      expect(knowledgeStorage.writeCount, greaterThan(0));
+      expect(knowledgeStorage.source, contains('Keep this memory'));
       final before = h.saved.encode();
       final beforeConversations = h.conversations.source;
       final beforeKnowledge = knowledgeStorage.source;

@@ -188,6 +188,8 @@ class AcceptanceHarness {
     AppData? data,
     ProviderClient? provider,
     AttachmentStorage? attachmentStorage,
+    KnowledgeStorage? knowledgeStorage,
+    SelectiveRestoreJournal? selectiveRestoreJournal,
   }) async {
     storage = WorkspaceMemoryStorage(data ?? acceptanceData());
     app = await workspaceProvider(
@@ -196,8 +198,9 @@ class AcceptanceHarness {
       // integration_test imports this harness without test/flutter_test_config;
       // keep every side store explicit so native smoke cannot open user data.
       agentAttachmentStorage: attachmentStorage ?? MemoryAttachmentStorage(),
-      agentKnowledgeStorage: MemoryKnowledgeStorage(),
-      selectiveRestoreJournal: MemorySelectiveRestoreJournal(),
+      agentKnowledgeStorage: knowledgeStorage ?? MemoryKnowledgeStorage(),
+      selectiveRestoreJournal:
+          selectiveRestoreJournal ?? MemorySelectiveRestoreJournal(),
       backupStagingStorage: MemoryAttachmentStorage(),
       agentCredentialStore: credentials,
       agentProvider: provider ?? _NoNetworkProvider(),

@@ -6,9 +6,7 @@ import 'package:sked/agent/attachments/attachment_storage.dart';
 import 'package:sked/agent/knowledge/knowledge_models.dart';
 import 'package:sked/backup/selective_backup_app_data.dart';
 import 'package:sked/backup/selective_backup_models.dart';
-import 'package:sked/backup/backup_staging_storage.dart';
 import 'package:sked/backup/selective_restore_coordinator.dart';
-import 'package:sked/backup/selective_restore_journal.dart';
 import 'package:sked/models/school_site_models.dart';
 import 'package:sked/application/operation_contracts.dart';
 
@@ -114,8 +112,7 @@ void main() {
 
   test('a partially prepared attachment stage is cleaned without admitting any data write', () async {
     final staging = _FailSecondStagedFile();
-    debugSetBackupStagingStorageFactory(() => staging);
-    final runtime = await workspaceProvider();
+    final runtime = await workspaceProvider(backupStagingStorage: staging);
     addTearDown(runtime.dispose);
     final before = runtime.session.committedData.toJson();
     final firstBytes = Uint8List.fromList([1, 2, 3]);
@@ -281,8 +278,7 @@ void main() {
 
   test('phase failure closes ordinary writes and lifecycle retry resumes the same target', () async {
     final journal = _FailAfterMainJournal();
-    debugSetSelectiveRestoreJournalFactory(() => journal);
-    final runtime = await workspaceProvider();
+    final runtime = await workspaceProvider(selectiveRestoreJournal: journal);
     addTearDown(runtime.dispose);
     final source = buildSelectiveBackupInventory(
       appData: runtime.session.committedData,

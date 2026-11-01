@@ -38,6 +38,7 @@ import 'package:sked/services/secret_store.dart';
 import 'package:sked/theme/app_theme.dart';
 import 'package:sked/widgets/desktop_window_host.dart';
 
+import 'memory_conversation_storage.dart';
 import 'timetable_storage_fakes.dart';
 import 'data_transfer_codec.dart';
 
@@ -115,12 +116,16 @@ Future<AppRuntime> workspaceProvider({
   );
   final provider = AppRuntime(
     dataTransferCodec: codec,
-    agentConversationStorage: agentConversationStorage,
-    agentAttachmentStorage: agentAttachmentStorage,
-    selectiveRestoreJournal: selectiveRestoreJournal,
-    backupStagingStorage: backupStagingStorage,
-    agentKnowledgeStorage: agentKnowledgeStorage,
-    agentCredentialStore: agentCredentialStore,
+    // Native integration entries do not inherit test/flutter_test_config.
+    // Each runtime owns separate side stores unless its caller supplies one.
+    agentConversationStorage:
+        agentConversationStorage ?? MemoryConversationStorage(),
+    agentAttachmentStorage: agentAttachmentStorage ?? MemoryAttachmentStorage(),
+    selectiveRestoreJournal:
+        selectiveRestoreJournal ?? MemorySelectiveRestoreJournal(),
+    backupStagingStorage: backupStagingStorage ?? MemoryAttachmentStorage(),
+    agentKnowledgeStorage: agentKnowledgeStorage ?? MemoryKnowledgeStorage(),
+    agentCredentialStore: agentCredentialStore ?? MemoryAgentCredentialStore(),
     agentProvider: agentProvider,
     devicePreferences: devicePreferences ?? DevicePreferencesStore.memory(),
     storage:

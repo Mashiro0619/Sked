@@ -8,7 +8,6 @@ import 'package:sked/backup/selective_backup_device_data.dart';
 import 'package:sked/backup/selective_backup_models.dart';
 import 'package:sked/backup/selective_backup_planner.dart';
 import 'package:sked/backup/selective_restore_coordinator.dart';
-import 'package:sked/backup/selective_restore_journal.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/desktop_layout_preferences.dart';
 import 'package:sked/services/developer_ui_preferences.dart';
@@ -347,10 +346,10 @@ void main() {
       buildInitialAppData(buildDefaultPeriodTimes()),
     );
     final journal = MemorySelectiveRestoreJournal();
-    debugSetSelectiveRestoreJournalFactory(() => journal);
     final runtime = await workspaceProvider(
       storage: storage,
       devicePreferences: disk.open(),
+      selectiveRestoreJournal: journal,
     );
     final service = runtime.backups.selective;
     final source = _source();
@@ -373,6 +372,7 @@ void main() {
     final restarted = await workspaceProvider(
       storage: storage,
       devicePreferences: disk.open(),
+      selectiveRestoreJournal: journal,
     );
     addTearDown(restarted.dispose);
     expect(restarted.backups.selective.recoveryPending, isFalse);
@@ -415,8 +415,10 @@ void main() {
   test('lost stage acknowledgement rereads both device stores instead of writing again', () async {
     final disk = _DeviceDisk();
     final journal = _LostDeviceStage();
-    debugSetSelectiveRestoreJournalFactory(() => journal);
-    final runtime = await workspaceProvider(devicePreferences: disk.open());
+    final runtime = await workspaceProvider(
+      devicePreferences: disk.open(),
+      selectiveRestoreJournal: journal,
+    );
     addTearDown(runtime.dispose);
     final service = runtime.backups.selective;
     final source = _source();
