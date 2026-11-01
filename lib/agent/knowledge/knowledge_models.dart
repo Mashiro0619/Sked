@@ -28,6 +28,7 @@ abstract final class KnowledgeLimits {
   static const tombstones = 4096;
   static const skillBytes = 24 * 1024;
   static const memoryBytes = 8 * 1024;
+  static const undoBatches = 32;
 }
 
 /// A source reference is evidence to recheck, never a writable object handle.
@@ -338,7 +339,7 @@ class KnowledgeChange {
     final after = json['after'] == null
         ? null
         : KnowledgeRecord.fromJson(json['after']);
-    if (before == null && after == null ||
+    if (before == null && after == null && json['expectedRevision'] == 0 ||
         before != null && before.key != key ||
         after != null && after.key != key) {
       knowledgeInvalid('Invalid knowledge change.');
@@ -357,9 +358,20 @@ class KnowledgeChangeSet {
     required this.id,
     required Iterable<KnowledgeChange> changes,
     this.inverseOf,
-  }) : changes = List.unmodifiable(changes) {
+    Iterable<String> inverseOperationIds = const [],
+  }) : changes = List.unmodifiable(changes),
+       inverseOperationIds = List.unmodifiable(inverseOperationIds) {
     knowledgeText(id, max: 256);
     if (inverseOf != null) knowledgeText(inverseOf, max: 512);
+    _validateInverseTargets(inverseOf, this.inverseOperationIds);
+    if (this.inverseOperationIds.isEmpty &&
+        this.changes.any(
+          (change) => change.before == null && change.after == null,
+        )) {
+      knowledgeInvalid(
+        'Only a complete inverse can record an empty net change.',
+      );
+    }
     if (this.changes.isEmpty ||
         this.changes.length > 128 ||
         this.changes.map((change) => change.key).toSet().length !=
@@ -373,12 +385,40 @@ class KnowledgeChangeSet {
   final String id;
   final List<KnowledgeChange> changes;
   final String? inverseOf;
+  final List<String> inverseOperationIds;
+  Iterable<String> get inverseTargets => [?inverseOf, ...inverseOperationIds];
   String get digest => knowledgeDigest(
     jsonEncode({
       'changes': changes.map((change) => change.toJson()).toList(),
       'inverseOf': inverseOf,
+      if (inverseOperationIds.isNotEmpty)
+        'inverseOperationIds': inverseOperationIds,
     }),
   );
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'changes': changes.map((change) => change.toJson()).toList(),
+    'inverseOf': inverseOf,
+    'inverseOperationIds': inverseOperationIds,
+  };
+
+  factory KnowledgeChangeSet.fromJson(Object? value) {
+    final json = knowledgeMap(value, {
+      'id',
+      'changes',
+      'inverseOf',
+      'inverseOperationIds',
+    });
+    final raw = json['changes'];
+    if (raw is! List) knowledgeInvalid('Invalid prepared knowledge changes.');
+    return KnowledgeChangeSet(
+      id: knowledgeText(json['id'], max: 256),
+      changes: raw.map(KnowledgeChange.fromJson),
+      inverseOf: knowledgeOptionalText(json['inverseOf'], max: 512),
+      inverseOperationIds: _inverseIds(json['inverseOperationIds']),
+    );
+  }
 }
 
 class KnowledgeReceipt {
@@ -388,17 +428,23 @@ class KnowledgeReceipt {
     required this.revision,
     required Iterable<KnowledgeChange> changes,
     this.inverseOf,
-  }) : changes = List.unmodifiable(changes);
+    Iterable<String> inverseOperationIds = const [],
+  }) : changes = List.unmodifiable(changes),
+       inverseOperationIds = List.unmodifiable(inverseOperationIds);
   final String operationId;
   final String digest;
   final int revision;
   final List<KnowledgeChange> changes;
   final String? inverseOf;
+  final List<String> inverseOperationIds;
+  Iterable<String> get inverseTargets => [?inverseOf, ...inverseOperationIds];
   Map<String, Object?> referenceJson() => {
     'operationId': operationId,
     'revision': revision,
     'knowledgeReceipt': operationId,
     'inverseOf': inverseOf,
+    if (inverseOperationIds.isNotEmpty)
+      'inverseOperationIds': inverseOperationIds,
     'targets': [
       for (final change in changes)
         {'key': change.key, 'deleted': change.after == null},
@@ -409,15 +455,22 @@ class KnowledgeReceipt {
     'digest': digest,
     'revision': revision,
     'inverseOf': inverseOf,
+    if (inverseOperationIds.isNotEmpty)
+      'inverseOperationIds': inverseOperationIds,
     'changes': changes.map((change) => change.toJson()).toList(),
   };
   factory KnowledgeReceipt.fromJson(Object? value) {
+    if (value is Map<String, dynamic> &&
+        !value.containsKey('inverseOperationIds')) {
+      value = {...value, 'inverseOperationIds': <String>[]};
+    }
     final json = knowledgeMap(value, {
       'operationId',
       'digest',
       'revision',
       'inverseOf',
       'changes',
+      'inverseOperationIds',
     });
     final raw = json['changes'];
     if (raw is! List || raw.isEmpty || raw.length > 128) {
@@ -428,10 +481,19 @@ class KnowledgeReceipt {
       digest: knowledgeText(json['digest'], max: 64),
       revision: knowledgeInteger(json['revision'], min: 1),
       inverseOf: knowledgeOptionalText(json['inverseOf'], max: 512),
+      inverseOperationIds: _inverseIds(json['inverseOperationIds']),
       changes: raw.map(KnowledgeChange.fromJson),
     );
+    _validateInverseTargets(receipt.inverseOf, receipt.inverseOperationIds);
+    if (receipt.inverseOperationIds.isEmpty &&
+        receipt.changes.any(
+          (change) => change.before == null && change.after == null,
+        )) {
+      knowledgeInvalid('An empty net change has no complete inverse range.');
+    }
     if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(receipt.digest) ||
         receipt.inverseOf == receipt.operationId ||
+        receipt.inverseOperationIds.contains(receipt.operationId) ||
         receipt.changes.map((change) => change.key).toSet().length !=
             receipt.changes.length) {
       knowledgeInvalid('Invalid knowledge receipt identity.');
@@ -447,32 +509,90 @@ class KnowledgeReceipt {
   }
 }
 
+/// The knowledge owner keeps the full, preflighted inverse. The chat journal
+/// carries only [operationId], [digest], and the original operation identities.
+class KnowledgeUndoBatch {
+  KnowledgeUndoBatch({
+    required this.batchId,
+    required this.operationId,
+    required this.plan,
+  }) {
+    knowledgeText(batchId, max: 256);
+    knowledgeText(operationId, max: 512);
+    if (operationId != 'history-undo:${knowledgeDigest(batchId)}' ||
+        plan.inverseOf != null ||
+        plan.inverseOperationIds.isEmpty ||
+        plan.inverseOperationIds.contains(operationId)) {
+      knowledgeInvalid('An undo batch requires its complete original range.');
+    }
+  }
+
+  final String batchId;
+  final String operationId;
+  final KnowledgeChangeSet plan;
+  String get digest => plan.digest;
+  List<String> get operationIds => plan.inverseOperationIds;
+  Map<String, Object?> toJson() => {
+    'batchId': batchId,
+    'operationId': operationId,
+    'plan': plan.toJson(),
+    'digest': digest,
+  };
+
+  factory KnowledgeUndoBatch.fromJson(Object? value) {
+    final json = knowledgeMap(value, {
+      'batchId',
+      'operationId',
+      'plan',
+      'digest',
+    });
+    final batch = KnowledgeUndoBatch(
+      batchId: knowledgeText(json['batchId'], max: 256),
+      operationId: knowledgeText(json['operationId'], max: 512),
+      plan: KnowledgeChangeSet.fromJson(json['plan']),
+    );
+    if (batch.digest != json['digest']) {
+      knowledgeInvalid('The prepared inverse digest does not match.');
+    }
+    return batch;
+  }
+}
+
 class KnowledgeArchive {
   KnowledgeArchive({
     this.revision = 0,
+    int? storageRevision,
     Iterable<KnowledgeRecord> records = const [],
     Map<String, int> tombstones = const {},
     Iterable<KnowledgeReceipt> receipts = const [],
-  }) : records = List.unmodifiable(records),
+    Iterable<KnowledgeUndoBatch> undoBatches = const [],
+  }) : storageRevision = storageRevision ?? revision,
+       records = List.unmodifiable(records),
        tombstones = Map.unmodifiable(tombstones),
-       receipts = List.unmodifiable(receipts);
-  static const currentVersion = 1;
+       receipts = List.unmodifiable(receipts),
+       undoBatches = List.unmodifiable(undoBatches);
+  static const currentVersion = 2;
   final int revision;
+  final int storageRevision;
   final List<KnowledgeRecord> records;
   final Map<String, int> tombstones;
   final List<KnowledgeReceipt> receipts;
+  final List<KnowledgeUndoBatch> undoBatches;
   String encode() {
     final source = jsonEncode({
       'version': currentVersion,
       'revision': revision,
+      'storageRevision': storageRevision,
       'records': records.map((record) => record.toJson()).toList(),
       'tombstones': tombstones,
       'receipts': receipts.map((receipt) => receipt.toJson()).toList(),
+      'undoBatches': undoBatches.map((batch) => batch.toJson()).toList(),
     });
     if (utf8.encode(source).length > KnowledgeLimits.archiveBytes ||
         records.length > KnowledgeLimits.records ||
         tombstones.length > KnowledgeLimits.tombstones ||
-        receipts.length > KnowledgeLimits.receipts) {
+        receipts.length > KnowledgeLimits.receipts ||
+        undoBatches.length > KnowledgeLimits.undoBatches) {
       throw const KnowledgeException(
         KnowledgeError.limit,
         'Knowledge storage budget exceeded.',
@@ -485,33 +605,80 @@ class KnowledgeArchive {
     if (utf8.encode(source).length > KnowledgeLimits.archiveBytes) {
       knowledgeInvalid('Knowledge archive too large.');
     }
-    final json = knowledgeMap(jsonDecode(source), {
-      'version',
-      'revision',
-      'records',
-      'tombstones',
-      'receipts',
-    });
-    if (json['version'] != currentVersion) {
+    final raw = jsonDecode(source);
+    if (raw is! Map<String, dynamic> ||
+        raw['version'] != 1 && raw['version'] != currentVersion) {
       throw const KnowledgeException(
         KnowledgeError.unavailable,
         'Unsupported knowledge format.',
       );
     }
+    if (raw['version'] == 1) {
+      knowledgeMap(raw, {
+        'version',
+        'revision',
+        'records',
+        'tombstones',
+        'receipts',
+      });
+      if (raw['receipts'] is List &&
+          (raw['receipts'] as List).any(
+            (receipt) =>
+                receipt is Map && receipt.containsKey('inverseOperationIds'),
+          )) {
+        knowledgeInvalid('A legacy archive contains newer inverse metadata.');
+      }
+      raw['storageRevision'] = raw['revision'];
+      raw['undoBatches'] = <Object?>[];
+    }
+    final json = knowledgeMap(raw, {
+      'version',
+      'revision',
+      'storageRevision',
+      'records',
+      'tombstones',
+      'receipts',
+      'undoBatches',
+    });
     final revision = knowledgeInteger(json['revision']);
+    final storageRevision = knowledgeInteger(
+      json['storageRevision'],
+      min: revision,
+    );
     final rawRecords = json['records'],
         rawReceipts = json['receipts'],
-        rawDeleted = json['tombstones'];
+        rawDeleted = json['tombstones'],
+        rawBatches = json['undoBatches'];
     if (rawRecords is! List ||
         rawRecords.length > KnowledgeLimits.records ||
         rawReceipts is! List ||
         rawReceipts.length > KnowledgeLimits.receipts ||
         rawDeleted is! Map<String, dynamic> ||
-        rawDeleted.length > KnowledgeLimits.tombstones) {
+        rawDeleted.length > KnowledgeLimits.tombstones ||
+        rawBatches is! List ||
+        rawBatches.length > KnowledgeLimits.undoBatches) {
       knowledgeInvalid('Invalid knowledge archive collections.');
     }
     final records = rawRecords.map(KnowledgeRecord.fromJson).toList();
     final receipts = rawReceipts.map(KnowledgeReceipt.fromJson).toList();
+    final batches = rawBatches.map(KnowledgeUndoBatch.fromJson).toList();
+    if (batches.map((batch) => batch.batchId).toSet().length !=
+            batches.length ||
+        batches.map((batch) => batch.operationId).toSet().length !=
+            batches.length) {
+      knowledgeInvalid('Prepared inverse identities conflict.');
+    }
+    for (final batch in batches) {
+      final receipt = receipts
+          .where((item) => item.operationId == batch.operationId)
+          .firstOrNull;
+      if (receipt != null && receipt.digest != batch.digest ||
+          batch.plan.changes.any(
+            (change) => change.expectedRevision > revision,
+          )) {
+        knowledgeInvalid('Prepared inverse disagrees with its owner.');
+      }
+    }
     final tombstones = <String, int>{};
     for (final entry in rawDeleted.entries) {
       if (!RegExp(r'^(skill|memory):[a-z][a-z0-9-]{0,127}$')
@@ -543,8 +710,7 @@ class KnowledgeArchive {
     for (var index = 0; index < receipts.length; index++) {
       final receipt = receipts[index];
       if (index > 0 && receipts[index - 1].revision + 1 != receipt.revision ||
-          receipt.inverseOf != null &&
-              !inverseTargets.add(receipt.inverseOf!)) {
+          receipt.inverseTargets.any((target) => !inverseTargets.add(target))) {
         knowledgeInvalid('Knowledge operation history conflicts.');
       }
       for (final change in receipt.changes) {
@@ -587,9 +753,11 @@ class KnowledgeArchive {
     }
     return KnowledgeArchive(
       revision: revision,
+      storageRevision: storageRevision,
       records: records,
       tombstones: tombstones,
       receipts: receipts,
+      undoBatches: batches,
     );
   }
 }
@@ -597,12 +765,32 @@ class KnowledgeArchive {
 void _validateKnowledgeChange(KnowledgeChange change) {
   if (!RegExp(r'^(skill|memory):[a-z][a-z0-9-]{0,127}$').hasMatch(change.key) ||
       change.expectedRevision < 0 ||
-      change.before == null && change.after == null ||
+      change.before == null &&
+          change.after == null &&
+          change.expectedRevision == 0 ||
       change.before != null &&
           (change.before!.key != change.key ||
               change.before!.revision != change.expectedRevision) ||
       change.after != null && change.after!.key != change.key) {
     knowledgeInvalid('Invalid knowledge change.');
+  }
+}
+
+List<String> _inverseIds(Object? value) {
+  if (value is! Iterable || value.length > KnowledgeLimits.receipts) {
+    knowledgeInvalid('Invalid inverse operation list.');
+  }
+  return List.unmodifiable(value.map((item) => knowledgeText(item, max: 512)));
+}
+
+void _validateInverseTargets(String? inverseOf, List<String> operationIds) {
+  if (inverseOf != null && operationIds.isNotEmpty ||
+      operationIds.length > KnowledgeLimits.receipts ||
+      operationIds.toSet().length != operationIds.length) {
+    knowledgeInvalid('Invalid inverse operation identities.');
+  }
+  for (final id in operationIds) {
+    knowledgeText(id, max: 512);
   }
 }
 

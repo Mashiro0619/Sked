@@ -227,6 +227,22 @@ class AgentKnowledgeService extends ChangeNotifier {
   /// become an override, never replace the app's immutable original assets.
   KnowledgeChangeSet prepareRestore(Iterable<KnowledgeRecord> selected) {
     _checkReady();
+    return repository.prepare({
+      for (final record in normalizeRestoreRecords(selected))
+        record.key: record,
+    }, allowRevive: true);
+  }
+
+  /// Pure provenance normalization for the application-owned restore barrier.
+  /// It does not grant a write or reopen a frozen repository.
+  List<KnowledgeRecord> normalizeRestoreRecords(
+    Iterable<KnowledgeRecord> selected,
+  ) {
+    if (!_loaded || _disposed) {
+      throw StateError(
+        'Load the installed Skill catalog before restoring knowledge.',
+      );
+    }
     final desired = <String, KnowledgeRecord?>{};
     for (var record in selected) {
       if (desired.containsKey(record.key)) {
@@ -255,7 +271,7 @@ class AgentKnowledgeService extends ChangeNotifier {
       }
       desired[record.key] = record;
     }
-    return repository.prepare(desired, allowRevive: true);
+    return List.unmodifiable(desired.values.whereType<KnowledgeRecord>());
   }
 
   Future<List<KnowledgeRecord>> exportSelected(
@@ -274,6 +290,42 @@ class AgentKnowledgeService extends ChangeNotifier {
       result.add(await read(kind, id));
     }
     if (revision != repository.revision) _conflict();
+    return List.unmodifiable(result);
+  }
+
+  Future<List<KnowledgeRecord>> exportFrozenForRestore({
+    required void Function() validateOwner,
+  }) async {
+    if (!_loaded ||
+        _disposed ||
+        !repository.isLoaded ||
+        !repository.isFrozen ||
+        repository.blocked) {
+      throw StateError(
+        'Frozen knowledge must be loaded before backup inspection.',
+      );
+    }
+    validateOwner();
+    final result = <KnowledgeRecord>[];
+    for (final kind in KnowledgeKind.values) {
+      for (var record in list(kind)) {
+        if (record.usesOriginal) {
+          final original = _builtIns[record.id];
+          if (original == null) {
+            throw StateError('The original Skill is unavailable.');
+          }
+          final body = await _loadAsset(
+            '${SharedSkillLoader.assetRoot}${original.asset}',
+          );
+          if (knowledgeDigest(body) != original.contentSha256) {
+            throw StateError('The original Skill checksum is invalid.');
+          }
+          record = record.copyWith(body: body);
+        }
+        result.add(record);
+      }
+    }
+    validateOwner();
     return List.unmodifiable(result);
   }
 

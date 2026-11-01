@@ -278,6 +278,7 @@ class _Repository extends AgentKnowledgeRepository {
     KnowledgeChangeSet plan, {
     required String operationId,
     void Function()? validateOwner,
+    KnowledgeUndoReservation? undoReservation,
   }) {
     if (operationId == watchOperationId && !queued.isCompleted) {
       queued.complete();
@@ -286,6 +287,7 @@ class _Repository extends AgentKnowledgeRepository {
       plan,
       operationId: operationId,
       validateOwner: validateOwner,
+      undoReservation: undoReservation,
     );
   }
 }

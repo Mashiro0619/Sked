@@ -36,8 +36,8 @@ class PlatformKnowledgeStorage extends KnowledgeStorage {
   Future<void> save(KnowledgeArchive archive) async {
     final encoded = encodeKnowledgeSlot(archive);
     final files = [
-      await _file(archive.revision % 2),
-      await _file((archive.revision + 1) % 2),
+      await _file(archive.storageRevision % 2),
+      await _file((archive.storageRevision + 1) % 2),
     ];
     try {
       // Mirror successful deletes: recovery cannot revive an older live copy.

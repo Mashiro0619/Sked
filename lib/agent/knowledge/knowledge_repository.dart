@@ -10,6 +10,14 @@ import 'knowledge_storage.dart';
 export 'knowledge_models.dart';
 export 'knowledge_storage.dart';
 
+/// A host-owned write reservation. It cannot be reconstructed from a tool
+/// argument or backup. Normal editors remain blocked while the holder restores
+/// a preflighted history batch, including after an uncertain owner save.
+class KnowledgeUndoReservation {
+  KnowledgeUndoReservation._(this.batchId);
+  final String batchId;
+}
+
 class AgentKnowledgeRepository extends ChangeNotifier {
   AgentKnowledgeRepository({KnowledgeStorage? storage})
     : _storage = storage ?? KnowledgeStorage();
@@ -18,9 +26,16 @@ class AgentKnowledgeRepository extends ChangeNotifier {
   Future<void> _tail = Future.value();
   bool _loaded = false, _blocked = false, _frozen = false, _disposed = false;
   int _writeEpoch = 0;
+  KnowledgeUndoReservation? _undoReservation;
   bool recovered = false;
   bool get isLoaded => _loaded;
-  bool get canWrite => _loaded && !_blocked && !_frozen && !_disposed;
+  bool get isFrozen => _frozen;
+  bool get canWrite =>
+      _loaded &&
+      !_blocked &&
+      !_frozen &&
+      !_disposed &&
+      _undoReservation == null;
   bool get blocked => _blocked;
   KnowledgeArchive get snapshot => _archive;
   List<KnowledgeRecord> get records => _archive.records;
@@ -32,6 +47,49 @@ class AgentKnowledgeRepository extends ChangeNotifier {
   KnowledgeReceipt? receiptFor(String operationId) => _archive.receipts
       .where((receipt) => receipt.operationId == operationId)
       .firstOrNull;
+  KnowledgeUndoBatch? undoBatchFor(String operationId) => _archive.undoBatches
+      .where((batch) => batch.operationId == operationId)
+      .firstOrNull;
+
+  Future<KnowledgeUndoReservation> reserveForHistoryUndo(String batchId) async {
+    knowledgeText(batchId, max: 256);
+    final current = _undoReservation;
+    if (current != null) {
+      if (current.batchId != batchId) _conflict();
+      await _tail;
+      _checkWritable(undoReservation: current);
+      return current;
+    }
+    _checkWritable();
+    final reservation = KnowledgeUndoReservation._(batchId);
+    _undoReservation = reservation;
+    // A queued, unaccepted editor must not cross the reserved history boundary.
+    // Storage writes which have already started still complete and are drained.
+    _writeEpoch++;
+    _notify();
+    try {
+      await _tail;
+      _checkWritable(undoReservation: reservation);
+      return reservation;
+    } catch (_) {
+      // No history plan was accepted under this newly acquired owner. Keep a
+      // failed store blocked, but do not leave an unreachable reservation that
+      // prevents a reload from restoring ordinary editor access.
+      if (identical(_undoReservation, reservation)) {
+        _undoReservation = null;
+        _writeEpoch++;
+        _notify();
+      }
+      rethrow;
+    }
+  }
+
+  void releaseHistoryUndo(KnowledgeUndoReservation reservation) {
+    if (!identical(_undoReservation, reservation)) _conflict();
+    _undoReservation = null;
+    _writeEpoch++;
+    _notify();
+  }
 
   Future<void> load() {
     final epoch = _writeEpoch;
@@ -87,8 +145,11 @@ class AgentKnowledgeRepository extends ChangeNotifier {
     return KnowledgeChangeSet(id: generateUuidV4(), changes: changes);
   }
 
-  void validate(KnowledgeChangeSet plan) {
-    _checkWritable();
+  void validate(
+    KnowledgeChangeSet plan, {
+    KnowledgeUndoReservation? undoReservation,
+  }) {
+    _checkWritable(undoReservation: undoReservation);
     for (final change in plan.changes) {
       if (versionFor(change.key) != change.expectedRevision ||
           jsonEncode(find(change.key)?.toJson()) !=
@@ -96,10 +157,9 @@ class AgentKnowledgeRepository extends ChangeNotifier {
         _conflict();
       }
     }
-    if (plan.inverseOf != null &&
-        _archive.receipts.any(
-          (receipt) => receipt.inverseOf == plan.inverseOf,
-        )) {
+    if (_archive.receipts.any(
+      (receipt) => receipt.inverseTargets.any(plan.inverseTargets.contains),
+    )) {
       _conflict();
     }
   }
@@ -117,9 +177,9 @@ class AgentKnowledgeRepository extends ChangeNotifier {
     _checkWritable();
     final receipt = receiptFor(operationId);
     if (receipt == null ||
-        receipt.inverseOf != null ||
+        receipt.inverseTargets.isNotEmpty ||
         _archive.receipts.any(
-          (candidate) => candidate.inverseOf == operationId,
+          (candidate) => candidate.inverseTargets.contains(operationId),
         )) {
       _conflict();
     }
@@ -142,15 +202,200 @@ class AgentKnowledgeRepository extends ChangeNotifier {
     );
   }
 
+  /// Evaluates the complete selected range against a shadow copy before any
+  /// inverse is accepted. Revisions rewind only in this private simulation;
+  /// the published inverse advances every affected key once as a single save.
+  KnowledgeChangeSet prepareInverseMany(
+    Iterable<String> operationIds, {
+    KnowledgeUndoReservation? undoReservation,
+  }) {
+    _checkWritable(undoReservation: undoReservation);
+    final ids = operationIds.toList();
+    if (ids.isEmpty ||
+        ids.length > KnowledgeLimits.receipts ||
+        ids.toSet().length != ids.length) {
+      knowledgeInvalid('Select a bounded, unique operation range.');
+    }
+    final originals = <KnowledgeReceipt>[];
+    for (final id in ids) {
+      knowledgeText(id, max: 512);
+      final receipt = receiptFor(id);
+      if (receipt == null ||
+          receipt.inverseTargets.isNotEmpty ||
+          _archive.receipts.any((other) => other.inverseTargets.contains(id))) {
+        _conflict();
+      }
+      originals.add(receipt);
+    }
+    originals.sort((a, b) => b.revision.compareTo(a.revision));
+    final shadow = {for (final record in records) record.key: record};
+    final versions = {
+      ..._archive.tombstones,
+      for (final record in records) record.key: record.revision,
+    };
+    final touched = <String>{};
+    for (final receipt in originals) {
+      for (final change in receipt.changes) {
+        if (versions[change.key] != receipt.revision ||
+            jsonEncode(shadow[change.key]?.toJson()) !=
+                jsonEncode(change.after?.toJson())) {
+          _conflict();
+        }
+        if (change.before == null) {
+          shadow.remove(change.key);
+        } else {
+          shadow[change.key] = change.before!;
+        }
+        versions[change.key] = change.expectedRevision;
+        touched.add(change.key);
+        if (touched.length > 128) {
+          throw const KnowledgeException(
+            KnowledgeError.limit,
+            'The complete inverse has too many targets.',
+          );
+        }
+      }
+    }
+    final keys = touched.toList()..sort();
+    return KnowledgeChangeSet(
+      id: generateUuidV4(),
+      inverseOperationIds: ids,
+      changes: [
+        for (final key in keys)
+          KnowledgeChange(
+            key: key,
+            expectedRevision: versionFor(key),
+            before: find(key),
+            after: shadow[key],
+          ),
+      ],
+    );
+  }
+
+  Future<KnowledgeUndoBatch> prepareInverseBatch({
+    required String batchId,
+    required List<String> operationIds,
+    required KnowledgeUndoReservation reservation,
+  }) {
+    final epoch = _writeEpoch;
+    final ids = List<String>.of(operationIds);
+    return _enqueue(() async {
+      if (epoch != _writeEpoch) _unavailable();
+      _checkWritable(undoReservation: reservation);
+      if (reservation.batchId != batchId) _conflict();
+      final existing = _archive.undoBatches
+          .where((item) => item.batchId == batchId)
+          .firstOrNull;
+      if (existing != null) {
+        if (!listEquals(existing.operationIds, ids)) _conflict();
+        return existing;
+      }
+      final operationId = 'history-undo:${knowledgeDigest(batchId)}';
+      // An evicted owner ticket may not be regenerated against newer data.
+      if (receiptFor(operationId) != null) _conflict();
+      final plan = prepareInverseMany(ids, undoReservation: reservation);
+      final batch = KnowledgeUndoBatch(
+        batchId: batchId,
+        operationId: operationId,
+        plan: plan,
+      );
+      final retained = [..._archive.undoBatches];
+      while (retained.length >= KnowledgeLimits.undoBatches) {
+        final removable = retained.indexWhere(
+          (item) => receiptFor(item.operationId)?.digest == item.digest,
+        );
+        if (removable < 0) {
+          throw const KnowledgeException(
+            KnowledgeError.limit,
+            'Too many incomplete knowledge undo batches.',
+          );
+        }
+        retained.removeAt(removable);
+      }
+      final prepared = KnowledgeArchive(
+        revision: revision,
+        storageRevision: _archive.storageRevision + 1,
+        records: records,
+        tombstones: _archive.tombstones,
+        receipts: _archive.receipts,
+        undoBatches: [...retained, batch],
+      );
+      // Include the eventual receipt and preserved owner plan in admission.
+      // A cross-store coordinator must learn about this limit before the main
+      // data owner has accepted its inverse.
+      _projectCommit(plan, operationId, base: prepared).archive.encode();
+      await _saveOwnerState(prepared);
+      return batch;
+    });
+  }
+
+  void validateInverseBatch(
+    KnowledgeUndoBatch batch, {
+    required KnowledgeUndoReservation reservation,
+  }) {
+    _checkWritable(undoReservation: reservation);
+    if (reservation.batchId != batch.batchId ||
+        undoBatchFor(batch.operationId)?.digest != batch.digest) {
+      _conflict();
+    }
+    final receipt = receiptFor(batch.operationId);
+    if (receipt != null) {
+      if (receipt.digest != batch.digest) _conflict();
+      return;
+    }
+    validate(batch.plan, undoReservation: reservation);
+    _projectCommit(batch.plan, batch.operationId).archive.encode();
+  }
+
+  Future<KnowledgeReceipt> commitInverseBatch(
+    KnowledgeUndoBatch batch, {
+    required KnowledgeUndoReservation reservation,
+  }) {
+    validateInverseBatch(batch, reservation: reservation);
+    return commit(
+      batch.plan,
+      operationId: batch.operationId,
+      undoReservation: reservation,
+      validateOwner: () =>
+          validateInverseBatch(batch, reservation: reservation),
+    );
+  }
+
+  /// Called only when the chat owner discarded an entirely unstarted batch.
+  Future<void> discardInverseBatch(
+    KnowledgeUndoBatch batch, {
+    required KnowledgeUndoReservation reservation,
+  }) => _enqueue(() async {
+    _checkWritable(undoReservation: reservation);
+    if (reservation.batchId != batch.batchId ||
+        undoBatchFor(batch.operationId)?.digest != batch.digest ||
+        receiptFor(batch.operationId) != null) {
+      _conflict();
+    }
+    await _saveOwnerState(
+      KnowledgeArchive(
+        revision: revision,
+        storageRevision: _archive.storageRevision + 1,
+        records: records,
+        tombstones: _archive.tombstones,
+        receipts: _archive.receipts,
+        undoBatches: _archive.undoBatches.where(
+          (item) => item.operationId != batch.operationId,
+        ),
+      ),
+    );
+  });
+
   Future<KnowledgeReceipt> commit(
     KnowledgeChangeSet plan, {
     required String operationId,
     void Function()? validateOwner,
+    KnowledgeUndoReservation? undoReservation,
   }) {
     final epoch = _writeEpoch;
     return _enqueue(() async {
       if (epoch != _writeEpoch) _unavailable();
-      _checkWritable();
+      _checkWritable(undoReservation: undoReservation);
       knowledgeText(operationId, max: 512);
       final old = receiptFor(operationId);
       if (old != null) {
@@ -163,64 +408,184 @@ class AgentKnowledgeRepository extends ChangeNotifier {
         return old;
       }
       validateOwner?.call();
-      validate(plan);
-      final nextRevision = revision + 1;
-      final next = {for (final record in records) record.key: record};
-      final deleted = Map<String, int>.of(_archive.tombstones);
-      final accepted = <KnowledgeChange>[];
-      for (final change in plan.changes) {
-        final after = change.after?.copyWith(revision: nextRevision);
-        if (after == null) {
-          next.remove(change.key);
-          deleted[change.key] = nextRevision;
-        } else {
-          next[change.key] = after;
-          deleted.remove(change.key);
-        }
-        accepted.add(
-          KnowledgeChange(
-            key: change.key,
-            expectedRevision: change.expectedRevision,
-            before: change.before,
-            after: after,
-          ),
-        );
+      validate(plan, undoReservation: undoReservation);
+      final result = _projectCommit(plan, operationId);
+      await _saveOwnerState(result.archive);
+      return result.receipt;
+    });
+  }
+
+  ({KnowledgeArchive archive, KnowledgeReceipt receipt}) _projectCommit(
+    KnowledgeChangeSet plan,
+    String operationId, {
+    KnowledgeArchive? base,
+  }) {
+    final source = base ?? _archive;
+    final nextRevision = source.revision + 1;
+    final next = {for (final record in source.records) record.key: record};
+    final deleted = Map<String, int>.of(source.tombstones);
+    final accepted = <KnowledgeChange>[];
+    for (final change in plan.changes) {
+      final after = change.after?.copyWith(revision: nextRevision);
+      if (after == null) {
+        next.remove(change.key);
+        deleted[change.key] = nextRevision;
+      } else {
+        next[change.key] = after;
+        deleted.remove(change.key);
       }
-      final receipt = KnowledgeReceipt(
-        operationId: operationId,
-        digest: plan.digest,
-        revision: nextRevision,
-        changes: accepted,
-        inverseOf: plan.inverseOf,
+      accepted.add(
+        KnowledgeChange(
+          key: change.key,
+          expectedRevision: change.expectedRevision,
+          before: change.before,
+          after: after,
+        ),
       );
-      final receipts = [..._archive.receipts, receipt];
-      final archive = KnowledgeArchive(
-        revision: nextRevision,
-        records: next.values,
-        tombstones: deleted,
-        receipts: receipts.skip(
+    }
+    final receipt = KnowledgeReceipt(
+      operationId: operationId,
+      digest: plan.digest,
+      revision: nextRevision,
+      changes: accepted,
+      inverseOf: plan.inverseOf,
+      inverseOperationIds: plan.inverseOperationIds,
+    );
+    final receipts = [...source.receipts, receipt];
+    final evictedReceiptIds = receipts
+        .take(
           (receipts.length - KnowledgeLimits.receipts).clamp(
             0,
             receipts.length,
           ),
-        ),
-      );
-      // Admission failures do not poison otherwise healthy storage.
-      archive.encode();
-      try {
-        await _storage.save(archive);
-        _archive = archive;
-      } catch (_) {
-        _blocked = true;
-        _notify();
-        rethrow;
-      }
-      _notify();
-      return receipt;
-    });
+        )
+        .map((item) => item.operationId)
+        .toSet();
+    final archive = KnowledgeArchive(
+      revision: nextRevision,
+      storageRevision: source.storageRevision + 1,
+      records: next.values,
+      tombstones: deleted,
+      receipts: receipts.skip(
+        (receipts.length - KnowledgeLimits.receipts).clamp(0, receipts.length),
+      ),
+      // A completed owner ticket cannot remain after its completion evidence
+      // expires; otherwise it would be misclassified as an incomplete batch
+      // and eventually consume every reserved history slot.
+      undoBatches: source.undoBatches.where(
+        (batch) => !evictedReceiptIds.contains(batch.operationId),
+      ),
+    );
+    return (archive: archive, receipt: receipt);
   }
 
   Future<void> waitForPendingWrites() => _tail;
+
+  Future<KnowledgeArchive> readFrozenForRestore({
+    required void Function() validateOwner,
+  }) => _enqueue(() async {
+    if (!_frozen || _disposed || _undoReservation != null) _unavailable();
+    validateOwner();
+    try {
+      final loaded = await _storage.load();
+      validateOwner();
+      _archive = loaded.archive;
+      _loaded = true;
+      _blocked = false;
+      recovered = loaded.recovered;
+      _notify();
+      return _archive;
+    } catch (_) {
+      _blocked = true;
+      _notify();
+      rethrow;
+    }
+  });
+
+  /// Produces a complete fixed target with only selected content replaced.
+  /// Large selections use bounded receipt groups but one side-store write.
+  KnowledgeArchive projectFrozenRestore(
+    Iterable<KnowledgeRecord> selected, {
+    required String restoreId,
+    required void Function() validateOwner,
+  }) {
+    if (!_frozen ||
+        _disposed ||
+        !_loaded ||
+        _blocked ||
+        _undoReservation != null) {
+      _unavailable();
+    }
+    validateOwner();
+    final desired = selected.toList();
+    if (desired.isEmpty ||
+        desired.length > KnowledgeLimits.records ||
+        desired.map((record) => record.key).toSet().length != desired.length) {
+      knowledgeInvalid('Invalid selected knowledge restore targets.');
+    }
+    var result = _archive;
+    for (var offset = 0; offset < desired.length; offset += 128) {
+      final current = {for (final record in result.records) record.key: record};
+      final plan = KnowledgeChangeSet(
+        id: 'backup-$restoreId-$offset',
+        changes: [
+          for (final record in desired.skip(offset).take(128))
+            KnowledgeChange(
+              key: record.key,
+              expectedRevision:
+                  current[record.key]?.revision ??
+                  result.tombstones[record.key] ??
+                  0,
+              before: current[record.key],
+              after: record,
+            ),
+        ],
+      );
+      result = _projectCommit(
+        plan,
+        'backup-restore:$restoreId:$offset',
+        base: result,
+      ).archive;
+    }
+    KnowledgeArchive.decode(result.encode());
+    return result;
+  }
+
+  Future<void> replaceFrozenForRestore(
+    KnowledgeArchive target, {
+    required void Function() validateOwner,
+  }) => _enqueue(() async {
+    if (!_frozen ||
+        _disposed ||
+        !_loaded ||
+        _blocked ||
+        _undoReservation != null) {
+      _unavailable();
+    }
+    validateOwner();
+    final source = target.encode();
+    KnowledgeArchive.decode(source);
+    if (target.storageRevision <= _archive.storageRevision &&
+        source != _archive.encode()) {
+      _conflict();
+    }
+    try {
+      await _saveOwnerState(target);
+      final confirmed = await _storage.load();
+      validateOwner();
+      if (confirmed.archive.encode() != source) {
+        throw const KnowledgeException(
+          KnowledgeError.unknown,
+          'The knowledge restore could not be read back.',
+        );
+      }
+    } catch (_) {
+      _blocked = true;
+      _notify();
+      rethrow;
+    }
+  });
+
   void freeze() {
     if (!_frozen) _writeEpoch++;
     _frozen = true;
@@ -250,8 +615,28 @@ class AgentKnowledgeRepository extends ChangeNotifier {
     return load();
   }
 
-  void _checkWritable() {
-    if (!canWrite) _unavailable();
+  void _checkWritable({KnowledgeUndoReservation? undoReservation}) {
+    if (!_loaded ||
+        _blocked ||
+        _frozen ||
+        _disposed ||
+        !identical(_undoReservation, undoReservation)) {
+      _unavailable();
+    }
+  }
+
+  Future<void> _saveOwnerState(KnowledgeArchive archive) async {
+    // Admission failures do not poison otherwise healthy storage.
+    archive.encode();
+    try {
+      await _storage.save(archive);
+      _archive = archive;
+    } catch (_) {
+      _blocked = true;
+      _notify();
+      rethrow;
+    }
+    _notify();
   }
 
   Never _unavailable() => throw const KnowledgeException(

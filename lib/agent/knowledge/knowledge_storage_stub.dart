@@ -32,8 +32,8 @@ class PlatformKnowledgeStorage extends KnowledgeStorage {
     final encoded = encodeKnowledgeSlot(archive);
     final preferences = await _preferences();
     final keys = [
-      '$storageKeyPrefix${archive.revision % 2}',
-      '$storageKeyPrefix${(archive.revision + 1) % 2}',
+      '$storageKeyPrefix${archive.storageRevision % 2}',
+      '$storageKeyPrefix${(archive.storageRevision + 1) % 2}',
     ];
     try {
       for (final key in keys) {

@@ -33,7 +33,7 @@ String encodeKnowledgeSlot(KnowledgeArchive archive) {
   KnowledgeArchive.decode(source);
   return jsonEncode({
     'version': 1,
-    'revision': archive.revision,
+    'revision': archive.storageRevision,
     'checksum': knowledgeDigest(source),
     'source': source,
   });
@@ -76,7 +76,7 @@ KnowledgeStorageLoad decodeKnowledgeSlots(List<String?> slots) {
         );
       }
       final archive = KnowledgeArchive.decode(json['source'] as String);
-      if (archive.revision != json['revision']) {
+      if (archive.storageRevision != json['revision']) {
         knowledgeInvalid('Knowledge revision mismatch.');
       }
       valid.add((archive: archive, source: json['source'] as String));
@@ -96,9 +96,11 @@ KnowledgeStorageLoad decodeKnowledgeSlots(List<String?> slots) {
     }
     return KnowledgeStorageLoad(KnowledgeArchive());
   }
-  valid.sort((a, b) => b.archive.revision.compareTo(a.archive.revision));
+  valid.sort(
+    (a, b) => b.archive.storageRevision.compareTo(a.archive.storageRevision),
+  );
   if (valid.length > 1 &&
-      valid[0].archive.revision == valid[1].archive.revision &&
+      valid[0].archive.storageRevision == valid[1].archive.storageRevision &&
       valid[0].source != valid[1].source) {
     throw const KnowledgeException(
       KnowledgeError.unavailable,
