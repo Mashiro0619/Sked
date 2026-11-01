@@ -89,22 +89,34 @@ class ExpressiveSwitcher extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final motion = SkedMotionPolicy.of(context);
-    if (!motion.animationsEnabled) {
-      return child;
-    }
+    // Covering a route changes TickerMode. Keep the wrapper structure stable
+    // so pausing motion or changing accessibility does not dispose its child.
     return AnimatedSwitcher(
-      duration: duration ?? motion.effects(SkedMotionSpeed.standard),
+      duration: motion.animationsEnabled
+          ? duration ?? motion.effects(SkedMotionSpeed.standard)
+          : Duration.zero,
       reverseDuration: motion.effects(SkedMotionSpeed.fast),
       switchInCurve: motion.scheme.enterCurve,
       switchOutCurve: motion.scheme.exitCurve,
-      // Outgoing children stay alive during the transition. Keep them out of
-      // the accessibility tree so a state change is announced only once.
+      // Existing outgoing controllers may be paused mid-transition. Retain
+      // their elements but hide them while motion is disabled, and never
+      // expose an outgoing child as a second interactive or semantic target.
       layoutBuilder: (currentChild, previousChildren) {
         return Stack(
           alignment: Alignment.center,
           children: [
             for (final previousChild in previousChildren)
-              ExcludeSemantics(child: previousChild),
+              ExcludeSemantics(
+                key: previousChild.key,
+                child: IgnorePointer(
+                  child: ExcludeFocus(
+                    child: Offstage(
+                      offstage: !motion.animationsEnabled,
+                      child: previousChild,
+                    ),
+                  ),
+                ),
+              ),
             ?currentChild,
           ],
         );
@@ -115,13 +127,14 @@ class ExpressiveSwitcher extends StatelessWidget {
           curve: motion.scheme.enterCurve,
           reverseCurve: motion.scheme.exitCurve,
         );
-        if (motion.reduceMotion) {
-          return FadeTransition(opacity: curved, child: child);
-        }
         return FadeTransition(
-          opacity: curved,
+          opacity: motion.animationsEnabled
+              ? curved
+              : const AlwaysStoppedAnimation(1),
           child: ScaleTransition(
-            scale: Tween<double>(begin: 0.98, end: 1).animate(curved),
+            scale: motion.spatialAnimationsEnabled
+                ? Tween<double>(begin: 0.98, end: 1).animate(curved)
+                : const AlwaysStoppedAnimation(1),
             child: child,
           ),
         );

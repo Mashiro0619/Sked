@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -9,9 +10,98 @@ import 'package:sked/app_runtime.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/screens/app_home_screen.dart';
+import 'package:sked/screens/agent_page.dart';
 import 'package:sked/services/export_service.dart';
+import 'package:sked/widgets/assistant_pane.dart';
 
 import '../../support/workspace_harness.dart';
+
+Future<void> _until(
+  WidgetTester tester,
+  bool Function() ready,
+  String reason,
+) async {
+  final watch = Stopwatch()..start();
+  while (!ready()) {
+    if (watch.elapsed > const Duration(seconds: 10)) {
+      fail('Timed out waiting for $reason');
+    }
+    await tester.pump(const Duration(milliseconds: 16));
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+  }
+  await tester.pump();
+}
+
+Future<void> _complete(
+  WidgetTester tester,
+  Future<void> future,
+  String reason,
+) async {
+  var done = false;
+  Object? failure;
+  StackTrace? failureStack;
+  unawaited(
+    future.then(
+      (_) => done = true,
+      onError: (Object error, StackTrace stack) {
+        failure = error;
+        failureStack = stack;
+        done = true;
+      },
+    ),
+  );
+  await _until(tester, () => done, reason);
+  if (failure != null) Error.throwWithStackTrace(failure!, failureStack!);
+}
+
+class _ReplyProvider extends ProviderClient {
+  var requests = 0;
+  ProviderCancellationToken? cancellation;
+  StreamController<ProviderEvent>? _events;
+  Future<void>? _closing;
+
+  @override
+  Stream<ProviderEvent> stream(
+    ProviderRequest request, {
+    required String apiKey,
+    ProviderCancellationToken? cancellation,
+  }) {
+    expect(apiKey, isEmpty);
+    expect(request.endpoint.host, 'workspace-return.invalid');
+    expect(request.model, 'return-fixture');
+    requests++;
+    expect(requests, 1);
+    this.cancellation = cancellation;
+    final events = _events = StreamController<ProviderEvent>();
+    unawaited(
+      cancellation!.whenCancelled.then((_) {
+        if (!events.isClosed) {
+          events.addError(const ProviderException(ProviderError.cancelled));
+          _closing ??= events.close();
+        }
+      }),
+    );
+    return events.stream;
+  }
+
+  Future<void> finish() async {
+    final events = _events;
+    if (events == null) return;
+    if (!events.isClosed) {
+      events.add(
+        ProviderCompleted(
+          ProviderResponse(
+            text: 'The synthetic reply is complete.',
+            toolCalls: const [],
+            finishReason: 'stop',
+          ),
+        ),
+      );
+      _closing ??= events.close();
+    }
+    await _closing;
+  }
+}
 
 class _Exports extends ExportService {
   final payloads = <ExportPayload>[];
@@ -29,6 +119,7 @@ class _Exports extends ExportService {
 
 void main() {
   late AppRuntime app;
+  late _ReplyProvider provider;
   late OperationScope scope;
   late _Exports exports;
   late WidgetTester activeTester;
@@ -36,7 +127,11 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    app = await workspaceProvider(mode: AppMode.general);
+    provider = _ReplyProvider();
+    app = await workspaceProvider(
+      mode: AppMode.general,
+      agentProvider: provider,
+    );
     await app.lifecycle.completeFirstLaunch(
       AppMode.general,
       hideWorkspaceNavigation: false,
@@ -92,6 +187,111 @@ void main() {
     );
     await tester.pumpAndSettle();
   }
+
+  Finder key(String value) => find.byKey(ValueKey(value));
+
+  Future<String> openRunningFullWorkspace(WidgetTester tester) async {
+    addTearDown(tester.view.reset);
+    tester.view.devicePixelRatio = 1.25;
+    tester.view.physicalSize = const Size(1582, 853);
+    await tester.runAsync(() async {
+      await app.agent.configure(
+        app.agent.settings.copyWith(
+          enabled: true,
+          endpoint: 'https://workspace-return.invalid/v1',
+          model: 'return-fixture',
+        ),
+      );
+      await app.agent.conversations.create(
+        title: 'Return to the original pane',
+      );
+      // The bundle caches Futures across tests. Load the real catalog outside
+      // FakeAsync so later host tools can await the same cached asset.
+      await app.agent.knowledge.initialize();
+    });
+    await mount(tester);
+    await tester.tap(key('assistant-toggle'));
+    await tester.pumpAndSettle();
+    final id = app.agent.conversations.selectedId!;
+    await tester.enterText(key('agent-composer'), 'Read the current plan.');
+    await tester.pump();
+    await tester.tap(key('agent-send'));
+    await _until(
+      tester,
+      () => provider.requests == 1,
+      'the actual provider request',
+    );
+    expect(app.agent.runtime.state.value.runFor(id).isActive, isTrue);
+    await tester.enterText(key('agent-composer'), 'Keep the pane draft.');
+    await tester.pumpAndSettle();
+    await tester.tap(key('agent-open-workspace'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AgentPage), findsOneWidget);
+    expect(
+      tester.widget<TextField>(key('agent-composer')).controller!.text,
+      'Keep the pane draft.',
+    );
+    await tester.enterText(
+      key('agent-composer'),
+      'Edited in the full workspace.',
+    );
+    return id;
+  }
+
+  Future<void> backFromFullWorkspace(WidgetTester tester) async {
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AgentPage),
+        matching: find.byType(BackButton),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(AgentPage), findsNothing);
+  }
+
+  Future<void> finishAndUnmount(WidgetTester tester) async {
+    await _complete(tester, provider.finish(), 'the provider stream to finish');
+    await _complete(
+      tester,
+      app.agent.quiesce(),
+      'the actual runtime to quiesce',
+    );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets(
+    'real home restores the running Agent pane and draft after full workspace Back',
+    (tester) async {
+      try {
+        final id = await openRunningFullWorkspace(tester);
+        await backFromFullWorkspace(tester);
+        expect(
+          find.byType(AgentAssistantPane).hitTestable(),
+          findsOneWidget,
+          reason: 'Back must restore the original pane automatically.',
+        );
+        expect(key('agent-composer').hitTestable(), findsOneWidget);
+        expect(app.agent.conversations.selectedId, id);
+        expect(
+          tester.widget<TextField>(key('agent-composer')).controller!.text,
+          'Edited in the full workspace.',
+        );
+        expect(
+          app.agent.conversations.find(id)!.draft,
+          'Edited in the full workspace.',
+        );
+        expect(app.agent.runtime.state.value.runFor(id).isActive, isTrue);
+        expect(provider.requests, 1);
+        expect(provider.cancellation!.isCancelled, isFalse);
+        expect(tester.takeException(), isNull);
+      } finally {
+        await finishAndUnmount(tester);
+      }
+    },
+    timeout: const Timeout(Duration(seconds: 45)),
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
 
   testWidgets(
     'navigation host selects the requested course and opens its actual stored detail',
