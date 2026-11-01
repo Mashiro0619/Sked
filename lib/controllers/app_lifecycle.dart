@@ -151,6 +151,7 @@ class AppLifecycle extends ObservableViewState {
       await _hydrateFromStorage(retry: false);
       if (_repository.canWrite) {
         await _backups.resumePendingRestore();
+        await _backups.resumePendingSelectiveRestore();
         await beforeOpeningWrites?.call();
       }
     } catch (e, st) {
@@ -192,6 +193,7 @@ class AppLifecycle extends ObservableViewState {
       await _hydrateFromStorage(retry: true);
       if (_repository.canWrite) {
         await _backups.resumePendingRestore();
+        await _backups.resumePendingSelectiveRestore();
         await beforeOpeningWrites?.call();
       }
     } catch (error, stackTrace) {
@@ -220,6 +222,7 @@ class AppLifecycle extends ObservableViewState {
     try {
       if (_backups.journalLoadStatus == StorageLoadStatus.corrupt) {
         await _backups.startFreshAfterCorruptJournal();
+        await _backups.resumePendingSelectiveRestore();
         await beforeOpeningWrites?.call();
         return;
       }
@@ -237,6 +240,7 @@ class AppLifecycle extends ObservableViewState {
         if (_backups.journalLoadStatus != StorageLoadStatus.corrupt) rethrow;
         await _backups.startFreshAfterCorruptJournal();
       }
+      await _backups.resumePendingSelectiveRestore();
       await beforeOpeningWrites?.call();
     } catch (_) {
       _session.blockWritesAfterInitializationFailure();

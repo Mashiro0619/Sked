@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import 'agent/agent_application.dart';
 import 'agent/attachments/attachment_storage.dart';
+import 'backup/selective_restore_coordinator.dart';
 import 'agent/connection/agent_credential_store.dart';
 import 'agent/conversations/conversation_storage.dart';
 import 'agent/knowledge/knowledge_storage.dart';
@@ -39,6 +40,7 @@ import 'models/timetable_models.dart';
 import 'services/agenda_runtime_mutation_lock.dart';
 import 'services/app_backup_restore_journal.dart';
 import 'services/data_transfer_codec.dart';
+import 'services/device_preferences_store.dart';
 import 'services/school_site_service.dart';
 import 'services/secret_store.dart';
 import 'services/settings_service.dart';
@@ -53,6 +55,7 @@ final class AppRuntime {
     SettingsService? settingsService,
     SecretStore? secretStore,
     SchoolSiteService? schoolSiteService,
+    DevicePreferencesStore? devicePreferences,
     AppBackupRestoreJournal? backupRestoreJournal,
     DataTransferCodec dataTransferCodec = const DataTransferCodec(),
     @visibleForTesting Future<String> Function()? appVersionLoader,
@@ -61,10 +64,13 @@ final class AppRuntime {
     Future<void> Function(Future<void> Function())? workspaceMutationLock,
     @visibleForTesting ConversationStorage? agentConversationStorage,
     @visibleForTesting AttachmentStorage? agentAttachmentStorage,
+    @visibleForTesting SelectiveRestoreJournal? selectiveRestoreJournal,
+    @visibleForTesting AttachmentStorage? backupStagingStorage,
     @visibleForTesting KnowledgeStorage? agentKnowledgeStorage,
     @visibleForTesting AgentCredentialStore? agentCredentialStore,
     @visibleForTesting ProviderClient? agentProvider,
   }) {
+    this.devicePreferences = devicePreferences ?? DevicePreferencesStore();
     final localeCodeResolver =
         systemLocaleCodeResolver ?? _defaultSystemLocaleCodeResolver;
     final schoolSites = schoolSiteService ?? SchoolSiteService();
@@ -206,6 +212,12 @@ final class AppRuntime {
       workspaces: workspaces,
     );
     backups.drainAgent = agent.quiesce;
+    backups.bindSelectiveAgent(
+      agent,
+      devicePreferences: this.devicePreferences,
+      journal: selectiveRestoreJournal,
+      staging: backupStagingStorage,
+    );
     lifecycle.beforeOpeningWrites = agent.recoverHistoryBeforeWrites;
     lifecycle.beforeRetryStorageLoad = () async {
       if (agent.history.ownsMaintenance) {
@@ -258,6 +270,7 @@ final class AppRuntime {
 
   late final AppSession session;
   late final AgentApplication agent;
+  late final DevicePreferencesStore devicePreferences;
   late final AppDataMaintenance maintenance;
   late final AppPersistence persistence;
   late final StudentViewState studentView;
@@ -282,6 +295,7 @@ final class AppRuntime {
   void dispose() {
     if (_isDisposed) return;
     _isDisposed = true;
+    unawaited(backups.closeSelective().whenComplete(devicePreferences.dispose));
     agent.dispose();
     persistence.flushScheduledUiStateSave();
     studentView.dispose();

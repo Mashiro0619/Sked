@@ -9,6 +9,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/agent/conversations/conversation_storage.dart';
 import 'package:sked/agent/attachments/attachment_storage.dart';
 import 'package:sked/agent/knowledge/knowledge_storage.dart';
+import 'package:sked/backup/backup_staging_storage.dart';
+import 'package:sked/backup/selective_restore_coordinator.dart';
+import 'package:sked/backup/selective_restore_journal.dart';
 import 'package:sked/services/app_backup_restore_journal.dart';
 
 class _TestConversationStorage extends ConversationStorage {
@@ -105,6 +108,8 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   debugSetConversationStorageFactory(_TestConversationStorage.new);
   debugSetAttachmentStorageFactory(MemoryAttachmentStorage.new);
   debugSetKnowledgeStorageFactory(MemoryKnowledgeStorage.new);
+  debugSetBackupStagingStorageFactory(MemoryAttachmentStorage.new);
+  debugSetSelectiveRestoreJournalFactory(MemorySelectiveRestoreJournal.new);
   debugSetAppBackupRestoreJournalFactory(
     () => _TestAppBackupRestoreJournal(appBackupRestoreJournalState),
   );
@@ -115,6 +120,10 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
     debugSetAttachmentStorageFactory(() => attachments);
     final knowledge = MemoryKnowledgeStorage();
     debugSetKnowledgeStorageFactory(() => knowledge);
+    final backupStaging = MemoryAttachmentStorage();
+    debugSetBackupStagingStorageFactory(() => backupStaging);
+    final selectiveJournal = MemorySelectiveRestoreJournal();
+    debugSetSelectiveRestoreJournalFactory(() => selectiveJournal);
     appBackupRestoreJournalState.reset();
     FlutterSecureStorage.setMockInitialValues({});
     SharedPreferences.setMockInitialValues({});
@@ -123,6 +132,8 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
     debugSetConversationStorageFactory(null);
     debugSetAttachmentStorageFactory(null);
     debugSetKnowledgeStorageFactory(null);
+    debugSetBackupStagingStorageFactory(null);
+    debugSetSelectiveRestoreJournalFactory(null);
     debugSetAppBackupRestoreJournalFactory(null);
   });
   await testMain();

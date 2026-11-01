@@ -14,6 +14,7 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/desktop_layout_preferences.dart';
 import 'package:sked/services/developer_ui_preferences.dart';
+import 'package:sked/services/device_preferences_store.dart';
 
 import '../../support/agenda_notification_memory.dart';
 import '../../support/workspace_harness.dart';
@@ -187,6 +188,10 @@ class AcceptanceHarness {
       agentConversationStorage: conversations,
       agentCredentialStore: credentials,
       agentProvider: provider ?? _NoNetworkProvider(),
+      devicePreferences: DevicePreferencesStore(
+        layout: layout,
+        developerUi: developer,
+      ),
     );
     await app.agent.initialize();
     conversationId = (await app.agent.conversations.create(

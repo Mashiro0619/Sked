@@ -74,7 +74,8 @@ typedef AppRuntimeFactory = AppRuntime Function();
 /// External services bound to one application root's lifetime.
 ///
 /// Factories stay lazy: the bootstrap creates layout preferences after taking
-/// its lease, and MyApp creates its own UI preferences and agenda service.
+/// its lease. Device preference owners are bound before storage recovery;
+/// MyApp creates the agenda service after bootstrap has begun loading.
 @immutable
 class AppStartupDependencies {
   const AppStartupDependencies({
@@ -118,6 +119,7 @@ class _AppBootstrapState extends State<AppBootstrap> {
   var _status = _AppBootstrapStatus.acquiring;
   AppRuntime? _app;
   DesktopLayoutPreferences? _desktopLayout;
+  DeveloperUiPreferences? _developerUi;
   Future<void>? _appLoad;
   Future<void>? _acquireOperation;
   var _attemptInProgress = false;
@@ -164,14 +166,24 @@ class _AppBootstrapState extends State<AppBootstrap> {
         _app = app;
         try {
           _desktopLayout = _startupDependencies.desktopLayoutFactory();
+          _developerUi = _startupDependencies.developerUiFactory();
+          app.devicePreferences.bindServices(
+            layout: _desktopLayout!,
+            developerUi: _developerUi!,
+          );
         } catch (_) {
           // This runtime has not started loading yet. Do not retain it after
           // a factory failure, which would also prevent the next lease retry.
           _app = null;
+          _desktopLayout?.dispose();
+          _desktopLayout = null;
+          _developerUi?.dispose();
+          _developerUi = null;
           app.dispose();
           rethrow;
         }
         unawaited(_desktopLayout!.load());
+        unawaited(_developerUi!.load());
         final load = app.lifecycle.load();
         _appLoad = load;
         unawaited(
@@ -251,6 +263,14 @@ class _AppBootstrapState extends State<AppBootstrap> {
       debugPrint('App provider shutdown failed: $error\n$stackTrace');
     } finally {
       try {
+        final developerUi = _developerUi;
+        if (developerUi != null) {
+          try {
+            await developerUi.waitForPendingSave();
+          } finally {
+            developerUi.dispose();
+          }
+        }
         final layout = _desktopLayout;
         if (layout != null) {
           try {
@@ -285,6 +305,7 @@ class _AppBootstrapState extends State<AppBootstrap> {
         app: app,
         dataReady: _appLoad,
         desktopLayoutPreferences: _desktopLayout,
+        developerUiPreferences: _developerUi,
         startupDependencies: _startupDependencies,
       );
     }
@@ -420,12 +441,14 @@ class MyApp extends StatefulWidget {
     required this.app,
     this.dataReady,
     this.desktopLayoutPreferences,
+    this.developerUiPreferences,
     this.startupDependencies = const AppStartupDependencies(),
   });
 
   final AppRuntime app;
   final Future<void>? dataReady;
   final DesktopLayoutPreferences? desktopLayoutPreferences;
+  final DeveloperUiPreferences? developerUiPreferences;
   final AppStartupDependencies startupDependencies;
 
   @override
@@ -442,6 +465,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late final DeveloperUiPreferences _developerUi;
   late final DesktopLayoutPreferences _desktopLayout;
   late final bool _ownsDesktopLayout;
+  late final bool _ownsDeveloperUi;
   final _windowModals = DesktopWindowModalObserver();
   final _updatePrompts = UpdatePromptController();
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
@@ -453,13 +477,27 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     _startupDependencies = widget.startupDependencies;
-    _developerUi = _startupDependencies.developerUiFactory();
+    final recoveringDevicePreferences = widget.app.devicePreferences.isFrozen;
+    _ownsDeveloperUi =
+        widget.developerUiPreferences == null && !recoveringDevicePreferences;
+    _developerUi =
+        widget.developerUiPreferences ??
+        (recoveringDevicePreferences
+            ? widget.app.devicePreferences.developerUi
+            : _startupDependencies.developerUiFactory());
     WidgetsBinding.instance.addObserver(this);
     DesktopWindowBridge.instance.prepareClose = _prepareWindowClose;
-    _ownsDesktopLayout = widget.desktopLayoutPreferences == null;
+    _ownsDesktopLayout =
+        widget.desktopLayoutPreferences == null && !recoveringDevicePreferences;
     _desktopLayout =
         widget.desktopLayoutPreferences ??
-        _startupDependencies.desktopLayoutFactory();
+        (recoveringDevicePreferences
+            ? widget.app.devicePreferences.layout
+            : _startupDependencies.desktopLayoutFactory());
+    widget.app.devicePreferences.bindServices(
+      layout: _desktopLayout,
+      developerUi: _developerUi,
+    );
     _desktopLayout.addListener(_onDesktopLayoutChanged);
     unawaited(_desktopLayout.load());
     unawaited(_developerUi.load());
@@ -599,7 +637,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     DesktopWindowBridge.instance.prepareClose = null;
     _agendaCoordinator.setForegroundActive(false);
     _agendaCoordinator.dispose();
-    _developerUi.dispose();
+    if (_ownsDeveloperUi) _developerUi.dispose();
     _desktopLayout.removeListener(_onDesktopLayoutChanged);
     _flushDesktopLayoutPreferences(
       _desktopLayout,

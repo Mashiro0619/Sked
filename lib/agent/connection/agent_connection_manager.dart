@@ -163,6 +163,28 @@ class AgentConnectionManager {
     );
   });
 
+  /// Read-only verification for a host-owned, paused restore. No credential or
+  /// transport permission is returned, and an old destination is never reused.
+  Future<bool> isReconciledForRestore(
+    AgentSettings expected,
+  ) => _enqueue(() async {
+    final current = _current();
+    if (_connectionDigest(current) != _connectionDigest(expected)) return false;
+    final records = await _records();
+    final active = records[0];
+    if (records[1] != null) return false;
+    // A missing local key stays missing; restoring model choices must not
+    // manufacture credentials or prevent the user from repairing them later.
+    if (current.credentialRef != null &&
+        (active == null || active.key == null)) {
+      return true;
+    }
+    return active != null &&
+        active.keyMatches(current) &&
+        active.connectionDigest == _connectionDigest(current) &&
+        active.legacyRetirement == null;
+  });
+
   /// Call after cancelling runs, before discarding this manager. It remains
   /// callable after freeze, and runs behind all previously admitted operations.
   Future<void> clearAll() => _enqueue(() async {

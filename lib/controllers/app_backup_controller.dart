@@ -2,6 +2,11 @@ import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show VoidCallback, debugPrint;
 
+import '../agent/agent_application.dart';
+import '../agent/attachments/attachment_storage.dart';
+import '../backup/selective_backup_models.dart';
+import '../backup/selective_backup_service.dart';
+import '../backup/selective_restore_coordinator.dart';
 import '../data/app_repository.dart';
 import '../data/timetable_storage.dart';
 import '../models/application_ledger.dart';
@@ -10,6 +15,7 @@ import '../models/school_site_models.dart';
 import '../models/timetable_models.dart';
 import '../services/app_backup_restore_journal.dart';
 import '../services/data_transfer_codec.dart';
+import '../services/device_preferences_store.dart';
 import '../services/school_site_service.dart';
 import '../services/school_site_store.dart';
 import '../utils/unique_id.dart';
@@ -98,6 +104,159 @@ class AppBackupController {
   StorageLoadStatus? _journalRecoveryLoadStatus;
   List<String> _journalRecoveryArtifacts = const [];
   String? _corruptAppBackupRestoreJournalArtifact;
+  SelectiveBackupService? _selective;
+
+  bool get hasSelectiveBackup => _selective != null;
+  SelectiveBackupService get selective =>
+      _selective ??
+      (throw StateError('Selective backup has not been bound to the Agent.'));
+
+  /// Bound once by AppRuntime after all real side-store owners exist.
+  void bindSelectiveAgent(
+    AgentApplication agent, {
+    required DevicePreferencesStore devicePreferences,
+    SelectiveRestoreJournal? journal,
+    AttachmentStorage? staging,
+  }) {
+    if (_selective != null) {
+      throw StateError('Selective backup is already bound.');
+    }
+    _selective = SelectiveBackupService(
+      agent: agent,
+      devicePreferences: devicePreferences,
+      journal: journal,
+      staging: staging,
+      readData: () => withRuntimeSchoolImportApiKey(
+        _session.committedData,
+        _data.aiApiSettings.customApiKey,
+      ),
+      readOwnedData: _readSelectiveOwnedData,
+      writeData: (target) async {
+        _validateSelectiveOwner();
+        _data = withRuntimeSchoolImportApiKey(
+          target,
+          _data.aiApiSettings.customApiKey,
+        );
+        _student.selectedWeek = _student.currentWeek();
+        await _persistence.saveAndNotify();
+      },
+      readSites: () async {
+        final result = await _schoolSites.loadSitesResult();
+        if (!result.canWrite) throw SchoolSiteRecoveryException(result);
+        return result.sites;
+      },
+      readOwnedSites: () async {
+        _validateSelectiveOwner();
+        final result = await _schoolSiteRestoreLease.loadSitesResult();
+        if (!result.canWrite) throw SchoolSiteRecoveryException(result);
+        return result.sites;
+      },
+      writeOwnedSites: (sites) =>
+          _schoolSiteRestoreLease.replaceSitesAfterRecovery(sites),
+      runExclusive: _runSelectiveExclusive,
+      validateOwner: _validateSelectiveOwner,
+      onRecoveryChanged: (pending) {
+        if (pending) _session.blockWritesAfterInitializationFailure();
+        _session.refreshReadiness();
+        _notifyViewChanged();
+      },
+    );
+  }
+
+  /// Called while startup/retry still owns the loading gate. This path does
+  /// not initialize or prune conversations, and never admits a new plan.
+  Future<void> resumePendingSelectiveRestore() async {
+    final service = _selective;
+    if (service == null) return;
+    if (await service.refreshRecoveryStatus()) await service.resume();
+  }
+
+  Future<void> closeSelective() async {
+    final service = _selective;
+    if (service == null) return;
+    await service.close();
+    service.dispose();
+  }
+
+  void _validateSelectiveOwner() {
+    if (!_maintenance.isReserved || _session.isClosed) {
+      throw StateError(
+        'Selective restore requires the application maintenance lease.',
+      );
+    }
+    _maintenance.ensureMutationAllowed();
+  }
+
+  Future<AppData> _readSelectiveOwnedData() async {
+    _validateSelectiveOwner();
+    final runtimeKey = _data.aiApiSettings.customApiKey;
+    final loaded = await _repository.retryLoad();
+    _validateSelectiveOwner();
+    if (!_repository.canWrite || loaded == null) {
+      _session.refreshReadiness();
+      throw RecoveryWriteBlockedException(_repository.lastLoadStatus);
+    }
+    final current = withRuntimeSchoolImportApiKey(loaded, runtimeKey);
+    _session.restoreData(current);
+    _session.refreshReadiness();
+    return current;
+  }
+
+  Future<void> _runSelectiveExclusive(Future<void> Function() action) async {
+    void checkReservation() {
+      if (_maintenance.isReserved) {
+        throw const SelectiveBackupException(
+          SelectiveBackupError.unavailable,
+          'Finish the active data maintenance operation before restoring.',
+        );
+      }
+    }
+
+    checkReservation();
+    final recovering = selective.recoveryPending;
+    if (!_session.isLoading && !recovering) {
+      for (final workspace in _data.enabledWorkspaces) {
+        if (_workspaces.hasExitGuards(workspace) &&
+            !await _workspaces.prepareExit(workspace)) {
+          throw const WorkspaceChangeCancelledException();
+        }
+      }
+    }
+    checkReservation();
+    await _enqueueAppBackupRestore(
+      () async {
+        final legacy = await _journal.load(localeCode: _data.localeCode);
+        if (legacy.status != AppBackupRestoreJournalLoadStatus.missing) {
+          throw const SelectiveBackupException(
+            SelectiveBackupError.unavailable,
+            'Finish the earlier complete restore before using selective restore.',
+          );
+        }
+        if (!recovering &&
+            !_session.isLoading &&
+            canonicalBackupJson(_data.toJson()) !=
+                canonicalBackupJson(_session.committedData.toJson())) {
+          throw const SelectiveBackupException(
+            SelectiveBackupError.conflict,
+            'Save or discard pending edits before restoring a backup.',
+          );
+        }
+        await _readSelectiveOwnedData();
+        await action();
+      },
+      allowWhileLoading: _session.isLoading,
+      allowRecoveryBlocked: recovering || _session.isLoading,
+    );
+  }
+
+  void _ensureNoSelectiveRecovery() {
+    if (_selective?.recoveryPending ?? false) {
+      throw const SelectiveBackupException(
+        SelectiveBackupError.unavailable,
+        'Finish the pending selective restore before starting another backup operation.',
+      );
+    }
+  }
 
   AppRepository get _repository => _session.repository;
   AppData get _data => _session.data;
@@ -130,6 +289,7 @@ class AppBackupController {
   Future<void> _appBackupRestoreTail = Future<void>.value();
 
   Future<PreparedAppBackup> prepareJson(String source) async {
+    _ensureNoSelectiveRecovery();
     _maintenance.ensureMutationAllowed();
     final session = _maintenance.dataSessionToken;
     final backup = await _codec.decodeBackup(
@@ -168,6 +328,7 @@ class AppBackupController {
   }
 
   Future<String> exportJson() async {
+    _ensureNoSelectiveRecovery();
     final siteResult = await _schoolSites.loadSitesResult();
     if (!siteResult.canWrite) {
       throw SchoolSiteRecoveryException(siteResult);
@@ -178,6 +339,7 @@ class AppBackupController {
   }
 
   Future<int> importJson(String source, {required AppImportMode mode}) async {
+    _ensureNoSelectiveRecovery();
     if (mode == AppImportMode.addAll) return _addTimetables(source);
     if (_data.enabledWorkspaces.any(_workspaces.hasExitGuards)) {
       return restorePrepared(await prepareJson(source));
@@ -211,6 +373,7 @@ class AppBackupController {
   }
 
   Future<int> _restoreAppBackup(AppData imported, AppBackupData backup) async {
+    _ensureNoSelectiveRecovery();
     await _secrets.ensurePersistenceKnown();
     final schoolSiteLease = _schoolSiteRestoreLease;
     final siteResult = await schoolSiteLease.loadSitesResult();
@@ -381,6 +544,13 @@ class AppBackupController {
     assert(_session.isLoading);
     assert(!_maintenance.isReserved);
     final preflight = await _journal.load(localeCode: _data.localeCode);
+    if (await _selective?.refreshRecoveryStatus() == true &&
+        preflight.status != AppBackupRestoreJournalLoadStatus.missing) {
+      throw const SelectiveBackupException(
+        SelectiveBackupError.conflict,
+        'Two pending backup formats cannot be recovered together.',
+      );
+    }
     if (preflight.status == AppBackupRestoreJournalLoadStatus.missing) {
       // Startup/retry owns the session while _session.isLoading is true, so a clean
       // journal needs neither an app-data reservation nor a school-site lease.

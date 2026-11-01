@@ -28,6 +28,7 @@ import 'package:sked/services/app_backup_restore_journal.dart';
 import 'package:sked/services/developer_sample_data_service.dart';
 import 'package:sked/services/data_transfer_codec.dart';
 import 'package:sked/services/developer_ui_preferences.dart';
+import 'package:sked/services/device_preferences_store.dart';
 import 'package:sked/services/desktop_layout_preferences.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/school_site_service.dart';
@@ -100,6 +101,7 @@ Future<AppRuntime> workspaceProvider({
   KnowledgeStorage? agentKnowledgeStorage,
   AgentCredentialStore? agentCredentialStore,
   ProviderClient? agentProvider,
+  DevicePreferencesStore? devicePreferences,
 }) async {
   final sample = DeveloperSampleDataService.append(
     current: buildInitialAppData(buildDefaultPeriodTimes(), localeCode: locale),
@@ -115,6 +117,7 @@ Future<AppRuntime> workspaceProvider({
     agentKnowledgeStorage: agentKnowledgeStorage,
     agentCredentialStore: agentCredentialStore,
     agentProvider: agentProvider,
+    devicePreferences: devicePreferences ?? DevicePreferencesStore.memory(),
     storage:
         storage ??
         WorkspaceMemoryStorage(sample.data.copyWith(activeMode: mode)),

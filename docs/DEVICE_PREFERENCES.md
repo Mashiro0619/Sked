@@ -2,7 +2,7 @@
 
 `DesktopLayoutPreferences` 保存用户明确设置的面板尺寸；`DeveloperUiPreferences` 保存旧开发者预览偏好。两者使用各自的 SharedPreferences 键，与 AppData 和旧整体 JSON 的格式保持分离。
 
-本层提供偏好快照和受控恢复接口。页面入口、备份选择和跨库恢复协调器的接线由后续改动完成。
+本层提供偏好快照和受控恢复接口。应用启动在加载数据之前绑定同一组界面拥有者，选择性恢复服务负责固定目标、排空侧写并核对持久状态；正式页面入口的进度见[选择性备份](SELECTIVE_BACKUP.md)。
 
 ## 快照格式
 

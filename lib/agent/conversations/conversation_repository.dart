@@ -366,6 +366,70 @@ class ConversationRepository extends ChangeNotifier {
 
   Future<void> waitForPendingWrites() => _tail;
 
+  /// The application restore owner has drained writes and holds its maintenance
+  /// lease. Read actual storage without reopening the ordinary chat write gate.
+  Future<ConversationArchive> readFrozenForRestore({
+    required void Function() validateOwner,
+  }) => _enqueue(() async {
+    if (!_frozen || _disposed) {
+      throw StateError('Conversation restore requires a frozen repository.');
+    }
+    validateOwner();
+    try {
+      final loaded = await _storage.load();
+      validateOwner();
+      final archive = loaded.source == null
+          ? ConversationArchive()
+          : ConversationArchive.decode(loaded.source!);
+      _archive = archive;
+      _loaded = true;
+      _blocked = false;
+      recovered = loaded.recovered;
+      _notify();
+      return archive;
+    } catch (_) {
+      _blocked = true;
+      _notify();
+      rethrow;
+    }
+  });
+
+  Future<void> replaceFrozenForRestore(
+    ConversationArchive target, {
+    required void Function() validateOwner,
+  }) => _enqueue(() async {
+    if (!_frozen || _disposed || !_loaded || _blocked) {
+      throw StateError('Conversation restore requires known frozen storage.');
+    }
+    validateOwner();
+    if (target.revision <= _archive.revision &&
+        target.encode() != _archive.encode()) {
+      throw const ConversationStorageException(
+        'The restore target is older than current conversations.',
+      );
+    }
+    try {
+      await _save(target);
+      final confirmed = await _storage.load();
+      validateOwner();
+      if (confirmed.source != target.encode()) {
+        throw const ConversationStorageException(
+          'The conversation restore could not be read back.',
+        );
+      }
+    } catch (_) {
+      _blocked = true;
+      _notify();
+      rethrow;
+    }
+  });
+
+  void resumeAfterMaintenance() {
+    if (_disposed) return;
+    _frozen = false;
+    _notify();
+  }
+
   /// Closing may finish only the host's already accepted runs. Clear/dispose
   /// pass no run IDs and remain a hard boundary against every later write.
   void freeze({Iterable<String> completingRunIds = const []}) {

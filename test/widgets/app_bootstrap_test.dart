@@ -360,10 +360,10 @@ void main() {
     expect(events, [
       'app.create',
       'layout.create',
-      'layout.read',
-      'app.load',
       'developer.create',
+      'layout.read',
       'developer.read',
+      'app.load',
       'notifications.create',
     ]);
     expect(find.byType(AppHomeScreen), findsOneWidget);
@@ -371,6 +371,8 @@ void main() {
     expect(updates.calls, 0);
     expect(layout.ready, isTrue);
     expect(developer.ready, isTrue);
+    expect(app.devicePreferences.layout, same(layout));
+    expect(app.devicePreferences.developerUi, same(developer));
     final homeContext = tester.element(find.byType(AppHomeScreen));
     final coordinator = homeContext.read<AgendaCoordinator>();
     expect(coordinator.notificationService, same(notifications));
@@ -378,7 +380,7 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
-    expect(developer.disposeCount, 1);
+    expect(developer.disposeCount, 0);
     expect(layout.disposeCount, 0);
     expect(notifications.committedDataReader, isNull);
     expect(app.session.isClosed, isFalse);
