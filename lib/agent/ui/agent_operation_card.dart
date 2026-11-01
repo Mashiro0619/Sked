@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:material_ui/material_ui.dart';
 
+import '../../application/resource_contracts.dart';
 import '../../l10n/app_localizations.dart';
 
 /// Host receipts provide the outcome. Assistant prose never sets this card's
@@ -53,9 +54,14 @@ class AgentOperationCard extends StatelessWidget {
               ? l.agentActionApplied
               : l.agentChangesSaved)
         : l.agentActionFailed;
-    final changes = (receipt['changes'] as List? ?? const [])
+    final storedChanges = (receipt['changes'] as List? ?? const [])
         .whereType<Map>()
         .toList();
+    final namedObjects = storedChanges.any(_isNamedObjectChange);
+    final changes = [
+      for (final change in storedChanges)
+        _presentChange(change, applied: applied, l: l),
+    ];
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Card.outlined(
@@ -99,15 +105,7 @@ class AgentOperationCard extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        '${switch (change['action']) {
-                          'created' => l.agentChangeCreated,
-                          'deleted' => l.agentChangeDeleted,
-                          _ => l.agentChangeUpdated,
-                        }} · ${change['label'] ?? change['key'] ?? ''}',
-                      ),
-                    ),
+                    Expanded(child: Text(_changeText(change, l))),
                     if (change['ref'] is Map &&
                         change['action'] != 'deleted' &&
                         onOpenResource != null)
@@ -135,19 +133,104 @@ class AgentOperationCard extends StatelessWidget {
                     label: Text(l.agentUndo),
                   ),
                 ),
-              ExpansionTile(
-                tilePadding: EdgeInsets.zero,
-                title: Text(l.agentPlanDetails),
-                children: [
-                  SelectableText(
-                    const JsonEncoder.withIndent('  ').convert(receipt),
-                  ),
-                ],
-              ),
+              if (!namedObjects)
+                ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  title: Text(l.agentPlanDetails),
+                  children: [
+                    SelectableText(
+                      const JsonEncoder.withIndent('  ').convert(receipt),
+                    ),
+                  ],
+                ),
             ],
           ),
         ),
       ),
     );
   }
+}
+
+String _changeText(Map change, AppLocalizations l) {
+  final label = change['label'] ?? change['key'] ?? '';
+  if (change['action'] == 'unconfirmed') return '$label';
+  final action = switch (change['action']) {
+    'created' => l.agentChangeCreated,
+    'deleted' => l.agentChangeDeleted,
+    _ => l.agentChangeUpdated,
+  };
+  return '$action · $label';
+}
+
+bool _isNamedObjectChange(Map change) {
+  final key = change['key'];
+  if (key is! String) return false;
+  if (key.startsWith('knowledge.skill:') ||
+      key.startsWith('knowledge.memory:')) {
+    return true;
+  }
+  final after = change['after'];
+  return key.startsWith('backup.') &&
+      after is Map &&
+      after['kind'] is String &&
+      _objectLabel(after) != null;
+}
+
+Map _presentChange(
+  Map change, {
+  required bool applied,
+  required AppLocalizations l,
+}) {
+  if (!_isNamedObjectChange(change)) return change;
+  final before = change['before'], after = change['after'];
+  final key = change['key'] as String;
+  final label =
+      _objectLabel(after) ??
+      _objectLabel(before) ??
+      (key.startsWith('knowledge.skill:') ? l.agentSkills : l.agentMemories);
+  // A prepared or uncertain target does not prove that the change took effect.
+  // Keep these rows neutral and do not link to a restored object yet.
+  if (!applied) return {'action': 'unconfirmed', 'label': label};
+  // Adding or removing a local override does not create/delete the installed
+  // Skill. Its logical identity already exists independently of that record.
+  final builtInSkill =
+      key.startsWith('knowledge.skill:') &&
+      ((after is Map && after['builtIn'] == true) ||
+          (before is Map && before['builtIn'] == true));
+  final action = builtInSkill
+      ? 'updated'
+      : before == null
+      ? 'created'
+      : after == null
+      ? 'deleted'
+      : 'updated';
+  ResourceRef? ref;
+  if (key.startsWith('backup.') && after is Map) {
+    final kind = switch (after['kind']) {
+      'timetable' => ResourceKind.timetable,
+      'periodTimeSet' => ResourceKind.periodTimeSet,
+      'calendar' => ResourceKind.calendar,
+      _ => null,
+    };
+    final id = after['id'];
+    if (kind != null && id is String && id.isNotEmpty) {
+      ref = ResourceRef(kind: kind, id: id);
+    }
+  }
+  // Display projections never change the stored receipt or infer write status.
+  // Knowledge has no ResourceRef route; its saved name is the visible result.
+  return {
+    'action': action,
+    'label': label,
+    if (ref != null) 'ref': ref.toJson(),
+  };
+}
+
+String? _objectLabel(Object? value) {
+  if (value is! Map) return null;
+  for (final field in ['label', 'title', 'name']) {
+    final label = value[field];
+    if (label is String && label.trim().isNotEmpty) return label;
+  }
+  return null;
 }
