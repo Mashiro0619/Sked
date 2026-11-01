@@ -26,6 +26,7 @@ dependencies:
   http: ^1.5.0
   html: ^0.15.7
   crypto: ^3.0.6
+  archive: 4.5.2
   package_info_plus: ^10.2.2
   # 6.2 is the first line whose Android plugin supports AGP 9.
   flutter_inappwebview: ^6.2.0-beta.3
