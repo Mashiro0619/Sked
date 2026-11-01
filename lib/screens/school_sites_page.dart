@@ -25,6 +25,7 @@ import '../services/school_site_service.dart';
 import '../services/school_site_store.dart';
 import '../services/text_file_picker.dart';
 import '../utils/platform_capabilities.dart';
+import '../utils/unique_id.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/export_save_flow.dart';
 import '../widgets/expressive_empty_state.dart';
@@ -335,7 +336,7 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
     },
   );
 
-  String? _selectedSiteUrl;
+  String? _selectedSiteId;
 
   Widget _buildSiteBrowser(
     AppLocalizations l10n,
@@ -354,9 +355,7 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
             navigation: 280,
             content: 480,
           );
-      final selected = _sites.indexWhere(
-        (site) => site.loginUrl == _selectedSiteUrl,
-      );
+      final selected = _sites.indexWhere((site) => site.id == _selectedSiteId);
       final selectedIndex = selected < 0 ? 0 : selected;
       final site = _sites[selectedIndex];
       final factor = WorkbenchLayoutPolicy.textFactor(
@@ -380,7 +379,7 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
         onTap: _siteEditorOpen
             ? null
             : wide
-            ? () => setState(() => _selectedSiteUrl = _sites[index].loginUrl)
+            ? () => setState(() => _selectedSiteId = _sites[index].id)
             : _supportsWebImport && !_webImportOpen
             ? () => _openWebImportForSite(_sites[index])
             : null,
@@ -869,7 +868,7 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
         initialSite: original,
         onSave: (site) async {
           final currentIndex = _sites.indexWhere(
-            (item) => item.loginUrl == original.loginUrl,
+            (item) => item.id == original.id,
           );
           if (currentIndex < 0) return false;
           final next = [..._sites];
@@ -926,7 +925,7 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
     required Future<bool> Function(SchoolSite) onSave,
   }) => _editorPane.show<void>(
     (_) => _SchoolSiteEditor(initialSite: initialSite, onSave: onSave),
-    selectionId: initialSite?.loginUrl,
+    selectionId: initialSite?.id,
     dismissOnCanvasTap: false,
   );
 
@@ -941,12 +940,13 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
     final l10n = AppLocalizations.of(context);
     setState(() => _siteMutationInProgress = true);
     try {
-      await _siteService.saveSites(sites);
+      final identifiedSites = assignSchoolSiteIdentities(sites);
+      await _siteService.saveSites(identifiedSites);
       if (!mounted) {
         return false;
       }
       setState(() {
-        _sites = sites;
+        _sites = identifiedSites;
       });
       _showMessage(successMessage ?? l10n.schoolSitesSaved);
       return true;
@@ -1169,12 +1169,19 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
     List<SchoolSite> current,
     List<SchoolSite> imported,
   ) {
-    final merged = [...current];
-    final seen = {for (final site in current) _schoolSiteIdentity(site)};
+    final additions = <SchoolSite>[];
+    final seen = {for (final site in current) _schoolSiteContentKey(site)};
     for (final site in imported) {
-      if (seen.add(_schoolSiteIdentity(site))) merged.add(site);
+      if (seen.add(_schoolSiteContentKey(site))) additions.add(site);
     }
-    return merged;
+    return [
+      ...current,
+      ...assignSchoolSiteIdentities(
+        additions,
+        occupiedIds: current.map((site) => site.id).toSet(),
+        copyConflicts: true,
+      ),
+    ];
   }
 
   Future<void> _shareJson({ExportPayload? payload}) async {
@@ -1283,7 +1290,7 @@ String _schoolSiteRecoveryArtifactFileName(String artifactPath) {
   return fileName;
 }
 
-String _schoolSiteIdentity(SchoolSite site) {
+String _schoolSiteContentKey(SchoolSite site) {
   return '${site.name.trim()}\x00${site.loginUrl.trim()}';
 }
 
@@ -1456,6 +1463,9 @@ class _SchoolSiteEditor extends StatefulWidget {
 
 class _SchoolSiteEditorState extends State<_SchoolSiteEditor>
     with EditorExitGuard<_SchoolSiteEditor> {
+  late final _siteId = widget.initialSite?.id.isNotEmpty == true
+      ? widget.initialSite!.id
+      : generateUuidV4();
   late final _name = TextEditingController(
     text: widget.initialSite?.name ?? '',
   );
@@ -1516,6 +1526,7 @@ class _SchoolSiteEditorState extends State<_SchoolSiteEditor>
     if (_saving) return;
     final l = AppLocalizations.of(context);
     final site = SchoolSite(
+      id: _siteId,
       name: _name.text.trim(),
       loginUrl: _url.text.trim(),
     );

@@ -272,13 +272,15 @@ class SchoolSiteService {
     };
     SchoolSiteStoreCandidate? selected;
     List<SchoolSite>? selectedSites;
+    var needsIdentityMigration = false;
     UnsupportedSchoolSiteStorageVersionException? unsupportedVersionError;
     StackTrace? unsupportedVersionStackTrace;
     for (final candidate in stored.candidates) {
       try {
-        final decodedSites = decodeSchoolSitesStrict(candidate.source);
+        final decoded = decodeSchoolSiteStorageSnapshot(candidate.source);
         if (selected == null && unsupportedVersionError == null) {
-          selectedSites = decodedSites;
+          selectedSites = decoded.sites;
+          needsIdentityMigration = decoded.needsIdentityMigration;
           selected = candidate;
         }
       } on UnsupportedSchoolSiteStorageVersionException catch (
@@ -316,6 +318,7 @@ class SchoolSiteService {
 
     if (selected != null && selectedSites != null) {
       var preservedArtifacts = const <String>[];
+      final identifiedSites = assignSchoolSiteIdentities(selectedSites);
       try {
         final mustPreserveInvalidArtifacts = invalidArtifacts.isNotEmpty;
         if (mustPreserveInvalidArtifacts) {
@@ -327,7 +330,9 @@ class SchoolSiteService {
               'School-site recovery did not preserve the invalid snapshots.',
             );
           }
-          await _store.saveAfterRecovery(selected.source);
+          await _store.saveAfterRecovery(
+            encodeSchoolSiteStorageSnapshot(identifiedSites),
+          );
         } else {
           storageChanged =
               selected.artifact == SchoolSiteStoreArtifact.temporary ||
@@ -337,6 +342,12 @@ class SchoolSiteService {
               SchoolSiteStoreArtifact.primary,
             ),
           );
+          if (needsIdentityMigration) {
+            // Publish assigned identities only after the existing transactional
+            // store confirms the v2 snapshot. A failed migration blocks writes.
+            storageChanged = true;
+            await _store.save(encodeSchoolSiteStorageSnapshot(identifiedSites));
+          }
         }
       } catch (error, stackTrace) {
         final recoveryArtifacts = preservedArtifacts.isNotEmpty
@@ -366,7 +377,7 @@ class SchoolSiteService {
           ? stored.historicalRecoveryArtifacts
           : preservedArtifacts;
       return SchoolSiteLoadResult(
-        sites: selectedSites,
+        sites: identifiedSites,
         recoveryStatus: switch (selected.artifact) {
           SchoolSiteStoreArtifact.temporary =>
             SchoolSiteRecoveryStatus.restoredFromTemporary,
@@ -501,7 +512,7 @@ class SchoolSiteService {
 
   Future<List<SchoolSite>> _loadBundledSites() async {
     final source = await rootBundle.loadString(schoolSitesAssetPath);
-    return decodeSchoolSitesStrict(source);
+    return decodeSchoolSitesStrict(source, requireStableIds: true);
   }
 
   Future<List<String>> _refreshRecoveryArtifacts(List<String> fallback) async {

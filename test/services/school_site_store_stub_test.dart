@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sked/models/school_site_models.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/school_site_store.dart';
 import 'package:sked/services/school_site_store_stub.dart' as browser_store;
@@ -13,6 +14,49 @@ void main() {
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
+  });
+
+  test(
+    'browser storage retains migrated identities across new service instances',
+    () async {
+      SharedPreferences.setMockInitialValues({
+        schoolSitesWebStorageKey:
+            '[{"name":"Legacy","loginUrl":"https://legacy.test"}]',
+      });
+      final first = SchoolSiteService(
+        store: browser_store.PlatformSchoolSiteStore(),
+      );
+      final sites = await first.loadSites();
+      expect(validSchoolSiteId(sites.single.id), isTrue);
+      final preferences = await SharedPreferences.getInstance();
+      final saved = preferences.getString(schoolSitesWebStorageKey)!;
+      expect(
+        decodeSchoolSiteStorageSnapshot(saved).needsIdentityMigration,
+        isFalse,
+      );
+      final second = SchoolSiteService(
+        store: browser_store.PlatformSchoolSiteStore(),
+      );
+      expect((await second.loadSites()).single.id, sites.single.id);
+      expect(preferences.getString(schoolSitesWebStorageKey), saved);
+    },
+  );
+
+  test('a rejected browser identity migration keeps legacy data and blocks publication', () async {
+    const legacy = '[{"name":"Legacy","loginUrl":"https://legacy.test"}]';
+    SharedPreferences.setMockInitialValues({schoolSitesWebStorageKey: legacy});
+    final preferences = await SharedPreferences.getInstance();
+    final service = SchoolSiteService(
+      store: browser_store.PlatformSchoolSiteStore(
+        preferencesProvider: () async => preferences,
+        stringWriter: (_, _, _) async => false,
+      ),
+    );
+    final loaded = await service.loadSitesResult();
+    expect(loaded.canWrite, isFalse);
+    expect(loaded.recoveryStatus, SchoolSiteRecoveryStatus.recoveryWriteFailed);
+    expect(loaded.sites.single.id, isEmpty);
+    expect(preferences.getString(schoolSitesWebStorageKey), legacy);
   });
 
   test('throws when SharedPreferences rejects a browser write', () async {

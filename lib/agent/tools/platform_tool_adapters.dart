@@ -13,6 +13,7 @@ import '../../services/desktop_window_bridge.dart';
 import '../../services/developer_ui_preferences.dart';
 import '../../services/school_site_service.dart';
 import '../../services/school_web_session_service.dart';
+import '../../utils/unique_id.dart';
 import '../connection/agent_connection_manager.dart';
 import '../provider/provider.dart';
 import 'application_tool_host.dart';
@@ -775,7 +776,7 @@ class PlatformToolAdapters {
   void _registerSchoolSites() {
     _add(
       'school_sites.list',
-      'Read school sites with handles bound to the current source version. Handles are not unversioned list indexes.',
+      'Read school sites with persistent IDs and handles bound to the current source version. Mutations still require the returned version-bound handle.',
       {'offset': _integer, 'limit': _integer},
       (args, _, _) async {
         _keys(args, {'offset', 'limit'});
@@ -945,11 +946,19 @@ class PlatformToolAdapters {
             }
             candidate = mode == 'replace'
                 ? List.of(imported.sites)
-                : [...candidate, ...imported.sites];
+                : [
+                    ...candidate,
+                    ...assignSchoolSiteIdentities(
+                      imported.sites,
+                      occupiedIds: candidate.map((site) => site.id).toSet(),
+                      copyConflicts: true,
+                    ),
+                  ];
           case 'restore':
             _keys(args, {'action', 'operationId'});
             candidate = decodeSchoolSitesStrict(
               await _loadBundledSchoolSites(),
+              requireStableIds: true,
             );
           default:
             _invalid('Unsupported school-site action.');
@@ -1036,12 +1045,26 @@ class PlatformToolAdapters {
   ) async {
     try {
       final snapshot = await _sites();
-      final actual = mutationDigest([
-        for (final site in snapshot.sites) site.toJson(),
-      ]);
-      final state = actual == mutationDigest(operation.arguments['after'])
+      bool matches(Object? recorded) {
+        // Receipts written before persistent IDs still describe the complete
+        // ordered name/URL snapshot. New receipts compare the IDs as well.
+        final legacy =
+            recorded is List &&
+            recorded.every((item) => item is Map && !item.containsKey('id'));
+        return mutationDigest([
+              for (final site in snapshot.sites)
+                {
+                  if (!legacy) 'id': site.id,
+                  'name': site.name.trim(),
+                  'loginUrl': site.loginUrl.trim(),
+                },
+            ]) ==
+            mutationDigest(recorded);
+      }
+
+      final state = matches(operation.arguments['after'])
           ? ExternalEffectState.applied
-          : actual == mutationDigest(operation.arguments['before'])
+          : matches(operation.arguments['before'])
           ? ExternalEffectState.failed
           : ExternalEffectState.unknown;
       return ExternalEffectResult(
@@ -1134,6 +1157,7 @@ SchoolSite _site(Object? value, {SchoolSite? base}) {
   }
   _keys(value, {'name', 'loginUrl'});
   final site = SchoolSite(
+    id: base?.id ?? generateUuidV4(),
     name: value.containsKey('name') ? _text(value, 'name') : base?.name ?? '',
     loginUrl: value.containsKey('loginUrl')
         ? _text(value, 'loginUrl')

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -104,6 +103,7 @@ class _ControlledSchoolSiteStore extends SchoolSiteStore {
   String source;
   Completer<void>? saveStarted;
   Completer<void>? allowSave;
+  bool failNextSave = false;
   var saveCount = 0;
 
   @override
@@ -119,6 +119,10 @@ class _ControlledSchoolSiteStore extends SchoolSiteStore {
   @override
   Future<void> save(String source) async {
     saveCount += 1;
+    if (failNextSave) {
+      failNextSave = false;
+      throw StateError('Synthetic migration write failure.');
+    }
     final started = saveStarted;
     if (started != null && !started.isCompleted) started.complete();
     await allowSave?.future;
@@ -156,6 +160,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   void mockSchoolSitesAsset(String source) {
+    rootBundle.evict(SchoolSiteService.schoolSitesAssetPath);
     final messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     messenger.setMockMessageHandler('flutter/assets', (message) async {
@@ -165,7 +170,10 @@ void main() {
       }
       return ByteData.sublistView(Uint8List.fromList(utf8.encode(source)));
     });
-    addTearDown(() => messenger.setMockMessageHandler('flutter/assets', null));
+    addTearDown(() {
+      rootBundle.evict(SchoolSiteService.schoolSitesAssetPath);
+      messenger.setMockMessageHandler('flutter/assets', null);
+    });
   }
 
   group('SchoolSiteService.loadSites', () {
@@ -296,6 +304,109 @@ void main() {
       expect(encoded['schema'], schoolSiteStorageSchema);
       expect(encoded['version'], schoolSiteStorageVersion);
       expect(decodeSchoolSitesStrict(store.source).single.name, 'Saved');
+    });
+
+    test('legacy duplicate entries acquire distinct IDs once before becoming writable', () async {
+      final store = _ControlledSchoolSiteStore(
+        jsonEncode([
+          {'name': 'Same', 'loginUrl': 'https://same.test'},
+          {'name': 'Same', 'loginUrl': 'https://same.test'},
+        ]),
+      );
+      final service = SchoolSiteService(store: store);
+      final migrated = await service.loadSitesResult();
+      expect(migrated.canWrite, isTrue);
+      expect(migrated.sites.map((site) => site.id).toSet(), hasLength(2));
+      expect(
+        migrated.sites.every((site) => validSchoolSiteId(site.id)),
+        isTrue,
+      );
+      expect(store.saveCount, 1);
+      final reopened = SchoolSiteService(store: store);
+      final reloaded = await reopened.loadSites();
+      expect(
+        reloaded.map((site) => site.id),
+        migrated.sites.map((site) => site.id),
+      );
+      expect(store.saveCount, 1);
+      final edited = reloaded[1].copyWith(
+        name: 'Edited second',
+        loginUrl: 'https://edited.test',
+      );
+      await reopened.saveSites([reloaded[0], edited]);
+      final exported = decodeSchoolSitesStrict(
+        await reopened.exportSites(await reopened.loadSites()),
+      );
+      expect(
+        exported.map((site) => site.id),
+        migrated.sites.map((site) => site.id),
+      );
+      expect(exported.first.name, 'Same');
+      expect(exported.last.name, 'Edited second');
+    });
+
+    test('failed identity migration blocks writes and preserves the original snapshot', () async {
+      const legacy = '[{"name":"Legacy","loginUrl":"https://legacy.test"}]';
+      final store = _ControlledSchoolSiteStore(legacy)..failNextSave = true;
+      final service = SchoolSiteService(store: store);
+      final blocked = await service.loadSitesResult();
+      expect(blocked.canWrite, isFalse);
+      expect(
+        blocked.recoveryStatus,
+        SchoolSiteRecoveryStatus.recoveryWriteFailed,
+      );
+      expect(blocked.sites.single.id, isEmpty);
+      expect(store.source, legacy);
+      await expectLater(
+        service.saveSites(blocked.sites),
+        throwsA(isA<SchoolSiteWriteBlockedException>()),
+      );
+      final recovered = await service.loadSitesResult();
+      expect(recovered.canWrite, isTrue);
+      expect(validSchoolSiteId(recovered.sites.single.id), isTrue);
+      expect(
+        decodeSchoolSitesStrict(store.source).single.id,
+        recovered.sites.single.id,
+      );
+    });
+
+    test('identity migration drains under the shared storage boundary before another reader', () async {
+      final store =
+          _ControlledSchoolSiteStore(
+              '[{"name":"Legacy","loginUrl":"https://legacy.test"}]',
+            )
+            ..saveStarted = Completer<void>()
+            ..allowSave = Completer<void>();
+      final coordinator = SchoolSiteStorageCoordinator();
+      final first = SchoolSiteService(store: store, coordinator: coordinator);
+      final second = SchoolSiteService(store: store, coordinator: coordinator);
+      final migrating = first.loadSitesResult();
+      await store.saveStarted!.future;
+      expect(first.canWrite, isFalse);
+      var secondFinished = false;
+      final waiting = second.loadSitesResult().then((result) {
+        secondFinished = true;
+        return result;
+      });
+      expect(secondFinished, isFalse);
+      store.allowSave!.complete();
+      final results = await Future.wait([migrating, waiting]);
+      expect(results.every((result) => result.canWrite), isTrue);
+      expect(results[0].sites.single.id, results[1].sites.single.id);
+      expect(store.saveCount, 1);
+    });
+
+    test('bundled identities remain fixed across repeated loads', () async {
+      mockSchoolSitesAsset(
+        '[{"id":"builtin-campus","name":"Bundled","loginUrl":"https://bundled.test"}]',
+      );
+      final store = _StructuredSchoolSiteStore(
+        const SchoolSiteStoreLoadResult.empty(),
+      );
+      final service = SchoolSiteService(store: store);
+      expect((await service.loadSites()).single.id, 'builtin-campus');
+      expect((await service.loadSites()).single.id, 'builtin-campus');
+      expect(store.saveCount, 0);
     });
 
     test('blocks recovery when invalid snapshots cannot be isolated', () async {

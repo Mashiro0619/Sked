@@ -317,6 +317,60 @@ void main() {
   }
 
   testWidgets(
+    'editing a duplicate login URL changes only the selected stable ID',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final provider = await _createProvider();
+      addTearDown(provider.dispose);
+      final store = _MemorySchoolSiteStore(
+        encodeSchoolSiteStorageSnapshot(const [
+          SchoolSite(
+            id: 'first-site',
+            name: 'First school',
+            loginUrl: 'https://shared.test',
+          ),
+          SchoolSite(
+            id: 'second-site',
+            name: 'Second school',
+            loginUrl: 'https://shared.test',
+          ),
+        ]),
+      );
+      await _pumpSchoolSitesPage(
+        tester,
+        provider,
+        platform: TargetPlatform.windows,
+        siteService: SchoolSiteService(store: store),
+      );
+      await tester.tap(find.byKey(const ValueKey('school-site-edit-1')));
+      await tester.pumpAndSettle();
+      final fields = find.descendant(
+        of: find.byType(AppSheetScaffold),
+        matching: find.byType(TextField),
+      );
+      expect(
+        tester.widget<TextField>(fields.first).controller!.text,
+        'Second school',
+      );
+      await tester.enterText(fields.first, 'Edited second school');
+      final l = AppLocalizations.of(
+        tester.element(find.byType(SchoolSitesPage)),
+      );
+      await tester.tap(find.text(l.save));
+      await tester.pumpAndSettle();
+      final saved = decodeSchoolSitesStrict(store.source!);
+      expect(saved.map((site) => site.id), ['first-site', 'second-site']);
+      expect(saved.map((site) => site.name), [
+        'First school',
+        'Edited second school',
+      ]);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets(
     'site edit stays beside its list and keeps its draft across rotation',
     (tester) async {
       tester.view.devicePixelRatio = 1;

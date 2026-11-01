@@ -235,7 +235,9 @@ void main() {
       );
       final provider = await _provider(
         appStorage: storage,
-        siteStore: _MemorySchoolSiteStore(encodeSchoolSites(const [])),
+        siteStore: _MemorySchoolSiteStore(
+          encodeSchoolSiteStorageSnapshot(const []),
+        ),
         secrets: _MemorySecretStore(''),
       );
       addTearDown(provider.dispose);
@@ -272,7 +274,9 @@ void main() {
     );
     final provider = await _provider(
       appStorage: storage,
-      siteStore: _MemorySchoolSiteStore(encodeSchoolSites(const [])),
+      siteStore: _MemorySchoolSiteStore(
+        encodeSchoolSiteStorageSnapshot(const []),
+      ),
       secrets: _MemorySecretStore(''),
     );
     addTearDown(provider.dispose);
@@ -314,7 +318,9 @@ void main() {
     final storage = _MemoryTimetableStorage(_appData('en'));
     final provider = await _provider(
       appStorage: storage,
-      siteStore: _MemorySchoolSiteStore(encodeSchoolSites(const [])),
+      siteStore: _MemorySchoolSiteStore(
+        encodeSchoolSiteStorageSnapshot(const []),
+      ),
       secrets: _MemorySecretStore(''),
       journal: _MemoryBackupRestoreJournal(
         source: encodeAppBackupForRecovery(target, const []),
@@ -328,7 +334,11 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   const oldSites = [
-    SchoolSite(name: 'Old University', loginUrl: 'https://old.test'),
+    SchoolSite(
+      id: 'existing-university',
+      name: 'Old University',
+      loginUrl: 'https://old.test',
+    ),
   ];
   const newSites = [
     SchoolSite(name: 'New University', loginUrl: 'https://new.test'),
@@ -338,7 +348,9 @@ void main() {
     'full backup export includes stored school sites and excludes API key',
     () async {
       final appStorage = _MemoryTimetableStorage(_appData('en'));
-      final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+      final siteStore = _MemorySchoolSiteStore(
+        encodeSchoolSiteStorageSnapshot(oldSites),
+      );
       final provider = await _provider(
         appStorage: appStorage,
         siteStore: siteStore,
@@ -356,7 +368,9 @@ void main() {
 
   test('school import preserves out-of-term weeks through reload and backup restore', () async {
     final appStorage = _MemoryTimetableStorage(_appData('en'));
-    final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+    final siteStore = _MemorySchoolSiteStore(
+      encodeSchoolSiteStorageSnapshot(oldSites),
+    );
     final provider = await _provider(
       appStorage: appStorage,
       siteStore: siteStore,
@@ -422,7 +436,9 @@ void main() {
     final restoredStorage = _MemoryTimetableStorage(_appData('en'));
     final restored = await _provider(
       appStorage: restoredStorage,
-      siteStore: _MemorySchoolSiteStore(encodeSchoolSites(const [])),
+      siteStore: _MemorySchoolSiteStore(
+        encodeSchoolSiteStorageSnapshot(const []),
+      ),
       secrets: _MemorySecretStore(''),
     );
     addTearDown(restored.dispose);
@@ -439,7 +455,9 @@ void main() {
       for (final blockedResult in <SchoolSiteStoreLoadResult>[
         SchoolSiteStoreLoadResult(
           candidates: [
-            SchoolSiteStoreCandidate(source: encodeSchoolSites(oldSites)),
+            SchoolSiteStoreCandidate(
+              source: encodeSchoolSiteStorageSnapshot(oldSites),
+            ),
           ],
           issues: [
             SchoolSiteStoreIssue(
@@ -453,7 +471,7 @@ void main() {
         SchoolSiteStoreLoadResult(
           candidates: [
             SchoolSiteStoreCandidate(
-              source: encodeSchoolSites(oldSites),
+              source: encodeSchoolSiteStorageSnapshot(oldSites),
               artifact: SchoolSiteStoreArtifact.backup,
               promote: () async => throw Exception('promotion denied'),
             ),
@@ -463,8 +481,9 @@ void main() {
       ]) {
         final original = _appData('en');
         final appStorage = _MemoryTimetableStorage(original);
-        final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites))
-          ..structuredLoadResult = blockedResult;
+        final siteStore = _MemorySchoolSiteStore(
+          encodeSchoolSiteStorageSnapshot(oldSites),
+        )..structuredLoadResult = blockedResult;
         final secrets = _MemorySecretStore('sk-old');
         final provider = await _provider(
           appStorage: appStorage,
@@ -494,7 +513,9 @@ void main() {
     'composite restore replaces both stores and restores backup locale',
     () async {
       final appStorage = _MemoryTimetableStorage(_appData('en'));
-      final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+      final siteStore = _MemorySchoolSiteStore(
+        encodeSchoolSiteStorageSnapshot(oldSites),
+      );
       final secrets = _MemorySecretStore('sk-old');
       final provider = await _provider(
         appStorage: appStorage,
@@ -518,7 +539,9 @@ void main() {
 
   test('legacy app-data restore preserves the current school sites', () async {
     final appStorage = _MemoryTimetableStorage(_appData('en'));
-    final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+    final siteStore = _MemorySchoolSiteStore(
+      encodeSchoolSiteStorageSnapshot(oldSites),
+    );
     final provider = await _provider(
       appStorage: appStorage,
       siteStore: siteStore,
@@ -541,7 +564,9 @@ void main() {
     'legacy restore journal resumes after an AppData storage failure',
     () async {
       final appStorage = _MemoryTimetableStorage(_appData('en'));
-      final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+      final siteStore = _MemorySchoolSiteStore(
+        encodeSchoolSiteStorageSnapshot(oldSites),
+      );
       final secrets = _MemorySecretStore('sk-old');
       final journal = _MemoryBackupRestoreJournal();
       final provider = await _provider(
@@ -589,7 +614,9 @@ void main() {
 
   test('invalid composite backup performs no writes', () async {
     final appStorage = _MemoryTimetableStorage(_appData('en'));
-    final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+    final siteStore = _MemorySchoolSiteStore(
+      encodeSchoolSiteStorageSnapshot(oldSites),
+    );
     final secrets = _MemorySecretStore('sk-old');
     final provider = await _provider(
       appStorage: appStorage,
@@ -621,7 +648,9 @@ void main() {
 
   test('journal write failure performs no restore writes', () async {
     final appStorage = _MemoryTimetableStorage(_appData('en'));
-    final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+    final siteStore = _MemorySchoolSiteStore(
+      encodeSchoolSiteStorageSnapshot(oldSites),
+    );
     final secrets = _MemorySecretStore('sk-old');
     final journal = _MemoryBackupRestoreJournal()
       ..writeFailures.add(Exception('journal unavailable'));
@@ -649,7 +678,9 @@ void main() {
 
   test('journal state uncertainty publishes the recovery write gate', () async {
     final appStorage = _MemoryTimetableStorage(_appData('en'));
-    final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+    final siteStore = _MemorySchoolSiteStore(
+      encodeSchoolSiteStorageSnapshot(oldSites),
+    );
     final secrets = _MemorySecretStore('sk-old');
     final journal = _MemoryBackupRestoreJournal()
       ..writeFailures.add(
@@ -683,7 +714,9 @@ void main() {
 
   test('restore reservation persists a pending debounced date first', () async {
     final appStorage = _MemoryTimetableStorage(_appData('en'));
-    final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+    final siteStore = _MemorySchoolSiteStore(
+      encodeSchoolSiteStorageSnapshot(oldSites),
+    );
     final secrets = _MemorySecretStore('sk-old');
     final journal = _MemoryBackupRestoreJournal()
       ..writeFailures.add(Exception('journal unavailable'));
@@ -712,7 +745,9 @@ void main() {
   test('school-site write failure compensates AppData and API key', () async {
     final original = _appData('en');
     final appStorage = _MemoryTimetableStorage(original);
-    final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+    final siteStore = _MemorySchoolSiteStore(
+      encodeSchoolSiteStorageSnapshot(oldSites),
+    );
     final secrets = _MemorySecretStore('sk-old');
     final journal = _MemoryBackupRestoreJournal();
     final provider = await _provider(
@@ -748,10 +783,11 @@ void main() {
     'failed journal cleanup after compensation keeps recovery gated',
     () async {
       final appStorage = _MemoryTimetableStorage(_appData('en'));
-      final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites))
-        ..saveFailures.add(
-          const SchoolSiteStoreWriteException('site disk full'),
-        );
+      final siteStore =
+          _MemorySchoolSiteStore(encodeSchoolSiteStorageSnapshot(oldSites))
+            ..saveFailures.add(
+              const SchoolSiteStoreWriteException('site disk full'),
+            );
       final secrets = _MemorySecretStore('sk-old');
       final journal = _MemoryBackupRestoreJournal()
         ..clearFailures.add(Exception('journal removal unavailable'));
@@ -802,7 +838,9 @@ void main() {
     () async {
       final original = _appData('en');
       final appStorage = _MemoryTimetableStorage(original);
-      final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+      final siteStore = _MemorySchoolSiteStore(
+        encodeSchoolSiteStorageSnapshot(oldSites),
+      );
       final secrets = _MemorySecretStore('sk-old');
       final provider = await _provider(
         appStorage: appStorage,
@@ -834,7 +872,9 @@ void main() {
   test('API key failure occurs only after both data stores commit', () async {
     final original = _appData('en');
     final appStorage = _MemoryTimetableStorage(original);
-    final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+    final siteStore = _MemorySchoolSiteStore(
+      encodeSchoolSiteStorageSnapshot(oldSites),
+    );
     final secrets = _MemorySecretStore('sk-old');
     final journal = _MemoryBackupRestoreJournal();
     final provider = await _provider(
@@ -889,7 +929,9 @@ void main() {
     () async {
       final original = _appData('en');
       final appStorage = _MemoryTimetableStorage(original);
-      final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+      final siteStore = _MemorySchoolSiteStore(
+        encodeSchoolSiteStorageSnapshot(oldSites),
+      );
       final secrets = _MemorySecretStore('sk-old')
         ..writeFailures.add(Exception('delete result unknown'));
       final journal = _MemoryBackupRestoreJournal();
@@ -952,7 +994,9 @@ void main() {
       final appStorage = _MemoryTimetableStorage(
         _appData('en').copyWith(aiApiSettings: localParser),
       );
-      final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+      final siteStore = _MemorySchoolSiteStore(
+        encodeSchoolSiteStorageSnapshot(oldSites),
+      );
       final secrets = _MemorySecretStore('sk-old');
       final journal = _MemoryBackupRestoreJournal()
         ..writeFailures.addAll([
@@ -1005,12 +1049,16 @@ void main() {
       expect(target.customModel, localParser.customModel);
       expect(target.customPrompt, localParser.customPrompt);
       expect(target.customApiKey, isEmpty);
+      final fixedSiteId = (await journal.load()).backup!.schoolSites.single.id;
+      expect(fixedSiteId, isNotEmpty);
+      expect(decodeSchoolSitesStrict(siteStore.source!).single.id, fixedSiteId);
       final siteSavesBeforeRetry = siteStore.saveCount;
 
       await provider.lifecycle.retryStorageLoad();
 
       expect(provider.session.canWrite, isTrue);
       expect(siteStore.saveCount, siteSavesBeforeRetry + 1);
+      expect(decodeSchoolSitesStrict(siteStore.source!).single.id, fixedSiteId);
       expect(secrets.value, isEmpty);
       expect(journal.source, isNull);
       expect(
@@ -1028,11 +1076,60 @@ void main() {
     },
   );
 
+  test('legacy prepared restore journals persist site identities before any data write and reuse them after restart', () async {
+    final appStorage = _MemoryTimetableStorage(_appData('en'));
+    final siteStore = _MemorySchoolSiteStore(
+      encodeSchoolSiteStorageSnapshot(oldSites),
+    );
+    final secrets = _MemorySecretStore('sk-preserve');
+    final journal = _MemoryBackupRestoreJournal();
+    await journal.writePrepared(
+      encodeAppBackupForRecovery(_appData('zh'), newSites),
+      apiKeyPolicy: AppBackupRestoreApiKeyPolicy.preserve,
+    );
+    expect((await journal.load()).backup!.schoolSites.single.id, isEmpty);
+    journal.writeFailures.add(Exception('identity checkpoint unavailable'));
+    final provider = await _provider(
+      appStorage: appStorage,
+      siteStore: siteStore,
+      secrets: secrets,
+      journal: journal,
+    );
+    expect(provider.session.canWrite, isFalse);
+    expect(appStorage.saveCount, 0);
+    expect(siteStore.saveCount, 0);
+    expect((await journal.load()).backup!.schoolSites.single.id, isEmpty);
+
+    journal.writeFailures.addAll([
+      null,
+      Exception('data phase checkpoint unavailable'),
+    ]);
+    await expectLater(provider.lifecycle.retryStorageLoad(), throwsException);
+    final fixedSiteId = (await journal.load()).backup!.schoolSites.single.id;
+    expect(fixedSiteId, isNotEmpty);
+    expect(decodeSchoolSitesStrict(siteStore.source!).single.id, fixedSiteId);
+    provider.dispose();
+
+    final restarted = await _provider(
+      appStorage: appStorage,
+      siteStore: siteStore,
+      secrets: secrets,
+      journal: journal,
+    );
+    addTearDown(restarted.dispose);
+    expect(restarted.session.canWrite, isTrue);
+    expect(decodeSchoolSitesStrict(siteStore.source!).single.id, fixedSiteId);
+    expect(secrets.value, 'sk-preserve');
+    expect(journal.source, isNull);
+  });
+
   test(
     'data-committed startup applies the key policy without replaying data',
     () async {
       final appStorage = _MemoryTimetableStorage(_appData('zh'));
-      final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(newSites));
+      final siteStore = _MemorySchoolSiteStore(
+        encodeSchoolSiteStorageSnapshot(newSites),
+      );
       final secrets = _MemorySecretStore('sk-old');
       final journal = _MemoryBackupRestoreJournal();
       final prepared = await journal.writePrepared(
@@ -1063,7 +1160,9 @@ void main() {
     'ambiguous data phase readback resumes without replaying either store',
     () async {
       final appStorage = _MemoryTimetableStorage(_appData('en'));
-      final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+      final siteStore = _MemorySchoolSiteStore(
+        encodeSchoolSiteStorageSnapshot(oldSites),
+      );
       final secrets = _MemorySecretStore('sk-old');
       final journal = _MemoryBackupRestoreJournal()
         ..writeFailuresAfterCommit[2] =
@@ -1113,7 +1212,9 @@ void main() {
     'secret phase write failure never replays already committed data',
     () async {
       final appStorage = _MemoryTimetableStorage(_appData('en'));
-      final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+      final siteStore = _MemorySchoolSiteStore(
+        encodeSchoolSiteStorageSnapshot(oldSites),
+      );
       final secrets = _MemorySecretStore('sk-old');
       final journal = _MemoryBackupRestoreJournal()
         ..writeFailures.addAll([
@@ -1163,7 +1264,9 @@ void main() {
     'unknown state after journal removal remains gated until reload',
     () async {
       final appStorage = _MemoryTimetableStorage(_appData('en'));
-      final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+      final siteStore = _MemorySchoolSiteStore(
+        encodeSchoolSiteStorageSnapshot(oldSites),
+      );
       final secrets = _MemorySecretStore('sk-old');
       final journal = _MemoryBackupRestoreJournal()
         ..clearFailureAfterRemoval =
@@ -1210,7 +1313,9 @@ void main() {
     'terminal journal cleanup failure stays blocked and never replays data',
     () async {
       final appStorage = _MemoryTimetableStorage(_appData('en'));
-      final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+      final siteStore = _MemorySchoolSiteStore(
+        encodeSchoolSiteStorageSnapshot(oldSites),
+      );
       final secrets = _MemorySecretStore('sk-old');
       final journal = _MemoryBackupRestoreJournal()
         ..clearFailures.add(Exception('journal removal unavailable'));
@@ -1274,7 +1379,9 @@ void main() {
     () async {
       final original = _appData('en');
       final appStorage = _MemoryTimetableStorage(original);
-      final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+      final siteStore = _MemorySchoolSiteStore(
+        encodeSchoolSiteStorageSnapshot(oldSites),
+      );
       final secrets = _MemorySecretStore('sk-old');
       final provider = await _provider(
         appStorage: appStorage,
@@ -1307,7 +1414,9 @@ void main() {
 
   test('full restore clears a secure key whose initial read failed', () async {
     final appStorage = _MemoryTimetableStorage(_appData('en'));
-    final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+    final siteStore = _MemorySchoolSiteStore(
+      encodeSchoolSiteStorageSnapshot(oldSites),
+    );
     final secrets = _MemorySecretStore('sk-old')
       ..readFailures.add(Exception('secure read unavailable'));
     final provider = await _provider(
@@ -1329,7 +1438,9 @@ void main() {
     'startup resumes a journaled composite restore before enabling writes',
     () async {
       final appStorage = _MemoryTimetableStorage(_appData('en'));
-      final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+      final siteStore = _MemorySchoolSiteStore(
+        encodeSchoolSiteStorageSnapshot(oldSites),
+      );
       final secrets = _MemorySecretStore('sk-old');
       final journal = _MemoryBackupRestoreJournal(
         source: encodeAppBackupForRecovery(_appData('zh'), newSites),
@@ -1359,13 +1470,14 @@ void main() {
     'failed journal resume stays gated and succeeds on recovery retry',
     () async {
       final appStorage = _MemoryTimetableStorage(_appData('en'));
-      final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites))
-        ..saveFailures.add(
-          const SchoolSiteStoreStateUnknownException(
-            writeError: 'write failed',
-            rollbackError: 'rollback failed',
-          ),
-        );
+      final siteStore =
+          _MemorySchoolSiteStore(encodeSchoolSiteStorageSnapshot(oldSites))
+            ..saveFailures.add(
+              const SchoolSiteStoreStateUnknownException(
+                writeError: 'write failed',
+                rollbackError: 'rollback failed',
+              ),
+            );
       final secrets = _MemorySecretStore('sk-old');
       final journal = _MemoryBackupRestoreJournal(
         source: encodeAppBackupForRecovery(_appData('zh'), newSites),
@@ -1399,7 +1511,9 @@ void main() {
     () async {
       final original = _appData('en');
       final appStorage = _MemoryTimetableStorage(original);
-      final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+      final siteStore = _MemorySchoolSiteStore(
+        encodeSchoolSiteStorageSnapshot(oldSites),
+      );
       final secrets = _MemorySecretStore('sk-old');
       final journal = _MemoryBackupRestoreJournal(source: '{broken-journal');
 
@@ -1473,7 +1587,9 @@ void main() {
         ..recoverySources[historicalArtifact] = '{historical-broken';
       final provider = await _provider(
         appStorage: _MemoryTimetableStorage(_appData('en')),
-        siteStore: _MemorySchoolSiteStore(encodeSchoolSites(oldSites)),
+        siteStore: _MemorySchoolSiteStore(
+          encodeSchoolSiteStorageSnapshot(oldSites),
+        ),
         secrets: _MemorySecretStore('sk-old'),
         journal: journal,
       );
@@ -1512,7 +1628,9 @@ void main() {
         );
       final provider = await _provider(
         appStorage: _MemoryTimetableStorage(_appData('en')),
-        siteStore: _MemorySchoolSiteStore(encodeSchoolSites(oldSites)),
+        siteStore: _MemorySchoolSiteStore(
+          encodeSchoolSiteStorageSnapshot(oldSites),
+        ),
         secrets: _MemorySecretStore('sk-old'),
         journal: journal,
       );
@@ -1550,7 +1668,9 @@ void main() {
     'failed corrupt-journal preservation stays gated with exportable source',
     () async {
       final appStorage = _MemoryTimetableStorage(_appData('en'));
-      final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+      final siteStore = _MemorySchoolSiteStore(
+        encodeSchoolSiteStorageSnapshot(oldSites),
+      );
       final journal = _MemoryBackupRestoreJournal(source: '{broken-journal')
         ..recoverySources['memory://journal/recovery/history'] =
             '{older-broken-journal'
@@ -1607,7 +1727,9 @@ void main() {
       final journal = _MemoryBackupRestoreJournal(source: futureSource);
       final provider = await _provider(
         appStorage: _MemoryTimetableStorage(_appData('en')),
-        siteStore: _MemorySchoolSiteStore(encodeSchoolSites(oldSites)),
+        siteStore: _MemorySchoolSiteStore(
+          encodeSchoolSiteStorageSnapshot(oldSites),
+        ),
         secrets: _MemorySecretStore('sk-old'),
         journal: journal,
       );
@@ -1649,7 +1771,9 @@ void main() {
       ..readFailures.add(Exception('preferences unavailable'));
     final provider = await _provider(
       appStorage: _MemoryTimetableStorage(_appData('en')),
-      siteStore: _MemorySchoolSiteStore(encodeSchoolSites(oldSites)),
+      siteStore: _MemorySchoolSiteStore(
+        encodeSchoolSiteStorageSnapshot(oldSites),
+      ),
       secrets: _MemorySecretStore('sk-old'),
       journal: journal,
     );
@@ -1674,7 +1798,9 @@ void main() {
     'a valid preflight that disappears is blocked once and never replayed',
     () async {
       final appStorage = _MemoryTimetableStorage(_appData('en'));
-      final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+      final siteStore = _MemorySchoolSiteStore(
+        encodeSchoolSiteStorageSnapshot(oldSites),
+      );
       final secrets = _MemorySecretStore('sk-old');
       final journal = _MemoryBackupRestoreJournal();
       final stalePreflight = await journal.writePrepared(
@@ -1719,13 +1845,14 @@ void main() {
     'interrupted explicit corrupt-journal recovery preserves key and resumes',
     () async {
       final appStorage = _MemoryTimetableStorage(_appData('en'));
-      final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites))
-        ..saveFailures.add(
-          const SchoolSiteStoreStateUnknownException(
-            writeError: 'write failed',
-            rollbackError: 'rollback failed',
-          ),
-        );
+      final siteStore =
+          _MemorySchoolSiteStore(encodeSchoolSiteStorageSnapshot(oldSites))
+            ..saveFailures.add(
+              const SchoolSiteStoreStateUnknownException(
+                writeError: 'write failed',
+                rollbackError: 'rollback failed',
+              ),
+            );
       final secrets = _MemorySecretStore('sk-old');
       final journal = _MemoryBackupRestoreJournal(source: '{broken-journal');
       final provider = await _provider(
@@ -1777,7 +1904,9 @@ void main() {
       final journal = _MemoryBackupRestoreJournal(source: '{broken-journal');
       final provider = await _provider(
         appStorage: appStorage,
-        siteStore: _MemorySchoolSiteStore(encodeSchoolSites(oldSites)),
+        siteStore: _MemorySchoolSiteStore(
+          encodeSchoolSiteStorageSnapshot(oldSites),
+        ),
         secrets: _MemorySecretStore('sk-old'),
         journal: journal,
       );
@@ -1797,7 +1926,9 @@ void main() {
     'concurrent composite restores run as whole serialized transactions',
     () async {
       final appStorage = _MemoryTimetableStorage(_appData('en'));
-      final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(oldSites));
+      final siteStore = _MemorySchoolSiteStore(
+        encodeSchoolSiteStorageSnapshot(oldSites),
+      );
       final firstSiteSaveGate = Completer<void>();
       siteStore.saveGates.add(firstSiteSaveGate);
       final secrets = _MemorySecretStore('sk-old');

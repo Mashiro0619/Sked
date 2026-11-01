@@ -91,6 +91,28 @@ void main() {
       expect(await backupFile().readAsString(), contains('"A"'));
     });
 
+    test('service persists legacy identities and preserves them after reopening native storage', () async {
+      const legacy =
+          '[{"name":"Same","loginUrl":"https://same.test"},'
+          '{"name":"Same","loginUrl":"https://same.test"}]';
+      await mainFile().writeAsString(legacy);
+      final migrated = await SchoolSiteService(store: store).loadSites();
+      expect(migrated.map((site) => site.id).toSet(), hasLength(2));
+      final source = await mainFile().readAsString();
+      expect(
+        decodeSchoolSiteStorageSnapshot(source).needsIdentityMigration,
+        isFalse,
+      );
+      expect(await backupFile().readAsString(), legacy);
+      final reopenedStore = PlatformSchoolSiteStore(
+        directoryProvider: () async => tempDir,
+      );
+      final reopened = await SchoolSiteService(store: reopenedStore)
+          .loadSites();
+      expect(reopened.map((site) => site.id), migrated.map((site) => site.id));
+      expect(await mainFile().readAsString(), source);
+    });
+
     test('loads and promotes backup when main file is missing', () async {
       const first = '[{"name":"A","loginUrl":"https://a.test"}]';
       const second = '[{"name":"B","loginUrl":"https://b.test"}]';
@@ -524,7 +546,12 @@ void main() {
         ];
         expect(preservedSources, contains('{ broken main'));
         expect(preservedSources, contains(backup));
-        expect(await mainFile().readAsString(), backup);
+        final recovered = decodeSchoolSitesStrict(
+          await mainFile().readAsString(),
+        );
+        expect(recovered.single.name, 'Backup University');
+        expect(recovered.single.id, result.sites.single.id);
+        expect(validSchoolSiteId(recovered.single.id), isTrue);
         expect(await backupFile().exists(), isFalse);
 
         await service.saveSites(const [
@@ -570,7 +597,12 @@ void main() {
         ];
         expect(preservedSources, contains(main));
         expect(preservedSources, contains('{ broken $corruptArtifact'));
-        expect(await mainFile().readAsString(), main);
+        final recovered = decodeSchoolSitesStrict(
+          await mainFile().readAsString(),
+        );
+        expect(recovered.single.name, 'Main University');
+        expect(recovered.single.id, result.sites.single.id);
+        expect(validSchoolSiteId(recovered.single.id), isTrue);
         expect(await corruptFile.exists(), isFalse);
       });
     }

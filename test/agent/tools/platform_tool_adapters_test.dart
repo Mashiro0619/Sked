@@ -8,6 +8,7 @@ import 'package:sked/agent/tools/platform_tool_adapters.dart';
 import 'package:sked/application/approval_plan.dart';
 import 'package:sked/application/external_operation_coordinator.dart';
 import 'package:sked/application/mutation_coordinator.dart';
+import 'package:sked/application/mutation_draft.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/controllers/app_session.dart';
 import 'package:sked/data/app_repository.dart';
@@ -43,7 +44,13 @@ class _AppStorage implements TimetableStorage {
 
 class _SiteStorage extends SchoolSiteStore {
   _SiteStorage() : super.base();
-  String source = '[{"name":"School","loginUrl":"https://school.test"}]';
+  String source = encodeSchoolSiteStorageSnapshot(const [
+    SchoolSite(
+      id: 'fixture-school',
+      name: 'School',
+      loginUrl: 'https://school.test',
+    ),
+  ]);
   int saves = 0;
   Object? error;
   @override
@@ -149,8 +156,7 @@ void main() {
       schoolSites: sites,
       schoolWebSession: browser,
       schoolWebSessionSupported: browserSupported,
-      loadBundledSchoolSites: () async =>
-          '[{"name":"Bundled","loginUrl":"https://bundled.test"}]',
+      loadBundledSchoolSites: () async => '[{"id":"builtin-school","name":"Bundled","loginUrl":"https://bundled.test"}]',
     );
   }
 
@@ -406,6 +412,7 @@ void main() {
   test('school site CRUD uses current version handles and shared service persistence', () async {
     final listed = await call('school_sites.list');
     final handle = ((listed['items'] as List).single as Map)['handle'];
+    final id = ((listed['items'] as List).single as Map)['id'];
     final plan = await call('school_sites.prepare', {
       'action': 'patch',
       'handle': handle,
@@ -415,6 +422,7 @@ void main() {
     final result = await commit(plan);
     expect(result['effectStatus'], 'applied');
     expect(decodeSchoolSitesStrict(siteStorage.source).single.name, 'Renamed');
+    expect(decodeSchoolSitesStrict(siteStorage.source).single.id, id);
     await expectLater(
       call('school_sites.get', {'handle': handle}),
       throwsA(_problem(OperationErrorCode.expired)),
@@ -493,6 +501,15 @@ void main() {
     );
     await commit(await call('school_sites.prepare', {'action': 'restore'}));
     expect(decodeSchoolSitesStrict(siteStorage.source).single.name, 'Bundled');
+    expect(
+      decodeSchoolSitesStrict(siteStorage.source).single.id,
+      'builtin-school',
+    );
+    await commit(await call('school_sites.prepare', {'action': 'restore'}));
+    expect(
+      decodeSchoolSitesStrict(siteStorage.source).single.id,
+      'builtin-school',
+    );
     await expectLater(
       call('school_sites.prepare', {
         'action': 'import',
@@ -500,6 +517,76 @@ void main() {
       }),
       throwsA(_problem(OperationErrorCode.invalidArgument)),
     );
+  });
+
+  test('appending an exported site copies a colliding ID and duplicate URLs retain separate handles', () async {
+    final exported = await call('school_sites.export');
+    await commit(
+      await call('school_sites.prepare', {
+        'action': 'import',
+        'mode': 'append',
+        'source': exported['text'],
+      }),
+    );
+    final listed = await call('school_sites.list');
+    final items = listed['items'] as List;
+    expect(items, hasLength(2));
+    expect(items[0]['id'], 'fixture-school');
+    expect(items[1]['id'], isNot(items[0]['id']));
+    expect(items[1]['loginUrl'], items[0]['loginUrl']);
+    await commit(
+      await call('school_sites.prepare', {
+        'action': 'patch',
+        'handle': items[1]['handle'],
+        'site': {'name': 'Copied school', 'loginUrl': 'https://copy.test'},
+      }),
+    );
+    final saved = decodeSchoolSitesStrict(siteStorage.source);
+    expect(saved.first.id, 'fixture-school');
+    expect(saved.first.name, 'School');
+    expect(saved.last.id, items[1]['id']);
+    expect(saved.last.name, 'Copied school');
+    await expectLater(
+      call('school_sites.prepare', {
+        'action': 'create',
+        'site': {
+          'id': 'caller-id',
+          'name': 'Injected',
+          'loginUrl': 'https://copy.test',
+        },
+      }),
+      throwsA(_problem(OperationErrorCode.invalidArgument)),
+    );
+  });
+
+  test('legacy site receipts still reconcile while a new receipt cannot ignore a different ID', () async {
+    for (final legacy in [true, false]) {
+      final after = [
+        {
+          if (!legacy) 'id': 'different-school',
+          'name': 'School',
+          'loginUrl': 'https://school.test',
+        },
+      ];
+      final prepared = external.prepare(
+        scope: scope,
+        action: 'school_sites.replace',
+        arguments: {'before': const [], 'after': after},
+        version: 0,
+        changes: [
+          ResourceChange(key: 'schoolSites', before: const [], after: after),
+        ],
+        validate: () {},
+        execute: (_) async =>
+            ExternalEffectResult(state: ExternalEffectState.unknown),
+      );
+      await external.commit(planId: prepared.id, scope: scope);
+      final result = await call('external.reconcile', {
+        'operationId': prepared.operationId,
+      });
+      expect(result['effectStatus'], legacy ? 'applied' : 'unknown');
+    }
+    expect(siteStorage.saves, 0);
   });
 
   test('school web cleanup reports local scope and unknown partial cleanup is never replayed', () async {

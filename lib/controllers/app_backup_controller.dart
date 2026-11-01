@@ -6,6 +6,7 @@ import '../data/app_repository.dart';
 import '../data/timetable_storage.dart';
 import '../models/application_ledger.dart';
 import '../models/school_import_models.dart';
+import '../models/school_site_models.dart';
 import '../models/timetable_models.dart';
 import '../services/app_backup_restore_journal.dart';
 import '../services/data_transfer_codec.dart';
@@ -246,9 +247,9 @@ class AppBackupController {
       imported,
       previousApiKey,
     );
-    final restoredSchoolSites = backup.includesSchoolSites
-        ? backup.schoolSites
-        : siteResult.sites;
+    final restoredSchoolSites = assignSchoolSiteIdentities(
+      backup.includesSchoolSites ? backup.schoolSites : siteResult.sites,
+    );
 
     late AppBackupRestoreJournalLoadResult pendingRestore;
     // Backups never carry secrets. Keep the existing key until both data
@@ -583,7 +584,7 @@ class AppBackupController {
   Future<void> _applyPendingAppBackupRestore(
     AppBackupRestoreJournalLoadResult result,
   ) async {
-    final backup = result.backup;
+    var backup = result.backup;
     if (backup == null || !backup.includesSchoolSites) {
       throw const AppBackupRestoreJournalException(
         'The pending app-backup restore journal has no valid target.',
@@ -596,6 +597,21 @@ class AppBackupController {
     var pendingRestore = result;
 
     if (pendingRestore.phase == AppBackupRestoreJournalPhase.prepared) {
+      if (backup.schoolSites.any((site) => site.id.isEmpty)) {
+        // Older journals predate persistent site identities. Fix the target in
+        // the journal before either store changes, so a retry never allocates
+        // another identity for an already restored site.
+        pendingRestore = await _journal.writePrepared(
+          await _codec.encodeBackupForRecovery(
+            backup.appData,
+            assignSchoolSiteIdentities(backup.schoolSites),
+          ),
+          apiKeyPolicy: pendingRestore.apiKeyPolicy,
+          recoveryArtifacts: pendingRestore.journalRecoveryArtifacts,
+          localeCode: backup.appData.localeCode,
+        );
+        backup = pendingRestore.backup!;
+      }
       final existingApiKey = _data.aiApiSettings.customApiKey;
       final restoredAppData = withRuntimeSchoolImportApiKey(
         await _codec.normalize(

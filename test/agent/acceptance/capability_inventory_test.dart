@@ -166,6 +166,7 @@ void main() {
     () async {
       await h.run(() async {
         const site = SchoolSite(
+          id: 'schema-fixture',
           name: 'Campus',
           loginUrl: 'https://campus.invalid',
         );
@@ -176,21 +177,26 @@ void main() {
             (schema['tools'] as List).single['parameters']['properties'] as Map;
         expect(
           (properties['site']['properties'] as Map).keys.toSet(),
-          site.toJson().keys.toSet(),
+          site.toJson().keys.toSet().difference({'id'}),
         );
+        expect(site.toJson().keys.toSet(), {'id', 'name', 'loginUrl'});
         expect(
           SettingRegistry().descriptor('device.schoolSites').adapterTool,
           'school_sites.prepare',
         );
         final plan = await h.call('school_sites.prepare', {
           'action': 'create',
-          'site': site.toJson(),
+          'site': site.toJson()..remove('id'),
         });
         expect((await h.externalCommit(plan))['effectStatus'], 'applied');
         final exported = await h.call('school_sites.export');
+        final actual =
+            (jsonDecode(exported['text'] as String) as List).single as Map;
+        expect(validSchoolSiteId(actual['id'] as String), isTrue);
+        expect(actual['id'], isNot(site.id));
         expect(
-          (jsonDecode(exported['text'] as String) as List).single,
-          site.toJson(),
+          Map<String, dynamic>.from(actual)..remove('id'),
+          site.toJson()..remove('id'),
         );
       });
     },
