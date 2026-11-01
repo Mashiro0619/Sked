@@ -100,7 +100,6 @@ final writeToolCoverage = <String, WriteToolCoverage>{
     ),
   for (final name in [
     'exports.write',
-    'backups.prepare_restore',
     'maintenance.prepare_clear',
     'workspaces.prepare',
     'navigation.open',
@@ -110,6 +109,10 @@ final writeToolCoverage = <String, WriteToolCoverage>{
       WriteBoundary.externalCommit,
       'test/agent/tools/workflow_tool_adapters_test.dart',
     ),
+  'backups.prepare_restore': const WriteToolCoverage(
+    WriteBoundary.externalCommit,
+    'test/backup/selective_backup_tools_test.dart',
+  ),
   for (final name in [
     'conversations.create',
     'conversations.rename',

@@ -1241,23 +1241,54 @@ class WorkflowToolAdapters {
             _conflict();
           }
         },
-        execute: (_) => run(scope, () async {
-          await service.restore(prepared);
-          return ExternalEffectResult(
-            state: ExternalEffectState.applied,
-            dataStatus: ExternalDataState.committed,
+        execute: (_) async {
+          ExternalEffectResult refused(String code) => ExternalEffectResult(
+            state: ExternalEffectState.failed,
+            dataStatus: ExternalDataState.unchanged,
             details: {
-              'restored': true,
+              'code': code,
+              'effectStarted': false,
               'restoreId': prepared.id,
-              'sourceDigest': source.fingerprint,
-              'selectedObjects': prepared.selected.length,
-              'skippedDeviceGroups': unsupportedGroups,
-              'generation': _host.mutations.generation,
-              'permissionsPreserved': true,
-              'secretsImported': false,
             },
           );
-        }),
+          final policyRevision = scope.policy.revision;
+          try {
+            // Side-store edits do not change the main ledger baseline. Reject
+            // an already stale target before taking ownership of any restore.
+            // The service still validates again under its frozen write barrier.
+            final current = await service.inventory();
+            scope.checkActive();
+            if (scope.policy.revision != policyRevision) {
+              return refused(OperationErrorCode.cancelled.name);
+            }
+            prepared.validateCurrent(current);
+          } on SelectiveBackupException catch (error) {
+            if (error.code != SelectiveBackupError.conflict) rethrow;
+            return refused(OperationErrorCode.conflict.name);
+          } on OperationProblem catch (error) {
+            if (error.code != OperationErrorCode.cancelled) rethrow;
+            return refused(error.code.name);
+          }
+          // Once restore ownership begins, exceptions retain the coordinator's
+          // unknown outcome. An empty/cleared journal alone cannot prove refusal.
+          return run(scope, () async {
+            await service.restore(prepared);
+            return ExternalEffectResult(
+              state: ExternalEffectState.applied,
+              dataStatus: ExternalDataState.committed,
+              details: {
+                'restored': true,
+                'restoreId': prepared.id,
+                'sourceDigest': source.fingerprint,
+                'selectedObjects': prepared.selected.length,
+                'skippedDeviceGroups': unsupportedGroups,
+                'generation': _host.mutations.generation,
+                'permissionsPreserved': true,
+                'secretsImported': false,
+              },
+            );
+          });
+        },
       );
       return boundedToolReceipt({
         ...plan.summary(),

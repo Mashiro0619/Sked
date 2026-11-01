@@ -32,6 +32,8 @@ API 密钥、Cookie、系统授权、设备运行许可和操作回执不进入�
 
 历史撤销与备份恢复共用维护门禁；已有历史撤销身份或 pending 标记时不能开始备份恢复。同时存在两种恢复标记时保留两者并拒绝写入。Agent 发起恢复走同一个应用拥有者，仅在排空时排除正在等待这次恢复结果的发起运行，避免等待自身。
 
+Agent 选择性恢复在接管恢复之前重新核对固定目标；已经发生的目标变化或已撤销的请求返回未开始写入的失败，保留本地数据。进入恢复拥有者之后的异常继续保留未知结果，由生命周期读取原 restoreId、数据世代和参与仓储目标继续；不能从 journal 当前为空推断此前没有写入。
+
 旧整体恢复 API 继续为兼容调用保留。其新准备目标先固定站点身份；升级发现旧 prepared journal 中没有站点 ID 时，先持久化并读回身份再写业务库。它与选择性恢复各有独立 journal，不同时重放。
 
 ## 可复现验证
@@ -41,4 +43,4 @@ API 密钥、Cookie、系统授权、设备运行许可和操作回执不进入�
 - [真实应用组合](../test/backup/selective_backup_service_test.dart)覆盖保存、排他、部分暂存失败和恢复；[原生仓储重开](../test/backup/selective_backup_recovery_test.dart)在系统临时目录使用主库、学校、聊天、知识、附件和 journal 的文件实现，验证新的运行时继续同一目标。
 - [选择页](../test/backup/selective_backup_page_test.dart)及[设置入口](../test/widgets/settings_backup_restore_progress_test.dart)覆盖窄窗、放大字号、旧文件与文本、取消、恢复进度、故障继续和离开页面后的保存所有权。
 - [设备偏好](../test/backup/selective_backup_device_test.dart)覆盖严格读取、相同与不同平台、未选保留、两组之间中断、写后读回和重新绑定真实 UI 拥有者；[导出取消](../test/backup/selective_backup_cancellation_test.dart)核对挂起读取取消及占用释放。
-- [Agent 工具](../test/backup/selective_backup_tools_test.dart)通过真实应用运行作用域验证选择、权限、保存及发起者排空。模型和原生目的地使用确定性替身；这些测试不代替实际平台文件选择器、真实 API、浏览器刷新或实体设备验收。
+- [Agent 工具](../test/backup/selective_backup_tools_test.dart)通过真实应用运行作用域验证选择、权限、保存及发起者排空，并覆盖非法与重复选择、同会话来源约束、准备后人工修改目标，以及主库保存后阶段写入失败的未知结果和沿用同一恢复身份、数据世代及仓储目标的生命周期恢复。模型和原生目的地使用确定性替身；这些测试不代替实际平台文件选择器、真实 API、浏览器刷新或实体设备验收。

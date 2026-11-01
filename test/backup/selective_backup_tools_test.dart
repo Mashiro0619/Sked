@@ -1,12 +1,17 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/agent/attachments/attachment_storage.dart';
+import 'package:sked/agent/conversations/conversation_repository.dart';
+import 'package:sked/agent/knowledge/knowledge_models.dart';
 import 'package:sked/application/operation_contracts.dart';
+import 'package:sked/backup/selective_backup_app_data.dart';
 import 'package:sked/backup/selective_backup_codec.dart';
 import 'package:sked/backup/selective_backup_device_data.dart';
 import 'package:sked/backup/selective_backup_models.dart';
+import 'package:sked/backup/selective_restore_coordinator.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/desktop_layout_preferences.dart';
 
@@ -34,6 +39,51 @@ class _ControlledReadStorage extends MemoryAttachmentStorage {
   }
 }
 
+class _FailAfterMainJournal extends MemorySelectiveRestoreJournal {
+  bool fail = false;
+  final attempts = <SelectiveRestoreState>[];
+  SelectiveRestoreState? failedState;
+
+  @override
+  Future<void> write(SelectiveRestoreState state) async {
+    attempts.add(state);
+    if (fail && state.completed == 1) {
+      fail = false;
+      failedState = state;
+      throw StateError('Stopped after the main store committed.');
+    }
+    await super.write(state);
+  }
+}
+
+AppData _incomingRestore(AppData current) => current.copyWith(
+  studentMode: current.studentMode.copyWith(
+    timetables: [
+      for (final table in current.studentMode.timetables)
+        table.copyWith(config: table.config.copyWith(name: 'Do not import')),
+    ],
+  ),
+  generalMode: current.generalMode.copyWith(
+    schedules: [
+      for (final calendar in current.generalMode.schedules)
+        calendar.copyWith(
+          name: calendar.id == 'visible'
+              ? 'Restored visible calendar'
+              : 'Do not import hidden calendar',
+        ),
+    ],
+  ),
+);
+
+Future<void> _attachRestore(AcceptanceHarness h) => h.attach(
+  'restore-source',
+  'structured_file',
+  encodeAppBackup(_incomingRestore(h.saved), const []),
+);
+
+Matcher _problem(OperationErrorCode code) =>
+    isA<OperationProblem>().having((error) => error.code, 'code', code);
+
 Future<String> _attachBytes(AcceptanceHarness h, Uint8List bytes) async {
   final file = await h.app.agent.attachmentStore.put(
     id: 'selected-backup-source',
@@ -56,10 +106,15 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late AcceptanceHarness h;
   late _ControlledReadStorage blobs;
+  late _FailAfterMainJournal journal;
   setUp(() async {
     h = AcceptanceHarness();
     blobs = _ControlledReadStorage();
-    await h.initialize(attachmentStorage: blobs);
+    journal = _FailAfterMainJournal();
+    await h.initialize(
+      attachmentStorage: blobs,
+      selectiveRestoreJournal: journal,
+    );
   });
   tearDown(() => h.close());
 
@@ -293,4 +348,262 @@ void main() {
       }, skill: 'restore-and-clear');
     },
   );
+
+  for (final invalid in <String, Object?>{
+    'non-list selection': {'kind': 'calendar', 'id': 'visible'},
+    'empty selection': <Object?>[],
+    'unknown object kind': [
+      {'kind': 'not-a-kind', 'id': 'visible'},
+    ],
+    'duplicate objects': [
+      {'kind': 'calendar', 'id': 'visible'},
+      {'kind': 'calendar', 'id': 'visible'},
+    ],
+    'absent selected object': [
+      {'kind': 'calendar', 'id': 'missing-calendar'},
+    ],
+    'attachment selected as an object': [
+      {'kind': 'attachment', 'id': 'missing-file'},
+    ],
+  }.entries) {
+    test('selective restore rejects ${invalid.key} before admission', () async {
+      await _attachRestore(h);
+      await h.run(() async {
+        final before = h.saved.encode();
+        await expectLater(
+          h.call('backups.prepare_restore', {
+            'sourceId': 'restore-source',
+            'objects': invalid.value,
+          }),
+          throwsA(_problem(OperationErrorCode.invalidArgument)),
+        );
+        expect(h.saved.encode(), before);
+        expect(journal.attempts, isEmpty);
+        expect(await journal.read(), isNull);
+        expect(h.app.backups.selective.recoveryPending, isFalse);
+        expect(h.app.session.canWrite, isTrue);
+        expect(h.writtenArtifacts, isEmpty);
+      });
+    });
+  }
+
+  test(
+    'selective restore cannot borrow a source from another conversation',
+    () async {
+      final foreign = await h.app.agent.conversations.create(
+        title: 'Other chat',
+      );
+      await h.app.agent.conversations.update(
+        foreign.id,
+        (current) => current.copyWith(
+          sources: [
+            ConversationSource(
+              id: 'foreign-restore',
+              kind: 'structured_file',
+              text: encodeAppBackup(_incomingRestore(h.saved), const []),
+            ),
+          ],
+        ),
+      );
+      await h.run(() async {
+        final before = h.saved.encode();
+        await expectLater(
+          h.call('backups.prepare_restore', {
+            'sourceId': 'foreign-restore',
+            'objects': [
+              {'kind': 'calendar', 'id': 'visible'},
+            ],
+          }),
+          throwsA(_problem(OperationErrorCode.notFound)),
+        );
+        expect(h.saved.encode(), before);
+        expect(journal.attempts, isEmpty);
+        expect(h.app.backups.selective.recoveryPending, isFalse);
+      });
+    },
+  );
+
+  test('manual target edit after preparation rejects the restore before a journal write', () async {
+    await _attachRestore(h);
+    await h.run(() async {
+      final prepared = await h.call('backups.prepare_restore', {
+        'sourceId': 'restore-source',
+        'objects': [
+          {'kind': 'calendar', 'id': 'visible'},
+        ],
+      });
+      await h.app.generalCommands.renameSchedule('visible', 'Manual name');
+      final manual = h.saved.encode();
+      await expectLater(
+        h.externalCommit(prepared),
+        throwsA(_problem(OperationErrorCode.conflict)),
+      );
+      expect(h.saved.encode(), manual);
+      expect(journal.attempts, isEmpty);
+      expect(await journal.read(), isNull);
+      expect(h.app.backups.selective.recoveryPending, isFalse);
+      expect(h.app.session.canWrite, isTrue);
+    });
+  });
+
+  test('a side-store target edited before restore is a confirmed refusal, not an unknown effect', () async {
+    await h.layout.load();
+    h.layout.setPreferredSize(
+      DesktopLayoutRegion.assistant,
+      const PreferredRegionSize(width: 400),
+    );
+    expect(await h.layout.flush(), isTrue);
+    final target = deviceBackupRecord(
+      PortableDevicePreferences(
+        platform: h.app.devicePreferences.platform,
+        group: DevicePreferenceGroup.desktopLayout,
+        values: const {
+          'regions': {
+            'assistant': {'width': 480.0},
+          },
+        },
+      ),
+    );
+    final sourceId = await _attachBytes(
+      h,
+      const SelectiveBackupCodec().encode(
+        SelectiveBackupBundle(records: [target], roots: [target.key]),
+      ),
+    );
+    await h.run(() async {
+      final prepared = await h.call('backups.prepare_restore', {
+        'sourceId': sourceId,
+        'objects': [target.key.toJson()],
+      });
+      final before = h.saved.encode();
+      h.layout.setPreferredSize(
+        DesktopLayoutRegion.assistant,
+        const PreferredRegionSize(width: 540),
+      );
+      expect(await h.layout.flush(), isTrue);
+      expect(h.saved.encode(), before);
+      final result = await h.externalCommit(prepared);
+      expect(result['effectStatus'], 'failed');
+      expect(result['dataStatus'], 'unchanged');
+      expect(result['receiptFinalized'], isTrue);
+      expect(result['recoveryRequired'], isFalse);
+      expect(result['effectResult'], containsPair('code', 'conflict'));
+      expect(result['effectResult'], containsPair('effectStarted', false));
+      expect(
+        h.layout.preferenceFor(DesktopLayoutRegion.assistant),
+        const PreferredRegionSize(width: 540),
+      );
+      expect(journal.attempts, isEmpty);
+      expect(await journal.read(), isNull);
+      expect(h.app.backups.selective.recoveryPending, isFalse);
+      expect(h.app.session.canWrite, isTrue);
+    });
+  });
+
+  test('a lost phase write after main data remains unknown and lifecycle resumes its fixed targets', () async {
+    final before = h.saved;
+    final source = buildSelectiveBackupInventory(
+      appData: _incomingRestore(before),
+      knowledge: [
+        KnowledgeRecord(
+          kind: KnowledgeKind.memory,
+          id: 'restored-note',
+          title: 'Restored note',
+          body: 'Synthetic content restored after the main phase.',
+        ),
+      ],
+    );
+    final sourceId = await _attachBytes(
+      h,
+      const SelectiveBackupCodec().encode(source),
+    );
+    journal.fail = true;
+    Map<String, Object?>? result;
+    late String restoreId;
+    try {
+      await h.run(() async {
+        final prepared = await h.call('backups.prepare_restore', {
+          'sourceId': sourceId,
+          'objects': [
+            {'kind': 'calendar', 'id': 'visible'},
+            {'kind': 'memory', 'id': 'restored-note'},
+          ],
+        });
+        restoreId =
+            h.app.agent.external
+                    .plan(prepared['planId'] as String)!
+                    .operation
+                    .arguments['restoreId']
+                as String;
+        result = await h.externalCommit(prepared);
+      });
+    } on ConversationStorageException {
+      // A pending restore may freeze the terminal host-message save. Its tool
+      // result must still be captured as unknown, never converted to success.
+    }
+    expect(result, isNotNull);
+    expect(result!['effectStatus'], 'unknown');
+    expect(result!['dataStatus'], 'unknown');
+    expect(result!['recoveryRequired'], isTrue);
+    expect(journal.failedState, isNotNull);
+    expect(journal.failedState!.restoreId, restoreId);
+    final pending = (await journal.read())!;
+    expect(pending.restoreId, restoreId);
+    expect(pending.completed, 0);
+    expect(pending.started, isTrue);
+    final mainTarget = pending.targets.singleWhere(
+      (target) => target.owner == BackupOwner.mainData,
+    );
+    final targetData = AppData.decodeStorageSnapshot(
+      jsonEncode(mainTarget.descriptor['target']),
+    );
+    final generation = targetData.applicationLedger!.generation;
+    final fixedTargets = pending.targets
+        .map((target) => target.fingerprint)
+        .toList();
+    expect(h.saved.applicationLedger!.generation, generation);
+    expect(h.app.backups.selective.recoveryPending, isTrue);
+    expect(h.app.session.canWrite, isFalse);
+    expect(
+      h.saved.generalMode.schedules.first.name,
+      'Restored visible calendar',
+    );
+    expect(
+      h.saved.generalMode.schedules.last.toJson(),
+      before.generalMode.schedules.last.toJson(),
+    );
+    expect(h.saved.studentMode.toJson(), before.studentMode.toJson());
+    expect(
+      h.app.agent.knowledgeRepository.find('memory:restored-note'),
+      isNull,
+    );
+
+    await h.app.lifecycle.retryStorageLoad();
+    expect(await journal.read(), isNull);
+    expect(h.app.backups.selective.recoveryPending, isFalse);
+    expect(h.app.session.canWrite, isTrue);
+    expect(h.saved.applicationLedger!.generation, generation);
+    expect(
+      h.saved.generalMode.schedules.first.name,
+      'Restored visible calendar',
+    );
+    expect(
+      h.saved.generalMode.schedules.last.toJson(),
+      before.generalMode.schedules.last.toJson(),
+    );
+    expect(h.saved.studentMode.toJson(), before.studentMode.toJson());
+    expect(
+      h.app.agent.knowledgeRepository.find('memory:restored-note')!.body,
+      'Synthetic content restored after the main phase.',
+    );
+    for (final state in journal.attempts) {
+      expect(state.restoreId, restoreId);
+      expect(state.planFingerprint, pending.planFingerprint);
+      expect(
+        state.targets.map((target) => target.fingerprint).toList(),
+        fixedTargets,
+      );
+    }
+    expect(result!['effectStatus'], 'unknown');
+  });
 }
