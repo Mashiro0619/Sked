@@ -84,7 +84,11 @@ class AgentTranscriptState extends State<AgentTranscript> {
   }
 
   void _remember() {
-    if (!widget.active || widget.position.followLatest) return;
+    if (!widget.active ||
+        widget.position.followLatest ||
+        _restoreFraction != null) {
+      return;
+    }
     final viewport = _viewportKey.currentContext?.findRenderObject();
     if (viewport is! RenderBox || !viewport.hasSize) return;
     LocalKey? first;
@@ -232,32 +236,38 @@ class AgentTranscriptState extends State<AgentTranscript> {
               }
               return false;
             },
-            child: CustomScrollView(
-              key: widget.scrollViewKey,
-              controller: _controller,
-              center: _centerSliverKey,
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              semanticChildCount: ids.length,
-              slivers: [
-                const SliverToBoxAdapter(child: SizedBox(height: 8)),
-                if (centerIndex > 0)
+            child: KeyedSubtree(
+              // A new message origin also needs a new ScrollPosition. Merely
+              // replacing the controller retains the old absolute pixels.
+              key: ObjectKey(_controller),
+              child: CustomScrollView(
+                key: widget.scrollViewKey,
+                controller: _controller,
+                center: _centerSliverKey,
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                semanticChildCount: ids.length,
+                slivers: [
+                  const SliverToBoxAdapter(child: SizedBox(height: 8)),
+                  if (centerIndex > 0)
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) => item(centerIndex - index - 1),
+                        childCount: centerIndex,
+                        addSemanticIndexes: false,
+                      ),
+                    ),
                   SliverList(
+                    key: _centerSliverKey,
                     delegate: SliverChildBuilderDelegate(
-                      (context, index) => item(centerIndex - index - 1),
-                      childCount: centerIndex,
+                      (context, index) => item(centerIndex + index),
+                      childCount: ids.length - centerIndex,
                       addSemanticIndexes: false,
                     ),
                   ),
-                SliverList(
-                  key: _centerSliverKey,
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) => item(centerIndex + index),
-                    childCount: ids.length - centerIndex,
-                    addSemanticIndexes: false,
-                  ),
-                ),
-                const SliverToBoxAdapter(child: SizedBox(height: 24)),
-              ],
+                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                ],
+              ),
             ),
           ),
         ),
