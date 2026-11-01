@@ -25,3 +25,13 @@ ZIP v1 使用 `manifest.json`、逐对象 JSON 和按摘要标识的二进制文
 设备偏好使用来源平台与组身份。当前平台无法应用的分组保留在计划的 `unsupportedGroups` 中，不生成写入目标。以上规划和合并是纯计算；真正写入须由存储拥有者在维护边界中执行。
 
 [选择和依赖回归](../test/backup/selective_backup_planner_test.dart)与[主数据及历史合并回归](../test/backup/selective_backup_app_data_test.dart)核对身份、依赖复制、未选保留、子对象重绑和旧格式边界。
+
+## 持久恢复协议
+
+`SelectiveRestoreCoordinator` 要求宿主提供排他的恢复边界。所有参与者先准备并验证原值和目标，首次 journal 固定对象映射、数据世代和阶段；预检失败不开始业务写入。已经保存但回复丢失的阶段必须读取实际存储确认，不能重新分配身份或准备另一组目标。
+
+参与者按附件、主库、凭据、学校站点、设备偏好、知识和聊天的顺序执行。每阶段核对实际目标后再记录进度，全部确认后才清理暂存和 pending 标记。任一阶段结果未知时保留 journal，由相同的存储拥有者继续，不能用旧内存数据冒充实际状态。
+
+原生 journal 使用双槽与完成墓碑；浏览器使用受控偏好存储。二进制附件暂存位于专用私有目录或独立 IndexedDB，不使用原设备文件路径。基础协调器只执行参与者协议，应用级排空、冻结和启动恢复由组合层接入。
+
+[恢复协调回归](../test/backup/selective_restore_coordinator_test.dart)覆盖固定目标、准备失败、中断继续、回执丢失和目标漂移；[journal 回归](../test/backup/selective_restore_journal_test.dart)覆盖双槽、版本拒绝、损坏和完成清理。
