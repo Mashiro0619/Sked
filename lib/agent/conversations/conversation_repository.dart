@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -30,6 +31,7 @@ class ConversationRepository extends ChangeNotifier {
   bool _blocked = false;
   bool _disposed = false;
   bool _frozen = false;
+  final _shutdownRunIds = <String>{};
   bool recovered = false;
 
   bool get isLoaded => _loaded;
@@ -67,11 +69,28 @@ class ConversationRepository extends ChangeNotifier {
         final interruptedRun = item.runs.any(
           (run) => run.status == ConversationRunStatus.running,
         );
+        final interruptedAttachment = item.messages.any(
+          (message) =>
+              message.attachmentDelivery == AttachmentDelivery.preparing ||
+              message.attachmentDelivery == AttachmentDelivery.sending,
+        );
         return item.status == ConversationStatus.running ||
                 item.status == ConversationStatus.waitingApproval ||
-                interruptedRun
+                interruptedRun ||
+                interruptedAttachment
             ? item.copyWith(
                 status: ConversationStatus.interrupted,
+                messages: item.messages.map(
+                  (message) =>
+                      message.attachmentDelivery ==
+                              AttachmentDelivery.preparing ||
+                          message.attachmentDelivery ==
+                              AttachmentDelivery.sending
+                      ? message.copyWith(
+                          attachmentDelivery: AttachmentDelivery.unknown,
+                        )
+                      : message,
+                ),
                 runs: item.runs.map(
                   (run) => run.status == ConversationRunStatus.running
                       ? run.interrupt()
@@ -142,6 +161,7 @@ class ConversationRepository extends ChangeNotifier {
           (item) =>
               item.status == ConversationStatus.idle &&
               item.draft.isEmpty &&
+              item.draftAttachmentIds.isEmpty &&
               item.updatedAt.isBefore(cutoff) &&
               canRemove(item.id),
         )
@@ -170,7 +190,7 @@ class ConversationRepository extends ChangeNotifier {
     AgentConversation Function(AgentConversation current) transform, {
     String? expectedRunId,
   }) => _enqueue(() async {
-    _checkWritable();
+    _checkWritable(expectedRunId: expectedRunId);
     final current = _requireConversation(id);
     if (expectedRunId != null && current.runId != expectedRunId) {
       throw const OperationProblem(
@@ -179,6 +199,7 @@ class ConversationRepository extends ChangeNotifier {
       );
     }
     final next = transform(current).copyWith(updatedAt: _clock().toUtc());
+    if (_frozen) _validateShutdownRunUpdate(current, next, expectedRunId!);
     if (next.id != current.id || next.createdAt != current.createdAt) {
       throw const OperationProblem(
         OperationErrorCode.invalidArgument,
@@ -292,8 +313,75 @@ class ConversationRepository extends ChangeNotifier {
 
   Future<void> waitForPendingWrites() => _tail;
 
-  /// Used before app-wide clear/shutdown; late callbacks cannot recreate files.
-  void freeze() => _frozen = true;
+  /// Closing may finish only the host's already accepted runs. Clear/dispose
+  /// pass no run IDs and remain a hard boundary against every later write.
+  void freeze({Iterable<String> completingRunIds = const []}) {
+    _frozen = true;
+    _shutdownRunIds
+      ..clear()
+      ..addAll(completingRunIds);
+  }
+
+  void finishShutdownRun(String runId) => _shutdownRunIds.remove(runId);
+
+  void _validateShutdownRunUpdate(
+    AgentConversation current,
+    AgentConversation next,
+    String runId,
+  ) {
+    Map<String, Object?> fixedFields(AgentConversation value) => value.toJson()
+      ..removeWhere(
+        (key, _) =>
+            const {'updatedAt', 'status', 'messages', 'runs'}.contains(key),
+      );
+    final runIds = current.runs.map((run) => run.id).toList();
+    final otherRuns = current.runs
+        .where((run) => run.id != runId)
+        .map((run) => run.toJson())
+        .toList();
+    if (jsonEncode(fixedFields(current)) != jsonEncode(fixedFields(next)) ||
+        jsonEncode(runIds) !=
+            jsonEncode(next.runs.map((run) => run.id).toList()) ||
+        jsonEncode(otherRuns) !=
+            jsonEncode(
+              next.runs
+                  .where((run) => run.id != runId)
+                  .map((run) => run.toJson())
+                  .toList(),
+            ) ||
+        next.messages.length < current.messages.length) {
+      throw const ConversationStorageException(
+        'Only accepted run completion may finish during shutdown.',
+      );
+    }
+    for (var index = 0; index < current.messages.length; index++) {
+      final before = current.messages[index].toJson()
+        ..remove('attachmentDelivery');
+      final after = next.messages[index].toJson()..remove('attachmentDelivery');
+      if (jsonEncode(before) != jsonEncode(after)) {
+        throw const ConversationStorageException(
+          'Shutdown cannot edit existing message content.',
+        );
+      }
+    }
+    final pendingCalls =
+        {
+          for (final message in current.messages)
+            for (final call in message.toolCalls) call.id,
+        }..removeAll(
+          current.messages
+              .map((message) => message.toolCallId)
+              .whereType<String>(),
+        );
+    for (final message in next.messages.skip(current.messages.length)) {
+      if (message.role != ConversationRole.tool ||
+          !pendingCalls.remove(message.toolCallId)) {
+        throw const ConversationStorageException(
+          'Shutdown can only record a pending tool result.',
+        );
+      }
+    }
+  }
 
   AgentConversation _newConversation(
     String title,
@@ -368,8 +456,14 @@ class ConversationRepository extends ChangeNotifier {
     _notify();
   }
 
-  void _checkWritable() {
-    if (!canWrite) {
+  void _checkWritable({String? expectedRunId}) {
+    if (!canWrite &&
+        !(_loaded &&
+            !_blocked &&
+            !_disposed &&
+            _frozen &&
+            expectedRunId != null &&
+            _shutdownRunIds.contains(expectedRunId))) {
       throw const ConversationStorageException(
         'Conversation storage is unavailable; load or recover it before writing.',
       );

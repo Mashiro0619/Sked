@@ -18,13 +18,17 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:js_interop';
+import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/widgets.dart';
 import 'package:http/browser_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sked/agent/attachments/attachment_repository.dart';
+import 'package:sked/agent/attachments/conversation_attachments.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
-import 'package:sked/agent/conversations/conversation_models.dart';
-import 'package:sked/agent/conversations/conversation_storage.dart';
+import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/utils/app_storage_keys.dart';
 import 'package:web/web.dart' as web;
@@ -64,6 +68,10 @@ Future<Map<String, Object?>> _dispatch(String source) async {
       'corruptSlot' => _corruptSlot(input['slot'] as int),
       'futureSlot' => _futureSlot(),
       'clearStorage' => _clearStorage(),
+      'seedAttachments' => _seedAttachments(),
+      'readAttachments' => _withAttachments(_attachmentReport),
+      'deleteAttachments' => _deleteAttachments(),
+      'requestAttachment' => _requestAttachment(_endpoint(input)),
       _ => throw const FormatException('Unknown browser probe operation.'),
     };
     return await result;
@@ -303,3 +311,193 @@ Future<Map<String, Object?>> _clearStorage() async {
   }
   return _readStorage();
 }
+
+const _attachmentConversationId = 'browser-attachment-fixture';
+const _binaryFixtureName = 'browser-fixture.bin';
+const _calendarFixtureName = 'browser-fixture.ics';
+const _calendarFixture =
+    'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\n'
+    'UID:sked-browser-fixture\r\nDTSTART:20261102T080000Z\r\n'
+    'DTEND:20261102T090000Z\r\nSUMMARY:Synthetic course\r\n'
+    'END:VEVENT\r\nEND:VCALENDAR\r\n';
+
+Uint8List _attachmentFixtureBytes(String name) => switch (name) {
+  _binaryFixtureName => Uint8List.fromList(
+    List.generate(200000, (index) => (index * 37) % 256),
+  ),
+  _calendarFixtureName => Uint8List.fromList(utf8.encode(_calendarFixture)),
+  _ => throw const FormatException('Unknown attachment fixture.'),
+};
+
+Future<Map<String, Object?>> _withAttachments(
+  Future<Map<String, Object?>> Function(
+    ConversationRepository,
+    AttachmentRepository,
+    ConversationAttachments,
+  )
+  action,
+) async {
+  final conversations = ConversationRepository(storage: _conversations);
+  final repository = AttachmentRepository();
+  final attachments = ConversationAttachments(
+    conversations: conversations,
+    repository: repository,
+  );
+  try {
+    await conversations.load();
+    return await action(conversations, repository, attachments);
+  } finally {
+    await attachments.close();
+    attachments.dispose();
+    conversations.dispose();
+  }
+}
+
+Future<Map<String, Object?>> _seedAttachments() =>
+    _withAttachments((conversations, repository, attachments) async {
+      await conversations.create(
+        id: _attachmentConversationId,
+        title: 'Persistent binary attachment fixture',
+      );
+      for (final name in [_binaryFixtureName, _calendarFixtureName]) {
+        await attachments.attach(
+          _attachmentConversationId,
+          XFile.fromData(_attachmentFixtureBytes(name), path: name, name: name),
+          canModify: () => true,
+        );
+      }
+      await conversations.update(_attachmentConversationId, (current) {
+        final binary = current.attachments.singleWhere(
+          (attachment) => attachment.name == _binaryFixtureName,
+        );
+        final calendar = current.attachments.singleWhere(
+          (attachment) => attachment.name == _calendarFixtureName,
+        );
+        return current.copyWith(
+          messages: [
+            ConversationMessage(
+              id: 'browser-attachment-message',
+              role: ConversationRole.user,
+              text: '',
+              createdAt: DateTime.utc(2026, 11, 1),
+              attachmentIds: [binary.id],
+              attachmentDelivery: AttachmentDelivery.sending,
+            ),
+          ],
+          draftAttachmentIds: [calendar.id],
+        );
+      });
+      return _attachmentReport(conversations, repository, attachments);
+    });
+
+Future<Map<String, Object?>> _attachmentReport(
+  ConversationRepository conversations,
+  AttachmentRepository repository,
+  ConversationAttachments _,
+) async {
+  final conversation = conversations.find(_attachmentConversationId);
+  final storedIds = (await repository.storage.ids()).toList()..sort();
+  final files = <Map<String, Object?>>[];
+  for (final attachment
+      in conversation?.attachments ?? const <ConversationAttachment>[]) {
+    final bytes = await repository.readBytes(attachment);
+    files.add({
+      ...attachment.toJson(),
+      'actualDigest': sha256.convert(bytes).toString(),
+      'fixtureDigest': sha256
+          .convert(_attachmentFixtureBytes(attachment.name))
+          .toString(),
+    });
+  }
+  final encodedBinary = base64Encode(
+    _attachmentFixtureBytes(_binaryFixtureName),
+  );
+  var binaryInLocalStorage = false;
+  for (var index = 0; index < web.window.localStorage.length; index++) {
+    final key = web.window.localStorage.key(index);
+    if (key != null &&
+        (web.window.localStorage.getItem(key)?.contains(encodedBinary) ??
+            false)) {
+      binaryInLocalStorage = true;
+    }
+  }
+  return {
+    'status': conversation == null ? 'missing' : 'loaded',
+    'conversationId': conversation?.id,
+    'conversationStatus': conversation?.status.name,
+    'draftAttachmentIds': conversation?.draftAttachmentIds ?? const [],
+    'messageAttachmentIds': [
+      for (final message
+          in conversation?.messages ?? const <ConversationMessage>[])
+        ...message.attachmentIds,
+    ],
+    'messageDeliveries': [
+      for (final message
+          in conversation?.messages ?? const <ConversationMessage>[])
+        message.attachmentDelivery.name,
+    ],
+    'files': files,
+    'storedIds': storedIds,
+    'binaryInLocalStorage': binaryInLocalStorage,
+  };
+}
+
+Future<Map<String, Object?>> _deleteAttachments() =>
+    _withAttachments((conversations, repository, attachments) async {
+      if (conversations.find(_attachmentConversationId) != null) {
+        await conversations.delete(_attachmentConversationId);
+      }
+      await attachments.collectGarbage();
+      return _attachmentReport(conversations, repository, attachments);
+    });
+
+Future<Map<String, Object?>> _requestAttachment(Uri endpoint) =>
+    _withAttachments((conversations, repository, _) async {
+      final attachment = conversations
+          .find(_attachmentConversationId)!
+          .attachments
+          .singleWhere((attachment) => attachment.name == _calendarFixtureName);
+      final browser = BrowserClient();
+      final provider = ProviderClient(client: browser);
+      try {
+        final response = await provider.collect(
+          ProviderRequest(
+            endpoint: endpoint,
+            protocol: ProviderProtocol.responses,
+            model: 'browser-file-fixture',
+            allowInsecureHttp: true,
+            messages: [
+              ProviderMessage(
+                role: ProviderRole.user,
+                text: 'Read the synthetic calendar.',
+                attachments: [
+                  ProviderAttachment(
+                    id: attachment.id,
+                    filename: attachment.name,
+                    mediaType: attachment.mediaType,
+                    byteLength: attachment.byteLength,
+                    digest: attachment.digest,
+                    openRead: () => repository.read(attachment),
+                  ),
+                ],
+              ),
+            ],
+            limits: const ProviderLimits(
+              totalTimeout: Duration(seconds: 10),
+              idleTimeout: Duration(seconds: 5),
+              maxOutputTokens: 32,
+            ),
+          ),
+          apiKey: _credentialMarker,
+        );
+        return {
+          'status': 'completed',
+          'text': response.text,
+          'attachmentId': attachment.id,
+          'digest': attachment.digest,
+        };
+      } finally {
+        provider.close();
+        browser.close();
+      }
+    });

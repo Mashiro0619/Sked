@@ -5,9 +5,11 @@ import 'package:crypto/crypto.dart';
 import '../../application/operation_contracts.dart';
 import '../../models/agent_settings.dart';
 import '../../utils/time_utils.dart' show tryParseStrictIsoDateTime;
+import '../attachments/attachment_models.dart';
 import 'conversation_usage.dart';
 
 export 'conversation_usage.dart';
+export '../attachments/attachment_models.dart';
 
 enum ConversationStatus { idle, running, waitingApproval, interrupted }
 
@@ -47,13 +49,24 @@ class ConversationMessage {
     this.toolCallId,
     this.modelSelection,
     this.providerProtocol,
+    Iterable<String> attachmentIds = const [],
+    this.attachmentDelivery = AttachmentDelivery.local,
     Iterable<Map<String, Object?>> responseItems = const [],
   }) : toolCalls = List.unmodifiable(toolCalls),
+       attachmentIds = List.unmodifiable(attachmentIds),
        responseItems = _freezeResponseItems(responseItems) {
     if (this.responseItems.isNotEmpty && role != ConversationRole.assistant) {
       throw const FormatException(
         'Only assistant messages have provider items.',
       );
+    }
+    if (this.attachmentIds.length > ConversationAttachment.maxPerMessage ||
+        this.attachmentIds.any((id) => !validAttachmentId(id)) ||
+        this.attachmentIds.toSet().length != this.attachmentIds.length ||
+        (this.attachmentIds.isNotEmpty &&
+            role != ConversationRole.user &&
+            role != ConversationRole.notice)) {
+      throw const FormatException('Invalid message attachment references.');
     }
   }
 
@@ -65,6 +78,28 @@ class ConversationMessage {
   final String? toolCallId;
   final AgentModelSelection? modelSelection;
   final AgentModelProtocol? providerProtocol;
+  final List<String> attachmentIds;
+  final AttachmentDelivery attachmentDelivery;
+
+  ConversationMessage copyWith({
+    String? text,
+    ConversationRole? role,
+    AgentModelSelection? modelSelection,
+    Iterable<String>? attachmentIds,
+    AttachmentDelivery? attachmentDelivery,
+  }) => ConversationMessage(
+    id: id,
+    role: role ?? this.role,
+    text: text ?? this.text,
+    createdAt: createdAt,
+    toolCalls: toolCalls,
+    toolCallId: toolCallId,
+    responseItems: responseItems,
+    modelSelection: modelSelection ?? this.modelSelection,
+    providerProtocol: providerProtocol,
+    attachmentIds: attachmentIds ?? this.attachmentIds,
+    attachmentDelivery: attachmentDelivery ?? this.attachmentDelivery,
+  );
 
   /// Bounded, immutable Responses continuation data; never request headers or
   /// credentials. The model endpoint remains bound at conversation level.
@@ -81,6 +116,8 @@ class ConversationMessage {
     if (responseItems.isNotEmpty) 'responseItems': responseItems,
     if (modelSelection != null) 'modelSelection': modelSelection!.toJson(),
     if (providerProtocol != null) 'providerProtocol': providerProtocol!.name,
+    if (attachmentIds.isNotEmpty) 'attachmentIds': attachmentIds,
+    if (attachmentIds.isNotEmpty) 'attachmentDelivery': attachmentDelivery.name,
   };
 
   factory ConversationMessage.fromJson(Map<String, dynamic> json) {
@@ -110,6 +147,10 @@ class ConversationMessage {
       providerProtocol: json['providerProtocol'] == null
           ? null
           : _enumValue(AgentModelProtocol.values, json['providerProtocol']),
+      attachmentIds: _attachmentIds(json['attachmentIds']),
+      attachmentDelivery: json['attachmentDelivery'] == null
+          ? AttachmentDelivery.local
+          : _enumValue(AttachmentDelivery.values, json['attachmentDelivery']),
     );
   }
 }
@@ -326,9 +367,13 @@ class AgentConversation {
     Iterable<ConversationMessage> messages = const [],
     Iterable<ConversationSource> sources = const [],
     Iterable<ConversationRunUsage> runs = const [],
+    Iterable<ConversationAttachment> attachments = const [],
+    Iterable<String> draftAttachmentIds = const [],
   }) : messages = List.unmodifiable(messages),
        sources = List.unmodifiable(sources),
-       runs = List.unmodifiable(runs);
+       runs = List.unmodifiable(runs),
+       attachments = List.unmodifiable(attachments),
+       draftAttachmentIds = List.unmodifiable(draftAttachmentIds);
 
   final String id;
   final String title;
@@ -344,6 +389,8 @@ class AgentConversation {
   final List<ConversationMessage> messages;
   final List<ConversationSource> sources;
   final List<ConversationRunUsage> runs;
+  final List<ConversationAttachment> attachments;
+  final List<String> draftAttachmentIds;
 
   AgentConversation copyWith({
     String? title,
@@ -358,6 +405,8 @@ class AgentConversation {
     Iterable<ConversationMessage>? messages,
     Iterable<ConversationSource>? sources,
     Iterable<ConversationRunUsage>? runs,
+    Iterable<ConversationAttachment>? attachments,
+    Iterable<String>? draftAttachmentIds,
   }) => AgentConversation(
     id: id,
     title: title ?? this.title,
@@ -373,6 +422,8 @@ class AgentConversation {
     messages: messages ?? this.messages,
     sources: sources ?? this.sources,
     runs: runs ?? this.runs,
+    attachments: attachments ?? this.attachments,
+    draftAttachmentIds: draftAttachmentIds ?? this.draftAttachmentIds,
   );
 
   Map<String, Object?> toJson() => {
@@ -391,6 +442,11 @@ class AgentConversation {
     'messages': messages.map((message) => message.toJson()).toList(),
     'sources': sources.map((source) => source.toJson()).toList(),
     'runs': runs.map((run) => run.toJson()).toList(),
+    if (attachments.isNotEmpty)
+      'attachments': attachments
+          .map((attachment) => attachment.toJson())
+          .toList(),
+    if (draftAttachmentIds.isNotEmpty) 'draftAttachmentIds': draftAttachmentIds,
   };
 
   factory AgentConversation.fromJson(Map<String, dynamic> json) {
@@ -412,6 +468,22 @@ class AgentConversation {
       'runs',
       max: 1000,
     ).map(ConversationRunUsage.fromJson).toList();
+    final attachments = _objects(
+      json,
+      'attachments',
+      max: 1000,
+    ).map(ConversationAttachment.fromJson).toList();
+    final draftAttachmentIds = _attachmentIds(json['draftAttachmentIds']);
+    final attachmentIds = attachments.map((a) => a.id).toSet();
+    if (attachmentIds.length != attachments.length ||
+        [
+          ...draftAttachmentIds,
+          ...messages.expand((m) => m.attachmentIds),
+        ].any((id) => !attachmentIds.contains(id))) {
+      throw const FormatException(
+        'Missing or duplicate attachment references.',
+      );
+    }
     if (messages.map((message) => message.id).toSet().length !=
             messages.length ||
         sources.map((source) => source.id).toSet().length != sources.length ||
@@ -445,6 +517,8 @@ class AgentConversation {
       messages: messages,
       sources: sources,
       runs: runs,
+      attachments: attachments,
+      draftAttachmentIds: draftAttachmentIds,
     );
   }
 }
@@ -490,7 +564,7 @@ class ConversationArchive {
        terminatedIds = Set.unmodifiable(terminatedIds);
 
   static const maxBytes = 16 * 1024 * 1024;
-  static const currentVersion = 3;
+  static const currentVersion = 4;
   final int revision;
   final String? selectedId;
   final List<AgentConversation> conversations;
@@ -521,7 +595,7 @@ class ConversationArchive {
       );
     }
     final json = _object(jsonDecode(source));
-    if ((!const [1, 2, currentVersion].contains(json['version'])) ||
+    if ((!const [1, 2, 3, currentVersion].contains(json['version'])) ||
         json['revision'] is! int ||
         (json['revision'] as int) < 0) {
       throw const FormatException('Unsupported conversation archive version.');
@@ -531,6 +605,15 @@ class ConversationArchive {
       'conversations',
       max: 200,
     ).map(AgentConversation.fromJson).toList();
+    final attachmentDefinitions = <String, String>{};
+    for (final attachment in conversations.expand((c) => c.attachments)) {
+      final definition = jsonEncode(attachment.toJson());
+      final previous = attachmentDefinitions[attachment.id];
+      if (previous != null && previous != definition) {
+        throw const FormatException('Conflicting shared attachment identity.');
+      }
+      attachmentDefinitions[attachment.id] = definition;
+    }
     final handoffs = _objects(
       json,
       'handoffs',
@@ -581,6 +664,22 @@ class ConversationArchive {
     );
   }
 }
+
+List<String> _attachmentIds(Object? value) {
+  if (value == null) return const [];
+  if (value is! List ||
+      value.length > ConversationAttachment.maxPerMessage ||
+      value.any((id) => id is! String || !validAttachmentId(id)) ||
+      value.toSet().length != value.length) {
+    throw const FormatException('Invalid attachment references.');
+  }
+  return value.cast<String>();
+}
+
+Set<String> conversationAttachmentIds(AgentConversation conversation) => {
+  ...conversation.draftAttachmentIds,
+  ...conversation.messages.expand((message) => message.attachmentIds),
+};
 
 Map<String, dynamic> _object(Object? value) {
   if (value is! Map<String, dynamic>) {

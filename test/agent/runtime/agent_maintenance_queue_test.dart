@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
+import 'package:sked/agent/conversations/conversation_models.dart';
 import 'package:sked/agent/conversations/conversation_storage.dart';
 import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/application/external_operation_coordinator.dart';
@@ -30,8 +31,9 @@ void main() {
       test(
         '$maintenance drains a different run queued for external $queuedAction',
         () async {
+          final storage = _Storage();
           final app = await workspaceProvider(
-            agentConversationStorage: _Storage(),
+            agentConversationStorage: storage,
             agentCredentialStore: MemoryAgentCredentialStore(),
           );
           final emergencyRelease = Completer<void>();
@@ -116,6 +118,36 @@ void main() {
                           : app.shutdown.quiesce().then((_) {
                               drained = true;
                             });
+                      if (maintenance == 'close') {
+                        final runId = app.agent.conversations
+                            .find(firstConversation.id)!
+                            .runId!;
+                        for (final change in [
+                          (AgentConversation current) =>
+                              current.copyWith(title: 'Late rename'),
+                          (AgentConversation current) =>
+                              current.copyWith(archived: true),
+                          (AgentConversation current) =>
+                              current.copyWith(draft: 'Late draft'),
+                        ]) {
+                          await expectLater(
+                            app.agent.conversations.update(
+                              firstConversation.id,
+                              change,
+                              expectedRunId: runId,
+                            ),
+                            throwsA(isA<ConversationStorageException>()),
+                          );
+                        }
+                        await expectLater(
+                          app.agent.conversations.update(
+                            firstConversation.id,
+                            (current) => current,
+                            expectedRunId: 'unaccepted-run',
+                          ),
+                          throwsA(isA<ConversationStorageException>()),
+                        );
+                      }
                       // A failed regression still releases its owned fixture queues
                       // during teardown rather than leaving a test process hung.
                       await Future.any([draining, emergencyRelease.future]);
@@ -183,6 +215,31 @@ void main() {
             expect((results.last['error'] as Map)['code'], 'cancelled');
             expect(queuedEffects, 0);
             expect(readBacks, 0);
+            final saved = ConversationArchive.decode(storage.source!)
+                .conversations
+                .singleWhere(
+                  (conversation) => conversation.id == secondConversation.id,
+                );
+            expect(
+              jsonDecode(saved.messages.last.text)['status'],
+              'not_executed',
+            );
+            expect(app.agent.conversations.canWrite, isFalse);
+            await expectLater(
+              app.agent.conversations.update(
+                secondConversation.id,
+                (current) => current.copyWith(draft: 'Late editor'),
+              ),
+              throwsA(isA<ConversationStorageException>()),
+            );
+            await expectLater(
+              app.agent.conversations.update(
+                secondConversation.id,
+                (current) => current,
+                expectedRunId: saved.runId,
+              ),
+              throwsA(isA<ConversationStorageException>()),
+            );
             await app.agent.external.waitForPendingWrites();
             expect(queuedEffects, 0);
             expect(readBacks, 0);

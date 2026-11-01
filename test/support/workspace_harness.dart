@@ -12,6 +12,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:sked/agent/agent_application.dart';
+import 'package:sked/agent/attachments/attachment_storage.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
 import 'package:sked/agent/conversations/conversation_storage.dart';
 import 'package:sked/agent/knowledge/knowledge_storage.dart';
@@ -95,6 +96,7 @@ Future<AppRuntime> workspaceProvider({
   Future<void> Function(Future<void> Function())? workspaceMutationLock,
   DataTransferCodec codec = inlineDataTransferCodec,
   ConversationStorage? agentConversationStorage,
+  AttachmentStorage? agentAttachmentStorage,
   KnowledgeStorage? agentKnowledgeStorage,
   AgentCredentialStore? agentCredentialStore,
   ProviderClient? agentProvider,
@@ -109,6 +111,7 @@ Future<AppRuntime> workspaceProvider({
   final provider = AppRuntime(
     dataTransferCodec: codec,
     agentConversationStorage: agentConversationStorage,
+    agentAttachmentStorage: agentAttachmentStorage,
     agentKnowledgeStorage: agentKnowledgeStorage,
     agentCredentialStore: agentCredentialStore,
     agentProvider: agentProvider,

@@ -6929,6 +6929,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'When to use this skill, one hint per line'**
   String get agentSkillTriggers;
+
+  /// No description provided for @agentAttachAnyFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Attach a file'**
+  String get agentAttachAnyFile;
+
+  /// No description provided for @agentFileLocal.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved on this device'**
+  String get agentFileLocal;
+
+  /// No description provided for @agentFileSaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving file…'**
+  String get agentFileSaving;
+
+  /// No description provided for @agentFilePreparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing to send…'**
+  String get agentFilePreparing;
+
+  /// No description provided for @agentFileSending.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending file…'**
+  String get agentFileSending;
+
+  /// No description provided for @agentFileAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepted by the service'**
+  String get agentFileAccepted;
+
+  /// No description provided for @agentFileFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'File was not accepted'**
+  String get agentFileFailed;
+
+  /// No description provided for @agentFileCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'File transfer stopped'**
+  String get agentFileCancelled;
+
+  /// No description provided for @agentFileUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Service acceptance is unknown'**
+  String get agentFileUnknown;
+
+  /// No description provided for @agentFileTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'A file can be up to 32 MB.'**
+  String get agentFileTooLarge;
+
+  /// No description provided for @agentFileChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'The file changed while it was being read. Select it again.'**
+  String get agentFileChanged;
+
+  /// No description provided for @agentFileMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'This file is no longer available on this device. Select it again to use it.'**
+  String get agentFileMissing;
+
+  /// No description provided for @agentFileCorrupt.
+  ///
+  /// In en, this message translates to:
+  /// **'The saved file could not be verified. Select the original file again.'**
+  String get agentFileCorrupt;
+
+  /// No description provided for @agentFileUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'File storage is unavailable. Retry after restoring access.'**
+  String get agentFileUnavailable;
+
+  /// No description provided for @agentFileUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'This API protocol cannot send this file type. The local file is kept.'**
+  String get agentFileUnsupported;
+
+  /// No description provided for @agentFileConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'The conversation changed while the file was being added, or the attachment limit was reached.'**
+  String get agentFileConflict;
+
+  /// No description provided for @agentFilePreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview file'**
+  String get agentFilePreview;
+
+  /// No description provided for @agentFileUseAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Use in the next message'**
+  String get agentFileUseAgain;
+
+  /// No description provided for @agentFileNoPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview is not available for this file type. The saved file can still be sent if the API supports it.'**
+  String get agentFileNoPreview;
+
+  /// No description provided for @agentFilePreviewFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'This image could not be displayed.'**
+  String get agentFilePreviewFailed;
+
+  /// No description provided for @agentFileReceivedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Acceptance confirms the service received the request; it does not confirm that the model read every file.'**
+  String get agentFileReceivedHint;
 }
 
 class _AppLocalizationsDelegate

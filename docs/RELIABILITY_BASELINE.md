@@ -45,7 +45,7 @@ Windows 学校页面清理需要等待锁定 WebView 插件 `dispose` 通道的�
 
 学校网页交接的来源、首条消息和交接标识一起持久化，普通文件附件按本地添加流程单独保存到会话。成功删除同步两个存储副本，迟到模型响应不能复活会话。归档和删除先处理当前运行，删除聊天不撤销业务操作。保留策略只清理超过期限、无草稿、无运行或排队输入的已完成会话；中断运行与需要核对的结果不自动重放。上下文摘要不改写原始消息，不冒充实时数据查询。见 [会话仓库](../test/agent/conversations/conversation_repository_test.dart)、[上下文](../test/agent/runtime/conversation_context_test.dart) 与 [会话工具](../test/agent/tools/conversation_tool_adapters_test.dart)。
 
-会话附件只做本地持久化，不自动调用模型。JSON／ICS／TXT／HTML／HTM 文件采用 512 KiB 单份字节上限和严格 UTF-8 解码；原生文件选择预检及实际读取都遵守该预算。保存失败复用当前页面持有的来源 ID 重试，不能重复追加；待重试来源绑定会话、消息边界和数据世代，边界变化后拒绝写入。尚未落盘的输入不保证跨页面退出或进程重启恢复，不能将页面内暂存描述成已保存。见 [附件存储](../test/agent/imports/conversation_file_attachments_test.dart)、[附件界面](../test/agent/ui/agent_conversation_attachments_test.dart) 与 [文本文件读取](../test/services/text_file_picker_test.dart)。
+二进制会话附件先完成私有存储写入和读回核验，再发布草稿引用，不自动调用模型；每份上限 32 MB，每条消息最多 20 份，请求原始字节合计上限 48 MB。原生私有文件与 Web IndexedDB Blob 使用相同的长度、摘要、取消和引用规则；请求按原生协议编码，文本上下文与 Base64 开销分别核算。重试复用已核验文件身份，最终读回核验仍可取消；会话、消息边界和数据世代变化后拒绝发布旧引用。未发布的重试缓冲不等同于持久草稿。见[附件协议与验证入口](AGENT_ATTACHMENTS.md)、[应用生命周期](../test/agent/attachments/attachment_application_lifecycle_test.dart)和[聊天入口](../test/agent/ui/agent_binary_attachment_view_test.dart)。旧网页/文本来源接口仍保留原有严格 UTF-8 和小文本预算，不作为二进制文件入口的限制。
 
 连接诊断使用合成小请求，分别报告收到有效响应与观察到工具调用，不使用私人课表或聊天。模型目录只使用已配置来源的已知路径或明确的同源地址，拒绝重定向、超时、超量和无效响应；完整目录保存在操作回执中，分页读取不重复联网。诊断测试覆盖协议、取消与输出边界，不能代替具体服务、账号、原生 keyring 或实体设备验收。见 [诊断协议](../test/agent/connection/agent_connection_diagnostics_test.dart) 与 [连接工具](../test/agent/tools/agent_control_tool_adapters_test.dart)。
 

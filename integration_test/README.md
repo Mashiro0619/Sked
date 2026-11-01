@@ -27,6 +27,12 @@ flutter build web --release --no-web-resources-cdn `
 
 `seedStorage` 后真实刷新页面，再调用 `readStorage`，应看到内存密钥消失而会话双槽保留；随后验证单槽损坏恢复、删除后不复活和较新格式拒读。HTTP 非可信别名用于单独验证安全上下文差异，不能用浏览器将 loopback 视为可信来源的例外假充混合内容检查。临时证书只可在该隔离上下文接受，不关闭 Web 安全策略或修改系统信任库。服务器、驱动脚本、日志和证书放在系统临时目录；浏览器 API 测试不证明任意第三方端点都提供相同 CORS 配置。
 
+附件使用同一探针的 `seedAttachments`、`readAttachments`、`requestAttachment` 和 `deleteAttachments`，在另一份全新配置及独立 origin 中运行。`seedAttachments` 通过实际会话和附件服务保存合成二进制历史消息及 ICS 草稿；驱动必须真正刷新页面后调用 `readAttachments`，再关闭并重新启动同一临时浏览器配置重新读取。每次核对相同的文件 ID、字节数、声明摘要、实际字节摘要、历史与草稿引用，并确认原 `sending` 状态恢复为 `unknown`、读取没有发起 API 请求、二进制不进入 LocalStorage。
+
+`requestAttachment` 显式读取恢复后的 ICS，向驱动提供的本地 Responses 端点发送原生 `input_file`；同时核对浏览器返回和服务端实际收到的字节摘要，不能只检查文件名。最后执行 `deleteAttachments` 并真实刷新，确认会话和最后一个二进制引用都没有复活。这条流程验证正常 Web 插件、SharedPreferences、IndexedDB、页面刷新及浏览器进程重开；文件选择由合成 `XFile` 输入，端点也是本地合成服务，不替代平台文件选择器、真实模型、正式聊天页面或实体设备验收。
+
+独立的 IndexedDB 关闭、重开和事务删除回归位于 `test/agent/attachments/attachment_storage_browser_test.dart`，以 `flutter test --platform chrome` 显式运行。该文件标记为仅浏览器测试；普通 VM 门禁不把它计作已经完成的浏览器验证。
+
 ## 界面采集
 
 当前界面采集统一从 `capture_scenarios_test.dart` 选择场景组。场景模块按

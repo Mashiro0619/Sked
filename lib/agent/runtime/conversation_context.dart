@@ -46,6 +46,9 @@ List<ProviderMessage>? boundConversationContext(
   final skillIds = <String>{};
   var omittedMessages = 0;
   for (var omitted = 0; omitted < maxOmittedGroups; omitted++) {
+    // Current request files must remain complete through every tool round;
+    // never replace a required binary input with a text checkpoint.
+    if (groups[omitted].any((message) => message.attachments.isNotEmpty)) break;
     for (final message in groups[omitted]) {
       omittedMessages++;
       if (message.role == ProviderRole.user) earlierUsers.add(message.text);

@@ -172,7 +172,15 @@ class ApplicationToolHost {
       );
     }
     try {
-      await _loader(scope);
+      try {
+        await _loader(scope);
+      } catch (_) {
+        // No tool has run yet. Maintenance can make the knowledge snapshot
+        // unavailable while it cancels this scope; preserve that no-effect
+        // cancellation instead of reporting an unrelated loader failure.
+        scope.checkActive();
+        rethrow;
+      }
       scope.checkActive();
       final result = await tool.$2(
         call.decodedArguments,

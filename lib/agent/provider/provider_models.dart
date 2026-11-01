@@ -37,6 +37,7 @@ class ProviderLimits {
     this.totalTimeout = const Duration(minutes: 5),
     this.idleTimeout = const Duration(minutes: 2),
     this.maxRequestBytes = 1024 * 1024,
+    this.maxAttachmentBytes = 48 * 1000 * 1000,
     this.maxResponseBytes = 8 * 1024 * 1024,
     this.maxEventBytes = 512 * 1024,
     this.maxToolArgumentBytes = 128 * 1024,
@@ -48,6 +49,9 @@ class ProviderLimits {
   final Duration totalTimeout;
   final Duration idleTimeout;
   final int maxRequestBytes;
+
+  /// Raw binary input budget, independent from the text/tool JSON budget.
+  final int maxAttachmentBytes;
   final int maxResponseBytes;
   final int maxEventBytes;
   final int maxToolArgumentBytes;
@@ -63,17 +67,62 @@ class ProviderMessage {
     List<ProviderToolCall> toolCalls = const [],
     this.toolCallId,
     List<Map<String, Object?>> responseItems = const [],
+    List<ProviderAttachment> attachments = const [],
   }) : toolCalls = List.unmodifiable(toolCalls),
+       attachments = List.unmodifiable(attachments),
        responseItems = List.unmodifiable(responseItems.map(freezeProviderMap));
 
   final ProviderRole role;
   final String text;
   final List<ProviderToolCall> toolCalls;
   final String? toolCallId;
+  final List<ProviderAttachment> attachments;
 
   /// Protocol continuation items, e.g. Responses reasoning and function calls.
   /// Only assistant messages may contain these; they never confer authority.
   final List<Map<String, Object?>> responseItems;
+}
+
+/// A lazy immutable file reference. Bytes are read only after request budgets
+/// and cancellation have been installed, and never serialized in chat JSON.
+class ProviderAttachment {
+  const ProviderAttachment({
+    required this.id,
+    required this.filename,
+    required this.mediaType,
+    required this.byteLength,
+    required this.digest,
+    required this.openRead,
+  });
+  final String id;
+  final String filename;
+  final String mediaType;
+  final int byteLength;
+  final String digest;
+  final Stream<List<int>> Function() openRead;
+}
+
+/// Internal JSON value expanded by the asynchronous request encoder.
+class ProviderBinaryEncoding {
+  const ProviderBinaryEncoding(this.attachment, {this.dataUrl = true});
+  final ProviderAttachment attachment;
+  final bool dataUrl;
+  String get prefix => dataUrl ? 'data:${attachment.mediaType};base64,' : '';
+  int get encodedLength =>
+      prefix.length + ((attachment.byteLength + 2) ~/ 3) * 4;
+}
+
+enum ProviderUploadPhase { encoding, sending, accepted }
+
+class ProviderUploadProgress extends ProviderEvent {
+  const ProviderUploadProgress(
+    this.phase, {
+    required this.completedBytes,
+    required this.totalBytes,
+  });
+  final ProviderUploadPhase phase;
+  final int completedBytes;
+  final int totalBytes;
 }
 
 class ProviderToolCall {
@@ -181,6 +230,9 @@ class ProviderCompleted extends ProviderEvent {
 
 enum ProviderError {
   invalidRequest,
+  unsupportedAttachment,
+  attachmentMissing,
+  attachmentChanged,
   insecureEndpoint,
   cancelled,
   timeout,

@@ -3646,6 +3646,69 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentSkillTriggers => '使用此技能的时机，每行一项';
+
+  @override
+  String get agentAttachAnyFile => '添加文件';
+
+  @override
+  String get agentFileLocal => '已保存到本机';
+
+  @override
+  String get agentFileSaving => '正在保存文件…';
+
+  @override
+  String get agentFilePreparing => '正在准备发送…';
+
+  @override
+  String get agentFileSending => '正在发送文件…';
+
+  @override
+  String get agentFileAccepted => '服务已接受';
+
+  @override
+  String get agentFileFailed => '文件未被接受';
+
+  @override
+  String get agentFileCancelled => '文件传输已停止';
+
+  @override
+  String get agentFileUnknown => '无法确认服务是否已接受';
+
+  @override
+  String get agentFileTooLarge => '单个文件最大为 32 MB。';
+
+  @override
+  String get agentFileChanged => '文件在读取时发生变化，请重新选择。';
+
+  @override
+  String get agentFileMissing => '本机已找不到此文件，如需使用请重新选择。';
+
+  @override
+  String get agentFileCorrupt => '无法校验已保存的文件，请重新选择原文件。';
+
+  @override
+  String get agentFileUnavailable => '文件存储暂不可用，请恢复访问后重试。';
+
+  @override
+  String get agentFileUnsupported => '当前 API 协议无法发送此类文件，文件仍保留在本机。';
+
+  @override
+  String get agentFileConflict => '添加文件期间会话已变化，或附件数量已达上限。';
+
+  @override
+  String get agentFilePreview => '预览文件';
+
+  @override
+  String get agentFileUseAgain => '用于下一条消息';
+
+  @override
+  String get agentFileNoPreview => '此类文件暂不提供预览，API 支持时仍可发送已保存的文件。';
+
+  @override
+  String get agentFilePreviewFailed => '无法显示此图片。';
+
+  @override
+  String get agentFileReceivedHint => '服务接受仅表示收到了请求，不表示模型已读完所有文件。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -7291,4 +7354,67 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentSkillTriggers => '使用此技能的時機，每行一項';
+
+  @override
+  String get agentAttachAnyFile => '加入檔案';
+
+  @override
+  String get agentFileLocal => '已儲存到本機';
+
+  @override
+  String get agentFileSaving => '正在儲存檔案…';
+
+  @override
+  String get agentFilePreparing => '正在準備傳送…';
+
+  @override
+  String get agentFileSending => '正在傳送檔案…';
+
+  @override
+  String get agentFileAccepted => '服務已接受';
+
+  @override
+  String get agentFileFailed => '檔案未被接受';
+
+  @override
+  String get agentFileCancelled => '檔案傳輸已停止';
+
+  @override
+  String get agentFileUnknown => '無法確認服務是否已接受';
+
+  @override
+  String get agentFileTooLarge => '單個檔案最大為 32 MB。';
+
+  @override
+  String get agentFileChanged => '檔案在讀取時發生變更，請重新選擇。';
+
+  @override
+  String get agentFileMissing => '本機已找不到此檔案，如需使用請重新選擇。';
+
+  @override
+  String get agentFileCorrupt => '無法驗證已儲存的檔案，請重新選擇原檔案。';
+
+  @override
+  String get agentFileUnavailable => '檔案儲存空間暫時無法使用，請恢復存取後重試。';
+
+  @override
+  String get agentFileUnsupported => '目前 API 協定無法傳送此類檔案，檔案仍保留在本機。';
+
+  @override
+  String get agentFileConflict => '加入檔案期間對話已變更，或附件數量已達上限。';
+
+  @override
+  String get agentFilePreview => '預覽檔案';
+
+  @override
+  String get agentFileUseAgain => '用於下一則訊息';
+
+  @override
+  String get agentFileNoPreview => '此類檔案暫不提供預覽，API 支援時仍可傳送已儲存的檔案。';
+
+  @override
+  String get agentFilePreviewFailed => '無法顯示此圖片。';
+
+  @override
+  String get agentFileReceivedHint => '服務接受僅表示收到了請求，不表示模型已讀完所有檔案。';
 }

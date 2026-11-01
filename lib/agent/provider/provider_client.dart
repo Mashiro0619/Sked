@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import 'provider_models.dart';
 import 'provider_protocol.dart';
+import 'provider_request_encoder.dart';
 import 'sse_decoder.dart';
 
 /// API keys are transient arguments and only enter the Authorization header.
@@ -73,19 +74,52 @@ class ProviderClient {
         if (cancellation?.isCancelled ?? false) {
           throw const ProviderException(ProviderError.cancelled);
         }
-        final body = utf8.encode(jsonEncode(encodeProviderRequest(request)));
-        if (body.length > request.limits.maxRequestBytes) {
-          throw const ProviderException(ProviderError.requestBudgetExceeded);
-        }
         totalTimer = Timer(
           request.limits.totalTimeout,
           () => stop(ProviderError.timeout),
         );
-        resetIdle();
         if (cancellation != null) {
           unawaited(
             cancellation.whenCancelled.then(
               (_) => stop(ProviderError.cancelled),
+            ),
+          );
+        }
+        void checkEncoding() {
+          if (stopped.isCompleted || (cancellation?.isCancelled ?? false)) {
+            throw const ProviderException(ProviderError.cancelled);
+          }
+        }
+
+        final body = await guarded(
+          encodeProviderRequestBody(
+            request,
+            abortSignal: aborted.future,
+            checkCancelled: checkEncoding,
+            onProgress: (completed, total) {
+              if (!subscriptionCancelled) {
+                controller.add(
+                  ProviderUploadProgress(
+                    ProviderUploadPhase.encoding,
+                    completedBytes: completed,
+                    totalBytes: total,
+                  ),
+                );
+              }
+            },
+          ),
+        );
+        checkEncoding();
+        resetIdle();
+        final hasAttachments = request.messages.any(
+          (message) => message.attachments.isNotEmpty,
+        );
+        if (hasAttachments && !subscriptionCancelled) {
+          controller.add(
+            ProviderUploadProgress(
+              ProviderUploadPhase.sending,
+              completedBytes: 0,
+              totalBytes: body.length,
             ),
           );
         }
@@ -125,6 +159,15 @@ class ProviderClient {
             429 => ProviderError.rateLimited,
             _ => ProviderError.httpFailure,
           }, statusCode: response.statusCode);
+        }
+        if (hasAttachments && !subscriptionCancelled) {
+          controller.add(
+            ProviderUploadProgress(
+              ProviderUploadPhase.accepted,
+              completedBytes: body.length,
+              totalBytes: body.length,
+            ),
+          );
         }
         if ((response.contentLength ?? 0) > request.limits.maxResponseBytes) {
           throw const ProviderException(ProviderError.responseBudgetExceeded);
@@ -249,6 +292,7 @@ void _validate(ProviderRequest request, String apiKey) {
       limits.idleTimeout <= Duration.zero ||
       [
         limits.maxRequestBytes,
+        limits.maxAttachmentBytes,
         limits.maxResponseBytes,
         limits.maxEventBytes,
         limits.maxToolArgumentBytes,

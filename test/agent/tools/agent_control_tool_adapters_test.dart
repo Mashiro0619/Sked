@@ -369,8 +369,12 @@ void main() {
   test(
     'revocation while input is open discards the secret and returns no handle',
     () async {
+      final opened = Completer<void>();
       final pending = Completer<AgentCredentialInput?>();
-      control.bindCredentialInput((_) => pending.future);
+      control.bindCredentialInput((_) {
+        opened.complete();
+        return pending.future;
+      });
       final action = h.call('credentials.request_input', {
         'endpoint': 'https://model.test/v1',
       });
@@ -378,6 +382,7 @@ void main() {
         action,
         throwsA(_problem(OperationErrorCode.cancelled)),
       );
+      await opened.future;
       h.scope.cancel();
       final input = AgentCredentialInput('discard-me');
       pending.complete(input);

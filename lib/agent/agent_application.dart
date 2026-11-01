@@ -18,6 +18,8 @@ import '../services/school_site_service.dart';
 import '../services/school_web_session_service.dart';
 import 'connection/agent_connection_manager.dart';
 import 'connection/agent_connection_diagnostics.dart';
+import 'attachments/attachment_repository.dart';
+import 'attachments/conversation_attachments.dart';
 import 'conversations/conversation_repository.dart';
 import 'knowledge/knowledge_service.dart';
 import 'provider/provider.dart';
@@ -43,6 +45,7 @@ class AgentApplication extends ChangeNotifier {
     required SecretStore legacyStore,
     required VoidCallback publishViews,
     ConversationStorage? conversationStorage,
+    AttachmentStorage? attachmentStorage,
     KnowledgeStorage? knowledgeStorage,
     AgentCredentialStore? credentialStore,
     ProviderClient? provider,
@@ -55,6 +58,7 @@ class AgentApplication extends ChangeNotifier {
        _publishViews = publishViews,
        _provider = provider ?? ProviderClient(),
        conversations = ConversationRepository(storage: conversationStorage),
+       attachmentStore = AttachmentRepository(storage: attachmentStorage),
        knowledgeRepository = AgentKnowledgeRepository(
          storage: knowledgeStorage,
        ) {
@@ -70,6 +74,11 @@ class AgentApplication extends ChangeNotifier {
       dataSessionRevision: () => maintenance.writeSessionRevision,
       onCommitted: publishViews,
       fallbackGeneration: () => mutations.generation,
+    );
+    _attachmentDataGeneration = mutations.generation;
+    binaryAttachments = ConversationAttachments(
+      conversations: conversations,
+      repository: attachmentStore,
     );
     connections = AgentConnectionManager(
       store: credentialStore,
@@ -127,6 +136,8 @@ class AgentApplication extends ChangeNotifier {
     runtime = AgentRuntimeController(
       repository: conversations,
       provider: _provider,
+      attachments: attachmentStore,
+      onAttachmentProgress: binaryAttachments.transferProgress,
       readSettings: _effectiveSettings,
       readApiKey: (snapshot) async {
         // Side-store loading is initiated by an actual run. Opening the
@@ -153,6 +164,7 @@ class AgentApplication extends ChangeNotifier {
         controlTools.discardScope(scope);
         knowledgeTools.discardScope(scope);
         _pruneHistory().ignore();
+        if (_attachmentCleanupError) _scheduleAttachmentCollection();
       },
     );
     conversationTools = registerConversationTools(
@@ -174,6 +186,7 @@ class AgentApplication extends ChangeNotifier {
     _commits = session.commits.listen(_committed);
     session.readiness.addListener(_readinessChanged);
     maintenance.addListener(_maintenanceChanged);
+    conversations.addListener(_conversationsChanged);
   }
 
   final AppSession _session;
@@ -184,6 +197,8 @@ class AgentApplication extends ChangeNotifier {
   late final diagnostics = AgentConnectionDiagnostics(provider: _provider);
   final _diagnosticTokens = <ProviderCancellationToken>{};
   final ConversationRepository conversations;
+  final AttachmentRepository attachmentStore;
+  late final ConversationAttachments binaryAttachments;
   final AgentKnowledgeRepository knowledgeRepository;
   late final AgentKnowledgeService knowledge;
   late final KnowledgeToolAdapters knowledgeTools;
@@ -208,6 +223,16 @@ class AgentApplication extends ChangeNotifier {
   int _disableRequests = 0;
   int _navigationRevision = 0;
   OperationScope? _maintenanceScope;
+  Future<void>? _attachmentFreeze;
+  Future<void>? _attachmentCollection;
+  bool _attachmentCollectionRequested = false;
+  bool _attachmentRecoveryRequired = false;
+  bool _attachmentCleanupError = false;
+  Set<String> _attachmentConversationIds = {};
+  late String _attachmentDataGeneration;
+
+  /// Failed collection leaves remaining local bytes intact and can be retried.
+  bool get attachmentCleanupError => _attachmentCleanupError;
 
   /// An accepted maintenance effect may drain all other work without waiting
   /// for the run that is itself waiting for that effect to finish.
@@ -302,6 +327,10 @@ class AgentApplication extends ChangeNotifier {
       if (_disposed || _suspended) return;
       _initialized = true;
       await _pruneHistory();
+      _attachmentConversationIds = {
+        for (final conversation in conversations.conversations) conversation.id,
+      };
+      _scheduleAttachmentCollection();
     } catch (_) {
       _initializationError = true;
       rethrow;
@@ -481,6 +510,12 @@ class AgentApplication extends ChangeNotifier {
     try {
       await quiesce();
       await conversations.load();
+      if (_attachmentRecoveryRequired) {
+        binaryAttachments.invalidatePendingAfterDataBoundary();
+      }
+      _attachmentRecoveryRequired = false;
+      await _resumeAttachmentsAfterMaintenance();
+      _scheduleAttachmentCollection();
       _initializationError = false;
     } finally {
       _disableRequests--;
@@ -494,6 +529,7 @@ class AgentApplication extends ChangeNotifier {
     runtime.cancelAll();
     conversations.freeze();
     knowledgeRepository.freeze();
+    await _freezeAttachments();
     await conversations.waitForPendingWrites();
     await knowledge.waitForPendingOperations();
     runtime.refreshSettings();
@@ -501,6 +537,8 @@ class AgentApplication extends ChangeNotifier {
 
   void resumeAfterFailedDataClear() {
     _clearSuspended = false;
+    _attachmentRecoveryRequired = true;
+    binaryAttachments.invalidatePendingAfterDataBoundary();
     conversations.resumeAfterFailedDataClear();
     knowledgeRepository.resumeAfterFailedDataClear();
     runtime.refreshSettings();
@@ -530,6 +568,11 @@ class AgentApplication extends ChangeNotifier {
 
   void _committed(AppDataCommit commit) {
     if (_disposed) return;
+    final generation = mutations.generation;
+    if (generation != _attachmentDataGeneration) {
+      _attachmentDataGeneration = generation;
+      binaryAttachments.invalidatePendingAfterDataBoundary();
+    }
     runtime.refreshSettings();
     _pruneHistory().ignore();
     _notify();
@@ -546,6 +589,7 @@ class AgentApplication extends ChangeNotifier {
 
   void _maintenanceChanged() {
     if (_maintenance.isReserved) {
+      _freezeAttachments().ignore();
       runtime.cancelAll();
       mutations.invalidate();
       external.invalidate();
@@ -553,6 +597,7 @@ class AgentApplication extends ChangeNotifier {
       // Existing complete backups leave shared knowledge intact. The restore
       // barrier freezes it only after accepted writes have been drained.
       knowledgeRepository.resumeAfterMaintenance();
+      _resumeAttachmentsAfterMaintenance().ignore();
     }
     knowledge.ownerChanged();
     runtime.refreshSettings();
@@ -579,10 +624,19 @@ class AgentApplication extends ChangeNotifier {
     await connections.waitForPendingWrites();
     await conversations.waitForPendingWrites();
     await knowledge.waitForPendingOperations();
+    await _attachmentCollection;
+    if (_maintenance.isReserved || _suspended || _clearSuspended) {
+      await _freezeAttachments();
+    } else {
+      await binaryAttachments.waitForPendingOperations();
+    }
     if (_maintenance.isReserved) knowledgeRepository.freeze();
   }
 
-  void freeze() {
+  void freeze({bool drainAcceptedRuns = false}) {
+    final completingRunIds = drainAcceptedRuns
+        ? runtime.acceptedRunIds
+        : const <String>{};
     for (final token in _diagnosticTokens) {
       token.cancel();
     }
@@ -592,9 +646,69 @@ class AgentApplication extends ChangeNotifier {
     mutations.invalidate();
     external.invalidate();
     connections.freeze();
-    conversations.freeze();
+    conversations.freeze(completingRunIds: completingRunIds);
     knowledgeRepository.freeze();
+    _freezeAttachments().ignore();
     knowledge.ownerChanged();
+  }
+
+  Future<void> _freezeAttachments() =>
+      _attachmentFreeze ??= binaryAttachments.freezeAndDrain();
+
+  Future<void> _resumeAttachmentsAfterMaintenance() async {
+    await _attachmentFreeze;
+    if (_disposed ||
+        _suspended ||
+        _clearSuspended ||
+        _maintenance.isReserved ||
+        _attachmentRecoveryRequired ||
+        !conversations.canWrite) {
+      return;
+    }
+    _attachmentFreeze = null;
+    binaryAttachments.resume();
+  }
+
+  void _conversationsChanged() {
+    if (!conversations.isLoaded) return;
+    final ids = {
+      for (final conversation in conversations.conversations) conversation.id,
+    };
+    final removed = _attachmentConversationIds.any((id) => !ids.contains(id));
+    _attachmentConversationIds = ids;
+    if (removed) _scheduleAttachmentCollection();
+  }
+
+  void _scheduleAttachmentCollection() {
+    if (!_initialized ||
+        _disposed ||
+        _suspended ||
+        _clearSuspended ||
+        _maintenance.isReserved ||
+        _attachmentRecoveryRequired ||
+        !conversations.canWrite) {
+      return;
+    }
+    _attachmentCollectionRequested = true;
+    if (_attachmentCollection != null) return;
+    _attachmentCollection = _collectAttachments().whenComplete(() {
+      _attachmentCollection = null;
+    });
+  }
+
+  Future<void> _collectAttachments() async {
+    while (_attachmentCollectionRequested) {
+      _attachmentCollectionRequested = false;
+      try {
+        await binaryAttachments.collectGarbage();
+        _attachmentCleanupError = false;
+      } catch (_) {
+        // The archive is already durable. Failed orphan cleanup must neither
+        // undo that deletion nor claim that its remaining bytes were removed.
+        _attachmentCleanupError = true;
+      }
+    }
+    _notify();
   }
 
   void _notify() {
@@ -608,6 +722,7 @@ class AgentApplication extends ChangeNotifier {
     _disposed = true;
     _session.readiness.removeListener(_readinessChanged);
     _maintenance.removeListener(_maintenanceChanged);
+    conversations.removeListener(_conversationsChanged);
     unawaited(_commits.cancel());
     runtime.dispose();
     tools.dispose();
@@ -618,6 +733,8 @@ class AgentApplication extends ChangeNotifier {
       runtime.waitForIdle().then((_) async {
         await conversations.waitForPendingWrites();
         await knowledge.waitForPendingOperations();
+        await binaryAttachments.close();
+        binaryAttachments.dispose();
         conversations.dispose();
         knowledge.dispose();
         knowledgeRepository.dispose();

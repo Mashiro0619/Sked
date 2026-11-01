@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../attachments/attachment_media_types.dart';
 import 'provider_models.dart';
 import 'sse_decoder.dart';
 import 'tool_name_codec.dart';
@@ -12,6 +13,9 @@ Map<String, Object?> encodeProviderRequest(ProviderRequest request) {
     }
   }
   for (final message in request.messages) {
+    if (message.attachments.isNotEmpty && message.role != ProviderRole.user) {
+      throw const ProviderException(ProviderError.invalidRequest);
+    }
     if ((message.toolCalls.isNotEmpty || message.responseItems.isNotEmpty) &&
         message.role != ProviderRole.assistant) {
       throw const ProviderException(ProviderError.invalidRequest);
@@ -43,7 +47,7 @@ Map<String, Object?> encodeProviderRequest(ProviderRequest request) {
           .map(
             (message) => <String, Object?>{
               'role': message.role.name,
-              'content': message.text,
+              'content': _messageContent(message, request.protocol),
               if (message.role == ProviderRole.tool)
                 'tool_call_id': message.toolCallId,
               if (message.toolCalls.isNotEmpty)
@@ -80,7 +84,10 @@ Map<String, Object?> encodeProviderRequest(ProviderRequest request) {
       input.addAll(message.responseItems);
     } else {
       if (message.text.isNotEmpty || message.toolCalls.isEmpty) {
-        input.add({'role': message.role.name, 'content': message.text});
+        input.add({
+          'role': message.role.name,
+          'content': _messageContent(message, request.protocol),
+        });
       }
       for (final call in message.toolCalls) {
         input.add({
@@ -103,6 +110,79 @@ Map<String, Object?> encodeProviderRequest(ProviderRequest request) {
     if (tools.isNotEmpty)
       'tools': tools.map((tool) => {'type': 'function', ...tool}).toList(),
   };
+}
+
+Object _messageContent(ProviderMessage message, ProviderProtocol protocol) {
+  if (message.attachments.isEmpty) return message.text;
+  final responses = protocol == ProviderProtocol.responses;
+  return [
+    if (message.text.isNotEmpty)
+      {'type': responses ? 'input_text' : 'text', 'text': message.text},
+    for (final attachment in message.attachments)
+      _attachmentContent(attachment, protocol),
+  ];
+}
+
+Map<String, Object?> _attachmentContent(
+  ProviderAttachment attachment,
+  ProviderProtocol protocol,
+) {
+  final responses = protocol == ProviderProtocol.responses;
+  // Older local files may carry only the picker's generic MIME. Resolve the
+  // native content type without changing their bytes or stored references.
+  final media = attachmentMediaType(attachment.filename, attachment.mediaType);
+  final payload = media == attachment.mediaType
+      ? attachment
+      : ProviderAttachment(
+          id: attachment.id,
+          filename: attachment.filename,
+          mediaType: media,
+          byteLength: attachment.byteLength,
+          digest: attachment.digest,
+          openRead: attachment.openRead,
+        );
+  if (const {
+    'image/png',
+    'image/jpeg',
+    'image/gif',
+    'image/webp',
+  }.contains(media)) {
+    return responses
+        ? {'type': 'input_image', 'image_url': ProviderBinaryEncoding(payload)}
+        : {
+            'type': 'image_url',
+            'image_url': {'url': ProviderBinaryEncoding(payload)},
+          };
+  }
+  if (!responses &&
+      const {'audio/mpeg', 'audio/wav', 'audio/x-wav'}.contains(media)) {
+    return {
+      'type': 'input_audio',
+      'input_audio': {
+        'data': ProviderBinaryEncoding(payload, dataUrl: false),
+        'format': media == 'audio/mpeg' ? 'mp3' : 'wav',
+      },
+    };
+  }
+  final canSendFile =
+      media == 'application/pdf' ||
+      (responses && responsesFileMediaTypes.contains(media));
+  if (!canSendFile) {
+    throw const ProviderException(ProviderError.unsupportedAttachment);
+  }
+  return responses
+      ? {
+          'type': 'input_file',
+          'filename': attachment.filename,
+          'file_data': ProviderBinaryEncoding(payload),
+        }
+      : {
+          'type': 'file',
+          'file': {
+            'filename': attachment.filename,
+            'file_data': ProviderBinaryEncoding(payload),
+          },
+        };
 }
 
 class ProviderResponseDecoder {

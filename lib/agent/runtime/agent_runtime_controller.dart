@@ -9,6 +9,7 @@ import '../../application/operation_contracts.dart';
 import '../../models/agent_settings.dart';
 import '../../utils/unique_id.dart';
 import '../connection/agent_endpoint.dart';
+import '../attachments/attachment_repository.dart';
 import '../conversations/conversation_repository.dart';
 import '../provider/provider.dart';
 import '../ui/agent_ui_delegate.dart';
@@ -102,6 +103,8 @@ class AgentRuntimeController implements AgentUiDelegate {
     this.readMaintenance = _notInMaintenance,
     this.systemInstructions = _defaultInstructions,
     this.additionalSystemInstructions = '',
+    this.attachments,
+    this.onAttachmentProgress,
     this.approvalSummary = _defaultApprovalSummary,
     this.limits = const AgentRuntimeLimits(),
     DateTime Function()? clock,
@@ -138,6 +141,9 @@ class AgentRuntimeController implements AgentUiDelegate {
   final bool Function() readMaintenance;
   final String Function(AgentConversation conversation) systemInstructions;
   final String additionalSystemInstructions;
+  final AttachmentRepository? attachments;
+  final void Function(String conversationId, AttachmentProgress progress)?
+  onAttachmentProgress;
   final String Function(ApprovalPlan plan) approvalSummary;
   final AgentRuntimeLimits limits;
   final DateTime Function() _clock;
@@ -156,6 +162,11 @@ class AgentRuntimeController implements AgentUiDelegate {
   @override
   ValueListenable<AgentUiState> get state => _state;
 
+  Set<String> get acceptedRunIds => {
+    for (final run in _runs.values)
+      if (run.accepted) run.id,
+  };
+
   /// Allows a host tool to resolve sources against this scope's conversation.
   AgentConversation? conversationForScope(OperationScope scope) {
     for (final run in _runs.values) {
@@ -168,7 +179,10 @@ class AgentRuntimeController implements AgentUiDelegate {
 
   @override
   Future<void> send(String conversationId, String text) {
-    if (text.trim().isEmpty || text.length > limits.maxUserMessageCharacters) {
+    if ((text.trim().isEmpty &&
+            (repository.find(conversationId)?.draftAttachmentIds.isEmpty ??
+                true)) ||
+        text.length > limits.maxUserMessageCharacters) {
       return Future.error(
         const AgentRuntimeException(AgentRuntimeError.invalidMessage),
       );
@@ -292,7 +306,10 @@ class AgentRuntimeController implements AgentUiDelegate {
     String text, {
     required bool steering,
   }) async {
-    if (text.trim().isEmpty || text.length > limits.maxUserMessageCharacters) {
+    if ((text.trim().isEmpty &&
+            (repository.find(conversationId)?.draftAttachmentIds.isEmpty ??
+                true)) ||
+        text.length > limits.maxUserMessageCharacters) {
       throw const AgentRuntimeException(AgentRuntimeError.invalidMessage);
     }
     final run = _runs[conversationId];
@@ -306,14 +323,21 @@ class AgentRuntimeController implements AgentUiDelegate {
       repository.find(conversationId)!,
       readSettings(),
     );
+    final attachmentIds = repository.find(conversationId)!.draftAttachmentIds;
     final queueEpoch = _queueEpochs[conversationId] ?? 0;
     await repository.update(conversationId, (current) {
       _checkRun(run);
+      if (attachmentIds.any((id) => !current.draftAttachmentIds.contains(id))) {
+        throw const AgentRuntimeException(AgentRuntimeError.busy);
+      }
       if (current.messages.where((m) => _queuedInput(m) != null).length >= 16) {
         throw const AgentRuntimeException(AgentRuntimeError.busy);
       }
       return current.copyWith(
         draft: '',
+        draftAttachmentIds: current.draftAttachmentIds.where(
+          (id) => !attachmentIds.contains(id),
+        ),
         messages: [
           ...current.messages,
           ConversationMessage(
@@ -327,6 +351,7 @@ class AgentRuntimeController implements AgentUiDelegate {
             }),
             createdAt: _clock().toUtc(),
             modelSelection: selection,
+            attachmentIds: attachmentIds,
           ),
         ],
       );
@@ -545,6 +570,7 @@ class AgentRuntimeController implements AgentUiDelegate {
         }
       }
       if (identical(_runs[conversationId], run)) _runs.remove(conversationId);
+      repository.finishShutdownRun(run.id);
       run.deadline?.cancel();
       run.scope.cancel();
       run.cancellation.cancel();
@@ -680,6 +706,9 @@ class AgentRuntimeController implements AgentUiDelegate {
       throw const AgentRuntimeException(AgentRuntimeError.invalidMessage);
     }
     final configuredSettings = readSettings();
+    final attachmentIds = userText == null
+        ? const <String>[]
+        : conversation.draftAttachmentIds;
     final pendingAtStart = resume || consumeQueued
         ? conversation.messages
               .where((m) => _queuedInput(m) != null)
@@ -756,6 +785,11 @@ class AgentRuntimeController implements AgentUiDelegate {
       if (userText != null) _rejectSecret(userText, run.apiKey);
       final recovered = await _recoverHistory(run);
       await repository.update(conversationId, (current) {
+        if (attachmentIds.any(
+          (id) => !current.draftAttachmentIds.contains(id),
+        )) {
+          throw const AgentRuntimeException(AgentRuntimeError.busy);
+        }
         if (handoff && current.runId != null) {
           throw const AgentRuntimeException(AgentRuntimeError.busy);
         }
@@ -781,6 +815,7 @@ class AgentRuntimeController implements AgentUiDelegate {
               text: input,
               createdAt: pending.createdAt,
               modelSelection: selection,
+              attachmentIds: pending.attachmentIds,
             ),
           ];
         }
@@ -795,9 +830,13 @@ class AgentRuntimeController implements AgentUiDelegate {
                     text: userText,
                     createdAt: _clock().toUtc(),
                     modelSelection: selection,
+                    attachmentIds: attachmentIds,
                   ),
                 ],
           draft: userText == null ? current.draft : '',
+          draftAttachmentIds: current.draftAttachmentIds.where(
+            (id) => !attachmentIds.contains(id),
+          ),
           status: ConversationStatus.running,
           runId: run.id,
           connectionFingerprint: fingerprint,
@@ -805,6 +844,12 @@ class AgentRuntimeController implements AgentUiDelegate {
           runs: _runRecords(current, run),
         );
       });
+      run.inputMessageId = repository
+          .find(conversationId)!
+          .messages
+          .where((message) => message.role == ConversationRole.user)
+          .lastOrNull
+          ?.id;
       run.accepted = true;
       run.started.complete(true);
       await _execute(run);
@@ -824,6 +869,7 @@ class AgentRuntimeController implements AgentUiDelegate {
       rethrow;
     } finally {
       if (identical(_runs[conversationId], run)) _runs.remove(conversationId);
+      repository.finishShutdownRun(run.id);
       run.apiKey = '';
       run.deadline?.cancel();
       run.scope.cancel();
@@ -1115,6 +1161,10 @@ class AgentRuntimeController implements AgentUiDelegate {
     ProviderResponse? response;
     ConversationTokenUsage? usage;
     var invoked = false;
+    var delivery = AttachmentDelivery.preparing;
+    final hasAttachments = messages.any(
+      (message) => message.attachments.isNotEmpty,
+    );
     final text = StringBuffer();
     _setDisplay(run, const AgentUiRunState(phase: AgentUiPhase.running));
     try {
@@ -1125,6 +1175,7 @@ class AgentRuntimeController implements AgentUiDelegate {
         _checkRun(run);
       }
       _checkRun(run);
+      if (hasAttachments) await _setAttachmentDelivery(run, delivery);
       invoked = true;
       await for (final event in provider.stream(
         ProviderRequest(
@@ -1145,6 +1196,25 @@ class AgentRuntimeController implements AgentUiDelegate {
         if (event is ProviderCompleted) {
           response = event.response;
           usage = _reportedUsage(response.usage) ?? usage;
+        }
+        if (event is ProviderUploadProgress) {
+          final next = switch (event.phase) {
+            ProviderUploadPhase.encoding => AttachmentDelivery.preparing,
+            ProviderUploadPhase.sending => AttachmentDelivery.sending,
+            ProviderUploadPhase.accepted => AttachmentDelivery.accepted,
+          };
+          onAttachmentProgress?.call(
+            run.conversationId,
+            AttachmentProgress(
+              next,
+              completedBytes: event.completedBytes,
+              totalBytes: event.totalBytes,
+            ),
+          );
+          if (next != delivery) {
+            delivery = next;
+            await _setAttachmentDelivery(run, delivery);
+          }
         }
         _checkRun(run);
         if (event is ProviderTextDelta) {
@@ -1170,6 +1240,24 @@ class AgentRuntimeController implements AgentUiDelegate {
       );
       return response;
     } catch (error) {
+      if (hasAttachments &&
+          (delivery != AttachmentDelivery.accepted ||
+              _providerRejected(error))) {
+        final failedDelivery =
+            delivery == AttachmentDelivery.sending && !_providerRejected(error)
+            ? AttachmentDelivery.unknown
+            : run.scope.isCancelled
+            ? AttachmentDelivery.cancelled
+            : AttachmentDelivery.failed;
+        onAttachmentProgress?.call(
+          run.conversationId,
+          AttachmentProgress(failedDelivery),
+        );
+        await _setAttachmentDelivery(
+          run,
+          failedDelivery,
+        ).catchError((Object _) {});
+      }
       run.usage = run.usage.withRequest(
         request.settle(
           outcome: response != null
@@ -1185,6 +1273,75 @@ class AgentRuntimeController implements AgentUiDelegate {
       );
       rethrow;
     }
+  }
+
+  Future<void> _setAttachmentDelivery(
+    _Run run,
+    AttachmentDelivery delivery,
+  ) async {
+    if (!run.accepted || run.inputMessageId == null) return;
+    await repository.update(
+      run.conversationId,
+      (current) => current.copyWith(
+        messages: current.messages.map(
+          (message) =>
+              message.id == run.inputMessageId &&
+                  message.attachmentIds.isNotEmpty
+              ? message.copyWith(attachmentDelivery: delivery)
+              : message,
+        ),
+      ),
+      expectedRunId: run.id,
+    );
+  }
+
+  List<ProviderAttachment> _providerAttachments(
+    AgentConversation conversation,
+    ConversationMessage message,
+    _Run run,
+  ) {
+    if (message.attachmentIds.isEmpty) return const [];
+    final store = attachments;
+    if (store == null) {
+      throw const AttachmentException(AttachmentError.unavailable);
+    }
+    return message.attachmentIds.map((id) {
+      final attachment = conversation.attachments
+          .where((a) => a.id == id)
+          .firstOrNull;
+      if (attachment == null) {
+        throw const AttachmentException(AttachmentError.missing);
+      }
+      return ProviderAttachment(
+        id: id,
+        filename: attachment.name,
+        mediaType: attachment.mediaType,
+        byteLength: attachment.byteLength,
+        digest: attachment.digest,
+        openRead: () async* {
+          final cancellation = AttachmentCancellation();
+          if (run.cancellation.isCancelled) cancellation.cancel();
+          unawaited(
+            run.cancellation.whenCancelled.then((_) => cancellation.cancel()),
+          );
+          try {
+            await for (final chunk in store.read(
+              attachment,
+              cancellation: cancellation,
+            )) {
+              yield chunk;
+            }
+          } on AttachmentException catch (error) {
+            throw ProviderException(switch (error.code) {
+              AttachmentError.cancelled => ProviderError.cancelled,
+              AttachmentError.missing ||
+              AttachmentError.unavailable => ProviderError.attachmentMissing,
+              _ => ProviderError.attachmentChanged,
+            });
+          }
+        },
+      );
+    }).toList();
   }
 
   Future<void> _recordUnexecuted(
@@ -1453,17 +1610,7 @@ class AgentRuntimeController implements AgentUiDelegate {
         modelSelection: selection,
         messages: current.messages.map((message) {
           if (!needsRepair(message)) return message;
-          return ConversationMessage(
-            id: message.id,
-            role: message.role,
-            text: message.text,
-            createdAt: message.createdAt,
-            toolCalls: message.toolCalls,
-            toolCallId: message.toolCallId,
-            responseItems: message.responseItems,
-            providerProtocol: message.providerProtocol,
-            modelSelection: selection,
-          );
+          return message.copyWith(modelSelection: selection);
         }),
       );
     });
@@ -1798,7 +1945,14 @@ class AgentRuntimeController implements AgentUiDelegate {
             ConversationRole.tool => ProviderRole.tool,
             ConversationRole.notice => throw StateError('unreachable'),
           },
-          text: message.text,
+          text:
+              message.id != run.inputMessageId &&
+                  message.attachmentIds.isNotEmpty
+              ? '${message.text}\n[Earlier attachments are not included in this request. Ask the user to attach them again if needed.]'
+              : message.text,
+          attachments: message.id == run.inputMessageId
+              ? _providerAttachments(conversation, message, run)
+              : const [],
           toolCallId: message.toolCallId,
           responseItems:
               message.modelSelection?.modelId == run.modelSelection?.modelId &&
@@ -1903,6 +2057,7 @@ class _Run {
   final bool hostAction;
   ConversationRunUsage usage;
   List<ToolDefinition> tools = const [];
+  String? inputMessageId;
   final OperationScope scope;
   final cancellation = ProviderCancellationToken();
   final settled = Completer<void>();
@@ -1950,6 +2105,9 @@ bool _providerRejected(Object error) =>
       ProviderError.invalidRequest,
       ProviderError.insecureEndpoint,
       ProviderError.requestBudgetExceeded,
+      ProviderError.unsupportedAttachment,
+      ProviderError.attachmentMissing,
+      ProviderError.attachmentChanged,
       ProviderError.redirectRejected,
       ProviderError.authentication,
       ProviderError.rateLimited,
@@ -2081,6 +2239,7 @@ Map<String, Object?> _toolFailureResult(Object error, String key) => {
 };
 
 String _safeError(Object error) => switch (error) {
+  AttachmentException value => 'attachment.${value.code.name}',
   AgentRuntimeException value => value.code.name,
   ProviderException value => 'provider.${value.code.name}',
   OperationProblem value => 'operation.${value.code.name}',

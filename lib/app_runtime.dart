@@ -4,6 +4,7 @@ import 'dart:ui' show PlatformDispatcher;
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import 'agent/agent_application.dart';
+import 'agent/attachments/attachment_storage.dart';
 import 'agent/connection/agent_credential_store.dart';
 import 'agent/conversations/conversation_storage.dart';
 import 'agent/knowledge/knowledge_storage.dart';
@@ -59,6 +60,7 @@ final class AppRuntime {
     @visibleForTesting
     Future<void> Function(Future<void> Function())? workspaceMutationLock,
     @visibleForTesting ConversationStorage? agentConversationStorage,
+    @visibleForTesting AttachmentStorage? agentAttachmentStorage,
     @visibleForTesting KnowledgeStorage? agentKnowledgeStorage,
     @visibleForTesting AgentCredentialStore? agentCredentialStore,
     @visibleForTesting ProviderClient? agentProvider,
@@ -195,6 +197,7 @@ final class AppRuntime {
       legacyStore: secrets,
       publishViews: publishViews,
       conversationStorage: agentConversationStorage,
+      attachmentStorage: agentAttachmentStorage,
       knowledgeStorage: agentKnowledgeStorage,
       credentialStore: agentCredentialStore,
       provider: agentProvider,
@@ -230,7 +233,7 @@ final class AppRuntime {
       workspaces: workspaces,
       dataClear: dataClear,
       quiescence: quiescence,
-      onBeginShutdown: agent.freeze,
+      onBeginShutdown: () => agent.freeze(drainAcceptedRuns: true),
     );
     developer = DeveloperCommands(
       session: session,

@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:flutter/services.dart';
+import 'package:file_selector/file_selector.dart' show XFile;
 import 'package:material_ui/material_ui.dart';
 
 import '../../application/operation_contracts.dart';
@@ -17,6 +18,8 @@ import '../../widgets/sked_spring_builder.dart';
 import 'agent_conversation_list.dart';
 import 'agent_message_content.dart';
 import 'agent_transcript.dart';
+import 'agent_attachment_view.dart';
+import '../attachments/conversation_attachments.dart';
 import '../conversations/conversation_repository.dart';
 import '../imports/conversation_file_attachments.dart';
 import 'agent_ui_delegate.dart';
@@ -54,6 +57,8 @@ class AgentConversationView extends StatefulWidget {
     this.readDatasetGeneration,
     this.recoverConversations,
     this.pickAttachment = ConversationFileAttachments.pickFile,
+    this.binaryAttachments,
+    this.pickBinaryAttachment = ConversationAttachments.pickFile,
   });
   final ConversationRepository repository;
   final AgentUiDelegate delegate;
@@ -72,6 +77,8 @@ class AgentConversationView extends StatefulWidget {
   final String Function()? readDatasetGeneration;
   final Future<void> Function()? recoverConversations;
   final Future<PickedTextFile?> Function() pickAttachment;
+  final ConversationAttachments? binaryAttachments;
+  final Future<XFile?> Function() pickBinaryAttachment;
 
   @override
   State<AgentConversationView> createState() => _AgentConversationViewState();
@@ -99,10 +106,83 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   String? _exportedId;
   bool _attachmentTooLarge = false;
   bool _attachmentFailed = false;
+  AttachmentError? _binaryAttachmentError;
   ConversationFileAttachments get _attachments =>
       _fileAttachments[_repository] ??= ConversationFileAttachments(
         _repository,
       );
+
+  bool _canModifyBinaryAttachments(String id) {
+    final conversation = _repository.find(id);
+    return mounted &&
+        _repository.canWrite &&
+        _repository.selectedId == id &&
+        _runtime.enabled &&
+        !_runtime.maintenance &&
+        conversation != null &&
+        !conversation.archived;
+  }
+
+  Future<void> _binaryAction(
+    String id,
+    Future<void> Function(ConversationAttachments service) action,
+  ) => _perform('attachment-$id', () async {
+    final service = widget.binaryAttachments;
+    if (service == null) return;
+    if (mounted) setState(() => _binaryAttachmentError = null);
+    try {
+      await action(service);
+    } on AttachmentException catch (error) {
+      if (mounted && _repository.selectedId == id) {
+        setState(() => _binaryAttachmentError = error.code);
+      }
+    } catch (_) {
+      if (mounted && _repository.selectedId == id) {
+        setState(() => _binaryAttachmentError = AttachmentError.unavailable);
+      }
+    }
+  });
+
+  Future<void> _attachBinaryFile(String id) =>
+      _binaryAction(id, (service) async {
+        final repository = _repository;
+        final generation = widget.readDatasetGeneration?.call();
+        final file = await widget.pickBinaryAttachment();
+        if (file == null || !mounted) return;
+        if (!identical(repository, _repository) ||
+            !identical(service, widget.binaryAttachments) ||
+            generation != widget.readDatasetGeneration?.call() ||
+            !_canModifyBinaryAttachments(id)) {
+          throw const AttachmentException(AttachmentError.conflict);
+        }
+        await service.attach(
+          id,
+          file,
+          canModify: () =>
+              identical(repository, _repository) &&
+              generation == widget.readDatasetGeneration?.call() &&
+              _canModifyBinaryAttachments(id),
+        );
+      });
+
+  Future<void> _retryBinaryAttachment(String id) => _binaryAction(id, (
+    service,
+  ) async {
+    final repository = _repository;
+    if (!repository.canWrite) {
+      if (widget.recoverConversations case final recover?) {
+        await recover();
+      } else {
+        await repository.load();
+      }
+    }
+    if (!mounted || !identical(repository, _repository)) return;
+    await service.retry(id, canModify: () => _canModifyBinaryAttachments(id));
+  });
+
+  bool _hasInput(AgentConversation conversation) =>
+      _composer.text.trim().isNotEmpty ||
+      conversation.draftAttachmentIds.isNotEmpty;
 
   bool _canModifyAttachments(String id) {
     final conversation = _repository.find(id);
@@ -175,6 +255,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     super.initState();
     _repository.addListener(_changed);
     widget.delegate.state.addListener(_changed);
+    widget.binaryAttachments?.addListener(_changed);
     _synchronizeDraft();
     if (!_repository.isLoaded) unawaited(_load());
   }
@@ -208,12 +289,17 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       oldWidget.delegate.state.removeListener(_changed);
       widget.delegate.state.addListener(_changed);
     }
+    if (oldWidget.binaryAttachments != widget.binaryAttachments) {
+      oldWidget.binaryAttachments?.removeListener(_changed);
+      widget.binaryAttachments?.addListener(_changed);
+    }
   }
 
   @override
   void dispose() {
     _repository.removeListener(_changed);
     widget.delegate.state.removeListener(_changed);
+    widget.binaryAttachments?.removeListener(_changed);
     _composer.dispose();
     _composerFocus.dispose();
     super.dispose();
@@ -240,6 +326,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     if (_shownId != selected?.id) {
       _attachmentTooLarge = false;
       _attachmentFailed = false;
+      _binaryAttachmentError = null;
     }
     final draft = selected == null
         ? ''
@@ -399,7 +486,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final repository = _repository;
     final delegate = widget.delegate;
     final text = _composer.text;
-    if (text.trim().isEmpty) return;
+    if (text.trim().isEmpty && conversation.draftAttachmentIds.isEmpty) return;
     _jumpToLatest(conversation.id);
     await _perform('send-${conversation.id}', () async {
       await _flushDraft(conversation.id);
@@ -415,7 +502,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final repository = _repository;
     final delegate = widget.delegate;
     final text = _composer.text;
-    if (text.trim().isEmpty) return;
+    if (text.trim().isEmpty && conversation.draftAttachmentIds.isEmpty) return;
     await _perform('queue-${conversation.id}', () async {
       await _flushDraft(conversation.id);
       if (!identical(repository, _repository)) return;
@@ -639,6 +726,31 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                 _notice(l.agentRecoveryRequired, error: true),
               if (_attachmentTooLarge)
                 _notice(l.agentAttachmentTooLarge, error: true),
+              if (_binaryAttachmentError case final error?)
+                _notice(agentAttachmentError(l, error), error: true),
+              if (conversation != null &&
+                  widget.binaryAttachments?.hasPending(conversation.id) == true)
+                Wrap(
+                  children: [
+                    TextButton(
+                      key: const ValueKey('agent-retry-binary-attachment'),
+                      onPressed: _busy.contains('attachment-${conversation.id}')
+                          ? null
+                          : () => _retryBinaryAttachment(conversation.id),
+                      child: Text(l.agentRetry),
+                    ),
+                    TextButton(
+                      onPressed: _busy.contains('attachment-${conversation.id}')
+                          ? null
+                          : () => _binaryAction(
+                              conversation.id,
+                              (service) =>
+                                  service.discardPending(conversation.id),
+                            ),
+                      child: Text(l.cancel),
+                    ),
+                  ],
+                ),
               if (_attachmentFailed ||
                   (conversation != null &&
                       _attachments.pending(conversation.id) != null))
@@ -742,6 +854,12 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                     writable &&
                         runtime.configured &&
                         !conversation.archived &&
+                        widget.binaryAttachments?.isImporting(
+                              conversation.id,
+                            ) !=
+                            true &&
+                        widget.binaryAttachments?.hasPending(conversation.id) !=
+                            true &&
                         (widget.canSendToModel?.call(conversation.id) ?? true),
                     l,
                   );
@@ -1111,10 +1229,19 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         (message) => !_isInternalHostOperation(message),
       ))
         if (_queuedInput(message) case final String text)
-          _messageText(
-            l.agentQueuedMessages(1),
-            text,
-            key: ValueKey('agent-message-${message.id}'),
+          Column(
+            key: ValueKey('agent-message-group-${message.id}'),
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _messageText(
+                l.agentQueuedMessages(1),
+                text,
+                key: ValueKey('agent-message-${message.id}'),
+              ),
+              if (message.attachmentIds.isNotEmpty &&
+                  widget.binaryAttachments != null)
+                _messageAttachments(conversation, message),
+            ],
           )
         else if (message.role == ConversationRole.tool &&
             AgentOperationCard.parse(message.text) != null)
@@ -1172,6 +1299,9 @@ class _AgentConversationViewState extends State<AgentConversationView> {
             key: ValueKey('agent-message-group-${message.id}'),
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (message.attachmentIds.isNotEmpty &&
+                  widget.binaryAttachments != null)
+                _messageAttachments(conversation, message),
               if (message.text.isNotEmpty)
                 _messageText(
                   switch (message.role) {
@@ -1201,6 +1331,28 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     ];
   }
 
+  Widget _messageAttachments(
+    AgentConversation conversation,
+    ConversationMessage message,
+  ) => AgentAttachmentList(
+    attachments: conversation.attachments,
+    ids: message.attachmentIds,
+    repository: widget.binaryAttachments!.repository,
+    delivery: message.attachmentDelivery,
+    onUseAgain:
+        _canModifyBinaryAttachments(conversation.id) &&
+            !_busy.contains('attachment-${conversation.id}')
+        ? (id) => _binaryAction(
+            conversation.id,
+            (service) => service.useAgain(
+              conversation.id,
+              id,
+              canModify: () => _canModifyBinaryAttachments(conversation.id),
+            ),
+          )
+        : null,
+  );
+
   Widget _messageText(
     String role,
     String text, {
@@ -1219,6 +1371,15 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   }
 
   String _errorMessage(String? code, AppLocalizations l) {
+    if (code?.startsWith('attachment.') == true) {
+      final error = AttachmentError.values
+          .where((error) => 'attachment.${error.name}' == code)
+          .firstOrNull;
+      return agentAttachmentError(l, error ?? AttachmentError.unavailable);
+    }
+    if (code == 'provider.unsupportedAttachment') return l.agentFileUnsupported;
+    if (code == 'provider.attachmentMissing') return l.agentFileMissing;
+    if (code == 'provider.attachmentChanged') return l.agentFileChanged;
     if (code == 'connectionChanged') return l.agentConnectionChanged;
     if (code == 'disabled' || code == 'operation.disabled') {
       return l.agentDisabled;
@@ -1370,6 +1531,44 @@ class _AgentConversationViewState extends State<AgentConversationView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (widget.binaryAttachments case final service?) ...[
+                if (conversation.draftAttachmentIds.isNotEmpty)
+                  AgentAttachmentList(
+                    key: const ValueKey('agent-draft-attachments'),
+                    attachments: conversation.attachments,
+                    ids: conversation.draftAttachmentIds,
+                    repository: service.repository,
+                    onRemove:
+                        _canModifyBinaryAttachments(conversation.id) &&
+                            !_busy.contains('attachment-${conversation.id}')
+                        ? (id) => _binaryAction(
+                            conversation.id,
+                            (service) => service.remove(
+                              conversation.id,
+                              id,
+                              canModify: () =>
+                                  _canModifyBinaryAttachments(conversation.id),
+                            ),
+                          )
+                        : null,
+                  ),
+                if (service.isImporting(conversation.id) ||
+                    (active &&
+                        const {
+                          AttachmentDelivery.preparing,
+                          AttachmentDelivery.sending,
+                        }.contains(
+                          service.progressFor(conversation.id)?.delivery,
+                        )))
+                  AgentAttachmentProgress(
+                    progress:
+                        service.progressFor(conversation.id) ??
+                        const AttachmentProgress(AttachmentDelivery.saving),
+                    onCancel: service.isImporting(conversation.id)
+                        ? () => service.cancelImport(conversation.id)
+                        : null,
+                  ),
+              ],
               if (widget.delegate.pendingInputCount(conversation.id) > 0)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 6),
@@ -1454,7 +1653,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                             state,
                           ),
                         ),
-                      if (active && _composer.text.trim().isNotEmpty)
+                      if (active && _hasInput(conversation))
                         Wrap(
                           spacing: 4,
                           runSpacing: 4,
@@ -1479,7 +1678,28 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          if (widget.readDatasetGeneration != null)
+                          if (widget.binaryAttachments != null)
+                            IconButton(
+                              key: const ValueKey('agent-attach-file'),
+                              tooltip: l.agentAttachAnyFile,
+                              icon: const Icon(Icons.add_rounded),
+                              onPressed:
+                                  _canModifyBinaryAttachments(
+                                        conversation.id,
+                                      ) &&
+                                      !widget.binaryAttachments!.hasPending(
+                                        conversation.id,
+                                      ) &&
+                                      !widget.binaryAttachments!.isImporting(
+                                        conversation.id,
+                                      ) &&
+                                      !_busy.contains(
+                                        'attachment-${conversation.id}',
+                                      )
+                                  ? () => _attachBinaryFile(conversation.id)
+                                  : null,
+                            )
+                          else if (widget.readDatasetGeneration != null)
                             IconButton(
                               key: const ValueKey('agent-attach-file'),
                               tooltip: l.agentAttachFile,
@@ -1522,7 +1742,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                                             )
                                     : canSend &&
                                           !sending &&
-                                          _composer.text.trim().isNotEmpty
+                                          _hasInput(conversation)
                                     ? () => _send(conversation)
                                     : null,
                                 icon: Stack(

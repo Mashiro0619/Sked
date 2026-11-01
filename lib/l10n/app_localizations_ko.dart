@@ -3785,4 +3785,75 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get agentSkillTriggers => 'When to use this skill, one hint per line';
+
+  @override
+  String get agentAttachAnyFile => 'Attach a file';
+
+  @override
+  String get agentFileLocal => 'Saved on this device';
+
+  @override
+  String get agentFileSaving => 'Saving file…';
+
+  @override
+  String get agentFilePreparing => 'Preparing to send…';
+
+  @override
+  String get agentFileSending => 'Sending file…';
+
+  @override
+  String get agentFileAccepted => 'Accepted by the service';
+
+  @override
+  String get agentFileFailed => 'File was not accepted';
+
+  @override
+  String get agentFileCancelled => 'File transfer stopped';
+
+  @override
+  String get agentFileUnknown => 'Service acceptance is unknown';
+
+  @override
+  String get agentFileTooLarge => 'A file can be up to 32 MB.';
+
+  @override
+  String get agentFileChanged =>
+      'The file changed while it was being read. Select it again.';
+
+  @override
+  String get agentFileMissing =>
+      'This file is no longer available on this device. Select it again to use it.';
+
+  @override
+  String get agentFileCorrupt =>
+      'The saved file could not be verified. Select the original file again.';
+
+  @override
+  String get agentFileUnavailable =>
+      'File storage is unavailable. Retry after restoring access.';
+
+  @override
+  String get agentFileUnsupported =>
+      'This API protocol cannot send this file type. The local file is kept.';
+
+  @override
+  String get agentFileConflict =>
+      'The conversation changed while the file was being added, or the attachment limit was reached.';
+
+  @override
+  String get agentFilePreview => 'Preview file';
+
+  @override
+  String get agentFileUseAgain => 'Use in the next message';
+
+  @override
+  String get agentFileNoPreview =>
+      'Preview is not available for this file type. The saved file can still be sent if the API supports it.';
+
+  @override
+  String get agentFilePreviewFailed => 'This image could not be displayed.';
+
+  @override
+  String get agentFileReceivedHint =>
+      'Acceptance confirms the service received the request; it does not confirm that the model read every file.';
 }

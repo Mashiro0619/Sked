@@ -6,6 +6,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/agent/agent_application.dart';
+import 'package:sked/agent/attachments/attachment_repository.dart';
+import 'package:sked/agent/attachments/conversation_attachments.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/knowledge/knowledge_service.dart';
@@ -87,6 +89,15 @@ class _Application extends ChangeNotifier implements AgentApplication {
   @override
   final ApplicationToolHost tools = _ReadOnlyToolHost();
   @override
+  final attachmentStore = AttachmentRepository(
+    storage: MemoryAttachmentStorage(),
+  );
+  @override
+  late final binaryAttachments = ConversationAttachments(
+    conversations: conversations,
+    repository: attachmentStore,
+  );
+  @override
   final knowledgeRepository = AgentKnowledgeRepository(
     storage: MemoryKnowledgeStorage(),
   );
@@ -125,6 +136,8 @@ class _Application extends ChangeNotifier implements AgentApplication {
     app.runtime = AgentRuntimeController(
       repository: app.conversations,
       provider: app.provider,
+      attachments: app.attachmentStore,
+      onAttachmentProgress: app.binaryAttachments.transferProgress,
       readSettings: () => app.settings,
       readApiKey: (_) async => 'fixture-key',
       readTools: (_) => const [],
@@ -174,6 +187,8 @@ class _Application extends ChangeNotifier implements AgentApplication {
   void dispose() {
     runtime.dispose();
     tools.dispose();
+    unawaited(binaryAttachments.close());
+    binaryAttachments.dispose();
     knowledge.dispose();
     knowledgeRepository.dispose();
     provider.close();
