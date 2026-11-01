@@ -5,6 +5,11 @@ import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sked/agent/attachments/attachment_storage.dart';
+import 'package:sked/agent/connection/agent_credential_store.dart';
+import 'package:sked/agent/knowledge/knowledge_storage.dart';
+import 'package:sked/backup/selective_restore_coordinator.dart';
+import 'package:sked/services/device_preferences_store.dart';
 import 'package:sked/data/timetable_storage_io.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/app_runtime.dart';
@@ -16,6 +21,7 @@ import 'package:sked/services/school_site_store_io.dart';
 import 'package:sked/services/secret_store.dart';
 
 import '../test/support/workspace_harness.dart';
+import '../test/support/memory_conversation_storage.dart';
 
 class _Secrets implements SecretStore {
   String value = '';
@@ -27,8 +33,16 @@ class _Secrets implements SecretStore {
   }
 }
 
-Future<AppRuntime> _load(Directory directory) async {
+/// Also exercised by the default-storage rejection regression.
+Future<AppRuntime> loadDataLifecycleRuntime(Directory directory) async {
   final provider = AppRuntime(
+    agentConversationStorage: MemoryConversationStorage(),
+    agentAttachmentStorage: MemoryAttachmentStorage(),
+    agentKnowledgeStorage: MemoryKnowledgeStorage(),
+    agentCredentialStore: MemoryAgentCredentialStore(),
+    selectiveRestoreJournal: MemorySelectiveRestoreJournal(),
+    backupStagingStorage: MemoryAttachmentStorage(),
+    devicePreferences: DevicePreferencesStore.memory(),
     storage: IoTimetableStorage(directoryProvider: () async => directory),
     secretStore: _Secrets(),
     schoolSiteService: SchoolSiteService(
@@ -106,7 +120,7 @@ void main() {
       await IoTimetableStorage(directoryProvider: () async => source)
           .save(sample);
 
-      final first = await _load(source);
+      final first = await loadDataLifecycleRuntime(source);
       providers.add(first);
       expect(first.session.canWrite, isTrue);
       _expectSnapshot(
@@ -134,7 +148,7 @@ void main() {
 
       first.dispose();
       providers.remove(first);
-      final reopened = await _load(source);
+      final reopened = await loadDataLifecycleRuntime(source);
       providers.add(reopened);
       expect(
         reopened.studentView.timetables.first.courses.first.name,
@@ -151,7 +165,7 @@ void main() {
       final backup = File(path.join(temporary.path, 'backup.json'));
       await backup.writeAsString(exported, flush: true);
 
-      final destination = await _load(restored);
+      final destination = await loadDataLifecycleRuntime(restored);
       providers.add(destination);
       await destination.backups.importJson(
         await backup.readAsString(),
@@ -160,7 +174,7 @@ void main() {
       await destination.persistence.flushPendingUiStateSaves();
       destination.dispose();
       providers.remove(destination);
-      final afterRestore = await _load(restored);
+      final afterRestore = await loadDataLifecycleRuntime(restored);
       providers.add(afterRestore);
       expect(afterRestore.session.canWrite, isTrue);
       expect(

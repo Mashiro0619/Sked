@@ -11,6 +11,15 @@ the 2026-10-28 preview candidate was not adopted, as recorded below.
 Use it separately
 from host JIT microbenchmarks and in-process UI workloads.
 
+The runtime adapter explicitly supplies empty memory Agent conversations,
+knowledge, attachment bytes, credentials, selective restore journal and staging.
+Main storage, school sites and the legacy recovery journal still use the checked
+run root, and both physical locks retain their existing scope. AppBootstrap
+still binds device preferences to the run-root-backed startup service owners
+before load. No measured milestone, workload, fixture or timing window changes.
+Historical samples taken before this side-store isolation must not be pooled
+with new samples; recapture both comparison sides under the same isolation.
+
 Every sample starts a new executable with isolated writable files. OS page,
 shader, and font caches are retained, so these are process-cold measurements,
 not disk-cold measurements. The input is injected through Flutter's

@@ -3,7 +3,13 @@
 `integration_test/ui_performance_benchmark_test.dart` runs the production
 `AppHomeScreen`, adaptive workspace shell, calendar/timetable views and settings widgets. Only
 storage, secrets, school sites, recovery journals and notifications use isolated
-in-memory implementations. The target never opens the user's data directory.
+in-memory implementations. Agent conversations, knowledge, attachment bytes,
+credentials and restore staging now also use explicit per-session memory
+owners; device backup preferences share the session's existing memory owners.
+The target never opens the user's data directory. Historical samples taken
+before this explicit side-store isolation cannot be pooled with new samples;
+recapture both comparison sides with the same isolation, inputs and timing
+protocol.
 It retains the production 450 ms UI-state save debounce. Native notification,
 startup update, filesystem and serialization performance are outside this UI
 suite; keep the existing pure-data benchmark alongside it.

@@ -16,7 +16,12 @@ The target uses real `IoTimetableStorage`, school-site files and restore
 journals within a checked system temporary directory. Synthetic secrets,
 offline privacy, in-memory preferences and a local notification mutation lock
 keep it away from user data, keyring and notification state. These substitutions
-do not replace storage, serialization, normalization or import algorithms.
+do not replace storage, serialization, normalization or import algorithms. Agent
+conversations, knowledge, attachment bytes, credentials, selective restore
+journal and staging now have explicit empty memory owners. The real main
+archive, legacy journal, sites, action sequence and timing windows stay as
+described above. Historical samples before explicit side-store isolation must
+not be pooled with new samples; recapture both sides with matching isolation.
 
 Every sample includes wall time, whole-process RSS before/after and successful
 AppData save count. Site and journal writes contribute to action time, but are

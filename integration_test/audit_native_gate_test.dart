@@ -11,6 +11,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sked/agent/attachments/attachment_storage.dart';
+import 'package:sked/agent/connection/agent_credential_store.dart';
+import 'package:sked/agent/knowledge/knowledge_storage.dart';
+import 'package:sked/backup/selective_restore_coordinator.dart';
+import 'package:sked/services/device_preferences_store.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/data/timetable_storage_io.dart';
 import 'package:sked/main.dart' hide main;
@@ -25,6 +30,8 @@ import 'package:sked/services/school_site_store_io.dart';
 import 'package:sked/services/secret_store.dart';
 import 'package:sked/services/update_distribution.dart';
 import 'package:sked/services/update_service.dart';
+
+import '../test/support/memory_conversation_storage.dart';
 
 class _Secrets implements SecretStore {
   @override
@@ -47,7 +54,15 @@ class _Updates extends UpdateService {
   );
 }
 
-AppRuntime _runtime(Directory directory) => AppRuntime(
+/// Also exercised by the default-storage rejection regression.
+AppRuntime createNativeGateRuntime(Directory directory) => AppRuntime(
+  agentConversationStorage: MemoryConversationStorage(),
+  agentAttachmentStorage: MemoryAttachmentStorage(),
+  agentKnowledgeStorage: MemoryKnowledgeStorage(),
+  agentCredentialStore: MemoryAgentCredentialStore(),
+  selectiveRestoreJournal: MemorySelectiveRestoreJournal(),
+  backupStagingStorage: MemoryAttachmentStorage(),
+  devicePreferences: DevicePreferencesStore.memory(),
   storage: IoTimetableStorage(directoryProvider: () async => directory),
   secretStore: _Secrets(),
   schoolSiteService: SchoolSiteService(
@@ -184,7 +199,7 @@ void main() {
                 lease: lease,
                 runtimeFactory: () {
                   factoryCalls += 1;
-                  return app = _runtime(directory);
+                  return app = createNativeGateRuntime(directory);
                 },
                 startupDependencies: AppStartupDependencies(
                   desktopLayoutFactory: DesktopLayoutPreferences.memory,

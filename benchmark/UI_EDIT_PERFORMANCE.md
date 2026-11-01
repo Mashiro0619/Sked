@@ -6,7 +6,12 @@ fixtures and frame statistics, with `UiPerformanceApp` hosting the production
 `AppHomeScreen` and workspace widgets. A test-only
 session adapter supplies real `IoTimetableStorage` within a checked temporary
 directory instead of the scrolling suite's in-memory data store. Production
-codec defaults and the save debounce are retained.
+codec defaults and the save debounce are retained. Agent conversations, knowledge,
+attachment bytes, credentials, selective restore journal and staging use
+explicit empty memory owners; device backup preferences share the session's
+existing memory layout and developer owners. The disk workload and timing
+windows are unchanged. Recapture both comparison sides with this isolation;
+older samples with implicit side-store defaults are a separate population.
 
 Both revisions use their actual home-screen subscriptions. UI-only seed setup
 supplies the same bundled privacy-policy acceptance version/timestamp and

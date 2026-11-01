@@ -1,8 +1,14 @@
+import 'package:sked/agent/attachments/attachment_storage.dart';
+import 'package:sked/agent/connection/agent_credential_store.dart';
+import 'package:sked/agent/knowledge/knowledge_storage.dart';
+import 'package:sked/backup/selective_restore_coordinator.dart';
+import 'package:sked/services/device_preferences_store.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/controllers/app_backup_controller.dart';
 import 'package:sked/models/timetable_models.dart';
 
 import 'data_operations_runtime.dart';
+import '../../test/support/memory_conversation_storage.dart';
 
 DataOperationsRuntime createDataOperationsRuntime(
   DataOperationsDependencies dependencies,
@@ -11,6 +17,20 @@ DataOperationsRuntime createDataOperationsRuntime(
 class _CurrentRuntime implements DataOperationsRuntime {
   _CurrentRuntime(DataOperationsDependencies dependencies)
     : _app = AppRuntime(
+        // Explicit test owners prevent this benchmark from opening user stores.
+        // ignore: invalid_use_of_visible_for_testing_member
+        agentConversationStorage: MemoryConversationStorage(),
+        // ignore: invalid_use_of_visible_for_testing_member
+        agentAttachmentStorage: MemoryAttachmentStorage(),
+        // ignore: invalid_use_of_visible_for_testing_member
+        agentKnowledgeStorage: MemoryKnowledgeStorage(),
+        // ignore: invalid_use_of_visible_for_testing_member
+        agentCredentialStore: MemoryAgentCredentialStore(),
+        // ignore: invalid_use_of_visible_for_testing_member
+        selectiveRestoreJournal: MemorySelectiveRestoreJournal(),
+        // ignore: invalid_use_of_visible_for_testing_member
+        backupStagingStorage: MemoryAttachmentStorage(),
+        devicePreferences: DevicePreferencesStore.memory(),
         storage: dependencies.storage,
         secretStore: dependencies.secrets,
         schoolSiteService: dependencies.schoolSites,
