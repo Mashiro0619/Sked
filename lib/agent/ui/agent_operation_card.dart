@@ -1,9 +1,11 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show listEquals, mapEquals;
 import 'package:material_ui/material_ui.dart';
 
 import '../../application/resource_contracts.dart';
 import '../../l10n/app_localizations.dart';
+import '../../models/school_site_models.dart' show validSchoolSiteId;
 
 /// Host receipts provide the outcome. Assistant prose never sets this card's
 /// saved, failed or uncertain state.
@@ -57,11 +59,25 @@ class AgentOperationCard extends StatelessWidget {
     final storedChanges = (receipt['changes'] as List? ?? const [])
         .whereType<Map>()
         .toList();
-    final namedObjects = storedChanges.any(_isNamedObjectChange);
-    final changes = [
-      for (final change in storedChanges)
-        _presentChange(change, applied: applied, l: l),
-    ];
+    var presentsSchoolSites = false;
+    final changes = <Map>[];
+    for (final change in storedChanges) {
+      final schoolSites = _presentSchoolSites(change, applied: applied, l: l);
+      if (schoolSites != null) {
+        presentsSchoolSites = true;
+        changes.addAll(schoolSites);
+      } else {
+        changes.add(_presentChange(change, applied: applied, l: l));
+      }
+    }
+    final namedObjects =
+        presentsSchoolSites || storedChanges.any(_isNamedObjectChange);
+    final storedChangeCount = receipt['changeCount'];
+    final changeCount = presentsSchoolSites
+        ? changes.length
+        : storedChangeCount is int
+        ? storedChangeCount
+        : null;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Card.outlined(
@@ -91,7 +107,7 @@ class AgentOperationCard extends StatelessWidget {
                   ),
                 ],
               ),
-              if (receipt['changeCount'] case final int count) ...[
+              if (changeCount case final int count) ...[
                 const SizedBox(height: 6),
                 Text(l.agentChangeCount(count)),
               ],
@@ -160,6 +176,66 @@ String _changeText(Map change, AppLocalizations l) {
     _ => l.agentChangeUpdated,
   };
   return '$action · $label';
+}
+
+List<Map>? _presentSchoolSites(
+  Map change, {
+  required bool applied,
+  required AppLocalizations l,
+}) {
+  if (change['key'] != 'schoolSites') return null;
+  final before = _schoolSitesById(change['before']);
+  final after = _schoolSitesById(change['after']);
+  // Historical records without unique stable IDs cannot be matched by name
+  // or URL. Keep their existing detail view instead of inventing a difference.
+  if (before == null || after == null) return null;
+  final rows = <Map>[];
+  for (final entry in after.entries) {
+    final previous = before[entry.key];
+    // The owning SchoolSite snapshot contains scalar ID, name and URL fields.
+    if (previous != null && mapEquals(previous, entry.value)) continue;
+    rows.add({
+      'label': entry.value['name'],
+      'action': !applied
+          ? 'unconfirmed'
+          : previous == null
+          ? 'created'
+          : 'updated',
+    });
+  }
+  for (final entry in before.entries) {
+    if (after.containsKey(entry.key)) continue;
+    rows.add({
+      'label': entry.value['name'],
+      'action': applied ? 'deleted' : 'unconfirmed',
+    });
+  }
+  if (rows.isEmpty && !listEquals(before.keys.toList(), after.keys.toList())) {
+    rows.add({
+      'label': l.schoolSitesPageTitle,
+      'action': applied ? 'updated' : 'unconfirmed',
+    });
+  }
+  return rows;
+}
+
+Map<String, Map>? _schoolSitesById(Object? value) {
+  if (value is! List) return null;
+  final sites = <String, Map>{};
+  for (final site in value) {
+    if (site is! Map) return null;
+    final id = site['id'], name = site['name'];
+    if (id is! String ||
+        !validSchoolSiteId(id) ||
+        sites.containsKey(id) ||
+        name is! String ||
+        name.trim().isEmpty ||
+        site['loginUrl'] is! String) {
+      return null;
+    }
+    sites[id] = site;
+  }
+  return sites;
 }
 
 bool _isNamedObjectChange(Map change) {
