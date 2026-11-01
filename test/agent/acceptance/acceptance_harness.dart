@@ -4,12 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/agent/attachments/attachment_storage.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
+import 'package:sked/agent/knowledge/knowledge_storage.dart';
 import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/runtime/agent_runtime_controller.dart';
 import 'package:sked/agent/tools/workflow_tool_adapters.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/application/external_operation_coordinator.dart';
 import 'package:sked/application/operation_contracts.dart';
+import 'package:sked/backup/selective_restore_coordinator.dart';
 import 'package:sked/models/agent_settings.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/agenda_notification_service.dart';
@@ -191,7 +193,12 @@ class AcceptanceHarness {
     app = await workspaceProvider(
       storage: storage,
       agentConversationStorage: conversations,
-      agentAttachmentStorage: attachmentStorage,
+      // integration_test imports this harness without test/flutter_test_config;
+      // keep every side store explicit so native smoke cannot open user data.
+      agentAttachmentStorage: attachmentStorage ?? MemoryAttachmentStorage(),
+      agentKnowledgeStorage: MemoryKnowledgeStorage(),
+      selectiveRestoreJournal: MemorySelectiveRestoreJournal(),
+      backupStagingStorage: MemoryAttachmentStorage(),
       agentCredentialStore: credentials,
       agentProvider: provider ?? _NoNetworkProvider(),
       devicePreferences: DevicePreferencesStore(

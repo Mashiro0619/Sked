@@ -17,6 +17,7 @@ import 'package:sked/agent/connection/agent_credential_store.dart';
 import 'package:sked/agent/conversations/conversation_storage.dart';
 import 'package:sked/agent/knowledge/knowledge_storage.dart';
 import 'package:sked/agent/provider/provider.dart';
+import 'package:sked/backup/selective_restore_coordinator.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
@@ -98,6 +99,8 @@ Future<AppRuntime> workspaceProvider({
   DataTransferCodec codec = inlineDataTransferCodec,
   ConversationStorage? agentConversationStorage,
   AttachmentStorage? agentAttachmentStorage,
+  SelectiveRestoreJournal? selectiveRestoreJournal,
+  AttachmentStorage? backupStagingStorage,
   KnowledgeStorage? agentKnowledgeStorage,
   AgentCredentialStore? agentCredentialStore,
   ProviderClient? agentProvider,
@@ -114,6 +117,8 @@ Future<AppRuntime> workspaceProvider({
     dataTransferCodec: codec,
     agentConversationStorage: agentConversationStorage,
     agentAttachmentStorage: agentAttachmentStorage,
+    selectiveRestoreJournal: selectiveRestoreJournal,
+    backupStagingStorage: backupStagingStorage,
     agentKnowledgeStorage: agentKnowledgeStorage,
     agentCredentialStore: agentCredentialStore,
     agentProvider: agentProvider,
