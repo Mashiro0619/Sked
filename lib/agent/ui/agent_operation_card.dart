@@ -181,7 +181,12 @@ Map _presentChange(
   required bool applied,
   required AppLocalizations l,
 }) {
-  if (!_isNamedObjectChange(change)) return change;
+  if (!_isNamedObjectChange(change)) {
+    if (applied) return change;
+    // Standard prepare receipts already contain actions and object references.
+    // Those describe the proposal, not a confirmed write or an existing target.
+    return {...change, 'action': 'unconfirmed'}..remove('ref');
+  }
   final before = change['before'], after = change['after'];
   final key = change['key'] as String;
   final label =

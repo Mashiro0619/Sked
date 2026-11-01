@@ -56,10 +56,10 @@ class _AgentPlanPreviewState extends State<AgentPlanPreview> {
             title: Text(_label(change)),
             subtitle: Text(
               change['before'] == null
-                  ? l.agentChangeCreated
+                  ? l.agentKnowledgeAdd
                   : change['after'] == null
-                  ? l.agentChangeDeleted
-                  : l.agentChangeUpdated,
+                  ? l.delete
+                  : l.agentKnowledgeEdit,
             ),
             children: [
               Align(
