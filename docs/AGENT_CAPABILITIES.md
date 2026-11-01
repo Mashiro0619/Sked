@@ -94,10 +94,10 @@ Agent 纳入现有功能管理，使用一个开关控制启用与入口显示�
 | 重复日程实例 | 范围展开、详情、复制为单次、按仅本次/本次及以后/整个系列修改或删除 | `GeneralCommands.prepareOccurrenceEdit/editOccurrence/deleteOccurrenceScope`。使用 `occurrenceKey` 和明确编辑范围；复用 `GeneralCalendarService.editOccurrence` 的拆分、例外映射和提醒状态处理。 |
 | 提醒处理记录 | 查询有效提醒、标记某实例已处理、恢复该实例提醒、查询稍后提醒等运行状态 | `dismissReminder/restoreReminder` 与通知动作工作流。已处理提醒不等于任务完成；内部运行记录通过语义动作维护，不提供任意 JSON 修改。 |
 | 综合日程查询 | 跨全部课表和日历检索、有限范围实例展开、空闲区间/冲突查询、返回可导航资源引用 | [GeneralOccurrenceService](../lib/services/general_occurrence_service.dart)和课程投影逻辑可复用。新增全局聚合、分页及空闲区间计算；注明纳入的隐藏/停用范围、时间基准与结果边界。 |
-| 学校站点 | 列表、详情、添加、改名/改 URL、删除、导入、导出、恢复内置列表 | [SchoolSiteService](../lib/services/school_site_service.dart)、[SchoolSite](../lib/models/school_site_models.dart)。当前对象只有名称和 URL，需稳定 ID 迁移，或在迁移前使用来源版本绑定的稳定句柄；不能用页面 index 执行并发删除。 |
+| 学校站点 | 列表、详情、添加、改名/改 URL、删除、导入、导出、恢复内置列表 | [SchoolSiteService](../lib/services/school_site_service.dart)、[SchoolSite](../lib/models/school_site_models.dart)。站点持久保存稳定 ID，改名、改地址和排序不改变身份；旧数据迁移及选择恢复规则见[学校站点身份](SCHOOL_SITE_IDENTITIES.md)。Agent 变更继续使用来源版本绑定的句柄，不能用页面 index 执行并发删除。 |
 | 学校网页登录会话 | 查询可操作状态、退出本机学校网页会话、清理后重建页面 | [SchoolWebSessionService](../lib/services/school_web_session_service.dart)。本机 Cookie/缓存清理不等于注销远端学校全部会话。 |
 | 课表/日程/节次导入导出 | 准备候选、查看完整诊断、选择资源和追加/替换目标、应用、生成 JSON/ICS 文件产物 | `DataTransferController` 与 [ImportExportService](../lib/services/import_export_service.dart)。来源和目标显式固定；文件生成、写入用户选定位置、分享/外传是不同能力。 |
-| 完整备份 | 生成备份、读取备份清单/影响、恢复、查询恢复进度及待恢复状态 | [AppBackupController](../lib/controllers/app_backup_controller.dart)。复用多存储日志和维护门禁，不等同普通数据导入；备份不包含密钥。独立解析配置退役后，按统一 Agent 连接的新迁移契约处理旧备份，并同步恢复规则与回归。 |
+| 选择性备份 | 按对象生成 ZIP、读取备份清单和依赖、选择恢复、查询恢复进度及待恢复状态 | [AppBackupController](../lib/controllers/app_backup_controller.dart)与[选择性备份服务](../lib/backup/selective_backup_service.dart)共用应用维护门禁。主库、站点、设备偏好、知识、聊天和附件分别记录固定目标及阶段；未选对象保留，聊天只恢复历史，密钥与执行授权不导出。旧 JSON 进入同一选择页，兼容整体恢复 API 另行保留。 |
 | 应用数据清除 | 描述清除范围、执行清除和退出、回报实际清除/退出状态 | [AppDataClearCoordinator](../lib/services/app_data_clear_coordinator.dart)。涉及主存档、侧存储、学校网页、设备偏好与通知；不能只写一个空 AppData 后回报全部清除成功。 |
 | 恢复与维护 | 读取诊断、重试加载、导出受控恢复工件、按既有条件开始新存档、重建通知投影 | [AppLifecycle](../lib/controllers/app_lifecycle.dart)、`AppRepository` 及现有维护服务。只暴露语义动作，不允许改写恢复阶段、文件候选顺序或写门禁状态。 |
 
@@ -177,7 +177,7 @@ Agent 参数校验不能依赖 Flutter 表单是否打开。需从 [CourseEditor
 | --- | --- | --- |
 | 学校站点列表 | 独立资源命令、版本检查、导入/导出/恢复默认 | `SchoolSiteService` 有恢复状态和 generation；与主数据跨存储批处理需恢复工作流，不能声称一个 AppData 写入全部原子完成。 |
 | 安全凭据 | 创建、替换、删除、绑定统一 Agent 的 API 连接、读取是否存在/验证状态 | 参考现有 [SecretStore](../lib/services/secret_store.dart)及 [SchoolImportSecretController](../lib/controllers/school_import_secret_controller.dart)的写入验证与失败恢复，迁移后退役独立学校解析密钥入口。凭据值由宿主安全输入或受控导入获得，工具接收 handle；不在参数、结果、消息、备份或日志里传递原文。 |
-| 设备面板尺寸 | 按角色读取、设置、清除单维度、重置角色/全部角色，并等待 flush | [DesktopLayoutPreferences](../lib/services/desktop_layout_preferences.dart)。`width`、`height`、`dockedWidth` 属设备偏好，不进 AppData/完整备份；布局约束后的测量值不能自动写回偏好。普通 reset 不得调用会冻结存储的清除流程。 |
+| 设备面板尺寸 | 按角色读取、设置、清除单维度、重置角色/全部角色，并等待 flush | [DesktopLayoutPreferences](../lib/services/desktop_layout_preferences.dart)。`width`、`height`、`dockedWidth` 属独立设备偏好，可显式选择平台分组备份，异平台恢复保留本机设置；不进入 AppData 或旧完整 JSON。布局约束后的测量值不能自动写回偏好，普通 reset 不得调用会冻结存储的清除流程。 |
 | 开发者入口 | 读取/修改/恢复已有开发者偏好 | [DeveloperUiPreferences](../lib/services/developer_ui_preferences.dart)。现有助手预览入口属于旧开发者功能；正式 Agent 改用功能管理中的单一开关，不要求同时开启开发者入口。 |
 | 开发者样例与诊断 | 查询能力、按明确命令生成样例、测试通知、清理测试运行状态 | [DeveloperCommands](../lib/controllers/developer_commands.dart)、[AgendaCoordinator](../lib/services/agenda_coordinator.dart)。生成样例是数据修改，不能作为普通设置字段或默认日程整理步骤。 |
 | 通知运行时 | 查询排程/稍后提醒/处理结果、重排、清理或恢复 | claim ledger、projection fence、内部通知 ID、恢复阶段都是一致性状态，只能由对应工作流维护。 |

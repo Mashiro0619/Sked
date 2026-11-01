@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:archive/archive.dart';
 import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -9,78 +10,87 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/app_runtime.dart';
+import 'package:sked/backup/selective_backup_codec.dart';
+import 'package:sked/backup/selective_backup_models.dart';
 import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
 import 'package:sked/controllers/app_data_maintenance.dart'
     show AppBackupRestoreInProgressException;
-import 'package:sked/services/data_transfer_codec.dart';
-import 'package:sked/services/text_file_picker.dart';
-import 'package:sked/screens/language_settings_page.dart';
+import 'package:sked/screens/selective_backup_page.dart';
 import 'package:sked/screens/settings_data_transfer_controller.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/theme_settings_page.dart';
-import 'package:sked/screens/workspace_features_page.dart';
 import 'package:sked/widgets/sked_dropdown_menu.dart';
 import 'package:sked/widgets/ui_command.dart';
 import 'package:sked/widgets/text_transfer_widgets.dart';
 
 import '../support/workspace_harness.dart';
-import '../support/data_transfer_codec.dart';
-import '../support/oversized_text_file_picker.dart';
 
 class _Storage extends WorkspaceMemoryStorage {
   _Storage(super.data);
-
   Completer<void>? pending;
+  Completer<void>? saveStarted;
   int writes = 0;
-
   @override
   Future<void> save(AppData value) async {
     writes++;
+    if (saveStarted case final signal? when !signal.isCompleted) {
+      signal.complete();
+    }
     await pending?.future;
     await super.save(value);
   }
 }
 
 class _FilePicker extends FileSelectorPlatform {
-  _FilePicker(this.source);
+  _FilePicker(this.source, {this.file});
   final String source;
-
+  final XFile? file;
   @override
   Future<XFile?> openFile({
     List<XTypeGroup>? acceptedTypeGroups,
     String? initialDirectory,
     String? confirmButtonText,
-  }) async => XFile.fromData(
-    Uint8List.fromList(utf8.encode(source)),
-    name: 'backup.json',
-    mimeType: 'application/json',
-  );
+  }) async =>
+      file ??
+      XFile.fromData(
+        Uint8List.fromList(utf8.encode(source)),
+        path: 'backup.json',
+        name: 'backup.json',
+        mimeType: 'application/json',
+      );
 }
 
-class _PendingBackupCodec extends DataTransferCodec {
-  _PendingBackupCodec() : super(run: runDataTransferInline);
-
-  final started = Completer<void>();
-  final release = Completer<void>();
-
+class _PendingFilePicker extends _FilePicker {
+  _PendingFilePicker(super.source);
+  final started = Completer<void>(), release = Completer<void>();
   @override
-  Future<AppBackupData> decodeBackup(
-    String source, {
-    required String localeCode,
+  Future<XFile?> openFile({
+    List<XTypeGroup>? acceptedTypeGroups,
+    String? initialDirectory,
+    String? confirmButtonText,
   }) async {
     started.complete();
     await release.future;
-    return super.decodeBackup(source, localeCode: localeCode);
+    return super.openFile(acceptedTypeGroups: acceptedTypeGroups);
   }
 }
 
-Future<(AppRuntime, _Storage)> _fixture({
-  DataTransferCodec codec = inlineDataTransferCodec,
-}) async {
+class _OversizedBackupFile extends XFile {
+  _OversizedBackupFile() : super('oversized.zip');
+  @override
+  Future<int> length() async => SelectiveBackupLimits.archiveBytes + 1;
+  @override
+  Stream<Uint8List> openRead([int? start, int? end]) =>
+      throw StateError('Oversized backup bytes must not be read.');
+}
+
+Future<(AppRuntime, _Storage)> _fixture() async {
   final seed = await workspaceProvider();
   final storage = _Storage(seed.workspaceView.data);
   seed.dispose();
-  return (await workspaceProvider(storage: storage, codec: codec), storage);
+  final result = (await workspaceProvider(storage: storage), storage);
+  await result.$1.backups.selective.inventory();
+  return result;
 }
 
 void _viewport(WidgetTester tester, [Size size = const Size(393, 900)]) {
@@ -102,14 +112,91 @@ Future<void> _pump(WidgetTester tester) async {
 Future<void> _open(WidgetTester tester, Finder finder) async {
   await tester.ensureVisible(finder);
   await _pump(tester);
-  await tester.tap(finder);
+  await tester.runAsync(() => tester.tap(finder));
   await _pump(tester);
 }
 
-void _pickBackup(String source) {
+void _pickBackup(String source, {FileSelectorPlatform? picker}) {
   final previousPicker = FileSelectorPlatform.instance;
-  FileSelectorPlatform.instance = _FilePicker(source);
+  FileSelectorPlatform.instance = picker ?? _FilePicker(source);
   addTearDown(() => FileSelectorPlatform.instance = previousPicker);
+}
+
+Future<void> _selectApplicationAndReview(WidgetTester tester) async {
+  final page = tester.widget<SelectiveBackupPage>(
+    find.byType(SelectiveBackupPage),
+  );
+  await tester.runAsync(() => page.service.inventory());
+  final l = AppLocalizations.of(
+    tester.element(find.byType(SelectiveBackupPage)),
+  );
+  final scrollable = find
+      .descendant(
+        of: find.byType(CustomScrollView),
+        matching: find.byType(Scrollable),
+      )
+      .first;
+  await tester.scrollUntilVisible(
+    find.text(l.selectiveBackupClearSelection),
+    300,
+    scrollable: scrollable,
+  );
+  await _open(tester, find.text(l.selectiveBackupClearSelection));
+  await tester.scrollUntilVisible(
+    find.byType(TextField),
+    -200,
+    scrollable: scrollable,
+  );
+  await tester.enterText(
+    find.byType(TextField),
+    l.selectiveBackupApplicationSettings,
+  );
+  await _pump(tester);
+  await tester.scrollUntilVisible(
+    _key('backup-object-settings:application'),
+    250,
+    scrollable: scrollable,
+  );
+  await _open(tester, _key('backup-object-settings:application'));
+  expect(
+    tester
+        .widget<CheckboxListTile>(_key('backup-object-settings:application'))
+        .value,
+    isTrue,
+  );
+  final primary = _key('selective-backup-primary');
+  await tester.scrollUntilVisible(
+    primary,
+    350,
+    scrollable: find
+        .descendant(
+          of: find.byType(CustomScrollView),
+          matching: find.byType(Scrollable),
+        )
+        .first,
+  );
+  await tester.runAsync(() async {
+    final prepared = Completer<void>();
+    var preparing = false;
+    void preparationChanged() {
+      if (page.service.isBusy) {
+        preparing = true;
+      } else if (preparing && !prepared.isCompleted) {
+        prepared.complete();
+      }
+    }
+
+    page.service.addListener(preparationChanged);
+    try {
+      await tester.tap(primary);
+      await prepared.future.timeout(const Duration(seconds: 15));
+    } finally {
+      page.service.removeListener(preparationChanged);
+    }
+  });
+  await tester.pumpAndSettle();
+  expect(find.text(l.selectiveBackupConfirmTitle), findsOneWidget);
+  expect(find.byType(LinearProgressIndicator), findsNothing);
 }
 
 Future<void> _startFileRestore(
@@ -117,23 +204,78 @@ Future<void> _startFileRestore(
   _Storage storage, {
   bool fails = false,
 }) async {
-  final l10n = AppLocalizations.of(
+  final l = AppLocalizations.of(
     tester.element(find.byType(SettingsPage).first),
   );
   await _open(tester, _key('settings-app-backup'));
-  await _open(tester, find.text(l10n.restoreBackupFileTitle));
-  expect(find.text(l10n.restoreBackupConfirmTitle), findsOneWidget);
-  storage.pending = Completer<void>();
-  if (fails) storage.saveError = StateError('disk full');
-  await tester.tap(
-    find.widgetWithText(FilledButton, l10n.restoreBackupConfirmAction),
-  );
+  await _open(tester, find.text(l.restoreBackupFileTitle));
+  await _selectApplicationAndReview(tester);
+  await tester.runAsync(() async {
+    storage.pending = Completer<void>();
+    storage.saveStarted = Completer<void>();
+    if (fails) storage.saveError = StateError('disk full');
+    await tester.tap(
+      find.widgetWithText(FilledButton, l.selectiveBackupRestore),
+    );
+    await storage.saveStarted!.future.timeout(const Duration(seconds: 15));
+  });
   await _pump(tester);
 }
 
 Switch _switchIn(WidgetTester tester, Finder row) => tester.widget<Switch>(
   find.descendant(of: row, matching: find.byType(Switch)),
 );
+
+Future<void> _runBackupButton(WidgetTester tester, Finder button) async {
+  final service = tester
+      .widget<SelectiveBackupPage>(find.byType(SelectiveBackupPage))
+      .service;
+  await tester.ensureVisible(button);
+  await tester.runAsync(() async {
+    final done = Completer<void>();
+    var started = false;
+    void changed() {
+      if (service.isBusy) {
+        started = true;
+      } else if (started && !done.isCompleted) {
+        done.complete();
+      }
+    }
+
+    service.addListener(changed);
+    try {
+      await tester.tap(button);
+      await done.future.timeout(const Duration(seconds: 15));
+    } finally {
+      service.removeListener(changed);
+    }
+  });
+  await tester.pumpAndSettle();
+}
+
+Future<void> _finishBackupWrite(
+  WidgetTester tester,
+  AppRuntime runtime,
+  _Storage storage,
+) async {
+  final service = runtime.backups.selective;
+  await tester.runAsync(() async {
+    final done = Completer<void>();
+    void changed() {
+      if (!service.isBusy && !done.isCompleted) done.complete();
+    }
+
+    service.addListener(changed);
+    try {
+      storage.pending!.complete();
+      storage.pending = null;
+      await done.future.timeout(const Duration(seconds: 15));
+    } finally {
+      service.removeListener(changed);
+    }
+  });
+  await tester.pumpAndSettle();
+}
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -144,10 +286,10 @@ void main() {
     (file: true, locale: const Locale('en'), empty: true),
   ]) {
     testWidgets(
-      'restore describes retained parser settings before apply: $scenario',
+      'legacy restore uses object selection, keeps unselected connection and preserves cancelled text: $scenario',
       (tester) async {
         _viewport(tester);
-        final (provider, storage) = await _fixture();
+        final (provider, storage) = (await tester.runAsync(_fixture))!;
         addTearDown(() async {
           await tester.pumpWidget(const SizedBox());
           provider.dispose();
@@ -155,21 +297,17 @@ void main() {
         var retainedUrl = scenario.empty
             ? ''
             : 'https://user:local-password@local.example/v1?token=local-token#local-fragment';
-        await provider.settingsCommands.updateCustomSchoolImportTextSettings(
-          baseUrl: retainedUrl,
-          model: 'local-model',
-          prompt: 'local prompt',
-        );
-        await provider.schoolImportSecrets.update('local-key');
+        await tester.runAsync(() async {
+          await provider.settingsCommands.updateCustomSchoolImportTextSettings(
+            baseUrl: retainedUrl,
+            model: 'local-model',
+            prompt: 'local prompt',
+          );
+          await provider.schoolImportSecrets.update('local-key');
+        });
+        final original = provider.session.committedData;
         final source = encodeAppBackup(
-          provider.session.committedData.copyWith(
-            hideHomeWorkspaceNavigation: true,
-            aiApiSettings: const AiApiSettings(
-              customBaseUrl: 'https://other:backup-password@backup.example/v1?token=backup-token#backup-fragment',
-              customModel: 'backup-model',
-              customPrompt: 'backup prompt',
-            ),
-          ),
+          original.copyWith(hideHomeWorkspaceNavigation: true),
           [],
         );
         if (scenario.file) _pickBackup(source);
@@ -182,22 +320,18 @@ void main() {
           ),
         );
         await tester.pumpAndSettle();
-        final l10n = AppLocalizations.of(
+        final l = AppLocalizations.of(
           tester.element(find.byType(SettingsPage)),
         );
-        final submit = find.widgetWithText(
-          FilledButton,
-          l10n.restoreBackupConfirmAction,
-        );
-        Future<void> openConfirmation({bool retry = false}) async {
+        Future<void> openSource({bool retry = false}) async {
           if (!retry || scenario.file) {
             await _open(tester, _key('settings-app-backup'));
             await _open(
               tester,
               find.text(
                 scenario.file
-                    ? l10n.restoreBackupFileTitle
-                    : l10n.restoreBackupTextTitle,
+                    ? l.restoreBackupFileTitle
+                    : l.restoreBackupTextTitle,
               ),
             );
             if (!scenario.file) {
@@ -205,43 +339,33 @@ void main() {
               await _pump(tester);
             }
           }
-          if (!scenario.file) await _open(tester, submit.last);
-          expect(find.text(l10n.restoreBackupConfirmTitle), findsOneWidget);
+          if (!scenario.file) {
+            await _open(
+              tester,
+              find.widgetWithText(FilledButton, l.restoreBackupConfirmAction),
+            );
+          }
+          await _selectApplicationAndReview(tester);
         }
 
-        await openConfirmation();
-        String summary() => tester
+        await openSource();
+        final summary = tester
             .widget<Text>(_key('restore-backup-agent-settings-summary'))
             .data!;
-        expect(summary(), l10n.agentBackupConnectionPreserved);
+        expect(summary, l.agentBackupConnectionPreserved);
         for (final secret in [
           'local-password',
-          'backup-password',
           'local-token',
-          'backup-token',
           'local-fragment',
-          'backup-fragment',
           'local-key',
         ]) {
-          expect(summary(), isNot(contains(secret)));
-        }
-        if (scenario.file && !scenario.empty) {
-          retainedUrl = 'https://revised.example/v1';
-          await provider.settingsCommands.updateCustomSchoolImportTextSettings(
-            baseUrl: retainedUrl,
-            model: 'local-model',
-            prompt: 'local prompt',
-            confirmedEndpointChange: provider.settingsCommands
-                .customSchoolImportEndpointChange(retainedUrl),
-          );
-          await tester.pump();
-          expect(summary(), l10n.agentBackupConnectionPreserved);
+          expect(summary, isNot(contains(secret)));
         }
         final writesBeforeCancel = storage.writes;
-        await _open(tester, find.widgetWithText(TextButton, l10n.cancel).last);
+        await _open(tester, find.widgetWithText(TextButton, l.cancel));
+        await tester.runAsync(() => tester.binding.handlePopRoute());
         await tester.pumpAndSettle();
         expect(storage.writes, writesBeforeCancel);
-        expect(provider.schoolImportSecrets.value, 'local-key');
         expect(provider.settingsView.hideHomeWorkspaceNavigation, isFalse);
         if (!scenario.file) {
           expect(
@@ -249,60 +373,170 @@ void main() {
             source,
           );
         }
-        await openConfirmation(retry: true);
-        await _open(tester, submit.last);
+        if (scenario.file && !scenario.empty) {
+          retainedUrl = 'https://revised.example/v1';
+          await tester.runAsync(
+            () =>
+                provider.settingsCommands.updateCustomSchoolImportTextSettings(
+                  baseUrl: retainedUrl,
+                  model: 'local-model',
+                  prompt: 'local prompt',
+                  confirmedEndpointChange: provider.settingsCommands
+                      .customSchoolImportEndpointChange(retainedUrl),
+                ),
+          );
+        }
+        final retainedKey = provider.schoolImportSecrets.value;
+        await openSource(retry: true);
+        await _runBackupButton(
+          tester,
+          find.widgetWithText(FilledButton, l.selectiveBackupRestore),
+        );
         await tester.pumpAndSettle();
         expect(provider.settingsView.hideHomeWorkspaceNavigation, isTrue);
         expect(provider.settingsView.customSchoolImportBaseUrl, retainedUrl);
         expect(provider.settingsView.customSchoolImportModel, 'local-model');
-        expect(provider.settingsView.customSchoolImportPrompt, 'local prompt');
-        expect(provider.schoolImportSecrets.value, isEmpty);
+        expect(provider.schoolImportSecrets.value, retainedKey);
+        expect(
+          provider.session.committedData.studentMode.toJson(),
+          original.studentMode.toJson(),
+        );
+        expect(
+          provider.session.committedData.generalMode.toJson(),
+          original.generalMode.toJson(),
+        );
+        expect(find.byType(TextImportPage), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  for (final scenario in [
+    (kind: 'zip', file: true, locale: const Locale('en')),
+    (kind: 'legacy envelope', file: true, locale: const Locale('zh')),
+    (
+      kind: 'legacy envelope',
+      file: false,
+      locale: const Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
+    ),
+    (kind: 'legacy schema', file: true, locale: const Locale('en')),
+    (kind: 'legacy schema', file: false, locale: const Locale('zh')),
+  ]) {
+    testWidgets(
+      'newer backup format requests an upgrade and keeps local data: $scenario',
+      (tester) async {
+        _viewport(tester);
+        final (provider, storage) = (await tester.runAsync(_fixture))!;
+        addTearDown(() async {
+          await tester.pumpWidget(const SizedBox());
+          provider.dispose();
+        });
+        final original = provider.session.committedData.encode();
+        final writesBefore = storage.writes;
+        final legacy = jsonDecode(
+          encodeAppBackup(provider.session.committedData, const []),
+        ) as Map<String, dynamic>;
+        if (scenario.kind == 'legacy schema') {
+          final data = legacy['data']['appData'] as Map<String, dynamic>;
+          data['schemaVersion'] = (data['schemaVersion'] as int) + 1;
+        } else {
+          legacy['version'] = (legacy['version'] as int) + 1;
+        }
+        final source = jsonEncode(legacy);
+        if (scenario.kind == 'zip') {
+          final archive = Archive()
+            ..add(
+              ArchiveFile.string(
+                SelectiveBackupCodec.manifestPath,
+                jsonEncode({
+                  'schema': SelectiveBackupCodec.schema,
+                  'version': SelectiveBackupCodec.version + 1,
+                }),
+              ),
+            );
+          _pickBackup(
+            '',
+            picker: _FilePicker(
+              '',
+              file: XFile.fromData(
+                ZipEncoder().encodeBytes(archive),
+                name: 'newer-backup.zip',
+                mimeType: 'application/zip',
+              ),
+            ),
+          );
+        } else if (scenario.file) {
+          _pickBackup(source);
+        }
+        await tester.pumpWidget(
+          WorkspaceHarness(
+            provider: provider,
+            home: const SettingsPage(),
+            locale: scenario.locale,
+          ),
+        );
+        await tester.pumpAndSettle();
+        final l = AppLocalizations.of(
+          tester.element(find.byType(SettingsPage)),
+        );
+        await _open(tester, _key('settings-app-backup'));
+        await _open(
+          tester,
+          find.text(
+            scenario.file ? l.restoreBackupFileTitle : l.restoreBackupTextTitle,
+          ),
+        );
+        if (!scenario.file) {
+          await tester.enterText(find.byType(TextField), source);
+          await _open(
+            tester,
+            find.widgetWithText(FilledButton, l.restoreBackupConfirmAction),
+          );
+          expect(
+            tester.widget<TextField>(find.byType(TextField)).controller!.text,
+            source,
+          );
+        }
+        expect(find.text(l.selectiveBackupNewerVersion), findsOneWidget);
+        expect(find.text(l.selectiveBackupInvalid), findsNothing);
+        expect(find.byType(SelectiveBackupPage), findsNothing);
+        expect(provider.session.committedData.encode(), original);
+        expect(storage.writes, writesBefore);
+        expect(provider.maintenance.isReserved, isFalse);
+        expect(provider.backups.selective.recoveryPending, isFalse);
         expect(tester.takeException(), isNull);
       },
     );
   }
 
   testWidgets(
-    'oversized backup file reports its limit before restore preparation',
+    'oversized backup is refused before reading its bytes or opening selection',
     (tester) async {
       _viewport(tester);
-      final (provider, storage) = await _fixture();
-      addTearDown(() async {
-        await tester.pumpWidget(const SizedBox());
-        provider.dispose();
-      });
-      final previousPicker = FileSelectorPlatform.instance;
-      FileSelectorPlatform.instance = OversizedTextFilePicker();
-      addTearDown(() => FileSelectorPlatform.instance = previousPicker);
+      final (provider, storage) = (await tester.runAsync(_fixture))!;
+      addTearDown(provider.dispose);
+      _pickBackup('', picker: _FilePicker('', file: _OversizedBackupFile()));
       await tester.pumpWidget(
         WorkspaceHarness(provider: provider, home: const SettingsPage()),
       );
       await tester.pumpAndSettle();
-      final l10n = AppLocalizations.of(
-        tester.element(find.byType(SettingsPage)),
-      );
+      final l = AppLocalizations.of(tester.element(find.byType(SettingsPage)));
       await _open(tester, _key('settings-app-backup'));
-      await _open(tester, find.text(l10n.restoreBackupFileTitle));
-      expect(
-        find.text(l10n.importTextFileTooLarge(TextFilePicker.maxMegabytes)),
-        findsOneWidget,
-      );
-      expect(find.text(l10n.restoreBackupConfirmTitle), findsNothing);
+      await _open(tester, find.text(l.restoreBackupFileTitle));
+      expect(find.text(l.selectiveBackupLimit), findsOneWidget);
+      expect(find.byType(SelectiveBackupPage), findsNothing);
       expect(storage.writes, 0);
-      expect(provider.maintenance.isReserved, false);
+      expect(provider.maintenance.isReserved, isFalse);
       expect(tester.takeException(), isNull);
     },
   );
 
   testWidgets(
-    'text backup restore can retry after a recoverable failure',
+    'text restore resumes its fixed target after an interrupted write',
     (tester) async {
       _viewport(tester);
-      final (provider, storage) = await _fixture();
-      addTearDown(() async {
-        await tester.pumpWidget(const SizedBox());
-        provider.dispose();
-      });
+      final (provider, storage) = (await tester.runAsync(_fixture))!;
+      addTearDown(provider.dispose);
       final source = encodeAppBackup(
         provider.session.committedData.copyWith(
           hideHomeWorkspaceNavigation: true,
@@ -313,44 +547,35 @@ void main() {
         WorkspaceHarness(provider: provider, home: const SettingsPage()),
       );
       await tester.pumpAndSettle();
-      final l10n = AppLocalizations.of(
-        tester.element(find.byType(SettingsPage)),
-      );
+      final l = AppLocalizations.of(tester.element(find.byType(SettingsPage)));
       await _open(tester, _key('settings-app-backup'));
-      await _open(tester, find.text(l10n.restoreBackupTextTitle));
-      final originalTextPage = tester.state(find.byType(TextImportPage));
+      await _open(tester, find.text(l.restoreBackupTextTitle));
       await tester.enterText(find.byType(TextField), source);
-      final submit = find.widgetWithText(
-        FilledButton,
-        l10n.restoreBackupConfirmAction,
+      await _open(
+        tester,
+        find.widgetWithText(FilledButton, l.restoreBackupConfirmAction),
       );
-      await _open(tester, submit);
-      expect(find.text(l10n.restoreBackupConfirmTitle), findsOneWidget);
-      final previousSession = provider.maintenance.dataSessionToken;
+      await _selectApplicationAndReview(tester);
       storage.saveError = StateError('disk full');
-      await tester.tap(submit.last);
-      await tester.pumpAndSettle();
-
-      expect(
-        provider.maintenance.dataSessionToken,
-        isNot(same(previousSession)),
+      await _runBackupButton(
+        tester,
+        find.widgetWithText(FilledButton, l.selectiveBackupRestore),
       );
-      expect(provider.maintenance.isReserved, isFalse);
+      await tester.pumpAndSettle();
+      expect(provider.session.canWrite, isFalse);
+      expect(provider.backups.selective.recoveryPending, isTrue);
+      final pending = await provider.backups.selective.journal.read();
+      expect(pending, isNotNull);
+      expect(find.text(l.selectiveBackupRecoveryPending), findsOneWidget);
+      await _runBackupButton(
+        tester,
+        find.widgetWithText(FilledButton, l.selectiveBackupResume),
+      );
+      await tester.pumpAndSettle();
       expect(provider.session.canWrite, isTrue);
-      expect(tester.state(find.byType(TextImportPage)), same(originalTextPage));
-      expect(
-        tester.widget<TextField>(find.byType(TextField)).controller!.text,
-        source,
-      );
-      expect(provider.settingsView.hideHomeWorkspaceNavigation, isFalse);
-
-      await _open(tester, submit);
-      expect(find.text(l10n.restoreBackupConfirmTitle), findsOneWidget);
-      await tester.tap(submit.last);
-      await tester.pumpAndSettle();
-      expect(find.byType(TextImportPage), findsNothing);
       expect(provider.settingsView.hideHomeWorkspaceNavigation, isTrue);
-      expect(provider.maintenance.isReserved, isFalse);
+      expect(await provider.backups.selective.journal.read(), isNull);
+      expect(find.byType(TextImportPage), findsNothing);
       expect(tester.takeException(), isNull);
     },
     variant: TargetPlatformVariant({
@@ -360,30 +585,27 @@ void main() {
   );
 
   testWidgets(
-    'a late backup preview cannot open confirmation in a new session',
+    'a file picker from an earlier data session cannot open a restore selection',
     (tester) async {
       _viewport(tester);
-      final codec = _PendingBackupCodec();
-      final (provider, storage) = await _fixture(codec: codec);
+      final (provider, storage) = (await tester.runAsync(_fixture))!;
       addTearDown(provider.dispose);
       final original = provider.session.committedData;
-      _pickBackup(encodeAppBackup(original, []));
+      final picker = _PendingFilePicker(encodeAppBackup(original, []));
+      _pickBackup('', picker: picker);
       await tester.pumpWidget(
         WorkspaceHarness(provider: provider, home: const SettingsPage()),
       );
       await tester.pumpAndSettle();
-      final l10n = AppLocalizations.of(
-        tester.element(find.byType(SettingsPage)),
-      );
+      final l = AppLocalizations.of(tester.element(find.byType(SettingsPage)));
       await _open(tester, _key('settings-app-backup'));
-      await _open(tester, find.text(l10n.restoreBackupFileTitle));
-      expect(codec.started.isCompleted, isTrue);
+      await _open(tester, find.text(l.restoreBackupFileTitle));
+      expect(picker.started.isCompleted, isTrue);
       final reservation = provider.maintenance.reserve();
       provider.maintenance.release(reservation);
-      codec.release.complete();
+      picker.release.complete();
       await tester.pumpAndSettle();
-      expect(find.text(l10n.restoreBackupConfirmTitle), findsNothing);
-      expect(find.text(l10n.restoreBackupFailureMessage), findsNothing);
+      expect(find.byType(SelectiveBackupPage), findsNothing);
       expect(provider.session.committedData, same(original));
       expect(storage.writes, 0);
       expect(tester.takeException(), isNull);
@@ -392,10 +614,10 @@ void main() {
 
   for (final fails in [false, true]) {
     testWidgets(
-      'file restore shows progress, allows browsing and restores writes after ${fails ? 'failure' : 'success'}',
+      'accepted selective restore remains owned while browsing and ${fails ? 'recovery' : 'completion'} restores editing',
       (tester) async {
         _viewport(tester);
-        final (provider, storage) = await _fixture();
+        final (provider, storage) = (await tester.runAsync(_fixture))!;
         addTearDown(provider.dispose);
         _pickBackup(
           encodeAppBackup(
@@ -409,40 +631,24 @@ void main() {
           WorkspaceHarness(provider: provider, home: const SettingsPage()),
         );
         await tester.pumpAndSettle();
-        final l10n = AppLocalizations.of(
+        final l = AppLocalizations.of(
           tester.element(find.byType(SettingsPage)),
         );
-        final writesBefore = storage.writes;
         await _startFileRestore(tester, storage, fails: fails);
         expect(provider.maintenance.isReserved, isTrue);
+        await tester.pageBack();
+        await _pump(tester);
         expect(_status, findsOneWidget);
-        expect(find.text(l10n.backupRestoreInProgressTitle), findsOneWidget);
-        expect(find.byType(LinearProgressIndicator), findsOneWidget);
-        expect(storage.writes, writesBefore + 1);
-
         await _open(tester, _key('settings-workspace-features'));
-        expect(find.byType(WorkspaceFeaturesPage), findsOneWidget);
-        expect(_status, findsOneWidget);
         expect(
           _switchIn(tester, _key('workspace-enabled-student')).onChanged,
           isNull,
         );
-        await tester.tap(
-          _key('workspace-enabled-student'),
-          warnIfMissed: false,
-        );
-        await _pump(tester);
-        expect(find.byType(AlertDialog), findsNothing);
-        expect(find.text(l10n.saveFailedRetry), findsNothing);
-        expect(storage.writes, writesBefore + 1);
         await tester.pageBack();
         await _pump(tester);
-
         await _open(tester, _key('settings-language'));
-        expect(find.byType(LanguageSettingsPage), findsOneWidget);
         await tester.enterText(_key('language-search'), 'Deutsch');
         await _pump(tester);
-        expect(_key('language-option-de'), findsOneWidget);
         expect(
           tester
               .widget<InkWell>(
@@ -454,33 +660,30 @@ void main() {
               .onTap,
           isNull,
         );
-        expect(_status, findsOneWidget);
         await tester.pageBack();
         await _pump(tester);
-
-        storage.pending!.complete();
-        await tester.pumpAndSettle();
-        storage.pending = null;
+        await _finishBackupWrite(tester, provider, storage);
         expect(provider.maintenance.isReserved, isFalse);
-        expect(_status, findsNothing);
-        expect(provider.settingsView.hideHomeWorkspaceNavigation, !fails);
-        expect(
-          find.text(
-            fails
-                ? l10n.restoreBackupFailureMessage
-                : l10n.restoreBackupSuccessMessage,
-          ),
-          findsOneWidget,
-        );
+        if (fails) {
+          expect(provider.session.canWrite, isFalse);
+          await _open(tester, _key('settings-app-backup'));
+          await _open(tester, find.text(l.selectiveBackupTitle));
+          await tester.pumpAndSettle();
+          await _runBackupButton(
+            tester,
+            find.widgetWithText(FilledButton, l.selectiveBackupResume),
+          );
+          await tester.pumpAndSettle();
+          await tester.pageBack();
+          await _pump(tester);
+        }
+        expect(provider.session.canWrite, isTrue);
+        expect(provider.settingsView.hideHomeWorkspaceNavigation, isTrue);
         await _open(tester, _key('settings-workspace-features'));
         expect(
           _switchIn(tester, _key('workspace-enabled-student')).onChanged,
           isNotNull,
         );
-        await tester.tap(find.text(l10n.hideHomeWorkspaceNavigation));
-        await tester.pumpAndSettle();
-        expect(provider.settingsView.hideHomeWorkspaceNavigation, fails);
-        expect(storage.writes, writesBefore + 2);
         expect(tester.takeException(), isNull);
       },
       variant: TargetPlatformVariant({
@@ -498,9 +701,9 @@ void main() {
       tester,
     ) async {
       _viewport(tester, const Size(1100, 1000));
-      final (provider, storage) = await _fixture();
+      final (provider, storage) = (await tester.runAsync(_fixture))!;
       addTearDown(provider.dispose);
-      final source = await provider.backups.exportJson();
+      final source = (await tester.runAsync(provider.backups.exportJson))!;
       await tester.pumpWidget(
         WorkspaceHarness(
           provider: provider,
@@ -508,11 +711,16 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      storage.pending = Completer<void>();
-      final restoring = provider.backups.importJson(
-        source,
-        mode: AppImportMode.replaceAll,
-      );
+      late Future<int> restoring;
+      await tester.runAsync(() async {
+        storage.pending = Completer<void>();
+        storage.saveStarted = Completer<void>();
+        restoring = provider.backups.importJson(
+          source,
+          mode: AppImportMode.replaceAll,
+        );
+        await storage.saveStarted!.future.timeout(const Duration(seconds: 15));
+      });
       await _pump(tester);
       expect(_status, findsOneWidget);
       final imports = tester.widgetList<SettingsTransferPageTile>(
@@ -531,9 +739,11 @@ void main() {
       expect(exports, isNotEmpty);
       expect(imports.every((tile) => tile.onTap == null), isTrue);
       expect(exports.every((tile) => tile.onTap != null), isTrue);
-      storage.pending!.complete();
+      await tester.runAsync(() async {
+        storage.pending!.complete();
+        await restoring;
+      });
       await tester.pumpAndSettle();
-      await restoring;
       expect(tester.takeException(), isNull);
     });
   }
@@ -542,9 +752,9 @@ void main() {
     'theme target remains readable while saved theme choices are disabled',
     (tester) async {
       _viewport(tester, const Size(1100, 1000));
-      final (provider, storage) = await _fixture();
+      final (provider, storage) = (await tester.runAsync(_fixture))!;
       addTearDown(provider.dispose);
-      final source = await provider.backups.exportJson();
+      final source = (await tester.runAsync(provider.backups.exportJson))!;
       await tester.pumpWidget(
         WorkspaceHarness(
           provider: provider,
@@ -552,11 +762,16 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      storage.pending = Completer<void>();
-      final restoring = provider.backups.importJson(
-        source,
-        mode: AppImportMode.replaceAll,
-      );
+      late Future<int> restoring;
+      await tester.runAsync(() async {
+        storage.pending = Completer<void>();
+        storage.saveStarted = Completer<void>();
+        restoring = provider.backups.importJson(
+          source,
+          mode: AppImportMode.replaceAll,
+        );
+        await storage.saveStarted!.future.timeout(const Duration(seconds: 15));
+      });
       await _pump(tester);
       SkedDropdownMenu<String> menuIn(String key) =>
           tester.widget<SkedDropdownMenu<String>>(
@@ -578,9 +793,11 @@ void main() {
         menuIn('theme-workspace-mode-choice-list').initialSelection,
         AppMode.general.value,
       );
-      storage.pending!.complete();
+      await tester.runAsync(() async {
+        storage.pending!.complete();
+        await restoring;
+      });
       await tester.pumpAndSettle();
-      await restoring;
       expect(tester.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
@@ -590,7 +807,7 @@ void main() {
     tester,
   ) async {
     _viewport(tester);
-    final (provider, storage) = await _fixture();
+    final (provider, storage) = (await tester.runAsync(_fixture))!;
     addTearDown(provider.dispose);
     _pickBackup(
       encodeAppBackup(
@@ -619,10 +836,11 @@ void main() {
     expect(provider.maintenance.isReserved, isTrue);
     await tester.pageBack();
     await _pump(tester);
+    await tester.pageBack();
+    await _pump(tester);
     expect(find.byType(SettingsPage), findsNothing);
     expect(provider.maintenance.isReserved, isTrue);
-    storage.pending!.complete();
-    await tester.pumpAndSettle();
+    await _finishBackupWrite(tester, provider, storage);
     expect(provider.maintenance.isReserved, isFalse);
     expect(storage.data.hideHomeWorkspaceNavigation, isTrue);
     expect(tester.takeException(), isNull);

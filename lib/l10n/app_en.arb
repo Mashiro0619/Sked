@@ -298,15 +298,15 @@
   "@dataImportExportDesc": {},
   "appBackupTitle": "App backup and restore",
   "@appBackupTitle": {},
-  "appBackupSheetSubtitle": "A full restore replaces current app data. AI API keys live in secure storage and are not written to backup files.",
+  "appBackupSheetSubtitle": "Choose which objects to back up or restore. Unselected data is kept, and API keys are never exported.",
   "@appBackupSheetSubtitle": {},
-  "restoreBackupFileTitle": "Restore from JSON file",
+  "restoreBackupFileTitle": "Restore from backup file",
   "@restoreBackupFileTitle": {},
-  "restoreBackupFileSubtitle": "Choose a full Sked backup file. You will confirm before restoring.",
+  "restoreBackupFileSubtitle": "Choose a ZIP or legacy JSON backup, then select objects and confirm the restore.",
   "@restoreBackupFileSubtitle": {},
   "restoreBackupTextTitle": "Paste backup JSON",
   "@restoreBackupTextTitle": {},
-  "restoreBackupTextSubtitle": "Paste a full backup and restore current app data.",
+  "restoreBackupTextSubtitle": "Paste a legacy JSON backup, then select the objects to restore.",
   "@restoreBackupTextSubtitle": {},
   "shareBackupTitle": "Share backup file",
   "@shareBackupTitle": {},
@@ -318,7 +318,7 @@
   "@saveBackupSubtitle": {},
   "copyBackupTitle": "Copy backup text",
   "@copyBackupTitle": {},
-  "copyBackupSubtitle": "Show the full backup JSON so you can copy or store it temporarily.",
+  "copyBackupSubtitle": "Show legacy JSON for business data, app preferences and school sites. Chats, files and Agent configuration are excluded.",
   "@copyBackupSubtitle": {},
   "restoreBackupConfirmTitle": "Restore full backup?",
   "@restoreBackupConfirmTitle": {},
@@ -611,7 +611,7 @@
   "@privacyGateTitle": {},
   "privacyGateSummaryStorage": "Timetables, general schedules, period-time sets, and school-site configuration are only stored locally and are not automatically uploaded to a developer server.",
   "@privacyGateSummaryStorage": {},
-  "privacyGateSummaryImportExport": "Imports, exports, backups, and sharing happen when you request them. Full backups exclude API keys and chats. When you use Agent, your messages, attachments, and task-related app data returned by tools are sent to your configured API service.",
+  "privacyGateSummaryImportExport": "Imports, exports, backups, and sharing happen when you request them. Backups can include chats and files you select; API keys are excluded. When you use Agent, your messages, attachments, and task-related app data returned by tools are sent to your configured API service.",
   "@privacyGateSummaryImportExport": {},
   "privacyGateSummaryUpdates": "If a later version changes how data is handled, the app may ask you to review the updated privacy policy again.",
   "@privacyGateSummaryUpdates": {},
@@ -2608,6 +2608,12 @@
   "@agentSkillRequiredTools": {},
   "agentSkillTriggers": "When to use this skill, one hint per line",
   "@agentSkillTriggers": {},
+  "agentComposerActions": "Message actions",
+  "@agentComposerActions": {},
+  "agentMakeDefaultModel": "Use as default model",
+  "@agentMakeDefaultModel": {},
+  "agentModelIdExists": "This model has already been added.",
+  "@agentModelIdExists": {},
   "agentAttachAnyFile": "Attach a file",
   "@agentAttachAnyFile": {},
   "agentFileLocal": "Saved on this device",
@@ -2650,6 +2656,133 @@
   "@agentFilePreviewFailed": {},
   "agentFileReceivedHint": "Acceptance confirms the service received the request; it does not confirm that the model read every file.",
   "@agentFileReceivedHint": {},
+  "selectiveBackupAdd": "Add",
+  "@selectiveBackupAdd": {},
+  "selectiveBackupAgentConnection": "Agent connection and models",
+  "@selectiveBackupAgentConnection": {},
+  "selectiveBackupAgentPreferences": "Agent preferences",
+  "@selectiveBackupAgentPreferences": {},
+  "selectiveBackupApplicationSettings": "Application settings",
+  "@selectiveBackupApplicationSettings": {},
+  "selectiveBackupCalendars": "Calendar categories",
+  "@selectiveBackupCalendars": {},
+  "selectiveBackupCalendarSettings": "Calendar settings",
+  "@selectiveBackupCalendarSettings": {},
+  "selectiveBackupCancelled": "Restore cancelled. Your selection is kept.",
+  "@selectiveBackupCancelled": {},
+  "selectiveBackupClearSelection": "Clear selection",
+  "@selectiveBackupClearSelection": {},
+  "selectiveBackupConfirmBody": "Selected objects with the same ID will be replaced. New objects will be added, and unselected objects will be kept.",
+  "@selectiveBackupConfirmBody": {},
+  "selectiveBackupConfirmTitle": "Restore selected data?",
+  "@selectiveBackupConfirmTitle": {},
+  "selectiveBackupConflict": "Some selected objects conflict with data used elsewhere. Include the related objects or cancel this restore.",
+  "@selectiveBackupConflict": {},
+  "selectiveBackupConversations": "Conversations",
+  "@selectiveBackupConversations": {},
+  "selectiveBackupCopiedDependencies": "Copy and rebind {count} dependencies",
+  "@selectiveBackupCopiedDependencies": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectiveBackupCurrentData": "Current data",
+  "@selectiveBackupCurrentData": {},
+  "selectiveBackupDependencies": "Required dependencies are included automatically. Conflicting dependencies are copied and linked only to the selected objects.",
+  "@selectiveBackupDependencies": {},
+  "selectiveBackupDescription": "Choose individual objects and settings groups to back up or restore. Conversation files can be selected separately.",
+  "@selectiveBackupDescription": {},
+  "selectiveBackupExclusions": "API keys, cookies, system permissions and execution approvals are excluded. Restored chats contain history only and do not resume old actions.",
+  "@selectiveBackupExclusions": {},
+  "selectiveBackupExportSelection": "Choose data to back up",
+  "@selectiveBackupExportSelection": {},
+  "selectiveBackupFileMissing": "This backup contains a reference only; file bytes are not included.",
+  "@selectiveBackupFileMissing": {},
+  "selectiveBackupFiles": "Conversation files",
+  "@selectiveBackupFiles": {},
+  "selectiveBackupFilesDescription": "Select file contents separately. Unchecked files retain only history references; their contents will be unavailable after restore.",
+  "@selectiveBackupFilesDescription": {},
+  "selectiveBackupFileSize": "{bytes} bytes",
+  "@selectiveBackupFileSize": {
+    "placeholders": {
+      "bytes": {
+        "type": "int"
+      }
+    }
+  },
+  "selectiveBackupInvalid": "This file is not a valid Sked backup.",
+  "@selectiveBackupInvalid": {},
+  "selectiveBackupLimit": "This backup exceeds the supported size or object limit.",
+  "@selectiveBackupLimit": {},
+  "selectiveBackupMemories": "Memory",
+  "@selectiveBackupMemories": {},
+  "selectiveBackupNewerVersion": "This backup uses a newer format. Update Sked before restoring it.",
+  "@selectiveBackupNewerVersion": {},
+  "selectiveBackupNotificationSettings": "Notification settings",
+  "@selectiveBackupNotificationSettings": {},
+  "selectiveBackupOpenFile": "Open backup",
+  "@selectiveBackupOpenFile": {},
+  "selectiveBackupPeriodTimes": "Period time sets",
+  "@selectiveBackupPeriodTimes": {},
+  "selectiveBackupRecoveryPending": "A restore is unfinished. Continue the same restore before changing data.",
+  "@selectiveBackupRecoveryPending": {},
+  "selectiveBackupReplace": "Replace",
+  "@selectiveBackupReplace": {},
+  "selectiveBackupRestore": "Restore",
+  "@selectiveBackupRestore": {},
+  "selectiveBackupRestoreCounts": "Add {added}; replace {replaced}",
+  "@selectiveBackupRestoreCounts": {
+    "placeholders": {
+      "added": {
+        "type": "int"
+      },
+      "replaced": {
+        "type": "int"
+      }
+    }
+  },
+  "selectiveBackupRestored": "Selected data restored",
+  "@selectiveBackupRestored": {},
+  "selectiveBackupRestoreSelection": "Choose data to restore",
+  "@selectiveBackupRestoreSelection": {},
+  "selectiveBackupResume": "Continue restore",
+  "@selectiveBackupResume": {},
+  "selectiveBackupReviewRestore": "Review restore",
+  "@selectiveBackupReviewRestore": {},
+  "selectiveBackupSave": "Save backup",
+  "@selectiveBackupSave": {},
+  "selectiveBackupSaved": "Backup saved",
+  "@selectiveBackupSaved": {},
+  "selectiveBackupSchoolSites": "School sites",
+  "@selectiveBackupSchoolSites": {},
+  "selectiveBackupSearch": "Search objects",
+  "@selectiveBackupSearch": {},
+  "selectiveBackupSelectAll": "Select all",
+  "@selectiveBackupSelectAll": {},
+  "selectiveBackupSelectedCount": "{count} selected",
+  "@selectiveBackupSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectiveBackupSettings": "Settings groups",
+  "@selectiveBackupSettings": {},
+  "selectiveBackupSkills": "Skills",
+  "@selectiveBackupSkills": {},
+  "selectiveBackupTimetables": "Timetables",
+  "@selectiveBackupTimetables": {},
+  "selectiveBackupTimetableSettings": "Timetable settings",
+  "@selectiveBackupTimetableSettings": {},
+  "selectiveBackupTitle": "Selective backup and restore",
+  "@selectiveBackupTitle": {},
+  "selectiveBackupUnavailable": "Could not finish this operation. Check storage access and retry; an unfinished restore will continue from its saved progress.",
+  "@selectiveBackupUnavailable": {},
+  "selectiveBackupWorkspaceSettings": "Workspace settings",
+  "@selectiveBackupWorkspaceSettings": {},
   "agentEditAndRedo": "Edit and redo",
   "@agentEditAndRedo": {},
   "agentRegenerateReply": "Regenerate reply",
@@ -2663,5 +2796,38 @@
   "agentRedoConflict": "The complete turn cannot be safely undone. Keep the current data and revise your request, or cancel.",
   "@agentRedoConflict": {},
   "agentKeepAndRevise": "Keep data and revise",
-  "@agentKeepAndRevise": {}
+  "@agentKeepAndRevise": {},
+  "selectiveBackupDeviceSettings": "Device settings",
+  "@selectiveBackupDeviceSettings": {},
+  "selectiveBackupDeviceLayout": "Panel dimensions",
+  "@selectiveBackupDeviceLayout": {},
+  "selectiveBackupDeviceDeveloperUi": "Developer preview preferences",
+  "@selectiveBackupDeviceDeveloperUi": {},
+  "selectiveBackupDeviceGroupPlatform": "{group} · {platform}",
+  "@selectiveBackupDeviceGroupPlatform": {
+    "placeholders": {
+      "group": {
+        "type": "String"
+      },
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
+  "selectiveBackupDeviceUnsupported": "Device settings from {platform} do not apply to this platform. Your local settings will be kept.",
+  "@selectiveBackupDeviceUnsupported": {
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
+  "selectiveBackupUnsupportedGroups": "{count} unsupported device settings groups will be skipped",
+  "@selectiveBackupUnsupportedGroups": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

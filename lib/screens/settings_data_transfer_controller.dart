@@ -29,6 +29,7 @@ enum SettingsGeneralDataAction {
 }
 
 enum SettingsAppDataAction {
+  selectBackupObjects,
   restoreBackupFile,
   restoreBackupText,
   shareBackupFile,
@@ -47,6 +48,7 @@ class SettingsDataTransferController {
     required bool Function() hasRecoveryArtifacts,
     required Future<void> Function(SettingsAppDataAction action) onAction,
     bool restoreEnabled = true,
+    bool selectiveEnabled = false,
   }) async {
     final action = await _showActions<SettingsAppDataAction>(
       context,
@@ -57,6 +59,15 @@ class SettingsDataTransferController {
           title: l10n.appBackupTitle,
           subtitle: l10n.appBackupSheetSubtitle,
           groups: [
+            if (selectiveEnabled)
+              [
+                _TransferAction(
+                  value: SettingsAppDataAction.selectBackupObjects,
+                  icon: Icons.checklist_outlined,
+                  title: l10n.selectiveBackupTitle,
+                  subtitle: l10n.selectiveBackupDescription,
+                ),
+              ],
             [
               _TransferAction(
                 value: SettingsAppDataAction.restoreBackupFile,
@@ -78,13 +89,17 @@ class SettingsDataTransferController {
                 value: SettingsAppDataAction.shareBackupFile,
                 icon: Icons.share_outlined,
                 title: l10n.shareBackupTitle,
-                subtitle: l10n.shareBackupSubtitle,
+                subtitle: selectiveEnabled
+                    ? l10n.selectiveBackupDescription
+                    : l10n.shareBackupSubtitle,
               ),
               _TransferAction(
                 value: SettingsAppDataAction.saveBackupFile,
                 icon: Icons.save_alt_outlined,
                 title: l10n.saveBackupTitle,
-                subtitle: l10n.saveBackupSubtitle,
+                subtitle: selectiveEnabled
+                    ? l10n.selectiveBackupDescription
+                    : l10n.saveBackupSubtitle,
               ),
               _TransferAction(
                 value: SettingsAppDataAction.copyBackupText,

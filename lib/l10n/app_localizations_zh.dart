@@ -400,23 +400,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dataImportExportDesc => '导入整包/单课表，或导出当前课表与全部课表';
 
   @override
-  String get appBackupTitle => '完整应用备份与恢复';
+  String get appBackupTitle => '应用备份与恢复';
 
   @override
-  String get appBackupSheetSubtitle =>
-      '恢复完整备份会替换当前应用数据。AI API 密钥存放在系统安全存储中，不会写入备份文件。';
+  String get appBackupSheetSubtitle => '选择要备份或恢复的对象；未选数据保留，API 密钥不导出。';
 
   @override
-  String get restoreBackupFileTitle => '从 JSON 文件恢复';
+  String get restoreBackupFileTitle => '从备份文件恢复';
 
   @override
-  String get restoreBackupFileSubtitle => '选择 Sked 完整备份文件，恢复前会再次确认。';
+  String get restoreBackupFileSubtitle => '选择 ZIP 或旧 JSON 备份，选择对象后确认恢复。';
 
   @override
   String get restoreBackupTextTitle => '粘贴备份 JSON';
 
   @override
-  String get restoreBackupTextSubtitle => '粘贴完整备份内容并恢复当前应用数据。';
+  String get restoreBackupTextSubtitle => '粘贴旧 JSON 备份，再选择要恢复的对象。';
 
   @override
   String get shareBackupTitle => '分享备份文件';
@@ -434,7 +433,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get copyBackupTitle => '复制备份文本';
 
   @override
-  String get copyBackupSubtitle => '显示完整备份 JSON，便于复制或临时保存。';
+  String get copyBackupSubtitle =>
+      '显示旧 JSON 兼容备份，包含业务数据、应用偏好和学校站点，不含聊天、文件和 Agent 配置。';
 
   @override
   String get restoreBackupConfirmTitle => '恢复完整备份？';
@@ -832,7 +832,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get privacyGateSummaryImportExport =>
-      '导入、导出、备份和分享按你的请求执行；完整备份不包含 API 密钥和聊天记录。使用 Agent 时，你的消息、附件及工具为任务读取的相关应用数据会发送到你配置的 API 服务。';
+      '导入、导出、备份和分享按你的请求执行；备份可包含你选择的聊天记录和文件，不包含 API 密钥。使用 Agent 时，你的消息、附件及工具为任务读取的相关应用数据会发送到你配置的 API 服务。';
 
   @override
   String get privacyGateSummaryUpdates =>
@@ -3648,6 +3648,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get agentSkillTriggers => '使用此技能的时机，每行一项';
 
   @override
+  String get agentComposerActions => '消息操作';
+
+  @override
+  String get agentMakeDefaultModel => '设为默认模型';
+
+  @override
+  String get agentModelIdExists => '此模型已添加。';
+
+  @override
   String get agentAttachAnyFile => '添加文件';
 
   @override
@@ -3711,6 +3720,166 @@ class AppLocalizationsZh extends AppLocalizations {
   String get agentFileReceivedHint => '服务接受仅表示收到了请求，不表示模型已读完所有文件。';
 
   @override
+  String get selectiveBackupAdd => '新增';
+
+  @override
+  String get selectiveBackupAgentConnection => 'Agent 连接与模型';
+
+  @override
+  String get selectiveBackupAgentPreferences => 'Agent 偏好';
+
+  @override
+  String get selectiveBackupApplicationSettings => '应用设置';
+
+  @override
+  String get selectiveBackupCalendars => '日程分类';
+
+  @override
+  String get selectiveBackupCalendarSettings => '日程设置';
+
+  @override
+  String get selectiveBackupCancelled => '恢复已取消，已保留选择。';
+
+  @override
+  String get selectiveBackupClearSelection => '取消全选';
+
+  @override
+  String get selectiveBackupConfirmBody => '同 ID 的选中对象将被替换，不存在的对象将新增；未选对象会保留。';
+
+  @override
+  String get selectiveBackupConfirmTitle => '恢复所选数据？';
+
+  @override
+  String get selectiveBackupConflict => '部分所选对象与其他数据的引用冲突，请补选相关对象或取消恢复。';
+
+  @override
+  String get selectiveBackupConversations => '聊天记录';
+
+  @override
+  String selectiveBackupCopiedDependencies(int count) {
+    return '复制并重新关联 $count 项依赖';
+  }
+
+  @override
+  String get selectiveBackupCurrentData => '当前数据';
+
+  @override
+  String get selectiveBackupDependencies => '必要依赖会自动包含；发生冲突时，只为所选对象复制并重新关联依赖。';
+
+  @override
+  String get selectiveBackupDescription => '按对象和设置分组选择备份或恢复，聊天文件可单独勾选。';
+
+  @override
+  String get selectiveBackupExclusions =>
+      '不包含 API 密钥、Cookie、系统权限和执行授权；恢复的聊天仅含历史，不继续旧操作。';
+
+  @override
+  String get selectiveBackupExportSelection => '选择备份内容';
+
+  @override
+  String get selectiveBackupFileMissing => '此备份仅包含引用，没有文件内容。';
+
+  @override
+  String get selectiveBackupFiles => '聊天文件';
+
+  @override
+  String get selectiveBackupFilesDescription =>
+      '单独选择文件内容。未勾选文件仅保留历史引用，恢复后无法读取其内容。';
+
+  @override
+  String selectiveBackupFileSize(int bytes) {
+    return '$bytes 字节';
+  }
+
+  @override
+  String get selectiveBackupInvalid => '此文件不是有效的 Sked 备份。';
+
+  @override
+  String get selectiveBackupLimit => '此备份超出支持的大小或对象数量限制。';
+
+  @override
+  String get selectiveBackupMemories => '记忆';
+
+  @override
+  String get selectiveBackupNewerVersion => '此备份使用了更新的格式，请更新 Sked 后恢复。';
+
+  @override
+  String get selectiveBackupNotificationSettings => '通知设置';
+
+  @override
+  String get selectiveBackupOpenFile => '打开备份';
+
+  @override
+  String get selectiveBackupPeriodTimes => '节次时间集';
+
+  @override
+  String get selectiveBackupRecoveryPending => '上次恢复尚未完成，请先继续该恢复，再修改数据。';
+
+  @override
+  String get selectiveBackupReplace => '替换';
+
+  @override
+  String get selectiveBackupRestore => '恢复';
+
+  @override
+  String selectiveBackupRestoreCounts(int added, int replaced) {
+    return '新增 $added 项，替换 $replaced 项';
+  }
+
+  @override
+  String get selectiveBackupRestored => '已恢复所选数据';
+
+  @override
+  String get selectiveBackupRestoreSelection => '选择恢复内容';
+
+  @override
+  String get selectiveBackupResume => '继续恢复';
+
+  @override
+  String get selectiveBackupReviewRestore => '核对恢复内容';
+
+  @override
+  String get selectiveBackupSave => '保存备份';
+
+  @override
+  String get selectiveBackupSaved => '备份已保存';
+
+  @override
+  String get selectiveBackupSchoolSites => '学校站点';
+
+  @override
+  String get selectiveBackupSearch => '搜索对象';
+
+  @override
+  String get selectiveBackupSelectAll => '全选';
+
+  @override
+  String selectiveBackupSelectedCount(int count) {
+    return '已选 $count 项';
+  }
+
+  @override
+  String get selectiveBackupSettings => '设置分组';
+
+  @override
+  String get selectiveBackupSkills => '技能';
+
+  @override
+  String get selectiveBackupTimetables => '课表';
+
+  @override
+  String get selectiveBackupTimetableSettings => '课表设置';
+
+  @override
+  String get selectiveBackupTitle => '选择备份与恢复';
+
+  @override
+  String get selectiveBackupUnavailable => '操作未完成，请检查存储访问后重试；未完成的恢复将从已保存的进度继续。';
+
+  @override
+  String get selectiveBackupWorkspaceSettings => '工作区设置';
+
+  @override
   String get agentEditAndRedo => '编辑并重做';
 
   @override
@@ -3731,6 +3900,30 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentKeepAndRevise => '保留数据并修改';
+
+  @override
+  String get selectiveBackupDeviceSettings => '设备设置';
+
+  @override
+  String get selectiveBackupDeviceLayout => '面板尺寸';
+
+  @override
+  String get selectiveBackupDeviceDeveloperUi => '开发者预览偏好';
+
+  @override
+  String selectiveBackupDeviceGroupPlatform(String group, String platform) {
+    return '$group · $platform';
+  }
+
+  @override
+  String selectiveBackupDeviceUnsupported(String platform) {
+    return '来自 $platform 的设备设置不适用于当前平台，将保留本机设置。';
+  }
+
+  @override
+  String selectiveBackupUnsupportedGroups(int count) {
+    return '$count 个不支持的设备设置组将跳过';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -4128,23 +4321,22 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get dataImportExportDesc => '匯入整包／單課表，或匯出當前課表與全部課表';
 
   @override
-  String get appBackupTitle => '完整應用備份與恢復';
+  String get appBackupTitle => '應用程式備份與恢復';
 
   @override
-  String get appBackupSheetSubtitle =>
-      '恢復完整備份會取代目前應用資料。AI API 金鑰存放在系統安全儲存中，不會寫入備份檔案。';
+  String get appBackupSheetSubtitle => '選擇要備份或恢復的物件；未選資料保留，API 金鑰不匯出。';
 
   @override
-  String get restoreBackupFileTitle => '從 JSON 檔案恢復';
+  String get restoreBackupFileTitle => '從備份檔案恢復';
 
   @override
-  String get restoreBackupFileSubtitle => '選擇 Sked 完整備份檔案，恢復前會再次確認。';
+  String get restoreBackupFileSubtitle => '選擇 ZIP 或舊 JSON 備份，選擇物件後確認恢復。';
 
   @override
   String get restoreBackupTextTitle => '貼上備份 JSON';
 
   @override
-  String get restoreBackupTextSubtitle => '貼上完整備份內容並恢復目前應用資料。';
+  String get restoreBackupTextSubtitle => '貼上舊 JSON 備份，再選擇要恢復的物件。';
 
   @override
   String get shareBackupTitle => '分享備份檔案';
@@ -4162,7 +4354,8 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get copyBackupTitle => '複製備份文字';
 
   @override
-  String get copyBackupSubtitle => '顯示完整備份 JSON，便於複製或暫時保存。';
+  String get copyBackupSubtitle =>
+      '顯示舊 JSON 相容備份，包含業務資料、應用程式偏好和學校網站，不含聊天、檔案和 Agent 設定。';
 
   @override
   String get restoreBackupConfirmTitle => '恢復完整備份？';
@@ -4559,7 +4752,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get privacyGateSummaryImportExport =>
-      '匯入、匯出、備份和分享依你的請求執行；完整備份不包含 API 金鑰和聊天記錄。使用 Agent 時，你的訊息、附件及工具為任務讀取的相關應用程式資料會傳送到你設定的 API 服務。';
+      '匯入、匯出、備份和分享依你的要求執行；備份可包含你選擇的聊天記錄和檔案，不包含 API 金鑰。使用 Agent 時，你的訊息、附件及工具為任務讀取的相關應用程式資料會傳送至你設定的 API 服務。';
 
   @override
   String get privacyGateSummaryUpdates =>
@@ -7378,6 +7571,15 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get agentSkillTriggers => '使用此技能的時機，每行一項';
 
   @override
+  String get agentComposerActions => '訊息操作';
+
+  @override
+  String get agentMakeDefaultModel => '設為預設模型';
+
+  @override
+  String get agentModelIdExists => '此模型已新增。';
+
+  @override
   String get agentAttachAnyFile => '加入檔案';
 
   @override
@@ -7441,6 +7643,167 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get agentFileReceivedHint => '服務接受僅表示收到了請求，不表示模型已讀完所有檔案。';
 
   @override
+  String get selectiveBackupAdd => '新增';
+
+  @override
+  String get selectiveBackupAgentConnection => 'Agent 連線與模型';
+
+  @override
+  String get selectiveBackupAgentPreferences => 'Agent 偏好';
+
+  @override
+  String get selectiveBackupApplicationSettings => '應用程式設定';
+
+  @override
+  String get selectiveBackupCalendars => '行事曆分類';
+
+  @override
+  String get selectiveBackupCalendarSettings => '行事曆設定';
+
+  @override
+  String get selectiveBackupCancelled => '還原已取消，已保留選擇。';
+
+  @override
+  String get selectiveBackupClearSelection => '取消全選';
+
+  @override
+  String get selectiveBackupConfirmBody => '同 ID 的所選物件將被取代，不存在的物件將新增；未選物件會保留。';
+
+  @override
+  String get selectiveBackupConfirmTitle => '還原所選資料？';
+
+  @override
+  String get selectiveBackupConflict => '部分所選物件與其他資料的引用衝突，請補選相關物件或取消還原。';
+
+  @override
+  String get selectiveBackupConversations => '聊天記錄';
+
+  @override
+  String selectiveBackupCopiedDependencies(int count) {
+    return '複製並重新關聯 $count 項相依項目';
+  }
+
+  @override
+  String get selectiveBackupCurrentData => '目前資料';
+
+  @override
+  String get selectiveBackupDependencies =>
+      '必要相依項目會自動包含；發生衝突時，只為所選物件複製並重新關聯相依項目。';
+
+  @override
+  String get selectiveBackupDescription => '按物件和設定群組選擇備份或還原，聊天檔案可單獨勾選。';
+
+  @override
+  String get selectiveBackupExclusions =>
+      '不包含 API 金鑰、Cookie、系統權限和執行授權；還原的聊天僅含歷史，不繼續舊操作。';
+
+  @override
+  String get selectiveBackupExportSelection => '選擇備份內容';
+
+  @override
+  String get selectiveBackupFileMissing => '此備份僅包含引用，沒有檔案內容。';
+
+  @override
+  String get selectiveBackupFiles => '聊天檔案';
+
+  @override
+  String get selectiveBackupFilesDescription =>
+      '單獨選擇檔案內容。未勾選檔案僅保留歷史引用，恢復後無法讀取其內容。';
+
+  @override
+  String selectiveBackupFileSize(int bytes) {
+    return '$bytes 位元組';
+  }
+
+  @override
+  String get selectiveBackupInvalid => '此檔案不是有效的 Sked 備份。';
+
+  @override
+  String get selectiveBackupLimit => '此備份超出支援的大小或物件數量限制。';
+
+  @override
+  String get selectiveBackupMemories => '記憶';
+
+  @override
+  String get selectiveBackupNewerVersion => '此備份使用了更新的格式，請更新 Sked 後還原。';
+
+  @override
+  String get selectiveBackupNotificationSettings => '通知設定';
+
+  @override
+  String get selectiveBackupOpenFile => '開啟備份';
+
+  @override
+  String get selectiveBackupPeriodTimes => '節次時間集';
+
+  @override
+  String get selectiveBackupRecoveryPending => '上次還原尚未完成，請先繼續該還原，再修改資料。';
+
+  @override
+  String get selectiveBackupReplace => '取代';
+
+  @override
+  String get selectiveBackupRestore => '還原';
+
+  @override
+  String selectiveBackupRestoreCounts(int added, int replaced) {
+    return '新增 $added 項，取代 $replaced 項';
+  }
+
+  @override
+  String get selectiveBackupRestored => '已還原所選資料';
+
+  @override
+  String get selectiveBackupRestoreSelection => '選擇還原內容';
+
+  @override
+  String get selectiveBackupResume => '繼續還原';
+
+  @override
+  String get selectiveBackupReviewRestore => '核對還原內容';
+
+  @override
+  String get selectiveBackupSave => '儲存備份';
+
+  @override
+  String get selectiveBackupSaved => '備份已儲存';
+
+  @override
+  String get selectiveBackupSchoolSites => '學校站點';
+
+  @override
+  String get selectiveBackupSearch => '搜尋物件';
+
+  @override
+  String get selectiveBackupSelectAll => '全選';
+
+  @override
+  String selectiveBackupSelectedCount(int count) {
+    return '已選 $count 項';
+  }
+
+  @override
+  String get selectiveBackupSettings => '設定群組';
+
+  @override
+  String get selectiveBackupSkills => '技能';
+
+  @override
+  String get selectiveBackupTimetables => '課表';
+
+  @override
+  String get selectiveBackupTimetableSettings => '課表設定';
+
+  @override
+  String get selectiveBackupTitle => '選擇備份與還原';
+
+  @override
+  String get selectiveBackupUnavailable => '操作未完成，請檢查儲存存取後重試；未完成的還原將從已儲存的進度繼續。';
+
+  @override
+  String get selectiveBackupWorkspaceSettings => '工作區設定';
+
+  @override
   String get agentEditAndRedo => '編輯並重做';
 
   @override
@@ -7461,4 +7824,28 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentKeepAndRevise => '保留資料並修改';
+
+  @override
+  String get selectiveBackupDeviceSettings => '裝置設定';
+
+  @override
+  String get selectiveBackupDeviceLayout => '面板尺寸';
+
+  @override
+  String get selectiveBackupDeviceDeveloperUi => '開發者預覽偏好';
+
+  @override
+  String selectiveBackupDeviceGroupPlatform(String group, String platform) {
+    return '$group · $platform';
+  }
+
+  @override
+  String selectiveBackupDeviceUnsupported(String platform) {
+    return '來自 $platform 的裝置設定不適用於目前平台，將保留本機設定。';
+  }
+
+  @override
+  String selectiveBackupUnsupportedGroups(int count) {
+    return '將略過 $count 個不支援的裝置設定群組';
+  }
 }

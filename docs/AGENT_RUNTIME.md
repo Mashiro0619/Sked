@@ -34,6 +34,8 @@
 
 会话格式从 v3 起按运行和请求身份保存实际用量、工具尝试、结果及模型选择；后续格式继续兼容 v1 和 v2，旧应用拒绝读取较新格式，避免写回时丢失记录。模型请求发送前先保存 pending，收到结果后将回复与用量一起保存；重复 usage 流事件覆盖同一请求，不重复累加。中断、取消或重启未取得结果时保留 unknown；缺失缓存/推理用量为 null，不能报告为零。普通显式继续创建关联旧运行的新记录；历史重做在中断后继续其已保留的运行身份，均不会在加载聊天时自动调用模型。多模型、思考强度、发送快照和排队请求的规则见[模型选择](AGENT_MODEL_SELECTION.md)。
 
+选择性备份工具按明确对象和独立文件选择生成 ZIP；设备偏好按平台分组，清单、计划和结果均保留不支持项。恢复进入独立维护边界，排空侧写后固定各仓储目标和阶段；发起运行不会等待自身，其他旧运行失效。聊天只导入可阅读历史，不恢复旧执行身份。文件导出读取继承当前运行的取消信号，协议与故障验证见[选择性备份](SELECTIVE_BACKUP.md)。
+
 conversation.get、conversations.get、runs.status 和会话导出提供已记录运行的统计；历史 v1 会话没有过去的用量证据。工具尝试区分未开始、完成、失败和未知，费用没有可信单价时保持 unknown。记录沿用会话保留、删除和大小上限，不进入正常模型上下文或完整业务备份。相关恢复与迁移见[用量存储回归](../test/agent/conversations/conversation_usage_test.dart)。
 
 实现与回归：[运行控制器](../lib/agent/runtime/agent_runtime_controller.dart)、[上下文](../lib/agent/runtime/conversation_context.dart)、[运行回归](../test/agent/runtime/agent_runtime_controller_test.dart)、[恢复回归](../test/agent/runtime/operation_recovery_test.dart)。

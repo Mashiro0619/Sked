@@ -2,6 +2,7 @@ import '../widgets/sked_confirmation_dialog.dart';
 import '../theme/sked_surface.dart';
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/foundation.dart';
@@ -14,6 +15,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../widgets/text_transfer_widgets.dart';
 import '../agent/agent_application.dart';
+import '../backup/selective_backup_models.dart';
 import '../widgets/sked_task_session.dart';
 import '../controllers/app_backup_controller.dart';
 
@@ -57,6 +59,7 @@ import '../models/settings_destination.dart';
 import '../models/settings_catalog.dart';
 import 'workspace_features_page.dart';
 import 'agent_settings_page.dart';
+import 'selective_backup_page.dart';
 import 'general_display_settings_page.dart';
 import 'developer_mode_page.dart';
 import 'language_settings_page.dart';
@@ -594,12 +597,31 @@ class _SettingsPageState extends State<SettingsPage>
     key: const ValueKey('settings-app-backup'),
     leading: const Icon(Icons.inventory_2_outlined),
     title: l10n.appBackupTitle,
-    subtitle: l10n.backupWorkspaceSelection,
-    trailing: const Icon(Icons.keyboard_arrow_up),
+    subtitle: l10n.selectiveBackupDescription,
+    trailing: const Icon(Icons.chevron_right),
     onTap: _isFlowOpen(_SettingsFlow.appDataActions)
         ? null
         : () => _showAppDataActions(),
   );
+
+  Future<bool?> _openSelectiveBackup({
+    SelectiveBackupBundle? source,
+    bool closeAfterRestore = false,
+    bool shareOnExport = false,
+  }) async {
+    final backups = context.read<AppBackupController>();
+    if (!backups.hasSelectiveBackup) return null;
+    return Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => SelectiveBackupPage(
+          service: backups.selective,
+          initialSource: source,
+          closeAfterRestore: closeAfterRestore,
+          shareOnExport: shareOnExport,
+        ),
+      ),
+    );
+  }
 
   List<Widget> _privacyControls(AppLocalizations l10n) {
     final lifecycle = context.read<AppLifecycle>();
@@ -1051,9 +1073,12 @@ class _SettingsPageState extends State<SettingsPage>
         context,
         hasRecoveryArtifacts: () => lifecycle.recoveryArtifacts.isNotEmpty,
         restoreEnabled: !maintenance.isReserved,
+        selectiveEnabled: backups.hasSelectiveBackup,
         onAction: (action) async {
           if (!isCurrent()) return;
           switch (action) {
+            case SettingsAppDataAction.selectBackupObjects:
+              await _openSelectiveBackup();
             case SettingsAppDataAction.restoreBackupFile:
               await _restoreAppDataFromFile(
                 backups: backups,
@@ -1212,6 +1237,26 @@ class _SettingsPageState extends State<SettingsPage>
     required WorkspaceViewState workspace,
   }) async {
     final session = maintenance.dataSessionToken;
+    if (backups.hasSelectiveBackup) {
+      try {
+        final bytes = await pickSelectiveBackupBytes();
+        if (bytes == null ||
+            !mounted ||
+            !identical(session, maintenance.dataSessionToken)) {
+          return;
+        }
+        await _openSelectiveBackup(
+          source: backups.selective.decode(bytes),
+          closeAfterRestore: true,
+        );
+      } catch (error) {
+        if (mounted && identical(session, maintenance.dataSessionToken)) {
+          final l = AppLocalizations.of(context);
+          _showMessage(_selectiveBackupImportErrorMessage(l, error));
+        }
+      }
+      return;
+    }
     final source = await _pickTextFile(allowedExtensions: const ['json']);
     if (source == null ||
         !mounted ||
@@ -1275,6 +1320,28 @@ class _SettingsPageState extends State<SettingsPage>
         feedbackContext.mounted &&
         identical(session, maintenance.dataSessionToken);
     if (!isCurrent()) return false;
+    if (backups.hasSelectiveBackup) {
+      try {
+        final bundle = backups.selective.decode(
+          Uint8List.fromList(utf8.encode(source)),
+        );
+        return await _openSelectiveBackup(
+              source: bundle,
+              closeAfterRestore: true,
+            ) ==
+            true;
+      } catch (error) {
+        if (isCurrent()) {
+          final l = AppLocalizations.of(feedbackContext);
+          ScaffoldMessenger.of(feedbackContext).showSnackBar(
+            SnackBar(
+              content: Text(_selectiveBackupImportErrorMessage(l, error)),
+            ),
+          );
+        }
+        return false;
+      }
+    }
     PreparedAppBackup prepared;
     try {
       prepared = await backups.prepareJson(source);
@@ -1425,6 +1492,10 @@ class _SettingsPageState extends State<SettingsPage>
     required AppDataMaintenance maintenance,
     required bool share,
   }) async {
+    if (backups.hasSelectiveBackup) {
+      await _openSelectiveBackup(shareOnExport: share);
+      return;
+    }
     final l10n = AppLocalizations.of(context);
     final session = maintenance.dataSessionToken;
     try {
@@ -2388,6 +2459,15 @@ class _DeveloperModeEntryTile extends StatelessWidget {
     );
   }
 }
+
+String _selectiveBackupImportErrorMessage(AppLocalizations l, Object error) =>
+    switch (error) {
+      SelectiveBackupException(code: SelectiveBackupError.unsupportedVersion) =>
+        l.selectiveBackupNewerVersion,
+      SelectiveBackupException(code: SelectiveBackupError.limit) =>
+        l.selectiveBackupLimit,
+      _ => l.selectiveBackupInvalid,
+    };
 
 class _SettingsRecoveryArtifactAction {
   const _SettingsRecoveryArtifactAction.copyPaths() : artifactPath = null;

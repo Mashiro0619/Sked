@@ -904,19 +904,19 @@ abstract class AppLocalizations {
   /// No description provided for @appBackupSheetSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'A full restore replaces current app data. AI API keys live in secure storage and are not written to backup files.'**
+  /// **'Choose which objects to back up or restore. Unselected data is kept, and API keys are never exported.'**
   String get appBackupSheetSubtitle;
 
   /// No description provided for @restoreBackupFileTitle.
   ///
   /// In en, this message translates to:
-  /// **'Restore from JSON file'**
+  /// **'Restore from backup file'**
   String get restoreBackupFileTitle;
 
   /// No description provided for @restoreBackupFileSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Choose a full Sked backup file. You will confirm before restoring.'**
+  /// **'Choose a ZIP or legacy JSON backup, then select objects and confirm the restore.'**
   String get restoreBackupFileSubtitle;
 
   /// No description provided for @restoreBackupTextTitle.
@@ -928,7 +928,7 @@ abstract class AppLocalizations {
   /// No description provided for @restoreBackupTextSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Paste a full backup and restore current app data.'**
+  /// **'Paste a legacy JSON backup, then select the objects to restore.'**
   String get restoreBackupTextSubtitle;
 
   /// No description provided for @shareBackupTitle.
@@ -964,7 +964,7 @@ abstract class AppLocalizations {
   /// No description provided for @copyBackupSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Show the full backup JSON so you can copy or store it temporarily.'**
+  /// **'Show legacy JSON for business data, app preferences and school sites. Chats, files and Agent configuration are excluded.'**
   String get copyBackupSubtitle;
 
   /// No description provided for @restoreBackupConfirmTitle.
@@ -1702,7 +1702,7 @@ abstract class AppLocalizations {
   /// No description provided for @privacyGateSummaryImportExport.
   ///
   /// In en, this message translates to:
-  /// **'Imports, exports, backups, and sharing happen when you request them. Full backups exclude API keys and chats. When you use Agent, your messages, attachments, and task-related app data returned by tools are sent to your configured API service.'**
+  /// **'Imports, exports, backups, and sharing happen when you request them. Backups can include chats and files you select; API keys are excluded. When you use Agent, your messages, attachments, and task-related app data returned by tools are sent to your configured API service.'**
   String get privacyGateSummaryImportExport;
 
   /// No description provided for @privacyGateSummaryUpdates.
@@ -6930,6 +6930,24 @@ abstract class AppLocalizations {
   /// **'When to use this skill, one hint per line'**
   String get agentSkillTriggers;
 
+  /// No description provided for @agentComposerActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Message actions'**
+  String get agentComposerActions;
+
+  /// No description provided for @agentMakeDefaultModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Use as default model'**
+  String get agentMakeDefaultModel;
+
+  /// No description provided for @agentModelIdExists.
+  ///
+  /// In en, this message translates to:
+  /// **'This model has already been added.'**
+  String get agentModelIdExists;
+
   /// No description provided for @agentAttachAnyFile.
   ///
   /// In en, this message translates to:
@@ -7056,6 +7074,306 @@ abstract class AppLocalizations {
   /// **'Acceptance confirms the service received the request; it does not confirm that the model read every file.'**
   String get agentFileReceivedHint;
 
+  /// No description provided for @selectiveBackupAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get selectiveBackupAdd;
+
+  /// No description provided for @selectiveBackupAgentConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Agent connection and models'**
+  String get selectiveBackupAgentConnection;
+
+  /// No description provided for @selectiveBackupAgentPreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Agent preferences'**
+  String get selectiveBackupAgentPreferences;
+
+  /// No description provided for @selectiveBackupApplicationSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Application settings'**
+  String get selectiveBackupApplicationSettings;
+
+  /// No description provided for @selectiveBackupCalendars.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar categories'**
+  String get selectiveBackupCalendars;
+
+  /// No description provided for @selectiveBackupCalendarSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar settings'**
+  String get selectiveBackupCalendarSettings;
+
+  /// No description provided for @selectiveBackupCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore cancelled. Your selection is kept.'**
+  String get selectiveBackupCancelled;
+
+  /// No description provided for @selectiveBackupClearSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear selection'**
+  String get selectiveBackupClearSelection;
+
+  /// No description provided for @selectiveBackupConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected objects with the same ID will be replaced. New objects will be added, and unselected objects will be kept.'**
+  String get selectiveBackupConfirmBody;
+
+  /// No description provided for @selectiveBackupConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore selected data?'**
+  String get selectiveBackupConfirmTitle;
+
+  /// No description provided for @selectiveBackupConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'Some selected objects conflict with data used elsewhere. Include the related objects or cancel this restore.'**
+  String get selectiveBackupConflict;
+
+  /// No description provided for @selectiveBackupConversations.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversations'**
+  String get selectiveBackupConversations;
+
+  /// No description provided for @selectiveBackupCopiedDependencies.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy and rebind {count} dependencies'**
+  String selectiveBackupCopiedDependencies(int count);
+
+  /// No description provided for @selectiveBackupCurrentData.
+  ///
+  /// In en, this message translates to:
+  /// **'Current data'**
+  String get selectiveBackupCurrentData;
+
+  /// No description provided for @selectiveBackupDependencies.
+  ///
+  /// In en, this message translates to:
+  /// **'Required dependencies are included automatically. Conflicting dependencies are copied and linked only to the selected objects.'**
+  String get selectiveBackupDependencies;
+
+  /// No description provided for @selectiveBackupDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose individual objects and settings groups to back up or restore. Conversation files can be selected separately.'**
+  String get selectiveBackupDescription;
+
+  /// No description provided for @selectiveBackupExclusions.
+  ///
+  /// In en, this message translates to:
+  /// **'API keys, cookies, system permissions and execution approvals are excluded. Restored chats contain history only and do not resume old actions.'**
+  String get selectiveBackupExclusions;
+
+  /// No description provided for @selectiveBackupExportSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose data to back up'**
+  String get selectiveBackupExportSelection;
+
+  /// No description provided for @selectiveBackupFileMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'This backup contains a reference only; file bytes are not included.'**
+  String get selectiveBackupFileMissing;
+
+  /// No description provided for @selectiveBackupFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation files'**
+  String get selectiveBackupFiles;
+
+  /// No description provided for @selectiveBackupFilesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Select file contents separately. Unchecked files retain only history references; their contents will be unavailable after restore.'**
+  String get selectiveBackupFilesDescription;
+
+  /// No description provided for @selectiveBackupFileSize.
+  ///
+  /// In en, this message translates to:
+  /// **'{bytes} bytes'**
+  String selectiveBackupFileSize(int bytes);
+
+  /// No description provided for @selectiveBackupInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'This file is not a valid Sked backup.'**
+  String get selectiveBackupInvalid;
+
+  /// No description provided for @selectiveBackupLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'This backup exceeds the supported size or object limit.'**
+  String get selectiveBackupLimit;
+
+  /// No description provided for @selectiveBackupMemories.
+  ///
+  /// In en, this message translates to:
+  /// **'Memory'**
+  String get selectiveBackupMemories;
+
+  /// No description provided for @selectiveBackupNewerVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'This backup uses a newer format. Update Sked before restoring it.'**
+  String get selectiveBackupNewerVersion;
+
+  /// No description provided for @selectiveBackupNotificationSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification settings'**
+  String get selectiveBackupNotificationSettings;
+
+  /// No description provided for @selectiveBackupOpenFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Open backup'**
+  String get selectiveBackupOpenFile;
+
+  /// No description provided for @selectiveBackupPeriodTimes.
+  ///
+  /// In en, this message translates to:
+  /// **'Period time sets'**
+  String get selectiveBackupPeriodTimes;
+
+  /// No description provided for @selectiveBackupRecoveryPending.
+  ///
+  /// In en, this message translates to:
+  /// **'A restore is unfinished. Continue the same restore before changing data.'**
+  String get selectiveBackupRecoveryPending;
+
+  /// No description provided for @selectiveBackupReplace.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace'**
+  String get selectiveBackupReplace;
+
+  /// No description provided for @selectiveBackupRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get selectiveBackupRestore;
+
+  /// No description provided for @selectiveBackupRestoreCounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Add {added}; replace {replaced}'**
+  String selectiveBackupRestoreCounts(int added, int replaced);
+
+  /// No description provided for @selectiveBackupRestored.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected data restored'**
+  String get selectiveBackupRestored;
+
+  /// No description provided for @selectiveBackupRestoreSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose data to restore'**
+  String get selectiveBackupRestoreSelection;
+
+  /// No description provided for @selectiveBackupResume.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue restore'**
+  String get selectiveBackupResume;
+
+  /// No description provided for @selectiveBackupReviewRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Review restore'**
+  String get selectiveBackupReviewRestore;
+
+  /// No description provided for @selectiveBackupSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save backup'**
+  String get selectiveBackupSave;
+
+  /// No description provided for @selectiveBackupSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup saved'**
+  String get selectiveBackupSaved;
+
+  /// No description provided for @selectiveBackupSchoolSites.
+  ///
+  /// In en, this message translates to:
+  /// **'School sites'**
+  String get selectiveBackupSchoolSites;
+
+  /// No description provided for @selectiveBackupSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search objects'**
+  String get selectiveBackupSearch;
+
+  /// No description provided for @selectiveBackupSelectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Select all'**
+  String get selectiveBackupSelectAll;
+
+  /// No description provided for @selectiveBackupSelectedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} selected'**
+  String selectiveBackupSelectedCount(int count);
+
+  /// No description provided for @selectiveBackupSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings groups'**
+  String get selectiveBackupSettings;
+
+  /// No description provided for @selectiveBackupSkills.
+  ///
+  /// In en, this message translates to:
+  /// **'Skills'**
+  String get selectiveBackupSkills;
+
+  /// No description provided for @selectiveBackupTimetables.
+  ///
+  /// In en, this message translates to:
+  /// **'Timetables'**
+  String get selectiveBackupTimetables;
+
+  /// No description provided for @selectiveBackupTimetableSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Timetable settings'**
+  String get selectiveBackupTimetableSettings;
+
+  /// No description provided for @selectiveBackupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Selective backup and restore'**
+  String get selectiveBackupTitle;
+
+  /// No description provided for @selectiveBackupUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not finish this operation. Check storage access and retry; an unfinished restore will continue from its saved progress.'**
+  String get selectiveBackupUnavailable;
+
+  /// No description provided for @selectiveBackupWorkspaceSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Workspace settings'**
+  String get selectiveBackupWorkspaceSettings;
+
   /// No description provided for @agentEditAndRedo.
   ///
   /// In en, this message translates to:
@@ -7097,6 +7415,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Keep data and revise'**
   String get agentKeepAndRevise;
+
+  /// No description provided for @selectiveBackupDeviceSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Device settings'**
+  String get selectiveBackupDeviceSettings;
+
+  /// No description provided for @selectiveBackupDeviceLayout.
+  ///
+  /// In en, this message translates to:
+  /// **'Panel dimensions'**
+  String get selectiveBackupDeviceLayout;
+
+  /// No description provided for @selectiveBackupDeviceDeveloperUi.
+  ///
+  /// In en, this message translates to:
+  /// **'Developer preview preferences'**
+  String get selectiveBackupDeviceDeveloperUi;
+
+  /// No description provided for @selectiveBackupDeviceGroupPlatform.
+  ///
+  /// In en, this message translates to:
+  /// **'{group} · {platform}'**
+  String selectiveBackupDeviceGroupPlatform(String group, String platform);
+
+  /// No description provided for @selectiveBackupDeviceUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Device settings from {platform} do not apply to this platform. Your local settings will be kept.'**
+  String selectiveBackupDeviceUnsupported(String platform);
+
+  /// No description provided for @selectiveBackupUnsupportedGroups.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} unsupported device settings groups will be skipped'**
+  String selectiveBackupUnsupportedGroups(int count);
 }
 
 class _AppLocalizationsDelegate

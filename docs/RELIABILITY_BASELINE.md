@@ -12,7 +12,8 @@
 | --- | --- |
 | 快照恢复 | 普通候选按已刷新的 temporary → main → backup 处理，不按 mtime 猜测新旧。未来 schema 或 I/O 不确定状态阻止写入；已有隔离文件时不能误判为首次启动。见 [恢复矩阵](../test/data/timetable_storage_recovery_matrix_test.dart) 与 [存储测试](../test/data/timetable_storage_io_test.dart)。 |
 | 密钥清理事务 | `.secret-scrub.rollback` / `.secret-scrub.tmp` 属于迁移事务，先处理事务恢复，再选择普通快照；rollback 不是第四个普通候选。不删除唯一可恢复的旧原件。见 [密钥存储测试](../test/services/app_storage_secret_io_test.dart)。 |
-| 完整备份恢复 | 保留恢复实际开始时的本机 Agent 连接、权限与偏好，并将目标数据的新世代一起固定到恢复日志。便携备份不带本机 Agent 配置、回执、聊天或原始密钥，不从备份补入本机连接；旧解析字段仅作兼容处理，其旧密钥按恢复日志的策略清理。恢复重放沿用已固定目标，不重新生成执行身份或激活旧入口。见 [备份流程测试](../test/controllers/app_backup_workflow_test.dart) 与 [Agent 迁移测试](../test/data/migrations/agent_state_migration_test.dart)。 |
+| 选择性备份恢复 | 预览按稳定 ID 列出新增、替换和依赖复制，未选对象保留。恢复先排空侧写并冻结参与仓储，再固定映射、数据世代和各仓储目标；逐阶段读取实际内容核验，中断后沿用同一 journal。聊天仅恢复历史，密钥、Cookie、系统授权和运行许可不导出。见[选择性备份约定](SELECTIVE_BACKUP.md)、[文件仓储重开回归](../test/backup/selective_backup_recovery_test.dart)与[恢复协调器](../test/backup/selective_restore_coordinator_test.dart)。 |
+| 旧完整 JSON 兼容 | 旧 JSON 与 AppData 导出不带本机 Agent 配置、回执、聊天或原始密钥，导入也不从兼容默认值补造这些内容。设置入口使用同一对象选择恢复；旧整体恢复 API 继续保留，固定恢复实际开始时的本机 Agent 配置、站点身份及新数据世代。重放沿用已持久目标，不重新生成执行身份或激活旧入口。见 [备份流程测试](../test/controllers/app_backup_workflow_test.dart) 与 [Agent 迁移测试](../test/data/migrations/agent_state_migration_test.dart)。 |
 | 保存与退出 | 显式退出入口等待 `quiesceForShutdown()`；暂停请求 flush，同步 `dispose()` 只能发起最佳努力保存。用明确开始/完成信号验证并发与最新快照，不用固定等待推测完成。见 [保存竞争测试](../test/controllers/app_persistence_race_test.dart)。 |
 | 敏感数据 | 普通 AppData、聊天、工具记录和备份不包含 API Key 值。宿主安全输入只给模型一个绑定运行与目的地的短期句柄，使用、取消和到期后清理；更换目的地不能保留旧凭据。错误不得带出认证头、原始网络错误体或密钥。见 [连接持久化](../test/agent/connection/agent_connection_manager_test.dart)、[安全输入工具](../test/agent/tools/agent_control_tool_adapters_test.dart) 与 [旧密钥兼容](../test/controllers/school_import_secret_persistence_test.dart)。 |
 | 学校网页会话清除 | 清除应用数据前先关闭学校浏览器的原生页面并清除 Cookie、站点存储及缓存；Android/iOS 使用对应 WebView 数据接口，Windows 使用同一默认 WebView2 profile 的 `ClearBrowsingDataAll`。清理失败时保留主存档和 API 密钥，不假报成功；页面重开使用新的文档，不复用旧登录上下文。见 [清除服务测试](../test/services/app_data_clear_service_io_test.dart) 与 [网页会话测试](../test/services/school_web_session_service_test.dart)。 |
@@ -31,7 +32,7 @@ Windows 学校页面清理需要等待锁定 WebView 插件 `dispose` 通道的�
 
 统一连接中的凭据绑定实际端点；更换目的地不得自动转移旧密钥或发送旧会话。连接草稿在保存成功前保留，后台、销毁或模型工具不得伪造用户同意。旧本机解析连接仅在新连接字段尚未配置时迁移，单独修改统一指令或预算不阻止迁移。旧密钥只有同一端点的新安全存储写入并读回成功后才退役，失败保留恢复材料。旧专用提示词不变成 Agent 系统指令。暂存密钥期间发生的偏好变更必须从最新提交继承，不能随旧连接草稿覆盖。见 [连接迁移测试](../test/agent/connection/agent_connection_manager_test.dart)、[连接表单](../test/agent/ui/agent_model_settings_form_test.dart) 与 [旧密钥兼容](../test/controllers/school_import_secret_persistence_test.dart)。
 
-本机未配置的 Agent 连接在恢复后仍保持未配置。统一 Agent 凭据不参加便携备份；兼容存留的旧解析密钥与新凭据分别处理，不能把旧密钥的清除策略描述成所有 Agent 凭据都会清除。恢复预览之后保存的本机配置，以恢复事务实际开始时的值为准；目标写入恢复日志后，失败重试沿用该目标。
+未选择 Agent 连接组或恢复旧 JSON 时，本机未配置的 Agent 连接仍保持未配置。选择性归档可以显式恢复连接地址和模型目录，密钥始终不参与便携备份；连接目的地改变时先按 journal 清理旧凭据，目的地相同则保留本机凭据。兼容存留的旧解析密钥另按旧恢复策略处理。恢复预览之后本机内容发生变化时必须重新核对；目标写入恢复日志后，失败重试沿用该目标。
 
 ## Agent 保存、会话与外部效果
 
@@ -67,7 +68,7 @@ Windows 学校页面清理需要等待锁定 WebView 插件 `dispose` 通道的�
 
 AppData schema 6 的 `AgentSettings` 不保存原始密钥；新装和旧本机数据的一次性迁移开启入口，默认采用询问模式。后续关闭状态及恢复开始时的本机配置保持不变；`ApplicationLedger` 与业务数据属于同一快照，首次操作前可为 null。回执保留连续末尾，最多 128 条且 JSON 合计不超过 4 MiB；单条结果与撤销材料超过 1 MiB 时整体拒绝，不截断。淘汰的序号必须由执行器按过期请求处理，不能重新创建同一操作。外部动作可在保持操作 ID、摘要、序号和顺序的前提下更新回执；容量淘汰遇到尚未核对的 pending/unknown 外部回执时拒绝新写入，先通过对应工作流核对，不能为腾出空间重做动作。账本变更有独立版本域，不单独触发提醒重排。
 
-便携导出排除本机 Agent 配置/账本，外部导入忽略这些字段；完整恢复保留当前本机 Agent 配置，固定一个新的数据世代并以恢复专用编码写入 journal。继续 journal 使用已固定的世代、配置和回执。Android 受控设备迁移也清除本机 Agent 权限、连接和回执，具体见[设备迁移约定](ANDROID_DEVICE_TRANSFER.md)。模型、实际文件、恢复工作流和 JVM 检查分别覆盖这些路径，不能替代物理断电或真实换机验收。
+旧 JSON 便携导出排除本机 Agent 配置与账本，兼容导入忽略这些字段；选择性 ZIP 只在显式勾选后携带连接和偏好组，仍排除密钥、运行权限和可执行回执。恢复固定新的数据世代并以恢复专用编码写入 journal，继续时使用已固定的世代、配置和映射。Android 受控设备迁移继续清除本机 Agent 权限、连接和回执，具体见[设备迁移约定](ANDROID_DEVICE_TRANSFER.md)。模型、实际文件、恢复工作流和 JVM 检查分别覆盖这些路径，不能替代物理断电或真实换机验收。
 
 外部导入在 JSON 解析后、迁移复制和领域模型构建前统一检查原始条数。课表 JSON、普通日程 JSON、节次时间 JSON、完整备份、旧版 AppData 备份和学校站点 JSON 共用 [计数规则](../lib/models/import_count_limits.dart)。候选预览和实际导入使用同一入口；超过任一上限即整份拒绝，不截断或部分保存。错误提供英文、简体中文、繁体中文，其余语言明确登记英文回退。
 

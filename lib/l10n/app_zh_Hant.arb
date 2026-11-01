@@ -294,17 +294,17 @@
   "@dataImportExport": {},
   "dataImportExportDesc": "匯入整包／單課表，或匯出當前課表與全部課表",
   "@dataImportExportDesc": {},
-  "appBackupTitle": "完整應用備份與恢復",
+  "appBackupTitle": "應用程式備份與恢復",
   "@appBackupTitle": {},
-  "appBackupSheetSubtitle": "恢復完整備份會取代目前應用資料。AI API 金鑰存放在系統安全儲存中，不會寫入備份檔案。",
+  "appBackupSheetSubtitle": "選擇要備份或恢復的物件；未選資料保留，API 金鑰不匯出。",
   "@appBackupSheetSubtitle": {},
-  "restoreBackupFileTitle": "從 JSON 檔案恢復",
+  "restoreBackupFileTitle": "從備份檔案恢復",
   "@restoreBackupFileTitle": {},
-  "restoreBackupFileSubtitle": "選擇 Sked 完整備份檔案，恢復前會再次確認。",
+  "restoreBackupFileSubtitle": "選擇 ZIP 或舊 JSON 備份，選擇物件後確認恢復。",
   "@restoreBackupFileSubtitle": {},
   "restoreBackupTextTitle": "貼上備份 JSON",
   "@restoreBackupTextTitle": {},
-  "restoreBackupTextSubtitle": "貼上完整備份內容並恢復目前應用資料。",
+  "restoreBackupTextSubtitle": "貼上舊 JSON 備份，再選擇要恢復的物件。",
   "@restoreBackupTextSubtitle": {},
   "shareBackupTitle": "分享備份檔案",
   "@shareBackupTitle": {},
@@ -316,7 +316,7 @@
   "@saveBackupSubtitle": {},
   "copyBackupTitle": "複製備份文字",
   "@copyBackupTitle": {},
-  "copyBackupSubtitle": "顯示完整備份 JSON，便於複製或暫時保存。",
+  "copyBackupSubtitle": "顯示舊 JSON 相容備份，包含業務資料、應用程式偏好和學校網站，不含聊天、檔案和 Agent 設定。",
   "@copyBackupSubtitle": {},
   "restoreBackupConfirmTitle": "恢復完整備份？",
   "@restoreBackupConfirmTitle": {},
@@ -609,7 +609,7 @@
   "@privacyGateTitle": {},
   "privacyGateSummaryStorage": "課表、通用日程、節次時間集和學校站點設定只會儲存在本機，不會自動上傳到開發者伺服器。",
   "@privacyGateSummaryStorage": {},
-  "privacyGateSummaryImportExport": "匯入、匯出、備份和分享依你的請求執行；完整備份不包含 API 金鑰和聊天記錄。使用 Agent 時，你的訊息、附件及工具為任務讀取的相關應用程式資料會傳送到你設定的 API 服務。",
+  "privacyGateSummaryImportExport": "匯入、匯出、備份和分享依你的要求執行；備份可包含你選擇的聊天記錄和檔案，不包含 API 金鑰。使用 Agent 時，你的訊息、附件及工具為任務讀取的相關應用程式資料會傳送至你設定的 API 服務。",
   "@privacyGateSummaryImportExport": {},
   "privacyGateSummaryUpdates": "如果後續版本調整了資料處理方式，應用可能會要求你重新查看更新後的隱私政策。",
   "@privacyGateSummaryUpdates": {},
@@ -2540,6 +2540,12 @@
   "@agentSkillRequiredTools": {},
   "agentSkillTriggers": "使用此技能的時機，每行一項",
   "@agentSkillTriggers": {},
+  "agentComposerActions": "訊息操作",
+  "@agentComposerActions": {},
+  "agentMakeDefaultModel": "設為預設模型",
+  "@agentMakeDefaultModel": {},
+  "agentModelIdExists": "此模型已新增。",
+  "@agentModelIdExists": {},
   "agentAttachAnyFile": "加入檔案",
   "@agentAttachAnyFile": {},
   "agentFileLocal": "已儲存到本機",
@@ -2582,6 +2588,133 @@
   "@agentFilePreviewFailed": {},
   "agentFileReceivedHint": "服務接受僅表示收到了請求，不表示模型已讀完所有檔案。",
   "@agentFileReceivedHint": {},
+  "selectiveBackupAdd": "新增",
+  "@selectiveBackupAdd": {},
+  "selectiveBackupAgentConnection": "Agent 連線與模型",
+  "@selectiveBackupAgentConnection": {},
+  "selectiveBackupAgentPreferences": "Agent 偏好",
+  "@selectiveBackupAgentPreferences": {},
+  "selectiveBackupApplicationSettings": "應用程式設定",
+  "@selectiveBackupApplicationSettings": {},
+  "selectiveBackupCalendars": "行事曆分類",
+  "@selectiveBackupCalendars": {},
+  "selectiveBackupCalendarSettings": "行事曆設定",
+  "@selectiveBackupCalendarSettings": {},
+  "selectiveBackupCancelled": "還原已取消，已保留選擇。",
+  "@selectiveBackupCancelled": {},
+  "selectiveBackupClearSelection": "取消全選",
+  "@selectiveBackupClearSelection": {},
+  "selectiveBackupConfirmBody": "同 ID 的所選物件將被取代，不存在的物件將新增；未選物件會保留。",
+  "@selectiveBackupConfirmBody": {},
+  "selectiveBackupConfirmTitle": "還原所選資料？",
+  "@selectiveBackupConfirmTitle": {},
+  "selectiveBackupConflict": "部分所選物件與其他資料的引用衝突，請補選相關物件或取消還原。",
+  "@selectiveBackupConflict": {},
+  "selectiveBackupConversations": "聊天記錄",
+  "@selectiveBackupConversations": {},
+  "selectiveBackupCopiedDependencies": "複製並重新關聯 {count} 項相依項目",
+  "@selectiveBackupCopiedDependencies": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectiveBackupCurrentData": "目前資料",
+  "@selectiveBackupCurrentData": {},
+  "selectiveBackupDependencies": "必要相依項目會自動包含；發生衝突時，只為所選物件複製並重新關聯相依項目。",
+  "@selectiveBackupDependencies": {},
+  "selectiveBackupDescription": "按物件和設定群組選擇備份或還原，聊天檔案可單獨勾選。",
+  "@selectiveBackupDescription": {},
+  "selectiveBackupExclusions": "不包含 API 金鑰、Cookie、系統權限和執行授權；還原的聊天僅含歷史，不繼續舊操作。",
+  "@selectiveBackupExclusions": {},
+  "selectiveBackupExportSelection": "選擇備份內容",
+  "@selectiveBackupExportSelection": {},
+  "selectiveBackupFileMissing": "此備份僅包含引用，沒有檔案內容。",
+  "@selectiveBackupFileMissing": {},
+  "selectiveBackupFiles": "聊天檔案",
+  "@selectiveBackupFiles": {},
+  "selectiveBackupFilesDescription": "單獨選擇檔案內容。未勾選檔案僅保留歷史引用，恢復後無法讀取其內容。",
+  "@selectiveBackupFilesDescription": {},
+  "selectiveBackupFileSize": "{bytes} 位元組",
+  "@selectiveBackupFileSize": {
+    "placeholders": {
+      "bytes": {
+        "type": "int"
+      }
+    }
+  },
+  "selectiveBackupInvalid": "此檔案不是有效的 Sked 備份。",
+  "@selectiveBackupInvalid": {},
+  "selectiveBackupLimit": "此備份超出支援的大小或物件數量限制。",
+  "@selectiveBackupLimit": {},
+  "selectiveBackupMemories": "記憶",
+  "@selectiveBackupMemories": {},
+  "selectiveBackupNewerVersion": "此備份使用了更新的格式，請更新 Sked 後還原。",
+  "@selectiveBackupNewerVersion": {},
+  "selectiveBackupNotificationSettings": "通知設定",
+  "@selectiveBackupNotificationSettings": {},
+  "selectiveBackupOpenFile": "開啟備份",
+  "@selectiveBackupOpenFile": {},
+  "selectiveBackupPeriodTimes": "節次時間集",
+  "@selectiveBackupPeriodTimes": {},
+  "selectiveBackupRecoveryPending": "上次還原尚未完成，請先繼續該還原，再修改資料。",
+  "@selectiveBackupRecoveryPending": {},
+  "selectiveBackupReplace": "取代",
+  "@selectiveBackupReplace": {},
+  "selectiveBackupRestore": "還原",
+  "@selectiveBackupRestore": {},
+  "selectiveBackupRestoreCounts": "新增 {added} 項，取代 {replaced} 項",
+  "@selectiveBackupRestoreCounts": {
+    "placeholders": {
+      "added": {
+        "type": "int"
+      },
+      "replaced": {
+        "type": "int"
+      }
+    }
+  },
+  "selectiveBackupRestored": "已還原所選資料",
+  "@selectiveBackupRestored": {},
+  "selectiveBackupRestoreSelection": "選擇還原內容",
+  "@selectiveBackupRestoreSelection": {},
+  "selectiveBackupResume": "繼續還原",
+  "@selectiveBackupResume": {},
+  "selectiveBackupReviewRestore": "核對還原內容",
+  "@selectiveBackupReviewRestore": {},
+  "selectiveBackupSave": "儲存備份",
+  "@selectiveBackupSave": {},
+  "selectiveBackupSaved": "備份已儲存",
+  "@selectiveBackupSaved": {},
+  "selectiveBackupSchoolSites": "學校站點",
+  "@selectiveBackupSchoolSites": {},
+  "selectiveBackupSearch": "搜尋物件",
+  "@selectiveBackupSearch": {},
+  "selectiveBackupSelectAll": "全選",
+  "@selectiveBackupSelectAll": {},
+  "selectiveBackupSelectedCount": "已選 {count} 項",
+  "@selectiveBackupSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectiveBackupSettings": "設定群組",
+  "@selectiveBackupSettings": {},
+  "selectiveBackupSkills": "技能",
+  "@selectiveBackupSkills": {},
+  "selectiveBackupTimetables": "課表",
+  "@selectiveBackupTimetables": {},
+  "selectiveBackupTimetableSettings": "課表設定",
+  "@selectiveBackupTimetableSettings": {},
+  "selectiveBackupTitle": "選擇備份與還原",
+  "@selectiveBackupTitle": {},
+  "selectiveBackupUnavailable": "操作未完成，請檢查儲存存取後重試；未完成的還原將從已儲存的進度繼續。",
+  "@selectiveBackupUnavailable": {},
+  "selectiveBackupWorkspaceSettings": "工作區設定",
+  "@selectiveBackupWorkspaceSettings": {},
   "agentEditAndRedo": "編輯並重做",
   "@agentEditAndRedo": {},
   "agentRegenerateReply": "重新產生回覆",
@@ -2595,5 +2728,38 @@
   "agentRedoConflict": "無法安全撤銷完整輪次。請保留目前資料重新調整請求，或取消。",
   "@agentRedoConflict": {},
   "agentKeepAndRevise": "保留資料並修改",
-  "@agentKeepAndRevise": {}
+  "@agentKeepAndRevise": {},
+  "selectiveBackupDeviceSettings": "裝置設定",
+  "@selectiveBackupDeviceSettings": {},
+  "selectiveBackupDeviceLayout": "面板尺寸",
+  "@selectiveBackupDeviceLayout": {},
+  "selectiveBackupDeviceDeveloperUi": "開發者預覽偏好",
+  "@selectiveBackupDeviceDeveloperUi": {},
+  "selectiveBackupDeviceGroupPlatform": "{group} · {platform}",
+  "@selectiveBackupDeviceGroupPlatform": {
+    "placeholders": {
+      "group": {
+        "type": "String"
+      },
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
+  "selectiveBackupDeviceUnsupported": "來自 {platform} 的裝置設定不適用於目前平台，將保留本機設定。",
+  "@selectiveBackupDeviceUnsupported": {
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
+  "selectiveBackupUnsupportedGroups": "將略過 {count} 個不支援的裝置設定群組",
+  "@selectiveBackupUnsupportedGroups": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

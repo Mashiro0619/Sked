@@ -418,25 +418,25 @@ class AppLocalizationsPl extends AppLocalizations {
       'Importuj pełne dane lub pojedyncze harmonogramy lub eksportuj bieżące/wszystkie harmonogramy.';
 
   @override
-  String get appBackupTitle => 'Kopia zapasowa i przywracanie aplikacji';
+  String get appBackupTitle => 'App backup and restore';
 
   @override
   String get appBackupSheetSubtitle =>
-      'Pełne przywracanie zastępuje bieżące dane aplikacji. Klucze AI API są w bezpiecznej pamięci i nie są zapisywane w plikach kopii.';
+      'Choose which objects to back up or restore. Unselected data is kept, and API keys are never exported.';
 
   @override
-  String get restoreBackupFileTitle => 'Przywróć z pliku JSON';
+  String get restoreBackupFileTitle => 'Restore from backup file';
 
   @override
   String get restoreBackupFileSubtitle =>
-      'Wybierz pełny plik kopii zapasowej Sked. Przed przywróceniem pojawi się prośba o potwierdzenie.';
+      'Choose a ZIP or legacy JSON backup, then select objects and confirm the restore.';
 
   @override
   String get restoreBackupTextTitle => 'Wklej JSON kopii';
 
   @override
   String get restoreBackupTextSubtitle =>
-      'Wklej pełną kopię zapasową i przywróć bieżące dane aplikacji.';
+      'Paste a legacy JSON backup, then select the objects to restore.';
 
   @override
   String get shareBackupTitle => 'Udostępnij plik kopii';
@@ -457,7 +457,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get copyBackupSubtitle =>
-      'Pokaż pełny JSON kopii, aby można go było skopiować lub tymczasowo zapisać.';
+      'Show legacy JSON for business data, app preferences and school sites. Chats, files and Agent configuration are excluded.';
 
   @override
   String get restoreBackupConfirmTitle => 'Przywrócić pełną kopię?';
@@ -883,7 +883,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get privacyGateSummaryImportExport =>
-      'Imports, exports, backups, and sharing happen when you request them. Full backups exclude API keys and chats. When you use Agent, your messages, attachments, and task-related app data returned by tools are sent to your configured API service.';
+      'Imports, exports, backups, and sharing happen when you request them. Backups can include chats and files you select; API keys are excluded. When you use Agent, your messages, attachments, and task-related app data returned by tools are sent to your configured API service.';
 
   @override
   String get privacyGateSummaryUpdates =>
@@ -3913,6 +3913,15 @@ class AppLocalizationsPl extends AppLocalizations {
   String get agentSkillTriggers => 'When to use this skill, one hint per line';
 
   @override
+  String get agentComposerActions => 'Message actions';
+
+  @override
+  String get agentMakeDefaultModel => 'Use as default model';
+
+  @override
+  String get agentModelIdExists => 'This model has already been added.';
+
+  @override
   String get agentAttachAnyFile => 'Attach a file';
 
   @override
@@ -3984,6 +3993,176 @@ class AppLocalizationsPl extends AppLocalizations {
       'Acceptance confirms the service received the request; it does not confirm that the model read every file.';
 
   @override
+  String get selectiveBackupAdd => 'Add';
+
+  @override
+  String get selectiveBackupAgentConnection => 'Agent connection and models';
+
+  @override
+  String get selectiveBackupAgentPreferences => 'Agent preferences';
+
+  @override
+  String get selectiveBackupApplicationSettings => 'Application settings';
+
+  @override
+  String get selectiveBackupCalendars => 'Calendar categories';
+
+  @override
+  String get selectiveBackupCalendarSettings => 'Calendar settings';
+
+  @override
+  String get selectiveBackupCancelled =>
+      'Restore cancelled. Your selection is kept.';
+
+  @override
+  String get selectiveBackupClearSelection => 'Clear selection';
+
+  @override
+  String get selectiveBackupConfirmBody =>
+      'Selected objects with the same ID will be replaced. New objects will be added, and unselected objects will be kept.';
+
+  @override
+  String get selectiveBackupConfirmTitle => 'Restore selected data?';
+
+  @override
+  String get selectiveBackupConflict =>
+      'Some selected objects conflict with data used elsewhere. Include the related objects or cancel this restore.';
+
+  @override
+  String get selectiveBackupConversations => 'Conversations';
+
+  @override
+  String selectiveBackupCopiedDependencies(int count) {
+    return 'Copy and rebind $count dependencies';
+  }
+
+  @override
+  String get selectiveBackupCurrentData => 'Current data';
+
+  @override
+  String get selectiveBackupDependencies =>
+      'Required dependencies are included automatically. Conflicting dependencies are copied and linked only to the selected objects.';
+
+  @override
+  String get selectiveBackupDescription =>
+      'Choose individual objects and settings groups to back up or restore. Conversation files can be selected separately.';
+
+  @override
+  String get selectiveBackupExclusions =>
+      'API keys, cookies, system permissions and execution approvals are excluded. Restored chats contain history only and do not resume old actions.';
+
+  @override
+  String get selectiveBackupExportSelection => 'Choose data to back up';
+
+  @override
+  String get selectiveBackupFileMissing =>
+      'This backup contains a reference only; file bytes are not included.';
+
+  @override
+  String get selectiveBackupFiles => 'Conversation files';
+
+  @override
+  String get selectiveBackupFilesDescription =>
+      'Select file contents separately. Unchecked files retain only history references; their contents will be unavailable after restore.';
+
+  @override
+  String selectiveBackupFileSize(int bytes) {
+    return '$bytes bytes';
+  }
+
+  @override
+  String get selectiveBackupInvalid => 'This file is not a valid Sked backup.';
+
+  @override
+  String get selectiveBackupLimit =>
+      'This backup exceeds the supported size or object limit.';
+
+  @override
+  String get selectiveBackupMemories => 'Memory';
+
+  @override
+  String get selectiveBackupNewerVersion =>
+      'This backup uses a newer format. Update Sked before restoring it.';
+
+  @override
+  String get selectiveBackupNotificationSettings => 'Notification settings';
+
+  @override
+  String get selectiveBackupOpenFile => 'Open backup';
+
+  @override
+  String get selectiveBackupPeriodTimes => 'Period time sets';
+
+  @override
+  String get selectiveBackupRecoveryPending =>
+      'A restore is unfinished. Continue the same restore before changing data.';
+
+  @override
+  String get selectiveBackupReplace => 'Replace';
+
+  @override
+  String get selectiveBackupRestore => 'Restore';
+
+  @override
+  String selectiveBackupRestoreCounts(int added, int replaced) {
+    return 'Add $added; replace $replaced';
+  }
+
+  @override
+  String get selectiveBackupRestored => 'Selected data restored';
+
+  @override
+  String get selectiveBackupRestoreSelection => 'Choose data to restore';
+
+  @override
+  String get selectiveBackupResume => 'Continue restore';
+
+  @override
+  String get selectiveBackupReviewRestore => 'Review restore';
+
+  @override
+  String get selectiveBackupSave => 'Save backup';
+
+  @override
+  String get selectiveBackupSaved => 'Backup saved';
+
+  @override
+  String get selectiveBackupSchoolSites => 'School sites';
+
+  @override
+  String get selectiveBackupSearch => 'Search objects';
+
+  @override
+  String get selectiveBackupSelectAll => 'Select all';
+
+  @override
+  String selectiveBackupSelectedCount(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String get selectiveBackupSettings => 'Settings groups';
+
+  @override
+  String get selectiveBackupSkills => 'Skills';
+
+  @override
+  String get selectiveBackupTimetables => 'Timetables';
+
+  @override
+  String get selectiveBackupTimetableSettings => 'Timetable settings';
+
+  @override
+  String get selectiveBackupTitle => 'Selective backup and restore';
+
+  @override
+  String get selectiveBackupUnavailable =>
+      'Could not finish this operation. Check storage access and retry; an unfinished restore will continue from its saved progress.';
+
+  @override
+  String get selectiveBackupWorkspaceSettings => 'Workspace settings';
+
+  @override
   String get agentEditAndRedo => 'Edit and redo';
 
   @override
@@ -4006,4 +4185,29 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get agentKeepAndRevise => 'Keep data and revise';
+
+  @override
+  String get selectiveBackupDeviceSettings => 'Device settings';
+
+  @override
+  String get selectiveBackupDeviceLayout => 'Panel dimensions';
+
+  @override
+  String get selectiveBackupDeviceDeveloperUi =>
+      'Developer preview preferences';
+
+  @override
+  String selectiveBackupDeviceGroupPlatform(String group, String platform) {
+    return '$group · $platform';
+  }
+
+  @override
+  String selectiveBackupDeviceUnsupported(String platform) {
+    return 'Device settings from $platform do not apply to this platform. Your local settings will be kept.';
+  }
+
+  @override
+  String selectiveBackupUnsupportedGroups(int count) {
+    return '$count unsupported device settings groups will be skipped';
+  }
 }

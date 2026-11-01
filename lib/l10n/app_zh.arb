@@ -294,17 +294,17 @@
   "@dataImportExport": {},
   "dataImportExportDesc": "导入整包/单课表，或导出当前课表与全部课表",
   "@dataImportExportDesc": {},
-  "appBackupTitle": "完整应用备份与恢复",
+  "appBackupTitle": "应用备份与恢复",
   "@appBackupTitle": {},
-  "appBackupSheetSubtitle": "恢复完整备份会替换当前应用数据。AI API 密钥存放在系统安全存储中，不会写入备份文件。",
+  "appBackupSheetSubtitle": "选择要备份或恢复的对象；未选数据保留，API 密钥不导出。",
   "@appBackupSheetSubtitle": {},
-  "restoreBackupFileTitle": "从 JSON 文件恢复",
+  "restoreBackupFileTitle": "从备份文件恢复",
   "@restoreBackupFileTitle": {},
-  "restoreBackupFileSubtitle": "选择 Sked 完整备份文件，恢复前会再次确认。",
+  "restoreBackupFileSubtitle": "选择 ZIP 或旧 JSON 备份，选择对象后确认恢复。",
   "@restoreBackupFileSubtitle": {},
   "restoreBackupTextTitle": "粘贴备份 JSON",
   "@restoreBackupTextTitle": {},
-  "restoreBackupTextSubtitle": "粘贴完整备份内容并恢复当前应用数据。",
+  "restoreBackupTextSubtitle": "粘贴旧 JSON 备份，再选择要恢复的对象。",
   "@restoreBackupTextSubtitle": {},
   "shareBackupTitle": "分享备份文件",
   "@shareBackupTitle": {},
@@ -316,7 +316,7 @@
   "@saveBackupSubtitle": {},
   "copyBackupTitle": "复制备份文本",
   "@copyBackupTitle": {},
-  "copyBackupSubtitle": "显示完整备份 JSON，便于复制或临时保存。",
+  "copyBackupSubtitle": "显示旧 JSON 兼容备份，包含业务数据、应用偏好和学校站点，不含聊天、文件和 Agent 配置。",
   "@copyBackupSubtitle": {},
   "restoreBackupConfirmTitle": "恢复完整备份？",
   "@restoreBackupConfirmTitle": {},
@@ -607,7 +607,7 @@
   "@privacyGateTitle": {},
   "privacyGateSummaryStorage": "课表、通用日程、节次时间集和学校站点配置只会保存在本地，不会自动上传到开发者服务器。",
   "@privacyGateSummaryStorage": {},
-  "privacyGateSummaryImportExport": "导入、导出、备份和分享按你的请求执行；完整备份不包含 API 密钥和聊天记录。使用 Agent 时，你的消息、附件及工具为任务读取的相关应用数据会发送到你配置的 API 服务。",
+  "privacyGateSummaryImportExport": "导入、导出、备份和分享按你的请求执行；备份可包含你选择的聊天记录和文件，不包含 API 密钥。使用 Agent 时，你的消息、附件及工具为任务读取的相关应用数据会发送到你配置的 API 服务。",
   "@privacyGateSummaryImportExport": {},
   "privacyGateSummaryUpdates": "如果后续版本调整了数据处理方式，应用可能会要求你重新查看更新后的隐私政策。",
   "@privacyGateSummaryUpdates": {},
@@ -2538,6 +2538,12 @@
   "@agentSkillRequiredTools": {},
   "agentSkillTriggers": "使用此技能的时机，每行一项",
   "@agentSkillTriggers": {},
+  "agentComposerActions": "消息操作",
+  "@agentComposerActions": {},
+  "agentMakeDefaultModel": "设为默认模型",
+  "@agentMakeDefaultModel": {},
+  "agentModelIdExists": "此模型已添加。",
+  "@agentModelIdExists": {},
   "agentAttachAnyFile": "添加文件",
   "@agentAttachAnyFile": {},
   "agentFileLocal": "已保存到本机",
@@ -2580,6 +2586,133 @@
   "@agentFilePreviewFailed": {},
   "agentFileReceivedHint": "服务接受仅表示收到了请求，不表示模型已读完所有文件。",
   "@agentFileReceivedHint": {},
+  "selectiveBackupAdd": "新增",
+  "@selectiveBackupAdd": {},
+  "selectiveBackupAgentConnection": "Agent 连接与模型",
+  "@selectiveBackupAgentConnection": {},
+  "selectiveBackupAgentPreferences": "Agent 偏好",
+  "@selectiveBackupAgentPreferences": {},
+  "selectiveBackupApplicationSettings": "应用设置",
+  "@selectiveBackupApplicationSettings": {},
+  "selectiveBackupCalendars": "日程分类",
+  "@selectiveBackupCalendars": {},
+  "selectiveBackupCalendarSettings": "日程设置",
+  "@selectiveBackupCalendarSettings": {},
+  "selectiveBackupCancelled": "恢复已取消，已保留选择。",
+  "@selectiveBackupCancelled": {},
+  "selectiveBackupClearSelection": "取消全选",
+  "@selectiveBackupClearSelection": {},
+  "selectiveBackupConfirmBody": "同 ID 的选中对象将被替换，不存在的对象将新增；未选对象会保留。",
+  "@selectiveBackupConfirmBody": {},
+  "selectiveBackupConfirmTitle": "恢复所选数据？",
+  "@selectiveBackupConfirmTitle": {},
+  "selectiveBackupConflict": "部分所选对象与其他数据的引用冲突，请补选相关对象或取消恢复。",
+  "@selectiveBackupConflict": {},
+  "selectiveBackupConversations": "聊天记录",
+  "@selectiveBackupConversations": {},
+  "selectiveBackupCopiedDependencies": "复制并重新关联 {count} 项依赖",
+  "@selectiveBackupCopiedDependencies": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectiveBackupCurrentData": "当前数据",
+  "@selectiveBackupCurrentData": {},
+  "selectiveBackupDependencies": "必要依赖会自动包含；发生冲突时，只为所选对象复制并重新关联依赖。",
+  "@selectiveBackupDependencies": {},
+  "selectiveBackupDescription": "按对象和设置分组选择备份或恢复，聊天文件可单独勾选。",
+  "@selectiveBackupDescription": {},
+  "selectiveBackupExclusions": "不包含 API 密钥、Cookie、系统权限和执行授权；恢复的聊天仅含历史，不继续旧操作。",
+  "@selectiveBackupExclusions": {},
+  "selectiveBackupExportSelection": "选择备份内容",
+  "@selectiveBackupExportSelection": {},
+  "selectiveBackupFileMissing": "此备份仅包含引用，没有文件内容。",
+  "@selectiveBackupFileMissing": {},
+  "selectiveBackupFiles": "聊天文件",
+  "@selectiveBackupFiles": {},
+  "selectiveBackupFilesDescription": "单独选择文件内容。未勾选文件仅保留历史引用，恢复后无法读取其内容。",
+  "@selectiveBackupFilesDescription": {},
+  "selectiveBackupFileSize": "{bytes} 字节",
+  "@selectiveBackupFileSize": {
+    "placeholders": {
+      "bytes": {
+        "type": "int"
+      }
+    }
+  },
+  "selectiveBackupInvalid": "此文件不是有效的 Sked 备份。",
+  "@selectiveBackupInvalid": {},
+  "selectiveBackupLimit": "此备份超出支持的大小或对象数量限制。",
+  "@selectiveBackupLimit": {},
+  "selectiveBackupMemories": "记忆",
+  "@selectiveBackupMemories": {},
+  "selectiveBackupNewerVersion": "此备份使用了更新的格式，请更新 Sked 后恢复。",
+  "@selectiveBackupNewerVersion": {},
+  "selectiveBackupNotificationSettings": "通知设置",
+  "@selectiveBackupNotificationSettings": {},
+  "selectiveBackupOpenFile": "打开备份",
+  "@selectiveBackupOpenFile": {},
+  "selectiveBackupPeriodTimes": "节次时间集",
+  "@selectiveBackupPeriodTimes": {},
+  "selectiveBackupRecoveryPending": "上次恢复尚未完成，请先继续该恢复，再修改数据。",
+  "@selectiveBackupRecoveryPending": {},
+  "selectiveBackupReplace": "替换",
+  "@selectiveBackupReplace": {},
+  "selectiveBackupRestore": "恢复",
+  "@selectiveBackupRestore": {},
+  "selectiveBackupRestoreCounts": "新增 {added} 项，替换 {replaced} 项",
+  "@selectiveBackupRestoreCounts": {
+    "placeholders": {
+      "added": {
+        "type": "int"
+      },
+      "replaced": {
+        "type": "int"
+      }
+    }
+  },
+  "selectiveBackupRestored": "已恢复所选数据",
+  "@selectiveBackupRestored": {},
+  "selectiveBackupRestoreSelection": "选择恢复内容",
+  "@selectiveBackupRestoreSelection": {},
+  "selectiveBackupResume": "继续恢复",
+  "@selectiveBackupResume": {},
+  "selectiveBackupReviewRestore": "核对恢复内容",
+  "@selectiveBackupReviewRestore": {},
+  "selectiveBackupSave": "保存备份",
+  "@selectiveBackupSave": {},
+  "selectiveBackupSaved": "备份已保存",
+  "@selectiveBackupSaved": {},
+  "selectiveBackupSchoolSites": "学校站点",
+  "@selectiveBackupSchoolSites": {},
+  "selectiveBackupSearch": "搜索对象",
+  "@selectiveBackupSearch": {},
+  "selectiveBackupSelectAll": "全选",
+  "@selectiveBackupSelectAll": {},
+  "selectiveBackupSelectedCount": "已选 {count} 项",
+  "@selectiveBackupSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectiveBackupSettings": "设置分组",
+  "@selectiveBackupSettings": {},
+  "selectiveBackupSkills": "技能",
+  "@selectiveBackupSkills": {},
+  "selectiveBackupTimetables": "课表",
+  "@selectiveBackupTimetables": {},
+  "selectiveBackupTimetableSettings": "课表设置",
+  "@selectiveBackupTimetableSettings": {},
+  "selectiveBackupTitle": "选择备份与恢复",
+  "@selectiveBackupTitle": {},
+  "selectiveBackupUnavailable": "操作未完成，请检查存储访问后重试；未完成的恢复将从已保存的进度继续。",
+  "@selectiveBackupUnavailable": {},
+  "selectiveBackupWorkspaceSettings": "工作区设置",
+  "@selectiveBackupWorkspaceSettings": {},
   "agentEditAndRedo": "编辑并重做",
   "@agentEditAndRedo": {},
   "agentRegenerateReply": "重新生成回复",
@@ -2593,5 +2726,38 @@
   "agentRedoConflict": "无法安全撤销完整轮次。请保留当前数据重新调整请求，或取消。",
   "@agentRedoConflict": {},
   "agentKeepAndRevise": "保留数据并修改",
-  "@agentKeepAndRevise": {}
+  "@agentKeepAndRevise": {},
+  "selectiveBackupDeviceSettings": "设备设置",
+  "@selectiveBackupDeviceSettings": {},
+  "selectiveBackupDeviceLayout": "面板尺寸",
+  "@selectiveBackupDeviceLayout": {},
+  "selectiveBackupDeviceDeveloperUi": "开发者预览偏好",
+  "@selectiveBackupDeviceDeveloperUi": {},
+  "selectiveBackupDeviceGroupPlatform": "{group} · {platform}",
+  "@selectiveBackupDeviceGroupPlatform": {
+    "placeholders": {
+      "group": {
+        "type": "String"
+      },
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
+  "selectiveBackupDeviceUnsupported": "来自 {platform} 的设备设置不适用于当前平台，将保留本机设置。",
+  "@selectiveBackupDeviceUnsupported": {
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
+  "selectiveBackupUnsupportedGroups": "{count} 个不支持的设备设置组将跳过",
+  "@selectiveBackupUnsupportedGroups": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }
