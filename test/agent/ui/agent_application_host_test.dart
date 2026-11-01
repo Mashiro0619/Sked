@@ -146,6 +146,106 @@ void main() {
     },
   );
 
+  for (final studentEnabled in [false, true]) {
+    testWidgets(
+      'developer sample uses the real home binding and preserves ${studentEnabled ? 'existing objects in both workspaces' : 'the disabled student workspace'}',
+      (tester) async {
+        await mount(tester);
+        await tester.runAsync(
+          () => app.workspaces.setEnabled(AppMode.student, studentEnabled),
+        );
+        await tester.pumpAndSettle();
+        final before = app.session.committedData;
+        final language = studentEnabled ? 'english' : 'simplifiedChinese';
+        if (studentEnabled) {
+          await expectLater(
+            tool('developer.sample.prepare', {
+              'language': 'unregistered-language',
+            }),
+            throwsA(
+              isA<OperationProblem>().having(
+                (error) => error.code,
+                'code',
+                OperationErrorCode.invalidArgument,
+              ),
+            ),
+          );
+          expect(app.session.committedData.encode(), before.encode());
+        }
+        final prepared = await tool('developer.sample.prepare', {
+          'language': language,
+        });
+        expect(app.session.committedData.encode(), before.encode());
+        final result = await tool('external.commit', {
+          'planId': prepared['planId'],
+        });
+        expect(result['effectStatus'], 'applied');
+        expect(result['dataStatus'], 'committed');
+        final after = app.session.committedData;
+        final oldTables = before.studentMode.timetables
+            .map((table) => table.toJson())
+            .toList();
+        final oldCalendars = before.generalMode.schedules
+            .map((calendar) => calendar.toJson())
+            .toList();
+        expect(after.enabledWorkspaces, before.enabledWorkspaces);
+        expect(after.activeMode, before.activeMode);
+        expect(after.generalMode.schedules, hasLength(oldCalendars.length + 3));
+        expect(
+          after.generalMode.schedules
+              .take(oldCalendars.length)
+              .map((calendar) => calendar.toJson())
+              .toList(),
+          oldCalendars,
+        );
+        final newCalendars = after.generalMode.schedules
+            .skip(oldCalendars.length)
+            .toList();
+        expect(
+          newCalendars.every((calendar) => calendar.events.isNotEmpty),
+          isTrue,
+        );
+        expect(after.generalMode.activeScheduleId, newCalendars.first.id);
+        expect(
+          result['effectResult'],
+          containsPair('calendarId', newCalendars.first.id),
+        );
+        if (studentEnabled) {
+          expect(after.studentMode.timetables, hasLength(oldTables.length + 1));
+          expect(
+            after.studentMode.timetables
+                .take(oldTables.length)
+                .map((table) => table.toJson())
+                .toList(),
+            oldTables,
+          );
+          final added = after.studentMode.timetables.last;
+          expect(added.config.name, 'Sample timetable');
+          expect(added.courses, isNotEmpty);
+          expect(after.studentMode.activeTimetableId, added.id);
+          expect(result['effectResult'], containsPair('timetableId', added.id));
+        } else {
+          expect(after.studentMode.toJson(), before.studentMode.toJson());
+        }
+        final replay = await tool('developer.sample.prepare', {
+          'language': language,
+          'operationId': prepared['operationId'],
+        });
+        final repeated = await tool('external.commit', {
+          'planId': replay['planId'],
+        });
+        expect(repeated['replayed'], isTrue);
+        expect(app.session.committedData.encode(), after.encode());
+        await tester.pumpWidget(const SizedBox());
+        final loaded = await tester.runAsync(
+          () => app.session.repository.load(),
+        );
+        expect(loaded!.encode(), after.encode());
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets(
     'file destination cancellation remains a failed effect and unmount revokes pending plans',
     (tester) async {
