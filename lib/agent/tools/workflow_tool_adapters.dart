@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import '../../application/external_operation_coordinator.dart';
 import '../../application/mutation_coordinator.dart';
@@ -6,6 +8,8 @@ import '../../application/operation_contracts.dart';
 import '../../application/resource_queries.dart';
 import '../../application/resource_mutations.dart';
 import '../../controllers/app_backup_controller.dart';
+import '../../backup/selective_backup_models.dart';
+import '../../backup/selective_backup_service.dart';
 import '../../controllers/general_navigation_controller.dart';
 import '../../controllers/workspace_commands.dart';
 import '../../models/school_import_models.dart';
@@ -29,17 +33,21 @@ class AgentDataArtifact {
     required this.name,
     required this.mimeType,
     required this.text,
+    this.binaryBytes,
   });
   final String id;
   final String name;
   final String mimeType;
   final String text;
-  String get digest => mutationDigest(text);
+  final Uint8List? binaryBytes;
+  int get byteLength => binaryBytes?.length ?? utf8.encode(text).length;
+  String get digest =>
+      binaryBytes == null ? mutationDigest(text) : backupDigest(binaryBytes!);
   Map<String, Object?> summary() => {
     'artifactId': id,
     'name': name,
     'mimeType': mimeType,
-    'bytes': utf8.encode(text).length,
+    'bytes': byteLength,
     'digest': digest,
   };
 }
@@ -220,9 +228,11 @@ class WorkflowToolAdapters {
       {
         'format': {
           'type': 'string',
-          'enum': [..._fileFormats, 'backup_json'],
+          'enum': [..._fileFormats, 'backup_json', 'backup_zip'],
         },
         'ids': _idsSchema,
+        'objects': _backupObjectsSchema,
+        'attachmentIds': _backupAttachmentIdsSchema,
       },
       _prepareExport,
       required: ['format'],
@@ -247,13 +257,28 @@ class WorkflowToolAdapters {
               _backups?.canStartFreshAfterRecovery ?? false,
           'generation': _host.mutations.generation,
           'current': _counts(_host.session.committedData),
+          'selectiveSupported': _backups?.hasSelectiveBackup ?? false,
+          'selectiveRecoveryPending': _backups?.hasSelectiveBackup == true
+              ? _backups!.selective.recoveryPending
+              : false,
         };
       },
     );
     _add(
+      'backups.inspect',
+      'List selectable backup objects and dependencies without restoring data. Omit sourceId for local data; otherwise use a binary attachment or complete legacy source from this conversation. Attachment bytes require separate selection. Device settings report their source platform and whether this device supports them.',
+      {'sourceId': _string, 'offset': _offsetSchema, 'limit': _limitSchema},
+      _inspectBackup,
+    );
+    _add(
       'backups.prepare_restore',
-      'Prepare complete restore from an attached backup. The existing multi-store journal owns execution; local Agent connection and permissions are retained. Commit with external.commit.',
-      {'sourceId': _string, 'operationId': _string},
+      'Prepare restore from an attached backup. Supply exact objects from backups.inspect for selective restore; only selected IDs and required dependencies change. Attachment bytes are selected separately. Unsupported device settings are listed as skipped, preserving local settings. Without objects, only the legacy complete JSON restore is supported. Commit with external.commit.',
+      {
+        'sourceId': _string,
+        'operationId': _string,
+        'objects': _backupObjectsSchema,
+        'attachmentIds': _backupAttachmentIdsSchema,
+      },
       _prepareRestore,
       required: ['sourceId'],
     );
@@ -836,8 +861,39 @@ class WorkflowToolAdapters {
     OperationScope scope,
     AgentApprovalRequester _,
   ) async {
-    _keys(args, {'format', 'ids'});
+    _keys(args, {'format', 'ids', 'objects', 'attachmentIds'});
     final format = _text(args, 'format'), data = _host.session.committedData;
+    if (format == 'backup_zip') {
+      if (args.containsKey('ids')) {
+        _invalid('Use objects for selective backup.');
+      }
+      final service = _selectiveBackup();
+      final inventory = await service.inventory();
+      scope.checkActive();
+      final cancellation = BackupCancellation();
+      unawaited(scope.whenCancelled.then((_) => cancellation.cancel()));
+      final bytes = await _backupCall(
+        () => service.export(
+          inventory,
+          _backupSelection(args),
+          cancellation: cancellation,
+        ),
+      );
+      scope.checkActive();
+      return _rememberArtifact(
+        AgentDataArtifact(
+          id: generateUuidV4(),
+          name: 'sked-backup.zip',
+          mimeType: 'application/zip',
+          text: '',
+          binaryBytes: bytes.asUnmodifiableView(),
+        ),
+        scope,
+      );
+    }
+    if (args.containsKey('objects') || args.containsKey('attachmentIds')) {
+      _invalid('Object selection is available only for backup_zip.');
+    }
     final ids = _ids(args['ids'], required: format != 'backup_json');
     late final String text;
     switch (format) {
@@ -877,17 +933,6 @@ class WorkflowToolAdapters {
     if (utf8.encode(text).length > 32 * 1024 * 1024) {
       _invalid('The export exceeds the in-memory artifact budget.');
     }
-    _artifacts.removeWhere((_, value) => value.scope.isCancelled);
-    var bytes = _artifacts.values.fold<int>(
-      0,
-      (n, e) => n + utf8.encode(e.value.text).length,
-    );
-    while (_artifacts.isNotEmpty &&
-        (_artifacts.length >= 8 ||
-            bytes + utf8.encode(text).length > 32 * 1024 * 1024)) {
-      final removed = _artifacts.remove(_artifacts.keys.first)!;
-      bytes -= utf8.encode(removed.value.text).length;
-    }
     final artifact = AgentDataArtifact(
       id: generateUuidV4(),
       name: 'sked-$format.${format == 'schedules_ics' ? 'ics' : 'json'}',
@@ -896,6 +941,26 @@ class WorkflowToolAdapters {
           : 'application/json',
       text: text,
     );
+    return _rememberArtifact(artifact, scope);
+  }
+
+  Map<String, Object?> _rememberArtifact(
+    AgentDataArtifact artifact,
+    OperationScope scope,
+  ) {
+    final budget = SelectiveBackupLimits.archiveBytes;
+    if (artifact.byteLength > budget) {
+      _invalid('The export exceeds the artifact budget.');
+    }
+    _artifacts.removeWhere((_, value) => value.scope.isCancelled);
+    var bytes = _artifacts.values.fold<int>(
+      0,
+      (sum, entry) => sum + entry.value.byteLength,
+    );
+    while (_artifacts.isNotEmpty &&
+        (_artifacts.length >= 8 || bytes + artifact.byteLength > budget)) {
+      bytes -= _artifacts.remove(_artifacts.keys.first)!.value.byteLength;
+    }
     _artifacts[artifact.id] = (value: artifact, scope: scope);
     return {
       'status': 'preparedArtifact',
@@ -965,7 +1030,13 @@ class WorkflowToolAdapters {
     OperationScope scope,
     AgentApprovalRequester _,
   ) async {
-    _keys(args, {'sourceId', 'operationId'});
+    _keys(args, {'sourceId', 'operationId', 'objects', 'attachmentIds'});
+    if (args.containsKey('objects')) {
+      return _prepareSelectiveRestore(args, scope);
+    }
+    if (args.containsKey('attachmentIds')) {
+      _invalid('Select objects before selecting attachment bytes.');
+    }
     final replay = _recorded(args, scope, 'backups.restore');
     if (replay != null) return replay;
     final backups = _backups, run = _runMaintenance;
@@ -1025,6 +1096,191 @@ class WorkflowToolAdapters {
       }),
     );
     return boundedToolReceipt(plan.summary());
+  }
+
+  SelectiveBackupService _selectiveBackup() {
+    final backups = _backups;
+    if (backups == null || !backups.hasSelectiveBackup) {
+      _unsupported('Selective backup is unavailable.');
+    }
+    return backups.selective;
+  }
+
+  Future<SelectiveBackupBundle> _backupSource(
+    String id,
+    OperationScope scope,
+  ) async {
+    final conversation = _host.conversationForScope(scope);
+    final attachment = conversation?.attachments
+        .where((file) => file.id == id)
+        .firstOrNull;
+    if (attachment != null) {
+      return _selectiveBackup().decodeAttachment(attachment);
+    }
+    final source = _source(scope, id, currentGeneration: false);
+    if (source.truncated) {
+      _invalid('Attach the complete backup before restoring it.');
+    }
+    return _selectiveBackup().decode(
+      Uint8List.fromList(utf8.encode(source.text)),
+    );
+  }
+
+  Future<Map<String, Object?>> _inspectBackup(
+    Map<String, Object?> args,
+    OperationScope scope,
+    AgentApprovalRequester _,
+  ) async {
+    _keys(args, {'sourceId', 'offset', 'limit'});
+    return _backupCall(() async {
+      final sourceId = _optionalText(args, 'sourceId');
+      final service = _selectiveBackup();
+      final bundle = sourceId == null
+          ? await service.inventory()
+          : await _backupSource(sourceId, scope);
+      scope.checkActive();
+      final offset = _integer(
+        args,
+        'offset',
+        max: SelectiveBackupLimits.objects,
+      );
+      final limit = _integer(args, 'limit', fallback: 25, min: 1, max: 100);
+      final records = bundle.records.skip(offset).take(limit).toList();
+      return {
+        'fingerprint': bundle.fingerprint,
+        'total': bundle.records.length,
+        'offset': offset,
+        'nextOffset': offset + records.length < bundle.records.length
+            ? offset + records.length
+            : null,
+        'objects': [
+          for (final record in records)
+            {
+              ...record.key.toJson(),
+              'label': record.label,
+              'dependencies': record.dependencies
+                  .map((key) => key.toJson())
+                  .toList(),
+              if (record.key.kind == BackupObjectKind.attachment) ...{
+                'byteLength': record.data['byteLength'],
+                'bytesIncluded': sourceId == null
+                    ? null
+                    : record.binaryDigest != null,
+              },
+              if (record.key.kind == BackupObjectKind.deviceSettings) ...{
+                'platform': record.data['platform'],
+                'group': record.data['group'],
+                'supportedOnThisPlatform': service.supportsDeviceGroup(record),
+              },
+            },
+        ],
+        'restored': false,
+      };
+    });
+  }
+
+  Future<Map<String, Object?>> _prepareSelectiveRestore(
+    Map<String, Object?> args,
+    OperationScope scope,
+  ) async {
+    final replay = _recorded(args, scope, 'backups.restore_selected');
+    if (replay != null) return replay;
+    final run = _runMaintenance;
+    if (run == null) _unsupported('Backup restore ownership is unavailable.');
+    return _backupCall(() async {
+      final service = _selectiveBackup();
+      final source = await _backupSource(_text(args, 'sourceId'), scope);
+      final prepared = await service.prepareRestore(
+        source,
+        _backupSelection(args),
+      );
+      scope.checkActive();
+      final unsupportedGroups = [
+        for (final record in prepared.unsupportedGroups)
+          {
+            ...record.key.toJson(),
+            'label': record.label,
+            'platform': record.data['platform'],
+            'group': record.data['group'],
+          },
+      ];
+      final generation = _host.mutations.generation;
+      final plan = _external.prepare(
+        scope: scope,
+        action: 'backups.restore_selected',
+        arguments: {
+          'request': _request(args),
+          'restoreId': prepared.id,
+          'sourceDigest': source.fingerprint,
+          'unsupportedGroups': unsupportedGroups,
+        },
+        version: prepared.fingerprint,
+        changes: [
+          for (final change in prepared.changes.where(
+            (change) => change.needsWrite,
+          ))
+            ResourceChange(
+              key: 'backup.${change.after.key}',
+              before: change.beforeFingerprint == null
+                  ? null
+                  : {'fingerprint': change.beforeFingerprint},
+              after: {
+                'id': change.after.key.id,
+                'kind': change.after.key.kind.name,
+                'label': change.after.label,
+                'fingerprint': change.after.fingerprint,
+                'includesBytes': change.after.binaryDigest != null,
+              },
+            ),
+        ],
+        operationId: _optionalText(args, 'operationId'),
+        validate: () {
+          if (generation != _host.mutations.generation ||
+              service.recoveryPending ||
+              service.isBusy) {
+            _conflict();
+          }
+        },
+        execute: (_) => run(scope, () async {
+          await service.restore(prepared);
+          return ExternalEffectResult(
+            state: ExternalEffectState.applied,
+            dataStatus: ExternalDataState.committed,
+            details: {
+              'restored': true,
+              'restoreId': prepared.id,
+              'sourceDigest': source.fingerprint,
+              'selectedObjects': prepared.selected.length,
+              'skippedDeviceGroups': unsupportedGroups,
+              'generation': _host.mutations.generation,
+              'permissionsPreserved': true,
+              'secretsImported': false,
+            },
+          );
+        }),
+      );
+      return boundedToolReceipt({
+        ...plan.summary(),
+        'unsupportedGroups': unsupportedGroups,
+      });
+    });
+  }
+
+  Future<T> _backupCall<T>(Future<T> Function() action) async {
+    try {
+      return await action();
+    } on SelectiveBackupException catch (error) {
+      throw OperationProblem(switch (error.code) {
+        SelectiveBackupError.cancelled => OperationErrorCode.cancelled,
+        SelectiveBackupError.conflict => OperationErrorCode.conflict,
+        SelectiveBackupError.invalid ||
+        SelectiveBackupError.limit => OperationErrorCode.invalidArgument,
+        SelectiveBackupError.unavailable => OperationErrorCode.busy,
+        SelectiveBackupError.unknown => OperationErrorCode.outcomeUnknown,
+        SelectiveBackupError.unsupportedVersion =>
+          OperationErrorCode.unsupported,
+      }, error.message);
+    }
   }
 
   Future<Map<String, Object?>> _prepareClear(
@@ -1337,6 +1593,63 @@ const _idsSchema = {
   'maxItems': 512,
   'uniqueItems': true,
 };
+const _backupObjectsSchema = {
+  'type': 'array',
+  'minItems': 1,
+  'maxItems': 512,
+  'uniqueItems': true,
+  'items': {
+    'type': 'object',
+    'properties': {
+      'kind': {
+        'type': 'string',
+        'enum': [
+          'timetable',
+          'periodTimeSet',
+          'calendar',
+          'schoolSite',
+          'skill',
+          'memory',
+          'conversation',
+          'settings',
+          'deviceSettings',
+        ],
+      },
+      'id': _string,
+    },
+    'required': ['kind', 'id'],
+    'additionalProperties': false,
+  },
+};
+const _backupAttachmentIdsSchema = {
+  'type': 'array',
+  'items': _string,
+  'maxItems': 512,
+  'uniqueItems': true,
+};
+BackupSelection _backupSelection(Map<String, Object?> args) {
+  final values = args['objects'];
+  if (values is! List || values.isEmpty || values.length > 512) {
+    _invalid('Select a bounded nonempty object list from backups.inspect.');
+  }
+  final objects = values.map(BackupObjectKey.fromJson).toList();
+  if (objects.any((key) => key.kind == BackupObjectKind.attachment)) {
+    _invalid(
+      'Select conversations as objects and their bytes through attachmentIds.',
+    );
+  }
+  if (objects.toSet().length != objects.length) {
+    _invalid('Backup selections must be distinct.');
+  }
+  final files = args['attachmentIds'];
+  return BackupSelection(
+    objects: objects,
+    attachmentBytes: files is List && files.isEmpty
+        ? const []
+        : _ids(files, required: false),
+  );
+}
+
 const _offsetSchema = {'type': 'integer', 'minimum': 0};
 const _limitSchema = {'type': 'integer', 'minimum': 1, 'maximum': 100};
 const _weekSchema = {'type': 'integer', 'minimum': 1, 'maximum': 1000};

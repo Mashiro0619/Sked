@@ -180,13 +180,19 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
     Future<AgentArtifactWriteResult> saveArtifact(
       AgentDataArtifact artifact,
     ) async {
-      final result = await widget.agentExportService.saveFile(
-        ExportPayload(
-          fileName: artifact.name,
-          content: artifact.text,
-          mimeType: artifact.mimeType,
-        ),
-      );
+      final result = artifact.binaryBytes != null
+          ? await widget.agentExportService.saveBytes(
+              fileName: artifact.name,
+              bytes: artifact.binaryBytes!,
+              mimeType: artifact.mimeType,
+            )
+          : await widget.agentExportService.saveFile(
+              ExportPayload(
+                fileName: artifact.name,
+                content: artifact.text,
+                mimeType: artifact.mimeType,
+              ),
+            );
       return AgentArtifactWriteResult(
         saved: result.isSuccess,
         cancelled: result.status == ExportSaveStatus.cancelled,

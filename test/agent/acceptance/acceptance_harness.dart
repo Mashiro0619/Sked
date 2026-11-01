@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sked/agent/attachments/attachment_storage.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/provider/provider.dart';
@@ -181,11 +182,16 @@ class AcceptanceHarness {
 
   AppData get saved => AppData.decodeStorageSnapshot(storage.data.encode());
 
-  Future<void> initialize({AppData? data, ProviderClient? provider}) async {
+  Future<void> initialize({
+    AppData? data,
+    ProviderClient? provider,
+    AttachmentStorage? attachmentStorage,
+  }) async {
     storage = WorkspaceMemoryStorage(data ?? acceptanceData());
     app = await workspaceProvider(
       storage: storage,
       agentConversationStorage: conversations,
+      agentAttachmentStorage: attachmentStorage,
       agentCredentialStore: credentials,
       agentProvider: provider ?? _NoNetworkProvider(),
       devicePreferences: DevicePreferencesStore(

@@ -85,7 +85,7 @@ class DeviceToolAdapters {
   void _register() {
     _add(
       'device.layout.describe',
-      'Read all device panel roles and their explicitly saved dimensions. Null means automatic layout; device geometry is excluded from backups.',
+      'Read all device panel roles and their explicitly saved dimensions. Null means automatic layout. Device dimensions can be selected as a platform-specific backup group; unsupported target platforms keep their local settings.',
       const {},
       (args, _, _) async {
         _keys(args, {});

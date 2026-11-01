@@ -196,6 +196,7 @@ final readOnlyToolInventory = <String>{
   'file_imports.inspect',
   'exports.prepare',
   'backups.describe',
+  'backups.inspect',
   'workspaces.describe',
   'navigation.status',
   'courses.display.list',

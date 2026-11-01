@@ -389,7 +389,7 @@
     },
     {
       "id": "export-and-backup",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "title": "导出和备份",
       "summary": "按明确范围生成并核对可保存或分享的导出产物。",
       "triggers": [
@@ -399,7 +399,7 @@
         "备份数据"
       ],
       "asset": "export-and-backup/SKILL.md",
-      "contentSha256": "05299c0c8f4f2d178595a9a8bb0386681d2638c98682868ced9456a25dab6c6e",
+      "contentSha256": "1aedf28fc0963f8cb9b81790592dd0be655df771b08fb2ab90d5a473941e8d49",
       "sourceKinds": [],
       "requiredTools": [
         "timetables.list",
@@ -407,13 +407,14 @@
         "exports.prepare",
         "exports.write",
         "external.commit",
-        "external.status"
+        "external.status",
+        "backups.inspect"
       ],
       "optionalTools": []
     },
     {
       "id": "restore-and-clear",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "title": "恢复或清除数据",
       "summary": "通过维护工作流恢复或清除明确数据并核对新世代和外部效果。",
       "triggers": [
@@ -423,7 +424,7 @@
         "清空后退出"
       ],
       "asset": "restore-and-clear/SKILL.md",
-      "contentSha256": "5ae036766aea56fd767a12dd7a7624e030664edcd341c95e724ffa9ec8ffecb4",
+      "contentSha256": "0d317cb369e7056ac1fef584551ef645afa0d6fcfea57057aa3a7325bf44fa41",
       "sourceKinds": [
         "structured_file"
       ],
@@ -433,7 +434,8 @@
         "maintenance.prepare_clear",
         "external.commit",
         "external.status",
-        "external.reconcile"
+        "external.reconcile",
+        "backups.inspect"
       ],
       "optionalTools": []
     },

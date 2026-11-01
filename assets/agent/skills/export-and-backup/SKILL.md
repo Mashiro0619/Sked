@@ -1,6 +1,6 @@
 ---
 id: export-and-backup
-version: 1.0.1
+version: 1.1.0
 summary: 按明确范围生成并核对可保存或分享的导出产物。
 ---
 
@@ -20,12 +20,12 @@ summary: 按明确范围生成并核对可保存或分享的导出产物。
 
 ## 依赖工具
 
-必需：timetables.list、calendars.list、exports.prepare、exports.write、external.commit、external.status。无额外可选工具。 参数以宿主注册表schema为准。
+必需：timetables.list、calendars.list、backups.inspect、exports.prepare、exports.write、external.commit、external.status。无额外可选工具。 参数以宿主注册表schema为准。
 
 ## 操作步骤
 
 1. 明确资源范围、文件格式与目的地，检查隐藏或停用域的包含范围。
-2. 准备产物并读取内容与敏感字段策略；普通备份不包含密钥和执行授权。
+2. 可选备份先用 backups.inspect 分页读取对象 ID 与依赖，再以 exports.prepare 的 backup_zip 格式提供明确 objects。设备设置按来源平台及分组选取；聊天附件 metadata 随聊天保留，只有 attachmentIds 明确列出的二进制才纳入。未选择的聊天、Skills、记忆或设置不因“备份”二字自动加入。密钥、Cookie、系统授权和运行许可不导出。
 3. 通过受宿主权限约束的写入工作流生成文件；分别报告生成、保存和分享结果。
 4. 只读计划模式仅查询、分析与准备；每次修改前询问模式由宿主对本次完整计划询问；完全权限按有效授权连续执行。技能不自设权限，也不加固定额外审批。
 

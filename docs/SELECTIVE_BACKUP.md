@@ -67,3 +67,17 @@ ZIP v1 使用 `manifest.json`、逐对象 JSON 和按摘要标识的二进制文
 - [启动拥有关系](../test/widgets/app_bootstrap_test.dart)：租约、偏好创建与读取、主库载入、实例共用和关闭顺序。
 
 应用专项中的内存仓储、Widget 环境和偏好存储替身分别覆盖其实际范围；原生文件专项只证明所执行宿主上的文件恢复行为。它们不替代真实模型、浏览器刷新、原生文件选择器、系统授权或实体设备验收。
+
+## Agent 工具与产物保存
+
+`backups.inspect` 列出当前对象，或通过 `sourceId` 检查已附加的 ZIP 和旧完整 JSON；结果分页提供对象 ID 与依赖，后续选择使用这些确切 ID。设备对象同时提供来源平台、分组与 `supportedOnThisPlatform`。
+
+`exports.prepare` 使用 `format: 'backup_zip'`、`objects` 和 `attachmentIds` 生成固定的内存二进制产物。选中聊天会保留其附件元数据；文件字节必须独立选择。取消 Agent 运行作用域会中断仍在等待的附件读取，未完成的产物不会发布。
+
+`exports.write` 准备保存操作，`external.commit` 才调用宿主保存。宿主对二进制产物使用 `ExportService.saveBytes`，文本产物继续使用 `saveFile`；结果应报告实际保存、取消或失败，生成归档字节本身不表示文件已经保存。
+
+`backups.prepare_restore` 明确提供对象时使用选择性恢复，预览以 `unsupportedGroups` 列出异平台设备分组，完成结果以 `skippedDeviceGroups` 报告跳过项并保留本机设置。未提供对象的调用保留旧完整 JSON 恢复兼容路径。恢复由应用持有固定 journal，排空运行时只排除正在等待本次结果的发起 Agent 运行，避免等待自身。
+
+内置 `export-and-backup` 与 `restore-and-clear` Skills 的 1.1.0 版本说明对象选择和设备兼容性，继续遵守现有三种权限模式。
+
+[Agent 工具回归](../test/backup/selective_backup_tools_test.dart)覆盖对象选择、权限、设备偏好拥有者、异平台预览与跳过、附件读取取消、选择性恢复和发起者排空。模型与保存目的地使用确定性替身，测试范围不包含实际平台文件选择器、真实模型 API 或实体设备验收。

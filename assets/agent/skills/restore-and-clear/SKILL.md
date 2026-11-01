@@ -1,6 +1,6 @@
 ---
 id: restore-and-clear
-version: 1.0.1
+version: 1.1.0
 summary: 通过维护工作流恢复或清除明确数据并核对新世代和外部效果。
 ---
 
@@ -20,14 +20,15 @@ summary: 通过维护工作流恢复或清除明确数据并核对新世代和�
 
 ## 依赖工具
 
-必需：backups.describe、backups.prepare_restore、maintenance.prepare_clear、external.commit、external.status、external.reconcile。无额外可选工具。 参数以宿主注册表schema为准。
+必需：backups.describe、backups.inspect、backups.prepare_restore、maintenance.prepare_clear、external.commit、external.status、external.reconcile。无额外可选工具。 参数以宿主注册表schema为准。
 
 ## 操作步骤
 
 1. 明确恢复或清除的范围，读取主库、学校会话、凭据和平台效果的完整影响。
-2. 使用宿主维护计划和当前权限执行，不直接拼接空AppData，也不另加技能私有审批。
-3. 按操作ID跟踪维护阶段和新数据世代，旧计划必须失效；报告数据已变更与未完成外部效果。
-4. 只读计划模式仅查询、分析与准备；每次修改前询问模式由宿主对本次完整计划询问；完全权限按有效授权连续执行。技能不自设权限，也不加固定额外审批。
+2. ZIP 与旧 JSON 都先通过 backups.inspect 的 sourceId 读取对象清单，再向 backups.prepare_restore 提供同一 sourceId、明确 objects 与独立 attachmentIds。按 ID 替换或新增，未选对象保留；共享依赖冲突由宿主复制重绑或要求补选，不能凭同名合并。设备设置需核对 supportedOnThisPlatform 与计划中的 unsupportedGroups；跳过的异平台分组保留本机设置，不能报告为已经恢复。聊天只恢复历史，不恢复旧运行和授权。
+3. 使用宿主维护计划和当前权限执行，不直接拼接空AppData，也不另加技能私有审批。已开始的跨库恢复按固定日志完成；失败后先恢复原计划，不准备第二次恢复。
+4. 按操作ID跟踪维护阶段和新数据世代，旧计划必须失效；报告数据已变更与未完成外部效果。
+5. 只读计划模式仅查询、分析与准备；每次修改前询问模式由宿主对本次完整计划询问；完全权限按有效授权连续执行。技能不自设权限，也不加固定额外审批。
 
 ## 业务注意事项
 
