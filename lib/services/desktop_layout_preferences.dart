@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'device_preferences_models.dart';
+
 /// Stable presentation roles, never individual course, event or task ids.
 enum DesktopLayoutRegion {
   resources,
@@ -68,7 +70,8 @@ class PreferredRegionSize {
   int get hashCode => Object.hash(width, height, dockedWidth);
 }
 
-/// Device-only geometry; it never participates in AppData or app backups.
+/// Device geometry stays outside AppData. Selective backups carry only an
+/// explicitly selected group tagged with its source platform.
 ///
 /// Hosts own their window and text-scale constraints. Only explicit user
 /// choices belong here, not the constrained size measured during layout.
@@ -108,8 +111,12 @@ class DesktopLayoutPreferences extends ChangeNotifier {
   }
 
   static const storageKey = 'sked.desktop.layout.v1';
-  static Future<Object?> _readStored() async =>
-      (await SharedPreferences.getInstance()).get(storageKey);
+  static Future<Object?> _readStored() async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.reload();
+    return preferences.get(storageKey);
+  }
+
   static Future<bool> _writeStored(String source) async =>
       (await SharedPreferences.getInstance()).setString(storageKey, source);
   static Future<bool> _removeStored() async =>
@@ -126,6 +133,7 @@ class DesktopLayoutPreferences extends ChangeNotifier {
   var _loaded = false;
   var _disposed = false;
   var _frozen = false;
+  var _restoreFrozen = false;
   Object? _error;
   Timer? _saveTimer;
   Future<void>? _loading;
@@ -143,7 +151,7 @@ class DesktopLayoutPreferences extends ChangeNotifier {
   /// Replaces one role. An empty value removes its explicit preference.
   /// Use [PreferredRegionSize.copyWith] to retain another mode's dimensions.
   void setPreferredSize(DesktopLayoutRegion region, PreferredRegionSize size) {
-    if (_disposed || _frozen) return;
+    if (_disposed || _frozen || _restoreFrozen) return;
     for (final value in [size.width, size.height, size.dockedWidth]) {
       if (value != null && (!value.isFinite || value <= 0)) {
         throw ArgumentError.value(value, 'size', 'Must be finite and positive');
@@ -236,8 +244,85 @@ class DesktopLayoutPreferences extends ChangeNotifier {
   }
 
   Future<bool> retry() {
+    if (_restoreFrozen) return Future.value(false);
     if (hasError && !hasUnsavedChanges && _flushing == null) _loaded = false;
     return flush();
+  }
+
+  /// Blocks new geometry changes synchronously, while flush still drains the
+  /// edits that were accepted before the restore boundary.
+  Future<void> freezeAndDrainForRestore() async {
+    if (_disposed || _frozen) throw StateError('Device layout is unavailable');
+    _restoreFrozen = true;
+    if (!await flush()) {
+      throw StateError('Device layout has unconfirmed saved changes');
+    }
+  }
+
+  Future<Map<String, Object?>> readBackupSnapshot() async {
+    if (_disposed || _frozen) throw StateError('Device layout is unavailable');
+    await _loading;
+    await _flushing;
+    if (hasUnsavedChanges) {
+      throw StateError('Device layout has unsaved changes');
+    }
+    final raw = await _read();
+    if (raw != null && raw is! String) {
+      throw const FormatException('Stored device layout is not text');
+    }
+    final Object? decoded = raw == null
+        ? {'version': 1, 'regions': <String, Object?>{}}
+        : jsonDecode(raw as String);
+    if (decoded is! Map ||
+        decoded.length != 2 ||
+        decoded['version'] != 1 ||
+        !decoded.containsKey('regions')) {
+      throw const FormatException('Unsupported stored device layout');
+    }
+    final result = validateDevicePreferenceValues(
+      DevicePreferenceGroup.desktopLayout,
+      {'regions': decoded['regions']},
+    );
+    if (hasUnsavedChanges) {
+      throw StateError('Device layout changed while reading');
+    }
+    if (_restoreFrozen) {
+      _values
+        ..clear()
+        ..addAll(_decode(jsonEncode({'version': 1, ...result})));
+      _loaded = true;
+      _ready = true;
+      _error = null;
+      _changed();
+    }
+    return result;
+  }
+
+  Future<void> restoreBackupSnapshot(
+    Map<String, Object?> values, {
+    required void Function() validateOwner,
+  }) async {
+    validateOwner();
+    if (!_restoreFrozen || _disposed || _frozen || hasUnsavedChanges) {
+      throw StateError('Device layout restore does not own the store');
+    }
+    final target = validateDevicePreferenceValues(
+      DevicePreferenceGroup.desktopLayout,
+      values,
+    );
+    final saved = (target['regions'] as Map).isEmpty
+        ? await _remove()
+        : await _write(jsonEncode({'version': 1, ...target}));
+    validateOwner();
+    if (!saved) throw StateError('Device layout restore was not confirmed');
+    final actual = await readBackupSnapshot();
+    if (!_sameBackupValues(actual, target)) {
+      throw StateError('Device layout restore did not persist its target');
+    }
+  }
+
+  void resumeAfterBackupRestore() {
+    if (!_disposed) _restoreFrozen = false;
   }
 
   Future<void> _performFlush(Completer<bool> completion) async {
@@ -363,4 +448,18 @@ class DesktopLayoutPreferences extends ChangeNotifier {
     _saveTimer?.cancel();
     super.dispose();
   }
+}
+
+bool _sameBackupValues(
+  Map<String, Object?> first,
+  Map<String, Object?> second,
+) {
+  final a = first['regions'] as Map, b = second['regions'] as Map;
+  if (a.length != b.length) return false;
+  return a.entries.every((entry) {
+    final dimensions = entry.value as Map, other = b[entry.key];
+    return other is Map &&
+        dimensions.length == other.length &&
+        dimensions.entries.every((size) => other[size.key] == size.value);
+  });
 }
