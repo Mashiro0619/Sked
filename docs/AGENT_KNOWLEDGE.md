@@ -41,6 +41,6 @@
 - [选择恢复的知识参与方](../test/agent/knowledge/knowledge_selective_restore_test.dart)：保留未选对象、较大选集单次侧库保存、拒绝过期目标与失效所有权，以及未知写入后读取实际结果。
 - [技能与记忆服务](../test/agent/knowledge/knowledge_service_test.dart)：原版覆盖、启停独立、运行快照、自定义发现及旧引用。
 - [运行中的技能版本](../test/agent/knowledge/knowledge_scope_snapshot_test.dart)：首次宿主动作按需读取知识，当前范围固定版本，后续范围读取已修改内容。
-- [真实工具宿主](../test/agent/tools/knowledge_tool_adapters_test.dart)：三种权限、完整审批、回执不含正文、用户并发编辑和逆操作。
+- [真实工具宿主](../test/agent/tools/knowledge_tool_adapters_test.dart)：三种权限、完整审批、回执不含正文、Skill 依赖字段与原版覆盖／启停／恢复，以及缺失记录、旧版本和失效逆操作的错误与无写入结果。
 - [设置编辑器](../test/agent/ui/agent_knowledge_view_test.dart)：持久修改、撤销、保留冲突草稿及大字号入口。
 - [应用生命周期](../test/agent/knowledge/knowledge_lifecycle_test.dart)：默认开启时按需读取、维护排空、清空成功及失败后的实际存储恢复。

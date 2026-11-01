@@ -155,6 +155,166 @@ void main() {
     expect(repository.records, hasLength(1));
   });
 
+  Future<void> expectPrepareRefusal(
+    String tool,
+    Map<String, Object?> arguments,
+    OperationErrorCode code,
+  ) async {
+    final knowledgeBefore = repository.snapshot.encode();
+    final businessBefore = jsonEncode(host.session.committedData.toJson());
+    final writesBefore = knowledgeStorage.writes;
+    await expectLater(
+      host.call(tool, arguments),
+      throwsA(
+        isA<OperationProblem>().having((error) => error.code, 'code', code),
+      ),
+    );
+    expect(repository.snapshot.encode(), knowledgeBefore);
+    expect(jsonEncode(host.session.committedData.toJson()), businessBefore);
+    expect(knowledgeStorage.writes, writesBefore);
+  }
+
+  test('custom Skill tool preserves guidance, triggers and dependency fields in actual storage', () async {
+    final plan = await host.call('skills.prepare', {
+      'action': 'create',
+      'title': 'Evening study',
+      'summary': 'Review the saved agenda',
+      'body': 'Read the current agenda before proposing evening study.',
+      'sourceNote': 'Synthetic user guidance',
+      'triggers': ['evening study', 'revision'],
+      'requiredTools': ['agenda.query'],
+      'optionalTools': ['uninstalled.optional'],
+    });
+    final result = await host.externalCommit(plan);
+    expect(result['effectStatus'], 'applied');
+    expect(result['dataStatus'], 'committed');
+    final stored = (await knowledgeStorage.load()).archive.records.single;
+    expect(stored.kind, KnowledgeKind.skill);
+    expect(stored.builtIn, isFalse);
+    expect(stored.usesOriginal, isFalse);
+    expect(stored.title, 'Evening study');
+    expect(stored.summary, 'Review the saved agenda');
+    expect(
+      stored.body,
+      'Read the current agenda before proposing evening study.',
+    );
+    expect(stored.sourceNote, 'Synthetic user guidance');
+    expect(stored.triggers, ['evening study', 'revision']);
+    expect(stored.requiredTools, ['agenda.query']);
+    expect(stored.optionalTools, ['uninstalled.optional']);
+    final read = await host.call('skills.get', {'id': stored.id});
+    expect(read['missingTools'], isEmpty);
+    expect(read['body'], stored.body);
+    expect(read['revision'], stored.revision);
+
+    await expectPrepareRefusal('skills.prepare', {
+      'action': 'update',
+      'id': stored.id,
+      'revision': stored.revision,
+      'requiredTools': ['agenda.query', 'agenda.query'],
+    }, OperationErrorCode.invalidArgument);
+    await expectPrepareRefusal('skills.prepare', {
+      'action': 'restoreOriginal',
+      'id': stored.id,
+      'revision': stored.revision,
+    }, OperationErrorCode.invalidArgument);
+  });
+
+  test('built-in Skill tool edits, disables and restores the original without re-enabling it', () async {
+    final original = await host.call('skills.get', {'id': 'read-agenda'});
+    final edit = await host.call('skills.prepare', {
+      'action': 'update',
+      'id': 'read-agenda',
+      'revision': original['revision'],
+      'title': 'My agenda guidance',
+      'body': 'Local shared guidance for the next run.',
+    });
+    await host.externalCommit(edit);
+    var current = await host.call('skills.get', {'id': 'read-agenda'});
+    expect(current['usesOriginal'], isFalse);
+    expect(current['body'], 'Local shared guidance for the next run.');
+    expect(current['title'], 'My agenda guidance');
+    expect(current['requiredTools'], original['requiredTools']);
+
+    final disable = await host.call('skills.prepare', {
+      'action': 'setEnabled',
+      'id': 'read-agenda',
+      'revision': current['revision'],
+      'enabled': false,
+    });
+    await host.externalCommit(disable);
+    current = await host.call('skills.get', {'id': 'read-agenda'});
+    expect(current['enabled'], isFalse);
+    expect(current['usesOriginal'], isFalse);
+    expect(current['body'], 'Local shared guidance for the next run.');
+    final restore = await host.call('skills.prepare', {
+      'action': 'restoreOriginal',
+      'id': 'read-agenda',
+      'revision': current['revision'],
+    });
+    await host.externalCommit(restore);
+    final restored = await host.call('skills.get', {'id': 'read-agenda'});
+    expect(restored['enabled'], isFalse);
+    expect(restored['usesOriginal'], isTrue);
+    expect(restored['body'], original['body']);
+    expect(restored['title'], original['title']);
+    expect(restored['requiredTools'], original['requiredTools']);
+    final persisted = (await knowledgeStorage.load()).archive.records.single;
+    expect(persisted.enabled, isFalse);
+    expect(persisted.usesOriginal, isTrue);
+    await expectPrepareRefusal('skills.prepare', {
+      'action': 'delete',
+      'id': 'read-agenda',
+      'revision': restored['revision'],
+    }, OperationErrorCode.invalidArgument);
+  });
+
+  test('memory preparation reports missing IDs and stale revisions without accepting a write', () async {
+    final create = await host.call('memories.prepare', {
+      'action': 'create',
+      'title': 'Stable preference',
+      'body': 'Keep the existing preference.',
+    });
+    await host.externalCommit(create);
+    final current = repository.records.single;
+    await expectPrepareRefusal('memories.prepare', {
+      'action': 'update',
+      'id': 'missing-memory',
+      'revision': current.revision,
+      'body': 'Must not be created implicitly.',
+    }, OperationErrorCode.invalidArgument);
+    await expectPrepareRefusal('memories.prepare', {
+      'action': 'update',
+      'id': current.id,
+      'revision': current.revision - 1,
+      'body': 'Must not replace the newer value.',
+    }, OperationErrorCode.conflict);
+    expect(repository.records.single.body, 'Keep the existing preference.');
+  });
+
+  test('knowledge inverse tool rejects a missing receipt and a later user edit without any inverse write', () async {
+    await expectPrepareRefusal('knowledge.undo.prepare', {
+      'targetOperationId': 'missing-operation',
+    }, OperationErrorCode.conflict);
+    final create = await host.call('memories.prepare', {
+      'action': 'create',
+      'title': 'Study preference',
+      'body': 'An Agent-created preference.',
+    });
+    await host.externalCommit(create);
+    final current = repository.records.single;
+    await service.saveFromUi(
+      service.prepareSave(
+        current.copyWith(body: 'The user changed this preference.'),
+      ),
+    );
+    await expectPrepareRefusal('knowledge.undo.prepare', {
+      'targetOperationId': create['operationId'],
+    }, OperationErrorCode.conflict);
+    expect(repository.records.single.body, 'The user changed this preference.');
+    expect(repository.snapshot.tombstones, isEmpty);
+  });
+
   for (final stop in [true, false]) {
     test(
       'queued knowledge edit reports no effect after ${stop ? 'stop' : 'permission tightening'}',
