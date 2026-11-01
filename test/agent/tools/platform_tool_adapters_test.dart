@@ -79,6 +79,19 @@ class _Gateway extends MemoryAgendaNotificationGateway {
   int permissionRequests = 0;
   int exactRequests = 0;
   int settingsRequests = 0;
+  int scheduleCalls = 0;
+  Object? scheduleError;
+
+  @override
+  Future<void> schedule(
+    AgendaNotificationRequest request, {
+    required bool exact,
+  }) async {
+    scheduleCalls++;
+    if (scheduleError != null) throw scheduleError!;
+    await super.schedule(request, exact: exact);
+  }
+
   @override
   Future<bool> requestPermission() async {
     permissionRequests++;
@@ -221,6 +234,147 @@ void main() {
     expect(result['dataStatus'], 'unchanged');
     expect(storage.saves, 2);
   });
+
+  for (final observed in [
+    AgendaNotificationExactAlarmState.inexact,
+    AgendaNotificationExactAlarmState.exact,
+  ]) {
+    test(
+      'Android exact-alarm request reports observed ${observed.name} and replays without another request',
+      () async {
+        gateway.exact = observed;
+        final original = session.committedData.toJson()
+          ..remove('applicationLedger');
+        final plan = await call('notifications.exact_alarm.prepare');
+        expect(gateway.exactRequests, 0);
+        expect(storage.saves, 0);
+        final result = await commit(plan);
+        expect(gateway.exactRequests, 1);
+        expect(
+          result['effectStatus'],
+          observed == AgendaNotificationExactAlarmState.exact
+              ? 'applied'
+              : 'failed',
+        );
+        expect(result['dataStatus'], 'unchanged');
+        expect(result['effectResult'], containsPair('requestCompleted', true));
+        expect(
+          (result['effectResult'] as Map)['platform'],
+          containsPair('exactAlarm', observed.name),
+        );
+        expect(
+          session.committedData.toJson()..remove('applicationLedger'),
+          original,
+        );
+        final retry = await call('notifications.exact_alarm.prepare', {
+          'operationId': plan['operationId'],
+        });
+        expect((await commit(retry))['replayed'], isTrue);
+        expect(gateway.exactRequests, 1);
+      },
+    );
+  }
+
+  Future<AppData> seedFutureReminder() async {
+    final base = session.committedData;
+    final data = base.copyWith(
+      enabledWorkspaces: {AppMode.student, AppMode.general},
+      generalMode: base.generalMode.copyWith(
+        activeScheduleId: 'reconcile-calendar',
+        schedules: [
+          GeneralSchedule(
+            id: 'reconcile-calendar',
+            name: 'Future reminders',
+            events: [
+              GeneralEvent(
+                id: 'reconcile-event',
+                calendarId: 'reconcile-calendar',
+                title: 'Only the committed reminder',
+                startDateTimeIso: '2026-10-30T09:00:00.000',
+                endDateTimeIso: '2026-10-30T10:00:00.000',
+                reminderBehavior: GeneralEventReminderBehavior.inherit,
+              ),
+            ],
+          ),
+        ],
+      ),
+      notificationSettings: const NotificationSettings(
+        enabled: true,
+        generalDefaultMinutesBefore: 10,
+        lockScreenShowTitles: true,
+      ),
+    );
+    await session.commitMutation(
+      (_) => data,
+      expectedEpoch: session.mutationEpoch,
+    );
+    notifications.dispose();
+    notifications = AgendaNotificationService(
+      gateway: gateway,
+      runtimeStore: MemoryAgendaNotificationRuntimeStore(),
+      enabled: true,
+      now: () => DateTime(2026, 10, 30, 7),
+    )..committedDataReader = () => session.committedData;
+    register();
+    return session.committedData;
+  }
+
+  for (final failSchedule in [false, true]) {
+    test(
+      'notification reconcile tool ${failSchedule ? 'retains unknown failure without replaying' : 'schedules the committed event without claiming delivery'}',
+      () async {
+        final data = await seedFutureReminder();
+        final original = data.toJson()..remove('applicationLedger');
+        final plan = await call('notifications.reconcile.prepare');
+        expect(gateway.scheduleCalls, 0);
+        expect(gateway.scheduled, isEmpty);
+        if (failSchedule) {
+          gateway.scheduleError = StateError('Synthetic scheduler failure');
+        }
+        final result = await commit(plan);
+        expect(result['effectStatus'], failSchedule ? 'unknown' : 'applied');
+        expect(
+          session.committedData.toJson()..remove('applicationLedger'),
+          original,
+        );
+        expect(gateway.scheduleCalls, 1);
+        if (failSchedule) {
+          expect(result['recoveryRequired'], isTrue);
+          expect(
+            result['effectResult'],
+            containsPair('exactOperationVerified', false),
+          );
+          expect(gateway.scheduled, isEmpty);
+          final checked = await call('external.reconcile', {
+            'operationId': plan['operationId'],
+          });
+          expect(checked['effectStatus'], 'unknown');
+          expect(
+            checked['effectResult'],
+            containsPair('exactOperationVerified', false),
+          );
+        } else {
+          expect(
+            result['effectResult'],
+            containsPair('deliveryVerified', false),
+          );
+          expect((result['effectResult'] as Map)['dataVersion'], isNotEmpty);
+          final request = gateway.scheduled.values.single;
+          expect(request.title, 'Only the committed reminder');
+          expect(request.fireAt, DateTime(2026, 10, 30, 8, 50));
+          expect(
+            result['effectResult'],
+            containsPair('directScheduledCount', 1),
+          );
+          final retry = await call('notifications.reconcile.prepare', {
+            'operationId': plan['operationId'],
+          });
+          expect((await commit(retry))['replayed'], isTrue);
+        }
+        expect(gateway.scheduleCalls, 1);
+      },
+    );
+  }
 
   test('diagnostic notifications have permission and replay gates and clear only tests', () async {
     final request = {'action': 'thirty_seconds', 'channel': 'course'};

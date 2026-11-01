@@ -54,7 +54,7 @@ Windows 学校页面清理需要等待锁定 WebView 插件 `dispose` 通道的�
 
 连接诊断使用合成小请求，分别报告收到有效响应与观察到工具调用，不使用私人课表或聊天。模型目录只使用已配置来源的已知路径或明确的同源地址，拒绝重定向、超时、超量和无效响应；完整目录保存在操作回执中，分页读取不重复联网。诊断测试覆盖协议、取消与输出边界，不能代替具体服务、账号、原生 keyring 或实体设备验收。见 [诊断协议](../test/agent/connection/agent_connection_diagnostics_test.dart) 与 [连接工具](../test/agent/tools/agent_control_tool_adapters_test.dart)。
 
-系统通知的兼容接口返回值不作为权限事实。打开设置不表示授权成功，OEM 自启动状态可保持 unknown。稍后提醒只作用于当前有效通知身份，读回保存的时间也不证明系统已投递；诊断通知与清除诊断通知不改变生产提醒。Windows 原生状态、Android 通知/后台行为及构建结果分别验收。见 [平台适配](../test/agent/tools/platform_tool_adapters_test.dart) 与 [通知服务](../test/services/agenda_notification_service_test.dart)。
+系统通知的兼容接口返回值不作为权限事实。打开设置不表示授权成功，OEM 自启动状态可保持 unknown。稍后提醒只作用于当前有效通知身份，读回保存的时间也不证明系统已投递；诊断通知与清除诊断通知不改变生产提醒。精确闹钟工具核对实际观测状态，不以兼容接口返回 true 当作授权；通知重建工具使用已提交日程，报告排程结果及未验证投递，结果未知后的核对不重复排程。Windows 原生状态、Android 通知/后台行为及构建结果分别验收。见 [平台适配](../test/agent/tools/platform_tool_adapters_test.dart) 与 [通知服务](../test/services/agenda_notification_service_test.dart)。
 
 文件夹具不能证明真实断电恢复或原生 keyring 迁移；显式退出保存不能保证操作系统强杀前落盘。通知重排、权限撤回、后台回收与厂商限制应结合 [通知验收矩阵](ANDROID_NOTIFICATION_ACCEPTANCE.md) 验证。
 
