@@ -6,16 +6,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'support/agent_attachment_journey.dart';
 import 'support/agent_feature_journey.dart';
+import 'support/agent_history_journey.dart';
 import 'support/agent_knowledge_journey.dart';
 import 'support/agent_native_session.dart';
 
 AgentNativeFeature _feature(String name) => switch (name) {
   'knowledge' => AgentKnowledgeJourney(),
   'attachments' => AgentAttachmentJourney(),
+  'history' => AgentHistoryJourney(),
   _ => throw ArgumentError.value(
     name,
     'SKED_AGENT_FEATURE_JOURNEY',
-    'Use knowledge or attachments.',
+    'Use knowledge, attachments or history.',
   ),
 };
 

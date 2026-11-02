@@ -5,6 +5,7 @@ import 'package:crypto/crypto.dart';
 import 'package:integration_test/integration_test_driver.dart';
 
 import 'support/agent_attachment_journey_assessor.dart';
+import 'support/agent_history_journey_assessor.dart';
 import 'support/report_output_directory.dart';
 
 const _protocol = 'agent-native-feature-journey-v1';
@@ -68,6 +69,7 @@ Future<void> main() => integrationDriver(
     for (final path in {
       ..._relevantSources,
       ...agentAttachmentRelevantSources,
+      ...agentHistoryRelevantSources,
     }) {
       try {
         final file = File(path);
@@ -722,6 +724,14 @@ String _validate(Object? value) {
       );
       validateAgentAttachmentJourney(report);
       return 'attachments';
+    case 'history':
+      _validateFeatureBase(
+        report,
+        feature: 'history',
+        expectedCheckpoints: agentHistoryCheckpoints,
+      );
+      validateAgentHistoryJourney(report);
+      return 'history';
     default:
       throw StateError(
         'No native feature assessor is implemented for ${report['feature']}.',

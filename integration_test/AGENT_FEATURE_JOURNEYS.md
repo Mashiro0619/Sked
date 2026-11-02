@@ -1,6 +1,6 @@
 # Agent 原生功能旅程
 
-入口为 `agent_feature_journeys_test.dart`，driver 为 `../test_driver/agent_feature_journeys_driver.dart`。`SKED_AGENT_FEATURE_JOURNEY` 显式选择 `knowledge` 或 `attachments`，各自使用独立进程、检查点和结果校验。审批、历史撤销、选择性恢复和原生系统能力仍需要各自的旅程，不能由这两组结果代替。
+入口为 `agent_feature_journeys_test.dart`，driver 为 `../test_driver/agent_feature_journeys_driver.dart`。`SKED_AGENT_FEATURE_JOURNEY` 显式选择 `knowledge`、`attachments` 或 `history`，各自使用独立进程、检查点和结果校验。审批、选择性恢复和原生系统能力仍需要各自的旅程，不能由这些结果代替。
 
 ## knowledge 的固定流程
 
@@ -68,7 +68,7 @@ try {
 
 `accessible` 单独运行，改动配置和标签并新建输出目录；Android 改用 `flutter devices` 中本轮核实的设备 ID，同时记录模拟器/设备来源。`SKED_AGENT_NATIVE_SOURCE_NOTE` 可以补充候选来源，但不能代替完整 SHA 和构建输入核对。
 
-driver 使用协议 `agent-native-feature-journey-v1`，先保存原始响应和其 checkout 中相关源码的 SHA-256，再校验 knowledge 专属的有序检查点、实际记录读回、版本变化、草稿/历史、零请求和完整清理。已有报告文件拒绝覆盖。配置错误、UI 失败和清理失败均保留在 `agent-feature-journey-raw.json`；`agent-feature-journey-assessment.json` 记录 driver 的通过或失败判断。未产生响应、进程崩溃或设备断开仍需保留命令日志，不能制造完整 JSON 证据。
+driver 使用协议 `agent-native-feature-journey-v1`，先保存原始响应和其 checkout 中相关源码的 SHA-256，再校验所选功能的有序检查点、实际存储读回、草稿/历史、对应请求次数和完整清理。已有报告文件拒绝覆盖。配置错误、UI 失败和清理失败均保留在 `agent-feature-journey-raw.json`；`agent-feature-journey-assessment.json` 记录 driver 的通过或失败判断。未产生响应、进程崩溃或设备断开仍需保留命令日志，不能制造完整 JSON 证据。
 
 JSON 通过之后，仍需复核本轮原生进程日志中的 Flutter 错误、AXTree 或平台 fatal 信息。原生运行、模拟器、框架配置、实际系统能力与实体设备结果分别记录，不能互相替代。运行报告和日志保留在系统临时目录供检查，不提交到仓库；清理时只处理本轮拥有且已核对绝对路径的目录。
 
@@ -87,3 +87,19 @@ JSON 通过之后，仍需复核本轮原生进程日志中的 Flutter 错误、
 输入来自 `XFile.fromData`，不创建源文件或读取个人路径。文件选择器及 HTTP transport 均为本旅程显式拥有的合成边界；本轮不证明系统文件对话框、文件权限、外部分享、真实模型或跨进程附件重启恢复。故障注入、取消、未知投递及原生存储重开仍按[附件协议](../docs/AGENT_ATTACHMENTS.md)的对应验证入口分别记录。
 
 中央 driver 先验证原生环境、源码、框架配置、主页入口和运行时清理，再调用附件专属 assessor 核对实际字节、稳定引用、显式操作和精确请求计数。新增其他 feature 必须显式添加完整检查点及专属 assessor，未知名称直接失败，不能靠任意自报检查点获得通过。
+
+## history 的固定流程
+
+在独立进程中选择 `SKED_AGENT_FEATURE_JOURNEY=history`，另设本轮标签和新的系统 Temp 输出目录。继续使用真实主页、`AgentNativeSession` 的明确合成存储，以及同一平台与框架配置。Windows 使用独立测试 checkout/build tree 和非空 `SKED_WINDOWS_TEST_NAMESPACE`；最终 `flutter drive` 必须使用已经核对过该 namespace 的同一 CMakeCache。参见 [Windows 原生验收](../docs/WINDOWS_NATIVE_ACCEPTANCE.md)。
+
+1. 从正式主页进入当前 Agent 长会话，经可见输入框和发送按钮发出一个合成请求。受控 provider 只返回 `capabilities.describe → mutation.prepare → mutation.commit` 的真实工具调用，以及最终文字回复。应用工具创建一个隐藏的空合成日历；旅程通过生产 codec 读回主库和聊天，核对真实可逆回执及宿主记录的运行/工具/轮次归属。
+2. 再通过输入框发送一个后续纯文字请求。保留两个独立轮次，原日历操作仍只属于首轮。
+3. 点击实际回复的“重新生成回复”按钮。受控 provider 检查这次请求没有工具目录，只返回新文字。原回复 ID、消息顺序、操作归属和主库保持不变，两份回复文字版本均保留；同时读取实际 RenderParagraph / RenderEditable 核对可见的新正文。
+4. 保存一条未发送的聊天草稿。通过首轮用户消息的“编辑并重做”进入实际对话框，修改文字后点击“取消”；聊天内容、主库和 provider 次数不变。重新打开同一对话框，实际输入框仍保存刚取消的编辑内容，聊天输入草稿保持独立。
+5. 点击实际确认按钮。正式历史协调器完整预检并撤销原日历创建，保留两个旧轮次和旧消息后缀，再仅执行选中的一个编辑后请求。通过真实主库逆回执、持久批次与存档读回核对：只有一次逆操作、批次完成、原日历已消失、除操作账本外的全部主库字段恢复原值；后续旧请求不重放。历史预约和恢复标记释放，普通聊天与主库可继续写入。 若阅读位置仍在旧历史中，通过实际“回到最新”按钮查看重做后的回复；核对可点击状态和真实渲染正文，不以固定次数滚动代替完整长历史中的正式导航。
+6. 从会话菜单打开“消息历史”，分别展开旧后缀和两份回复版本。核对实际可见旧文字，关闭对话框后请求数、当前上下文与存储摘要不变，未发草稿保持。原 512 条历史、短对照会话和共享知识也保持各自原状态。
+7. 沿公共清理流程卸载界面，排空写入并关闭运行时、仓储、provider 和偏好。provider 和 transport 均只关闭一次；本功能不安装文件选择器或平台 channel 替身。
+
+provider 固定为七次本地受控响应：首轮四次、后续文字一次、重新生成一次、编辑重做一次。普通请求保持正式工具目录，只有重新生成请求为空；重做请求不得包含已退役的两条用户消息，也不得发送仍在输入框中的草稿。原始报告记录各次用户消息列表、工具名、工具参数和实际回执来源；不记录凭据。注入的 HTTP client 拒绝任何发送，不访问真实模型。
+
+这组验证的是原生 Flutter 产品 UI、正式历史协调器、主库撤销及纯文字重新生成的组合。它不注入存储故障，也不覆盖跨仓储中断、知识逆变更、恢复后继续、冲突降级、原生文件持久化、系统强杀、真实模型或实体设备。相关故障/恢复证明仍分别见 [历史协议](../docs/AGENT_HISTORY.md) 中的专项入口。界面打开、返回、主题和 2× 字号是实际运行配置的证据，不等同于 OS IME、物理手势或原生无障碍验收。
