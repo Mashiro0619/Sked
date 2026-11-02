@@ -48,6 +48,8 @@ Windows 学校页面清理需要等待锁定 WebView 插件 `dispose` 通道的�
 
 清空前先停止运行并排空已接受写入，冻结会话存储，再处理网页会话、通知运行时、设备偏好、应用数据及安全存储。安全存储删除要读回确认；退出回调返回或失败后，独立会话库也不能重新写回已删除内容。清理失败可能留下部分结果，不能自动把旧内存快照当作完整存档继续写入；会话恢复需重新读取存储。见 [组合层回归](../test/agent/agent_application_test.dart) 与 [清空服务](../test/services/app_data_clear_service_io_test.dart)。
 
+[原生清空组合回归](../test/services/app_data_clear_service_io_test.dart)通过真实文件拥有者写入主库、聊天和附件引用、共享技能与记忆、历史恢复标记、选择恢复 journal 和二进制暂存，先读回内容，再统一清空并使用新拥有者核对空库、空标记及缺失文件。测试仅使用系统临时目录中的合成内容；凭据和网页会话是明确替身，原生 keyring、WebView 与进程强杀仍需单独验收。
+
 学校网页交接的来源、首条消息和交接标识一起持久化，普通文件附件按本地添加流程单独保存到会话。成功删除同步两个存储副本，迟到模型响应不能复活会话。归档和删除先处理当前运行，删除聊天不撤销业务操作。保留策略只清理超过期限、无草稿、无运行或排队输入的已完成会话；中断运行与需要核对的结果不自动重放。上下文摘要不改写原始消息，不冒充实时数据查询。见 [会话仓库](../test/agent/conversations/conversation_repository_test.dart)、[上下文](../test/agent/runtime/conversation_context_test.dart) 与 [会话工具](../test/agent/tools/conversation_tool_adapters_test.dart)。
 
 二进制会话附件先完成私有存储写入和读回核验，再发布草稿引用，不自动调用模型；每份上限 32 MB，每条消息最多 20 份，请求原始字节合计上限 48 MB。原生私有文件与 Web IndexedDB Blob 使用相同的长度、摘要、取消和引用规则；请求按原生协议编码，文本上下文与 Base64 开销分别核算。重试复用已核验文件身份，最终读回核验仍可取消；会话、消息边界和数据世代变化后拒绝发布旧引用。未发布的重试缓冲不等同于持久草稿。见[附件协议与验证入口](AGENT_ATTACHMENTS.md)、[应用生命周期](../test/agent/attachments/attachment_application_lifecycle_test.dart)和[聊天入口](../test/agent/ui/agent_binary_attachment_view_test.dart)。旧网页/文本来源接口仍保留原有严格 UTF-8 和小文本预算，不作为二进制文件入口的限制。

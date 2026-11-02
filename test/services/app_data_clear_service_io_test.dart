@@ -4,7 +4,17 @@ import 'dart:io';
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sked/agent/attachments/attachment_storage_io.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
+import 'package:sked/agent/conversations/conversation_repository.dart';
+import 'package:sked/agent/conversations/conversation_storage_io.dart';
+import 'package:sked/agent/knowledge/knowledge_repository.dart';
+import 'package:sked/agent/knowledge/knowledge_storage_io.dart';
+import 'package:sked/backup/selective_backup_models.dart';
+import 'package:sked/backup/selective_restore_coordinator.dart';
+import 'package:sked/backup/selective_restore_journal.dart';
+import 'package:sked/backup/selective_restore_journal_io.dart';
+import 'package:sked/data/timetable_storage_io.dart';
 import 'package:path/path.dart' as path;
 import 'package:sked/models/school_site_models.dart';
 import 'package:sked/services/app_data_clear_service_io.dart';
@@ -217,6 +227,175 @@ void main() {
       expect(schoolSession.calls, 1);
     },
   );
+
+  test('clear removes real Agent stores, recovery markers and staging before reopening empty', () async {
+    final layout = AppStorageLayout(directoryProvider: () async => root);
+    final stagingLayout = AppStorageLayout(
+      directoryProvider: () async =>
+          Directory(path.join(root.path, 'Sked_selective_restore_staging')),
+    );
+    final mainStorage = IoTimetableStorage(layout: layout);
+    final data = buildInitialAppData(buildDefaultPeriodTimes());
+    await mainStorage.save(data);
+
+    final chatStorage = PlatformConversationStorage(layout: layout);
+    final chats = ConversationRepository(storage: chatStorage);
+    final knowledgeStorage = PlatformKnowledgeStorage(layout: layout);
+    final knowledge = AgentKnowledgeRepository(storage: knowledgeStorage);
+    final attachments = PlatformAttachmentStorage(layout: layout);
+    final staging = PlatformAttachmentStorage(layout: stagingLayout);
+    addTearDown(() async {
+      await chats.waitForPendingWrites();
+      await knowledge.waitForPendingWrites();
+      chats.dispose();
+      knowledge.dispose();
+      await attachments.close();
+      await staging.close();
+    });
+    const bytes = [0, 1, 127, 128, 255];
+    final attachment = ConversationAttachment(
+      id: 'clear-agent-file',
+      name: 'private.bin',
+      mediaType: 'application/octet-stream',
+      byteLength: bytes.length,
+      digest: backupDigest(bytes),
+    );
+    await attachments.write(attachment.id, Stream.value(bytes));
+    await staging.write('clear-staged-file', Stream.value(bytes));
+    await chats.load();
+    final conversation = await chats.create(
+      id: 'clear-agent-chat',
+      title: 'Private stored conversation',
+    );
+    await chats.update(
+      conversation.id,
+      (current) => current.copyWith(
+        draft: 'Unsent private draft',
+        attachments: [attachment],
+        messages: [
+          ConversationMessage(
+            id: 'clear-agent-message',
+            role: ConversationRole.user,
+            text: 'Stored private request',
+            createdAt: conversation.createdAt,
+            attachmentIds: [attachment.id],
+          ),
+        ],
+      ),
+    );
+    await chatStorage.writePendingHistoryBatch('clear-history-batch');
+    await knowledge.load();
+    await knowledge.commit(
+      knowledge.prepare({
+        'memory:clear-memory': KnowledgeRecord(
+          kind: KnowledgeKind.memory,
+          id: 'clear-memory',
+          title: 'Stored preference',
+          body: 'Retained until the user clears app data.',
+        ),
+        'skill:clear-skill': KnowledgeRecord(
+          kind: KnowledgeKind.skill,
+          id: 'clear-skill',
+          title: 'Stored custom skill',
+          body: 'Read the current agenda before planning.',
+        ),
+      }),
+      operationId: 'clear-knowledge-operation',
+    );
+    PersistentSelectiveRestoreJournal journal() =>
+        PersistentSelectiveRestoreJournal(
+          storage: PlatformSelectiveJournalStorage(layout: layout),
+        );
+    final restore = SelectiveRestoreState(
+      restoreId: 'clear-restore',
+      planFingerprint: backupDigest(bytes),
+      targets: [
+        BackupPreparedTarget(
+          owner: BackupOwner.mainData,
+          restoreId: 'clear-restore',
+          descriptor: {'before': data.toJson(), 'target': data.toJson()},
+        ),
+      ],
+    );
+    await journal().write(restore);
+    await journal().write(restore.markStarted());
+    for (final slot in AgentCredentialSlot.values) {
+      await agentCredentials.write(slot, 'synthetic-${slot.name}');
+    }
+
+    final storedChat = ConversationArchive.decode(
+      (await PlatformConversationStorage(layout: layout).load()).source!,
+    ).conversations.single;
+    expect(storedChat.messages.single.text, 'Stored private request');
+    expect(storedChat.messages.single.attachmentIds, [attachment.id]);
+    expect(storedChat.draft, 'Unsent private draft');
+    expect(
+      await PlatformConversationStorage(layout: layout).pendingHistoryBatch(),
+      'clear-history-batch',
+    );
+    final storedKnowledge = (await PlatformKnowledgeStorage(
+      layout: layout,
+    ).load()).archive;
+    expect(
+      storedKnowledge.records.map((record) => record.id),
+      containsAll(['clear-memory', 'clear-skill']),
+    );
+    expect(storedKnowledge.receipts, hasLength(1));
+    expect((await journal().read())!.toJson(), restore.markStarted().toJson());
+    expect(
+      await attachments.read(attachment.id).expand((chunk) => chunk).toList(),
+      bytes,
+    );
+    expect(
+      await staging.read('clear-staged-file').expand((chunk) => chunk).toList(),
+      bytes,
+    );
+    expect((await mainStorage.load()).data!.encode(), data.encode());
+    chats.freeze();
+    knowledge.freeze();
+
+    await service.clear();
+    expect(await root.list(followLinks: false).toList(), isEmpty);
+
+    final reopenedChats = PlatformConversationStorage(layout: layout);
+    expect((await reopenedChats.load()).source, isNull);
+    expect(await reopenedChats.pendingHistoryBatch(), isNull);
+    final reopenedKnowledge = (await PlatformKnowledgeStorage(
+      layout: layout,
+    ).load()).archive;
+    expect(reopenedKnowledge.records, isEmpty);
+    expect(reopenedKnowledge.receipts, isEmpty);
+    expect(reopenedKnowledge.tombstones, isEmpty);
+    expect(reopenedKnowledge.undoBatches, isEmpty);
+    expect(await journal().read(), isNull);
+    final reopenedAttachments = PlatformAttachmentStorage(layout: layout);
+    final reopenedStaging = PlatformAttachmentStorage(layout: stagingLayout);
+    addTearDown(reopenedAttachments.close);
+    addTearDown(reopenedStaging.close);
+    expect(await reopenedAttachments.ids(), isEmpty);
+    expect(await reopenedStaging.ids(), isEmpty);
+    for (final entry in [
+      (reopenedAttachments, attachment.id),
+      (reopenedStaging, 'clear-staged-file'),
+    ]) {
+      await expectLater(
+        entry.$1.read(entry.$2).drain<void>(),
+        throwsA(
+          isA<AttachmentException>().having(
+            (error) => error.code,
+            'code',
+            AttachmentError.missing,
+          ),
+        ),
+      );
+    }
+    expect((await IoTimetableStorage(layout: layout).load()).data, isNull);
+    for (final slot in AgentCredentialSlot.values) {
+      expect(await agentCredentials.read(slot), isNull);
+    }
+    expect(secrets.value, isEmpty);
+    expect(schoolSession.calls, 1);
+  });
 
   test(
     'school session is cleared before any durable files or secrets',
