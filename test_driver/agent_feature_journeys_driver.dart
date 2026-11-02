@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:integration_test/integration_test_driver.dart';
 
+import 'support/agent_attachment_journey_assessor.dart';
 import 'support/report_output_directory.dart';
 
 const _protocol = 'agent-native-feature-journey-v1';
@@ -64,7 +65,10 @@ Future<void> main() => integrationDriver(
       label: 'agent-feature-journey',
     );
     final manifest = <String, Object?>{};
-    for (final path in _relevantSources) {
+    for (final path in {
+      ..._relevantSources,
+      ...agentAttachmentRelevantSources,
+    }) {
       try {
         final file = File(path);
         manifest[path] = await file.exists()
@@ -89,7 +93,7 @@ Future<void> main() => integrationDriver(
       '${output.path}${Platform.pathSeparator}agent-feature-journey-assessment.json',
     );
     try {
-      _validate(data?['agentFeatureJourney']);
+      final feature = _validate(data?['agentFeatureJourney']);
       _require(
         manifest.values.every(
           (value) =>
@@ -100,7 +104,7 @@ Future<void> main() => integrationDriver(
       await _writeNew(assessmentFile, {
         'status': 'passed',
         'protocol': _protocol,
-        'feature': 'knowledge',
+        'feature': feature,
         'rawReport': rawFile.absolute.path,
         'scope': 'native functional feature checkpoints; native process logs require separate review',
       });
@@ -145,16 +149,19 @@ void _digest(Object? value, String description) {
   );
 }
 
-Map<String, Map<String, Object?>> _checkpoints(Object? value) {
+Map<String, Map<String, Object?>> _checkpoints(
+  Object? value, {
+  List<String> expected = _knowledgeCheckpoints,
+}) {
   _require(
-    value is List && value.length == _knowledgeCheckpoints.length,
-    'The knowledge checkpoint sequence is incomplete.',
+    value is List && value.length == expected.length,
+    'The required native feature checkpoint sequence is incomplete.',
   );
   final result = <String, Map<String, Object?>>{};
   final steps = value as List;
-  for (var index = 0; index < _knowledgeCheckpoints.length; index++) {
+  for (var index = 0; index < expected.length; index++) {
     final step = _map(steps[index], 'Checkpoint $index');
-    final name = _knowledgeCheckpoints[index];
+    final name = expected[index];
     _require(
       step['name'] == name && step['status'] == 'complete',
       'Checkpoint $name did not complete in order.',
@@ -353,7 +360,7 @@ void _settings(Object? value, bool accessible) {
   _tab(settings['memoryTab'], kind: 'memory', accessible: accessible);
 }
 
-void _cleanup(Object? value) {
+Map<String, Object?> _runtimeCleanup(Object? value) {
   final cleanup = _map(value, 'Cleanup');
   _require(
     cleanup['status'] == 'complete' &&
@@ -377,6 +384,22 @@ void _cleanup(Object? value) {
       'Runtime cleanup ${_ownerCleanup[index]} failed.',
     );
   }
+  _require(
+    _map(cleanup['provider'], 'Feature provider')['closed'] == true &&
+        _map(cleanup['ownedProvider'], 'Session provider owner')['closed'] ==
+            true &&
+        _map(
+              cleanup['featureBoundaries'],
+              'Feature boundary cleanup',
+            )['status'] ==
+            'complete',
+    'The runtime provider or feature boundaries were not completely closed.',
+  );
+  return cleanup;
+}
+
+void _cleanup(Object? value) {
+  final cleanup = _runtimeCleanup(value);
   final boundaries = _map(
     cleanup['featureBoundaries'],
     'Feature boundary restoration',
@@ -391,13 +414,9 @@ void _cleanup(Object? value) {
     'Knowledge unexpectedly installed a picker or platform replacement.',
   );
   _provider(cleanup['provider'], closed: true);
-  _require(
-    _map(cleanup['ownedProvider'], 'Session provider owner')['closed'] == true,
-    'The runtime did not close its provider owner.',
-  );
 }
 
-void _validate(Object? value) {
+void _validateKnowledge(Object? value) {
   final report = _map(value, 'Agent feature journey report');
   _require(
     report['protocol'] == _protocol &&
@@ -604,4 +623,108 @@ void _validate(Object? value) {
   );
   _cleanup(report['cleanup']);
   _cleanup(checkpoints['cleanup']);
+}
+
+/// Shared gates for separately implemented feature assessors. Knowledge keeps
+/// its existing explicit validator; new features must also supply their own
+/// concrete UI, persistence, provider and boundary assertions after this gate.
+void _validateFeatureBase(
+  Map<String, Object?> report, {
+  required String feature,
+  required List<String> expectedCheckpoints,
+}) {
+  _require(
+    report['protocol'] == _protocol &&
+        report['measurement'] == 'native-functional-feature',
+    'This is not the native feature protocol.',
+  );
+  _require(
+    report['status'] == 'passed' && report['feature'] == feature,
+    'The selected native feature did not pass; inspect retained failure and cleanup evidence.',
+  );
+  final source = _map(report['source'], 'Source provenance');
+  _require(
+    source['revision'] is String &&
+        RegExp(r'^[0-9a-f]{40}$').hasMatch(source['revision'] as String),
+    'The native feature must declare its full source SHA.',
+  );
+  _require(
+    report['label'] is String &&
+        RegExp(r'^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$')
+            .hasMatch(report['label'] as String),
+    'The native feature label is invalid.',
+  );
+  final platform = _environment(report['environment']);
+  final config = _map(report['configuration'], 'Framework configuration');
+  _require(
+    const ['baseline', 'accessible'].contains(config['name']) &&
+        config['configurationScope'] ==
+            'framework theme, TextScaler and motion scope',
+    'The native feature configuration or its scope is invalid.',
+  );
+  final accessible = config['name'] == 'accessible';
+  _configuration(config, accessible);
+  final fixture = _map(report['fixture'], 'Synthetic fixture');
+  _require(
+    fixture['longMessageCount'] == 512 &&
+        fixture['shortMessageCount'] == 2 &&
+        fixture['conversationCount'] == 2,
+    'The native feature did not use the required synthetic conversation fixture.',
+  );
+  for (final key in ['mainSha256', 'archiveSha256', 'longHistorySha256']) {
+    _digest(fixture[key], 'Fixture $key');
+  }
+  final checkpoints = _checkpoints(
+    report['checkpoints'],
+    expected: expectedCheckpoints,
+  );
+  final loaded = checkpoints['runtime-loaded']!;
+  _require(
+    loaded['agentInitialized'] == false &&
+        _map(loaded['storage'], 'Initial storage')['conversationLoads'] == 0,
+    'Agent history was not dormant before the real product entry.',
+  );
+  final entry = checkpoints['product-entry']!;
+  _require(
+    entry['historyMessageCount'] == 512 &&
+        entry['initialDraft'] == 'Long conversation initial draft' &&
+        entry['sameApplicationAndRepository'] == true &&
+        entry['selectedId'] == 'native-long-history' &&
+        entry['host'] ==
+            (platform == 'windows' ? 'AgentAssistantPane' : 'AgentPage') &&
+        entry['entry'] ==
+            (platform == 'windows'
+                ? 'home assistant toggle'
+                : 'home More menu / Agent'),
+    'The formal native entry did not retain its expected host, owners, archive and draft.',
+  );
+  _digest(entry['mainSha256'], 'Workspace at product entry');
+  _configuration(
+    _map(entry['configuration'], 'Native Agent host configuration'),
+    accessible,
+    observed: true,
+  );
+  _runtimeCleanup(report['cleanup']);
+  _runtimeCleanup(checkpoints['cleanup']);
+}
+
+String _validate(Object? value) {
+  final report = _map(value, 'Agent feature journey report');
+  switch (report['feature']) {
+    case 'knowledge':
+      _validateKnowledge(report);
+      return 'knowledge';
+    case 'attachments':
+      _validateFeatureBase(
+        report,
+        feature: 'attachments',
+        expectedCheckpoints: agentAttachmentCheckpoints,
+      );
+      validateAgentAttachmentJourney(report);
+      return 'attachments';
+    default:
+      throw StateError(
+        'No native feature assessor is implemented for ${report['feature']}.',
+      );
+  }
 }

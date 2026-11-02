@@ -1,6 +1,6 @@
 # Agent 原生功能旅程
 
-入口为 `agent_feature_journeys_test.dart`，driver 为 `../test_driver/agent_feature_journeys_driver.dart`。当前只实现 `SKED_AGENT_FEATURE_JOURNEY=knowledge`，用于验证实际主页 → Agent → 独立 Agent 设置页的知识编辑流程。附件、审批、历史撤销、选择性恢复和原生系统能力需要各自独立的旅程；本入口通过不能代替这些验收。
+入口为 `agent_feature_journeys_test.dart`，driver 为 `../test_driver/agent_feature_journeys_driver.dart`。`SKED_AGENT_FEATURE_JOURNEY` 显式选择 `knowledge` 或 `attachments`，各自使用独立进程、检查点和结果校验。审批、历史撤销、选择性恢复和原生系统能力仍需要各自的旅程，不能由这两组结果代替。
 
 ## knowledge 的固定流程
 
@@ -71,3 +71,19 @@ try {
 driver 使用协议 `agent-native-feature-journey-v1`，先保存原始响应和其 checkout 中相关源码的 SHA-256，再校验 knowledge 专属的有序检查点、实际记录读回、版本变化、草稿/历史、零请求和完整清理。已有报告文件拒绝覆盖。配置错误、UI 失败和清理失败均保留在 `agent-feature-journey-raw.json`；`agent-feature-journey-assessment.json` 记录 driver 的通过或失败判断。未产生响应、进程崩溃或设备断开仍需保留命令日志，不能制造完整 JSON 证据。
 
 JSON 通过之后，仍需复核本轮原生进程日志中的 Flutter 错误、AXTree 或平台 fatal 信息。原生运行、模拟器、框架配置、实际系统能力与实体设备结果分别记录，不能互相替代。运行报告和日志保留在系统临时目录供检查，不提交到仓库；清理时只处理本轮拥有且已核对绝对路径的目录。
+
+## attachments 的固定流程
+
+在独立进程中将上例的 `SKED_AGENT_FEATURE_JOURNEY=knowledge` 改为 `SKED_AGENT_FEATURE_JOURNEY=attachments`，使用附件专属标签和新输出目录，并继续遵守同一原生平台、Windows 测试命名空间与代理准备要求。不得以文件选择器替身代替 Windows 原生测试进程隔离。
+
+1. 从真实主页进入 Agent，清空合成长会话的输入框，然后点击 `agent-attach-file`。本旅程独占并最终恢复 `FileSelectorPlatform.instance`，只返回一次内存中的 4 × 4 合成 PNG；产品正常执行本地复制、摘要核验和草稿引用发布。
+2. 等待文件成为本地已保存状态，读取实际聊天存储和 `attachmentStore.readBytes`，核对原始 79 字节、SHA-256、稳定 ID 和唯一文件。聊天 JSON 不得包含来源路径或 Base64 正文，选择文件不发起请求，也不自动预览。
+3. 从草稿附件菜单点击“预览文件”，等待真实 `RawImage` / `RenderImage` 完成解码，核对其内存图片字节和非零实际渲染尺寸。随后点击真实“关闭”按钮。仅构造 `Image` 组件不能视为解码通过。
+4. 保持输入框为空，点击发送。生产 `ProviderClient` 完成预算检查、文件读取、`image_url` 原生内容块编码、进度和响应解码；专属离线 `http.BaseClient` 接收编码后的请求，核对 Base64 中的原始 PNG 字节与摘要，再返回一次合成 HTTP 200 JSON 回复。
+5. 核对聊天只新增一条正文为空的附件用户消息和一条脚本回复，引用从草稿转到用户消息。编码、发送和已接受状态来自生产 provider 对该合成响应的处理；这里的“已接受”只表示测试 transport 的响应，不代表远端服务或模型已接收、理解文件。
+6. 输入下一条未发送草稿，通过真实会话列表切到短会话，再回到长会话。核对两份原始历史、独立草稿和同一文件身份；附件菜单不在可见区域时，按实际几何方向拖动消息区，确认菜单可点击后，再从已保存消息显式预览同一图片。报告保留拖动次数与方向，不能用不改变跟随状态的程序定位代替用户滚动。重开和预览不重新发送请求，也不复制二进制文件；主工作区保持进入 Agent 时的快照。
+7. 先由公共 runner 卸载界面并关闭全部运行时 owner，再逐项完成本旅程捕获的图片缓存清理和 picker 恢复。driver 要求一次 picker 选择、一次脚本 provider/transport 请求、两次实际图片预览、完整流结束及零 `dart:io` HTTP 操作。
+
+输入来自 `XFile.fromData`，不创建源文件或读取个人路径。文件选择器及 HTTP transport 均为本旅程显式拥有的合成边界；本轮不证明系统文件对话框、文件权限、外部分享、真实模型或跨进程附件重启恢复。故障注入、取消、未知投递及原生存储重开仍按[附件协议](../docs/AGENT_ATTACHMENTS.md)的对应验证入口分别记录。
+
+中央 driver 先验证原生环境、源码、框架配置、主页入口和运行时清理，再调用附件专属 assessor 核对实际字节、稳定引用、显式操作和精确请求计数。新增其他 feature 必须显式添加完整检查点及专属 assessor，未知名称直接失败，不能靠任意自报检查点获得通过。

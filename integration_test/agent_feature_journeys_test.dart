@@ -4,20 +4,26 @@ import 'package:integration_test/integration_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'support/agent_attachment_journey.dart';
 import 'support/agent_feature_journey.dart';
 import 'support/agent_knowledge_journey.dart';
 import 'support/agent_native_session.dart';
 
 AgentNativeFeature _feature(String name) => switch (name) {
   'knowledge' => AgentKnowledgeJourney(),
+  'attachments' => AgentAttachmentJourney(),
   _ => throw ArgumentError.value(
     name,
     'SKED_AGENT_FEATURE_JOURNEY',
-    'Only the knowledge journey is implemented.',
+    'Use knowledge or attachments.',
   ),
 };
 
 void main() {
+  const featureName = String.fromEnvironment(
+    'SKED_AGENT_FEATURE_JOURNEY',
+    defaultValue: 'knowledge',
+  );
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
 
@@ -27,7 +33,7 @@ void main() {
   });
 
   testWidgets(
-    'native Agent settings saves and reopens shared knowledge without losing chat drafts',
+    'native Agent $featureName journey preserves its product state',
     (tester) async {
       SharedPreferences.setMockInitialValues({});
       PackageInfo.setMockInitialValues(
@@ -44,10 +50,7 @@ void main() {
         binding.reportData = {
           'agentFeatureJourney': await runAgentFeatureJourney(
             tester,
-            featureName: const String.fromEnvironment(
-              'SKED_AGENT_FEATURE_JOURNEY',
-              defaultValue: 'knowledge',
-            ),
+            featureName: featureName,
             createFeature: _feature,
             config: const AgentNativeConfig(
               name: String.fromEnvironment(
