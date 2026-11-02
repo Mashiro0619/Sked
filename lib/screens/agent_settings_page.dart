@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
@@ -93,15 +94,29 @@ class _AgentSettingsPageState extends State<AgentSettingsPage> {
     }
 
     final l = AppLocalizations.of(context);
+    Widget settingsTab(String label, {Key? key}) {
+      final tab = Tab(key: key, text: label);
+      if (kIsWeb || defaultTargetPlatform != TargetPlatform.windows) return tab;
+      // The Windows bridge reads the button flag, not the explicit tab role.
+      // TabBar merges this flag with its own label, role, selection and action.
+      return PreferredSize(
+        preferredSize: tab.preferredSize,
+        child: Semantics(button: true, child: tab),
+      );
+    }
+
     final tabs = TabBar(
       isScrollable: true,
       tabs: [
-        Tab(text: l.agentModelSettings),
-        Tab(text: l.agentRunPreferences),
-        Tab(key: const ValueKey('agent-settings-skills'), text: l.agentSkills),
-        Tab(
+        settingsTab(l.agentModelSettings),
+        settingsTab(l.agentRunPreferences),
+        settingsTab(
+          l.agentSkills,
+          key: const ValueKey('agent-settings-skills'),
+        ),
+        settingsTab(
+          l.agentMemories,
           key: const ValueKey('agent-settings-memories'),
-          text: l.agentMemories,
         ),
       ],
     );
