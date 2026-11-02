@@ -6,6 +6,7 @@ import 'package:integration_test/integration_test_driver.dart';
 
 import 'support/agent_attachment_journey_assessor.dart';
 import 'support/agent_history_journey_assessor.dart';
+import 'support/agent_selective_backup_journey_assessor.dart';
 import 'support/report_output_directory.dart';
 
 const _protocol = 'agent-native-feature-journey-v1';
@@ -70,6 +71,7 @@ Future<void> main() => integrationDriver(
       ..._relevantSources,
       ...agentAttachmentRelevantSources,
       ...agentHistoryRelevantSources,
+      ...agentSelectiveBackupRelevantSources,
     }) {
       try {
         final file = File(path);
@@ -732,6 +734,14 @@ String _validate(Object? value) {
       );
       validateAgentHistoryJourney(report);
       return 'history';
+    case 'selective-backup':
+      _validateFeatureBase(
+        report,
+        feature: 'selective-backup',
+        expectedCheckpoints: agentSelectiveBackupCheckpoints,
+      );
+      validateAgentSelectiveBackupJourney(report);
+      return 'selective-backup';
     default:
       throw StateError(
         'No native feature assessor is implemented for ${report['feature']}.',

@@ -9,15 +9,17 @@ import 'support/agent_feature_journey.dart';
 import 'support/agent_history_journey.dart';
 import 'support/agent_knowledge_journey.dart';
 import 'support/agent_native_session.dart';
+import 'support/agent_selective_backup_journey.dart';
 
 AgentNativeFeature _feature(String name) => switch (name) {
   'knowledge' => AgentKnowledgeJourney(),
   'attachments' => AgentAttachmentJourney(),
   'history' => AgentHistoryJourney(),
+  'selective-backup' => AgentSelectiveBackupJourney(),
   _ => throw ArgumentError.value(
     name,
     'SKED_AGENT_FEATURE_JOURNEY',
-    'Use knowledge, attachments or history.',
+    'Use knowledge, attachments, history or selective-backup.',
   ),
 };
 
