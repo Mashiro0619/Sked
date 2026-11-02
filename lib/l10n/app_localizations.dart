@@ -6252,6 +6252,18 @@ abstract class AppLocalizations {
   /// **'Updated'**
   String get agentChangeUpdated;
 
+  /// No description provided for @agentChangeArchived.
+  ///
+  /// In en, this message translates to:
+  /// **'Archived'**
+  String get agentChangeArchived;
+
+  /// No description provided for @agentChangeRestored.
+  ///
+  /// In en, this message translates to:
+  /// **'Restored'**
+  String get agentChangeRestored;
+
   /// No description provided for @agentViewObject.
   ///
   /// In en, this message translates to:

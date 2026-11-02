@@ -1411,6 +1411,11 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                       ),
                     )
                   : null,
+              canOpenConversation: (id) =>
+                  _repository.canWrite &&
+                  !_runtime.maintenance &&
+                  _repository.find(id) != null,
+              onOpenConversation: (id) => unawaited(_select(id)),
               onOpenResource: widget.onOpenResource == null
                   ? null
                   : (ref) => _perform(

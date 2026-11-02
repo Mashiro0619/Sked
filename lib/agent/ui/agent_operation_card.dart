@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../application/resource_contracts.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/school_site_models.dart' show validSchoolSiteId;
+import 'agent_conversation_receipt.dart';
 import 'agent_selectable_text.dart';
 
 /// Host receipts provide the outcome. Assistant prose never sets this card's
@@ -16,11 +17,15 @@ class AgentOperationCard extends StatelessWidget {
     required this.receipt,
     this.onUndo,
     this.onOpenResource,
+    this.canOpenConversation,
+    this.onOpenConversation,
   });
 
   final Map<String, Object?> receipt;
   final VoidCallback? onUndo;
   final void Function(Map<String, Object?> ref)? onOpenResource;
+  final bool Function(String id)? canOpenConversation;
+  final ValueChanged<String>? onOpenConversation;
 
   static Map<String, Object?>? parse(String text) {
     try {
@@ -61,8 +66,19 @@ class AgentOperationCard extends StatelessWidget {
         .whereType<Map>()
         .toList();
     var presentsSchoolSites = false;
+    var presentsConversations = false;
     final changes = <Map>[];
     for (final change in storedChanges) {
+      final conversation = presentConversationReceiptChange(
+        change,
+        applied: applied,
+        l: l,
+      );
+      if (conversation != null) {
+        presentsConversations = true;
+        changes.add(conversation);
+        continue;
+      }
       final schoolSites = _presentSchoolSites(change, applied: applied, l: l);
       if (schoolSites != null) {
         presentsSchoolSites = true;
@@ -72,7 +88,9 @@ class AgentOperationCard extends StatelessWidget {
       }
     }
     final namedObjects =
-        presentsSchoolSites || storedChanges.any(_isNamedObjectChange);
+        presentsSchoolSites ||
+        presentsConversations ||
+        storedChanges.any(_isNamedObjectChange);
     final storedChangeCount = receipt['changeCount'];
     final changeCount = presentsSchoolSites
         ? changes.length
@@ -123,6 +141,14 @@ class AgentOperationCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(child: Text(_changeText(change, l))),
+                    if (change['conversationId'] case final String id)
+                      if (onOpenConversation != null &&
+                          canOpenConversation?.call(id) == true)
+                        IconButton(
+                          tooltip: l.agentViewObject,
+                          icon: const Icon(Icons.open_in_new, size: 20),
+                          onPressed: () => onOpenConversation!(id),
+                        ),
                     if (change['ref'] is Map &&
                         change['action'] != 'deleted' &&
                         onOpenResource != null)
@@ -174,6 +200,8 @@ String _changeText(Map change, AppLocalizations l) {
   final action = switch (change['action']) {
     'created' => l.agentChangeCreated,
     'deleted' => l.agentChangeDeleted,
+    'archived' => l.agentChangeArchived,
+    'restored' => l.agentChangeRestored,
     _ => l.agentChangeUpdated,
   };
   return '$action · $label';

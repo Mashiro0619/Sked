@@ -3420,6 +3420,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get agentChangeUpdated => 'Updated';
 
   @override
+  String get agentChangeArchived => 'Archived';
+
+  @override
+  String get agentChangeRestored => 'Restored';
+
+  @override
   String get agentViewObject => 'View item';
 
   @override

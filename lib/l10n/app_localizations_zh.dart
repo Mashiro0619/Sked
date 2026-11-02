@@ -3299,6 +3299,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get agentChangeUpdated => '已更新';
 
   @override
+  String get agentChangeArchived => '已归档';
+
+  @override
+  String get agentChangeRestored => '已恢复';
+
+  @override
   String get agentViewObject => '查看对象';
 
   @override
@@ -7220,6 +7226,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentChangeUpdated => '已更新';
+
+  @override
+  String get agentChangeArchived => '已封存';
+
+  @override
+  String get agentChangeRestored => '已還原';
 
   @override
   String get agentViewObject => '查看項目';

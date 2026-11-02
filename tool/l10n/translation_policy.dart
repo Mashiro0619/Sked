@@ -228,6 +228,8 @@ const commonEnglishFallbacks = <String>{
   'agentChangeCreated',
   'agentChangeDeleted',
   'agentChangeUpdated',
+  'agentChangeArchived',
+  'agentChangeRestored',
   'agentViewObject',
   'agentMoreChanges',
   'agentUndo',
