@@ -675,20 +675,23 @@ class _WorkspaceSlotState extends State<_WorkspaceSlot> {
     return TickerMode(
       key: ValueKey('adaptive-workspace-ticker-${widget.slotIndex}'),
       enabled: widget.runtimeActive,
-      child: ExcludeSemantics(
-        key: ValueKey('adaptive-workspace-semantics-${widget.slotIndex}'),
-        excluding: !widget.semanticActive,
-        child: IgnorePointer(
-          key: ValueKey('adaptive-workspace-input-${widget.slotIndex}'),
-          ignoring: !widget.interactive,
-          child: FocusScope(
-            node: _focusScopeNode,
-            canRequestFocus: widget.interactive,
-            descendantsAreFocusable: widget.interactive,
-            descendantsAreTraversable: widget.interactive,
-            child: WorkspaceVisibilityScope(
-              visible: widget.semanticActive,
-              child: widget.child,
+      child: TooltipVisibility(
+        visible: widget.semanticActive && TooltipVisibility.of(context),
+        child: ExcludeSemantics(
+          key: ValueKey('adaptive-workspace-semantics-${widget.slotIndex}'),
+          excluding: !widget.semanticActive,
+          child: IgnorePointer(
+            key: ValueKey('adaptive-workspace-input-${widget.slotIndex}'),
+            ignoring: !widget.interactive,
+            child: FocusScope(
+              node: _focusScopeNode,
+              canRequestFocus: widget.interactive,
+              descendantsAreFocusable: widget.interactive,
+              descendantsAreTraversable: widget.interactive,
+              child: WorkspaceVisibilityScope(
+                visible: widget.semanticActive,
+                child: widget.child,
+              ),
             ),
           ),
         ),
