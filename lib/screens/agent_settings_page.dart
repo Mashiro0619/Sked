@@ -118,9 +118,8 @@ class _AgentSettingsPageState extends State<AgentSettingsPage> {
               child: ExcludeFocus(excluding: _saving, child: tabs),
             ),
           ),
-          bodyBuilder: (context, header) => NestedScrollView(
-            headerSliverBuilder: (context, innerBoxIsScrolled) => [?header],
-            body: TabBarView(
+          bodyBuilder: (context, header) {
+            final content = TabBarView(
               physics: _saving ? const NeverScrollableScrollPhysics() : null,
               children: [
                 _KeptSettingsForm(
@@ -186,8 +185,14 @@ class _AgentSettingsPageState extends State<AgentSettingsPage> {
                   ),
                 ),
               ],
-            ),
-          ),
+            );
+            // Desktop titles stay outside the independently scrolling tabs.
+            if (header == null) return content;
+            return NestedScrollView(
+              headerSliverBuilder: (context, innerBoxIsScrolled) => [header],
+              body: content,
+            );
+          },
         ),
       ),
     );

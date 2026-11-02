@@ -6,6 +6,8 @@
 
 设置总览有独立的 Agent 设置分类，直接进入 Agent 设置页。功能管理只保留 Agent 启用开关；关闭功能后仍可从设置总览管理连接与偏好。
 
+桌面设置页的连接、运行偏好、Skills 和记忆分别滚动。切换标签保留未保存的输入及各自的滚动位置；鼠标滚轮和键盘焦点定位只调整当前标签，桌面滚动条继续可用。触屏设置页继续按可用空间使用固定或折叠标题。
+
 手机使用完整对话页面。桌面可以在课表或日程旁打开 Agent 面板，并通过面板标题栏的展开按钮进入完整对话工作台。返回时，原工作区仍激活且 Agent 仍启用，则自动恢复原面板及完整页面中编辑的草稿；返回时已切换到其他工作区或 Agent 已关闭，则不恢复旧面板。两种桌面呈现与手机页面使用同一个应用级会话仓库和运行时；呈现变化不新建 Agent、不重复发送、不停止已有运行。
 
 完整页面按实际可用空间展示会话侧栏。窄窗口和手机通过会话按钮打开历史侧抽屉；侧栏和抽屉读取同一本地历史，提供标题搜索、归档筛选及恢复入口。抽屉的标题、搜索和历史处于同一滚动区域，大字号和键盘占用空间时仍可操作。新建、改名、归档、导出和删除继续使用原有会话操作与保存规则。
@@ -43,6 +45,7 @@
 - [对话界面回归](../test/agent/ui/agent_conversation_view_test.dart)
 - [阅读与排版回归](../test/agent/ui/agent_chat_design_test.dart)
 - [保留面板与阅读锚点回归](../test/agent/ui/agent_transcript_test.dart)
+- [设置标签滚动与键盘回归](../test/agent/ui/agent_settings_page_test.dart)
 - [模型选择回归](../test/agent/ui/agent_model_picker_test.dart)
 - [工作区入口及共享运行回归](../test/widgets/agent_workspace_entry_test.dart)
 - [真实主页返回及共享运行回归](../test/agent/ui/agent_application_host_test.dart)
