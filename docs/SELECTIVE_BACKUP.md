@@ -1,6 +1,6 @@
 # 对象选择备份与恢复
 
-设置的“备份与恢复”提供对象选择页，原保存和分享文件入口也先选择对象再生成 ZIP，复制旧 JSON 文本的兼容入口继续保留。从文件恢复支持新的 ZIP 与旧完整 JSON；从文本恢复的 JSON 也进入同一选择页。先查看和勾选对象，再查看实际新增、替换及依赖复制的清单，确认后才开始写入。取消确认保留选择，返回文本输入保留原文。等待确认时没有执行进度；接受后的恢复属于应用，离开页面不会取消已经开始的跨库写入。
+设置的“备份与恢复”提供对象选择页，原保存和分享文件入口也先选择对象再生成 ZIP，复制旧 JSON 文本的兼容入口继续保留。从文件恢复支持新的 ZIP 与旧完整 JSON；从文本恢复的 JSON 也进入同一选择页。先查看和勾选对象，再查看实际新增、替换及依赖复制的清单，确认后才开始写入。滚动列表或取消确认保留筛选输入和选择，返回文本输入保留原文。重新打开备份或加载当前数据时清空筛选输入。等待确认时没有执行进度；接受后的恢复属于应用，离开页面不会取消已经开始的跨库写入。
 
 ## 选择与身份
 
@@ -41,6 +41,6 @@ Agent 选择性恢复在接管恢复之前重新核对固定目标；已经发�
 - [纯选择与依赖规划](../test/backup/selective_backup_planner_test.dart)和[主数据合并](../test/backup/selective_backup_app_data_test.dart)覆盖未选保留、共享依赖、子对象重绑及导入权限边界。
 - [归档检查](../test/backup/selective_backup_codec_test.dart)覆盖字节、摘要、预算、路径和版本拒绝；[journal](../test/backup/selective_restore_journal_test.dart)及[协调器](../test/backup/selective_restore_coordinator_test.dart)覆盖持久阶段和实际结果核对。
 - [真实应用组合](../test/backup/selective_backup_service_test.dart)覆盖保存、排他、部分暂存失败和恢复；[原生仓储重开](../test/backup/selective_backup_recovery_test.dart)在系统临时目录使用主库、学校、聊天、知识、附件和 journal 的文件实现，验证新的运行时继续同一目标。
-- [选择页](../test/backup/selective_backup_page_test.dart)及[设置入口](../test/widgets/settings_backup_restore_progress_test.dart)覆盖窄窗、放大字号、旧文件与文本、取消、恢复进度、故障继续和离开页面后的保存所有权。
+- [选择页](../test/backup/selective_backup_page_test.dart)及[设置入口](../test/widgets/settings_backup_restore_progress_test.dart)覆盖窄窗、放大字号、旧文件与文本、滚动和取消后的筛选与选择保留、重新载入来源后的筛选清空、恢复进度、故障继续和离开页面后的保存所有权。
 - [设备偏好](../test/backup/selective_backup_device_test.dart)覆盖严格读取、相同与不同平台、未选保留、两组之间中断、写后读回和重新绑定真实 UI 拥有者；[导出取消](../test/backup/selective_backup_cancellation_test.dart)核对挂起读取取消及占用释放。
 - [Agent 工具](../test/backup/selective_backup_tools_test.dart)通过真实应用运行作用域验证选择、权限、保存及发起者排空，并覆盖非法与重复选择、同会话来源约束、准备后人工修改目标，以及主库保存后阶段写入失败的未知结果和沿用同一恢复身份、数据世代及仓储目标的生命周期恢复。模型和原生目的地使用确定性替身；这些测试不代替实际平台文件选择器、真实 API、浏览器刷新或实体设备验收。

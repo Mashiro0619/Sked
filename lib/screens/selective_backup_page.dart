@@ -43,6 +43,7 @@ class _SelectiveBackupPageState extends State<SelectiveBackupPage> {
   SelectiveBackupBundle? _bundle;
   final _objects = <BackupObjectKey>{};
   final _files = <String>{};
+  final _searchController = TextEditingController();
   String _search = '';
   bool _restoring = false, _working = false, _reviewing = false;
   BackupCancellation? _exportCancellation;
@@ -66,6 +67,7 @@ class _SelectiveBackupPageState extends State<SelectiveBackupPage> {
   void dispose() {
     _exportCancellation?.cancel();
     widget.service.removeListener(_changed);
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -106,6 +108,7 @@ class _SelectiveBackupPageState extends State<SelectiveBackupPage> {
         ),
       );
     _files.clear();
+    _searchController.clear();
     _search = '';
     _error = null;
     _conflicts = const [];
@@ -494,6 +497,7 @@ class _SelectiveBackupPageState extends State<SelectiveBackupPage> {
         const SizedBox(height: 12),
         TextField(
           key: ValueKey('backup-search-$_restoring-${bundle.fingerprint}'),
+          controller: _searchController,
           enabled: !_busy,
           decoration: InputDecoration(
             labelText: l.selectiveBackupSearch,
