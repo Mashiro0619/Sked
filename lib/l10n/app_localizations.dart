@@ -6264,6 +6264,42 @@ abstract class AppLocalizations {
   /// **'Restored'**
   String get agentChangeRestored;
 
+  /// No description provided for @agentLayoutWidth.
+  ///
+  /// In en, this message translates to:
+  /// **'Panel width'**
+  String get agentLayoutWidth;
+
+  /// No description provided for @agentLayoutHeight.
+  ///
+  /// In en, this message translates to:
+  /// **'Panel height'**
+  String get agentLayoutHeight;
+
+  /// No description provided for @agentLayoutDockedWidth.
+  ///
+  /// In en, this message translates to:
+  /// **'Side-by-side panel width'**
+  String get agentLayoutDockedWidth;
+
+  /// No description provided for @agentLayoutResources.
+  ///
+  /// In en, this message translates to:
+  /// **'Workspace resources'**
+  String get agentLayoutResources;
+
+  /// No description provided for @agentLayoutCourseDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Course details'**
+  String get agentLayoutCourseDetails;
+
+  /// No description provided for @agentLayoutEventDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Event details'**
+  String get agentLayoutEventDetails;
+
   /// No description provided for @agentViewObject.
   ///
   /// In en, this message translates to:

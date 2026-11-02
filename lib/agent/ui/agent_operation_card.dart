@@ -7,6 +7,7 @@ import '../../application/resource_contracts.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/school_site_models.dart' show validSchoolSiteId;
 import 'agent_conversation_receipt.dart';
+import 'agent_setting_labels.dart';
 import 'agent_selectable_text.dart';
 
 /// Host receipts provide the outcome. Assistant prose never sets this card's
@@ -287,10 +288,16 @@ Map _presentChange(
   required AppLocalizations l,
 }) {
   if (!_isNamedObjectChange(change)) {
-    if (applied) return change;
+    final label =
+        change['label'] ??
+        agentSettingLabel(change, l) ??
+        _objectLabel(change['after']) ??
+        _objectLabel(change['before']);
+    final presented = label == null ? change : {...change, 'label': label};
+    if (applied) return presented;
     // Standard prepare receipts already contain actions and object references.
     // Those describe the proposal, not a confirmed write or an existing target.
-    return {...change, 'action': 'unconfirmed'}..remove('ref');
+    return {...presented, 'action': 'unconfirmed'}..remove('ref');
   }
   final before = change['before'], after = change['after'];
   final key = change['key'] as String;

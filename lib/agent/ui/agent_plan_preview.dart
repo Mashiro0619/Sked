@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
+import 'agent_setting_labels.dart';
 import 'agent_selectable_text.dart';
 
 /// Every affected object can be inspected before approval, without eagerly
@@ -54,7 +55,7 @@ class _AgentPlanPreviewState extends State<AgentPlanPreview> {
         for (final change in changes.take(_shown))
           ExpansionTile(
             tilePadding: EdgeInsets.zero,
-            title: Text(_label(change)),
+            title: Text(_label(change, l)),
             subtitle: Text(
               change['before'] == null
                   ? l.agentKnowledgeAdd
@@ -83,7 +84,7 @@ class _AgentPlanPreviewState extends State<AgentPlanPreview> {
     );
   }
 
-  String _label(Map change) {
+  String _label(Map change, AppLocalizations l) {
     for (final value in [change['after'], change['before']]) {
       if (value is! Map) continue;
       final config = value['config'];
@@ -93,6 +94,9 @@ class _AgentPlanPreviewState extends State<AgentPlanPreview> {
           (config is Map ? config['name'] : null);
       if (label is String && label.trim().isNotEmpty) return label;
     }
-    return change['label'] as String? ?? change['key'] as String? ?? '';
+    return change['label'] as String? ??
+        agentSettingLabel(change, l) ??
+        change['key'] as String? ??
+        '';
   }
 }

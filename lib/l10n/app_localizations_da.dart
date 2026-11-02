@@ -3527,6 +3527,24 @@ class AppLocalizationsDa extends AppLocalizations {
   String get agentChangeRestored => 'Restored';
 
   @override
+  String get agentLayoutWidth => 'Panel width';
+
+  @override
+  String get agentLayoutHeight => 'Panel height';
+
+  @override
+  String get agentLayoutDockedWidth => 'Side-by-side panel width';
+
+  @override
+  String get agentLayoutResources => 'Workspace resources';
+
+  @override
+  String get agentLayoutCourseDetails => 'Course details';
+
+  @override
+  String get agentLayoutEventDetails => 'Event details';
+
+  @override
   String get agentViewObject => 'View item';
 
   @override

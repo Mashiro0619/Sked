@@ -3305,6 +3305,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get agentChangeRestored => '已恢复';
 
   @override
+  String get agentLayoutWidth => '面板宽度';
+
+  @override
+  String get agentLayoutHeight => '面板高度';
+
+  @override
+  String get agentLayoutDockedWidth => '并排面板宽度';
+
+  @override
+  String get agentLayoutResources => '工作区资源';
+
+  @override
+  String get agentLayoutCourseDetails => '课程详情';
+
+  @override
+  String get agentLayoutEventDetails => '日程详情';
+
+  @override
   String get agentViewObject => '查看对象';
 
   @override
@@ -7232,6 +7250,24 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentChangeRestored => '已還原';
+
+  @override
+  String get agentLayoutWidth => '面板寬度';
+
+  @override
+  String get agentLayoutHeight => '面板高度';
+
+  @override
+  String get agentLayoutDockedWidth => '並排面板寬度';
+
+  @override
+  String get agentLayoutResources => '工作區資源';
+
+  @override
+  String get agentLayoutCourseDetails => '課程詳情';
+
+  @override
+  String get agentLayoutEventDetails => '日程詳細資料';
 
   @override
   String get agentViewObject => '查看項目';
