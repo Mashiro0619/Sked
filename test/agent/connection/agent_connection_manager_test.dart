@@ -732,6 +732,70 @@ void main() {
     );
   });
 
+  for (final futureSlot in AgentCredentialSlot.values) {
+    test(
+      'a future ${futureSlot.name} credential blocks reconciliation beside a valid slot',
+      () async {
+        await seeded();
+        final valid = vault.values[AgentCredentialSlot.active]!;
+        final future = jsonDecode(valid) as Map<String, dynamic>;
+        future['version'] = (future['version'] as int) + 1;
+        for (final slot in AgentCredentialSlot.values) {
+          vault.values[slot] = slot == futureSlot ? jsonEncode(future) : valid;
+        }
+        legacy = const AiApiSettings(
+          customBaseUrl: 'https://legacy.example.test/v1',
+          customModel: 'legacy-model',
+        );
+        legacySecrets.key = 'retained-legacy-key';
+        final beforeSlots = Map<AgentCredentialSlot, String>.from(vault.values);
+        final beforeSettings = current.toJson();
+        final beforeLegacy = legacy.toJson();
+        final beforeCommits = commits;
+        final beforeLegacyReads = legacySecrets.reads;
+        vault.events.clear();
+
+        final connection = manager();
+        await expectLater(
+          connection.initialize(),
+          error(AgentConnectionErrorCode.storageFailure),
+        );
+        expect(connection.status.initialized, isFalse);
+        expect(connection.status.needsRecovery, isTrue);
+        expect(connection.status.credentialAvailable, isFalse);
+        await expectLater(
+          connection.readKeyFor(current),
+          error(AgentConnectionErrorCode.recoveryRequired),
+        );
+        await expectLater(
+          connection.save(
+            configured,
+            credentialAction: AgentCredentialAction.replace,
+            rawKey: 'must-not-replace-either-slot',
+          ),
+          error(AgentConnectionErrorCode.recoveryRequired),
+        );
+        await expectLater(
+          connection.initialize(migrateLegacy: false),
+          error(AgentConnectionErrorCode.storageFailure),
+        );
+        await connection.waitForPendingWrites();
+
+        expect(vault.values, beforeSlots);
+        expect(
+          vault.events.where((event) => event.startsWith('write:')),
+          isEmpty,
+        );
+        expect(current.toJson(), beforeSettings);
+        expect(commits, beforeCommits);
+        expect(legacy.toJson(), beforeLegacy);
+        expect(legacySecrets.key, 'retained-legacy-key');
+        expect(legacySecrets.reads, beforeLegacyReads);
+        expect(legacySecrets.clears, 0);
+      },
+    );
+  }
+
   test(
     'corrupt secure records stay untouched and report only a sanitized failure',
     () async {

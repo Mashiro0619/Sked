@@ -36,6 +36,8 @@ Windows 学校页面清理需要等待锁定 WebView 插件 `dispose` 通道的�
 
 统一连接中的凭据绑定实际端点；更换目的地不得自动转移旧密钥或发送旧会话。连接草稿在保存成功前保留，后台、销毁或模型工具不得伪造用户同意。旧本机解析连接仅在新连接字段尚未配置时迁移，单独修改统一指令或预算不阻止迁移。旧密钥只有同一端点的新安全存储写入并读回成功后才退役，失败保留恢复材料。旧专用提示词不变成 Agent 系统指令。暂存密钥期间发生的偏好变更必须从最新提交继承，不能随旧连接草稿覆盖。见 [连接迁移测试](../test/agent/connection/agent_connection_manager_test.dart)、[连接表单](../test/agent/ui/agent_model_settings_form_test.dart) 与 [旧密钥兼容](../test/controllers/school_import_secret_persistence_test.dart)。
 
+安全存储的 active 或 pending 记录使用较新格式时，连接初始化、取钥与替换请求保持阻断；另一有效槽不作为降级覆盖的依据。两槽原文、本机配置和兼容旧密钥保留。对应[连接回归](../test/agent/connection/agent_connection_manager_test.dart)先通过真实管理器生成当前记录，再提升其中一槽的格式版本，核对拒绝及零写入；安全存储使用明确替身，不代表原生 keyring 验收。
+
 未选择 Agent 连接组或恢复旧 JSON 时，本机未配置的 Agent 连接仍保持未配置。选择性归档可以显式恢复连接地址和模型目录，密钥始终不参与便携备份；连接目的地改变时先按 journal 清理旧凭据，目的地相同则保留本机凭据。兼容存留的旧解析密钥另按旧恢复策略处理。恢复预览之后本机内容发生变化时必须重新核对；目标写入恢复日志后，失败重试沿用该目标。
 
 ## Agent 保存、会话与外部效果
