@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../application/resource_contracts.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/school_site_models.dart' show validSchoolSiteId;
+import 'agent_selectable_text.dart';
 
 /// Host receipts provide the outcome. Assistant prose never sets this card's
 /// saved, failed or uncertain state.
@@ -154,7 +155,7 @@ class AgentOperationCard extends StatelessWidget {
                   tilePadding: EdgeInsets.zero,
                   title: Text(l.agentPlanDetails),
                   children: [
-                    SelectableText(
+                    AgentSelectableText(
                       const JsonEncoder.withIndent('  ').convert(receipt),
                     ),
                   ],

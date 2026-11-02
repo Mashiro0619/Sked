@@ -10,6 +10,7 @@ import '../../models/app_data_commit.dart';
 import '../../utils/time_utils.dart';
 import '../../widgets/settings_page_header.dart';
 import '../../widgets/workbench_chrome_metrics.dart';
+import 'agent_selectable_text.dart';
 
 /// Opens the current stored object without enabling its workspace, changing
 /// visibility or turning a read-only inspection into another Agent mutation.
@@ -98,7 +99,7 @@ class AgentResourceView extends StatelessWidget {
                     padding: const EdgeInsets.all(16),
                     children: [
                       if (label is String)
-                        SelectableText(
+                        AgentSelectableText(
                           label,
                           style: Theme.of(context).textTheme.headlineSmall,
                         ),
@@ -113,7 +114,7 @@ class AgentResourceView extends StatelessWidget {
                                   row.$1,
                                   style: Theme.of(context).textTheme.labelLarge,
                                 ),
-                                SelectableText(_display(row.$2)),
+                                AgentSelectableText(_display(row.$2)),
                               ],
                             ),
                           ),
@@ -122,7 +123,7 @@ class AgentResourceView extends StatelessWidget {
                         children: [
                           Align(
                             alignment: AlignmentDirectional.centerStart,
-                            child: SelectableText(
+                            child: AgentSelectableText(
                               const JsonEncoder.withIndent('  ')
                                   .convert(values),
                             ),

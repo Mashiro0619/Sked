@@ -17,6 +17,7 @@ import '../../widgets/sked_popup_menu.dart';
 import '../../widgets/sked_spring_builder.dart';
 import 'agent_conversation_list.dart';
 import 'agent_message_content.dart';
+import 'agent_selectable_text.dart';
 import 'agent_transcript.dart';
 import 'agent_attachment_view.dart';
 import '../attachments/conversation_attachments.dart';
@@ -652,7 +653,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                             if (message.text.isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.all(12),
-                                child: SelectableText(message.text),
+                                child: AgentSelectableText(message.text),
                               ),
                         ],
                       ),
@@ -662,7 +663,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                         children: [
                           Padding(
                             padding: const EdgeInsets.all(12),
-                            child: SelectableText(revision.text),
+                            child: AgentSelectableText(revision.text),
                           ),
                         ],
                       ),
@@ -1362,7 +1363,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
           childrenPadding: const EdgeInsets.all(16),
           children: [
             if (source.truncated) Text(l.agentSourceTruncated),
-            SelectableText(source.text),
+            AgentSelectableText(source.text),
           ],
         ),
       for (final message in conversation.messages.where(
@@ -1426,12 +1427,12 @@ class _AgentConversationViewState extends State<AgentConversationView> {
             childrenPadding: const EdgeInsets.all(16),
             children: [
               if (toolCalls[message.toolCallId] case final call?) ...[
-                SelectableText(call.name),
+                AgentSelectableText(call.name),
                 const SizedBox(height: 8),
-                SelectableText(_prettyJson(call.arguments)),
+                AgentSelectableText(_prettyJson(call.arguments)),
                 const SizedBox(height: 12),
               ],
-              SelectableText(_prettyJson(message.text)),
+              AgentSelectableText(_prettyJson(message.text)),
             ],
           )
         else
@@ -1505,9 +1506,9 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                   leading: const Icon(Icons.bolt_outlined, size: 20),
                   childrenPadding: const EdgeInsets.all(16),
                   children: [
-                    SelectableText(call.name),
+                    AgentSelectableText(call.name),
                     const SizedBox(height: 8),
-                    SelectableText(_prettyJson(call.arguments)),
+                    AgentSelectableText(_prettyJson(call.arguments)),
                   ],
                 ),
             ],

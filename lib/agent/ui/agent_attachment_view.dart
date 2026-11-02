@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../../widgets/expressive_dialog.dart';
 import '../../widgets/sked_popup_menu.dart';
 import '../attachments/attachment_repository.dart';
+import 'agent_selectable_text.dart';
 
 String agentAttachmentError(AppLocalizations l, AttachmentError error) =>
     switch (error) {
@@ -254,7 +255,7 @@ class _AttachmentPreviewState extends State<_AttachmentPreview> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SelectableText(
+            AgentSelectableText(
               '${_size(widget.attachment.byteLength)} · ${widget.attachment.mediaType}',
             ),
             const SizedBox(height: 16),

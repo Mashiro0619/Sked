@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
+import 'agent_selectable_text.dart';
 
 /// The key is returned only to the owning host callback. It is never serialized
 /// as a tool argument, conversation message or credential status value.
@@ -46,7 +47,7 @@ class _AgentCredentialDialogState extends State<_AgentCredentialDialog> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(l.agentEndpoint),
-          SelectableText(endpoint.toString()),
+          AgentSelectableText(endpoint.toString()),
           const SizedBox(height: 16),
           TextField(
             key: const ValueKey('agent-credential-input'),

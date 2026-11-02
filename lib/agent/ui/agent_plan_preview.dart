@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
+import 'agent_selectable_text.dart';
 
 /// Every affected object can be inspected before approval, without eagerly
 /// laying out a thousand expanded JSON records on a phone.
@@ -35,7 +36,7 @@ class _AgentPlanPreviewState extends State<AgentPlanPreview> {
           Text(l.agentHttpTransportScope),
           const SizedBox(height: 8),
           Text(l.agentEndpoint, style: Theme.of(context).textTheme.labelLarge),
-          SelectableText(widget.details['endpoint'] as String? ?? ''),
+          AgentSelectableText(widget.details['endpoint'] as String? ?? ''),
         ],
       );
     }
@@ -64,7 +65,7 @@ class _AgentPlanPreviewState extends State<AgentPlanPreview> {
             children: [
               Align(
                 alignment: AlignmentDirectional.centerStart,
-                child: SelectableText(
+                child: AgentSelectableText(
                   const JsonEncoder.withIndent('  ').convert({
                     l.agentValueBefore: change['before'],
                     l.agentValueAfter: change['after'],

@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/sked_expressive_theme.dart';
 import '../../widgets/expressive_motion.dart';
+import 'agent_selectable_text.dart';
 
 /// Message presentation never interprets a reply as an application operation.
 /// Persisted operation receipts have their own host-owned cards.
@@ -33,7 +34,7 @@ class AgentMessageContent extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final bodyStyle = theme.textTheme.bodyLarge?.copyWith(height: 1.55);
     final body = isUser || isNotice
-        ? SelectableText(text, style: bodyStyle)
+        ? AgentSelectableText(text, style: bodyStyle)
         : MarkdownBody(
             data: text,
             selectable: true,
@@ -83,7 +84,7 @@ class AgentMessageContent extends StatelessWidget {
             builders: {'pre': _CodeBlockBuilder()},
             // A remote image embedded in model text must not make an implicit
             // request to a third-party host while reading the conversation.
-            imageBuilder: (uri, title, alt) => SelectableText(
+            imageBuilder: (uri, title, alt) => AgentSelectableText(
               (alt?.isNotEmpty == true ? alt : title) ?? uri.toString(),
               style: bodyStyle,
             ),
@@ -263,7 +264,7 @@ class _CodeBlockBuilder extends MarkdownElementBuilder {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: SelectableText(
+            child: AgentSelectableText(
               code,
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontFamily: 'monospace',
