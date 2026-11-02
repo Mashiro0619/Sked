@@ -10,8 +10,93 @@ flutter test --no-pub -d <device-id> --reporter expanded `
 ```
 
 入口核对发送、通过实际询问按钮批准后保存一条日程及提醒配置、主库操作回执、关闭/重开页面与切换会话后的独立草稿，以及停止后取消 provider、保持业务数据和显示继续入口。测试等待运行、存储和按钮状态，不用固定延时推断保存完成。
+会话选择使用实际桌面侧栏或窄屏抽屉；选择后检查当前会话与输入草稿，抽屉关闭，
+桌面侧栏仍可继续选择其他会话。
 
 存储、凭据、模型传输和原生副作用网关均为合成实现；文本使用测试键盘，点击由框架注入。这只证明该原生 Flutter 页面上的业务闭环，不证明真实输入法、系统手势、读屏、进程重启持久化、真实模型或系统通知投递。Android 模拟器与实体设备结果分别记录。
+
+## Agent 正式入口与长历史连续性
+
+`agent_native_journey_test.dart` 从真实 `AppHomeScreen` 进入 Agent，在 Windows
+核对面板 → 完整工作台 → 面板，在 Android 核对完整页关闭 → 主页菜单重开。
+入口遵循实际工具栏布局；大字号或紧凑桌面时先打开“更多”菜单，再选择 Agent。
+独立的原生进程使用明确合成的主库、聊天、知识、附件、凭据、两类恢复日志、
+备份 staging、站点及设备偏好；正式 `AppRuntime`、codec、工具注册表与保存调度
+保持接入。该入口没有挂载历史布局预览，也没有替换 Agent 页面或导航 delegate。
+
+固定输入包含一条 512 消息长会话和一条 2 消息对照会话。用例在真实 transcript
+上拖动，以实际可见 message ID、消息内归一化位置和渲染文本摘要记录阅读锚点；
+流式回复到达时核对草稿、输入选择、焦点和“回到最新”状态。跨宿主后，同一应用、
+会话仓库、当前会话与草稿仍在，只发出一次受控 provider 请求。结束后核对原有
+512 条消息的完整摘要、新输入和最终回复各一条、实际返回末尾及两条独立草稿。
+运行中与跨宿主时要求取消 token 保持未取消；正常收尾也会取消 token 以释放资源，
+因此完成后另外核对已保存的运行和单次请求均为完成状态，并保留 token 的实际值。
+
+每个平台分别运行 `baseline`（浅色、1×、普通动态效果）和 `accessible`
+（深色、2×、框架 reduced-motion）。配置只作用于框架主题、`TextScaler` 和
+motion scope；不修改原生窗口尺寸、DPR 或系统无障碍选项。Windows 必须先有至少
+1100×600 逻辑像素的真实窗口；Android 使用已确认的任务专用模拟器。入口拒绝
+`flutter_tester` 的 VM 回退，并记录 PID、实际窗口、DPR、运行模式及 Android
+API／ABI／QEMU 标志。未知 Android 硬件类型不会自动记作实体设备。
+
+Windows 测试构建先按[原生隔离约定](../docs/WINDOWS_NATIVE_ACCEPTANCE.md)
+设置独立的 CMake 命名空间，隔离窗口注册表与再次启动通知；使用已配置构建树中
+记录的同一 CMake 可执行文件，不修改生产身份。随后使用专用 driver 保存成功或
+失败的完整检查点，例如：
+
+```powershell
+$agentNativeOutput = Join-Path ([IO.Path]::GetTempPath()) ('sked-agent-native-' + [guid]::NewGuid().ToString('N'))
+$agentNativeRevision = '<full40-source-sha>'
+$agentNativePreviousOutput = $env:FLUTTER_TEST_OUTPUTS_DIR
+$agentNativePreviousNoProxy = $env:NO_PROXY
+flutter build windows --debug --config-only --no-pub `
+  --target=integration_test/agent_native_journey_test.dart
+if ($LASTEXITCODE -ne 0) { throw 'Windows configuration failed.' }
+$agentNativeCmake = (Select-String -LiteralPath build/windows/x64/CMakeCache.txt -Pattern '^CMAKE_COMMAND:INTERNAL=(.+)$').Matches.Groups[1].Value
+& $agentNativeCmake -S windows -B build/windows/x64 `
+  "-DSKED_WINDOWS_TEST_NAMESPACE=agent-$([guid]::NewGuid().ToString('N'))" `
+  -DSKED_BUILD_WINDOWS_RUNNER_TESTS=ON
+if ($LASTEXITCODE -ne 0) { throw 'Windows test namespace configuration failed.' }
+try {
+  $env:FLUTTER_TEST_OUTPUTS_DIR = $agentNativeOutput
+  $env:NO_PROXY = '127.0.0.1,localhost'
+  flutter drive --no-pub -d windows `
+    --driver=test_driver/agent_native_journey_driver.dart `
+    --target=integration_test/agent_native_journey_test.dart `
+    --dart-define=SKED_AGENT_NATIVE_CONFIG=baseline `
+    --dart-define=SKED_AGENT_NATIVE_LABEL=windows-baseline `
+    "--dart-define=SKED_AGENT_NATIVE_REVISION=$agentNativeRevision"
+  if ($LASTEXITCODE -ne 0) { throw 'Agent native journey failed.' }
+} finally {
+  $env:FLUTTER_TEST_OUTPUTS_DIR = $agentNativePreviousOutput
+  $env:NO_PROXY = $agentNativePreviousNoProxy
+}
+```
+
+每次更换配置或实际设备 ID 时使用新的输出目录与 label。`SKED_AGENT_NATIVE_REVISION`
+必须对应构建输入的完整源码 SHA；隔离归档候选可用
+`SKED_AGENT_NATIVE_SOURCE_NOTE` 另记候选树，不能在没有 `.git` 的归档目录推断
+当前分支。driver 保存相关源码文件的 SHA-256 清单，标明它是相关源文件清单，
+不将它表述为全部受跟踪文件或二进制与源码的一致性证明。
+
+输出为 `agent-native-journey-raw.json` 和
+`agent-native-journey-assessment.json`。原始响应和相关源文件清单先保存，随后才
+校验 `native-functional` 协议、平台、配置、检查点次序、归档和 provider 计数。
+失败保留先前步骤、当前异常与独立清理结果；已有输出不覆盖。卸载页面后停止
+未完成合成流、排空运行及仓储，等待 Agent／备份 staging／session 关闭，再排空
+主写队列并释放自有偏好。超时或关闭失败都不记为清理成功。
+
+`support/agent_native_session.dart` 的 `AgentNativeSession(provider: ...)` 可为
+后续独立功能入口注入其他 scripted `ProviderClient`；`AgentNativeApp` 仍挂载正式
+主页。核心 `runAgentNativeJourney` 只使用默认单流 provider，不放宽一次请求断言。
+HTTP guard 在独立原生 UI isolate 阻止意外 Dart HTTP 操作；正常空闲 client 的创建
+和关闭不算请求，也不把它推广为平台原生网络或其他进程的审计。
+
+这是一条原生 Flutter 功能流程，输入来自框架点击、拖动与测试键盘；不等同于
+OS IME、系统返回手势、物理键鼠、读屏或实体设备验收。没有采集引擎帧或 RSS，
+不产出 Profile 性能结论。知识、附件、历史重做、选择恢复与原生无障碍由各自
+独立入口补齐，不能从本条通过推断全矩阵通过。运行时同时保存命令、退出码和
+完整原生日志；AXTree／fatal 错误仍需按失败处理，不能只凭 JSON 的通过字段放行。
 
 ## Agent 浏览器协议与存储
 

@@ -74,6 +74,27 @@ Future<void> _open(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+Future<void> _selectHistory(WidgetTester tester, String id) async {
+  final list = find
+      .byKey(const PageStorageKey('agent-conversation-list'))
+      .hitTestable();
+  if (list.evaluate().isEmpty) {
+    await _tap(tester, _key('agent-history'));
+  }
+  await _until(
+    tester,
+    () => list.evaluate().length == 1,
+    'the actual conversation sidebar or drawer',
+  );
+  final row = _key('agent-history-$id');
+  await _until(
+    tester,
+    () => row.evaluate().length == 1,
+    'the actual conversation history row',
+  );
+  await _tap(tester, row);
+}
+
 Future<void> _sendRequest(WidgetTester tester, String text) async {
   await tester.enterText(_key('agent-composer'), text);
   // Text entry schedules the frame that enables Send. Wait for that actual
@@ -232,6 +253,12 @@ void main() {
         await _open(tester);
         // Exercise the actual product permission selector instead of injecting
         // an approval or changing OperationScope directly from the test.
+        await _tap(tester, _key('agent-mode-picker'));
+        await _until(
+          tester,
+          () => _key('agent-mode-ask').hitTestable().evaluate().isNotEmpty,
+          'the permission menu',
+        );
         await _tap(tester, _key('agent-mode-ask'));
         await _until(
           tester,
@@ -348,36 +375,26 @@ void main() {
           'the second persisted draft',
         );
         FocusManager.instance.primaryFocus?.unfocus();
-        await _tap(tester, _key('agent-history'));
-        await _until(
-          tester,
-          () => _key('agent-history-$firstId').evaluate().isNotEmpty,
-          'the actual conversation history dialog',
-        );
-        await _tap(tester, _key('agent-history-$firstId'));
+        await _selectHistory(tester, firstId);
         await _until(
           tester,
           () =>
               h.app.agent.conversations.selectedId == firstId &&
-              _key('agent-history-$firstId').evaluate().isEmpty,
+              _key('agent-history-drawer').evaluate().isEmpty &&
+              _key('agent-composer').hitTestable().evaluate().length == 1,
           'the original conversation',
         );
         expect(
           tester.widget<TextField>(_key('agent-composer')).controller!.text,
           firstDraft,
         );
-        await _tap(tester, _key('agent-history'));
-        await _until(
-          tester,
-          () => _key('agent-history-$secondId').evaluate().isNotEmpty,
-          'the second conversation history row',
-        );
-        await _tap(tester, _key('agent-history-$secondId'));
+        await _selectHistory(tester, secondId);
         await _until(
           tester,
           () =>
               h.app.agent.conversations.selectedId == secondId &&
-              _key('agent-history-$secondId').evaluate().isEmpty,
+              _key('agent-history-drawer').evaluate().isEmpty &&
+              _key('agent-composer').hitTestable().evaluate().length == 1,
           'the second conversation',
         );
         expect(
