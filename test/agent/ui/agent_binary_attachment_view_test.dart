@@ -10,6 +10,7 @@ import 'package:sked/agent/attachments/conversation_attachments.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
+import 'package:sked/widgets/sked_popup_menu.dart';
 
 import 'agent_ui_test_support.dart';
 
@@ -190,6 +191,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      expect(find.byType(SkedPopupMenuItem<String>), findsNWidgets(2));
       await tester.tap(find.text('Preview file'));
       await _pumpUntil(
         tester,

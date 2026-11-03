@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' show SemanticsRole;
 
@@ -25,15 +26,49 @@ Future<T?> showSkedMenu<T>({
   String? semanticLabel,
   RouteSettings? routeSettings,
 }) {
+  assert((position == null) != (positionBuilder == null));
   final menu = SkedMenuStyle.of(context);
+  final effectiveConstraints = SkedMenuStyle.constraintsFor(
+    context,
+    requested: constraints,
+  );
   return showMenu<T>(
     context: context,
-    items: items,
-    position: position,
-    positionBuilder: positionBuilder,
+    items: [
+      if (items.isNotEmpty) _SkedMenuMetricsGuard<T>(item: items.first),
+      ...items.skip(1),
+    ],
+    positionBuilder: (layoutContext, layoutConstraints) {
+      final anchor =
+          positionBuilder?.call(layoutContext, layoutConstraints) ?? position!;
+      final overlay = Offset.zero & layoutConstraints.biggest;
+      final viewportContext = context.mounted ? context : layoutContext;
+      final available = SkedMenuStyle.availableRectOf(viewportContext);
+      final media = MediaQuery.of(Overlay.of(viewportContext).context);
+      if (media.viewInsets == EdgeInsets.zero) return anchor;
+      final bounds = anchor.toRect(overlay);
+      final left = bounds.left.clamp(
+        available.left,
+        math.max(
+          available.left,
+          available.right - effectiveConstraints.maxWidth,
+        ),
+      );
+      final top = bounds.top.clamp(
+        available.top,
+        math.max(
+          available.top,
+          available.bottom - effectiveConstraints.maxHeight,
+        ),
+      );
+      return RelativeRect.fromRect(
+        bounds.shift(Offset(left - bounds.left, top - bounds.top)),
+        overlay,
+      );
+    },
     initialValue: initialValue,
-    constraints: constraints ?? SkedMenuStyle.constraints,
-    requestFocus: requestFocus,
+    constraints: effectiveConstraints,
+    requestFocus: requestFocus ?? true,
     useRootNavigator: useRootNavigator,
     semanticLabel: semanticLabel,
     routeSettings: menu.desktop
@@ -93,39 +128,8 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final motion = SkedMotionPolicy.of(context);
     final menu = SkedMenuStyle.of(context);
-    final routeSettings = menu.desktop
-        ? DesktopMenuRouteSettings(context)
-        : null;
-    if (focusNode != null) {
-      return _FocusedPopupMenuButton<T>(
-        focusNode: focusNode!,
-        initialValue: initialValue,
-        onOpened: onOpened,
-        onSelected: onSelected,
-        onCanceled: onCanceled,
-        tooltip: tooltip,
-        enabled: enabled,
-        icon: icon,
-        padding: padding,
-        offset: offset,
-        position: position,
-        constraints: constraints ?? SkedMenuStyle.constraints,
-        style: style,
-        iconSize: iconSize,
-        color: menu.surface,
-        shape: menu.shape,
-        elevation: menu.elevation,
-        shadowColor: menu.shadow,
-        surfaceTintColor: Colors.transparent,
-        menuPadding: menu.padding,
-        clipBehavior: Clip.antiAlias,
-        popUpAnimationStyle: motion.routeStyle(AppMotion.menuAnimationStyle),
-        routeSettings: routeSettings,
-        itemBuilder: itemBuilder,
-        child: child,
-      );
-    }
-    return PopupMenuButton<T>(
+    return _SkedPopupMenuButton<T>(
+      focusNode: focusNode,
       initialValue: initialValue,
       onOpened: onOpened,
       onSelected: onSelected,
@@ -136,7 +140,10 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
       padding: padding,
       offset: offset,
       position: position,
-      constraints: constraints ?? SkedMenuStyle.constraints,
+      constraints: SkedMenuStyle.constraintsFor(
+        context,
+        requested: constraints,
+      ),
       style: style,
       iconSize: iconSize,
       color: menu.surface,
@@ -147,18 +154,17 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
       menuPadding: menu.padding,
       clipBehavior: Clip.antiAlias,
       popUpAnimationStyle: motion.routeStyle(AppMotion.menuAnimationStyle),
-      routeSettings: routeSettings,
       itemBuilder: itemBuilder,
       child: child,
     );
   }
 }
 
-// material_ui's PopupMenuButton has no focusNode parameter. Reuse its route
-// implementation and supply the same focusable icon control for the shell.
-class _FocusedPopupMenuButton<T> extends PopupMenuButton<T> {
-  const _FocusedPopupMenuButton({
-    required this.focusNode,
+// Keep Material's popup route and selection behavior, while all triggers share
+// explicit focus support and the viewport-aware showSkedMenu entry point.
+class _SkedPopupMenuButton<T> extends PopupMenuButton<T> {
+  const _SkedPopupMenuButton({
+    this.focusNode,
     required super.itemBuilder,
     super.initialValue,
     super.onOpened,
@@ -184,36 +190,160 @@ class _FocusedPopupMenuButton<T> extends PopupMenuButton<T> {
     super.routeSettings,
     super.child,
   });
-  final FocusNode focusNode;
+  final FocusNode? focusNode;
   @override
-  PopupMenuButtonState<T> createState() => _FocusedPopupMenuButtonState<T>();
+  PopupMenuButtonState<T> createState() => _SkedPopupMenuButtonState<T>();
 }
 
-class _FocusedPopupMenuButtonState<T> extends PopupMenuButtonState<T> {
+class _SkedPopupMenuButtonState<T> extends PopupMenuButtonState<T> {
+  bool _expanded = false;
+  int _menuGeneration = 0;
+
+  @override
+  void showButtonMenu() {
+    if (!widget.enabled) return;
+    final items = widget.itemBuilder(context);
+    if (items.isEmpty) return;
+    final button = context.findRenderObject() as RenderBox?;
+    final overlay =
+        Navigator.of(context).overlay?.context.findRenderObject() as RenderBox?;
+    if (button == null || overlay == null) return;
+    final generation = ++_menuGeneration;
+    RelativeRect? lastPosition;
+    widget.onOpened?.call();
+    setState(() => _expanded = true);
+    unawaited(
+      showSkedMenu<T>(
+        context: context,
+        items: items,
+        initialValue: widget.initialValue,
+        constraints: widget.constraints,
+        requestFocus: widget.requestFocus,
+        useRootNavigator: widget.useRootNavigator,
+        routeSettings: widget.routeSettings,
+        positionBuilder: (_, _) {
+          if (!button.attached || !overlay.attached) {
+            return lastPosition ?? RelativeRect.fill;
+          }
+          var offset = widget.offset;
+          if (widget.position == PopupMenuPosition.under) {
+            offset += Offset(0, button.size.height);
+            if (widget.child == null) {
+              offset -= Offset(0, widget.padding.vertical / 2);
+            }
+          }
+          final origin = button.localToGlobal(offset, ancestor: overlay);
+          return lastPosition = RelativeRect.fromRect(
+            origin & button.size,
+            Offset.zero & overlay.size,
+          );
+        },
+      ).then((value) {
+        if (!mounted) return;
+        if (generation == _menuGeneration) setState(() => _expanded = false);
+        if (value == null) {
+          widget.onCanceled?.call();
+        } else {
+          widget.onSelected?.call(value);
+        }
+      }),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final button = widget as _FocusedPopupMenuButton<T>;
+    final button = widget as _SkedPopupMenuButton<T>;
+    final Widget trigger;
     if (button.child != null) {
-      return SkedTooltip(
+      final child = SkedTooltip(
         message:
             button.tooltip ?? MaterialLocalizations.of(context).showMenuTooltip,
         child: InkWell(
           focusNode: button.focusNode,
           onTap: button.enabled ? showButtonMenu : null,
+          customBorder: skedShapeSchemeOf(context).selection,
           child: button.child,
         ),
       );
+      trigger = button.style?.tapTargetSize == MaterialTapTargetSize.padded
+          ? ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+              child: child,
+            )
+          : child;
+    } else {
+      trigger = IconButton(
+        focusNode: button.focusNode,
+        style: button.style,
+        iconSize: button.iconSize,
+        padding: button.padding,
+        tooltip:
+            button.tooltip ?? MaterialLocalizations.of(context).showMenuTooltip,
+        icon: button.icon ?? const Icon(Icons.more_horiz),
+        onPressed: button.enabled ? showButtonMenu : null,
+      );
     }
-    return IconButton(
-      focusNode: button.focusNode,
-      style: button.style,
-      iconSize: button.iconSize,
-      padding: button.padding,
-      tooltip:
-          button.tooltip ?? MaterialLocalizations.of(context).showMenuTooltip,
-      icon: button.icon ?? const Icon(Icons.more_horiz),
-      onPressed: button.enabled ? showButtonMenu : null,
+    return Semantics(
+      button: true,
+      enabled: button.enabled,
+      expanded: _expanded,
+      child: trigger,
     );
+  }
+}
+
+/// A metrics change invalidates the route's captured menu constraints. Dismiss
+/// this menu without selecting instead of keeping it under a new keyboard or
+/// across a resized viewport. Never pop a later route above the menu.
+class _SkedMenuMetricsGuard<T> extends PopupMenuEntry<T> {
+  const _SkedMenuMetricsGuard({required this.item});
+
+  final PopupMenuEntry<T> item;
+  @override
+  double get height => item.height;
+  @override
+  bool represents(T? value) => item.represents(value);
+  @override
+  State<_SkedMenuMetricsGuard<T>> createState() =>
+      _SkedMenuMetricsGuardState<T>();
+}
+
+class _SkedMenuMetricsGuardState<T> extends State<_SkedMenuMetricsGuard<T>>
+    with WidgetsBindingObserver {
+  bool _invalidated = false;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeMetrics() {
+    _invalidated = true;
+    _closeIfCurrent();
+  }
+
+  void _closeIfCurrent() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && ModalRoute.isCurrentOf(context) == true) {
+        Navigator.of(context).pop<T>();
+      }
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (ModalRoute.isCurrentOf(context) == true && _invalidated) {
+      _closeIfCurrent();
+    }
+    return widget.item;
   }
 }
 
@@ -248,9 +378,15 @@ class SkedCheckedPopupMenuItem<T> extends SkedPopupMenuItem<T> {
     required this.checked,
     super.enabled,
     required this.label,
+    this.description,
+    this.leading,
+    this.trailing,
   }) : super(selected: checked, child: const SizedBox.shrink());
   final bool checked;
   final String label;
+  final String? description;
+  final Widget? leading;
+  final Widget? trailing;
   @override
   PopupMenuItemState<T, SkedPopupMenuItem<T>> createState() =>
       _SkedCheckedMenuState<T>();
@@ -269,7 +405,30 @@ class _SkedCheckedMenuState<T> extends _SkedPopupMenuItemState<T> {
   @override
   Widget buildChild() {
     final item = widget as SkedCheckedPopupMenuItem<T>;
-    return SkedMenuItemContent(selected: item.checked, child: Text(item.label));
+    final menu = SkedMenuStyle.of(context);
+    return SkedMenuItemContent(
+      leading: item.leading,
+      trailing: item.trailing,
+      selected: item.checked,
+      child: item.description == null
+          ? Text(item.label)
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(item.label),
+                if (item.description != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    item.description!,
+                    style: menu.descriptionStyle({
+                      if (!item.enabled) WidgetState.disabled,
+                    }, selected: item.checked),
+                  ),
+                ],
+              ],
+            ),
+    );
   }
 }
 

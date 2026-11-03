@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 
 import '../widgets/workbench_chrome_metrics.dart';
@@ -33,10 +35,78 @@ class SkedMenuStyle {
   static const minimumItemHeight = 32.0;
   static const minimumWidth = 144.0;
   static const maximumWidth = 360.0;
+  static const maximumHeight = 360.0;
+  static const screenPadding = 8.0;
   static const constraints = BoxConstraints(
     minWidth: minimumWidth,
     maxWidth: maximumWidth,
   );
+
+  /// The overlay retains the real safe area and keyboard insets even when a
+  /// page's Scaffold has already consumed them around the trigger.
+  static Rect availableRectOf(BuildContext context) {
+    final localMedia = MediaQuery.of(context);
+    final overlay = Overlay.maybeOf(context);
+    final media = overlay == null ? localMedia : MediaQuery.of(overlay.context);
+    final left = math.max(media.padding.left, media.viewInsets.left);
+    final top = math.max(media.padding.top, media.viewInsets.top);
+    final right = math.max(media.padding.right, media.viewInsets.right);
+    final bottom = math.max(media.padding.bottom, media.viewInsets.bottom);
+    var available = Rect.fromLTWH(
+      left,
+      top,
+      math.max(0.0, media.size.width - left - right),
+      math.max(0.0, media.size.height - top - bottom),
+    );
+    final box = overlay?.context.findRenderObject();
+    if (box is RenderBox && _hasLaidOutAncestry(box)) {
+      available = available
+          .shift(-box.localToGlobal(Offset.zero))
+          .intersect(Offset.zero & box.size);
+    }
+    return Rect.fromLTWH(
+      available.left + screenPadding,
+      available.top + screenPadding,
+      math.max(0.0, available.width - screenPadding * 2),
+      math.max(0.0, available.height - screenPadding * 2),
+    );
+  }
+
+  static bool _hasLaidOutAncestry(RenderBox box) {
+    if (!box.attached) return false;
+    // The overlay may already have a size while a new route's fractional
+    // translation above it is still laying out. Its transform needs that
+    // ancestor's size too; first-frame fields use the MediaQuery fallback.
+    for (
+      RenderObject? current = box;
+      current != null;
+      current = current.parent
+    ) {
+      if (current is RenderBox && !current.hasSize) return false;
+    }
+    return true;
+  }
+
+  static BoxConstraints constraintsFor(
+    BuildContext context, {
+    BoxConstraints? requested,
+  }) {
+    final available = availableRectOf(context);
+    final width = math.min(
+      requested?.maxWidth ?? maximumWidth,
+      math.min(maximumWidth, available.width),
+    );
+    final height = math.min(
+      requested?.maxHeight ?? maximumHeight,
+      math.min(maximumHeight, available.height),
+    );
+    return BoxConstraints(
+      minWidth: math.min(requested?.minWidth ?? minimumWidth, width),
+      maxWidth: width,
+      minHeight: math.min(requested?.minHeight ?? 0, height),
+      maxHeight: height,
+    );
+  }
 
   double get elevation => desktop ? 2 : 3;
   EdgeInsets get padding => desktop
@@ -94,6 +164,15 @@ class SkedMenuStyle {
 
   TextStyle labelStyle(Set<WidgetState> states, {bool selected = false}) =>
       _labelStyle.copyWith(color: foreground(states, selected: selected));
+
+  TextStyle descriptionStyle(
+    Set<WidgetState> states, {
+    bool selected = false,
+  }) => (textTheme.bodySmall ?? _labelStyle).copyWith(
+    color: states.contains(WidgetState.disabled) || selected
+        ? foreground(states, selected: selected)
+        : colors.onSurfaceVariant,
+  );
 
   // InkWell paints focus and hover as separate overlays. Resolve their combined
   // state once so pointer and keyboard menus cannot accumulate different tints.

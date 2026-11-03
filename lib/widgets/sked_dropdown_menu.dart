@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
@@ -8,7 +7,6 @@ import 'package:provider/provider.dart';
 import '../models/app_mode.dart';
 import '../controllers/app_data_maintenance.dart';
 import '../controllers/workspace_view_state.dart';
-import 'workbench_chrome_metrics.dart';
 
 import '../theme/sked_expressive_theme.dart';
 import '../theme/sked_menu_style.dart';
@@ -67,12 +65,9 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>>
   Listenable? _sessionChanges;
   Object? _dataSession;
   String? _workspaces;
-  bool _compact = false, _desktop = false;
   bool _ownerCurrent = true, _acceptSelection = false;
   int _generation = 0;
   bool _restoreTriggerFocus = true;
-
-  bool get _managedMenu => _compact || _desktop || widget.fieldBuilder != null;
 
   bool get _sessionCurrent =>
       _ownerCurrent &&
@@ -101,8 +96,6 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _compact = WorkbenchChromeMetrics.compactTouch(context);
-    _desktop = WorkbenchChromeMetrics.of(context).desktop;
     _ownerCurrent = ModalRoute.isCurrentOf(context) ?? true;
     final maintenance = context.read<AppDataMaintenance?>();
     final workspaceView = context.read<WorkspaceViewState?>();
@@ -118,7 +111,7 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>>
   }
 
   void _checkSession() {
-    if (_managedMenu && _menu.isOpen && !_sessionCurrent) _invalidateMenu();
+    if (_menu.isOpen && !_sessionCurrent) _invalidateMenu();
   }
 
   void _invalidateMenu() {
@@ -131,7 +124,6 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>>
   }
 
   void _opened() {
-    if (!_managedMenu) return;
     _dataSession = _maintenance?.dataSessionToken;
     _workspaces = _workspaceView?.enabledWorkspaces
         .map((mode) => mode.value)
@@ -151,7 +143,6 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>>
 
   void _closed() {
     _acceptSelection = false;
-    if (!_managedMenu) return;
     final generation = ++_generation;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted &&
@@ -171,7 +162,6 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>>
   }
 
   Widget _trackInput(Widget child) {
-    if (!_managedMenu) return child;
     return Focus(
       canRequestFocus: false,
       includeSemantics: false,
@@ -216,8 +206,7 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>>
   @override
   void didUpdateWidget(covariant SkedDropdownMenu<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (_managedMenu &&
-        _menu.isOpen &&
+    if (_menu.isOpen &&
         (!widget.enabled ||
             widget.workspace != oldWidget.workspace ||
             widget.sessionKey != oldWidget.sessionKey ||
@@ -251,16 +240,13 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>>
     final shapes = skedShapeSchemeOf(context);
 
     return LayoutBuilder(
-      builder: (context, constraints) {
-        final menuStyle = _menuStyleForAnchor(
-          baseMenuStyle,
-          constraints.maxWidth,
-        );
+      builder: (context, _) {
+        final menuStyle = _menuStyleForAnchor(baseMenuStyle);
         void toggleMenu() {
           if (_menu.isOpen) {
             _menu.close();
           } else {
-            if (_managedMenu) _triggerFocus.requestFocus();
+            _triggerFocus.requestFocus();
             _menu.open();
           }
         }
@@ -269,7 +255,7 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>>
           button: true,
           enabled: widget.enabled,
           child: InkWell(
-            focusNode: _managedMenu ? _triggerFocus : null,
+            focusNode: _triggerFocus,
             onTap: widget.enabled ? toggleMenu : null,
             borderRadius: shapes.fieldRadius,
             child: content,
@@ -277,7 +263,7 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>>
         );
         Widget anchor({Widget? child}) => MenuAnchor(
           controller: _menu,
-          childFocusNode: _managedMenu ? _triggerFocus : null,
+          childFocusNode: _triggerFocus,
           onOpen: _opened,
           onClose: _closed,
           animated: motion.spatialAnimationsEnabled,
@@ -291,23 +277,18 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>>
             for (final entry in widget.dropdownMenuEntries)
               _trackInput(
                 _SkedDropdownMenuItem<T>(
-                  key: _managedMenu && entry.value == _selectedValue
-                      ? _selectedItem
-                      : null,
-                  compact: _managedMenu,
+                  key: entry.value == _selectedValue ? _selectedItem : null,
                   entry: entry,
                   selected: entry.value == _selectedValue,
                   onSelected: widget.enabled && entry.enabled
                       ? (value) {
-                          if (_managedMenu) {
-                            if (!_acceptSelection ||
-                                !_menu.isOpen ||
-                                !_sessionCurrent) {
-                              return;
-                            }
-                            _acceptSelection = false;
-                            _menu.close();
+                          if (!_acceptSelection ||
+                              !_menu.isOpen ||
+                              !_sessionCurrent) {
+                            return;
                           }
+                          _acceptSelection = false;
+                          _menu.close();
                           setState(() => _selectedValue = value);
                           widget.onSelected?.call(value);
                         }
@@ -366,17 +347,15 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>>
                   ),
                 ),
               );
-        final interactiveField = _managedMenu
-            ? TapRegion(
-                // The whole row is inside the menu's tap region so a slow tap
-                // closes it once. Outside clicks must not have focus stolen back.
-                groupId: _menu,
-                onTapOutside: (_) {
-                  if (_menu.isOpen) _restoreTriggerFocus = false;
-                },
-                child: _trackInput(field),
-              )
-            : field;
+        final interactiveField = TapRegion(
+          // The whole row is inside the menu's tap region so a slow tap
+          // closes it once. Outside clicks must not have focus stolen back.
+          groupId: _menu,
+          onTapOutside: (_) {
+            if (_menu.isOpen) _restoreTriggerFocus = false;
+          },
+          child: _trackInput(field),
+        );
         return expand
             ? SizedBox(width: double.infinity, child: interactiveField)
             : interactiveField;
@@ -384,64 +363,14 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>>
     );
   }
 
-  MenuStyle _menuStyleForAnchor(MenuStyle? baseStyle, double anchorWidth) {
-    // The popup uses the overlay's insets. A page Scaffold or SafeArea may
-    // already have removed them from the field's MediaQuery.
-    final media = MediaQuery.of(Overlay.of(context).context);
-    final fixedSize = anchorWidth.isFinite && anchorWidth > 0
-        ? WidgetStatePropertyAll(Size.fromWidth(anchorWidth))
-        : null;
-
-    if (_desktop || widget.fieldBuilder != null) {
-      final maxWidth = math.min(
-        SkedMenuStyle.maximumWidth,
-        math.max(0.0, media.size.width - media.padding.horizontal - 16),
-      );
-      final maxHeight = math.min(
-        360.0,
-        math.max(
-          48.0,
-          media.size.height -
-              media.padding.top -
-              math.max(media.padding.bottom, media.viewInsets.bottom) -
-              16,
-        ),
-      );
-      return (baseStyle ?? const MenuStyle()).copyWith(
-        fixedSize: const WidgetStatePropertyAll<Size?>(null),
-        minimumSize: WidgetStatePropertyAll(
-          Size(math.min(SkedMenuStyle.minimumWidth, maxWidth), 0),
-        ),
-        maximumSize: WidgetStatePropertyAll(Size(maxWidth, maxHeight)),
-        alignment: AlignmentDirectional.bottomStart,
-      );
-    }
-    if (!_compact) {
-      return (baseStyle ?? const MenuStyle()).copyWith(
-        fixedSize: fixedSize,
-        alignment: AlignmentDirectional.bottomStart,
-      );
-    }
-    final width = math.min(
-      anchorWidth,
-      math.max(0.0, media.size.width - media.padding.horizontal - 16),
-    );
-    final height = math.min(
-      360.0,
-      math.max(
-        48.0,
-        media.size.height -
-            media.padding.top -
-            math.max(media.padding.bottom, media.viewInsets.bottom) -
-            16,
-      ),
-    );
+  MenuStyle _menuStyleForAnchor(MenuStyle? baseStyle) {
+    final constraints = SkedMenuStyle.constraintsFor(context);
     return (baseStyle ?? const MenuStyle()).copyWith(
-      // A fixed Size.fromWidth has infinite height; clamping it to a finite
-      // maximum would accidentally force every small menu to that maximum.
       fixedSize: const WidgetStatePropertyAll<Size?>(null),
-      minimumSize: WidgetStatePropertyAll(Size(width, 0)),
-      maximumSize: WidgetStatePropertyAll(Size(width, height)),
+      minimumSize: WidgetStatePropertyAll(Size(constraints.minWidth, 0)),
+      maximumSize: WidgetStatePropertyAll(
+        Size(constraints.maxWidth, constraints.maxHeight),
+      ),
       alignment: AlignmentDirectional.bottomStart,
     );
   }
@@ -459,14 +388,12 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>>
 class _SkedDropdownMenuItem<T> extends StatelessWidget {
   const _SkedDropdownMenuItem({
     super.key,
-    required this.compact,
     required this.entry,
     required this.selected,
     required this.onSelected,
   });
 
   final DropdownMenuEntry<T> entry;
-  final bool compact;
   final bool selected;
   final ValueChanged<T>? onSelected;
 
@@ -482,7 +409,7 @@ class _SkedDropdownMenuItem<T> extends StatelessWidget {
         checked: selected,
         child: MenuItemButton(
           requestFocusOnHover: false,
-          closeOnActivate: !compact,
+          closeOnActivate: false,
           onPressed: enabled ? () => onSelected?.call(entry.value) : null,
           style: entry.style?.merge(style) ?? style,
           child: SkedMenuItemContent(
@@ -490,8 +417,8 @@ class _SkedDropdownMenuItem<T> extends StatelessWidget {
             trailing: entry.trailingIcon,
             selected: selected,
             child: DefaultTextStyle.merge(
-              maxLines: compact ? null : 1,
-              overflow: compact ? TextOverflow.visible : TextOverflow.ellipsis,
+              maxLines: null,
+              overflow: TextOverflow.visible,
               child: entry.labelWidget ?? Text(entry.label),
             ),
           ),

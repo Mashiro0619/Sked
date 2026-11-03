@@ -27,7 +27,14 @@ class SkedMenuItemContent extends StatelessWidget {
           SizedBox.square(dimension: menu.iconSize, child: leading),
           SizedBox(width: menu.iconGap),
         ],
-        Expanded(child: child),
+        Expanded(
+          child: DefaultTextStyle.merge(
+            maxLines: null,
+            softWrap: true,
+            overflow: TextOverflow.visible,
+            child: child,
+          ),
+        ),
         if (trailing != null) ...[SizedBox(width: menu.iconGap), trailing!],
         if (selected != null) ...[
           SizedBox(width: menu.iconGap),

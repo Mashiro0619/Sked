@@ -104,17 +104,17 @@ class AgentAttachmentList extends StatelessWidget {
                       tooltip: l.agentFilePreview,
                       itemBuilder: (context) => [
                         if (byId[id] != null)
-                          PopupMenuItem(
+                          SkedPopupMenuItem(
                             value: 'preview',
                             child: Text(l.agentFilePreview),
                           ),
                         if (onUseAgain != null)
-                          PopupMenuItem(
+                          SkedPopupMenuItem(
                             value: 'reuse',
                             child: Text(l.agentFileUseAgain),
                           ),
                         if (onRemove != null)
-                          PopupMenuItem(
+                          SkedPopupMenuItem(
                             value: 'remove',
                             child: Text(l.agentRemoveAttachment),
                           ),
