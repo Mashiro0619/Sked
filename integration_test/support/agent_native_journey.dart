@@ -16,7 +16,6 @@ import 'package:sked/controllers/app_session.dart';
 import 'package:sked/screens/agent_page.dart';
 import 'package:sked/screens/app_home_screen.dart';
 import 'package:sked/theme/sked_expressive_theme.dart';
-import 'package:sked/widgets/assistant_pane.dart';
 
 import 'agent_native_session.dart';
 
@@ -346,14 +345,10 @@ class _Journey {
 
   Finder key(String value) => find.byKey(ValueKey(value));
   Finder get composer => key('agent-composer').hitTestable();
-  Finder get homeMore => key(
-    Platform.isWindows
-        ? 'general-desktop-toolbar-more'
-        : 'general-toolbar-more-button',
-  );
+  Finder get homeNavigation => key('workspace-main-navigation');
   bool get homeEntryVisible =>
-      key('assistant-toggle').hitTestable().evaluate().length == 1 ||
-      homeMore.hitTestable().evaluate().length == 1;
+      key('workspace-agent-entry').hitTestable().evaluate().length == 1 ||
+      homeNavigation.hitTestable().evaluate().length == 1;
   Finder transcript([String id = agentNativeLongId]) =>
       key('agent-transcript-$id').hitTestable();
   TextField get field => tester.widget<TextField>(composer);
@@ -384,8 +379,9 @@ class _Journey {
     'composerCount': composer.evaluate().length,
     'agentInitialized': session.app.agent.isInitialized,
     'homeAgentVisible':
-        key('assistant-toggle').hitTestable().evaluate().length == 1,
-    'homeMoreVisible': homeMore.hitTestable().evaluate().length == 1,
+        key('workspace-agent-entry').hitTestable().evaluate().length == 1,
+    'homeNavigationVisible':
+        homeNavigation.hitTestable().evaluate().length == 1,
     'lastObservedAnchor': _lastObservedAnchor?.toJson(),
     'lastExpectedAnchor': _lastExpectedAnchor?.toJson(),
     'provider': session.controlledProvider.toJson(),
@@ -446,36 +442,28 @@ class _Journey {
   }
 
   Future<void> openFromHome() async {
-    if (key('assistant-toggle').hitTestable().evaluate().isEmpty) {
-      await tap(homeMore, 'the real general workspace More menu');
+    if (key('workspace-agent-entry').hitTestable().evaluate().isEmpty) {
+      await tap(homeNavigation, 'the real main navigation drawer');
       await until(
-        () => key('assistant-toggle').evaluate().length == 1,
-        'the real Agent menu item',
+        () => key('workspace-agent-entry').evaluate().length == 1,
+        'the real side navigation Agent entry',
       );
-      await tester.ensureVisible(key('assistant-toggle'));
+      await tester.ensureVisible(key('workspace-agent-entry'));
       await tester.pump();
-      _homeEntry = Platform.isWindows
-          ? 'home desktop More menu / Agent'
-          : 'home More menu / Agent';
-    } else {
-      _homeEntry = 'home assistant toggle';
     }
-    await tap(key('assistant-toggle'), 'the real home Agent entry');
+    _homeEntry = 'home side navigation / Agent';
+    await tap(
+      key('workspace-agent-entry'),
+      'the real side navigation Agent entry',
+    );
     await until(
       () => composer.evaluate().length == 1 && session.app.agent.isInitialized,
       'the product Agent composer',
     );
-    if (Platform.isWindows) {
-      _require(
-        find.byType(AgentAssistantPane).hitTestable().evaluate().isNotEmpty,
-        'Windows did not open the production assistant pane.',
-      );
-    } else {
-      _require(
-        find.byType(AgentPage).hitTestable().evaluate().length == 1,
-        'Android did not open the production full Agent page.',
-      );
-    }
+    _require(
+      find.byType(AgentPage).hitTestable().evaluate().length == 1,
+      'The production full Agent workspace did not open.',
+    );
     assertOwner();
   }
 
@@ -505,7 +493,7 @@ class _Journey {
     return {
       ...state(),
       'entry': _homeEntry,
-      'host': Platform.isWindows ? 'AgentAssistantPane' : 'AgentPage',
+      'host': 'AgentPage',
       'historyMessageCount':
           session.app.agent.conversations.selected!.messages.length,
       'anchor': anchor.toJson(),
@@ -787,66 +775,29 @@ class _Journey {
       field.controller!.text == _streamInput!.text,
       'The pending draft changed before navigation.',
     );
-    final observations = <String, Object?>{'before': before.toJson()};
-    if (Platform.isWindows) {
-      await tap(key('agent-open-workspace'), 'the pane Expand action');
-      await until(
-        () =>
-            find.byType(AgentPage).hitTestable().evaluate().length == 1 &&
-            composer.evaluate().length == 1,
-        'the full product Agent workspace',
+    final history = key('agent-workspace-history').hitTestable();
+    final wideHistory = history.evaluate().isNotEmpty;
+    if (wideHistory) {
+      final selected = find.descendant(
+        of: history,
+        matching: key('agent-history-$agentNativeLongId'),
       );
-      assertOwner();
-      assertActiveRun();
-      final full = await stableAnchor(expected: before);
       _require(
-        field.controller!.text == _draft,
-        'Expanding the pane lost its draft.',
+        tester.widget<ListTile>(selected).selected,
+        'The full workspace history does not mark the shared conversation.',
       );
-      final history = key('agent-workspace-history').hitTestable();
-      final wideHistory = history.evaluate().isNotEmpty;
-      if (wideHistory) {
-        final selected = find.descendant(
-          of: history,
-          matching: key('agent-history-$agentNativeLongId'),
-        );
-        _require(
-          tester.widget<ListTile>(selected).selected,
-          'The full workspace history does not mark the shared conversation.',
-        );
-      }
-      _draft = 'Draft edited inside the full Agent workspace';
-      await enterDraft(_draft);
-      final edited = await stableAnchor(expected: full);
-      await closeFullPage();
-      await until(
-        () =>
-            composer.evaluate().length == 1 &&
-            find.byType(AgentAssistantPane).hitTestable().evaluate().isNotEmpty,
-        'the retained desktop Agent pane',
-      );
-      final returned = await stableAnchor(expected: edited);
-      observations.addAll({
-        'route': 'pane → full AgentPage → pane',
-        'fullPage': full.toJson(),
-        'fullPageEdited': edited.toJson(),
-        'returned': returned.toJson(),
-        'workspaceHistoryVisible': wideHistory,
-      });
-    } else {
-      await closeFullPage();
-      _require(
-        composer.evaluate().isEmpty,
-        'Closing the Android page left an interactive composer.',
-      );
-      assertActiveRun();
-      await openFromHome();
-      final reopened = await stableAnchor(expected: before);
-      observations.addAll({
-        'route': 'full AgentPage → home → More / Agent',
-        'reopened': reopened.toJson(),
-      });
     }
+    _draft = 'Draft edited inside the full Agent workspace';
+    await enterDraft(_draft);
+    final edited = await stableAnchor(expected: before);
+    await closeFullPage();
+    _require(
+      composer.evaluate().isEmpty,
+      'Closing the full page left an interactive composer.',
+    );
+    assertActiveRun();
+    await openFromHome();
+    final reopened = await stableAnchor(expected: edited);
     assertOwner();
     assertActiveRun();
     _require(
@@ -854,14 +805,24 @@ class _Journey {
           session.app.agent.conversations.selected!.draft == _draft,
       'The visible host and stored draft diverged after navigation.',
     );
-    return {...observations, ...state(), 'sameApplicationAndRepository': true};
+    return {
+      'before': before.toJson(),
+      'edited': edited.toJson(),
+      'route': 'full AgentPage → home side navigation → full AgentPage',
+      'reopened': reopened.toJson(),
+      'workspaceHistoryVisible': wideHistory,
+      ...state(),
+      'sameApplicationAndRepository': true,
+    };
   }
 
   Future<void> selectHistory(String id) async {
-    await tap(key('agent-history'), 'the real conversation History action');
     final list = find
         .byKey(const PageStorageKey('agent-conversation-list'))
         .hitTestable();
+    if (list.evaluate().isEmpty) {
+      await tap(key('agent-history'), 'the real conversation History action');
+    }
     await until(
       () => list.evaluate().length == 1,
       'the conversation history list',

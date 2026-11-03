@@ -17,9 +17,9 @@ flutter test --no-pub -d <device-id> --reporter expanded `
 
 ## Agent 正式入口与长历史连续性
 
-`agent_native_journey_test.dart` 从真实 `AppHomeScreen` 进入 Agent，在 Windows
-核对面板 → 完整工作台 → 面板，在 Android 核对完整页关闭 → 主页菜单重开。
-入口遵循实际工具栏布局；大字号或紧凑桌面时先打开“更多”菜单，再选择 Agent。
+`agent_native_journey_test.dart` 从真实 `AppHomeScreen` 的侧边导航进入完整 Agent 页面，
+在 Windows 和 Android 都核对向上阅读 → 关闭完整页 → 从侧边导航重开。
+入口遵循实际布局；手机先打开主导航抽屉，桌面使用侧栏，必要时滚动到 Agent。
 独立的原生进程使用明确合成的主库、聊天、知识、附件、凭据、两类恢复日志、
 备份 staging、站点及设备偏好；正式 `AppRuntime`、codec、工具注册表与保存调度
 保持接入。该入口没有挂载历史布局预览，也没有替换 Agent 页面或导航 delegate。

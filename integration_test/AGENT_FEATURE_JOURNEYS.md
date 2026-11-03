@@ -5,7 +5,7 @@
 ## knowledge 的固定流程
 
 1. 使用 `AgentNativeSession(provider:)` 的显式合成内存存储装载真实 `AppRuntime`，主页挂载前后均核对 Agent 历史尚未加载。
-2. Windows 从主页 Agent 按钮进入真实 `AgentAssistantPane`；Android 从通用工作区“更多”菜单进入真实 `AgentPage`。核对同一 `AgentApplication`、主会话、会话仓库及 512 条历史，并通过输入框保存一条未发送草稿。
+2. Windows 从主页侧栏进入真实 `AgentPage`；Android 通过主页导航按钮打开现有侧抽屉，再进入同一完整聊天。核对同一 `AgentApplication`、主会话、会话仓库及 512 条历史，并通过输入框保存一条未发送草稿。
 3. 通过会话菜单进入独立 Agent 设置页，在 Memory 页签创建并保存一条合成记忆。等待知识仓库写入完成，再调用生产知识服务 `initialize(reload: true)` 读回存储，核对 ID、内容、版本及实际保存回执。
 4. 点击同一记录，编辑标题和正文并保存，再次读回存储。记录保持同一 ID，版本从 1 增至 2，档案中仍只有一条 Memory。
 5. 点击设置页返回按钮回到原聊天，再从会话菜单重新进入设置，打开同一 Memory，核对实际编辑框内容。点击对话框“取消”，访问 Skills 页签及可用的添加按钮，并确认内置目录已经加载。再次读回知识存储，核对取消和页签切换没有新增写入。

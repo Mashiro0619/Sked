@@ -27,6 +27,7 @@ import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/workspace_features_page.dart';
 import 'package:sked/widgets/assistant_pane.dart';
 import 'package:sked/widgets/workspace_frame.dart';
+import 'package:sked/widgets/workspace_navigation.dart';
 
 import '../agent/ui/agent_ui_test_support.dart';
 import '../support/workspace_harness.dart';
@@ -241,9 +242,21 @@ Future<void> _mountFrame(
       assistantController: assistant,
       panelDisplayMode: WorkspacePanelDisplayMode.sideBySide,
       resources: const Text('Resources'),
-      canvas: const Align(
+      canvas: Align(
         alignment: Alignment.topLeft,
-        child: AssistantPaneToggle(),
+        child: Builder(
+          builder: (context) {
+            final scope = AssistantPaneScope.of(context)!;
+            return scope.enabled
+                ? IconButton(
+                    key: const ValueKey('workspace-agent-entry'),
+                    tooltip: 'Agent',
+                    onPressed: scope.onToggle,
+                    icon: const Icon(Icons.chat_bubble_outline),
+                  )
+                : const SizedBox.shrink();
+          },
+        ),
       ),
     ),
   ),
@@ -319,7 +332,7 @@ void main() {
         workspace,
         size: const Size(1280, 1000),
       );
-      await tester.tap(_key('assistant-toggle'));
+      await tester.tap(_key('workspace-agent-entry'));
       await tester.pumpAndSettle();
       await tester.enterText(_key('agent-composer'), 'First request');
       await tester.pump();
@@ -363,7 +376,7 @@ void main() {
   );
 
   testWidgets(
-    'a foreground narrow workspace task excludes the covered Agent from input and focus',
+    'full Agent workspace keeps retained calendar tasks covered and unfocused',
     (tester) async {
       final application = await _Application.create();
       final assistant = AssistantPaneController();
@@ -380,7 +393,7 @@ void main() {
         size: const Size(720, 1000),
         scale: 2,
       );
-      await tester.tap(_key('assistant-toggle'));
+      await tester.tap(_key('workspace-agent-entry'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(_key('agent-composer'));
       await tester.tap(_key('agent-composer'));
@@ -393,9 +406,9 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Foreground task'), findsOneWidget);
-      expect(_key('agent-composer').hitTestable(), findsNothing);
-      expect(focus.hasFocus, isFalse);
+      expect(find.text('Foreground task'), findsNothing);
+      expect(_key('agent-composer').hitTestable(), findsOneWidget);
+      expect(focus.hasFocus, isTrue);
       await workspace.close();
       await tester.pumpAndSettle();
       expect(_key('agent-composer'), findsOneWidget);
@@ -408,7 +421,7 @@ void main() {
   for (final desktop in [false, true]) {
     for (final scale in [1.0, 2.0]) {
       testWidgets(
-        '${desktop ? 'desktop' : 'phone'} Agent sends, switches conversations and keeps a running draft at ${scale}x',
+        '${desktop ? 'desktop' : 'phone'} full Agent workspace sends, switches conversations and keeps a running draft at ${scale}x',
         (tester) async {
           final application = await _Application.create();
           final assistant = AssistantPaneController();
@@ -425,14 +438,11 @@ void main() {
             size: desktop ? const Size(1440, 1000) : const Size(390, 844),
             scale: scale,
           );
-          await tester.tap(_key('assistant-toggle'));
+          await tester.tap(_key('workspace-agent-entry'));
           await tester.pumpAndSettle();
-          expect(
-            find.byType(AgentPage),
-            desktop ? findsNothing : findsOneWidget,
-          );
+          expect(find.byType(AgentPage), findsOneWidget);
           expect(find.byType(AssistantPreviewPane), findsNothing);
-          expect(find.text('First conversation'), findsOneWidget);
+          expect(find.text('First conversation'), findsWidgets);
           final first = application.conversations.selectedId!;
           await tester.ensureVisible(_key('agent-composer'));
           await tester.enterText(_key('agent-composer'), 'Read my schedule');
@@ -471,23 +481,17 @@ void main() {
           expect(second, isNot(first));
           await tester.ensureVisible(_key('agent-composer'));
           await tester.enterText(_key('agent-composer'), 'Second draft');
-          await tester.ensureVisible(_key('agent-history'));
-          await tester.tap(_key('agent-history'));
-          await tester.pumpAndSettle();
+          if (_key('agent-history-$first').hitTestable().evaluate().isEmpty) {
+            await tester.ensureVisible(_key('agent-history'));
+            await tester.tap(_key('agent-history'));
+            await tester.pumpAndSettle();
+          }
+          await tester.ensureVisible(_key('agent-history-$first'));
           await tester.tap(_key('agent-history-$first'));
           await tester.pumpAndSettle();
           await tester.ensureVisible(_key('agent-composer'));
           await tester.enterText(_key('agent-composer'), 'Next question');
-          if (desktop) {
-            await tester.tap(
-              find.descendant(
-                of: find.byType(AgentAssistantPane),
-                matching: find.byTooltip('Close'),
-              ),
-            );
-          } else {
-            await tester.tap(find.byType(BackButton));
-          }
+          await tester.tap(find.byType(BackButton));
           await tester.pumpAndSettle();
           expect(
             application.runtime.state.value.runFor(first).isActive,
@@ -502,7 +506,7 @@ void main() {
             tester.view.physicalSize = const Size(800, 1000);
             await tester.pumpAndSettle();
           }
-          await tester.tap(_key('assistant-toggle'));
+          await tester.tap(_key('workspace-agent-entry'));
           await tester.pumpAndSettle();
           expect(
             tester.widget<TextField>(_key('agent-composer')).controller!.text,
@@ -530,7 +534,7 @@ void main() {
 
   for (final desktop in [false, true]) {
     testWidgets(
-      'application-owned Agent enables and runs in the ${desktop ? 'desktop pane' : 'phone page'}',
+      'application-owned Agent enables and runs in the ${desktop ? 'desktop' : 'phone'} full workspace',
       (tester) async {
         final storage = UiMemoryStorage();
         final provider = _Provider();
@@ -577,21 +581,18 @@ void main() {
         await tester.pumpWidget(WorkspaceHarness(provider: app));
         await tester.pumpAndSettle();
         expect(find.byType(AgentAssistantPane), findsNothing);
-        final entry = _key('assistant-toggle');
+        final entry = _key('workspace-agent-entry');
         if (!desktop) expect(entry, findsNothing);
         if (entry.evaluate().isEmpty) {
-          await tester.tap(_key('student-toolbar-more-button'));
+          await tester.tap(_key('workspace-main-navigation'));
           await tester.pumpAndSettle();
         }
         expect(entry, findsOneWidget);
         await tester.tap(entry);
         await tester.pumpAndSettle();
         expect(find.byType(AssistantPreviewPane), findsNothing);
-        expect(find.byType(AgentPage), desktop ? findsNothing : findsOneWidget);
-        expect(
-          find.byType(AgentAssistantPane),
-          desktop ? findsOneWidget : findsNothing,
-        );
+        expect(find.byType(AgentPage), findsOneWidget);
+        expect(find.byType(AgentAssistantPane), findsNothing);
         await tester.tap(_key('agent-new'));
         await tester.pumpAndSettle();
         final conversation = app.agent.conversations.selectedId!;
@@ -615,20 +616,15 @@ void main() {
           'Read my calendar',
         );
         await tester.enterText(_key('agent-composer'), 'Keep this draft');
-        if (desktop) {
-          tester.view.physicalSize = const Size(720, 1000);
-          await tester.pumpAndSettle();
-          expect(find.byType(AgentAssistantPane), findsOneWidget);
-        } else {
-          await tester.tap(find.byType(BackButton));
-          await tester.pumpAndSettle();
-          unawaited(
-            AgentPage.openConversation(
-              tester.element(find.byType(AdaptiveSkedShell)),
-            ),
-          );
-          await tester.pumpAndSettle();
-        }
+        await tester.tap(find.byType(BackButton));
+        await tester.pumpAndSettle();
+        if (desktop) tester.view.physicalSize = const Size(720, 1000);
+        unawaited(
+          AgentPage.openConversation(
+            tester.element(find.byType(AdaptiveSkedShell)),
+          ),
+        );
+        await tester.pumpAndSettle();
         expect(app.agent.conversations.selectedId, conversation);
         expect(
           tester.widget<TextField>(_key('agent-composer')).controller!.text,
@@ -658,7 +654,7 @@ void main() {
   }
 
   testWidgets(
-    'desktop full workspace and side pane share one running conversation',
+    'desktop full workspace preserves one running conversation across reopen',
     (tester) async {
       final application = await _Application.create();
       final assistant = AssistantPaneController();
@@ -674,7 +670,7 @@ void main() {
         workspace,
         size: const Size(1440, 1000),
       );
-      await tester.tap(_key('assistant-toggle'));
+      await tester.tap(_key('workspace-agent-entry'));
       await tester.pumpAndSettle();
       final id = application.conversations.selectedId!;
       await tester.enterText(_key('agent-composer'), 'Read my schedule');
@@ -683,10 +679,10 @@ void main() {
       await _until(tester, () => application.provider.requests.isNotEmpty);
       await tester.enterText(_key('agent-composer'), 'Keep this next question');
       await tester.pumpAndSettle();
-      await tester.tap(_key('agent-open-workspace'));
+      tester.view.physicalSize = const Size(720, 1000);
       await tester.pumpAndSettle();
       expect(find.byType(AgentPage), findsOneWidget);
-      expect(_key('agent-workspace-history'), findsOneWidget);
+      expect(_key('agent-history'), findsOneWidget);
       expect(_key('agent-composer'), findsOneWidget);
       expect(application.conversations.selectedId, id);
       expect(application.provider.requests.length, 1);
@@ -704,8 +700,10 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.byType(AgentPage), findsNothing);
-      expect(find.byType(AgentAssistantPane), findsOneWidget);
-      expect(assistant.isOpen, isTrue);
+      expect(find.byType(AgentAssistantPane), findsNothing);
+      expect(assistant.isOpen, isFalse);
+      await tester.tap(_key('workspace-agent-entry'));
+      await tester.pumpAndSettle();
       expect(
         tester.widget<TextField>(_key('agent-composer')).controller!.text,
         'Edited in full chat',
@@ -743,25 +741,25 @@ void main() {
         workspace,
         size: const Size(1440, 900),
       );
-      await tester.tap(_key('assistant-toggle'));
+      await tester.tap(_key('workspace-agent-entry'));
       await tester.pumpAndSettle();
       await tester.enterText(_key('agent-composer'), 'Preserved draft');
       await application.setEnabled(false);
       await tester.pumpAndSettle();
-      expect(_key('assistant-toggle'), findsNothing);
+      expect(_key('workspace-agent-entry'), findsNothing);
       expect(find.byType(AgentAssistantPane), findsNothing);
       expect(assistant.isOpen, isFalse);
       await application.setEnabled(true);
       await tester.pumpAndSettle();
-      expect(_key('assistant-toggle'), findsOneWidget);
+      expect(_key('workspace-agent-entry'), findsOneWidget);
       expect(assistant.isOpen, isFalse);
-      await tester.tap(_key('assistant-toggle'));
+      await tester.tap(_key('workspace-agent-entry'));
       await tester.pumpAndSettle();
       expect(
         tester.widget<TextField>(_key('agent-composer')).controller!.text,
         'Preserved draft',
       );
-      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();
       expect(assistant.isOpen, isFalse);
       expect(tester.takeException(), isNull);
@@ -931,7 +929,7 @@ void main() {
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
   testWidgets(
-    'desktop schedule and timetable panes share the running conversation',
+    'desktop schedule and timetable reopen the same running full workspace',
     (tester) async {
       final application = await _Application.create();
       final app = await workspaceProvider(mode: AppMode.general);
@@ -959,8 +957,10 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      await AgentPage.openConversation(
-        tester.element(find.byType(AdaptiveSkedShell)),
+      unawaited(
+        AgentPage.openConversation(
+          tester.element(find.byType(AdaptiveSkedShell)),
+        ),
       );
       await tester.pumpAndSettle();
       await tester.enterText(_key('agent-composer'), 'Read across workspaces');
@@ -969,6 +969,8 @@ void main() {
       await _until(tester, () => application.provider.requests.isNotEmpty);
       final id = application.conversations.selectedId!;
       await tester.enterText(_key('agent-composer'), 'Shared next question');
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
       await tester.tap(_key('workspace-resource-mode-student'));
       await tester.pumpAndSettle();
       expect(app.workspaceView.activeMode, AppMode.student);
@@ -976,9 +978,9 @@ void main() {
       await application.configure(application.settings);
       await tester.pumpAndSettle();
       expect(find.byType(AgentAssistantPane), findsNothing);
-      await tester.tap(_key('assistant-toggle'));
+      await tester.tap(_key('workspace-agent-entry'));
       await tester.pumpAndSettle();
-      expect(find.byType(AgentAssistantPane), findsOneWidget);
+      expect(find.byType(AgentPage), findsOneWidget);
       expect(application.conversations.selectedId, id);
       expect(
         tester.widget<TextField>(_key('agent-composer')).controller!.text,
@@ -998,49 +1000,69 @@ void main() {
   );
 
   for (final mode in AppMode.values) {
-    testWidgets('hidden bottom navigation retains ${mode.name} Agent entry', (
-      tester,
-    ) async {
-      final application = await _Application.create();
-      final app = await workspaceProvider(mode: mode);
-      addTearDown(application.dispose);
-      addTearDown(app.dispose);
-      addTearDown(tester.view.reset);
-      await app.settingsCommands.updateHideHomeWorkspaceNavigation(true);
-      tester.view.devicePixelRatio = 1;
-      tester.view.physicalSize = const Size(390, 844);
-      await tester.pumpWidget(
-        WorkspaceHarness(
-          provider: app,
-          home: ChangeNotifierProvider<AgentApplication>.value(
-            value: application,
-            child: Consumer2<WorkspaceViewState, SettingsViewState>(
-              builder: (_, workspace, settings, _) => AdaptiveSkedShell(
-                workspace: workspace,
-                workspaces: app.workspaces,
-                settings: settings,
-                settingsCommands: app.settingsCommands,
-                activeMode: workspace.activeMode,
-                onOpenSettings: () async {},
+    for (final scale in [1.0, 2.0]) {
+      testWidgets(
+        'single ${mode.name} workspace retains Agent drawer entry at ${scale}x with hidden bottom navigation',
+        (tester) async {
+          final application = await _Application.create();
+          final app = await workspaceProvider(mode: mode);
+          addTearDown(application.dispose);
+          addTearDown(app.dispose);
+          addTearDown(tester.view.reset);
+          await app.settingsCommands.updateHideHomeWorkspaceNavigation(true);
+          await app.workspaces.setEnabled(
+            mode == AppMode.student ? AppMode.general : AppMode.student,
+            false,
+          );
+          tester.view.devicePixelRatio = 1;
+          tester.view.physicalSize = const Size(390, 844);
+          tester.platformDispatcher.textScaleFactorTestValue = scale;
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+          await tester.pumpWidget(
+            WorkspaceHarness(
+              provider: app,
+              home: ChangeNotifierProvider<AgentApplication>.value(
+                value: application,
+                child: Consumer2<WorkspaceViewState, SettingsViewState>(
+                  builder: (_, workspace, settings, _) => AdaptiveSkedShell(
+                    workspace: workspace,
+                    workspaces: app.workspaces,
+                    settings: settings,
+                    settingsCommands: app.settingsCommands,
+                    activeMode: workspace.activeMode,
+                    onOpenSettings: () async {},
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
+          );
+          await tester.pumpAndSettle();
+          expect(find.byType(NavigationBar), findsNothing);
+          expect(_key('assistant-toggle'), findsNothing);
+          expect(_key('workspace-main-navigation'), findsOneWidget);
+          final navigation = WorkspaceNavigationScope.maybeOf(
+            tester.element(_key('workspace-main-navigation')),
+          )!;
+          final entry = _key('workspace-agent-entry');
+          if (entry.evaluate().isEmpty) {
+            await tester.tap(_key('workspace-main-navigation'));
+            await tester.pumpAndSettle();
+          }
+          await tester.ensureVisible(entry);
+          await tester.tap(entry);
+          await tester.pumpAndSettle();
+          navigation.onOpenAgent!();
+          navigation.onOpenAgent!();
+          await tester.pumpAndSettle();
+          expect(find.byType(AgentPage), findsOneWidget);
+          expect(find.byType(AgentPage, skipOffstage: false), findsOneWidget);
+          expect(_key('workspace-resource-scrim'), findsNothing);
+          expect(find.byType(AssistantPreviewPane), findsNothing);
+          expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox.shrink());
+        },
+        variant: TargetPlatformVariant.only(TargetPlatform.android),
       );
-      await tester.pumpAndSettle();
-      expect(find.byType(NavigationBar), findsNothing);
-      final entry = _key('assistant-toggle');
-      if (entry.evaluate().isEmpty) {
-        await tester.tap(_key('${mode.value}-toolbar-more-button'));
-        await tester.pumpAndSettle();
-      }
-      await tester.ensureVisible(entry);
-      await tester.tap(entry);
-      await tester.pumpAndSettle();
-      expect(find.byType(AgentPage), findsOneWidget);
-      expect(find.byType(AssistantPreviewPane), findsNothing);
-      expect(tester.takeException(), isNull);
-      await tester.pumpWidget(const SizedBox.shrink());
-    }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+    }
   }
 }

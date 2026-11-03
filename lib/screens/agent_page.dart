@@ -14,7 +14,6 @@ import '../agent/provider/provider.dart';
 import '../application/operation_contracts.dart';
 import '../l10n/app_localizations.dart';
 import '../models/agent_settings.dart';
-import '../widgets/workbench_chrome_metrics.dart';
 import 'agent_settings_page.dart';
 
 /// A full conversation workspace using the same application-owned repository
@@ -22,9 +21,17 @@ import 'agent_settings_page.dart';
 class AgentPage extends StatelessWidget {
   const AgentPage({super.key});
 
-  static Future<void> open(BuildContext context) {
+  static final _openRoutes = Expando<Future<void>>('Agent workspace route');
+
+  static bool isOpen(AgentApplication application) =>
+      _openRoutes[application] != null;
+
+  static Future<void> open(BuildContext context) async {
     final application = context.read<AgentApplication>();
-    return Navigator.of(context).push<void>(
+    if (!application.settings.enabled) return;
+    final existing = _openRoutes[application];
+    if (existing != null) return existing;
+    final route = Navigator.of(context, rootNavigator: true).push<void>(
       MaterialPageRoute<void>(
         builder: (_) => ChangeNotifierProvider<AgentApplication>.value(
           value: application,
@@ -32,17 +39,18 @@ class AgentPage extends StatelessWidget {
         ),
       ),
     );
+    _openRoutes[application] = route;
+    try {
+      await route;
+    } finally {
+      if (identical(_openRoutes[application], route)) {
+        _openRoutes[application] = null;
+      }
+    }
   }
 
-  /// Opens the selected conversation in the current platform's product host.
-  /// Desktop workspaces consume this request once, only while active.
-  static Future<void> openConversation(BuildContext context) {
-    if (WorkbenchChromeMetrics.of(context).desktop) {
-      context.read<AgentApplication>().requestShowConversation();
-      return Future.value();
-    }
-    return open(context);
-  }
+  /// Every product entry uses the same full conversation workspace.
+  static Future<void> openConversation(BuildContext context) => open(context);
 
   @override
   Widget build(BuildContext context) {

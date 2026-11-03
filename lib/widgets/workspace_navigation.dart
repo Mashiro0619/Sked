@@ -19,6 +19,7 @@ import '../l10n/app_localizations.dart';
 import 'ui_command.dart';
 import 'sked_popup_menu.dart';
 import 'app_layout_tokens.dart';
+import 'assistant_pane.dart';
 import 'workbench_chrome_metrics.dart';
 import 'desktop_window_host.dart';
 import 'workspace_frame.dart';
@@ -34,6 +35,8 @@ class WorkspaceNavigationScope extends InheritedWidget {
     required this.integrated,
     required this.onSelect,
     required this.onToggleResources,
+    this.agentEnabled = false,
+    this.onOpenAgent,
     required super.child,
   });
   final bool enabled;
@@ -41,6 +44,8 @@ class WorkspaceNavigationScope extends InheritedWidget {
   final bool integrated;
   final ValueChanged<AppMode> onSelect;
   final VoidCallback onToggleResources;
+  final bool agentEnabled;
+  final VoidCallback? onOpenAgent;
   static WorkspaceNavigationScope? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<WorkspaceNavigationScope>();
   @override
@@ -48,7 +53,36 @@ class WorkspaceNavigationScope extends InheritedWidget {
       selectedMode != oldWidget.selectedMode ||
       enabled != oldWidget.enabled ||
       integrated != oldWidget.integrated ||
-      onSelect != oldWidget.onSelect;
+      onSelect != oldWidget.onSelect ||
+      agentEnabled != oldWidget.agentEnabled ||
+      onOpenAgent != oldWidget.onOpenAgent;
+}
+
+/// Always reachable on touch layouts, including a hidden bottom mode bar.
+Widget? workspaceMainNavigationButton(BuildContext context) =>
+    WorkspaceResourceScope.maybeOf(context) != null &&
+        WorkspaceCanvasScope.maybeOf(context)?.resources != true
+    ? const WorkspaceMainNavigationButton()
+    : null;
+
+class WorkspaceMainNavigationButton extends StatelessWidget {
+  const WorkspaceMainNavigationButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final resources = WorkspaceResourceScope.maybeOf(context);
+    if (resources == null ||
+        WorkspaceCanvasScope.maybeOf(context)?.resources == true) {
+      return const SizedBox.shrink();
+    }
+    final navigation = WorkspaceNavigationScope.maybeOf(context);
+    return IconButton(
+      key: const ValueKey('workspace-main-navigation'),
+      tooltip: AppLocalizations.of(context).expandWorkspaceNavigation,
+      onPressed: navigation?.enabled == false ? null : resources.open,
+      icon: const Icon(Icons.menu),
+    );
+  }
 }
 
 void selectWorkspace(BuildContext context, AppMode mode) {
@@ -203,9 +237,14 @@ class WorkspaceResourcePanel extends StatelessWidget {
     final m = WorkbenchChromeMetrics.of(context);
     final l = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
-    final resourceScope = m.desktop
-        ? WorkspaceResourceScope.maybeOf(context)
-        : null;
+    final resourceScope = WorkspaceResourceScope.maybeOf(context);
+    final assistant = AssistantPaneScope.of(context);
+    final agentEnabled =
+        scope?.agentEnabled ??
+        (assistant?.enabled == true && assistant?.title == l.agentTitle);
+    final onOpenAgent = scope?.onOpenAgent ?? assistant?.onToggle;
+    final previewEnabled =
+        assistant?.enabled == true && assistant?.title == null;
     final drawer = resourceScope?.drawerOpen ?? false;
     final collapsed =
         !drawer &&
@@ -240,7 +279,7 @@ class WorkspaceResourcePanel extends StatelessWidget {
     final showModes =
         workspace.enabledWorkspaces.length > 1 &&
         (drawer || !preferences.hidden) &&
-        (scope?.integrated ?? true);
+        (drawer || (scope?.integrated ?? true));
     final factor = WorkbenchLayoutPolicy.textFactor(m.textScale);
     final compactWidth =
         (m.desktop
@@ -268,6 +307,13 @@ class WorkspaceResourcePanel extends StatelessWidget {
                   .clamp(0.0, 1.0);
           final labelOpacity = const Interval(.15, .85).transform(progress);
           final detailsInteractive = !collapsed && progress >= .999;
+          const navigationRowPadding = EdgeInsets.symmetric(
+            horizontal: 8,
+            vertical: 2,
+          );
+          const resourceHeadingPadding = EdgeInsets.only(top: 20, bottom: 8);
+          const settingsPadding = EdgeInsets.symmetric(vertical: 6);
+          const modeGroupTopSpacing = 8.0;
           Widget label(Widget child) => _ResourcePaneReveal(
             width: expandedWidth - compactWidth,
             opacity: labelOpacity,
@@ -343,7 +389,7 @@ class WorkspaceResourcePanel extends StatelessWidget {
             bool selected = false,
             FocusNode? focusNode,
           }) => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            padding: navigationRowPadding,
             child: SkedTooltip(
               message: collapsed ? title : '',
               excludeFromSemantics: true,
@@ -406,7 +452,7 @@ class WorkspaceResourcePanel extends StatelessWidget {
           );
           final navigation = <Widget>[
             if (showModes) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: modeGroupTopSpacing),
               for (final mode in workspace.enabledWorkspaces)
                 navigationAction(
                   id: 'workspace-resource-mode-${mode.value}',
@@ -420,8 +466,37 @@ class WorkspaceResourcePanel extends StatelessWidget {
                   onTap: enabled ? () => selectWorkspace(context, mode) : null,
                 ),
             ],
+            if (agentEnabled)
+              navigationAction(
+                id: 'workspace-agent-entry',
+                title: l.agentTitle,
+                icon: Icons.chat_bubble_outline,
+                onTap: enabled && onOpenAgent != null
+                    ? () {
+                        resourceScope?.close();
+                        if (drawer) {
+                          // Let the drawer return focus to its trigger before
+                          // the full route captures its return-focus target.
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (context.mounted) onOpenAgent();
+                          });
+                        } else {
+                          onOpenAgent();
+                        }
+                      }
+                    : null,
+              ),
+            if (previewEnabled)
+              navigationAction(
+                id: 'workspace-assistant-preview-entry',
+                title: l.assistantLayoutPreview,
+                icon: Icons.assistant_outlined,
+                onTap: enabled && assistant?.interactive == true
+                    ? assistant?.onToggle
+                    : null,
+              ),
             Padding(
-              padding: const EdgeInsets.only(top: 20, bottom: 8),
+              padding: resourceHeadingPadding,
               child: SizedBox(
                 height: m.resourceRowHeight,
                 child: Row(
@@ -517,7 +592,7 @@ class WorkspaceResourcePanel extends StatelessWidget {
           final settings = onSettings == null
               ? const SizedBox.shrink()
               : Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  padding: settingsPadding,
                   child: navigationAction(
                     id: 'workspace-resource-settings',
                     title: l.settings,
@@ -556,19 +631,45 @@ class WorkspaceResourcePanel extends StatelessWidget {
               ),
             ),
           );
-          if (constraints.maxHeight < m.toolbarHeight + 200 * m.textScale) {
-            // Even a very short window keeps Settings anchored at the bottom.
+          final navigationRowExtent =
+              m.resourceRowHeight + navigationRowPadding.vertical;
+          final navigationExtent =
+              (showModes
+                  ? modeGroupTopSpacing +
+                        workspace.enabledWorkspaces.length * navigationRowExtent
+                  : 0) +
+              (agentEnabled ? navigationRowExtent : 0) +
+              (previewEnabled ? navigationRowExtent : 0) +
+              m.resourceRowHeight +
+              resourceHeadingPadding.vertical;
+          final settingsExtent = onSettings == null
+              ? 0.0
+              : navigationRowExtent + settingsPadding.vertical;
+          final fixedExtent =
+              m.toolbarHeight + navigationExtent + settingsExtent;
+          Widget scrollingNavigation({bool includeSettings = false}) =>
+              ListView(
+                key: const PageStorageKey('workspace-resource-navigation-list'),
+                primary: false,
+                padding: EdgeInsets.zero,
+                children: [
+                  header,
+                  ...navigation,
+                  if (!collapsed) resources(shrinkWrap: true),
+                  if (includeSettings) settings,
+                ],
+              );
+          if (constraints.maxHeight < settingsExtent + m.resourceRowHeight) {
+            // At extreme heights the complete column must scroll so neither
+            // Settings nor the navigation above it loses its touch viewport.
+            return scrollingNavigation(includeSettings: true);
+          }
+          if (constraints.maxHeight < fixedExtent + m.resourceRowHeight) {
+            // Budget every visible mode, Agent and resource heading before
+            // reserving a resource row. Settings remains anchored when it fits.
             return Column(
               children: [
-                Expanded(
-                  child: ListView(
-                    children: [
-                      header,
-                      ...navigation,
-                      if (!collapsed) resources(shrinkWrap: true),
-                    ],
-                  ),
-                ),
+                Expanded(child: scrollingNavigation()),
                 settings,
               ],
             );

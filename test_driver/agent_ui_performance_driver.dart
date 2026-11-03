@@ -8,15 +8,7 @@ import 'package:integration_test/integration_test_driver.dart';
 import '../benchmark/src/ui_performance_metrics.dart';
 import 'support/report_output_directory.dart';
 
-const _windowsActions = [
-  'agent.entry.open',
-  'agent.pane.scroll_older',
-  'agent.pane_to_workspace',
-  'agent.workspace.scroll_older',
-  'agent.workspace_to_pane',
-  'agent.pane.jump_latest',
-  'agent.pane.close',
-];
+const _windowsActions = _androidActions;
 const _androidActions = [
   'agent.entry.open',
   'agent.page.scroll_older',
@@ -36,8 +28,10 @@ const _sources = [
   'lib/app_runtime.dart',
   'lib/providers/app_scope.dart',
   'lib/screens/app_home_screen.dart',
+  'lib/screens/adaptive_sked_shell.dart',
   'lib/screens/agent_page.dart',
-  'lib/widgets/assistant_pane.dart',
+  'lib/widgets/workspace_navigation.dart',
+  'lib/widgets/workspace_frame.dart',
   'lib/agent/agent_application.dart',
   'lib/agent/conversations/conversation_models.dart',
   'lib/agent/conversations/conversation_repository.dart',
@@ -78,7 +72,7 @@ Future<void> main() => integrationDriver(
       );
       await _writeNew(assessment, {
         'status': 'passed',
-        'protocol': 'agent-ui-frames-v1',
+        'protocol': 'agent-ui-frames-v2',
         'rawReport': raw.absolute.path,
         'scope': 'one independent Profile process; comparisons require three matched processes per side/platform/configuration',
         'nativeLogs': 'review full stdout/stderr separately; AXTree/fatal errors invalidate the run',
@@ -134,6 +128,38 @@ int _integer(Object? value, String name) {
 bool _sha256(Object? value) =>
     value is String && RegExp(r'^[0-9a-f]{64}$').hasMatch(value);
 
+/// Validates the v2 population before accepting native frame evidence.
+List<String> validateAgentUiPerformancePopulation({
+  required Map protocol,
+  required Object? expectedActions,
+  required String platform,
+}) {
+  _require(
+    const ['windows', 'android'].contains(platform),
+    'Unknown Agent frame population platform.',
+  );
+  final scroll = _map(protocol['scrollTargeting'], 'Scroll protocol');
+  _require(
+    protocol['id'] == 'agent-ui-frames-v2' &&
+        protocol['version'] == 2 &&
+        protocol['nativeSemanticsHarnessVersion'] == 2 &&
+        protocol['iterations'] == 2 &&
+        protocol['requiredIndependentProcesses'] == 3 &&
+        protocol['deliveryWaitMs'] == 1200 &&
+        scroll['id'] == 'agent-transcript-scroll-v1' &&
+        scroll['version'] == 1 &&
+        scroll['scope'] == 'agent-transcript' &&
+        scroll['key'] == 'agent-transcript-native-long-history',
+    'The report must use the fixed Agent transcript population and native semantics protocol.',
+  );
+  final actions = platform == 'windows' ? _windowsActions : _androidActions;
+  _require(
+    jsonEncode(expectedActions) == jsonEncode(actions),
+    'The required full-page action list differs.',
+  );
+  return actions;
+}
+
 void _validate(Object? value) {
   final report = _map(value, 'Agent Profile report');
   _require(
@@ -155,20 +181,6 @@ void _validate(Object? value) {
     'Invalid report label.',
   );
   final protocol = _map(report['protocol'], 'Protocol');
-  final scroll = _map(protocol['scrollTargeting'], 'Scroll protocol');
-  _require(
-    protocol['id'] == 'agent-ui-frames-v1' &&
-        protocol['version'] == 1 &&
-        protocol['nativeSemanticsHarnessVersion'] == 2 &&
-        protocol['iterations'] == 2 &&
-        protocol['requiredIndependentProcesses'] == 3 &&
-        protocol['deliveryWaitMs'] == 1200 &&
-        scroll['id'] == 'agent-transcript-scroll-v1' &&
-        scroll['version'] == 1 &&
-        scroll['scope'] == 'agent-transcript' &&
-        scroll['key'] == 'agent-transcript-native-long-history',
-    'The report must use the fixed Agent transcript population and native semantics protocol.',
-  );
   final config = _map(report['configuration'], 'Configuration');
   _require(
     const ['baseline', 'accessible'].contains(config['name']),
@@ -268,10 +280,10 @@ void _validate(Object? value) {
         afterStore['conversationLoads'] == 1,
     'The first/warm sequence did not share a single archive load.',
   );
-  final actions = platform == 'windows' ? _windowsActions : _androidActions;
-  _require(
-    jsonEncode(report['expectedActions']) == jsonEncode(actions),
-    'The required action list differs.',
+  final actions = validateAgentUiPerformancePopulation(
+    protocol: protocol,
+    expectedActions: report['expectedActions'],
+    platform: platform as String,
   );
   final results = _list(report['results'], 'Action windows');
   _require(
@@ -280,7 +292,7 @@ void _validate(Object? value) {
   );
   var previousEnd = 0;
   var assignedFrameCount = 0;
-  Map? closedAndroidReading;
+  Map? closedReading;
   for (var index = 0; index < results.length; index++) {
     final row = _map(results[index], 'Action window');
     final iteration = index ~/ actions.length;
@@ -375,9 +387,7 @@ void _validate(Object? value) {
           'Cold/warm entry state does not match the same-runtime protocol.',
         );
         _latest(checkpoints.single);
-      case 'agent.pane.scroll_older' ||
-          'agent.workspace.scroll_older' ||
-          'agent.page.scroll_older':
+      case 'agent.page.scroll_older':
         _require(
           details['gestureCount'] == 3 &&
               details['scrollStatus'] == 'scrolled' &&
@@ -392,13 +402,7 @@ void _validate(Object? value) {
                   72,
           'The action did not scroll actual long-history content.',
         );
-      case 'agent.pane_to_workspace' || 'agent.workspace_to_pane':
-        _require(
-          checkpoints.length == 2 && details['readingPreserved'] == true,
-          'The pane/workspace reading checkpoints are incomplete.',
-        );
-        _sameReading(checkpoints.first, checkpoints.last);
-      case 'agent.pane.jump_latest' || 'agent.page.jump_latest':
+      case 'agent.page.jump_latest':
         _require(
           checkpoints.length == 2 &&
               checkpoints.first['followLatest'] == false &&
@@ -410,20 +414,20 @@ void _validate(Object? value) {
         _require(
           checkpoints.single['followLatest'] == false &&
               details['returnedHome'] == true,
-          'Android close did not start from earlier reading.',
+          'Full page close did not start from earlier reading.',
         );
-        closedAndroidReading = checkpoints.single;
+        closedReading = checkpoints.single;
       case 'agent.page.reopen_reading':
         _require(
-          closedAndroidReading != null &&
+          closedReading != null &&
               details['readingPreserved'] == true &&
               details['conversationLoadsBefore'] == 1 &&
               details['conversationLoadsAfter'] == 1,
-          'Android reopen did not retain the existing conversation repository.',
+          'Full page reopen did not retain the existing conversation repository.',
         );
-        _sameReading(closedAndroidReading!, checkpoints.single);
-        closedAndroidReading = null;
-      case 'agent.pane.close' || 'agent.page.close_latest':
+        _sameReading(closedReading!, checkpoints.single);
+        closedReading = null;
+      case 'agent.page.close_latest':
         _require(
           details['returnedHome'] == true &&
               details['conversationLoadsAfter'] == 1,

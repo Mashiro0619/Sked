@@ -128,6 +128,7 @@ Widget _appFor(
   EdgeInsets safePadding = EdgeInsets.zero,
   bool disableAnimations = false,
   bool enabled = true,
+  TargetPlatform? platform,
   Future<void> Function()? onOpenSettings,
 }) {
   return AppScope(
@@ -141,7 +142,7 @@ Widget _appFor(
         brightness: Brightness.light,
         themeColorMode: themeColorModeSingle,
         colorfulUiColorValues: const {},
-      ),
+      ).copyWith(platform: platform),
       builder: (context, child) {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
@@ -544,6 +545,84 @@ void main() {
     expect(settingsRect.height, greaterThanOrEqualTo(48));
     expect(tester.takeException(), isNull);
   });
+
+  for (final height in [180.0, 200.0]) {
+    testWidgets(
+      'short $height large-text expanded rail scrolls Agent and settings into reach',
+      (tester) async {
+        final data = _shellData();
+        final provider = await _providerFor(
+          _MemoryStorage(
+            data.copyWith(
+              agentSettings: data.agentSettings.copyWith(enabled: true),
+            ),
+          ),
+        );
+        addTearDown(provider.dispose);
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.binding.setSurfaceSize(Size(1200, height));
+        var settingsOpened = 0;
+        await tester.pumpWidget(
+          _appFor(
+            provider,
+            locale: const Locale('de'),
+            textScaler: const TextScaler.linear(2),
+            platform: TargetPlatform.android,
+            onOpenSettings: () async {
+              settingsOpened++;
+            },
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final rail = find.byKey(
+          const ValueKey('adaptive-shell-navigation-rail'),
+        );
+        final heightScroll = find.byKey(
+          const ValueKey('adaptive-shell-navigation-height-scroll'),
+        );
+        final agent = find.byKey(const ValueKey('adaptive-shell-agent-entry'));
+        final settings = find.byKey(
+          const ValueKey('adaptive-shell-settings-action'),
+        );
+        expect(tester.widget<NavigationRail>(rail).extended, isTrue);
+        expect(provider.agent.settings.enabled, isTrue);
+        expect(
+          tester.widget<SingleChildScrollView>(heightScroll).physics,
+          isA<ClampingScrollPhysics>(),
+        );
+        expect(tester.takeException(), isNull);
+
+        for (final action in [agent, settings]) {
+          await tester.ensureVisible(action);
+          await tester.pumpAndSettle();
+          final viewport = tester.getRect(heightScroll);
+          final actionRect = tester.getRect(action);
+          expect(action.hitTestable(), findsOneWidget);
+          expect(actionRect.top, greaterThanOrEqualTo(viewport.top));
+          expect(actionRect.bottom, lessThanOrEqualTo(viewport.bottom));
+          expect(actionRect.height, greaterThanOrEqualTo(48));
+          expect(tester.takeException(), isNull);
+        }
+
+        await tester.tap(settings);
+        await tester.pumpAndSettle();
+        expect(settingsOpened, 1);
+
+        final brand = find.byKey(
+          const ValueKey('adaptive-shell-wide-brand-icon-slot'),
+        );
+        await tester.ensureVisible(brand);
+        await tester.pumpAndSettle();
+        expect(brand.hitTestable(), findsOneWidget);
+        expect(
+          tester.getRect(brand).top,
+          greaterThanOrEqualTo(tester.getRect(heightScroll).top),
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   testWidgets(
     'hidden navigation removes mode chrome but keeps global settings',

@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
@@ -357,17 +356,15 @@ class AgentSelectiveBackupJourney implements AgentNativeFeature {
       'The unselected archive fixture must differ from the local timetable.',
     );
     _picker.configure(encodeAppBackup(incoming, const []));
-    if (Platform.isAndroid) {
-      final back = find.descendant(
-        of: find.byType(AgentPage),
-        matching: find.byType(BackButton),
-      );
-      await journey.tap(back, 'the actual Agent page Back button');
-      await journey.until(
-        () => find.byType(AgentPage).evaluate().isEmpty,
-        'the general home after leaving Agent',
-      );
-    }
+    final back = find.descendant(
+      of: find.byType(AgentPage),
+      matching: find.byType(BackButton),
+    );
+    await journey.tap(back, 'the actual Agent page Back button');
+    await journey.until(
+      () => find.byType(AgentPage).evaluate().isEmpty,
+      'the general home after leaving Agent',
+    );
     const settingsControls = [
       'workspace-resource-settings',
       'general-settings-button',
@@ -405,9 +402,7 @@ class AgentSelectiveBackupJourney implements AgentNativeFeature {
       'settingsControl': settingsControl == settingsEntry
           ? settingsControl
           : '$settingsControl / $settingsEntry',
-      'sourceHost': Platform.isWindows
-          ? 'AgentAssistantPane'
-          : 'AgentPage / BackButton',
+      'sourceHost': 'AgentPage / BackButton',
       'sameMainSessionAndBackupOwner': true,
       'configuration': _settingsOwner(journey),
       'before': _initial,

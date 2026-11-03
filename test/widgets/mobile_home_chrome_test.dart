@@ -289,11 +289,14 @@ void main() {
         expect(settings.size, const Size.square(48));
         expect(settings.center.dy, closeTo(toolbar.center.dy, .1));
         expect(storage.writes, before);
-        await t.tap(key('student-toolbar-more-button'));
+        expect(key('workspace-main-navigation').hitTestable(), findsOneWidget);
+        await t.tap(key('workspace-main-navigation'));
         await t.pumpAndSettle();
-        expect(key('assistant-toggle'), findsOneWidget);
-        await t.ensureVisible(key('assistant-toggle'));
-        await t.tap(key('assistant-toggle'));
+        expect(key('assistant-toggle'), findsNothing);
+        expect(key('workspace-agent-entry'), findsOneWidget);
+        await t.ensureVisible(key('workspace-agent-entry'));
+        await t.pumpAndSettle();
+        await t.tap(key('workspace-agent-entry'));
         await t.pumpAndSettle();
         expect(find.byType(AgentPage), findsOneWidget);
         expect(t.takeException(), isNull);

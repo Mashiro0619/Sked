@@ -13,7 +13,6 @@ import 'package:sked/controllers/app_session.dart';
 import 'package:sked/screens/agent_page.dart';
 import 'package:sked/screens/app_home_screen.dart';
 import 'package:sked/theme/sked_expressive_theme.dart';
-import 'package:sked/widgets/assistant_pane.dart';
 
 import 'agent_native_session.dart';
 
@@ -500,11 +499,7 @@ class AgentFeatureJourney {
 
   Future<Map<String, Object?>> openProduct() async {
     await tester.pumpWidget(AgentNativeApp(session: session, config: config));
-    const homeControls = [
-      'assistant-toggle',
-      'general-desktop-toolbar-more',
-      'general-toolbar-more-button',
-    ];
+    const homeControls = ['workspace-agent-entry', 'workspace-main-navigation'];
     await until(
       () =>
           find.byType(AppHomeScreen).evaluate().length == 1 &&
@@ -521,19 +516,20 @@ class AgentFeatureJourney {
     final homeControl = homeControls.firstWhere(
       (id) => key(id).hitTestable().evaluate().length == 1,
     );
-    if (homeControl != 'assistant-toggle') {
-      await tap(key(homeControl), 'the visible general workspace More menu');
-      await reveal(key('assistant-toggle'), 'the actual home Agent menu item');
+    if (homeControl != 'workspace-agent-entry') {
+      await tap(key(homeControl), 'the visible main navigation drawer');
+      await reveal(
+        key('workspace-agent-entry'),
+        'the side navigation Agent entry',
+      );
     }
-    await tap(key('assistant-toggle'), 'the home Agent entry');
+    await tap(key('workspace-agent-entry'), 'the side navigation Agent entry');
     await until(
       () => composer.evaluate().length == 1 && session.app.agent.isInitialized,
       'the actual Agent composer',
     );
     requireAgentFeature(
-      Platform.isWindows
-          ? find.byType(AgentAssistantPane).hitTestable().evaluate().isNotEmpty
-          : find.byType(AgentPage).hitTestable().evaluate().length == 1,
+      find.byType(AgentPage).hitTestable().evaluate().length == 1,
       'The expected native product host did not open.',
     );
     final observedConfig = assertOwner();
@@ -545,13 +541,11 @@ class AgentFeatureJourney {
     );
     return {
       ...state(),
-      'entry': Platform.isWindows
-          ? 'home assistant toggle'
-          : 'home More menu / Agent',
-      'entryControl': homeControl == 'assistant-toggle'
+      'entry': 'home side navigation / Agent',
+      'entryControl': homeControl == 'workspace-agent-entry'
           ? homeControl
-          : '$homeControl / assistant-toggle',
-      'host': Platform.isWindows ? 'AgentAssistantPane' : 'AgentPage',
+          : '$homeControl / workspace-agent-entry',
+      'host': 'AgentPage',
       'historyMessageCount':
           session.app.agent.conversations.selected!.messages.length,
       'initialDraft': field.controller!.text,

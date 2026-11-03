@@ -479,6 +479,10 @@ class WorkspaceFrame extends StatefulWidget {
 }
 
 class _WorkspaceFrameState extends State<WorkspaceFrame> {
+  bool get _coveredByAgentWorkspace =>
+      _agentApplication != null &&
+      AgentPage.isOpen(_agentApplication!) &&
+      ModalRoute.of(context)?.isCurrent == false;
   late final AssistantPaneController _assistant =
       widget.assistantController ?? AssistantPaneController();
   final _assistantFocus = FocusScopeNode(debugLabel: 'Workspace assistant');
@@ -578,9 +582,9 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
       if (widget.active &&
           _agentApplication?.settings.enabled == true &&
           WorkbenchChromeMetrics.of(context).desktop) {
-        _assistantLast = true;
-        _setAssistantOpen(true);
-        _requestAssistantFocus();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && widget.active) unawaited(_openAgentPage());
+        });
       }
     }
     setState(() {});
@@ -640,8 +644,7 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
         _agentApplication?.settings.enabled == false) {
       return;
     }
-    if (_agentApplication != null &&
-        !WorkbenchChromeMetrics.of(context).desktop) {
+    if (_agentApplication != null) {
       unawaited(_openAgentPage());
       return;
     }
@@ -662,20 +665,11 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
     }
     _agentRouteOpen = true;
     _closeResources(restoreFocus: false);
-    final restorePane =
-        WorkbenchChromeMetrics.of(context).desktop && _assistant.isOpen;
-    if (restorePane) _setAssistantOpen(false);
+    _setAssistantOpen(false);
     try {
       await AgentPage.open(context);
     } finally {
       _agentRouteOpen = false;
-      if (mounted &&
-          restorePane &&
-          widget.active &&
-          _agentApplication?.settings.enabled == true) {
-        _setAssistantOpen(true);
-        _requestAssistantFocus();
-      }
     }
   }
 
@@ -913,7 +907,8 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
     controller.focusScope.traversalEdgeBehavior = floatingEditor
         ? TraversalEdgeBehavior.closedLoop
         : TraversalEdgeBehavior.parentScope;
-    final interactive = widget.active && policy.detailVisible;
+    final interactive =
+        widget.active && policy.detailVisible && !_coveredByAgentWorkspace;
     return Offstage(
       offstage: !policy.detailVisible,
       child: FocusScope(
@@ -1362,7 +1357,7 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
       builder: (context, _) => LayoutBuilder(
         builder: (context, constraints) {
           final controller = widget.controller;
-          final active = widget.active;
+          final active = widget.active && !_coveredByAgentWorkspace;
           final previewEnabled =
               _agentApplication?.settings.enabled ??
               _developerUi?.assistantVisible ??

@@ -29,7 +29,7 @@ Sked 内置一个 Agent，用户可以新建多个会话。所有会话使用同
 | [StudentCommands](../lib/controllers/student_commands.dart)、[GeneralCommands](../lib/controllers/general_commands.dart)、[SettingsCommands](../lib/controllers/settings_commands.dart) | 已有业务入口及纯领域服务 | 显式目标、严格输入、结构化结果、统一预览和冲突检查 |
 | [AppSession](../lib/controllers/app_session.dart)、[AppRepository](../lib/data/app_repository.dart) | 唯一可写快照、排队保存、实际保存回执、已提交事件 | 命令幂等、跨重启版本、纯数据批事务、审计和撤销 |
 | [GeneralCalendarService](../lib/services/general_calendar_service.dart) | 重复实例的本次／以后／全系列变换及一次保存 | 工具协议直接复用这些语义，覆盖普通修改和删除的版本前提 |
-| [助手宿主](../lib/widgets/assistant_pane.dart) | 桌面布局、宽度与焦点约束 | 已改为访问应用持有的真实会话；关闭面板不结束运行 |
+| [工作区导航](../lib/widgets/workspace_navigation.dart)与[完整聊天](../lib/screens/agent_page.dart) | 统一侧边入口、路由与焦点约束 | 各布局访问应用持有的真实会话；关闭聊天不结束运行 |
 | [ProviderClient](../lib/agent/provider/provider_client.dart) | 承接旧 SchoolImportApi 的有界网络、取消和敏感请求保护 | 旧专用 AI 请求链路已退役；纯候选解码位于 Agent 导入层 |
 | [SecretStore](../lib/services/secret_store.dart) | 平台安全存储与已有密钥迁移路径 | 当前活动连接的凭据引用、端点绑定、替换/清除及读取结果脱敏 |
 
@@ -288,11 +288,11 @@ Skills 是这个 Agent 共用的按任务操作指导，不承担权限执行，
 
 正式入口为功能管理中的 Agent 开关、Agent 页面、会话列表/新建会话、统一模型设置、三种模式选择和运行详情。没有 Agent 列表、添加 Agent 或删除 Agent 身份入口。正式功能与现有开发者布局预览开关分离。
 
-手机端 Agent 是应用导航中的完整页面：可新建/切换会话，主要区域为消息、工具结果与输入框，按键盘和大字号适配；不以课表上的临时底部弹窗作为主入口。开关启用后，导航中显示 Agent；关闭后移除该入口并从当前 Agent 页面返回可用业务页面。底部导航被用户隐藏时，仍通过既有导航菜单进入 Agent。桌面继续复用助手面板和会话选择，保留 400dp 默认宽度及自动/并排/覆盖预算。
+各布局的 Agent 都是应用导航中的完整页面：可新建/切换会话，主要区域为消息、工具结果与输入框，按键盘和大字号适配。开关启用后，侧边导航中显示 Agent；关闭后移除该入口并从当前 Agent 页面返回可用业务页面。手机通过主页导航按钮打开现有侧抽屉，保留底部工作区栏；底部导航被用户隐藏时仍可进入 Agent。桌面展开／折叠侧栏与平板导航栏打开同一个完整聊天路由。
 
-桌面与手机属于同一批可用功能：桌面工作台必须具备会话列表/新建/切换、完整消息与工具结果、输入、模型配置、三模式切换、停止和恢复；支持与课表/日程并排工作，窄窗自动采用可用的覆盖布局。双端共用应用级会话与运行时，功能管理开关同时生效。首条可执行闭环必须在两种界面验证，不能把桌面留作后续适配或仅保留开发者预览。
+桌面与手机属于同一批可用功能：完整聊天必须具备会话列表/新建/切换、完整消息与工具结果、输入、模型配置、三模式切换、停止和恢复；关闭重开保持草稿和阅读位置。双端共用应用级会话与运行时，功能管理开关同时生效。首条可执行闭环必须在两种界面验证，不能把桌面留作后续适配或仅保留开发者预览。
 
-当前 [WorkspaceFeaturesPage](../lib/screens/workspace_features_page.dart) 已在课表/日程功能之外接入单独的 `AgentSettings.enabled` 开关和 Agent 配置入口；手机使用独立导航页面，桌面使用共享会话面板。Agent 不属于 `AppMode`，不参与“至少保留一个业务工作区”的计数，也不产生新的 agenda source。关闭 Agent 不改变课表/日程的启用、可见性和提醒。入口显示、普通页面返回和功能停用遵循第 4 节各自语义。
+当前 [WorkspaceFeaturesPage](../lib/screens/workspace_features_page.dart) 已在课表/日程功能之外接入单独的 `AgentSettings.enabled` 开关和 Agent 配置入口；各布局从侧边导航进入完整聊天。Agent 不属于 `AppMode`，不参与“至少保留一个业务工作区”的计数，也不产生新的 agenda source。关闭 Agent 不改变课表/日程的启用、可见性和提醒。入口显示、普通页面返回和功能停用遵循第 4 节各自语义。
 
 操作卡从宿主回执生成：展示影响对象、日期/实例范围、变更摘要、保存状态、查看对象和可用的撤销入口。模型最终回复用于解释，不是成功状态的唯一来源。需要确认时展示一批实际变化，允许修改计划或取消。
 

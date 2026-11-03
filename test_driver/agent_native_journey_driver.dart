@@ -231,8 +231,7 @@ void _validate(Object? value) {
   _require(
     entry['historyMessageCount'] == 512 &&
         entry['sameApplicationAndRepository'] == true &&
-        entry['host'] ==
-            (platform == 'windows' ? 'AgentAssistantPane' : 'AgentPage'),
+        entry['host'] == 'AgentPage',
     'The formal product entry did not open its platform host and full history.',
   );
   final scroll = observations['long-history-scroll']!;
@@ -259,9 +258,7 @@ void _validate(Object? value) {
         _map(host['provider'], 'Provider during host return')['cancelled'] ==
             false &&
         host['route'] ==
-            (platform == 'windows'
-                ? 'pane → full AgentPage → pane'
-                : 'full AgentPage → home → More / Agent'),
+            'full AgentPage → home side navigation → full AgentPage',
     'The platform host transition is missing.',
   );
   final completed = observations['completion-and-history']!;

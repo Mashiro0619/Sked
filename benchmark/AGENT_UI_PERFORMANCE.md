@@ -2,7 +2,7 @@
 
 `integration_test/agent_ui_performance_benchmark_test.dart` records native
 Profile engine frames for the actual Agent entry, long-history scrolling,
-desktop pane/workspace transitions and return to the latest message. It reuses
+full-page close/reopen transitions and return to the latest message. It reuses
 the [native functional host](../integration_test/README.md), including its real
 `AppRuntime`, `AppHomeScreen`, production codecs and normal save scheduling.
 The fixture has 512 deterministic Markdown/code messages in the selected
@@ -17,10 +17,15 @@ artificial provider wait in these frame samples.
 
 ## Fixed population
 
-Protocol `agent-ui-frames-v1` fixes **three independent native processes per
+Protocol `agent-ui-frames-v2` fixes **three independent native processes per
 revision, platform and configuration**. Each process creates one session and
 performs one `cold` sequence followed by one `warm` sequence in that same
 runtime and conversation repository.
+
+Version 2 follows the full Agent page on both platforms. Historical v1 reports
+retain their original pane/workspace population and must not be merged with or
+directly compared against v2 results. Keep those raw reports unchanged; a new
+v2 before/after comparison needs fresh evidence for each source revision.
 
 `cold` means the first Agent open and first action sequence in that process,
 after the main snapshot and actual home page have been prepared outside action
@@ -34,23 +39,20 @@ Each action below has its own nonoverlapping timing window:
 
 | Order | Windows | Android |
 | --- | --- | --- |
-| 1 | Home Agent entry → pane | Home More menu → Agent page |
-| 2 | Pane transcript: three older-history drags | Page transcript: three older-history drags |
-| 3 | Pane → full workspace, preserving the reading anchor | Close page while reading earlier history |
-| 4 | Workspace transcript: three older-history drags | Reopen from the actual home menu, preserving the anchor |
-| 5 | Workspace → pane, preserving the reading anchor | Jump to latest |
-| 6 | Pane jump to latest | Close the page at latest |
-| 7 | Close pane through the home toggle | — |
+| 1 | Sidebar Agent entry → full Agent page | Main navigation drawer Agent entry → full Agent page |
+| 2 | Page transcript: three older-history drags | Page transcript: three older-history drags |
+| 3 | Close page while reading earlier history | Close page while reading earlier history |
+| 4 | Reopen from side navigation, preserving the anchor | Reopen from main navigation, preserving the anchor |
+| 5 | Jump to latest | Jump to latest |
+| 6 | Close the page at latest | Close the page at latest |
 
-Home actions use the currently visible Agent control: a direct
-`assistant-toggle`, the compact desktop `general-desktop-toolbar-more` menu,
-or the mobile `general-toolbar-more-button` menu. A menu item is brought into
-view before it is tapped. Windows pane closing uses the same actual home
-control; Android reopening repeats the current home entry. The chosen path is
-recorded in `entry` or `closeControl`, and any menu opening or scrolling
-remains inside the existing action window.
+Home actions use `workspace-agent-entry` in the sidebar or open the mobile
+`workspace-main-navigation` drawer first. An entry is brought into view before
+it is tapped. Reopening repeats the actual home entry; closing uses the full
+page Back control. The chosen path is recorded in `entry`, and drawer opening
+or entry scrolling remains inside the action window.
 
-There are 14 Windows or 12 Android action windows per process. Returning home
+There are 12 action windows per process on each platform. Returning home
 at the end of each sequence is measured too. Platform populations differ and
 must not be pooled. The short comparison conversation remains unchanged; this
 protocol does not time history selection or add extra feature scenarios.
@@ -106,7 +108,7 @@ The entry records visible message IDs, text from actual `RenderParagraph` and
 actual scroll metrics and follow-latest state before and after the gestures
 and host transitions. SelectableText and selectable Markdown use RenderEditable,
 so the collector does not rely on a RichText widget for message-body evidence.
-A pane/page transition compares the same visible message and its normalized within-message
+Closing/reopening the full page compares the same visible message and its normalized within-message
 position using four logical pixels of tolerance. Raw extent estimates are
 diagnostics; they are not a substitute for content/anchor evidence. Jump to
 latest must expose the final seeded reply and leave at most two logical pixels
@@ -198,6 +200,11 @@ RSS before/after. The shared `ui_performance_metrics.dart` computes statistics;
 the driver recalculates them from the retained raw frames. It also checks
 ordered cold/warm actions, transcript text hashes, reading continuity, one
 archive load, stable semantics and complete cleanup.
+
+The [population contract regression](../test/agent_ui_performance_protocol_test.dart)
+checks the benchmark and driver together, including rejection of v1 reports,
+legacy pane actions and incomplete cold/warm requirements. It does not collect
+native frames or replace a v2 process run.
 
 The frame budget uses the reported native refresh rate; a missing/invalid
 engine rate explicitly records a 60 Hz fallback. Over-budget stages are

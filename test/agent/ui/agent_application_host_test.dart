@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/agent/provider/provider.dart';
+import 'package:sked/agent/conversations/conversation_models.dart';
+import 'package:sked/agent/ui/agent_transcript.dart';
 import 'package:sked/agent/ui/agent_resource_view.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/application/operation_contracts.dart';
@@ -210,15 +212,32 @@ void main() {
           ],
         ),
       );
-      await app.agent.conversations.create(
-        title: 'Return to the original pane',
+      final conversation = await app.agent.conversations.create(
+        title: 'Return to the full workspace',
+      );
+      await app.agent.conversations.update(
+        conversation.id,
+        (current) => current.copyWith(
+          messages: [
+            for (var index = 0; index < 16; index++)
+              ConversationMessage(
+                id: 'host-history-$index',
+                role: index.isEven
+                    ? ConversationRole.user
+                    : ConversationRole.assistant,
+                text:
+                    'Synthetic history $index. ${List.filled(4, 'This is a local reading-position fixture. It contains no personal schedule or credentials.').join(' ')}',
+                createdAt: DateTime.utc(2026, 1, 1, 12, index),
+              ),
+          ],
+        ),
       );
       // The bundle caches Futures across tests. Load the real catalog outside
       // FakeAsync so later host tools can await the same cached asset.
       await app.agent.knowledge.initialize();
     });
     await mount(tester);
-    await tester.tap(key('assistant-toggle'));
+    await tester.tap(key('workspace-agent-entry'));
     await tester.pumpAndSettle();
     final id = app.agent.conversations.selectedId!;
     await tester.enterText(key('agent-composer'), 'Read the current plan.');
@@ -230,14 +249,15 @@ void main() {
       'the actual provider request',
     );
     expect(app.agent.runtime.state.value.runFor(id).isActive, isTrue);
-    await tester.enterText(key('agent-composer'), 'Keep the pane draft.');
-    await tester.pumpAndSettle();
-    await tester.tap(key('agent-open-workspace'));
+    await tester.enterText(
+      key('agent-composer'),
+      'Keep the full workspace draft.',
+    );
     await tester.pumpAndSettle();
     expect(find.byType(AgentPage), findsOneWidget);
     expect(
       tester.widget<TextField>(key('agent-composer')).controller!.text,
-      'Keep the pane draft.',
+      'Keep the full workspace draft.',
     );
     await tester.enterText(
       key('agent-composer'),
@@ -269,17 +289,32 @@ void main() {
   }
 
   testWidgets(
-    'real home restores the running Agent pane and draft after full workspace Back',
+    'real sidebar reopens the running full Agent workspace with draft and reading position',
     (tester) async {
       try {
         final id = await openRunningFullWorkspace(tester);
+        await tester.drag(key('agent-transcript-$id'), const Offset(0, 620));
+        await tester.pumpAndSettle();
+        final reading = tester
+            .widget<AgentTranscript>(find.byType(AgentTranscript))
+            .position;
+        expect(reading.followLatest, isFalse);
+        final anchor = reading.anchor;
+        expect(anchor, isNotNull);
         await backFromFullWorkspace(tester);
-        expect(
-          find.byType(AgentAssistantPane).hitTestable(),
-          findsOneWidget,
-          reason: 'Back must restore the original pane automatically.',
-        );
+        expect(find.byType(AgentAssistantPane), findsNothing);
+        expect(key('agent-composer'), findsNothing);
+        tester.view.physicalSize = const Size(1062, 853);
+        await tester.pumpAndSettle();
+        await tester.tap(key('workspace-agent-entry'));
+        await tester.pumpAndSettle();
         expect(key('agent-composer').hitTestable(), findsOneWidget);
+        final reopenedReading = tester
+            .widget<AgentTranscript>(find.byType(AgentTranscript))
+            .position;
+        expect(reopenedReading, same(reading));
+        expect(reopenedReading.followLatest, isFalse);
+        expect(reopenedReading.anchor, anchor);
         expect(app.agent.conversations.selectedId, id);
         expect(
           tester.widget<TextField>(key('agent-composer')).controller!.text,

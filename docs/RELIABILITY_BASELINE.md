@@ -44,7 +44,7 @@ Windows 学校页面清理需要等待锁定 WebView 插件 `dispose` 通道的�
 
 课程冲突显示和自定义日期范围由确定性适配器生成主数据计划，复用课程投影及普通日期导航的纯变换，经 `mutation.commit` 保存。显示选择核对指定课表、周次、实际完整冲突键与可选课程；日期范围和必要焦点变化一起记入回执。停用工作区、非当前课表、旧格式冲突重置、三种权限模式、保存失败、重复操作和撤销冲突由[适配器专项](../test/agent/tools/display_range_tool_adapters_test.dart)验证。
 
-手机页面和桌面面板共享 [应用级 Agent](../lib/agent/agent_application.dart)，界面销毁不拥有或终止唯一执行器。功能关闭、停止、维护预约和退出都会阻止未接受的新步骤；已接受的主数据写入或外部效果必须完成核对。外部队列中尚未开始的操作可以因取消立即返回，避免清空或退出等待另一个排在自己后面的会话；已经开始的操作仍等待真实结果。见 [运行时](../test/agent/runtime/agent_runtime_controller_test.dart)、[双会话维护队列](../test/agent/runtime/agent_maintenance_queue_test.dart) 与 [工作台入口](../test/widgets/agent_workspace_entry_test.dart)。
+各平台完整聊天共享 [应用级 Agent](../lib/agent/agent_application.dart)，界面销毁不拥有或终止唯一执行器。功能关闭、停止、维护预约和退出都会阻止未接受的新步骤；已接受的主数据写入或外部效果必须完成核对。外部队列中尚未开始的操作可以因取消立即返回，避免清空或退出等待另一个排在自己后面的会话；已经开始的操作仍等待真实结果。见 [运行时](../test/agent/runtime/agent_runtime_controller_test.dart)、[双会话维护队列](../test/agent/runtime/agent_maintenance_queue_test.dart) 与 [工作台入口](../test/widgets/agent_workspace_entry_test.dart)。
 
 主数据候选与持久回执一次保存。旧操作 ID 配不同参数会拒绝，淘汰回执之后的旧请求不能重新执行。跨主库、学校站点、安全存储、设备偏好和原生系统的动作使用独立的 pending/结果回执；不能把多个存储当成一个原子事务。停止或回复保存失败后先读取已有回执，平台状态未知不能改成成功。外部重试使用原请求与原版本，只核对结果，不再次发送通知、保存文件或清空数据。见 [操作协调器](../test/application/mutation_coordinator_test.dart)、[外部效果](../test/application/external_operation_coordinator_test.dart) 和 [设备适配器](../test/agent/tools/device_tool_adapters_test.dart)。
 

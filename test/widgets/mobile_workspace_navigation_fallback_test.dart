@@ -75,6 +75,8 @@ Future<AppRuntime> _mount(
 Future<void> _selectGeneral(WidgetTester t) async {
   final direct = _menu.hitTestable().evaluate().isNotEmpty;
   final trigger = direct ? _menu : _key('student-toolbar-more-button');
+  await t.ensureVisible(trigger);
+  await t.pumpAndSettle();
   expect(trigger.hitTestable(), findsOneWidget);
   expect(t.getSize(trigger).width, greaterThanOrEqualTo(48));
   await t.tap(trigger);
@@ -90,7 +92,11 @@ Future<void> _selectGeneral(WidgetTester t) async {
 
 Future<void> _returnToStudent(WidgetTester t) async {
   final direct = _menu.hitTestable().evaluate().isNotEmpty;
-  await t.tap(direct ? _menu : _key('general-toolbar-more-button'));
+  final trigger = direct ? _menu : _key('general-toolbar-more-button');
+  await t.ensureVisible(trigger);
+  await t.pumpAndSettle();
+  expect(trigger.hitTestable(), findsOneWidget);
+  await t.tap(trigger);
   await t.pumpAndSettle();
   final student = _key(
     direct ? 'workspace-menu-student' : 'general-more-workspace-student',
@@ -101,11 +107,75 @@ Future<void> _returnToStudent(WidgetTester t) async {
   await t.tap(student);
   await t.pumpAndSettle();
   expect(_key('student-home'), findsOneWidget);
+  final returnTrigger = _menu.hitTestable().evaluate().isNotEmpty
+      ? _menu
+      : _key('student-toolbar-more-button');
+  await t.ensureVisible(returnTrigger);
+  await t.pumpAndSettle();
   expect(
     _menu.hitTestable().evaluate().isNotEmpty ||
         _key('student-toolbar-more-button').hitTestable().evaluate().isNotEmpty,
     isTrue,
   );
+  expect(_bar, findsNothing);
+}
+
+Future<void> _openMainDrawer(WidgetTester t) async {
+  if (_key('workspace-resource-scrim').evaluate().isNotEmpty) return;
+  // Landscape can retain a compact resource rail; its brand action opens the
+  // same drawer that the fixed main button opens when resources are hidden.
+  final main = _key('workspace-main-navigation');
+  final trigger = main.evaluate().isNotEmpty
+      ? main
+      : _key('workspace-resource-collapse');
+  await t.ensureVisible(trigger);
+  await t.pumpAndSettle();
+  expect(trigger.hitTestable(), findsOneWidget);
+  expect(t.getSize(trigger).width, greaterThanOrEqualTo(48));
+  expect(t.getSize(trigger).height, greaterThanOrEqualTo(48));
+  await t.tap(trigger);
+  await t.pumpAndSettle();
+  expect(_key('workspace-resource-scrim'), findsOneWidget);
+}
+
+Future<void> _selectFromMainDrawer(WidgetTester t, AppMode mode) async {
+  await _openMainDrawer(t);
+  final destination = _key('workspace-resource-mode-${mode.value}');
+  final navigationList = find
+      .byKey(const PageStorageKey('workspace-resource-navigation-list'))
+      .hitTestable();
+  if (navigationList.evaluate().isNotEmpty) {
+    expect(navigationList, findsOneWidget);
+    // Reopened short drawers retain their scroll position. Mode rows near the
+    // top may not be built yet; scroll the outer navigation list to reveal them.
+    final navigationScrollable = find
+        .descendant(of: navigationList, matching: find.byType(Scrollable))
+        .first;
+    await t.scrollUntilVisible(
+      destination,
+      -48,
+      scrollable: navigationScrollable,
+    );
+  } else {
+    await t.ensureVisible(destination);
+  }
+  await t.pumpAndSettle();
+  expect(destination.hitTestable(), findsOneWidget);
+  expect(t.getSize(destination).height, greaterThanOrEqualTo(48));
+  await t.tap(destination);
+}
+
+Future<void> _mainDrawerRoundTrip(WidgetTester t, AppRuntime p) async {
+  await _selectFromMainDrawer(t, AppMode.general);
+  await t.pumpAndSettle();
+  expect(p.workspaceView.activeMode, AppMode.general);
+  expect(_key('general-home'), findsOneWidget);
+  expect(_key('workspace-resource-scrim'), findsNothing);
+  await _selectFromMainDrawer(t, AppMode.student);
+  await t.pumpAndSettle();
+  expect(p.workspaceView.activeMode, AppMode.student);
+  expect(_key('student-home'), findsOneWidget);
+  expect(_key('workspace-resource-scrim'), findsNothing);
   expect(_bar, findsNothing);
 }
 
@@ -142,6 +212,8 @@ void main() {
             await _returnToStudent(t);
             expect(p.workspaceView.activeMode, AppMode.student);
             expect(p.studentView.data.toJson(), tables);
+            await _mainDrawerRoundTrip(t, p);
+            expect(p.studentView.data.toJson(), tables);
             expect(t.takeException(), isNull);
           },
           variant: _phones,
@@ -157,6 +229,7 @@ void main() {
     await _selectGeneral(t);
     await t.pumpAndSettle();
     await _returnToStudent(t);
+    await _mainDrawerRoundTrip(t, p);
     expect(p.studentView.timetables, isEmpty);
     expect(t.takeException(), isNull);
   }, variant: _phones);
@@ -196,6 +269,7 @@ void main() {
       await t.pumpAndSettle();
       await _returnToStudent(t);
       expect(p.workspaceView.activeMode, AppMode.student);
+      await _mainDrawerRoundTrip(t, p);
       expect(t.takeException(), isNull);
     },
     variant: _phones,
@@ -219,6 +293,17 @@ void main() {
       await t.pumpAndSettle();
       expect(_menu, findsNothing);
       expect(_bar, findsNothing);
+      expect(_key('workspace-main-navigation').hitTestable(), findsOneWidget);
+      await _openMainDrawer(t);
+      expect(_key('workspace-resource-mode-student'), findsNothing);
+      expect(_key('workspace-resource-mode-general'), findsNothing);
+      final settings = _key('workspace-resource-settings');
+      await t.ensureVisible(settings);
+      await t.pumpAndSettle();
+      expect(settings.hitTestable(), findsOneWidget);
+      await t.binding.handlePopRoute();
+      await t.pumpAndSettle();
+      expect(_key('workspace-resource-scrim'), findsNothing);
       await p.workspaces.setEnabled(AppMode.general, true);
       await t.pumpAndSettle();
       expect(_menu.hitTestable(), findsOneWidget);
@@ -226,6 +311,49 @@ void main() {
       await t.pumpAndSettle();
       expect(_bar, findsOneWidget);
       expect(_menu, findsNothing);
+      expect(t.takeException(), isNull);
+    },
+    variant: _phones,
+  );
+
+  testWidgets(
+    'main navigation drawer shares the save gate and retries a failed switch',
+    (t) async {
+      final storage = _GatedStorage();
+      final p = await _mount(t, storage: storage);
+      final tables = p.studentView.data.toJson();
+      final writes = storage.writes;
+      final gate = Completer<void>();
+      addTearDown(() {
+        if (!gate.isCompleted) gate.complete();
+      });
+      storage.gate = gate;
+      storage.saveError = StateError('workspace write failed');
+      await _selectFromMainDrawer(t, AppMode.general);
+      await t.pump();
+      expect(storage.writes, writes + 1);
+      expect(_key('workspace-resource-scrim'), findsOneWidget);
+      expect(_key('student-home'), findsOneWidget);
+      expect(_key('general-home'), findsNothing);
+      final main = _key('workspace-main-navigation');
+      final general = _key('workspace-resource-mode-general');
+      expect(t.widget<IconButton>(main).onPressed, isNull);
+      expect(t.widget<ListTile>(general).enabled, isFalse);
+      expect(t.widget<ListTile>(general).onTap, isNull);
+      await t.tap(general);
+      await t.pump();
+      expect(storage.writes, writes + 1);
+
+      gate.complete();
+      storage.gate = null;
+      await t.pumpAndSettle();
+      expect(p.workspaceView.activeMode, AppMode.student);
+      expect(_key('student-home'), findsOneWidget);
+      expect(_key('workspace-resource-scrim'), findsOneWidget);
+      expect(t.widget<IconButton>(main).onPressed, isNotNull);
+      expect(t.widget<ListTile>(general).enabled, isTrue);
+      await _mainDrawerRoundTrip(t, p);
+      expect(p.studentView.data.toJson(), tables);
       expect(t.takeException(), isNull);
     },
     variant: _phones,
@@ -270,6 +398,8 @@ void main() {
     (t) async {
       final storage = WorkspaceMemoryStorage(_data(hidden: false));
       final p = await _mount(t, storage: storage);
+      await t.ensureVisible(_key('student-toolbar-more-button'));
+      await t.pumpAndSettle();
       await t.tap(_key('student-toolbar-more-button'));
       await t.pumpAndSettle();
       await t.tap(_key('student-more-settings'));

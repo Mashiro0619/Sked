@@ -21,24 +21,15 @@ import 'package:sked/controllers/app_session.dart';
 import 'package:sked/screens/agent_page.dart';
 import 'package:sked/screens/app_home_screen.dart';
 import 'package:sked/theme/sked_expressive_theme.dart';
-import 'package:sked/widgets/assistant_pane.dart';
 
 import '../../integration_test/support/agent_native_session.dart';
 import 'native_semantics_probe.dart';
 import 'ui_performance_metrics.dart';
 
-const agentUiPerformanceProtocolId = 'agent-ui-frames-v1';
+const agentUiPerformanceProtocolId = 'agent-ui-frames-v2';
 const agentUiPerformanceScrollId = 'agent-transcript-scroll-v1';
 const agentUiPerformanceIterations = 2;
-const agentUiPerformanceWindowsActions = [
-  'agent.entry.open',
-  'agent.pane.scroll_older',
-  'agent.pane_to_workspace',
-  'agent.workspace.scroll_older',
-  'agent.workspace_to_pane',
-  'agent.pane.jump_latest',
-  'agent.pane.close',
-];
+const agentUiPerformanceWindowsActions = agentUiPerformanceAndroidActions;
 const agentUiPerformanceAndroidActions = [
   'agent.entry.open',
   'agent.page.scroll_older',
@@ -247,7 +238,7 @@ Future<Map<String, Object?>> runAgentUiPerformanceBenchmarks(
     'failures': failures,
     'protocol': {
       'id': agentUiPerformanceProtocolId,
-      'version': 1,
+      'version': 2,
       'nativeSemanticsHarnessVersion': 2,
       'scrollTargeting': {
         'id': agentUiPerformanceScrollId,
@@ -261,7 +252,7 @@ Future<Map<String, Object?>> runAgentUiPerformanceBenchmarks(
       'cold': 'First Agent open and first action sequence in this native process/session, after unmeasured production home preparation; not OS cold start.',
       'warm': 'Second sequence in the same AppRuntime, repository and native process after chat history has loaded; no replacement session.',
       'provider': 'Idle only: zero provider requests before/after every window and cleanup.',
-      'host': 'AgentNativeApp / real AppRuntime / AppHomeScreen / AgentAssistantPane / AgentPage',
+      'host': 'AgentNativeApp / real AppRuntime / AppHomeScreen / side navigation / AgentPage',
       'codec': 'production DataTransferCodec; no override parameter',
       'surface': 'actual native window and DPR, no setSurfaceSize/physicalSize overrides',
       'timestamps': 'Timeline.now action boundaries; engine FramePhase.vsyncStart in [startUs, endUs).',
@@ -448,20 +439,11 @@ Future<Map<String, Object?>> runAgentUiPerformanceBenchmarks(
           'agent.entry.open',
           (details) => journey.open(details, iteration: iteration),
         );
-        if (Platform.isWindows) {
-          await measure('agent.pane.scroll_older', journey.scrollOlder);
-          await measure('agent.pane_to_workspace', journey.expand);
-          await measure('agent.workspace.scroll_older', journey.scrollOlder);
-          await measure('agent.workspace_to_pane', journey.backToPane);
-          await measure('agent.pane.jump_latest', journey.jumpLatest);
-          await measure('agent.pane.close', journey.closePane);
-        } else {
-          await measure('agent.page.scroll_older', journey.scrollOlder);
-          await measure('agent.page.close_reading', journey.closePageReading);
-          await measure('agent.page.reopen_reading', journey.reopenReading);
-          await measure('agent.page.jump_latest', journey.jumpLatest);
-          await measure('agent.page.close_latest', journey.closePageLatest);
-        }
+        await measure('agent.page.scroll_older', journey.scrollOlder);
+        await measure('agent.page.close_reading', journey.closePageReading);
+        await measure('agent.page.reopen_reading', journey.reopenReading);
+        await measure('agent.page.jump_latest', journey.jumpLatest);
+        await measure('agent.page.close_latest', journey.closePageLatest);
       }
       _assertIdle(native);
       await native.app.agent.conversations.waitForPendingWrites().timeout(
@@ -773,7 +755,7 @@ class _AgentJourney {
     await _settle(tester);
   }
 
-  Map<String, Object?> assertHost({bool? fullPage}) {
+  Map<String, Object?> assertHost() {
     _assertIdle(session);
     _require(
       composer.evaluate().length == 1,
@@ -810,15 +792,10 @@ class _AgentJourney {
           !motion.disableAnimations,
       'The active host does not match its framework configuration.',
     );
-    if (fullPage != null) {
-      _require(
-        fullPage
-            ? find.byType(AgentPage).hitTestable().evaluate().length == 1
-            : find.byType(AgentAssistantPane).hitTestable().evaluate().length ==
-                  1,
-        'The expected production host is not visible.',
-      );
-    }
+    _require(
+      find.byType(AgentPage).hitTestable().evaluate().length == 1,
+      'The production full Agent page is not visible.',
+    );
     return {
       'brightness': brightness.name,
       'textScale': textScale,
@@ -943,7 +920,7 @@ class _AgentJourney {
       'Cold/warm history ownership changed.',
     );
     final entryControl = await _openFromHome();
-    assertHost(fullPage: !Platform.isWindows);
+    assertHost();
     final opened = observe(details, 'opened');
     _assertLatest(opened);
     _require(
@@ -955,11 +932,7 @@ class _AgentJourney {
   }
 
   Future<String> _tapHomeAgent() async {
-    const controls = [
-      'assistant-toggle',
-      'general-desktop-toolbar-more',
-      'general-toolbar-more-button',
-    ];
+    const controls = ['workspace-agent-entry', 'workspace-main-navigation'];
     String? visibleControl() {
       for (final id in controls) {
         if (key(id).hitTestable().evaluate().length == 1) {
@@ -977,21 +950,21 @@ class _AgentJourney {
       );
       control = visibleControl()!;
     }
-    final agent = key('assistant-toggle');
-    if (control != 'assistant-toggle') {
-      await tap(key(control), 'the visible formal home More menu');
+    final agent = key('workspace-agent-entry');
+    if (control != 'workspace-agent-entry') {
+      await tap(key(control), 'the visible main navigation drawer');
       if (agent.hitTestable().evaluate().length != 1) {
         await until(
           () => agent.evaluate().length == 1,
-          'the actual home Agent menu item',
+          'the actual side navigation Agent entry',
         );
         await tester.ensureVisible(agent).timeout(const Duration(seconds: 20));
       }
     }
-    await tap(agent, 'the formal home Agent toggle');
-    return control == 'assistant-toggle'
+    await tap(agent, 'the formal side navigation Agent entry');
+    return control == 'workspace-agent-entry'
         ? control
-        : '$control / assistant-toggle';
+        : '$control / workspace-agent-entry';
   }
 
   Future<String> _openFromHome() async {
@@ -1027,42 +1000,6 @@ class _AgentJourney {
       'Timed drags did not move the real transcript to earlier messages.',
     );
     details['scrollStatus'] = 'scrolled';
-  }
-
-  Future<void> expand(Map<String, Object?> details) async {
-    final before = observe(details, 'pane');
-    _require(
-      !before.latest,
-      'Pane expansion must begin while reading earlier history.',
-    );
-    await tap(key('agent-open-workspace'), 'the pane Expand action');
-    await until(
-      () => find.byType(AgentPage).hitTestable().evaluate().length == 1,
-      'the full product Agent page',
-    );
-    assertHost(fullPage: true);
-    final after = observe(details, 'workspace');
-    _require(
-      before.matches(after),
-      'Expanding the pane moved the saved reading anchor.',
-    );
-    details['readingPreserved'] = true;
-  }
-
-  Future<void> backToPane(Map<String, Object?> details) async {
-    final before = observe(details, 'workspace');
-    _require(
-      !before.latest,
-      'Returning to the pane must begin in earlier history.',
-    );
-    await _closeFullPage();
-    assertHost(fullPage: false);
-    final after = observe(details, 'pane');
-    _require(
-      before.matches(after),
-      'Returning to the pane moved the saved reading anchor.',
-    );
-    details['readingPreserved'] = true;
   }
 
   Future<void> _closeFullPage() async {
@@ -1102,28 +1039,17 @@ class _AgentJourney {
     );
   }
 
-  Future<void> closePane(Map<String, Object?> details) async {
-    _assertLatest(observe(details, 'pane'));
-    details['closeControl'] = await _tapHomeAgent();
-    await until(
-      () => composer.evaluate().isEmpty,
-      'the Agent pane to become noninteractive',
-    );
-    details['returnedHome'] = true;
-    details['conversationLoadsAfter'] = session.conversationLoads;
-  }
-
   Future<void> closePageReading(Map<String, Object?> details) async {
     final before = observe(details, 'page');
     _require(
       !before.latest,
-      'Android close must begin while reading earlier history.',
+      'Full page close must begin while reading earlier history.',
     );
     _closedReading = before;
     await _closeFullPage();
     _require(
       composer.evaluate().isEmpty,
-      'A closed Android page retained interactive input.',
+      'A closed full page retained interactive input.',
     );
     details['returnedHome'] = true;
   }
@@ -1131,15 +1057,15 @@ class _AgentJourney {
   Future<void> reopenReading(Map<String, Object?> details) async {
     _require(
       _closedReading != null,
-      'The Android reading checkpoint is missing.',
+      'The full page reading checkpoint is missing.',
     );
     details['conversationLoadsBefore'] = session.conversationLoads;
     details['entry'] = await _openFromHome();
-    assertHost(fullPage: true);
+    assertHost();
     final after = observe(details, 'reopened');
     _require(
       _closedReading!.matches(after) && session.conversationLoads == 1,
-      'Android reopening moved the reading anchor or reloaded history.',
+      'Full page reopening moved the reading anchor or reloaded history.',
     );
     details['readingPreserved'] = true;
     details['conversationLoadsAfter'] = session.conversationLoads;
@@ -1150,7 +1076,7 @@ class _AgentJourney {
     await _closeFullPage();
     _require(
       composer.evaluate().isEmpty,
-      'A closed Android page retained interactive input.',
+      'A closed full page retained interactive input.',
     );
     details['returnedHome'] = true;
     details['conversationLoadsAfter'] = session.conversationLoads;

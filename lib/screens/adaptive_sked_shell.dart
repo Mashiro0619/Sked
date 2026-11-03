@@ -6,10 +6,13 @@ import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:provider/provider.dart';
 
 import '../widgets/sked_tooltip.dart';
 
 import '../l10n/app_localizations.dart';
+import '../agent/agent_application.dart';
+import 'agent_page.dart';
 import '../models/timetable_models.dart';
 import '../controllers/workspace_view_state.dart';
 import '../controllers/workspace_commands.dart';
@@ -68,6 +71,7 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
   bool _settingsOpen = false;
   bool _modeSwitchInFlight = false;
   bool _navigationToggleInFlight = false;
+  bool _agentOpen = false;
   Object? _navigationLayoutIdentity;
   late AppMode _committedMode;
   final _workspaceStackKey = GlobalKey<_AdaptiveWorkspaceStackState>();
@@ -116,6 +120,7 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
     if (!widget.enabled ||
         uiCommandBusy ||
         _navigationToggleInFlight ||
+        _agentOpen ||
         _settingsOpen ||
         index == _selectedIndex) {
       return;
@@ -140,6 +145,7 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
     if (!widget.enabled ||
         uiCommandBusy ||
         _navigationToggleInFlight ||
+        _agentOpen ||
         _settingsOpen ||
         !mounted) {
       return;
@@ -156,6 +162,7 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
     if (!widget.enabled ||
         uiCommandBusy ||
         _navigationToggleInFlight ||
+        _agentOpen ||
         _settingsOpen ||
         !mounted) {
       return;
@@ -177,6 +184,36 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
   void _openSettingsFromWorkspace() {
     unawaited(_openSettings());
   }
+
+  Future<void> _openAgent() async {
+    if (!mounted) return;
+    final application = context.read<AgentApplication?>();
+    if (!widget.enabled ||
+        uiCommandBusy ||
+        _navigationToggleInFlight ||
+        _settingsOpen ||
+        _agentOpen ||
+        application?.settings.enabled != true) {
+      return;
+    }
+    final returnFocus = FocusManager.instance.primaryFocus;
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _agentOpen = true);
+    try {
+      await AgentPage.open(context);
+    } finally {
+      if (mounted) {
+        setState(() => _agentOpen = false);
+        if (returnFocus?.context?.mounted == true &&
+            returnFocus!.canRequestFocus &&
+            ModalRoute.of(context)?.isCurrent != false) {
+          returnFocus.requestFocus();
+        }
+      }
+    }
+  }
+
+  void _openAgentFromNavigation() => unawaited(_openAgent());
 
   void _selectFromNavigation(AppMode mode) {
     unawaited(_selectWorkspace(mode == AppMode.student ? 0 : 1));
@@ -200,6 +237,9 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
+        final agentEnabled = context.select<AgentApplication?, bool>(
+          (application) => application?.settings.enabled == true,
+        );
         final compact = width < _compactNavigationBreakpoint;
         final supportsCollapsibleNavigation =
             width >= _permanentDrawerBreakpoint;
@@ -227,6 +267,7 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
             widget.enabled &&
             !uiCommandBusy &&
             !_navigationToggleInFlight &&
+            !_agentOpen &&
             !_settingsOpen;
         final workspaceStack = WorkspaceNavigationScope(
           selectedMode: _effectiveMode,
@@ -237,6 +278,8 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
                   MediaQuery.textScalerOf(context).scale(14) / 14 <= 1.5),
           onSelect: _selectFromNavigation,
           onToggleResources: _toggleResourcesFromNavigation,
+          agentEnabled: agentEnabled,
+          onOpenAgent: _openAgentFromNavigation,
           child: _AdaptiveWorkspaceStack(
             key: _workspaceStackKey,
             selectedIndex: selectedIndex,
@@ -299,6 +342,7 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
                 settingsBusy: _settingsOpen,
                 onDestinationSelected: _selectWorkspace,
                 onOpenSettings: _openSettings,
+                onOpenAgent: agentEnabled ? _openAgentFromNavigation : null,
                 settingsFocusNode: _settingsFocusNode,
               )
             : _ExpandableWorkspaceRail(
@@ -310,6 +354,7 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
                 settingsBusy: _settingsOpen,
                 onDestinationSelected: _selectWorkspace,
                 onOpenSettings: _openSettings,
+                onOpenAgent: agentEnabled ? _openAgentFromNavigation : null,
                 settingsFocusNode: _settingsFocusNode,
                 collapseToggleTooltip: navigationCollapsed
                     ? AppLocalizations.of(context).expandWorkspaceNavigation
@@ -1047,6 +1092,7 @@ class _ExpandableWorkspaceRail extends StatelessWidget {
     required this.settingsBusy,
     required this.onDestinationSelected,
     required this.onOpenSettings,
+    this.onOpenAgent,
     required this.settingsFocusNode,
     required this.collapseToggleTooltip,
     required this.onToggleCollapsed,
@@ -1060,6 +1106,7 @@ class _ExpandableWorkspaceRail extends StatelessWidget {
   final bool settingsBusy;
   final ValueChanged<int> onDestinationSelected;
   final VoidCallback onOpenSettings;
+  final VoidCallback? onOpenAgent;
   final FocusNode settingsFocusNode;
   final String collapseToggleTooltip;
   final VoidCallback onToggleCollapsed;
@@ -1087,6 +1134,7 @@ class _ExpandableWorkspaceRail extends StatelessWidget {
         enabled: enabled,
         settingsBusy: settingsBusy,
         onOpenSettings: onOpenSettings,
+        onOpenAgent: onOpenAgent,
         settingsFocusNode: settingsFocusNode,
       ),
       destinations: [
@@ -1121,6 +1169,36 @@ class _ExpandableWorkspaceRail extends StatelessWidget {
             key: ValueKey('adaptive-shell-wide-navigation-static-$expanded'),
             child: rail,
           );
+    final heightAwareRail = LayoutBuilder(
+      builder: (context, constraints) {
+        const brandExtent = 56.0;
+        const railSpacing = 16.0;
+        const destinationViewport = kMinInteractiveDimension + 16;
+        final dividerExtent = 16 + (DividerTheme.of(context).space ?? 16);
+        final settingsExtent =
+            kMinInteractiveDimension +
+            12 +
+            dividerExtent +
+            (onOpenAgent == null ? 0 : kMinInteractiveDimension);
+        final minimumHeight =
+            brandExtent +
+            railSpacing +
+            destinationViewport +
+            settingsExtent +
+            MediaQuery.paddingOf(context).vertical;
+        final height = math.max(constraints.maxHeight, minimumHeight);
+        // NavigationRail only scrolls destinations. At extreme heights its
+        // fixed brand, Agent and settings actions need whole-rail scrolling.
+        return SingleChildScrollView(
+          key: const ValueKey('adaptive-shell-navigation-height-scroll'),
+          primary: false,
+          physics: height > constraints.maxHeight
+              ? const ClampingScrollPhysics()
+              : const NeverScrollableScrollPhysics(),
+          child: SizedBox(height: height, child: motionAwareRail),
+        );
+      },
+    );
     final targetWidth = expanded ? _permanentDrawerWidth : _compactRailWidth;
     return TweenAnimationBuilder<double>(
       tween: Tween(end: targetWidth),
@@ -1135,7 +1213,7 @@ class _ExpandableWorkspaceRail extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          AbsorbPointer(absorbing: interactionBlocked, child: motionAwareRail),
+          AbsorbPointer(absorbing: interactionBlocked, child: heightAwareRail),
           if (interactionBlocked)
             Semantics(
               liveRegion: true,
@@ -1228,6 +1306,7 @@ class _ExpandableRailSettingsAction extends StatelessWidget {
     required this.enabled,
     required this.settingsBusy,
     required this.onOpenSettings,
+    this.onOpenAgent,
     required this.settingsFocusNode,
   });
 
@@ -1235,6 +1314,7 @@ class _ExpandableRailSettingsAction extends StatelessWidget {
   final bool enabled;
   final bool settingsBusy;
   final VoidCallback onOpenSettings;
+  final VoidCallback? onOpenAgent;
   final FocusNode settingsFocusNode;
 
   @override
@@ -1261,6 +1341,42 @@ class _ExpandableRailSettingsAction extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  if (onOpenAgent != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: SkedTooltip(
+                        message: l10n.agentTitle,
+                        child: InkWell(
+                          key: const ValueKey('adaptive-shell-agent-entry'),
+                          onTap: actionEnabled ? onOpenAgent : null,
+                          borderRadius: BorderRadius.circular(16),
+                          child: SizedBox(
+                            height: 48,
+                            child: Row(
+                              children: [
+                                const SizedBox(
+                                  width: _compactRailWidth - 24,
+                                  child: Icon(Icons.chat_bubble_outline),
+                                ),
+                                Expanded(
+                                  child: ClipRect(
+                                    child: Opacity(
+                                      opacity: labelOpacity,
+                                      alwaysIncludeSemantics: true,
+                                      child: Text(
+                                        l10n.agentTitle,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   const Padding(
                     padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
                     child: Divider(),
@@ -1345,6 +1461,7 @@ class _WorkspaceRail extends StatelessWidget {
     required this.settingsBusy,
     required this.onDestinationSelected,
     required this.onOpenSettings,
+    this.onOpenAgent,
     required this.settingsFocusNode,
   });
 
@@ -1354,6 +1471,7 @@ class _WorkspaceRail extends StatelessWidget {
   final bool settingsBusy;
   final ValueChanged<int> onDestinationSelected;
   final VoidCallback onOpenSettings;
+  final VoidCallback? onOpenAgent;
   final FocusNode settingsFocusNode;
 
   @override
@@ -1366,7 +1484,10 @@ class _WorkspaceRail extends StatelessWidget {
           SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                const settingsExtent = kMinInteractiveDimension + 20;
+                final settingsExtent =
+                    kMinInteractiveDimension +
+                    20 +
+                    (onOpenAgent == null ? 0 : kMinInteractiveDimension);
                 const destinationViewport = kMinInteractiveDimension + 16;
                 const brandExtent = 48.0 + 24.0;
                 final minimumHeight = settingsExtent + destinationViewport;
@@ -1428,6 +1549,15 @@ class _WorkspaceRail extends StatelessWidget {
                             ],
                           ),
                         ),
+                        if (onOpenAgent != null)
+                          IconButton(
+                            key: const ValueKey('adaptive-shell-agent-entry'),
+                            tooltip: l10n.agentTitle,
+                            onPressed: busy || settingsBusy || !enabled
+                                ? null
+                                : onOpenAgent,
+                            icon: const Icon(Icons.chat_bubble_outline),
+                          ),
                         Padding(
                           padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
                           child: IconButton(

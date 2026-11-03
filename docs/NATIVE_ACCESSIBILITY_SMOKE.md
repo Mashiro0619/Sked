@@ -46,8 +46,8 @@ physical-size or DPR override is applied.
 
 After the original workspace tree is unmounted, each Agent scenario creates a
 fresh `AgentNativeSession` with explicit memory owners and production codecs.
-The real home Agent toggle, New conversation and full Agent workspace actions
-lead to the actual composer. Independent Agent settings are opened through the
+The real home side navigation opens the full Agent page; New conversation
+leads to the actual composer. Independent Agent settings are opened through the
 conversation menu; all four tabs must publish distinct actionable semantics
 and select their corresponding product form. The named native control must
 use the MSAA page-tab role (37) or the Windows push-button compatibility role

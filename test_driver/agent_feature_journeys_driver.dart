@@ -447,7 +447,7 @@ void _validateKnowledge(Object? value) {
             .hasMatch(report['label'] as String),
     'The report label is invalid.',
   );
-  final platform = _environment(report['environment']);
+  _environment(report['environment']);
   final config = _map(report['configuration'], 'Framework configuration');
   _require(
     const ['baseline', 'accessible'].contains(config['name']),
@@ -484,12 +484,8 @@ void _validateKnowledge(Object? value) {
         entry['initialDraft'] == 'Long conversation initial draft' &&
         entry['sameApplicationAndRepository'] == true &&
         entry['selectedId'] == 'native-long-history' &&
-        entry['host'] ==
-            (platform == 'windows' ? 'AgentAssistantPane' : 'AgentPage') &&
-        entry['entry'] ==
-            (platform == 'windows'
-                ? 'home assistant toggle'
-                : 'home More menu / Agent'),
+        entry['host'] == 'AgentPage' &&
+        entry['entry'] == 'home side navigation / Agent',
     'The actual product entry did not retain the expected host, owner, archive and draft.',
   );
   _digest(entry['mainSha256'], 'Workspace at product entry');
@@ -658,7 +654,7 @@ void _validateFeatureBase(
             .hasMatch(report['label'] as String),
     'The native feature label is invalid.',
   );
-  final platform = _environment(report['environment']);
+  _environment(report['environment']);
   final config = _map(report['configuration'], 'Framework configuration');
   _require(
     const ['baseline', 'accessible'].contains(config['name']) &&
@@ -694,12 +690,8 @@ void _validateFeatureBase(
         entry['initialDraft'] == 'Long conversation initial draft' &&
         entry['sameApplicationAndRepository'] == true &&
         entry['selectedId'] == 'native-long-history' &&
-        entry['host'] ==
-            (platform == 'windows' ? 'AgentAssistantPane' : 'AgentPage') &&
-        entry['entry'] ==
-            (platform == 'windows'
-                ? 'home assistant toggle'
-                : 'home More menu / Agent'),
+        entry['host'] == 'AgentPage' &&
+        entry['entry'] == 'home side navigation / Agent',
     'The formal native entry did not retain its expected host, owners, archive and draft.',
   );
   _digest(entry['mainSha256'], 'Workspace at product entry');

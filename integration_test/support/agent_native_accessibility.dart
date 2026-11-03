@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:io' show pid;
 import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart';
@@ -531,11 +531,7 @@ class _MsaaScenario {
   }
 
   Future<void> run() async {
-    const homeControls = [
-      'assistant-toggle',
-      'general-desktop-toolbar-more',
-      'general-toolbar-more-button',
-    ];
+    const homeControls = ['workspace-agent-entry', 'workspace-main-navigation'];
     await at('mount', () async {
       await session.app.lifecycle.load().timeout(const Duration(seconds: 20));
       expect(session.app.lifecycle.canWrite, isTrue);
@@ -553,10 +549,10 @@ class _MsaaScenario {
       final homeControl = homeControls.firstWhere(
         (id) => key(id).hitTestable().evaluate().length == 1,
       );
-      if (homeControl != 'assistant-toggle') {
+      if (homeControl != 'workspace-agent-entry') {
         await tap(key(homeControl));
       }
-      await tap(key('assistant-toggle'));
+      await tap(key('workspace-agent-entry'));
       await until(
         () =>
             composer.evaluate().length == 1 && session.app.agent.isInitialized,
@@ -571,7 +567,6 @@ class _MsaaScenario {
         'the actual new conversation',
       );
       conversationId = session.app.agent.conversations.selectedId!;
-      await tap(key('agent-open-workspace'));
       await until(
         () =>
             find.byType(AgentPage).hitTestable().evaluate().length == 1 &&
@@ -598,10 +593,10 @@ class _MsaaScenario {
       beforeStored = session.mainSource;
       expect(beforeStored, beforeSource);
       report['entry'] = {
-        'path': 'home Agent toggle → new conversation → full AgentPage',
-        'homeControl': homeControl == 'assistant-toggle'
+        'path': 'home side navigation / Agent → new conversation',
+        'homeControl': homeControl == 'workspace-agent-entry'
             ? homeControl
-            : '$homeControl / assistant-toggle',
+            : '$homeControl / workspace-agent-entry',
         'conversationId': conversationId,
         'originalLongMessageCount': agentNativeMessageCount,
       };

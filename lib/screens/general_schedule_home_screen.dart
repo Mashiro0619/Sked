@@ -68,7 +68,6 @@ import '../providers/app_scope.dart';
 import '../utils/general_schedule_colors.dart';
 import '../widgets/app_modal_sheet.dart';
 import '../widgets/workspace_frame.dart';
-import '../widgets/assistant_pane.dart';
 import '../widgets/app_layout_tokens.dart';
 import '../widgets/editor_exit_guard.dart';
 import '../widgets/sked_task_route.dart';
@@ -394,6 +393,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
               ? _desktopToolbar(context, general, snapshot, view)
               : SkedWorkspaceToolbar(
                   key: const ValueKey('general-workspace-toolbar'),
+                  leading: workspaceMainNavigationButton(context),
                   actions: compactTouch
                       ? const []
                       : [
@@ -428,7 +428,6 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                                 icon: const Icon(Icons.view_agenda_outlined),
                               ),
                             ),
-                          const AssistantPaneToggle(),
                           if (width >= 600 &&
                               snapshot.showAddEventFab &&
                               widget.active &&
@@ -1301,7 +1300,6 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
   ) {
     final commands = context.read<GeneralCommands>();
     final l = AppLocalizations.of(context);
-    final assistant = AssistantPaneScope.of(context);
     final hidden = snapshot.hiddenToolbarNavigationIds;
     final placement = MobileToolbarLayout.resolve(
       order: snapshot.toolbarNavigationOrder,
@@ -1408,10 +1406,6 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                     ),
                   );
                 }
-              case 'assistant':
-                if (assistant?.enabled == true && assistant!.interactive) {
-                  (assistant.onToggle ?? assistant.controller.toggle)();
-                }
               case 'settings':
                 if (widget.settingsEnabled) {
                   (widget.settingsAction ?? () => _openSettingsPage(context))();
@@ -1473,13 +1467,6 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                     _ => id,
                   }),
                 ),
-            if (assistant?.enabled == true)
-              SkedPopupMenuItem<String>(
-                key: const ValueKey('assistant-toggle'),
-                value: 'assistant',
-                enabled: assistant!.interactive,
-                child: Text(assistant.title ?? l.assistantLayoutPreview),
-              ),
           ],
         ),
       ),
@@ -1497,7 +1484,6 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     final workspace = context.read<WorkspaceViewState>();
     final l = AppLocalizations.of(context);
     final resources = WorkspaceCanvasScope.maybeOf(context)?.resources == true;
-    final assistant = AssistantPaneScope.of(context);
     final canNavigate = widget.interactive && !_dateNavigationBusy;
     return _ReminderStrip(
       view: general,
@@ -1628,15 +1614,6 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
               icon: Icons.view_agenda_outlined,
               onSelected: (anchor) =>
                   unawaited(_openDayAgenda(context, anchorContext: anchor)),
-            ),
-          if (assistant?.enabled == true)
-            WorkbenchOverflowAction(
-              id: 'assistant-toggle',
-              label: assistant!.title ?? l.assistantLayoutPreview,
-              icon: Icons.chat_bubble_outline,
-              onSelected: assistant.interactive
-                  ? (_) => (assistant.onToggle ?? assistant.controller.toggle)()
-                  : null,
             ),
           if (widget.showSettingsAction && !resources)
             WorkbenchOverflowAction(
@@ -1819,7 +1796,6 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
               icon: const Icon(Icons.view_agenda_outlined),
             ),
           ),
-        const AssistantPaneToggle(),
         if (widget.showSettingsAction && !resources)
           IconButton(
             key: const ValueKey('general-settings-button'),

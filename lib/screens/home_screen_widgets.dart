@@ -183,7 +183,6 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
               ),
             ),
           ),
-          const AssistantPaneToggle(),
           if (showSettings)
             IconButton(
               key: const ValueKey('student-settings-button'),
@@ -368,8 +367,6 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
       context,
       width: compactWidth ? 0 : null,
     );
-    final assistant = AssistantPaneScope.of(context);
-    final assistantInMenu = mobile && assistant?.enabled == true;
     final showWorkspace = mobile
         ? needsMobileWorkspaceMenu(context)
         : needsWorkspaceMenu(context);
@@ -385,8 +382,7 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
       hiddenBehavior: hiddenItemsBehavior,
       defaultOrder: studentToolbarNavigationDefaultOrder,
       hasFixedMenuItems:
-          (!timetableInResources && onManagePeriodTimeSets != null) ||
-          assistantInMenu,
+          !timetableInResources && onManagePeriodTimeSets != null,
       availableIds: {
         if (!timetableInResources) 'timetable',
         'week',
@@ -429,10 +425,6 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
                 onOpenSettings?.call();
               case 'periods':
                 onManagePeriodTimeSets?.call();
-              case 'assistant':
-                if (assistant?.enabled == true && assistant!.interactive) {
-                  (assistant.onToggle ?? assistant.controller.toggle)();
-                }
               case 'student':
                 selectWorkspace(context, AppMode.student);
               case 'general':
@@ -471,13 +463,6 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
                 value: 'today',
                 child: Text(l10n.today),
               ),
-            if (assistantInMenu)
-              SkedPopupMenuItem<String>(
-                key: const ValueKey('assistant-toggle'),
-                value: 'assistant',
-                enabled: assistant!.interactive,
-                child: Text(assistant.title ?? l10n.assistantLayoutPreview),
-              ),
           ],
         ),
       ),
@@ -485,9 +470,8 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
     final orderedIds = placement.toolbarIds;
     return SkedWorkspaceToolbar(
       key: const ValueKey('student-workspace-toolbar'),
-      leading: !mobile && showWorkspace ? const WorkspaceModeMenu() : null,
+      leading: workspaceMainNavigationButton(context),
       actions: [
-        if (!mobile) const AssistantPaneToggle(),
         if (onAddCourse != null)
           Builder(
             builder: (anchor) => SkedTooltip(
@@ -546,23 +530,13 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
                     sum + (fixedActionWidths[id] ?? defaultActionWidth),
               );
           final gapWidth = math.max(0, orderedIds.length - 1) * gap;
-          final maximumWeekWidth = math.max(
-            48.0,
-            availableWidth -
-                nonFlexibleWidth -
-                gapWidth -
-                (hasTimetable ? selectorMinimum : 0),
-          );
           final desiredWeekWidth = math.max(
             weekMinimum,
             measuredWeekWidth + 12,
           );
-          // Give the date its preferred width before allocating the filter.
-          // A long localized week can wrap once the filter reaches its minimum;
-          // keep the existing scroll fallback for rows whose targets cannot fit.
-          final weekWidth = hasWeek
-              ? math.min(desiredWeekWidth, maximumWeekWidth)
-              : 0.0;
+          // Keep the week readable after the fixed navigation trigger takes
+          // space. The existing row scrolls when its controls cannot all fit.
+          final weekWidth = hasWeek ? desiredWeekWidth : 0.0;
           final flexibleWidth = math.max(
             selectorMinimum,
             availableWidth - nonFlexibleWidth - gapWidth - weekWidth,
@@ -640,7 +614,6 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
             enabledWorkspaces: view.enabledWorkspaces,
           ),
         );
-    final assistant = AssistantPaneScope.of(context);
     final resources = WorkspaceCanvasScope.maybeOf(context)?.resources == true;
     return WorkbenchCompactCalendarBar(
       id: 'student',
@@ -716,15 +689,6 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
             onSelected: onViewChanged == null
                 ? null
                 : (_) => onViewChanged!(mode),
-          ),
-        if (assistant?.enabled == true)
-          WorkbenchOverflowAction(
-            id: 'assistant-toggle',
-            label: assistant!.title ?? l.assistantLayoutPreview,
-            icon: Icons.chat_bubble_outline,
-            onSelected: assistant.interactive
-                ? (_) => (assistant.onToggle ?? assistant.controller.toggle)()
-                : null,
           ),
         if (showSettings)
           WorkbenchOverflowAction(
@@ -2172,14 +2136,12 @@ class _EmptyTimetableToolbar extends StatelessWidget {
               hiddenBehavior: view.studentToolbarHiddenItemsBehavior,
             ),
           );
-      final assistant = AssistantPaneScope.of(context);
       final placement = MobileToolbarLayout.resolve(
         order: navigation.order,
         hiddenIds: navigation.hiddenIds,
         hiddenBehavior: navigation.hiddenBehavior,
         defaultOrder: studentToolbarNavigationDefaultOrder,
-        hasFixedMenuItems:
-            onManagePeriodTimeSets != null || assistant?.enabled == true,
+        hasFixedMenuItems: onManagePeriodTimeSets != null,
         availableIds: {
           if (needsMobileWorkspaceMenu(context)) 'workspace',
           if (showSettingsAction) 'settings',
@@ -2188,6 +2150,7 @@ class _EmptyTimetableToolbar extends StatelessWidget {
       final enabled =
           WorkspaceNavigationScope.maybeOf(context)?.enabled ?? true;
       return SkedWorkspaceToolbar(
+        leading: workspaceMainNavigationButton(context),
         padding: const EdgeInsets.symmetric(horizontal: 8),
         title: Row(
           children: [
@@ -2219,11 +2182,6 @@ class _EmptyTimetableToolbar extends StatelessWidget {
                         onOpenSettings?.call();
                       case 'periods':
                         onManagePeriodTimeSets?.call();
-                      case 'assistant':
-                        if (assistant?.enabled == true &&
-                            assistant!.interactive) {
-                          (assistant.onToggle ?? assistant.controller.toggle)();
-                        }
                       case 'student':
                         selectWorkspace(context, AppMode.student);
                       case 'general':
@@ -2251,15 +2209,6 @@ class _EmptyTimetableToolbar extends StatelessWidget {
                           enabled: onOpenSettings != null,
                           child: Text(l10n.settings),
                         ),
-                    if (assistant?.enabled == true)
-                      SkedPopupMenuItem<String>(
-                        key: const ValueKey('assistant-toggle'),
-                        value: 'assistant',
-                        enabled: assistant!.interactive,
-                        child: Text(
-                          assistant.title ?? l10n.assistantLayoutPreview,
-                        ),
-                      ),
                   ],
                 ),
               },
@@ -2275,6 +2224,7 @@ class _EmptyTimetableToolbar extends StatelessWidget {
     );
     return SkedWorkspaceToolbar(
       padding: padding,
+      leading: workspaceMainNavigationButton(context),
       title: SizedBox(
         height: metrics.desktop
             ? metrics.toolbarHeight - padding.vertical

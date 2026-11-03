@@ -297,10 +297,7 @@ void validateAgentSelectiveBackupJourney(Map<String, Object?> report) {
           ].contains(settingsControl));
   _require(
     validSettingsRoute &&
-        settings['sourceHost'] ==
-            (platform == 'windows'
-                ? 'AgentAssistantPane'
-                : 'AgentPage / BackButton') &&
+        settings['sourceHost'] == 'AgentPage / BackButton' &&
         settings['sameMainSessionAndBackupOwner'] == true,
     'The backup flow did not enter the real global Settings route from Agent.',
   );

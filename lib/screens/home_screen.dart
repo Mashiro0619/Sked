@@ -47,7 +47,6 @@ import '../widgets/app_modal_sheet.dart';
 import '../widgets/sked_task_body.dart';
 import '../widgets/sked_task_header.dart';
 import '../widgets/workspace_frame.dart';
-import '../widgets/assistant_pane.dart' show AssistantPaneScope;
 import '../widgets/app_layout_tokens.dart';
 import '../widgets/editor_exit_guard.dart';
 import '../widgets/sked_task_route.dart';
