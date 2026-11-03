@@ -5964,6 +5964,36 @@ abstract class AppLocalizations {
   /// **'Could not save or complete this action. Your input is kept here.'**
   String get agentOperationFailed;
 
+  /// No description provided for @agentInitializing.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading Agent…'**
+  String get agentInitializing;
+
+  /// No description provided for @agentInitializationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Agent could not finish loading.'**
+  String get agentInitializationFailed;
+
+  /// No description provided for @agentInitializationApplicationStorage.
+  ///
+  /// In en, this message translates to:
+  /// **'Application storage is not ready. Return to the workspace and resolve its storage or recovery notice before retrying.'**
+  String get agentInitializationApplicationStorage;
+
+  /// No description provided for @agentInitializationConversationStorage.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved chats could not be loaded. Existing records are preserved. Check storage access or archive format, then retry.'**
+  String get agentInitializationConversationStorage;
+
+  /// No description provided for @agentInitializationConnectionStorage.
+  ///
+  /// In en, this message translates to:
+  /// **'The saved connection could not be initialized. Open Agent settings to review it, then retry.'**
+  String get agentInitializationConnectionStorage;
+
   /// No description provided for @agentRetry.
   ///
   /// In en, this message translates to:

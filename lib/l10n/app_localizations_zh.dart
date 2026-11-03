@@ -3139,6 +3139,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get agentOperationFailed => '无法保存或完成此操作。输入仍保留在此处。';
 
   @override
+  String get agentInitializing => '正在加载 Agent…';
+
+  @override
+  String get agentInitializationFailed => 'Agent 尚未完成加载。';
+
+  @override
+  String get agentInitializationApplicationStorage =>
+      '应用存储尚未就绪。请返回工作区，处理存储或恢复提示后重试。';
+
+  @override
+  String get agentInitializationConversationStorage =>
+      '无法加载已保存的聊天，原记录已保留。请检查存储访问权限或档案格式后重试。';
+
+  @override
+  String get agentInitializationConnectionStorage =>
+      '无法初始化已保存的连接。请打开 Agent 设置核对连接后重试。';
+
+  @override
   String get agentRetry => '重试';
 
   @override
@@ -7084,6 +7102,24 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentOperationFailed => '無法儲存或完成此操作。輸入仍保留在此處。';
+
+  @override
+  String get agentInitializing => '正在載入 Agent…';
+
+  @override
+  String get agentInitializationFailed => 'Agent 尚未完成載入。';
+
+  @override
+  String get agentInitializationApplicationStorage =>
+      '應用程式儲存尚未就緒。請返回工作區，處理儲存或復原提示後重試。';
+
+  @override
+  String get agentInitializationConversationStorage =>
+      '無法載入已儲存的聊天，原記錄已保留。請檢查儲存存取權限或封存資料格式後重試。';
+
+  @override
+  String get agentInitializationConnectionStorage =>
+      '無法初始化已儲存的連線。請開啟 Agent 設定核對連線後重試。';
 
   @override
   String get agentRetry => '重試';

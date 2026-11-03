@@ -1,10 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:sked/agent/agent_application.dart';
 import 'package:sked/agent/connection/agent_connection_manager.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
+import 'package:sked/agent/conversations/conversation_storage_codec.dart';
 import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/tools/application_tool_host.dart';
 import 'package:sked/agent/skills/shared_skill_loader.dart';
@@ -18,18 +22,38 @@ import '../support/workspace_harness.dart';
 class _ConversationStorage extends ConversationStorage {
   _ConversationStorage() : super.base();
   String? source;
+  List<String?>? slots;
   bool failLoad = false;
+  bool failSave = false;
+  Future<void> Function()? beforeSave;
   int loads = 0;
+  int saves = 0;
   @override
   Future<ConversationStorageLoad> load() async {
     loads++;
     if (failLoad) throw StateError('fixture storage failure');
+    if (slots != null) return decodeConversationSlots(slots!);
     return ConversationStorageLoad(source: source);
   }
 
   @override
   Future<void> save(String value, {required int revision}) async {
+    saves++;
+    await beforeSave?.call();
+    if (failSave) throw StateError('fixture storage write failure');
     source = value;
+  }
+}
+
+class _CredentialStore extends MemoryAgentCredentialStore {
+  bool failRead = false;
+  int reads = 0;
+
+  @override
+  Future<String?> read(AgentCredentialSlot slot) async {
+    reads++;
+    if (failRead) throw StateError('fixture credential read failure');
+    return super.read(slot);
   }
 }
 
@@ -86,15 +110,17 @@ Future<void> _until(AppRuntime app, bool Function() predicate) async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   late _ConversationStorage conversations;
+  late _CredentialStore credentials;
   late _Provider provider;
   late AppRuntime app;
 
   setUp(() async {
     conversations = _ConversationStorage();
+    credentials = _CredentialStore();
     provider = _Provider()..respond = (_) => _done();
     app = await workspaceProvider(
       agentConversationStorage: conversations,
-      agentCredentialStore: MemoryAgentCredentialStore(),
+      agentCredentialStore: credentials,
       agentProvider: provider,
     );
   });
@@ -560,13 +586,165 @@ void main() {
       conversations.failLoad = true;
       await expectLater(app.agent.initialize(), throwsStateError);
       expect(app.agent.initializationError, isTrue);
+      expect(
+        app.agent.initializationFailure,
+        AgentInitializationFailure.conversationStorage,
+      );
+      expect(app.agent.isInitialized, isFalse);
       expect(app.session.canWrite, isTrue);
       conversations.failLoad = false;
       await app.agent.initialize();
       expect(app.agent.initializationError, isFalse);
+      expect(app.agent.initializationFailure, isNull);
       expect(app.agent.isInitialized, isTrue);
     },
   );
+
+  test('initialization identifies unavailable main storage before opening side stores', () async {
+    final reservation = app.maintenance.reserve();
+    try {
+      await expectLater(app.agent.initialize(), throwsStateError);
+      expect(
+        app.agent.initializationFailure,
+        AgentInitializationFailure.applicationStorage,
+      );
+      expect(app.agent.initializationError, isTrue);
+      expect(app.agent.isInitialized, isFalse);
+      expect(conversations.loads, 0);
+      expect(credentials.reads, 0);
+      expect(provider.requests, isEmpty);
+    } finally {
+      app.maintenance.release(reservation);
+    }
+    await app.agent.initialize();
+    expect(app.agent.initializationFailure, isNull);
+    expect(app.agent.isInitialized, isTrue);
+  });
+
+  test(
+    'connection initialization failure is classified and cleared on retry',
+    () async {
+      credentials.failRead = true;
+      await expectLater(
+        app.agent.initialize(),
+        throwsA(isA<AgentConnectionException>()),
+      );
+      expect(
+        app.agent.initializationFailure,
+        AgentInitializationFailure.connectionStorage,
+      );
+      expect(app.agent.initializationError, isTrue);
+      expect(app.agent.isInitialized, isFalse);
+      expect(conversations.loads, 1);
+      expect(app.session.canWrite, isTrue);
+      expect(provider.requests, isEmpty);
+      credentials.failRead = false;
+      await app.agent.initialize();
+      expect(app.agent.initializationFailure, isNull);
+      expect(app.agent.initializationError, isFalse);
+      expect(app.agent.isInitialized, isTrue);
+    },
+  );
+
+  test('checksum-valid retired automatic metadata fails safely without clearing conversations', () async {
+    final createdAt = DateTime.utc(2026, 10, 30);
+    final archive = ConversationArchive(
+      revision: 5,
+      selectedId: 'legacy-fixture',
+      conversations: [
+        AgentConversation(
+          id: 'legacy-fixture',
+          title: 'Preserved fixture',
+          createdAt: createdAt,
+          updatedAt: createdAt,
+          modelSelection: const AgentModelSelection(
+            modelId: 'fixture',
+            reasoningEffort: AgentReasoningEffort.medium,
+          ),
+        ),
+      ],
+    );
+    final raw = jsonDecode(archive.encode()) as Map;
+    (((raw['conversations'] as List).single as Map)['modelSelection']
+            as Map)['reasoningEffort'] =
+        'auto';
+    final source = jsonEncode(raw);
+    final slot = jsonEncode({
+      'version': 1,
+      'revision': 5,
+      'checksum': sha256.convert(utf8.encode(source)).toString(),
+      'source': source,
+    });
+    conversations.slots = [slot, slot];
+    await expectLater(
+      app.agent.initialize(),
+      throwsA(isA<ConversationStorageException>()),
+    );
+    expect(
+      app.agent.initializationFailure,
+      AgentInitializationFailure.conversationStorage,
+    );
+    expect(app.agent.isInitialized, isFalse);
+    expect(app.agent.runtime.state.value.enabled, isFalse);
+    expect(conversations.slots, [slot, slot]);
+    expect(conversations.saves, 0);
+    expect(app.session.canWrite, isTrue);
+    expect(provider.requests, isEmpty);
+  });
+
+  test('initialization waits for retention persistence and does not report a late failure as ready', () async {
+    await app.session.commitMutation(
+      (data) => data.copyWith(
+        agentSettings: data.agentSettings.copyWith(historyRetentionDays: 7),
+      ),
+      expectedEpoch: app.session.mutationEpoch,
+    );
+    final createdAt = DateTime.utc(2000);
+    conversations.source = ConversationArchive(
+      revision: 1,
+      selectedId: 'expired-fixture',
+      conversations: [
+        AgentConversation(
+          id: 'expired-fixture',
+          title: 'Expired fixture',
+          createdAt: createdAt,
+          updatedAt: createdAt,
+        ),
+      ],
+    ).encode();
+    final entered = Completer<void>();
+    final release = Completer<void>();
+    addTearDown(() {
+      if (!release.isCompleted) release.complete();
+    });
+    conversations.beforeSave = () async {
+      entered.complete();
+      await release.future;
+    };
+    conversations.failSave = true;
+    final initialization = app.agent.initialize();
+    final failure = expectLater(initialization, throwsStateError);
+    await entered.future.timeout(const Duration(seconds: 5));
+    expect(app.agent.isInitialized, isFalse);
+    expect(app.agent.runtime.state.value.enabled, isFalse);
+    expect(app.agent.initializationFailure, isNull);
+    release.complete();
+    await failure;
+    expect(
+      app.agent.initializationFailure,
+      AgentInitializationFailure.conversationStorage,
+    );
+    expect(app.agent.initializationError, isTrue);
+    expect(app.agent.isInitialized, isFalse);
+    conversations.beforeSave = null;
+    conversations.failSave = false;
+    await app.agent.initialize();
+    expect(app.agent.isInitialized, isTrue);
+    expect(app.agent.initializationFailure, isNull);
+    expect(app.agent.initializationError, isFalse);
+    expect(app.agent.conversations.conversations, isEmpty);
+    expect(provider.requests, isEmpty);
+  });
 
   test('configuration never saves a currently unsaved UI edit', () async {
     await ready(AgentPermissionMode.full);

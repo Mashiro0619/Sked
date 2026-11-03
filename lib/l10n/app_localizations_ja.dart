@@ -3242,6 +3242,24 @@ class AppLocalizationsJa extends AppLocalizations {
       'Could not save or complete this action. Your input is kept here.';
 
   @override
+  String get agentInitializing => 'Loading Agent…';
+
+  @override
+  String get agentInitializationFailed => 'Agent could not finish loading.';
+
+  @override
+  String get agentInitializationApplicationStorage =>
+      'Application storage is not ready. Return to the workspace and resolve its storage or recovery notice before retrying.';
+
+  @override
+  String get agentInitializationConversationStorage =>
+      'Saved chats could not be loaded. Existing records are preserved. Check storage access or archive format, then retry.';
+
+  @override
+  String get agentInitializationConnectionStorage =>
+      'The saved connection could not be initialized. Open Agent settings to review it, then retry.';
+
+  @override
   String get agentRetry => 'Retry';
 
   @override

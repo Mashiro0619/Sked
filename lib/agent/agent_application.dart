@@ -35,6 +35,13 @@ import 'tools/knowledge_tool_adapters.dart';
 
 export 'connection/agent_credential_action.dart';
 
+/// Safe failure categories for product feedback; never exposes stored content.
+enum AgentInitializationFailure {
+  applicationStorage,
+  conversationStorage,
+  connectionStorage,
+}
+
 /// One application-owned Agent. Views share its conversations and lifetime.
 /// Initialization errors here do not turn a healthy main archive read-only.
 class AgentApplication extends ChangeNotifier {
@@ -237,6 +244,7 @@ class AgentApplication extends ChangeNotifier {
   Future<void> _configurationTail = Future.value();
   bool _initialized = false;
   bool _initializationError = false;
+  AgentInitializationFailure? _initializationFailure;
   bool _disposed = false;
   bool _suspended = false;
   bool _clearSuspended = false;
@@ -282,6 +290,8 @@ class AgentApplication extends ChangeNotifier {
       _session.committedData.aiApiSettings.customModel.trim();
   bool get isInitialized => _initialized;
   bool get initializationError => _initializationError;
+  AgentInitializationFailure? get initializationFailure =>
+      _initializationFailure;
   Future<void> recoverHistoryBeforeWrites() => history.recoverBeforeWrites();
   int get navigationRevision => _navigationRevision;
 
@@ -339,6 +349,8 @@ class AgentApplication extends ChangeNotifier {
 
   Future<void> _initialize() async {
     _initializationError = false;
+    _initializationFailure = null;
+    var stage = AgentInitializationFailure.applicationStorage;
     try {
       if (!_session.isLoaded ||
           _session.isLoading ||
@@ -347,17 +359,25 @@ class AgentApplication extends ChangeNotifier {
           _maintenance.isReserved) {
         throw StateError('Application storage is not ready.');
       }
-      if (!conversations.isLoaded) await conversations.load();
+      stage = AgentInitializationFailure.conversationStorage;
+      if (!conversations.isLoaded || conversations.blocked) {
+        await conversations.load();
+      }
+      stage = AgentInitializationFailure.connectionStorage;
       await connections.initialize();
-      if (_disposed || _suspended) return;
-      _initialized = true;
-      await _pruneHistory();
+      if (_disposed || _suspended || _clearSuspended) return;
+      stage = AgentInitializationFailure.conversationStorage;
+      await _pruneHistory(initializing: true);
+      if (_disposed || _suspended || _clearSuspended) return;
       _attachmentConversationIds = {
         for (final conversation in conversations.conversations) conversation.id,
       };
+      _initialized = true;
       _scheduleAttachmentCollection();
     } catch (_) {
+      _initialized = false;
       _initializationError = true;
+      _initializationFailure = stage;
       rethrow;
     } finally {
       if (!_disposed) {
@@ -510,14 +530,19 @@ class AgentApplication extends ChangeNotifier {
         );
       });
 
-  Future<void> _pruneHistory() async {
-    if (!_initialized ||
+  Future<void> _pruneHistory({bool initializing = false}) async {
+    if ((!_initialized && !initializing) ||
         _disposed ||
         _suspended ||
-        settings.historyRetentionDays == 0 ||
-        !conversations.canWrite) {
+        _clearSuspended) {
       return;
     }
+    if (initializing && !conversations.canWrite) {
+      throw const ConversationStorageException(
+        'Conversation storage is unavailable during initialization.',
+      );
+    }
+    if (settings.historyRetentionDays == 0 || !conversations.canWrite) return;
     await conversations.pruneHistory(
       days: settings.historyRetentionDays,
       canRemove: (id) =>
@@ -542,6 +567,7 @@ class AgentApplication extends ChangeNotifier {
       await _resumeAttachmentsAfterMaintenance();
       _scheduleAttachmentCollection();
       _initializationError = false;
+      _initializationFailure = null;
     } finally {
       _disableRequests--;
       runtime.refreshSettings();

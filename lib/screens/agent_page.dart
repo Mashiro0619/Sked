@@ -14,6 +14,7 @@ import '../agent/provider/provider.dart';
 import '../application/operation_contracts.dart';
 import '../l10n/app_localizations.dart';
 import '../models/agent_settings.dart';
+import '../widgets/desktop_window_host.dart';
 import 'agent_settings_page.dart';
 
 /// A full conversation workspace using the same application-owned repository
@@ -149,6 +150,74 @@ class _AgentConversationHostState extends State<AgentConversationHost> {
     }
   }
 
+  Widget _initializationStatus(
+    AgentApplication application,
+    AppLocalizations l,
+  ) {
+    final failed = application.initializationError && !_retrying;
+    final reason = switch (application.initializationFailure) {
+      AgentInitializationFailure.applicationStorage =>
+        l.agentInitializationApplicationStorage,
+      AgentInitializationFailure.conversationStorage =>
+        l.agentInitializationConversationStorage,
+      AgentInitializationFailure.connectionStorage =>
+        l.agentInitializationConnectionStorage,
+      null => null,
+    };
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        key: const ValueKey('agent-initialization-scroll'),
+        primary: false,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: Semantics(
+                  liveRegion: true,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (!failed) ...[
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 16),
+                      ],
+                      Text(
+                        failed
+                            ? l.agentInitializationFailed
+                            : l.agentInitializing,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      if (failed) ...[
+                        if (reason != null) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            reason,
+                            key: const ValueKey('agent-initialization-reason'),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                        const SizedBox(height: 12),
+                        TextButton(
+                          key: const ValueKey('agent-initialization-retry'),
+                          onPressed: _retryInitialization,
+                          child: Text(l.agentRetry),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final application = context.watch<AgentApplication>();
@@ -157,23 +226,47 @@ class _AgentConversationHostState extends State<AgentConversationHost> {
       return const SizedBox.shrink();
     }
     if (!application.isInitialized) {
-      return Center(
-        child: application.initializationError && !_retrying
-            ? Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(l.agentOperationFailed),
-                    const SizedBox(height: 12),
-                    TextButton(
-                      onPressed: _retryInitialization,
-                      child: Text(l.agentRetry),
-                    ),
-                  ],
+      final status = _initializationStatus(application, l);
+      if (!widget.fullWorkspace) return status;
+      final navigationButtonStyle = IconButton.styleFrom(
+        minimumSize: const Size.square(48),
+        visualDensity: VisualDensity.standard,
+        tapTargetSize: MaterialTapTargetSize.padded,
+      );
+      return Column(
+        children: [
+          Padding(
+            key: const ValueKey('agent-initialization-header'),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: Row(
+              children: [
+                BackButton(
+                  key: const ValueKey('agent-initialization-back'),
+                  style: navigationButtonStyle,
                 ),
-              )
-            : const CircularProgressIndicator(),
+                Expanded(
+                  child: DesktopDragRegion(
+                    child: Text(
+                      l.agentTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  key: const ValueKey('agent-initialization-settings'),
+                  tooltip: l.agentSettingsTitle,
+                  style: navigationButtonStyle,
+                  onPressed: () => unawaited(_openSettings()),
+                  icon: const Icon(Icons.settings_outlined),
+                ),
+                const DesktopCaptionSpacer(),
+              ],
+            ),
+          ),
+          Expanded(child: status),
+        ],
       );
     }
     return AgentConversationView(
