@@ -6,6 +6,7 @@ import 'package:sked/data/migrations/app_data_migrations.dart';
 import 'package:sked/models/agent_settings.dart';
 import 'package:sked/models/application_ledger.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/services/developer_sample_data_service.dart';
 
 void main() {
   AppData data() => buildInitialAppData(buildDefaultPeriodTimes());
@@ -26,6 +27,13 @@ void main() {
     endpoint: 'https://example.test/v1',
     model: 'model',
     credentialRef: 'local-reference',
+    models: [
+      AgentModelConfig(
+        id: 'model',
+        reasoningEfforts: [AgentReasoningEffort.medium],
+        defaultReasoningEffort: AgentReasoningEffort.medium,
+      ),
+    ],
   );
 
   test('v4 to v5 retains its historical disabled defaults', () {
@@ -36,38 +44,61 @@ void main() {
     expect(legacy, isNot(contains('models')));
   });
 
-  test('v5 enables once and preserves the previous connection and policy', () {
-    final old = data().copyWith(agentSettings: settings).toJson()
-      ..['schemaVersion'] = 5;
-    final legacy = old['agentSettings'] as Map;
-    legacy['enabled'] = false;
-    legacy.remove('models');
-    final upgraded = AppData.decodeStorageSnapshot(jsonEncode(old));
-    expect(upgraded.agentSettings.enabled, isTrue);
-    expect(upgraded.agentSettings.endpoint, settings.endpoint);
-    expect(upgraded.agentSettings.model, settings.model);
-    expect(upgraded.agentSettings.permissionMode, AgentPermissionMode.full);
-    expect(upgraded.agentSettings.credentialRef, settings.credentialRef);
-    final disabled = upgraded.copyWith(
-      agentSettings: upgraded.agentSettings.copyWith(enabled: false),
-    );
-    expect(
-      AppData.decodeStorageSnapshot(disabled.encode()).agentSettings.enabled,
-      isFalse,
-    );
-    expect(
-      decodeAppBackupForRecovery(encodeAppBackupForRecovery(disabled, const []))
-          .appData
-          .agentSettings
-          .enabled,
-      isFalse,
-    );
-  });
+  test(
+    'unreleased v5 enables once without inferring model reasoning levels',
+    () {
+      final old =
+          data()
+              .copyWith(
+                agentSettings: settings.copyWith(model: '', models: const []),
+              )
+              .toJson()
+            ..['schemaVersion'] = 5;
+      final legacy = old['agentSettings'] as Map;
+      legacy['enabled'] = false;
+      legacy.remove('models');
+      final upgraded = AppData.decodeStorageSnapshot(jsonEncode(old));
+      expect(upgraded.agentSettings.enabled, isTrue);
+      expect(upgraded.agentSettings.endpoint, settings.endpoint);
+      expect(upgraded.agentSettings.model, isEmpty);
+      expect(upgraded.agentSettings.models, isEmpty);
+      expect(upgraded.agentSettings.permissionMode, AgentPermissionMode.full);
+      expect(upgraded.agentSettings.credentialRef, settings.credentialRef);
+      final disabled = upgraded.copyWith(
+        agentSettings: upgraded.agentSettings.copyWith(enabled: false),
+      );
+      expect(
+        AppData.decodeStorageSnapshot(disabled.encode()).agentSettings.enabled,
+        isFalse,
+      );
+      expect(
+        decodeAppBackupForRecovery(
+          encodeAppBackupForRecovery(disabled, const []),
+        ).appData.agentSettings.enabled,
+        isFalse,
+      );
+    },
+  );
 
   test(
     'v4 migration is deterministic and cannot adopt unknown Agent authority',
     () {
-      final old = data().toJson()
+      final source = DeveloperSampleDataService.append(
+        current: data(),
+        language: DeveloperSampleLanguage.english,
+        now: DateTime(2026, 9, 8, 9),
+      ).data.copyWith(localeCode: 'zh');
+      expect(
+        source.studentMode.timetables.any((table) => table.courses.isNotEmpty),
+        isTrue,
+      );
+      expect(
+        source.generalMode.schedules.any(
+          (calendar) => calendar.events.isNotEmpty,
+        ),
+        isTrue,
+      );
+      final old = source.toJson()
         ..['schemaVersion'] = 4
         ..['agentSettings'] = settings.toJson()
         ..['applicationLedger'] = ledger.toJson();
@@ -82,6 +113,9 @@ void main() {
       expect(appDataMigrationRunner.run(first), first);
       final decoded = AppData.decodeStorageSnapshot(jsonEncode(old));
       expect(decoded.agentSettings, const AgentSettings());
+      expect(decoded.studentMode.toJson(), old['studentMode']);
+      expect(decoded.generalMode.toJson(), old['generalMode']);
+      expect(decoded.localeCode, source.localeCode);
       expect(decoded.applicationLedger, isNull);
     },
   );

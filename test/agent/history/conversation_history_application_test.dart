@@ -140,6 +140,13 @@ void main() {
       const AgentSettings(
         endpoint: 'https://fixture.example/v1',
         model: 'fixture',
+        models: [
+          AgentModelConfig(
+            id: 'fixture',
+            reasoningEfforts: [AgentReasoningEffort.medium],
+            defaultReasoningEffort: AgentReasoningEffort.medium,
+          ),
+        ],
       ),
     );
     await app.agent.setEnabled(true);

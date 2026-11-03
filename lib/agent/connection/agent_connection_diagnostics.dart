@@ -8,6 +8,7 @@ import '../provider/provider.dart';
 import 'agent_endpoint.dart';
 
 enum AgentConnectionDiagnosticError {
+  modelSelectionRequired,
   unsupportedModelsEndpoint,
   invalidModelsResponse,
 }
@@ -77,12 +78,18 @@ class AgentConnectionDiagnostics {
     bool allowInsecureHttp = false,
     ProviderCancellationToken? cancellation,
   }) async {
+    final selection = settings.defaultModelSelection;
+    if (selection == null || !settings.allowsSelection(selection)) {
+      throw const AgentConnectionDiagnosticException(
+        AgentConnectionDiagnosticError.modelSelectionRequired,
+      );
+    }
     final provider = _providedProvider ?? ProviderClient(client: _client);
     final response = await provider.collect(
       ProviderRequest(
         endpoint: resolveConfiguredAgentEndpoint(settings),
         model: settings.model,
-        reasoningEffort: settings.defaultModelSelection?.wireReasoningEffort,
+        reasoningEffort: selection.wireReasoningEffort,
         protocol: settings.protocol == AgentModelProtocol.responses
             ? ProviderProtocol.responses
             : ProviderProtocol.chatCompletions,

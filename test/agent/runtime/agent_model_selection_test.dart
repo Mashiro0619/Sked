@@ -17,11 +17,13 @@ const _b = AgentModelSelection(
 const _models = [
   AgentModelConfig(
     id: 'model-a',
-    reasoningEfforts: [AgentReasoningEffort.auto, AgentReasoningEffort.high],
+    reasoningEfforts: [AgentReasoningEffort.medium, AgentReasoningEffort.high],
+    defaultReasoningEffort: AgentReasoningEffort.medium,
   ),
   AgentModelConfig(
     id: 'model-b',
-    reasoningEfforts: [AgentReasoningEffort.auto, AgentReasoningEffort.low],
+    reasoningEfforts: [AgentReasoningEffort.medium, AgentReasoningEffort.low],
+    defaultReasoningEffort: AgentReasoningEffort.medium,
   ),
 ];
 
@@ -48,11 +50,17 @@ void main() {
       archive.conversations
           .singleWhere((c) => c.id == created.id)
           .modelSelection,
-      const AgentModelSelection(modelId: 'model-a'),
+      const AgentModelSelection(
+        modelId: 'model-a',
+        reasoningEffort: AgentReasoningEffort.medium,
+      ),
     );
     expect(
       archive.conversations.singleWhere((c) => c.id == h.id).modelSelection,
-      const AgentModelSelection(modelId: 'model-b'),
+      const AgentModelSelection(
+        modelId: 'model-b',
+        reasoningEffort: AgentReasoningEffort.medium,
+      ),
     );
   });
 
@@ -367,6 +375,37 @@ void main() {
     expect(h.repository.find(h.id)!.modelSelection, isNull);
     expect(h.provider.requests, isEmpty);
   });
+
+  test(
+    'a model ID without configured reasoning cannot send or append input',
+    () async {
+      final h = await _Harness.create((_, _) => _complete());
+      addTearDown(h.dispose);
+      h.settings = const AgentSettings(
+        endpoint: 'https://models.example/v1',
+        model: 'model-only',
+      );
+      h.runtime.refreshSettings();
+      for (final request in [
+        () => h.runtime.send(h.id, 'must remain unsent'),
+        () => h.runtime.queueFollowUp(h.id, 'must not be queued'),
+      ]) {
+        await expectLater(
+          request(),
+          throwsA(
+            isA<AgentRuntimeException>().having(
+              (e) => e.code,
+              'code',
+              AgentRuntimeError.unconfigured,
+            ),
+          ),
+        );
+      }
+      expect(h.provider.requests, isEmpty);
+      expect(h.repository.find(h.id)!.messages, isEmpty);
+      expect(h.runtime.pendingInputCount(h.id), 0);
+    },
+  );
 }
 
 ProviderCompleted _done() => ProviderCompleted(

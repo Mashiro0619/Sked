@@ -2182,6 +2182,13 @@ class _Harness {
         model: 'fixture-model',
         protocol: protocol,
         permissionMode: mode,
+        models: [
+          AgentModelConfig(
+            id: 'fixture-model',
+            reasoningEfforts: [AgentReasoningEffort.medium],
+            defaultReasoningEffort: AgentReasoningEffort.medium,
+          ),
+        ],
       ),
     );
     harness.runtime = AgentRuntimeController(

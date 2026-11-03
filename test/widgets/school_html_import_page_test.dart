@@ -39,6 +39,13 @@ class _Fixture {
     enabled: true,
     endpoint: 'https://model.example/v1',
     model: 'synthetic-model',
+    models: [
+      AgentModelConfig(
+        id: 'synthetic-model',
+        reasoningEfforts: [AgentReasoningEffort.medium],
+        defaultReasoningEffort: AgentReasoningEffort.medium,
+      ),
+    ],
   );
   final starts = <String>[];
   final opened = <String>[];
@@ -105,6 +112,13 @@ Future<_Fixture> _mount(
         enabled: true,
         endpoint: 'https://model.example/v1',
         model: 'synthetic-model',
+        models: [
+          AgentModelConfig(
+            id: 'synthetic-model',
+            reasoningEfforts: [AgentReasoningEffort.medium],
+            defaultReasoningEffort: AgentReasoningEffort.medium,
+          ),
+        ],
       );
     },
   );
@@ -157,6 +171,13 @@ void main() {
         const AgentSettings(
           endpoint: 'https://fixture.example/v1',
           model: 'fixture',
+          models: [
+            AgentModelConfig(
+              id: 'fixture',
+              reasoningEfforts: [AgentReasoningEffort.medium],
+              defaultReasoningEffort: AgentReasoningEffort.medium,
+            ),
+          ],
         ),
       );
       await app.agent.setEnabled(true);
@@ -259,6 +280,13 @@ void main() {
         endpoint: 'https://model.example/v1',
         model: 'synthetic-model',
         permissionMode: AgentPermissionMode.plan,
+        models: [
+          AgentModelConfig(
+            id: 'synthetic-model',
+            reasoningEfforts: [AgentReasoningEffort.medium],
+            defaultReasoningEffort: AgentReasoningEffort.medium,
+          ),
+        ],
       ),
     );
     final before = fixture.provider.session.data.toJson();

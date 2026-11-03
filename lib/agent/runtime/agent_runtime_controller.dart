@@ -840,6 +840,11 @@ class AgentRuntimeController implements AgentUiDelegate {
                 .where((item) => item.id == reservedRunId)
                 .firstOrNull
           : null;
+      if (previous?.model != null && previous?.reasoningEffort == null) {
+        throw const AgentRuntimeException(
+          AgentRuntimeError.modelSelectionRequired,
+        );
+      }
       selection = previous?.model == null
           ? _selectionForRequest(
               conversation,
@@ -848,8 +853,7 @@ class AgentRuntimeController implements AgentUiDelegate {
             )
           : AgentModelSelection(
               modelId: previous!.model!,
-              reasoningEffort:
-                  previous.reasoningEffort ?? AgentReasoningEffort.auto,
+              reasoningEffort: previous.reasoningEffort!,
             );
       if (!configuredSettings.allowsSelection(selection)) {
         throw const AgentRuntimeException(
@@ -1579,6 +1583,12 @@ class AgentRuntimeController implements AgentUiDelegate {
     _Run run,
     List<ProviderMessage> messages,
   ) async {
+    final selection = run.modelSelection;
+    if (selection == null) {
+      throw const AgentRuntimeException(
+        AgentRuntimeError.modelSelectionRequired,
+      );
+    }
     var allowInsecureHttp = await _authorizeHttpTransport(run);
     _checkRun(run);
     final request = ConversationRequestUsage(
@@ -1617,7 +1627,7 @@ class AgentRuntimeController implements AgentUiDelegate {
             tools: run.tools,
             limits: limits.providerLimits,
             allowInsecureHttp: allowInsecureHttp,
-            reasoningEffort: run.modelSelection?.wireReasoningEffort,
+            reasoningEffort: selection.wireReasoningEffort,
           ),
         ),
         apiKey: run.apiKey,

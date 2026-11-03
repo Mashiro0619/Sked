@@ -176,12 +176,16 @@ void main() {
       AgentModelConfig(
         id: 'model-a',
         reasoningEfforts: [
-          AgentReasoningEffort.auto,
+          AgentReasoningEffort.medium,
           AgentReasoningEffort.high,
         ],
         defaultReasoningEffort: AgentReasoningEffort.high,
       ),
-      AgentModelConfig(id: 'model-b'),
+      AgentModelConfig(
+        id: 'model-b',
+        reasoningEfforts: [AgentReasoningEffort.medium],
+        defaultReasoningEffort: AgentReasoningEffort.medium,
+      ),
     ];
     final before = sample().copyWith(
       agentSettings: const AgentSettings(model: 'model-a', models: models),

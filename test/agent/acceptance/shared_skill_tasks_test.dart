@@ -4,6 +4,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/agent/skills/shared_skill_loader.dart';
 import 'package:sked/agent/tools/agent_control_tool_adapters.dart';
+import 'package:sked/models/agent_settings.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/agenda_notification_service.dart';
 import 'package:sked/services/desktop_layout_preferences.dart';
@@ -618,6 +619,13 @@ Future<void> _connection(AcceptanceHarness h) async {
     'action': 'set',
     'endpoint': 'https://new-acceptance.invalid/v1',
     'model': 'new-fixture',
+    'models': [
+      const AgentModelConfig(
+        id: 'new-fixture',
+        reasoningEfforts: [AgentReasoningEffort.medium],
+        defaultReasoningEffort: AgentReasoningEffort.medium,
+      ).toJson(),
+    ],
     'credentialAction': 'replace',
     'credentialHandle': handle['credentialHandle'],
   });

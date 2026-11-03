@@ -91,6 +91,13 @@ void main() {
         endpoint: 'https://fixture.example/v1',
         model: 'fixture',
         protocol: AgentModelProtocol.responses,
+        models: [
+          AgentModelConfig(
+            id: 'fixture',
+            reasoningEfforts: [AgentReasoningEffort.medium],
+            defaultReasoningEffort: AgentReasoningEffort.medium,
+          ),
+        ],
       ),
     );
     final id = await conversation();

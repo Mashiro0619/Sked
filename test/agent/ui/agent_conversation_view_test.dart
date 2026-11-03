@@ -51,16 +51,24 @@ void main() {
         modelId: 'model-a',
         reasoningEffort: AgentReasoningEffort.high,
       );
-      const secondSelection = AgentModelSelection(modelId: 'model-b');
+      const secondSelection = AgentModelSelection(
+        modelId: 'model-b',
+        reasoningEffort: AgentReasoningEffort.medium,
+      );
       const models = [
         AgentModelConfig(
           id: 'model-a',
           reasoningEfforts: [
-            AgentReasoningEffort.auto,
+            AgentReasoningEffort.medium,
             AgentReasoningEffort.high,
           ],
+          defaultReasoningEffort: AgentReasoningEffort.medium,
         ),
-        AgentModelConfig(id: 'model-b'),
+        AgentModelConfig(
+          id: 'model-b',
+          reasoningEfforts: [AgentReasoningEffort.medium],
+          defaultReasoningEffort: AgentReasoningEffort.medium,
+        ),
       ];
       delegate.state.value = AgentUiState(
         enabled: true,

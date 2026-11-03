@@ -87,6 +87,13 @@ void main() {
         model: 'old',
         credentialRef: 'local-secret-reference',
         systemInstructions: 'Keep me',
+        models: [
+          AgentModelConfig(
+            id: 'old',
+            reasoningEfforts: [AgentReasoningEffort.medium],
+            defaultReasoningEffort: AgentReasoningEffort.medium,
+          ),
+        ],
       ),
     );
     final incoming = _base().copyWith(
@@ -97,6 +104,13 @@ void main() {
         model: 'new',
         credentialRef: 'foreign-reference',
         systemInstructions: 'Other instructions',
+        models: [
+          AgentModelConfig(
+            id: 'new',
+            reasoningEfforts: [AgentReasoningEffort.medium],
+            defaultReasoningEffort: AgentReasoningEffort.medium,
+          ),
+        ],
       ),
     );
     final inventory = buildSelectiveBackupInventory(appData: incoming);
@@ -136,6 +150,13 @@ void main() {
           endpoint: 'https://local.example.test',
           model: 'local',
           credentialRef: 'local-key',
+          models: [
+            AgentModelConfig(
+              id: 'local',
+              reasoningEfforts: [AgentReasoningEffort.medium],
+              defaultReasoningEffort: AgentReasoningEffort.medium,
+            ),
+          ],
         ),
         localeCode: 'zh',
       );

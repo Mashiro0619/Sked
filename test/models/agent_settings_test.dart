@@ -14,28 +14,37 @@ void main() {
     expect(AgentSettings.fromJson(settings.toJson()), settings);
   });
 
-  test(
-    'legacy single model becomes a selected model with automatic thinking',
-    () {
-      final legacy = const AgentSettings(model: 'legacy-model').toJson()
-        ..remove('models');
-      final settings = AgentSettings.fromJson(legacy);
-      expect(settings.availableModels, [
-        const AgentModelConfig(id: 'legacy-model'),
-      ]);
-      expect(
-        settings.defaultModelSelection,
-        const AgentModelSelection(modelId: 'legacy-model'),
-      );
-      expect(settings.toJson()['models'], [
-        {
-          'id': 'legacy-model',
-          'reasoningEfforts': ['auto'],
-          'defaultReasoningEffort': 'auto',
-        },
-      ]);
-    },
-  );
+  test('model IDs never imply a reasoning capability or default', () {
+    const modelOnly = AgentSettings(model: 'unconfigured-model');
+    expect(modelOnly.availableModels, isEmpty);
+    expect(modelOnly.defaultModelSelection, isNull);
+    expect(modelOnly.validate, throwsFormatException);
+    expect(
+      () => const AgentSettings().copyWith(model: 'new-model'),
+      throwsFormatException,
+    );
+    final json = const AgentSettings().toJson()
+      ..['model'] = 'unconfigured-model';
+    expect(() => AgentSettings.fromJson(json), throwsFormatException);
+  });
+
+  test('automatic and missing reasoning selections are rejected', () {
+    for (final value in [
+      {'modelId': 'first', 'reasoningEffort': 'auto'},
+      {'modelId': 'first'},
+      {'modelId': 'first', 'reasoningEffort': null},
+    ]) {
+      expect(() => AgentModelSelection.fromJson(value), throwsFormatException);
+    }
+    expect(
+      () => AgentModelConfig.fromJson({
+        'id': 'first',
+        'reasoningEfforts': ['auto'],
+        'defaultReasoningEffort': 'auto',
+      }),
+      throwsFormatException,
+    );
+  });
 
   test('enabled models retain independent supported levels and defaults', () {
     const settings = AgentSettings(
@@ -44,12 +53,16 @@ void main() {
         AgentModelConfig(
           id: 'first',
           reasoningEfforts: [
-            AgentReasoningEffort.auto,
+            AgentReasoningEffort.medium,
             AgentReasoningEffort.high,
           ],
           defaultReasoningEffort: AgentReasoningEffort.high,
         ),
-        AgentModelConfig(id: 'second'),
+        AgentModelConfig(
+          id: 'second',
+          reasoningEfforts: [AgentReasoningEffort.medium],
+          defaultReasoningEffort: AgentReasoningEffort.medium,
+        ),
       ],
     );
     final decoded = AgentSettings.fromJson(settings.toJson());
@@ -78,7 +91,7 @@ void main() {
           .copyWith(model: 'second')
           .defaultModelSelection!
           .wireReasoningEffort,
-      isNull,
+      'medium',
     );
     expect(decoded.copyWith(model: '', models: []).availableModels, isEmpty);
   });
@@ -89,13 +102,12 @@ void main() {
       for (final settings in [
         const AgentSettings(
           model: 'missing',
-          models: [AgentModelConfig(id: 'first')],
-        ),
-        const AgentSettings(
-          model: 'first',
           models: [
-            AgentModelConfig(id: 'first'),
-            AgentModelConfig(id: 'first'),
+            AgentModelConfig(
+              id: 'first',
+              reasoningEfforts: [AgentReasoningEffort.medium],
+              defaultReasoningEffort: AgentReasoningEffort.medium,
+            ),
           ],
         ),
         const AgentSettings(
@@ -103,6 +115,22 @@ void main() {
           models: [
             AgentModelConfig(
               id: 'first',
+              reasoningEfforts: [AgentReasoningEffort.medium],
+              defaultReasoningEffort: AgentReasoningEffort.medium,
+            ),
+            AgentModelConfig(
+              id: 'first',
+              reasoningEfforts: [AgentReasoningEffort.medium],
+              defaultReasoningEffort: AgentReasoningEffort.medium,
+            ),
+          ],
+        ),
+        const AgentSettings(
+          model: 'first',
+          models: [
+            AgentModelConfig(
+              id: 'first',
+              reasoningEfforts: [AgentReasoningEffort.medium],
               defaultReasoningEffort: AgentReasoningEffort.high,
             ),
           ],
@@ -112,15 +140,24 @@ void main() {
           models: [
             AgentModelConfig(
               id: 'first',
-              reasoningEfforts: [AgentReasoningEffort.high],
+              reasoningEfforts: [],
+              defaultReasoningEffort: AgentReasoningEffort.high,
             ),
           ],
         ),
       ]) {
         expect(settings.validate, throwsFormatException);
       }
-      final invalid = const AgentSettings(model: 'first').toJson()
-        ..['models'] = [];
+      final invalid = const AgentSettings(
+        model: 'first',
+        models: [
+          AgentModelConfig(
+            id: 'first',
+            reasoningEfforts: [AgentReasoningEffort.medium],
+            defaultReasoningEffort: AgentReasoningEffort.medium,
+          ),
+        ],
+      ).toJson()..['models'] = [];
       expect(() => AgentSettings.fromJson(invalid), throwsFormatException);
     },
   );
@@ -132,6 +169,13 @@ void main() {
       protocol: AgentModelProtocol.responses,
       endpoint: 'https://example.test/v1',
       model: 'test-model',
+      models: const [
+        AgentModelConfig(
+          id: 'test-model',
+          reasoningEfforts: [AgentReasoningEffort.medium],
+          defaultReasoningEffort: AgentReasoningEffort.medium,
+        ),
+      ],
       credentialRef: 'agent-key-1',
       systemInstructions: 'Keep responses concise.',
       maxModelRounds: 10,

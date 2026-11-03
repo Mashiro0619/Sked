@@ -324,6 +324,13 @@ class _Harness {
         endpoint: 'https://files.example/v1',
         model: 'fixture',
         protocol: AgentModelProtocol.responses,
+        models: [
+          AgentModelConfig(
+            id: 'fixture',
+            reasoningEfforts: [AgentReasoningEffort.medium],
+            defaultReasoningEffort: AgentReasoningEffort.medium,
+          ),
+        ],
       ),
       readApiKey: (_) async => '',
       readTools: (_) => [],

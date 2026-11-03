@@ -3,12 +3,38 @@ import 'package:material_ui/material_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/agent_settings.dart';
 import '../../theme/sked_surface.dart';
+import '../../widgets/sked_dropdown_menu.dart';
 import '../connection/agent_credential_action.dart';
 import '../connection/agent_connection_diagnostics.dart';
 import '../provider/provider.dart' show ProviderCancellationToken;
 import 'agent_model_labels.dart';
 
 export '../connection/agent_credential_action.dart';
+
+class _ModelDraft {
+  _ModelDraft(
+    this.id, {
+    Iterable<AgentReasoningEffort> efforts = const [],
+    this.defaultEffort,
+  }) : efforts = efforts.toSet();
+  factory _ModelDraft.fromConfig(AgentModelConfig model) => _ModelDraft(
+    model.id,
+    efforts: model.reasoningEfforts,
+    defaultEffort: model.defaultReasoningEffort,
+  );
+  final String id;
+  final Set<AgentReasoningEffort> efforts;
+  AgentReasoningEffort? defaultEffort;
+  bool get complete => efforts.isNotEmpty && efforts.contains(defaultEffort);
+  AgentModelConfig toConfig() => AgentModelConfig(
+    id: id,
+    reasoningEfforts: [
+      for (final effort in AgentReasoningEffort.values)
+        if (efforts.contains(effort)) effort,
+    ],
+    defaultReasoningEffort: defaultEffort!,
+  );
+}
 
 /// A transient host command, deliberately without JSON serialization. The
 /// host writes the secret to its credential store and returns only a reference.
@@ -32,11 +58,13 @@ class AgentModelSettingsForm extends StatefulWidget {
     this.showTitle = true,
     this.onProbe,
     this.onListModels,
+    this.suggestedModelId,
   });
   final AgentSettings settings;
   final Future<void> Function(AgentModelSettingsChange change) onSave;
   final VoidCallback? onSaved;
   final bool showTitle;
+  final String? suggestedModelId;
   final Future<AgentConnectionProbeResult> Function(
     ProviderCancellationToken cancellation,
   )?
@@ -56,16 +84,18 @@ class _AgentModelSettingsFormState extends State<AgentModelSettingsForm> {
   final _model = TextEditingController();
   final _modelSearch = TextEditingController();
   late String _defaultModel = widget.settings.model;
-  late final _models = <String, AgentModelConfig>{
-    for (final model in widget.settings.availableModels) model.id: model,
+  late final _models = <String, _ModelDraft>{
+    for (final model in widget.settings.availableModels)
+      model.id: _ModelDraft.fromConfig(model),
   };
-  final _removedModels = <String, AgentModelConfig>{};
+  final _removedModels = <String, _ModelDraft>{};
   final _key = TextEditingController();
   late AgentModelProtocol _protocol = widget.settings.protocol;
   bool _showKey = false;
   bool _clearKey = false;
   bool _saving = false;
   bool _failed = false;
+  bool _incompleteModels = false;
   bool _diagnosing = false;
   bool _diagnosticFailed = false;
   AgentConnectionProbeResult? _probe;
@@ -129,18 +159,28 @@ class _AgentModelSettingsFormState extends State<AgentModelSettingsForm> {
 
   Future<void> _save() async {
     if (_saving || _diagnosing || !_formKey.currentState!.validate()) return;
+    final manualModel = _model.text.trim();
+    if (manualModel.isNotEmpty) {
+      setState(() {
+        _setModelEnabled(manualModel, true);
+        _model.clear();
+      });
+    }
+    if (_models.values.any((model) => !model.complete)) {
+      setState(() => _incompleteModels = true);
+      return;
+    }
     setState(() {
       _saving = true;
       _failed = false;
+      _incompleteModels = false;
     });
     try {
-      final manualModel = _model.text.trim();
-      if (manualModel.isNotEmpty) _setModelEnabled(manualModel, true);
       final change = AgentModelSettingsChange(
         settings: widget.settings.copyWith(
           endpoint: _endpoint.text.trim(),
           model: _defaultModel,
-          models: _models.values.toList(),
+          models: _models.values.map((model) => model.toConfig()).toList(),
           protocol: _protocol,
         ),
         credentialAction: _clearKey
@@ -168,7 +208,7 @@ class _AgentModelSettingsFormState extends State<AgentModelSettingsForm> {
     if (enabled) {
       _models.putIfAbsent(
         id,
-        () => _removedModels.remove(id) ?? AgentModelConfig(id: id),
+        () => _removedModels.remove(id) ?? _ModelDraft(id),
       );
       if (_defaultModel.isEmpty) _defaultModel = id;
     } else {
@@ -188,10 +228,7 @@ class _AgentModelSettingsFormState extends State<AgentModelSettingsForm> {
     });
   }
 
-  Widget _modelOptions(
-    AgentModelConfig model,
-    AppLocalizations l,
-  ) => ExpansionTile(
+  Widget _modelOptions(_ModelDraft model, AppLocalizations l) => ExpansionTile(
     key: ValueKey('agent-model-options-${model.id}'),
     title: Text(model.id),
     subtitle: model.id == _defaultModel ? Text(l.agentDefaultModel) : null,
@@ -216,63 +253,52 @@ class _AgentModelSettingsFormState extends State<AgentModelSettingsForm> {
             FilterChip(
               key: ValueKey('agent-model-effort-${model.id}-${effort.name}'),
               label: Text(agentReasoningEffortLabel(l, effort)),
-              selected: model.reasoningEfforts.contains(effort),
-              onSelected: _saving || effort == AgentReasoningEffort.auto
+              selected: model.efforts.contains(effort),
+              onSelected: _saving
                   ? null
                   : (selected) {
                       setState(() {
-                        final efforts = AgentReasoningEffort.values
-                            .where(
-                              (value) =>
-                                  value == AgentReasoningEffort.auto ||
-                                  (value == effort
-                                      ? selected
-                                      : model.reasoningEfforts.contains(value)),
-                            )
-                            .toList();
-                        _models[model.id] = AgentModelConfig(
-                          id: model.id,
-                          reasoningEfforts: List.unmodifiable(efforts),
-                          defaultReasoningEffort:
-                              efforts.contains(model.defaultReasoningEffort)
-                              ? model.defaultReasoningEffort
-                              : AgentReasoningEffort.auto,
-                        );
+                        if (selected) {
+                          model.efforts.add(effort);
+                        } else {
+                          model.efforts.remove(effort);
+                          if (model.defaultEffort == effort) {
+                            model.defaultEffort = null;
+                          }
+                        }
                       });
                     },
             ),
         ],
       ),
       const SizedBox(height: 12),
-      DropdownButtonFormField<AgentReasoningEffort>(
-        key: ValueKey(
-          'agent-default-effort-${model.id}-${model.defaultReasoningEffort.name}',
-        ),
-        initialValue: model.defaultReasoningEffort,
-        isExpanded: true,
-        decoration: InputDecoration(
-          filled: true,
-          labelText: l.agentDefaultEffort,
-        ),
-        items: [
-          for (final effort in model.reasoningEfforts)
-            DropdownMenuItem(
+      SkedDropdownMenu<AgentReasoningEffort>(
+        key: ValueKey('agent-default-effort-${model.id}'),
+        initialSelection: model.defaultEffort,
+        enabled: !_saving && model.efforts.isNotEmpty,
+        label: Text(l.agentDefaultEffort),
+        dropdownMenuEntries: [
+          for (final effort in AgentReasoningEffort.values.where(
+            model.efforts.contains,
+          ))
+            DropdownMenuEntry(
               value: effort,
-              child: Text(agentReasoningEffortLabel(l, effort)),
+              label: agentReasoningEffortLabel(l, effort),
             ),
         ],
-        onChanged: _saving
+        onSelected: _saving
             ? null
             : (effort) => setState(() {
                 if (effort != null) {
-                  _models[model.id] = AgentModelConfig(
-                    id: model.id,
-                    reasoningEfforts: model.reasoningEfforts,
-                    defaultReasoningEffort: effort,
-                  );
+                  model.defaultEffort = effort;
                 }
               }),
       ),
+      if (_incompleteModels && !model.complete)
+        Text(
+          l.agentModelEffortsRequired,
+          style: TextStyle(color: Theme.of(context).colorScheme.error),
+        ),
     ],
   );
 
@@ -329,7 +355,7 @@ class _AgentModelSettingsFormState extends State<AgentModelSettingsForm> {
                         key: const ValueKey('agent-probe-connection'),
                         onPressed:
                             canDiagnose &&
-                                widget.settings.model.isNotEmpty &&
+                                widget.settings.defaultModelSelection != null &&
                                 !_diagnosing &&
                                 !_saving
                             ? () => _diagnose(listModels: false)
@@ -433,6 +459,20 @@ class _AgentModelSettingsFormState extends State<AgentModelSettingsForm> {
                 },
               ),
               const SizedBox(height: 16),
+              if (widget.suggestedModelId case final suggested?
+                  when suggested.isNotEmpty && !_models.containsKey(suggested))
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: TextButton.icon(
+                    key: const ValueKey('agent-suggested-model'),
+                    onPressed: _saving || suggested.length > 256
+                        ? null
+                        : () =>
+                              setState(() => _setModelEnabled(suggested, true)),
+                    icon: const Icon(Icons.add),
+                    label: Text('${l.agentAddModel}: $suggested'),
+                  ),
+                ),
               TextFormField(
                 key: const ValueKey('agent-model'),
                 controller: _model,
@@ -465,24 +505,24 @@ class _AgentModelSettingsFormState extends State<AgentModelSettingsForm> {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               if (_models.isEmpty) Text(l.agentNoModelsSelected),
+              if (_incompleteModels)
+                Text(
+                  l.agentModelEffortsRequired,
+                  key: const ValueKey('agent-model-efforts-required'),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
               if (_models.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
+                SkedDropdownMenu<String>(
                   key: ValueKey('agent-default-model-$_defaultModel'),
-                  initialValue: _defaultModel,
-                  isExpanded: true,
-                  decoration: InputDecoration(
-                    filled: true,
-                    labelText: l.agentDefaultModel,
-                  ),
-                  items: [
+                  initialSelection: _defaultModel,
+                  enabled: !_saving,
+                  label: Text(l.agentDefaultModel),
+                  dropdownMenuEntries: [
                     for (final id in _models.keys)
-                      DropdownMenuItem(
-                        value: id,
-                        child: Text(id, overflow: TextOverflow.ellipsis),
-                      ),
+                      DropdownMenuEntry(value: id, label: id),
                   ],
-                  onChanged: _saving
+                  onSelected: _saving
                       ? null
                       : (id) => setState(() => _defaultModel = id!),
                 ),
@@ -491,25 +531,22 @@ class _AgentModelSettingsFormState extends State<AgentModelSettingsForm> {
                 for (final model in _models.values) _modelOptions(model, l),
               ],
               const SizedBox(height: 16),
-              DropdownButtonFormField<AgentModelProtocol>(
+              SkedDropdownMenu<AgentModelProtocol>(
                 key: const ValueKey('agent-protocol'),
-                initialValue: _protocol,
-                isExpanded: true,
-                decoration: InputDecoration(
-                  filled: true,
-                  labelText: l.agentProtocol,
-                ),
-                items: const [
-                  DropdownMenuItem(
+                initialSelection: _protocol,
+                enabled: !_saving,
+                label: Text(l.agentProtocol),
+                dropdownMenuEntries: const [
+                  DropdownMenuEntry(
                     value: AgentModelProtocol.chatCompletions,
-                    child: Text('Chat Completions'),
+                    label: 'Chat Completions',
                   ),
-                  DropdownMenuItem(
+                  DropdownMenuEntry(
                     value: AgentModelProtocol.responses,
-                    child: Text('Responses'),
+                    label: 'Responses',
                   ),
                 ],
-                onChanged: _saving
+                onSelected: _saving
                     ? null
                     : (value) => setState(() => _protocol = value!),
               ),

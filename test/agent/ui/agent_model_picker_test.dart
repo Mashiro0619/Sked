@@ -40,9 +40,14 @@ class _ModelDelegate extends UiDelegate {
 void main() {
   const modelA = AgentModelConfig(
     id: 'model-a',
-    reasoningEfforts: [AgentReasoningEffort.auto, AgentReasoningEffort.high],
+    reasoningEfforts: [AgentReasoningEffort.medium, AgentReasoningEffort.high],
+    defaultReasoningEffort: AgentReasoningEffort.medium,
   );
-  const modelB = AgentModelConfig(id: 'model-b');
+  const modelB = AgentModelConfig(
+    id: 'model-b',
+    reasoningEfforts: [AgentReasoningEffort.medium],
+    defaultReasoningEffort: AgentReasoningEffort.medium,
+  );
   late ConversationRepository repository;
   late _ModelDelegate delegate;
   late String id;
@@ -93,7 +98,10 @@ void main() {
       await delegate.selectionWrite;
       expect(
         delegate.choices.single,
-        const AgentModelSelection(modelId: 'model-b'),
+        const AgentModelSelection(
+          modelId: 'model-b',
+          reasoningEffort: AgentReasoningEffort.medium,
+        ),
       );
       expect(repository.selected!.modelSelection, delegate.choices.single);
       expect(delegate.state.value.runFor(id).modelSelection, running);
@@ -112,7 +120,10 @@ void main() {
         configured: true,
         availableModels: const [modelA],
         modelSelections: {
-          id: const AgentModelSelection(modelId: 'removed-model'),
+          id: const AgentModelSelection(
+            modelId: 'removed-model',
+            reasoningEffort: AgentReasoningEffort.medium,
+          ),
         },
       );
       await mountAgentUi(tester, view(), size: const Size(320, 900), scale: 2);

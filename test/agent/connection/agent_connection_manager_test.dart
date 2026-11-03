@@ -90,6 +90,13 @@ void main() {
   const configured = AgentSettings(
     endpoint: 'https://example.test/v1',
     model: 'model-a',
+    models: [
+      AgentModelConfig(
+        id: 'model-a',
+        reasoningEfforts: [AgentReasoningEffort.medium],
+        defaultReasoningEffort: AgentReasoningEffort.medium,
+      ),
+    ],
   );
   Matcher error(AgentConnectionErrorCode code) => throwsA(
     isA<AgentConnectionException>().having((e) => e.code, 'code', code),
@@ -196,7 +203,16 @@ void main() {
       }
     };
     final saving = connection.save(
-      current.copyWith(model: 'model-b'),
+      current.copyWith(
+        model: 'model-b',
+        models: const [
+          AgentModelConfig(
+            id: 'model-b',
+            reasoningEfforts: [AgentReasoningEffort.medium],
+            defaultReasoningEffort: AgentReasoningEffort.medium,
+          ),
+        ],
+      ),
       credentialAction: AgentCredentialAction.replace,
       rawKey: 'replacement-key',
     );
@@ -243,7 +259,9 @@ void main() {
       final connection = manager();
       await connection.initialize();
       expect(current.endpoint, 'https://legacy.test/v1');
-      expect(current.model, 'legacy-model');
+      expect(current.model, isEmpty);
+      expect(current.models, isEmpty);
+      expect(legacy.customModel, 'legacy-model');
       expect(await connection.readKeyFor(current), 'legacy-key');
       expect(current.enabled, isTrue);
       expect(current.permissionMode, AgentPermissionMode.plan);
@@ -281,7 +299,16 @@ void main() {
       expect(current, original);
       expect(await connection.readKeyFor(current), 'old-key');
       await connection.save(
-        current.copyWith(model: 'model-b'),
+        current.copyWith(
+          model: 'model-b',
+          models: const [
+            AgentModelConfig(
+              id: 'model-b',
+              reasoningEfforts: [AgentReasoningEffort.medium],
+              defaultReasoningEffort: AgentReasoningEffort.medium,
+            ),
+          ],
+        ),
         credentialAction: AgentCredentialAction.keep,
       );
       expect(current.model, 'model-b');
@@ -481,7 +508,9 @@ void main() {
     final status = await connection.initialize();
     expect(current.enabled, isTrue);
     expect(current.permissionMode, AgentPermissionMode.ask);
-    expect(current.model, 'legacy-model');
+    expect(current.model, isEmpty);
+    expect(current.models, isEmpty);
+    expect(legacy.customModel, 'legacy-model');
     expect(await connection.readKeyFor(current), 'stored-legacy-key');
     expect(legacy.customPrompt, 'Untrusted old prompt');
     expect(vault.values.values.join(), isNot(contains('Untrusted old prompt')));

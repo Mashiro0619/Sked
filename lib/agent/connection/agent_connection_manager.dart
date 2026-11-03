@@ -499,7 +499,8 @@ class AgentConnectionManager {
     try {
       input = current.copyWith(
         endpoint: legacy.customBaseUrl.trim(),
-        model: legacy.customModel.trim(),
+        model: '',
+        models: const [],
       );
       _validate(input);
     } catch (_) {

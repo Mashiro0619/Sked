@@ -276,6 +276,10 @@ class AgentApplication extends ChangeNotifier {
   }
 
   AgentSettings get settings => _session.committedData.agentSettings;
+
+  /// The retired parser's model name is a candidate, never an enabled model.
+  String get suggestedModelId =>
+      _session.committedData.aiApiSettings.customModel.trim();
   bool get isInitialized => _initialized;
   bool get initializationError => _initializationError;
   Future<void> recoverHistoryBeforeWrites() => history.recoverBeforeWrites();

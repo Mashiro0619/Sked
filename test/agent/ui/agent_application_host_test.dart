@@ -9,6 +9,7 @@ import 'package:sked/agent/ui/agent_resource_view.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/models/timetable_models.dart';
+import 'package:sked/models/agent_settings.dart';
 import 'package:sked/screens/app_home_screen.dart';
 import 'package:sked/screens/agent_page.dart';
 import 'package:sked/services/export_service.dart';
@@ -200,6 +201,13 @@ void main() {
           enabled: true,
           endpoint: 'https://workspace-return.invalid/v1',
           model: 'return-fixture',
+          models: const [
+            AgentModelConfig(
+              id: 'return-fixture',
+              reasoningEfforts: [AgentReasoningEffort.medium],
+              defaultReasoningEffort: AgentReasoningEffort.medium,
+            ),
+          ],
         ),
       );
       await app.agent.conversations.create(

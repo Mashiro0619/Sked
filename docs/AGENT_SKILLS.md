@@ -161,7 +161,7 @@ Manifest 至少记录整包版本、运行时契约版本、工具契约兼容�
 | `configure-workspaces` 工作区和全局偏好 | 启停课表/日程、语言、导航、更新偏好 | `workspaces.describe/prepare`、`settings.*`、`mutation.commit` | 区分启用/显示/活动状态，保留至少一个工作区，计算联动 | 不伪造隐私接受或更新缓存；停用不删除数据 |
 | `troubleshoot-notifications` 通知诊断 | 提醒不响、权限、电池或自启动设置 | `notifications.status`、`notifications.reconcile.prepare`、`external.commit`、`platform.request_action` | 查真实诊断、请求可用系统动作、回到前台复查 | unknown/unsupported/denied分开；打开设置不等于授权 |
 | `manage-school-access` 学校站点与网页登录 | 新增站点、改地址、退出学校网页 | `school_sites.*`、`school_session.clear.prepare`、`external.commit` | 用稳定句柄修改，检测并发，按网页登录工作流清理 | URL变化不删错对象；本机退出不声称注销远端所有会话 |
-| `configure-agent-connection` 配置内置 Agent | API、模型、凭据、预算、功能开关 | `connection.describe/prepare`、`credentials.request_input`、`agent_settings.describe/prepare` | 读取共享配置，绑定目的地与凭据引用，在运行边界生效 | 无多Agent定义；密钥不进模型；模型不能自行提权 |
+| `configure-agent-connection` 配置内置 Agent | API、模型、凭据、预算、功能开关 | `connection.describe/prepare`、`credentials.request_input`、`agent_settings.describe/prepare` | 读取共享配置，明确模型目录、具体思考档位与默认值，绑定目的地与凭据引用，在运行边界生效 | 无自动档位或能力猜测；密钥不进模型；模型不能自行提权 |
 | `recover-and-undo` 核对运行、继续或撤销 | “刚才成功了吗”“继续”“撤销上一批” | `runs.status/stop/resume`、`operations.status`、`undo.prepare`、`mutation.commit`、`conversation.*` | 先核对回执，再恢复未提交步骤或准备逆变更 | 回复丢失不重复创建；删除会话不撤销业务；新编辑不被旧撤销覆盖 |
 
 ## 网页入口：保留压缩校对，改由新会话处理

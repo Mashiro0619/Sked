@@ -28,6 +28,13 @@ http.StreamedResponse _json(Object body, {int status = 200}) =>
 const _settings = AgentSettings(
   endpoint: 'https://api.test/v1',
   model: 'chosen-model',
+  models: [
+    AgentModelConfig(
+      id: 'chosen-model',
+      reasoningEfforts: [AgentReasoningEffort.medium],
+      defaultReasoningEffort: AgentReasoningEffort.medium,
+    ),
+  ],
 );
 Matcher _provider(ProviderError code) =>
     isA<ProviderException>().having((e) => e.code, 'code', code);
@@ -46,6 +53,11 @@ void main() {
             utf8.decode(await request.finalize().toBytes()),
           ) as Map;
           expect(body['model'], 'chosen-model');
+          if (protocol == AgentModelProtocol.responses) {
+            expect(body['reasoning'], {'effort': 'medium'});
+          } else {
+            expect(body['reasoning_effort'], 'medium');
+          }
           expect(body['tools'], hasLength(1));
           return protocol == AgentModelProtocol.responses
               ? _json({
@@ -99,6 +111,64 @@ void main() {
       },
     );
   }
+
+  test(
+    'probe requires a configured explicit effort before any request',
+    () async {
+      final client = _Client((_) async => _json({}));
+      final service = AgentConnectionDiagnostics(client: client);
+      for (final settings in [
+        const AgentSettings(endpoint: 'https://api.test/v1'),
+        const AgentSettings(
+          endpoint: 'https://api.test/v1',
+          model: 'model-only',
+        ),
+        const AgentSettings(
+          endpoint: 'https://api.test/v1',
+          model: 'empty-efforts',
+          models: [
+            AgentModelConfig(
+              id: 'empty-efforts',
+              reasoningEfforts: [],
+              defaultReasoningEffort: AgentReasoningEffort.high,
+            ),
+          ],
+        ),
+      ]) {
+        await expectLater(
+          service.probe(settings, apiKey: 'key'),
+          throwsA(
+            isA<AgentConnectionDiagnosticException>().having(
+              (e) => e.code,
+              'code',
+              AgentConnectionDiagnosticError.modelSelectionRequired,
+            ),
+          ),
+        );
+      }
+      expect(client.requests, isEmpty);
+    },
+  );
+
+  test(
+    'model catalog remains available before configuring reasoning',
+    () async {
+      final client = _Client(
+        (_) async => _json({
+          'data': [
+            {'id': 'candidate'},
+          ],
+        }),
+      );
+      final service = AgentConnectionDiagnostics(client: client);
+      final result = await service.listModels(
+        const AgentSettings(endpoint: 'https://api.test/v1'),
+        apiKey: 'key',
+      );
+      expect(result.models, ['candidate']);
+      expect(client.requests, hasLength(1));
+    },
+  );
 
   test(
     'successful text alone proves transport but not function calling',

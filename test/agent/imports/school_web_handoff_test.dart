@@ -50,6 +50,13 @@ void main() {
       enabled: true,
       endpoint: 'https://model.example/v1',
       model: 'test-model',
+      models: [
+        AgentModelConfig(
+          id: 'test-model',
+          reasoningEfforts: [AgentReasoningEffort.medium],
+          defaultReasoningEffort: AgentReasoningEffort.medium,
+        ),
+      ],
     );
     draft = SchoolWebReviewedDraft(
       content: 'A reviewed school page',
@@ -75,8 +82,16 @@ void main() {
     () async {
       settings = settings.copyWith(
         models: const [
-          AgentModelConfig(id: 'test-model'),
-          AgentModelConfig(id: 'later-default'),
+          AgentModelConfig(
+            id: 'test-model',
+            reasoningEfforts: [AgentReasoningEffort.medium],
+            defaultReasoningEffort: AgentReasoningEffort.medium,
+          ),
+          AgentModelConfig(
+            id: 'later-default',
+            reasoningEfforts: [AgentReasoningEffort.medium],
+            defaultReasoningEffort: AgentReasoningEffort.medium,
+          ),
         ],
       );
       final originalSelection = settings.defaultModelSelection;
@@ -165,6 +180,13 @@ void main() {
       settings = settings.copyWith(
         endpoint: 'https://model.test/v1',
         model: 'test',
+        models: const [
+          AgentModelConfig(
+            id: 'test',
+            reasoningEfforts: [AgentReasoningEffort.medium],
+            defaultReasoningEffort: AgentReasoningEffort.medium,
+          ),
+        ],
       );
       await handoff.handoff(draft, isCurrent: () => true);
       expect(

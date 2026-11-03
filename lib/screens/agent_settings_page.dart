@@ -144,6 +144,9 @@ class _AgentSettingsPageState extends State<AgentSettingsPage> {
                       constraints: const BoxConstraints(maxWidth: 720),
                       child: AgentModelSettingsForm(
                         settings: displayedSettings,
+                        suggestedModelId: displayedSettings.models.isEmpty
+                            ? application.suggestedModelId
+                            : null,
                         showTitle: false,
                         onSave: _save,
                         onSaved: _saved,

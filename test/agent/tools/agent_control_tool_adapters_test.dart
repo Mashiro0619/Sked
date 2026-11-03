@@ -15,6 +15,14 @@ import 'tool_adapter_test_support.dart';
 Matcher _problem(OperationErrorCode code) =>
     isA<OperationProblem>().having((error) => error.code, 'code', code);
 
+List<Map<String, Object?>> _configuredModels(String id) => [
+  AgentModelConfig(
+    id: id,
+    reasoningEfforts: const [AgentReasoningEffort.medium],
+    defaultReasoningEffort: AgentReasoningEffort.medium,
+  ).toJson(),
+];
+
 class _Diagnostics extends AgentConnectionDiagnostics {
   int probes = 0, catalogs = 0;
   @override
@@ -65,6 +73,13 @@ void main() {
           endpoint: 'https://model.test/v1',
           model: 'model-a',
           systemInstructions: 'Keep my preference',
+          models: [
+            AgentModelConfig(
+              id: 'model-a',
+              reasoningEfforts: [AgentReasoningEffort.medium],
+              defaultReasoningEffort: AgentReasoningEffort.medium,
+            ),
+          ],
         ),
       ),
     );
@@ -146,6 +161,7 @@ void main() {
     final plan = await h.call('connection.prepare', {
       'action': 'set',
       'model': 'model-b',
+      'models': _configuredModels('model-b'),
     });
     expect(writes, 0);
     h.scope.policy.update(mode: AgentPermissionMode.plan);
@@ -168,6 +184,7 @@ void main() {
     final retry = await h.call('connection.prepare', {
       'action': 'set',
       'model': 'model-b',
+      'models': _configuredModels('model-b'),
       'operationId': plan['operationId'],
     });
     expect((await h.externalCommit(retry))['replayed'], isTrue);
@@ -176,11 +193,15 @@ void main() {
 
   test('model-list changes retain all enabled choices and their reasoning defaults', () async {
     final models = [
-      const AgentModelConfig(id: 'model-a').toJson(),
+      const AgentModelConfig(
+        id: 'model-a',
+        reasoningEfforts: [AgentReasoningEffort.medium],
+        defaultReasoningEffort: AgentReasoningEffort.medium,
+      ).toJson(),
       const AgentModelConfig(
         id: 'model-b',
         reasoningEfforts: [
-          AgentReasoningEffort.auto,
+          AgentReasoningEffort.medium,
           AgentReasoningEffort.high,
         ],
         defaultReasoningEffort: AgentReasoningEffort.high,
@@ -209,7 +230,7 @@ void main() {
         [
           {
             'id': 'model-a',
-            'reasoningEfforts': ['high'],
+            'reasoningEfforts': [],
             'defaultReasoningEffort': 'high',
           },
         ],
@@ -280,6 +301,7 @@ void main() {
       'action': 'set',
       'endpoint': 'https://next.test/v1',
       'model': 'model-c',
+      'models': _configuredModels('model-c'),
       'credentialAction': 'replace',
       'credentialHandle': input['credentialHandle'],
     };

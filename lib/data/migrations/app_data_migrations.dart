@@ -1,5 +1,4 @@
 import '../../utils/constants.dart';
-import '../../models/agent_settings.dart';
 import 'migration.dart';
 import 'migration_runner.dart';
 
@@ -176,23 +175,16 @@ class AppDataMigrationV5ToV6 extends Migration {
 
   @override
   Map<String, dynamic> apply(Map<String, dynamic> json) {
-    final settings = AgentSettings.fromJson(json['agentSettings']);
     final raw = Map<String, dynamic>.from(json['agentSettings'] as Map);
     return {
       ...json,
       'agentSettings': {
         ...raw,
         'enabled': true,
-        'models':
-            raw['models'] ??
-            [
-              if (settings.model.isNotEmpty)
-                {
-                  'id': settings.model,
-                  'reasoningEfforts': ['auto'],
-                  'defaultReasoningEffort': 'auto',
-                },
-            ],
+        // Agent v5/v6 have not shipped. Published v4 data starts with an empty
+        // catalog; no model capability or reasoning default is inferred.
+        'model': '',
+        'models': const [],
       },
     };
   }

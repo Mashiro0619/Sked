@@ -67,6 +67,13 @@ AppData acceptanceData() {
       permissionMode: AgentPermissionMode.full,
       endpoint: 'https://acceptance.invalid/v1',
       model: 'deterministic-fixture',
+      models: [
+        AgentModelConfig(
+          id: 'deterministic-fixture',
+          reasoningEfforts: [AgentReasoningEffort.medium],
+          defaultReasoningEffort: AgentReasoningEffort.medium,
+        ),
+      ],
     ),
     studentMode: initial.studentMode.copyWith(
       activeTimetableId: 'current',

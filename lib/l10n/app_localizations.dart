@@ -6576,12 +6576,6 @@ abstract class AppLocalizations {
   /// **'Thinking effort'**
   String get agentThinkingEffort;
 
-  /// No description provided for @agentEffortAuto.
-  ///
-  /// In en, this message translates to:
-  /// **'Automatic'**
-  String get agentEffortAuto;
-
   /// No description provided for @agentEffortNone.
   ///
   /// In en, this message translates to:
@@ -6681,8 +6675,14 @@ abstract class AppLocalizations {
   /// No description provided for @agentModelCapabilityHint.
   ///
   /// In en, this message translates to:
-  /// **'A model list does not describe supported thinking levels. Enable the levels your service supports. Automatic sends no thinking parameter.'**
+  /// **'A model list does not describe supported thinking levels. Select the levels your service supports and choose an explicit default.'**
   String get agentModelCapabilityHint;
+
+  /// No description provided for @agentModelEffortsRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Select at least one thinking effort and choose its default for every enabled model.'**
+  String get agentModelEffortsRequired;
 
   /// No description provided for @agentRemoveModel.
   ///

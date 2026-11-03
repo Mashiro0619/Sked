@@ -206,7 +206,7 @@ class AgentControlToolAdapters {
     );
     _add(
       'connection.prepare',
-      'Prepare updating or resetting the shared connection; commit with external.commit. The model field is the default ID; models enables IDs with their selected reasoning levels. Automatic omits the parameter. Replacement requires a credential handle from this run and endpoint. Keeping a credential while changing destination is rejected. Model-list edits apply to future runs; changing the endpoint or credential stops old requests.',
+      'Prepare updating or resetting the shared connection; commit with external.commit. The model field is the default ID; models enables IDs with explicit supported reasoning levels and a default level. Replacement requires a credential handle from this run and endpoint. Keeping a credential while changing destination is rejected. Model-list edits apply to future runs; changing the endpoint or credential stops old requests.',
       {
         'action': {
           'type': 'string',
@@ -235,7 +235,7 @@ class AgentControlToolAdapters {
                       .map((value) => value.name)
                       .toList(),
                 },
-                'description': 'Include auto; enable only levels supported by the service.',
+                'description': 'Enable only explicit levels supported by the service; defaults must be included.',
               },
               'defaultReasoningEffort': {
                 'type': 'string',

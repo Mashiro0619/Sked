@@ -3468,9 +3468,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get agentThinkingEffort => '思考强度';
 
   @override
-  String get agentEffortAuto => '自动';
-
-  @override
   String get agentEffortNone => '关闭';
 
   @override
@@ -3520,7 +3517,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentModelCapabilityHint =>
-      '模型列表不包含可靠的思考档位信息。请选择服务支持的档位；选择“自动”时不发送思考参数。';
+      '模型列表不包含可靠的思考档位信息。请选择服务支持的档位，并明确选择默认强度。';
+
+  @override
+  String get agentModelEffortsRequired => '请为每个启用的模型选择至少一个思考档位，并明确选择默认强度。';
 
   @override
   String get agentRemoveModel => '移除模型';
@@ -7415,9 +7415,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get agentThinkingEffort => '思考強度';
 
   @override
-  String get agentEffortAuto => '自動';
-
-  @override
   String get agentEffortNone => '關閉';
 
   @override
@@ -7467,7 +7464,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentModelCapabilityHint =>
-      '模型清單不包含可靠的思考檔位資訊。請選擇服務支援的檔位；選擇「自動」時不傳送思考參數。';
+      '模型清單不包含可靠的思考檔位資訊。請選擇服務支援的檔位，並明確選擇預設強度。';
+
+  @override
+  String get agentModelEffortsRequired => '請為每個啟用的模型選擇至少一個思考檔位，並明確選擇預設強度。';
 
   @override
   String get agentRemoveModel => '移除模型';

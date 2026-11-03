@@ -264,6 +264,13 @@ void main() {
       endpoint: 'https://model.example.test/v1',
       model: 'test',
       credentialRef: 'local-credential',
+      models: [
+        AgentModelConfig(
+          id: 'test',
+          reasoningEfforts: [AgentReasoningEffort.medium],
+          defaultReasoningEffort: AgentReasoningEffort.medium,
+        ),
+      ],
     );
     final originalLedger = ApplicationLedger(
       generation: '8215b660-b784-4c0a-9c9d-9acee313f7f5',
@@ -308,6 +315,13 @@ void main() {
     const config = AgentSettings(
       endpoint: 'https://model.example.test/v1',
       model: 'test',
+      models: [
+        AgentModelConfig(
+          id: 'test',
+          reasoningEfforts: [AgentReasoningEffort.medium],
+          defaultReasoningEffort: AgentReasoningEffort.medium,
+        ),
+      ],
     );
     final target = _appData('zh').copyWith(
       agentSettings: config,

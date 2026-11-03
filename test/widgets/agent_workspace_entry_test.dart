@@ -123,6 +123,13 @@ class _Application extends ChangeNotifier implements AgentApplication {
     enabled: true,
     endpoint: 'https://fixture.example/v1',
     model: 'fixture-model',
+    models: [
+      AgentModelConfig(
+        id: 'fixture-model',
+        reasoningEfforts: [AgentReasoningEffort.medium],
+        defaultReasoningEffort: AgentReasoningEffort.medium,
+      ),
+    ],
   );
   @override
   bool isInitialized = true;
@@ -543,6 +550,13 @@ void main() {
             enabled: false,
             endpoint: 'https://fixture.example/v1',
             model: 'fixture-model',
+            models: [
+              AgentModelConfig(
+                id: 'fixture-model',
+                reasoningEfforts: [AgentReasoningEffort.medium],
+                defaultReasoningEffort: AgentReasoningEffort.medium,
+              ),
+            ],
           ),
           credentialAction: AgentCredentialAction.replace,
           rawKey: 'fixture-key',
@@ -779,6 +793,24 @@ void main() {
     expect(find.text('Agent model settings'), findsOneWidget);
     await tester.ensureVisible(_key('agent-model'));
     await tester.enterText(_key('agent-model'), 'changed-model');
+    await tester.ensureVisible(_key('agent-add-model'));
+    await tester.pumpAndSettle();
+    await tester.tap(_key('agent-add-model'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(_key('agent-model-options-changed-model'));
+    await tester.pumpAndSettle();
+    await tester.tap(_key('agent-model-options-changed-model'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(_key('agent-model-effort-changed-model-medium'));
+    await tester.pumpAndSettle();
+    await tester.tap(_key('agent-model-effort-changed-model-medium'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(_key('agent-default-effort-changed-model'));
+    await tester.pumpAndSettle();
+    await tester.tap(_key('agent-default-effort-changed-model'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Medium').last);
+    await tester.pumpAndSettle();
     await tester.ensureVisible(_key('agent-api-key'));
     await tester.enterText(_key('agent-api-key'), 'transient-fixture-key');
     await tester.pumpAndSettle();

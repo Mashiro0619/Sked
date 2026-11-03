@@ -3743,9 +3743,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get agentThinkingEffort => 'Thinking effort';
 
   @override
-  String get agentEffortAuto => 'Automatic';
-
-  @override
   String get agentEffortNone => 'None';
 
   @override
@@ -3797,7 +3794,11 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get agentModelCapabilityHint =>
-      'A model list does not describe supported thinking levels. Enable the levels your service supports. Automatic sends no thinking parameter.';
+      'A model list does not describe supported thinking levels. Select the levels your service supports and choose an explicit default.';
+
+  @override
+  String get agentModelEffortsRequired =>
+      'Select at least one thinking effort and choose its default for every enabled model.';
 
   @override
   String get agentRemoveModel => 'Remove model';

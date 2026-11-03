@@ -425,7 +425,13 @@ AppData _mainFixture() {
         permissionMode: AgentPermissionMode.full,
         endpoint: 'https://native-ui.invalid/v1',
         model: 'native-ui-fixture',
-        models: [AgentModelConfig(id: 'native-ui-fixture')],
+        models: [
+          AgentModelConfig(
+            id: 'native-ui-fixture',
+            reasoningEfforts: [AgentReasoningEffort.medium],
+            defaultReasoningEffort: AgentReasoningEffort.medium,
+          ),
+        ],
       ),
       studentMode: StudentModeData(
         activeTimetableId: 'native-table',

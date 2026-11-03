@@ -31,6 +31,13 @@ void main() {
           endpoint: 'https://model.example/v1',
           model: 'fixture',
           permissionMode: AgentPermissionMode.ask,
+          models: [
+            AgentModelConfig(
+              id: 'fixture',
+              reasoningEfforts: [AgentReasoningEffort.medium],
+              defaultReasoningEffort: AgentReasoningEffort.medium,
+            ),
+          ],
         ),
       ),
     );
@@ -136,7 +143,10 @@ void main() {
     expect(created.mode, AgentPermissionMode.ask);
     expect(
       created.modelSelection,
-      const AgentModelSelection(modelId: 'fixture'),
+      const AgentModelSelection(
+        modelId: 'fixture',
+        reasoningEffort: AgentReasoningEffort.medium,
+      ),
     );
     expect(created.messages, isEmpty);
     expect(result['effectResult'], containsPair('started', false));
@@ -168,11 +178,15 @@ void main() {
           agentSettings: data.agentSettings.copyWith(
             model: 'model-b',
             models: const [
-              AgentModelConfig(id: 'fixture'),
+              AgentModelConfig(
+                id: 'fixture',
+                reasoningEfforts: [AgentReasoningEffort.medium],
+                defaultReasoningEffort: AgentReasoningEffort.medium,
+              ),
               AgentModelConfig(
                 id: 'model-b',
                 reasoningEfforts: [
-                  AgentReasoningEffort.auto,
+                  AgentReasoningEffort.medium,
                   AgentReasoningEffort.low,
                 ],
                 defaultReasoningEffort: AgentReasoningEffort.low,

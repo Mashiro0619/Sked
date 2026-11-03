@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "packVersion": "1.0.1",
+  "packVersion": "1.0.2",
   "runtimeContractVersion": 1,
   "toolApiCompatibility": ">=1.0.0 <2.0.0",
   "skills": [
@@ -575,7 +575,7 @@
     },
     {
       "id": "configure-agent-connection",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "title": "配置内置Agent",
       "summary": "管理共享连接与预算并由宿主安全处理凭据和执行模式。",
       "triggers": [
@@ -586,7 +586,7 @@
         "配置Agent"
       ],
       "asset": "configure-agent-connection/SKILL.md",
-      "contentSha256": "5544df6f09397f3047c3a41f96c5941371ad52ae1730fe205c806f869edc30d1",
+      "contentSha256": "e134b8ac8027bbe10054c585823a550df8a7e13b14518397dddea95744fd36d9",
       "sourceKinds": [],
       "requiredTools": [
         "connection.describe",

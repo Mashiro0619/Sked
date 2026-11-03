@@ -785,6 +785,13 @@ void main() {
             endpoint: 'https://api.test/v1?api_key=do-not-return',
             model: 'model',
             credentialRef: 'opaque-secret-ref',
+            models: [
+              AgentModelConfig(
+                id: 'model',
+                reasoningEfforts: [AgentReasoningEffort.medium],
+                defaultReasoningEffort: AgentReasoningEffort.medium,
+              ),
+            ],
           ),
         ),
       );

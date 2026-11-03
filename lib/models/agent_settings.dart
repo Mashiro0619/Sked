@@ -4,22 +4,19 @@ import '../application/operation_contracts.dart';
 
 enum AgentModelProtocol { chatCompletions, responses }
 
-/// Auto delegates to the service by omitting its reasoning parameter.
-enum AgentReasoningEffort { auto, none, minimal, low, medium, high, xhigh, max }
+/// Every enabled model explicitly declares the reasoning parameters it accepts.
+enum AgentReasoningEffort { none, minimal, low, medium, high, xhigh, max }
 
 class AgentModelSelection {
   const AgentModelSelection({
     required this.modelId,
-    this.reasoningEffort = AgentReasoningEffort.auto,
+    required this.reasoningEffort,
   });
 
   final String modelId;
   final AgentReasoningEffort reasoningEffort;
 
-  String? get wireReasoningEffort =>
-      reasoningEffort == AgentReasoningEffort.auto
-      ? null
-      : reasoningEffort.name;
+  String get wireReasoningEffort => reasoningEffort.name;
 
   Map<String, Object?> toJson() => {
     'modelId': modelId,
@@ -59,8 +56,8 @@ class AgentModelSelection {
 class AgentModelConfig {
   const AgentModelConfig({
     required this.id,
-    this.reasoningEfforts = const [AgentReasoningEffort.auto],
-    this.defaultReasoningEffort = AgentReasoningEffort.auto,
+    required this.reasoningEfforts,
+    required this.defaultReasoningEffort,
   });
 
   final String id;
@@ -72,7 +69,7 @@ class AgentModelConfig {
 
   void validate() {
     if (!_validModelId(id) ||
-        !reasoningEfforts.contains(AgentReasoningEffort.auto) ||
+        reasoningEfforts.isEmpty ||
         reasoningEfforts.toSet().length != reasoningEfforts.length ||
         !reasoningEfforts.contains(defaultReasoningEffort)) {
       throw const FormatException('Invalid enabled model configuration.');
@@ -156,11 +153,8 @@ class AgentSettings {
   final String model;
   final List<AgentModelConfig> models;
 
-  /// The old single-model field remains the default ID. Legacy constructors
-  /// and saved settings without a model list expose that one configured model.
-  List<AgentModelConfig> get availableModels => models.isNotEmpty
-      ? List.unmodifiable(models)
-      : [if (model.isNotEmpty) AgentModelConfig(id: model)];
+  /// The default ID must refer to an explicitly configured model and effort.
+  List<AgentModelConfig> get availableModels => List.unmodifiable(models);
 
   AgentModelConfig? modelConfig(String id) =>
       availableModels.where((value) => value.id == id).firstOrNull;
@@ -198,17 +192,8 @@ class AgentSettings {
     if (models != null && models.isEmpty && model != null && model.isNotEmpty) {
       throw const FormatException('A default model must be enabled.');
     }
-    var nextModels = models ?? this.models;
-    // Legacy callers explicitly setting a new default also enable that model.
-    // A supplied list is authoritative and must agree with its default.
-    if (models == null && model != null) {
-      if (model.isEmpty) {
-        nextModels = const [];
-      } else if (nextModels.isNotEmpty &&
-          !nextModels.any((value) => value.id == model)) {
-        nextModels = [...nextModels, AgentModelConfig(id: model)];
-      }
-    }
+    final nextModels =
+        models ?? (model == '' ? const <AgentModelConfig>[] : this.models);
     final result = AgentSettings(
       enabled: enabled ?? this.enabled,
       permissionMode: permissionMode ?? this.permissionMode,
@@ -232,7 +217,9 @@ class AgentSettings {
   void validate() {
     if (models.length > 256 ||
         models.map((value) => value.id).toSet().length != models.length ||
-        (models.isNotEmpty && !models.any((value) => value.id == model)) ||
+        (models.isEmpty
+            ? model.isNotEmpty
+            : !models.any((value) => value.id == model)) ||
         (model.isNotEmpty && !_validModelId(model))) {
       throw const FormatException(
         'Enabled models or default model are invalid.',

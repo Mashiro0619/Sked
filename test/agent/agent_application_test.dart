@@ -108,6 +108,13 @@ void main() {
       const AgentSettings(
         endpoint: 'https://fixture.example/v1',
         model: 'fixture',
+        models: [
+          AgentModelConfig(
+            id: 'fixture',
+            reasoningEfforts: [AgentReasoningEffort.medium],
+            defaultReasoningEffort: AgentReasoningEffort.medium,
+          ),
+        ],
       ),
     );
     await app.agent.setEnabled(true);
@@ -493,7 +500,13 @@ void main() {
         await app.agent.configure(
           app.agent.settings.copyWith(
             model: 'next-model',
-            models: const [AgentModelConfig(id: 'next-model')],
+            models: const [
+              AgentModelConfig(
+                id: 'next-model',
+                reasoningEfforts: [AgentReasoningEffort.medium],
+                defaultReasoningEffort: AgentReasoningEffort.medium,
+              ),
+            ],
           ),
         );
         expect(app.agent.settings.model, 'next-model');
