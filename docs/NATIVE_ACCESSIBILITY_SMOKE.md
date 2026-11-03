@@ -13,7 +13,8 @@ before and after every phase.
 
 The driver report alone is insufficient: the assessor rejects any AXTree/crash
 log line, missing stage, invalid graph, missing native MSAA result, non-Profile
-execution or mismatched source revision. It requires all 27 labelled phases.
+execution or mismatched source revision. It requires all 27 original labelled
+phases followed by 17 Agent phases in each of two configurations (61 total).
 
 The native test opts out of testWidgets' automatic artificial semantics handle.
 Its initial provider query must enable engine semantics before the populated
@@ -41,29 +42,129 @@ runner. This is not physical input, Android or complete screen-reader task
 acceptance. The native client must be at least 1100 x 600 logical pixels; no
 physical-size or DPR override is applied.
 
+## Agent coverage
+
+After the original workspace tree is unmounted, each Agent scenario creates a
+fresh `AgentNativeSession` with explicit memory owners and production codecs.
+The real home Agent toggle, New conversation and full Agent workspace actions
+lead to the actual composer. Independent Agent settings are opened through the
+conversation menu; all four tabs must publish distinct actionable semantics
+and select their corresponding product form. The named native control must
+use the MSAA page-tab role (37) or the Windows push-button compatibility role
+(43). Windows bridges that map legacy semantics flags may expose the latter
+while Flutter retains the tab role. Both native roles still require distinct,
+unmerged framework tab nodes with tap actions, selected state and matching
+content; static-text (41), window and container matches never pass.
+Returning from settings must preserve the registered-input draft and make no
+provider request or main-data change.
+
+Action checks resolve the unique published tap node inside the requested
+control's render subtree. Merged text and tab labels may use their nearest
+published ancestor; unrelated actions elsewhere in that ancestor never count.
+Hidden nodes and ambiguous controls fail the check.
+
+Both configurations test the exact composer value, Ask approve/reject buttons,
+Show more changes and expanded first/last change details through same-PID MSAA.
+A scripted provider requests real `capabilities.describe`, `mutation.prepare`
+and `mutation.commit` tools. The 21 synthetic events exceed the initial 20-row
+preview: Show more is observed through MSAA and tapped through Flutter to
+reveal the complete target list. A pointer drag on the actual transcript enters
+earlier-history reading before inspecting the rows; its offset and the visible
+Jump to latest control confirm that ordinary follow-latest behavior is paused.
+The first and last displayed records are expanded through the product UI; their
+complete before/after JSON is checked against the host plan, and their detail
+sentinels must appear as native text rather than a window/container match.
+Each detail waits for its own expansion clip to expose the full body with
+stable geometry before it is scrolled into view. The active approval spinner
+does not need to settle. Before/after clip geometry and the actual text node's
+label, value, hidden flag and root reachability remain in the report; a local
+debug semantics node alone is not proof that native clients can read it.
+
+The baseline configuration is light with 1× text and normal motion. It rejects
+the plan and requires the entire committed and persisted main snapshots to stay
+identical. The accessible configuration uses dark theme, 2× text and the
+framework reduced-motion policy, with animations still enabled. It approves
+the plan and checks every new event's full content, all original data, the
+21-change stored receipt and the corresponding receipt card. No controller
+assignment, direct approval callback or model prose substitutes for those
+checks. Configuration observations, input diagnostics, pre-decision hashes,
+pagination, native roles and cleanup are retained separately from the original
+two editor-input diagnostics.
+
+Rejection ends the real host run after three provider requests, with the
+`cancelled` commit tool result persisted in the conversation and no subsequent
+provider reply. Approval makes a fourth request and must finish with the same
+stored tool result followed by the final reply. The v2 report checks the exact
+tool-call identity, saved/current conversation equality, settled request/tool
+accounting, terminal status and absence of pending approval for both outcomes.
+
+An HTTP guard and rejecting provider transport must observe zero network
+operations. Each UI tree is unmounted before all session owners are explicitly
+closed; missing/failed cleanup fails the assessment. Native semantics remains
+enabled across both trees. These are Windows MSAA and framework-injected UI
+checks; the theme/text/motion settings are framework configuration, not changes
+to Windows accessibility settings or complete screen-reader acceptance.
+
 ## Running
 
-Run from the repository root, after any quiet performance measurement. The
-absolute PowerShell probe path is a required compile-time define. Never rely
-on the native process CWD, and rebuild when changing the compiled probe path.
+Run from the root of a fresh, isolated test checkout or source export in system
+Temp, outside any performance sampling window. Follow the build-time namespace
+requirement in [Windows native acceptance](WINDOWS_NATIVE_ACCEPTANCE.md):
+synthetic Dart data alone does not isolate native window-state registry keys or
+the single-instance mutex. Configure a unique `SKED_WINDOWS_TEST_NAMESPACE`
+before building/running the test application, and retain its CMake cache with
+the result. Use a separate fresh build tree for production release/MSIX builds
+and confirm that its namespace is empty; test build trees are not packaging
+inputs.
+
+Keep the physical build-root path short, for example
+`[system Temp]/sked-win-<8 random characters>/source`; plugin headers, link
+outputs and MSBuild tracking files can exceed Windows path limits under deeply
+nested candidate directories. Evidence may use a separate longer Temp path.
+Do not change repository or SDK paths to compensate for a long test root.
+
+The absolute PowerShell probe path is a required compile-time define. Never
+rely on the native process CWD, and rebuild when changing the compiled probe
+path. For a Git source export, supply its manifest's full source SHA instead
+of invoking `git rev-parse` in the exported directory.
 
 ```powershell
-$nativeRevision = (git rev-parse --short=12 HEAD).Trim()
+$nativeRevision = (git rev-parse HEAD).Trim()
 $nativeProbe = (Resolve-Path -LiteralPath 'tool/probe_native_accessibility.ps1').ProviderPath
 $nativeRun = Join-Path ([IO.Path]::GetTempPath()) ('sked-native-accessibility-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $nativeRun -ErrorAction Stop | Out-Null
+$nativeNamespace = 'sked.a11y.' + [Guid]::NewGuid().ToString('N')
 $previousNativeOutputs = $env:FLUTTER_TEST_OUTPUTS_DIR
 $previousNativeNoProxy = $env:NO_PROXY
 try {
   $env:FLUTTER_TEST_OUTPUTS_DIR = $nativeRun
   $env:NO_PROXY = '127.0.0.1,localhost'
+  flutter build windows --profile --no-pub --config-only
+  if ($LASTEXITCODE -ne 0) { throw 'Native test CMake preparation failed' }
+  $nativeCache = 'build/windows/x64/CMakeCache.txt'
+  $nativeCmakeLine = Select-String -LiteralPath $nativeCache -Pattern '^CMAKE_COMMAND:INTERNAL=(.+)$'
+  if ($nativeCmakeLine.Count -ne 1) { throw 'Cannot identify the configured CMake executable' }
+  $nativeCmake = $nativeCmakeLine.Matches[0].Groups[1].Value
+  & $nativeCmake -S windows -B build/windows/x64 `
+    "-DSKED_WINDOWS_TEST_NAMESPACE=$nativeNamespace" `
+    -DSKED_BUILD_WINDOWS_RUNNER_TESTS=ON
+  if ($LASTEXITCODE -ne 0) { throw 'Native test namespace configuration failed' }
+  $nativeNamespaceLine = "SKED_WINDOWS_TEST_NAMESPACE:STRING=$nativeNamespace"
+  if (-not ((Get-Content -LiteralPath $nativeCache) -contains $nativeNamespaceLine)) {
+    throw 'The native test namespace was not retained in CMake'
+  }
+  Copy-Item -LiteralPath $nativeCache -Destination (Join-Path $nativeRun 'CMakeCache-before.txt')
   flutter drive --profile --no-pub -d windows `
     --driver=test_driver/native_accessibility_driver.dart `
     --target=integration_test/native_accessibility_smoke_test.dart `
     "--dart-define=SKED_A11Y_PROBE=$nativeProbe" `
     --dart-define=SKED_A11Y_REVISION=$nativeRevision `
-    --timeout=360 2>&1 | Tee-Object -FilePath (Join-Path $nativeRun 'run.log')
+    --timeout=840 2>&1 | Tee-Object -FilePath (Join-Path $nativeRun 'run.log')
   $nativeExitCode = $LASTEXITCODE
+  Copy-Item -LiteralPath $nativeCache -Destination (Join-Path $nativeRun 'CMakeCache-after.txt')
+  if (-not ((Get-Content -LiteralPath $nativeCache) -contains $nativeNamespaceLine)) {
+    throw 'The native test namespace changed during the build'
+  }
   python tool/assess_native_accessibility.py `
     --log (Join-Path $nativeRun 'run.log') `
     --report (Join-Path $nativeRun 'native-accessibility.json') `
@@ -74,6 +175,13 @@ try {
   $env:NO_PROXY = $previousNativeNoProxy
 }
 ```
+
+The integration target is bounded to 12 minutes, the driver to 13 and the
+outer command to 14. Individual native queries and Agent state waits retain
+20-second limits; original workspace phases retain their 15-second settle
+limits. Active Agent phases use bounded state predicates and explicit
+semantics pumps so a waiting approval does not require all animations to
+settle. A timeout is a failed run, never an accepted partial result.
 
 Preserve the report, assessment and run.log together. They contain the revision,
 viewport/DPR, probe path, native CWD, per-phase update ranges and compact MSAA

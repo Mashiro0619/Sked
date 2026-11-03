@@ -3,7 +3,7 @@ import 'package:integration_test/integration_test_driver.dart';
 import 'support/report_output_directory.dart';
 
 Future<void> main() => integrationDriver(
-  timeout: const Duration(minutes: 5),
+  timeout: const Duration(minutes: 13),
   writeResponseOnFailure: true,
   responseDataCallback: (data) => writeResponseData(
     data,

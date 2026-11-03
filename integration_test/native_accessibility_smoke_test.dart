@@ -20,6 +20,7 @@ import 'package:sked/widgets/sked_week_picker.dart';
 
 import '../test/support/semantics_update_audit.dart';
 import '../test/support/workspace_harness.dart';
+import 'support/agent_native_accessibility.dart';
 
 class _NativeSemanticsBinding extends IntegrationTestWidgetsFlutterBinding {
   // Keep this audit alive for the entire native runner lifetime. Resetting it
@@ -134,8 +135,9 @@ Future<void> _enterTextAndCheckSemantics(
   WidgetTester tester,
   Finder field,
   String value,
-  List<Map<String, Object?>> diagnostics,
-) async {
+  List<Map<String, Object?>> diagnostics, {
+  bool settle = true,
+}) async {
   final editable = find.descendant(
     of: field,
     matching: find.byType(EditableText),
@@ -144,11 +146,18 @@ Future<void> _enterTextAndCheckSemantics(
   expect(editable, findsOneWidget);
   expect(tester.testTextInput.isRegistered, isTrue);
   await tester.enterText(field, value);
-  await tester.pumpAndSettle(
-    const Duration(milliseconds: 50),
-    EnginePhase.sendSemanticsUpdate,
-    const Duration(seconds: 15),
-  );
+  if (settle) {
+    await tester.pumpAndSettle(
+      const Duration(milliseconds: 50),
+      EnginePhase.sendSemanticsUpdate,
+      const Duration(seconds: 15),
+    );
+  } else {
+    await tester.pump(
+      const Duration(milliseconds: 16),
+      EnginePhase.sendSemanticsUpdate,
+    );
+  }
   final state = tester.state<EditableTextState>(editable);
   final published = _publishedEditableSemantics(state);
   final clientCalls = tester.testTextInput.log.where(
@@ -269,6 +278,7 @@ void main() {
   final phases = <Map<String, Object?>>[];
   final nativeProbes = <Map<String, dynamic>>[];
   final textSemanticsDiagnostics = <Map<String, Object?>>[];
+  final agentScenarios = <Map<String, Object?>>[];
   final nativeBootstrap = <String, Object?>{};
   var completed = false;
 
@@ -338,16 +348,29 @@ void main() {
       );
       var pointerAdded = false;
 
-      Future<void> phase(String name, Future<void> Function() action) async {
+      Future<void> phase(
+        String name,
+        Future<void> Function() action, {
+        bool settle = true,
+      }) async {
         final before = binding.audit.updateCount;
         final engineEnabledBefore = binding.platformDispatcher.semanticsEnabled;
         debugPrint('SKED_A11Y_PHASE_BEGIN $name updates=$before');
         await action();
-        await tester.pumpAndSettle(
-          const Duration(milliseconds: 50),
-          EnginePhase.sendSemanticsUpdate,
-          const Duration(seconds: 15),
-        );
+        if (settle) {
+          await tester.pumpAndSettle(
+            const Duration(milliseconds: 50),
+            EnginePhase.sendSemanticsUpdate,
+            const Duration(seconds: 15),
+          );
+        } else {
+          // Active Agent phases use their own bounded state waits. Keep the
+          // original workspace phases' settling behavior unchanged.
+          await tester.pump(
+            const Duration(milliseconds: 16),
+            EnginePhase.sendSemanticsUpdate,
+          );
+        }
         final nodes = _checkCurrentTree(tester);
         final record = <String, Object?>{
           'phase': name,
@@ -367,305 +390,328 @@ void main() {
       }
 
       try {
-        // Activate the native bridge before publishing the populated tree. A
-        // Dart-only handle can otherwise emit its first full update too early.
-        await tester.pumpWidget(const SizedBox.shrink());
-        await phase('activate-native-accessibility-provider', () async {
-          nativeProbes.add({
-            'phase': 'activate-native-accessibility-provider',
-            ...await _probeNative(tester),
-          });
-          await _waitForNativeSemantics(tester);
-        });
-        await phase('populated-student-mount', () async {
-          await tester.pumpWidget(
-            WorkspaceHarness(
-              provider: app,
-              layoutPreferences: layout,
-              developerUiPreferences: developer,
-            ),
-          );
-        });
-        expect(binding.semanticsEnabled, isTrue);
-        expect(binding.audit.updateCount, greaterThan(0));
-        await phase('native-provider-exposes-controls', () async {
-          final probe = await _probeNative(tester);
-          nativeProbes.add({
-            'phase': 'native-provider-exposes-controls',
-            ...probe,
-          });
-          expect(probe['descendants'], greaterThan(0));
-          expect(probe['nativeButtons'], greaterThan(0));
-        });
-        await mouse.addPointer(location: const Offset(8, 100));
-        pointerAdded = true;
-        await phase(
-          'student-navigation-tooltip',
-          () => _hover(tester, mouse, _key('student-previous-week')),
-        );
-        await phase(
-          'week-route-open-after-tooltip',
-          () => _mouseClick(tester, mouse, _key('student-week-picker-button')),
-        );
-        expect(find.byType(SkedWeekPicker), findsOneWidget);
-        await phase('week-picker-keyboard-escape', () async {
-          // Profile strips debug key names used by the simulator's inference.
-          await tester.sendKeyEvent(
-            LogicalKeyboardKey.tab,
-            physicalKey: PhysicalKeyboardKey.tab,
-          );
-          expect(FocusManager.instance.primaryFocus, isNotNull);
-          await tester.sendKeyEvent(
-            LogicalKeyboardKey.escape,
-            physicalKey: PhysicalKeyboardKey.escape,
-          );
-        });
-        expect(find.byType(SkedWeekPicker), findsNothing);
-        expect(app.studentView.selectedWeek, originalWeek);
-
-        await phase(
-          'workspace-student-to-general',
-          () => _mouseClick(
-            tester,
-            mouse,
-            _key('workspace-resource-mode-general'),
-          ),
-        );
-        expect(app.workspaceView.activeMode, AppMode.general);
-        await phase(
-          'general-date-tooltip',
-          () => _hover(tester, mouse, _key('general-date-picker')),
-        );
-        final dateOwner = ModalRoute.of(
-          tester.element(_key('general-date-picker')),
-        )!;
-        await phase(
-          'hovered-date-route-open',
-          () => _mouseClick(tester, mouse, _key('general-date-picker')),
-        );
-        expect(dateOwner.isCurrent, isFalse);
-        await phase('date-picker-keyboard-escape', () async {
-          await tester.sendKeyEvent(
-            LogicalKeyboardKey.escape,
-            physicalKey: PhysicalKeyboardKey.escape,
-          );
-        });
-        expect(dateOwner.isCurrent, isTrue);
-        expect(app.generalView.selectedDate, originalDate);
-
-        await phase(
-          'general-navigation-tooltip',
-          () => _hover(tester, mouse, _key('general-next-period')),
-        );
-        await phase(
-          'event-editor-open-after-tooltip',
-          () => _mouseClick(tester, mouse, _key('general-add-event')),
-        );
-        final editor = find.byType(GeneralEventEditorSheet);
-        expect(editor, findsOneWidget);
-        final editorState = tester.state(editor);
-        final title = _key('event-desktop-title');
-        const savedTitle = 'Native semantics saved event';
-        const discardedTitle = 'Native semantics discarded event';
-        final l = AppLocalizations.of(tester.element(editor));
-
-        await phase('event-text-and-keyboard-focus', () async {
-          await _enterTextAndCheckSemantics(
-            tester,
-            title,
-            savedTitle,
-            textSemanticsDiagnostics,
-          );
-          final beforeTab = FocusManager.instance.primaryFocus;
-          await tester.sendKeyEvent(
-            LogicalKeyboardKey.tab,
-            physicalKey: PhysicalKeyboardKey.tab,
-          );
-          await tester.pump();
-          expect(FocusManager.instance.primaryFocus, isNot(same(beforeTab)));
-        });
-        await phase('native-provider-exposes-editor-value', () async {
-          final probe = await _probeNative(tester, expectedText: savedTitle);
-          nativeProbes.add({
-            'phase': 'native-provider-exposes-editor-value',
-            ...probe,
-          });
-          expect(probe['matchedExpectedText'], greaterThan(0));
-          expect(probe['matchedEditableValues'], greaterThan(0));
-        });
-        await phase(
-          'draft-workspace-hide',
-          () => _mouseClick(
-            tester,
-            mouse,
-            _key('workspace-resource-mode-student'),
-          ),
-        );
-        expect(app.workspaceView.activeMode, AppMode.student);
-        expect(editor, findsNothing);
-        await phase(
-          'draft-workspace-return',
-          () => _mouseClick(
-            tester,
-            mouse,
-            _key('workspace-resource-mode-general'),
-          ),
-        );
-        expect(tester.state(editor), same(editorState));
-        expect(find.text(savedTitle), findsOneWidget);
-        await phase(
-          'settings-route-over-draft',
-          () => _mouseClick(tester, mouse, _key('workspace-resource-settings')),
-        );
-        expect(find.byType(SettingsPage), findsOneWidget);
-        await phase(
-          'settings-route-return',
-          () => _mouseClick(tester, mouse, find.byType(BackButton).first),
-        );
-        expect(tester.state(editor), same(editorState));
-        expect(find.text(savedTitle), findsOneWidget);
-
-        Finder cancelEditor() => find.descendant(
-          of: editor,
-          matching: find.widgetWithText(TextButton, l.cancel),
-        );
-        await phase(
-          'dirty-editor-cancel-opens-confirmation',
-          () => _mouseClick(tester, mouse, cancelEditor()),
-        );
-        expect(find.text(l.unsavedChangesMessage), findsOneWidget);
-        await phase('native-provider-exposes-discard-dialog', () async {
-          final probe = await _probeNative(
-            tester,
-            expectedText: l.unsavedChangesMessage,
-          );
-          nativeProbes.add({
-            'phase': 'native-provider-exposes-discard-dialog',
-            ...probe,
-          });
-          expect(probe['matchedExpectedText'], greaterThan(0));
-        });
-        await phase(
-          'cancel-discard-keeps-draft',
-          () => _mouseClick(
-            tester,
-            mouse,
-            find.widgetWithText(TextButton, l.cancel).hitTestable().last,
-          ),
-        );
-        expect(tester.state(editor), same(editorState));
-        expect(find.text(savedTitle), findsOneWidget);
-        expect(
-          app.generalView.schedules
-              .expand((calendar) => calendar.events)
-              .length,
-          originalEvents,
-        );
-        await phase(
-          'event-save-commits-and-retires-editor',
-          () => _mouseClick(
-            tester,
-            mouse,
-            find.descendant(
-              of: editor,
-              matching: find.widgetWithText(FilledButton, l.save),
-            ),
-          ),
-        );
-        expect(editor, findsNothing);
-        expect(
-          app.session.committedData.generalMode.schedules
-              .expand((calendar) => calendar.events)
-              .where((event) => event.title == savedTitle),
-          hasLength(1),
-        );
-
-        await phase(
-          'second-editor-open',
-          () => _mouseClick(tester, mouse, _key('general-add-event')),
-        );
-        await phase(
-          'second-editor-draft',
-          () => _enterTextAndCheckSemantics(
-            tester,
-            title,
-            discardedTitle,
-            textSemanticsDiagnostics,
-          ),
-        );
-        await phase(
-          'second-editor-cancel',
-          () => _mouseClick(tester, mouse, cancelEditor()),
-        );
-        expect(find.text(l.unsavedChangesMessage), findsOneWidget);
-        await phase(
-          'discard-retires-without-saving',
-          () => _mouseClick(tester, mouse, find.text(l.discardChangesAndExit)),
-        );
-        expect(editor, findsNothing);
-        final committed = app.session.committedData.generalMode.schedules
-            .expand((calendar) => calendar.events);
-        expect(committed.length, originalEvents + 1);
-        expect(
-          committed.any((event) => event.title == discardedTitle),
-          isFalse,
-        );
-        expect(app.studentView.selectedWeek, originalWeek);
-        expect(app.generalView.selectedDate, originalDate);
-        completed = true;
-      } finally {
         try {
-          if (pointerAdded) await mouse.removePointer();
+          // Activate the native bridge before publishing the populated tree. A
+          // Dart-only handle can otherwise emit its first full update too early.
+          await tester.pumpWidget(const SizedBox.shrink());
+          await phase('activate-native-accessibility-provider', () async {
+            nativeProbes.add({
+              'phase': 'activate-native-accessibility-provider',
+              ...await _probeNative(tester),
+            });
+            await _waitForNativeSemantics(tester);
+          });
+          await phase('populated-student-mount', () async {
+            await tester.pumpWidget(
+              WorkspaceHarness(
+                provider: app,
+                layoutPreferences: layout,
+                developerUiPreferences: developer,
+              ),
+            );
+          });
+          expect(binding.semanticsEnabled, isTrue);
+          expect(binding.audit.updateCount, greaterThan(0));
+          await phase('native-provider-exposes-controls', () async {
+            final probe = await _probeNative(tester);
+            nativeProbes.add({
+              'phase': 'native-provider-exposes-controls',
+              ...probe,
+            });
+            expect(probe['descendants'], greaterThan(0));
+            expect(probe['nativeButtons'], greaterThan(0));
+          });
+          await mouse.addPointer(location: const Offset(8, 100));
+          pointerAdded = true;
           await phase(
-            'native-tree-unmount',
-            () => tester.pumpWidget(const SizedBox.shrink()),
+            'student-navigation-tooltip',
+            () => _hover(tester, mouse, _key('student-previous-week')),
           );
+          await phase(
+            'week-route-open-after-tooltip',
+            () =>
+                _mouseClick(tester, mouse, _key('student-week-picker-button')),
+          );
+          expect(find.byType(SkedWeekPicker), findsOneWidget);
+          await phase('week-picker-keyboard-escape', () async {
+            // Profile strips debug key names used by the simulator's inference.
+            await tester.sendKeyEvent(
+              LogicalKeyboardKey.tab,
+              physicalKey: PhysicalKeyboardKey.tab,
+            );
+            expect(FocusManager.instance.primaryFocus, isNotNull);
+            await tester.sendKeyEvent(
+              LogicalKeyboardKey.escape,
+              physicalKey: PhysicalKeyboardKey.escape,
+            );
+          });
+          expect(find.byType(SkedWeekPicker), findsNothing);
+          expect(app.studentView.selectedWeek, originalWeek);
+
+          await phase(
+            'workspace-student-to-general',
+            () => _mouseClick(
+              tester,
+              mouse,
+              _key('workspace-resource-mode-general'),
+            ),
+          );
+          expect(app.workspaceView.activeMode, AppMode.general);
+          await phase(
+            'general-date-tooltip',
+            () => _hover(tester, mouse, _key('general-date-picker')),
+          );
+          final dateOwner = ModalRoute.of(
+            tester.element(_key('general-date-picker')),
+          )!;
+          await phase(
+            'hovered-date-route-open',
+            () => _mouseClick(tester, mouse, _key('general-date-picker')),
+          );
+          expect(dateOwner.isCurrent, isFalse);
+          await phase('date-picker-keyboard-escape', () async {
+            await tester.sendKeyEvent(
+              LogicalKeyboardKey.escape,
+              physicalKey: PhysicalKeyboardKey.escape,
+            );
+          });
+          expect(dateOwner.isCurrent, isTrue);
+          expect(app.generalView.selectedDate, originalDate);
+
+          await phase(
+            'general-navigation-tooltip',
+            () => _hover(tester, mouse, _key('general-next-period')),
+          );
+          await phase(
+            'event-editor-open-after-tooltip',
+            () => _mouseClick(tester, mouse, _key('general-add-event')),
+          );
+          final editor = find.byType(GeneralEventEditorSheet);
+          expect(editor, findsOneWidget);
+          final editorState = tester.state(editor);
+          final title = _key('event-desktop-title');
+          const savedTitle = 'Native semantics saved event';
+          const discardedTitle = 'Native semantics discarded event';
+          final l = AppLocalizations.of(tester.element(editor));
+
+          await phase('event-text-and-keyboard-focus', () async {
+            await _enterTextAndCheckSemantics(
+              tester,
+              title,
+              savedTitle,
+              textSemanticsDiagnostics,
+            );
+            final beforeTab = FocusManager.instance.primaryFocus;
+            await tester.sendKeyEvent(
+              LogicalKeyboardKey.tab,
+              physicalKey: PhysicalKeyboardKey.tab,
+            );
+            await tester.pump();
+            expect(FocusManager.instance.primaryFocus, isNot(same(beforeTab)));
+          });
+          await phase('native-provider-exposes-editor-value', () async {
+            final probe = await _probeNative(tester, expectedText: savedTitle);
+            nativeProbes.add({
+              'phase': 'native-provider-exposes-editor-value',
+              ...probe,
+            });
+            expect(probe['matchedExpectedText'], greaterThan(0));
+            expect(probe['matchedEditableValues'], greaterThan(0));
+          });
+          await phase(
+            'draft-workspace-hide',
+            () => _mouseClick(
+              tester,
+              mouse,
+              _key('workspace-resource-mode-student'),
+            ),
+          );
+          expect(app.workspaceView.activeMode, AppMode.student);
+          expect(editor, findsNothing);
+          await phase(
+            'draft-workspace-return',
+            () => _mouseClick(
+              tester,
+              mouse,
+              _key('workspace-resource-mode-general'),
+            ),
+          );
+          expect(tester.state(editor), same(editorState));
+          expect(find.text(savedTitle), findsOneWidget);
+          await phase(
+            'settings-route-over-draft',
+            () =>
+                _mouseClick(tester, mouse, _key('workspace-resource-settings')),
+          );
+          expect(find.byType(SettingsPage), findsOneWidget);
+          await phase(
+            'settings-route-return',
+            () => _mouseClick(tester, mouse, find.byType(BackButton).first),
+          );
+          expect(tester.state(editor), same(editorState));
+          expect(find.text(savedTitle), findsOneWidget);
+
+          Finder cancelEditor() => find.descendant(
+            of: editor,
+            matching: find.widgetWithText(TextButton, l.cancel),
+          );
+          await phase(
+            'dirty-editor-cancel-opens-confirmation',
+            () => _mouseClick(tester, mouse, cancelEditor()),
+          );
+          expect(find.text(l.unsavedChangesMessage), findsOneWidget);
+          await phase('native-provider-exposes-discard-dialog', () async {
+            final probe = await _probeNative(
+              tester,
+              expectedText: l.unsavedChangesMessage,
+            );
+            nativeProbes.add({
+              'phase': 'native-provider-exposes-discard-dialog',
+              ...probe,
+            });
+            expect(probe['matchedExpectedText'], greaterThan(0));
+          });
+          await phase(
+            'cancel-discard-keeps-draft',
+            () => _mouseClick(
+              tester,
+              mouse,
+              find.widgetWithText(TextButton, l.cancel).hitTestable().last,
+            ),
+          );
+          expect(tester.state(editor), same(editorState));
+          expect(find.text(savedTitle), findsOneWidget);
+          expect(
+            app.generalView.schedules
+                .expand((calendar) => calendar.events)
+                .length,
+            originalEvents,
+          );
+          await phase(
+            'event-save-commits-and-retires-editor',
+            () => _mouseClick(
+              tester,
+              mouse,
+              find.descendant(
+                of: editor,
+                matching: find.widgetWithText(FilledButton, l.save),
+              ),
+            ),
+          );
+          expect(editor, findsNothing);
+          expect(
+            app.session.committedData.generalMode.schedules
+                .expand((calendar) => calendar.events)
+                .where((event) => event.title == savedTitle),
+            hasLength(1),
+          );
+
+          await phase(
+            'second-editor-open',
+            () => _mouseClick(tester, mouse, _key('general-add-event')),
+          );
+          await phase(
+            'second-editor-draft',
+            () => _enterTextAndCheckSemantics(
+              tester,
+              title,
+              discardedTitle,
+              textSemanticsDiagnostics,
+            ),
+          );
+          await phase(
+            'second-editor-cancel',
+            () => _mouseClick(tester, mouse, cancelEditor()),
+          );
+          expect(find.text(l.unsavedChangesMessage), findsOneWidget);
+          await phase(
+            'discard-retires-without-saving',
+            () =>
+                _mouseClick(tester, mouse, find.text(l.discardChangesAndExit)),
+          );
+          expect(editor, findsNothing);
+          final committed = app.session.committedData.generalMode.schedules
+              .expand((calendar) => calendar.events);
+          expect(committed.length, originalEvents + 1);
+          expect(
+            committed.any((event) => event.title == discardedTitle),
+            isFalse,
+          );
+          expect(app.studentView.selectedWeek, originalWeek);
+          expect(app.generalView.selectedDate, originalDate);
         } finally {
           try {
-            await app.persistence.flushPendingUiStateSaves();
+            if (pointerAdded) await mouse.removePointer();
+            await phase(
+              'native-tree-unmount',
+              () => tester.pumpWidget(const SizedBox.shrink()),
+            );
           } finally {
-            app.dispose();
-            layout.dispose();
-            developer.dispose();
-            binding.reportData = {
-              'nativeAccessibility': {
-                'completedInteractions': completed,
-                'platform': Platform.operatingSystem,
-                'processId': pid,
-                'nativeApi': 'MSAA',
-                'dart': Platform.version,
-                'profile': kProfileMode,
-                'revision': const String.fromEnvironment('SKED_A11Y_REVISION'),
-                'logicalWidth': logicalSize.width,
-                'logicalHeight': logicalSize.height,
-                'dpr': tester.view.devicePixelRatio,
-                'nativeWorkingDirectory': Directory.current.path,
-                'nativeProbePath': probePath,
-                'workspacePanelDisplayMode':
-                    app.settingsView.workspacePanelDisplayMode.value,
-                'semanticsUpdates': binding.audit.updateCount,
-                'engineSemanticsEnabled':
-                    binding.platformDispatcher.semanticsEnabled,
-                'nativeBootstrap': nativeBootstrap,
-                'textInputTransport': 'registered-flutter-test-client',
-                'textSemanticsDiagnostics': textSemanticsDiagnostics,
-                'graphErrors': binding.audit.errors,
-                'phases': phases,
-                'nativeProbes': nativeProbes,
-                'dataIsolation':
-                    'WorkspaceHarness memory data, secrets, sites, '
-                    'journal, notification runtime, developer and layout preferences',
-                'input':
-                    'Synthetic Flutter mouse and key events in a native Windows '
-                    'runner; actual native semantics serialization remains enabled',
-                'nativeLogCheckRequired': true,
-              },
-            };
+            try {
+              await app.persistence.flushPendingUiStateSaves();
+            } finally {
+              app.dispose();
+              layout.dispose();
+              developer.dispose();
+            }
           }
         }
+        await runAgentNativeAccessibility(
+          tester,
+          revision: const String.fromEnvironment('SKED_A11Y_REVISION'),
+          phase: (name, action) => phase(name, action, settle: false),
+          probe: (expected) => _probeNative(tester, expectedText: expected),
+          enterText: (field, value, diagnostics) => _enterTextAndCheckSemantics(
+            tester,
+            field,
+            value,
+            diagnostics,
+            settle: false,
+          ),
+          nativeProbes: nativeProbes,
+          scenarios: agentScenarios,
+        );
+        completed = true;
+      } finally {
+        binding.reportData = {
+          'nativeAccessibility': {
+            'completedInteractions': completed,
+            'platform': Platform.operatingSystem,
+            'processId': pid,
+            'nativeApi': 'MSAA',
+            'dart': Platform.version,
+            'profile': kProfileMode,
+            'revision': const String.fromEnvironment('SKED_A11Y_REVISION'),
+            'logicalWidth': logicalSize.width,
+            'logicalHeight': logicalSize.height,
+            'dpr': tester.view.devicePixelRatio,
+            'nativeWorkingDirectory': Directory.current.path,
+            'nativeProbePath': probePath,
+            'workspacePanelDisplayMode':
+                app.settingsView.workspacePanelDisplayMode.value,
+            'semanticsUpdates': binding.audit.updateCount,
+            'engineSemanticsEnabled':
+                binding.platformDispatcher.semanticsEnabled,
+            'nativeBootstrap': nativeBootstrap,
+            'textInputTransport': 'registered-flutter-test-client',
+            'textSemanticsDiagnostics': textSemanticsDiagnostics,
+            'agentScenarios': agentScenarios,
+            'graphErrors': binding.audit.errors,
+            'phases': phases,
+            'nativeProbes': nativeProbes,
+            'dataIsolation':
+                'WorkspaceHarness memory data, secrets, sites, '
+                'journal, notification runtime, developer and layout preferences; '
+                'AgentNativeSession explicit synthetic memory owners',
+            'input':
+                'Synthetic Flutter mouse and key events in a native Windows '
+                'runner; actual native semantics serialization remains enabled',
+            'nativeLogCheckRequired': true,
+          },
+        };
       }
     },
     semanticsEnabled: false,
-    timeout: const Timeout(Duration(minutes: 4)),
+    timeout: const Timeout(Duration(minutes: 12)),
   );
 }
