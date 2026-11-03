@@ -14,6 +14,7 @@ import 'package:sked/controllers/app_lifecycle.dart'
 import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
 import 'package:sked/screens/app_home_screen.dart';
 import 'package:sked/screens/settings_page.dart';
+import 'package:sked/screens/selective_backup_page.dart';
 import 'package:sked/screens/theme_settings_page.dart';
 import 'package:sked/widgets/expressive_motion.dart';
 import 'package:sked/widgets/settings_list.dart';
@@ -49,10 +50,14 @@ class _Storage extends WorkspaceMemoryStorage {
 
 class _RestoreGate {
   final ready = Completer<void>();
+  final entered = Completer<void>();
   var blocked = false;
 
   Future<void> run(Future<void> Function() action) async {
-    if (blocked) await ready.future;
+    if (blocked) {
+      if (!entered.isCompleted) entered.complete();
+      await ready.future;
+    }
     await action();
   }
 
@@ -74,8 +79,61 @@ Future<void> _pump(WidgetTester tester) async {
 Future<void> _open(WidgetTester tester, Finder finder) async {
   await tester.ensureVisible(finder);
   await _pump(tester);
-  await tester.tap(finder);
+  await tester.runAsync(() => tester.tap(finder));
   await _pump(tester);
+}
+
+Future<void> _runSelectiveAction(
+  WidgetTester tester,
+  AppRuntime provider,
+  Future<void> Function() action,
+) async {
+  final service = provider.backups.selective;
+  await tester.runAsync(() async {
+    final done = Completer<void>();
+    var started = service.isBusy;
+    void changed() {
+      if (service.isBusy) {
+        started = true;
+      } else if (started && !done.isCompleted) {
+        done.complete();
+      }
+    }
+
+    service.addListener(changed);
+    try {
+      await action();
+      await done.future.timeout(const Duration(seconds: 15));
+    } finally {
+      service.removeListener(changed);
+    }
+  });
+  await tester.pumpAndSettle();
+}
+
+Future<void> _reviewFileRestore(
+  WidgetTester tester,
+  AppRuntime provider,
+) async {
+  expect(find.byType(SelectiveBackupPage), findsOneWidget);
+  final l = AppLocalizations.of(
+    tester.element(find.byType(SelectiveBackupPage)),
+  );
+  await _open(tester, find.text(l.selectiveBackupSelectAll));
+  for (final group in ['student', 'general']) {
+    expect(
+      tester
+          .widget<CheckboxListTile>(_key('backup-object-settings:$group'))
+          .value,
+      isTrue,
+    );
+  }
+  final primary = _key('selective-backup-primary');
+  await tester.ensureVisible(primary);
+  await _pump(tester);
+  await _runSelectiveAction(tester, provider, () => tester.tap(primary));
+  expect(find.text(l.selectiveBackupConfirmTitle), findsOneWidget);
+  expect(provider.maintenance.isReserved, isFalse);
 }
 
 void _viewport(WidgetTester tester) {
@@ -129,25 +187,55 @@ AppData _colorData(AppData source, int color, String colorMode) =>
       ),
     );
 
-Future<(AppRuntime, _Storage, _RestoreGate)> _fixture({
+Future<(AppRuntime, _Storage, _RestoreGate)> _fixture(
+  WidgetTester tester, {
   AppMode mode = AppMode.student,
   String colorMode = themeColorModeColorful,
 }) async {
-  final seed = await workspaceProvider(mode: mode);
-  final storage = _Storage(
-    _colorData(seed.workspaceView.data, 0xff112233, colorMode),
-  );
-  seed.dispose();
-  final gate = _RestoreGate();
-  final provider = await workspaceProvider(
-    storage: storage,
-    workspaceMutationLock: gate.run,
-  );
-  addTearDown(() {
-    gate.release();
-    provider.dispose();
+  final fixture = (await tester.runAsync(() async {
+    final seed = await workspaceProvider(mode: mode);
+    final storage = _Storage(
+      _colorData(seed.workspaceView.data, 0xff112233, colorMode),
+    );
+    await seed.agent.quiesce();
+    await seed.backups.selective.close();
+    seed.dispose();
+    await seed.session.close();
+    final gate = _RestoreGate();
+    final provider = await workspaceProvider(
+      storage: storage,
+      workspaceMutationLock: gate.run,
+    );
+    await provider.backups.selective.inventory();
+    return (provider, storage, gate);
+  }))!;
+  final (provider, _, gate) = fixture;
+  addTearDown(() async {
+    await tester.pumpWidget(const SizedBox());
+    await tester.runAsync(() async {
+      final drained = Completer<void>();
+      void maintenanceChanged() {
+        if (!provider.maintenance.isReserved && !drained.isCompleted) {
+          drained.complete();
+        }
+      }
+
+      provider.maintenance.addListener(maintenanceChanged);
+      try {
+        gate.release();
+        maintenanceChanged();
+        await drained.future;
+      } finally {
+        provider.maintenance.removeListener(maintenanceChanged);
+      }
+      await provider.agent.quiesce();
+      await provider.backups.selective.close();
+      await provider.persistence.flushPendingUiStateSaves();
+      provider.dispose();
+      await provider.session.close();
+    });
   });
-  return (provider, storage, gate);
+  return fixture;
 }
 
 List<String> _colorRowKeys(AppRuntime provider, AppMode mode) => [
@@ -185,10 +273,10 @@ void main() {
   for (final mode in AppMode.values) {
     for (final fails in [false, true]) {
       testWidgets(
-        '$mode color editors wait for file restore and reopen after ${fails ? 'failure' : 'success'}',
+        '$mode color editors wait for selective file restore and reopen after ${fails ? 'recovery' : 'success'}',
         (tester) async {
           _viewport(tester);
-          final (provider, storage, gate) = await _fixture(mode: mode);
+          final (provider, storage, gate) = await _fixture(tester, mode: mode);
           final backup = _colorData(
             provider.workspaceView.data,
             0xffabcdef,
@@ -215,15 +303,24 @@ void main() {
               .onTap!;
           await _open(tester, _key('settings-app-backup'));
           await _open(tester, find.text(l10n.restoreBackupFileTitle));
-          expect(find.text(l10n.restoreBackupConfirmTitle), findsOneWidget);
+          await _reviewFileRestore(tester, provider);
           gate.blocked = true;
           final writesBeforeRestore = storage.writes;
+          final persistedBeforeRestore = storage.data.toJson();
           if (fails) storage.saveError = StateError('Expected restore failure');
-          await _open(
-            tester,
-            find.widgetWithText(FilledButton, l10n.restoreBackupConfirmAction),
-          );
+          await tester.runAsync(() async {
+            await tester.tap(
+              find.widgetWithText(FilledButton, l10n.selectiveBackupRestore),
+            );
+            await gate.entered.future.timeout(const Duration(seconds: 15));
+          });
+          await _pump(tester);
           expect(provider.maintenance.isReserved, isTrue);
+          // The accepted restore belongs to the application after leaving the
+          // object selector, so settings must keep its editing guard active.
+          await tester.pageBack();
+          await _pump(tester);
+          expect(find.byType(SelectiveBackupPage), findsNothing);
           expect(_status, findsOneWidget);
 
           staleSeedTap();
@@ -259,20 +356,63 @@ void main() {
             0xff112233,
           );
 
-          gate.release();
-          await tester.pumpAndSettle();
+          await _runSelectiveAction(
+            tester,
+            provider,
+            () async => gate.release(),
+          );
           expect(provider.maintenance.isReserved, isFalse);
           expect(_status, findsNothing);
           expect(_hex, findsNothing);
-          expect(
-            find.text(
-              fails
-                  ? l10n.restoreBackupFailureMessage
-                  : l10n.restoreBackupSuccessMessage,
-            ),
-            findsOneWidget,
-          );
-          final expected = fails ? 0xff112233 : 0xffabcdef;
+          if (fails) {
+            expect(provider.session.canWrite, isFalse);
+            expect(provider.backups.selective.recoveryPending, isTrue);
+            expect(storage.data.toJson(), persistedBeforeRestore);
+            expect(
+              storage.data.studentMode.colorfulUiColorValues.values,
+              everyElement(0xff112233),
+            );
+            expect(
+              storage.data.generalMode.colorfulUiColorValues.values,
+              everyElement(0xff112233),
+            );
+            expect(
+              provider.settingsView.courseNameColorValues.values,
+              everyElement(0xff112233),
+            );
+            expect(
+              provider.generalView.schedules.map(
+                (schedule) => schedule.colorValue,
+              ),
+              everyElement(0xff112233),
+            );
+            expect(
+              provider.settingsView.liveCourseOutlineColorValue,
+              0xff112233,
+            );
+            // The production home retires editing routes when the storage
+            // owner blocks writes. Recovery must use that real entry point.
+            expect(_key('data-recovery-screen'), findsOneWidget);
+            expect(find.byType(ThemeSettingsPage), findsNothing);
+            expect(find.byType(SettingsPage), findsNothing);
+            expect(storage.writes, writesBeforeRestore + 1);
+            final retry = _key('data-recovery-retry');
+            await tester.ensureVisible(retry);
+            await _runSelectiveAction(
+              tester,
+              provider,
+              () => tester.tap(retry),
+            );
+            expect(_key('data-recovery-screen'), findsNothing);
+            await _open(
+              tester,
+              find.byIcon(Icons.settings_outlined).hitTestable(),
+            );
+            await _open(tester, _key('settings-appearance-details'));
+          }
+          expect(provider.session.canWrite, isTrue);
+          expect(provider.backups.selective.recoveryPending, isFalse);
+          final expected = 0xffabcdef;
           expect(
             provider.studentView.data.colorfulUiColorValues.values,
             everyElement(expected),
@@ -302,10 +442,7 @@ void main() {
 
           final writesAfterRestore = storage.writes;
           await _open(tester, _key('theme-ui-color-primary'));
-          expect(
-            tester.widget<TextField>(_hex).controller!.text,
-            fails ? '#112233' : '#ABCDEF',
-          );
+          expect(tester.widget<TextField>(_hex).controller!.text, '#ABCDEF');
           await tester.enterText(_hex, '#345678');
           await _pump(tester);
           await _open(
@@ -335,6 +472,7 @@ void main() {
     (tester) async {
       _viewport(tester);
       final (provider, _, gate) = await _fixture(
+        tester,
         colorMode: themeColorModeSingle,
       );
       await tester.pumpWidget(
@@ -352,17 +490,21 @@ void main() {
       final outline = _key('theme-outline-settings-card');
       final staleOutlineTap = _tapIn(tester, outline).onTap!;
       gate.blocked = true;
-      final restoring = provider.backups.importJson(
-        encodeAppBackup(
-          _colorData(
-            provider.workspaceView.data,
-            0xffabcdef,
-            themeColorModeSingle,
+      late Future<int> restoring;
+      await tester.runAsync(() async {
+        restoring = provider.backups.importJson(
+          encodeAppBackup(
+            _colorData(
+              provider.workspaceView.data,
+              0xffabcdef,
+              themeColorModeSingle,
+            ),
+            [],
           ),
-          [],
-        ),
-        mode: AppImportMode.replaceAll,
-      );
+          mode: AppImportMode.replaceAll,
+        );
+        await gate.entered.future.timeout(const Duration(seconds: 15));
+      });
       await _pump(tester);
       expect(provider.maintenance.isReserved, isTrue);
       expect(_tapIn(tester, custom).onTap, isNull);
@@ -379,9 +521,11 @@ void main() {
         ),
         findsNothing,
       );
-      gate.release();
+      await tester.runAsync(() async {
+        gate.release();
+        await restoring;
+      });
       await tester.pumpAndSettle();
-      await restoring;
       expect(provider.studentView.data.themeSeedColorValue, 0xffabcdef);
       await _open(tester, custom);
       expect(tester.widget<TextField>(_hex).controller!.text, '#ABCDEF');

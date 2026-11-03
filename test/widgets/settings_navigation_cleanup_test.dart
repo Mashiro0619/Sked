@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/school_sites_page.dart';
 import 'package:sked/services/school_site_service.dart';
@@ -112,11 +113,13 @@ void main() {
 
         expect(backup, findsOneWidget);
         await _open(t, backup);
-        expect(find.text('Restore from JSON file'), findsOneWidget);
-        expect(find.text('Paste backup JSON'), findsOneWidget);
-        expect(find.text('Share backup file'), findsOneWidget);
-        expect(find.text('Save backup file'), findsOneWidget);
-        expect(find.text('Copy backup text'), findsOneWidget);
+        final l = AppLocalizations.of(t.element(find.byType(SettingsPage)));
+        expect(find.text(l.selectiveBackupTitle), findsOneWidget);
+        expect(find.text(l.restoreBackupFileTitle), findsOneWidget);
+        expect(find.text(l.restoreBackupTextTitle), findsOneWidget);
+        expect(find.text(l.shareBackupTitle), findsOneWidget);
+        expect(find.text(l.saveBackupTitle), findsOneWidget);
+        expect(find.text(l.copyBackupTitle), findsOneWidget);
         expect(t.takeException(), isNull);
       },
       variant: TargetPlatformVariant.only(platform),

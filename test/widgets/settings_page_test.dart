@@ -1592,15 +1592,14 @@ void main() {
     await tester.tap(backupEntry);
     await tester.pumpAndSettle();
 
-    expect(find.text('Restore from JSON file'), findsOneWidget);
-    expect(find.text('Paste backup JSON'), findsOneWidget);
-    expect(find.text('Share backup file'), findsOneWidget);
-    expect(find.text('Save backup file'), findsOneWidget);
-    expect(find.text('Copy backup text'), findsOneWidget);
-    expect(
-      find.textContaining('are not written to backup files'),
-      findsOneWidget,
-    );
+    final l = AppLocalizations.of(tester.element(find.byType(SettingsPage)));
+    expect(find.text(l.selectiveBackupTitle), findsOneWidget);
+    expect(find.text(l.restoreBackupFileTitle), findsOneWidget);
+    expect(find.text(l.restoreBackupTextTitle), findsOneWidget);
+    expect(find.text(l.shareBackupTitle), findsOneWidget);
+    expect(find.text(l.saveBackupTitle), findsOneWidget);
+    expect(find.text(l.copyBackupTitle), findsOneWidget);
+    expect(find.text(l.appBackupSheetSubtitle), findsOneWidget);
   });
 
   testWidgets('app backup sheet exposes historical recovery artifacts', (
@@ -1619,11 +1618,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(backupEntry);
     await tester.pumpAndSettle();
-    await tester.drag(find.byType(ListView).last, const Offset(0, -400));
-    await tester.pumpAndSettle();
-
-    final recoveryEntry = find.text('Show recovery files and locations');
+    final l = AppLocalizations.of(tester.element(find.byType(SettingsPage)));
+    final recoveryEntry = find.text(l.dataRecoveryArtifactsAction);
     expect(recoveryEntry, findsOneWidget);
+    await tester.ensureVisible(recoveryEntry);
+    await tester.pumpAndSettle();
+    expect(recoveryEntry.hitTestable(), findsOneWidget);
     await tester.tap(recoveryEntry);
     await tester.pumpAndSettle();
 
@@ -1647,10 +1647,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(backupEntry);
     await tester.pumpAndSettle();
-    await tester.drag(find.byType(ListView).last, const Offset(0, -400));
+    final l = AppLocalizations.of(tester.element(find.byType(SettingsPage)));
+    final recoveryEntry = find.text(l.dataRecoveryArtifactsAction);
+    await tester.ensureVisible(recoveryEntry);
     await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Show recovery files and locations'));
+    expect(recoveryEntry.hitTestable(), findsOneWidget);
+    await tester.tap(recoveryEntry);
     await tester.pumpAndSettle();
 
     expect(find.text(artifact), findsOneWidget);
