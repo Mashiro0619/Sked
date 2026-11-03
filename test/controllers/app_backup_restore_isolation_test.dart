@@ -137,12 +137,72 @@ class _MemoryBackupRestoreJournal extends AppBackupRestoreJournal {
 AppData _appData(String localeCode) =>
     buildInitialAppData(buildDefaultPeriodTimes(), localeCode: localeCode);
 
+/// A failed assertion must not leave a test-held save blocking the real
+/// process/file runtime lock and unrelated suites. The original futures stay
+/// available to the tests' outcome assertions; these observers only drain both
+/// successful and failed work during cleanup.
+class _PendingRestoreWork {
+  final _gates = <Completer<void>>[];
+  final _settled = <Future<void>>[];
+  AppRuntime? provider;
+  Future<void>? _closing;
+
+  Completer<void> gate() {
+    final gate = Completer<void>();
+    _gates.add(gate);
+    return gate;
+  }
+
+  void release(Completer<void> gate) {
+    if (!gate.isCompleted) gate.complete();
+  }
+
+  Future<T> track<T>(Future<T> operation) {
+    _settled.add(
+      operation.then<void>((_) {}, onError: (Object _, StackTrace _) {}),
+    );
+    return operation;
+  }
+
+  Future<void> close() => _closing ??= _close();
+
+  Future<void> _close() async {
+    for (final gate in _gates) {
+      release(gate);
+    }
+    var completed = 0;
+    while (completed < _settled.length) {
+      final count = _settled.length;
+      await Future.wait(_settled.sublist(completed, count));
+      completed = count;
+    }
+    final app = provider;
+    if (app != null) {
+      try {
+        await app.shutdown.quiesce();
+      } finally {
+        app.dispose();
+        await app.session.close();
+      }
+    }
+  }
+}
+
 Future<AppRuntime> _provider({
+  required _PendingRestoreWork work,
   required _MemoryTimetableStorage appStorage,
   required _MemorySchoolSiteStore siteStore,
   required _MemorySecretStore secrets,
   required _MemoryBackupRestoreJournal journal,
 }) async {
+  // These cases pause the restore's site write, not a legacy-list migration.
+  expect(
+    decodeSchoolSiteStorageSnapshot(
+      siteStore.source!,
+      requireStableIds: true,
+    ).needsIdentityMigration,
+    isFalse,
+  );
   final provider = AppRuntime(
     storage: appStorage,
     schoolSiteService: SchoolSiteService(store: siteStore),
@@ -150,6 +210,7 @@ Future<AppRuntime> _provider({
     backupRestoreJournal: journal,
     systemLocaleCodeResolver: () => 'en',
   );
+  work.provider = provider;
   await provider.lifecycle.load();
   return provider;
 }
@@ -166,194 +227,240 @@ void main() {
   ];
 
   test('a queued restore cannot replace a recovery-pending journal', () async {
-    final appStorage = _MemoryTimetableStorage(_appData('en'));
-    final firstSaveGate = Completer<void>();
-    final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(originalSites))
-      ..saveGates.add(firstSaveGate)
-      ..saveFailures.add(
-        const SchoolSiteStoreStateUnknownException(
-          writeError: 'write failed',
-          rollbackError: 'rollback failed',
+    final work = _PendingRestoreWork();
+    addTearDown(work.close);
+    try {
+      final appStorage = _MemoryTimetableStorage(_appData('en'));
+      final firstSaveGate = work.gate();
+      final siteStore =
+          _MemorySchoolSiteStore(encodeSchoolSiteStorageSnapshot(originalSites))
+            ..saveGates.add(firstSaveGate)
+            ..saveFailures.add(
+              const SchoolSiteStoreStateUnknownException(
+                writeError: 'write failed',
+                rollbackError: 'rollback failed',
+              ),
+            );
+      final journal = _MemoryBackupRestoreJournal();
+      final provider = await _provider(
+        work: work,
+        appStorage: appStorage,
+        siteStore: siteStore,
+        secrets: _MemorySecretStore('sk-old'),
+        journal: journal,
+      );
+      final firstSaveStarted = siteStore.saveStarted.stream.first;
+
+      final firstRestore = work.track(
+        provider.backups.importJson(
+          encodeAppBackup(_appData('zh'), firstSites),
+          mode: AppImportMode.replaceAll,
         ),
       );
-    final journal = _MemoryBackupRestoreJournal();
-    final provider = await _provider(
-      appStorage: appStorage,
-      siteStore: siteStore,
-      secrets: _MemorySecretStore('sk-old'),
-      journal: journal,
-    );
-    final firstSaveStarted = siteStore.saveStarted.stream.first;
-
-    final firstRestore = provider.backups.importJson(
-      encodeAppBackup(_appData('zh'), firstSites),
-      mode: AppImportMode.replaceAll,
-    );
-    await firstSaveStarted;
-    final secondRestore = provider.backups.importJson(
-      encodeAppBackup(_appData('ja'), secondSites),
-      mode: AppImportMode.replaceAll,
-    );
-
-    firstSaveGate.complete();
-    await expectLater(
-      firstRestore,
-      throwsA(
-        isA<AppBackupRestoreException>().having(
-          (error) => error.recoveryPending,
-          'recoveryPending',
-          isTrue,
+      await firstSaveStarted;
+      final secondRestore = work.track(
+        provider.backups.importJson(
+          encodeAppBackup(_appData('ja'), secondSites),
+          mode: AppImportMode.replaceAll,
         ),
-      ),
-    );
-    await expectLater(
-      secondRestore,
-      throwsA(isA<RecoveryWriteBlockedException>()),
-    );
+      );
 
-    expect(provider.session.canWrite, isFalse);
-    expect(journal.source, isNotNull);
-    final pending = (await journal.load()).backup!;
-    expect(pending.appData.localeCode, 'zh');
-    expect(pending.schoolSites.single.name, 'First University');
+      work.release(firstSaveGate);
+      await expectLater(
+        firstRestore,
+        throwsA(
+          isA<AppBackupRestoreException>().having(
+            (error) => error.recoveryPending,
+            'recoveryPending',
+            isTrue,
+          ),
+        ),
+      );
+      await expectLater(
+        secondRestore,
+        throwsA(isA<RecoveryWriteBlockedException>()),
+      );
+
+      expect(provider.session.canWrite, isFalse);
+      expect(journal.source, isNotNull);
+      final pending = (await journal.load()).backup!;
+      expect(pending.appData.localeCode, 'zh');
+      expect(pending.schoolSites.single.name, 'First University');
+    } finally {
+      await work.close();
+    }
   });
 
   test(
     'provider mutations are rejected while a restore is in progress',
     () async {
-      final appStorage = _MemoryTimetableStorage(_appData('en'));
-      final siteSaveGate = Completer<void>();
-      final siteStore = _MemorySchoolSiteStore(encodeSchoolSites(originalSites))
-        ..saveGates.add(siteSaveGate);
-      final secrets = _MemorySecretStore('sk-old');
-      final provider = await _provider(
-        appStorage: appStorage,
-        siteStore: siteStore,
-        secrets: secrets,
-        journal: _MemoryBackupRestoreJournal(),
-      );
-      final siteSaveStarted = siteStore.saveStarted.stream.first;
+      final work = _PendingRestoreWork();
+      addTearDown(work.close);
+      try {
+        final appStorage = _MemoryTimetableStorage(_appData('en'));
+        final siteSaveGate = work.gate();
+        final siteStore = _MemorySchoolSiteStore(
+          encodeSchoolSiteStorageSnapshot(originalSites),
+        )..saveGates.add(siteSaveGate);
+        final secrets = _MemorySecretStore('sk-old');
+        final provider = await _provider(
+          work: work,
+          appStorage: appStorage,
+          siteStore: siteStore,
+          secrets: secrets,
+          journal: _MemoryBackupRestoreJournal(),
+        );
+        final siteSaveStarted = siteStore.saveStarted.stream.first;
 
-      final restore = provider.backups.importJson(
-        encodeAppBackup(_appData('zh'), firstSites),
-        mode: AppImportMode.replaceAll,
-      );
-      await siteSaveStarted;
-      final savesDuringRestore = appStorage.saveCount;
+        final restore = work.track(
+          provider.backups.importJson(
+            encodeAppBackup(_appData('zh'), firstSites),
+            mode: AppImportMode.replaceAll,
+          ),
+        );
+        await siteSaveStarted;
+        final savesDuringRestore = appStorage.saveCount;
 
-      await expectLater(
-        provider.settingsCommands.updateLocaleCode('ja'),
-        throwsA(isA<AppBackupRestoreInProgressException>()),
-      );
-      await expectLater(
-        provider.settingsCommands.updateThemeMode('dark'),
-        throwsA(isA<AppBackupRestoreInProgressException>()),
-      );
-      await expectLater(
-        provider.schoolImportSecrets.update('sk-concurrent'),
-        throwsA(isA<AppBackupRestoreInProgressException>()),
-      );
-      await expectLater(
-        provider.backups.importJson(
-          encodeAppDataEnvelope(_appData('ja')),
-          mode: AppImportMode.addAll,
-        ),
-        throwsA(isA<AppBackupRestoreInProgressException>()),
-      );
-      await expectLater(
-        provider.lifecycle.retryStorageLoad(),
-        throwsA(isA<AppBackupRestoreInProgressException>()),
-      );
+        await expectLater(
+          provider.settingsCommands.updateLocaleCode('ja'),
+          throwsA(isA<AppBackupRestoreInProgressException>()),
+        );
+        await expectLater(
+          provider.settingsCommands.updateThemeMode('dark'),
+          throwsA(isA<AppBackupRestoreInProgressException>()),
+        );
+        await expectLater(
+          provider.schoolImportSecrets.update('sk-concurrent'),
+          throwsA(isA<AppBackupRestoreInProgressException>()),
+        );
+        await expectLater(
+          provider.backups.importJson(
+            encodeAppDataEnvelope(_appData('ja')),
+            mode: AppImportMode.addAll,
+          ),
+          throwsA(isA<AppBackupRestoreInProgressException>()),
+        );
+        await expectLater(
+          provider.lifecycle.retryStorageLoad(),
+          throwsA(isA<AppBackupRestoreInProgressException>()),
+        );
 
-      expect(provider.settingsView.localeCode, 'zh');
-      expect(provider.settingsView.customSchoolImportApiKey, 'sk-old');
-      expect(appStorage.saveCount, savesDuringRestore);
+        expect(provider.settingsView.localeCode, 'zh');
+        expect(provider.settingsView.customSchoolImportApiKey, 'sk-old');
+        expect(appStorage.saveCount, savesDuringRestore);
 
-      siteSaveGate.complete();
-      await restore;
+        work.release(siteSaveGate);
+        await restore;
 
-      expect(provider.settingsView.localeCode, 'zh');
-      expect(appStorage.data!.localeCode, 'zh');
-      expect(
-        decodeSchoolSitesStrict(siteStore.source!).single.name,
-        'First University',
-      );
-      expect(secrets.value, isEmpty);
+        expect(provider.settingsView.localeCode, 'zh');
+        expect(appStorage.data!.localeCode, 'zh');
+        expect(
+          decodeSchoolSitesStrict(siteStore.source!).single.name,
+          'First University',
+        );
+        expect(secrets.value, isEmpty);
+      } finally {
+        await work.close();
+      }
     },
   );
 
   test(
     'restore reservation lets an accepted debounced save roll back',
     () async {
-      final saveGate = Completer<void>();
-      final journalGate = Completer<void>();
-      final appStorage = _MemoryTimetableStorage(_appData('en'))
-        ..saveGates.add(saveGate)
-        ..saveFailures.add(Exception('accepted UI save failed'));
-      final journal = _MemoryBackupRestoreJournal()
-        ..writeGates.add(journalGate);
-      final provider = await _provider(
-        appStorage: appStorage,
-        siteStore: _MemorySchoolSiteStore(encodeSchoolSites(originalSites)),
-        secrets: _MemorySecretStore('sk-old'),
-        journal: journal,
-      );
-      final persistedDate = provider.generalView.selectedDate;
-      await provider.generalNavigation.setSelectedDate(
-        DateTime(
-          persistedDate.year,
-          persistedDate.month,
-          persistedDate.day + 1,
-        ),
-      );
-      final saveStarted = appStorage.saveStarted.stream.first;
-      final journalWriteStarted = journal.writeStarted.stream.first;
+      final work = _PendingRestoreWork();
+      addTearDown(work.close);
+      try {
+        final saveGate = work.gate();
+        final journalGate = work.gate();
+        final appStorage = _MemoryTimetableStorage(_appData('en'))
+          ..saveGates.add(saveGate)
+          ..saveFailures.add(Exception('accepted UI save failed'));
+        final journal = _MemoryBackupRestoreJournal()
+          ..writeGates.add(journalGate);
+        final provider = await _provider(
+          work: work,
+          appStorage: appStorage,
+          siteStore: _MemorySchoolSiteStore(
+            encodeSchoolSiteStorageSnapshot(originalSites),
+          ),
+          secrets: _MemorySecretStore('sk-old'),
+          journal: journal,
+        );
+        final persistedDate = provider.generalView.selectedDate;
+        await provider.generalNavigation.setSelectedDate(
+          DateTime(
+            persistedDate.year,
+            persistedDate.month,
+            persistedDate.day + 1,
+          ),
+        );
+        final saveStarted = appStorage.saveStarted.stream.first;
+        final journalWriteStarted = journal.writeStarted.stream.first;
 
-      final restore = provider.backups.importJson(
-        encodeAppBackup(_appData('zh'), firstSites),
-        mode: AppImportMode.replaceAll,
-      );
-      await saveStarted;
-      expect(appStorage.saveCount, 1);
-      expect(appStorage.saveFailures, hasLength(1));
-      saveGate.complete();
-      await journalWriteStarted;
+        final restore = work.track(
+          provider.backups.importJson(
+            encodeAppBackup(_appData('zh'), firstSites),
+            mode: AppImportMode.replaceAll,
+          ),
+        );
+        await saveStarted;
+        expect(appStorage.saveCount, 1);
+        expect(appStorage.saveFailures, hasLength(1));
+        work.release(saveGate);
+        await journalWriteStarted;
 
-      expect(provider.generalView.selectedDate, persistedDate);
-      journalGate.complete();
-      await restore;
+        expect(provider.generalView.selectedDate, persistedDate);
+        work.release(journalGate);
+        await restore;
 
-      expect(provider.settingsView.localeCode, 'zh');
-      expect(appStorage.data!.localeCode, 'zh');
+        expect(provider.settingsView.localeCode, 'zh');
+        expect(appStorage.data!.localeCode, 'zh');
+      } finally {
+        await work.close();
+      }
     },
   );
 
   test('restore reservation lets an accepted secret save roll back', () async {
-    final writeGate = Completer<void>();
-    final secrets = _MemorySecretStore('sk-old')
-      ..writeGates.add(writeGate)
-      ..writeFailures.add(Exception('accepted secret save failed'));
-    final provider = await _provider(
-      appStorage: _MemoryTimetableStorage(_appData('en')),
-      siteStore: _MemorySchoolSiteStore(encodeSchoolSites(originalSites)),
-      secrets: secrets,
-      journal: _MemoryBackupRestoreJournal(),
-    );
-    final writeStarted = secrets.writeStarted.stream.first;
-    final secretSave = provider.schoolImportSecrets.update('sk-new');
-    await writeStarted;
+    final work = _PendingRestoreWork();
+    addTearDown(work.close);
+    try {
+      final writeGate = work.gate();
+      final secrets = _MemorySecretStore('sk-old')
+        ..writeGates.add(writeGate)
+        ..writeFailures.add(Exception('accepted secret save failed'));
+      final provider = await _provider(
+        work: work,
+        appStorage: _MemoryTimetableStorage(_appData('en')),
+        siteStore: _MemorySchoolSiteStore(
+          encodeSchoolSiteStorageSnapshot(originalSites),
+        ),
+        secrets: secrets,
+        journal: _MemoryBackupRestoreJournal(),
+      );
+      final writeStarted = secrets.writeStarted.stream.first;
+      final secretSave = work.track(
+        provider.schoolImportSecrets.update('sk-new'),
+      );
+      await writeStarted;
 
-    final restore = provider.backups.importJson(
-      encodeAppBackup(_appData('zh'), firstSites),
-      mode: AppImportMode.replaceAll,
-    );
-    writeGate.complete();
+      final restore = work.track(
+        provider.backups.importJson(
+          encodeAppBackup(_appData('zh'), firstSites),
+          mode: AppImportMode.replaceAll,
+        ),
+      );
+      work.release(writeGate);
 
-    await expectLater(secretSave, throwsStateError);
-    await restore;
+      await expectLater(secretSave, throwsStateError);
+      await restore;
 
-    expect(provider.settingsView.localeCode, 'zh');
-    expect(provider.settingsView.customSchoolImportApiKey, isEmpty);
-    expect(secrets.value, isEmpty);
+      expect(provider.settingsView.localeCode, 'zh');
+      expect(provider.settingsView.customSchoolImportApiKey, isEmpty);
+      expect(secrets.value, isEmpty);
+    } finally {
+      await work.close();
+    }
   });
 }

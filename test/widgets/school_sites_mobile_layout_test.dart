@@ -24,7 +24,7 @@ const _longUrl =
 
 class _SiteStore extends SchoolSiteStore {
   _SiteStore(List<SchoolSite> sites)
-    : source = encodeSchoolSites(sites),
+    : source = encodeSchoolSiteStorageSnapshot(sites),
       super.base();
 
   String source;
