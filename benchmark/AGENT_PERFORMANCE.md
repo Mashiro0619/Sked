@@ -208,7 +208,7 @@ Keep Windows host JIT and emulator/device profile populations separate.
 | Requirement | Existing entry | Relationship to this target |
 | --- | --- | --- |
 | Fresh Windows process, first/ready/response raster and four timestamped RSS points | [STARTUP.md](STARTUP.md), `startup_main.dart`, `run_startup_windows.ps1` | Retains its native clock/window/lock proof. This target does not replace or extend its readiness contract. |
-| Native in-process workspace/settings engine frame timing | [UI_PERFORMANCE.md](UI_PERFORMANCE.md), `integration_test/ui_performance_benchmark_test.dart` | Uses real FrameTiming. Adding an Agent open/long-history scroll journey and accepting it on Windows is a separate platform task. |
+| Native in-process workspace/settings and Agent transcript engine frame timing | [UI_PERFORMANCE.md](UI_PERFORMANCE.md), [AGENT_UI_PERFORMANCE.md](AGENT_UI_PERFORMANCE.md) | Separate real FrameTiming protocols cover the workspace and Agent open/long-history journeys. Native execution and the three-process cohorts remain distinct from this host JIT target. |
 | Ordinary durable course/event saves, import/export/restore | [DATA_OPERATIONS.md](DATA_OPERATIONS.md) | Reuse the existing operation matrix rather than duplicating it as Agent work. |
 | Eligible preference save coalescing | [README.md](README.md#durable-preference-write-batching) | Existing one/five-disjoint/five-same-field controls remain authoritative for that optimization. |
 | Real provider tool behavior and new history/attachment/knowledge flows | Agent acceptance and explicit real-model synthetic scenarios | Functional evidence, independent of this fully offline host timing protocol. |
