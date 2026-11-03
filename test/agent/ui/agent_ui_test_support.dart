@@ -104,6 +104,7 @@ Future<void> mountAgentUi(
   double scale = 1,
   double keyboard = 0,
   Locale locale = const Locale('en'),
+  Brightness brightness = Brightness.light,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = size;
@@ -114,7 +115,7 @@ Future<void> mountAgentUi(
       supportedLocales: AppLocalizations.supportedLocales,
       theme: buildAppTheme(
         seedColor: const Color(0xff6750a4),
-        brightness: Brightness.light,
+        brightness: brightness,
         themeColorMode: 'solid',
         colorfulUiColorValues: const {},
       ),

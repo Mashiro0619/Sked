@@ -172,7 +172,8 @@ class _AgentConversationHostState extends State<AgentConversationHost> {
       repository: application.conversations,
       showTitle: false,
       fullWorkspace: widget.fullWorkspace,
-      modelPickerBuilder: (conversation, _) => AgentModelPicker(
+      modelPickerBuilder: (conversation, _, layout) => AgentModelPicker(
+        layoutBuilder: layout,
         conversationId: conversation.id,
         delegate: application.runtime,
         enabled: !conversation.archived,

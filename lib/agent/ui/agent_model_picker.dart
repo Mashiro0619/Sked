@@ -1,13 +1,21 @@
 import 'dart:async';
+import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../models/agent_settings.dart';
 import '../../theme/sked_expressive_theme.dart';
-import '../../widgets/sked_popup_menu.dart';
+import '../../theme/sked_menu_style.dart';
+import '../../widgets/sked_menu_item_content.dart';
 import 'agent_model_labels.dart';
 import 'agent_ui_delegate.dart';
+
+typedef AgentModelPickerLayoutBuilder = Widget Function(
+  Widget control,
+  Widget status,
+);
 
 bool agentConversationModelReady(AgentUiState state, String conversationId) {
   final selection = state.selectionFor(conversationId);
@@ -19,28 +27,54 @@ bool agentConversationModelReady(AgentUiState state, String conversationId) {
       );
 }
 
-/// Changes only the saved choice for the next request. The runtime owns the
-/// current request snapshot, queued input repair and explicit continuation.
+/// Persists a model/effort pair for the next request. Dragging only previews;
+/// the runtime continues to own every active request snapshot.
 class AgentModelPicker extends StatefulWidget {
   const AgentModelPicker({
     super.key,
     required this.conversationId,
     required this.delegate,
     this.enabled = true,
+    this.layoutBuilder,
   });
-
   final String conversationId;
   final AgentUiDelegate delegate;
   final bool enabled;
-
+  final AgentModelPickerLayoutBuilder? layoutBuilder;
   @override
   State<AgentModelPicker> createState() => _AgentModelPickerState();
 }
 
-class _AgentModelPickerState extends State<AgentModelPicker> {
-  bool _saving = false;
-  bool _failed = false;
+class _AgentModelPickerState extends State<AgentModelPicker>
+    with WidgetsBindingObserver {
+  final _menu = MenuController();
+  final _focus = FocusNode(debugLabel: 'Agent model and effort');
+  final _sliderFocus = FocusNode(debugLabel: 'Agent thinking effort');
+  bool _saving = false, _failed = false, _modelsVisible = false;
   int _generation = 0;
+  int? _openGeneration;
+  Object? _openToken;
+  List<AgentModelConfig>? _openModels;
+  AgentReasoningEffort? _preview;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _focus.dispose();
+    _sliderFocus.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeMetrics() {
+    _invalidateMenu();
+  }
 
   @override
   void didUpdateWidget(AgentModelPicker oldWidget) {
@@ -50,11 +84,60 @@ class _AgentModelPickerState extends State<AgentModelPicker> {
       _generation++;
       _saving = false;
       _failed = false;
+      _invalidateMenu();
+    } else if (!widget.enabled) {
+      _invalidateMenu();
     }
   }
 
-  Future<void> _select(AgentModelSelection selection) async {
-    if (_saving || !widget.enabled) return;
+  void _invalidateMenu() {
+    _openGeneration = null;
+    _openToken = null;
+    _openModels = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_menu.isOpen) {
+        _menu.close();
+      } else if (_preview != null) {
+        setState(() => _preview = null);
+      }
+    });
+  }
+
+  bool get _sessionCurrent {
+    final state = widget.delegate.state.value;
+    return mounted &&
+        widget.enabled &&
+        state.enabled &&
+        !state.maintenance &&
+        _openGeneration == _generation &&
+        listEquals(_openModels, state.availableModels);
+  }
+
+  bool _isOpenSession(Object? token) =>
+      token != null &&
+      identical(token, _openToken) &&
+      _menu.isOpen &&
+      _sessionCurrent;
+
+  Future<void> _select(
+    AgentModelSelection selection, {
+    required Object? openToken,
+  }) async {
+    if (_saving || !_isOpenSession(openToken)) return;
+    final state = widget.delegate.state.value;
+    if (!state.availableModels.any(
+      (m) =>
+          m.id == selection.modelId &&
+          m.reasoningEfforts.contains(selection.reasoningEffort),
+    )) {
+      return;
+    }
+    if (state.selectionFor(widget.conversationId) == selection &&
+        !state.runFor(widget.conversationId).requiresModelSelection) {
+      setState(() => _preview = null);
+      return;
+    }
     final generation = _generation;
     final delegate = widget.delegate;
     final id = widget.conversationId;
@@ -67,29 +150,14 @@ class _AgentModelPickerState extends State<AgentModelPicker> {
     } catch (_) {
       if (mounted && generation == _generation) setState(() => _failed = true);
     } finally {
-      if (mounted && generation == _generation) setState(() => _saving = false);
+      if (mounted && generation == _generation) {
+        setState(() {
+          _saving = false;
+          _preview = null;
+        });
+      }
     }
   }
-
-  Widget _label(BuildContext context, String label, IconData icon) => Material(
-    color: Theme.of(context).colorScheme.surfaceContainerHigh,
-    shape: skedShapeSchemeOf(context).selection,
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis),
-          ),
-          const SizedBox(width: 2),
-          const Icon(Icons.expand_more_rounded, size: 18),
-        ],
-      ),
-    ),
-  );
 
   @override
   Widget build(BuildContext context) => ValueListenableBuilder<AgentUiState>(
@@ -98,131 +166,376 @@ class _AgentModelPickerState extends State<AgentModelPicker> {
       final l = AppLocalizations.of(context);
       final selection = state.selectionFor(widget.conversationId);
       final model = state.availableModels
-          .where((item) => item.id == selection?.modelId)
+          .where((m) => m.id == selection?.modelId)
           .firstOrNull;
-      final run = state.runFor(widget.conversationId);
       final ready = agentConversationModelReady(state, widget.conversationId);
       final enabled =
           widget.enabled && state.enabled && !state.maintenance && !_saving;
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          LayoutBuilder(
-            builder: (context, constraints) => Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: constraints.maxWidth),
-                  child: SkedPopupMenuButton<String>(
-                    key: const ValueKey('agent-model-picker'),
-                    tooltip: l.agentModelSelection,
-                    enabled: enabled && state.availableModels.isNotEmpty,
-                    initialValue: model?.id,
-                    onSelected: (id) {
-                      final selected = state.availableModels
-                          .where((item) => item.id == id)
-                          .firstOrNull;
-                      if (selected == null) return;
-                      final effort = selection?.reasoningEffort;
-                      unawaited(
-                        _select(
-                          AgentModelSelection(
-                            modelId: id,
-                            reasoningEffort:
-                                effort != null &&
-                                    selected.reasoningEfforts.contains(effort)
-                                ? effort
-                                : selected.defaultReasoningEffort,
+      if (_openGeneration != null && !_sessionCurrent) _invalidateMenu();
+      final menuToken = _openToken;
+      final menuStyle = SkedMenuStyle.of(context);
+      final bounds = SkedMenuStyle.constraintsFor(
+        context,
+        requested: const BoxConstraints(maxWidth: 320),
+      );
+      final width = bounds.maxWidth;
+      final height = bounds.maxHeight;
+      final efforts = [
+        for (final effort in AgentReasoningEffort.values)
+          if (model?.reasoningEfforts.contains(effort) == true) effort,
+      ];
+      final effort = _preview ?? selection?.reasoningEffort;
+      final effortLabel = effort == null
+          ? l.agentThinkingEffort
+          : agentReasoningEffortLabel(l, effort);
+      final modelLabel = selection?.modelId ?? l.agentChooseModel;
+      final control = MenuAnchor(
+        controller: _menu,
+        childFocusNode: _focus,
+        animated: SkedMotionPolicy.of(context).spatialAnimationsEnabled,
+        style: menuStyle.menuStyle.copyWith(
+          maximumSize: WidgetStatePropertyAll(Size(width, height)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        onClose: () {
+          _openGeneration = null;
+          _openToken = null;
+          _openModels = null;
+          if (mounted) setState(() => _preview = null);
+        },
+        menuChildren: [
+          SizedBox(
+            width: width,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: math.max(0, height - menuStyle.padding.vertical),
+              ),
+              child: SingleChildScrollView(
+                primary: false,
+                child: _modelsVisible
+                    ? Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          MenuItemButton(
+                            style: menuStyle.itemStyle(),
+                            closeOnActivate: false,
+                            onPressed: _saving
+                                ? null
+                                : () {
+                                    if (_isOpenSession(menuToken)) {
+                                      setState(() => _modelsVisible = false);
+                                    }
+                                  },
+                            leadingIcon: const Icon(Icons.arrow_back_rounded),
+                            child: Text(l.agentModelSelection),
                           ),
-                        ),
-                      );
-                    },
-                    itemBuilder: (context) => [
-                      for (final item in state.availableModels)
-                        PopupMenuItem(
-                          key: ValueKey('agent-model-choice-${item.id}'),
-                          value: item.id,
-                          child: Text(item.id),
-                        ),
-                    ],
-                    child: _label(
-                      context,
-                      selection?.modelId ?? l.agentChooseModel,
-                      Icons.auto_awesome_outlined,
-                    ),
-                  ),
-                ),
-                ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: constraints.maxWidth),
-                  child: SkedPopupMenuButton<AgentReasoningEffort>(
-                    key: const ValueKey('agent-effort-picker'),
-                    tooltip: l.agentThinkingEffort,
-                    enabled: enabled && model != null,
-                    initialValue: ready ? selection?.reasoningEffort : null,
-                    onSelected: (effort) {
-                      if (model != null) {
-                        unawaited(
-                          _select(
-                            AgentModelSelection(
-                              modelId: model.id,
-                              reasoningEffort: effort,
+                          for (final item in state.availableModels)
+                            MenuItemButton(
+                              key: ValueKey('agent-model-choice-${item.id}'),
+                              style: menuStyle.itemStyle(
+                                selected: item.id == selection?.modelId,
+                              ),
+                              closeOnActivate: false,
+                              onPressed: enabled
+                                  ? () {
+                                      if (!_isOpenSession(menuToken)) return;
+                                      setState(() => _modelsVisible = false);
+                                      unawaited(
+                                        _select(
+                                          AgentModelSelection(
+                                            modelId: item.id,
+                                            reasoningEffort:
+                                                selection != null &&
+                                                    item.reasoningEfforts
+                                                        .contains(
+                                                          selection
+                                                              .reasoningEffort,
+                                                        )
+                                                ? selection.reasoningEffort
+                                                : item.defaultReasoningEffort,
+                                          ),
+                                          openToken: menuToken,
+                                        ),
+                                      );
+                                    }
+                                  : null,
+                              child: Semantics(
+                                selected: item.id == selection?.modelId,
+                                child: SkedMenuItemContent(
+                                  selected: item.id == selection?.modelId,
+                                  child: Text(item.id),
+                                ),
+                              ),
                             ),
-                          ),
-                        );
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      for (final effort
-                          in model?.reasoningEfforts ??
-                              const <AgentReasoningEffort>[])
-                        PopupMenuItem(
-                          key: ValueKey('agent-effort-choice-${effort.name}'),
-                          value: effort,
-                          child: Text(agentReasoningEffortLabel(l, effort)),
-                        ),
-                    ],
-                    child: _label(
-                      context,
-                      selection == null
-                          ? l.agentThinkingEffort
-                          : agentReasoningEffortLabel(
-                              l,
-                              selection.reasoningEffort,
+                        ],
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              effortLabel,
+                              key: const ValueKey('agent-effort-value'),
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(
+                                    color: menuStyle.selectedForeground,
+                                  ),
                             ),
-                      Icons.tune_rounded,
-                    ),
-                  ),
-                ),
-              ],
+                            if (state.availableModels.length > 1 ||
+                                model == null)
+                              MenuItemButton(
+                                key: const ValueKey('agent-model-switch'),
+                                closeOnActivate: false,
+                                style: menuStyle.itemStyle(),
+                                trailingIcon:
+                                    state.availableModels.length > 1 ||
+                                        model == null
+                                    ? const Icon(Icons.chevron_right_rounded)
+                                    : null,
+                                onPressed:
+                                    enabled &&
+                                        (state.availableModels.length > 1 ||
+                                            model == null)
+                                    ? () {
+                                        if (_isOpenSession(menuToken)) {
+                                          setState(() => _modelsVisible = true);
+                                        }
+                                      }
+                                    : null,
+                                child: Text(
+                                  modelLabel,
+                                  textAlign: TextAlign.center,
+                                ),
+                              )
+                            else
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                child: Text(
+                                  modelLabel,
+                                  textAlign: TextAlign.center,
+                                  style: menuStyle.labelStyle({}),
+                                ),
+                              ),
+                            if (efforts.length > 1)
+                              Slider(
+                                key: const ValueKey('agent-effort-slider'),
+                                focusNode: _sliderFocus,
+                                value: math
+                                    .max(
+                                      0,
+                                      efforts.indexOf(effort ?? efforts.first),
+                                    )
+                                    .toDouble(),
+                                min: 0,
+                                max: (efforts.length - 1).toDouble(),
+                                divisions: efforts.length - 1,
+                                label: effortLabel,
+                                semanticFormatterCallback: (value) =>
+                                    agentReasoningEffortLabel(
+                                      l,
+                                      efforts[value.round()],
+                                    ),
+                                onChanged: enabled && model != null
+                                    ? (value) {
+                                        if (_isOpenSession(menuToken)) {
+                                          setState(
+                                            () => _preview =
+                                                efforts[value.round()],
+                                          );
+                                        }
+                                      }
+                                    : null,
+                                onChangeEnd: enabled && model != null
+                                    ? (value) => unawaited(
+                                        _select(
+                                          AgentModelSelection(
+                                            modelId: model.id,
+                                            reasoningEffort:
+                                                efforts[value.round()],
+                                          ),
+                                          openToken: menuToken,
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                            if (efforts.length == 1 &&
+                                (!ready ||
+                                    state
+                                        .runFor(widget.conversationId)
+                                        .requiresModelSelection) &&
+                                model != null)
+                              MenuItemButton(
+                                key: ValueKey(
+                                  'agent-effort-choice-${efforts.single.name}',
+                                ),
+                                style: menuStyle.itemStyle(),
+                                closeOnActivate: false,
+                                onPressed: enabled
+                                    ? () => unawaited(
+                                        _select(
+                                          AgentModelSelection(
+                                            modelId: model.id,
+                                            reasoningEffort: efforts.single,
+                                          ),
+                                          openToken: menuToken,
+                                        ),
+                                      )
+                                    : null,
+                                child: Text(
+                                  agentReasoningEffortLabel(l, efforts.single),
+                                ),
+                              ),
+                            if (!ready)
+                              Text(
+                                l.agentModelSelectionRequired,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
+                              ),
+                            if (_failed)
+                              Text(
+                                l.agentOperationFailed,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+              ),
             ),
           ),
-          if (run.isActive)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
-              child: Text(
-                l.agentModelNextRunHint,
-                style: Theme.of(context).textTheme.bodySmall,
+        ],
+        builder: (context, controller, _) => Tooltip(
+          message: '$modelLabel · $effortLabel',
+          child: Semantics(
+            button: true,
+            enabled: enabled && state.availableModels.isNotEmpty,
+            label: '${l.agentModelSelection}: $modelLabel · $effortLabel',
+            expanded: controller.isOpen,
+            child: Material(
+              color: Theme.of(context).colorScheme.surfaceContainerHigh,
+              shape: skedShapeSchemeOf(context).selection,
+              child: InkWell(
+                key: const ValueKey('agent-model-picker'),
+                focusNode: _focus,
+                customBorder: skedShapeSchemeOf(context).selection,
+                onTap: enabled && state.availableModels.isNotEmpty
+                    ? () {
+                        if (controller.isOpen) {
+                          controller.close();
+                          return;
+                        }
+                        _openGeneration = _generation;
+                        _openToken = Object();
+                        _openModels = List.of(state.availableModels);
+                        setState(() {
+                          _modelsVisible = model == null;
+                          _preview = null;
+                        });
+                        controller.open();
+                      }
+                    : null,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: menuStyle.desktop ? 32 : 48,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 6,
+                    ),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final style = DefaultTextStyle.of(context).style;
+                        final measure = TextPainter(
+                          text: TextSpan(text: effortLabel, style: style),
+                          textDirection: Directionality.of(context),
+                          textScaler: MediaQuery.textScalerOf(context),
+                        )..layout();
+                        final showIcon = constraints.maxWidth >= 220;
+                        final effortWidth = math.min(
+                          measure.width,
+                          math.max(
+                            0.0,
+                            constraints.maxWidth -
+                                (showIcon ? 20 : 0) -
+                                16 -
+                                16 -
+                                16,
+                          ),
+                        );
+                        measure.dispose();
+                        return Row(
+                          children: [
+                            if (showIcon) ...[
+                              const Icon(Icons.auto_awesome_outlined, size: 16),
+                              const SizedBox(width: 4),
+                            ],
+                            Expanded(
+                              child: Text(
+                                modelLabel,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.circle, size: 3),
+                            const SizedBox(width: 4),
+                            SizedBox(
+                              width: effortWidth,
+                              child: Text(
+                                effortLabel,
+                                key: const ValueKey('agent-model-effort-label'),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const Icon(Icons.expand_more_rounded, size: 16),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ),
               ),
             ),
-          if ((!ready && selection != null) || run.requiresModelSelection)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
-              child: Text(
-                l.agentModelSelectionRequired,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
+          ),
+        ),
+      );
+      final status = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (state.runFor(widget.conversationId).isActive)
+            Text(
+              l.agentModelNextRunHint,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          if ((!ready && selection != null) ||
+              state.runFor(widget.conversationId).requiresModelSelection)
+            Text(
+              l.agentModelSelectionRequired,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           if (_failed)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
-              child: Text(
-                l.agentOperationFailed,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
+            Text(
+              l.agentOperationFailed,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
         ],
       );
+      return widget.layoutBuilder?.call(control, status) ??
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [control, status],
+          );
     },
   );
 }

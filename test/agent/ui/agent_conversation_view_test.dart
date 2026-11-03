@@ -10,6 +10,7 @@ import 'package:sked/agent/ui/agent_ui_delegate.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/agent_settings.dart';
+import 'package:sked/agent/ui/agent_model_picker.dart';
 
 import 'agent_ui_test_support.dart';
 
@@ -42,6 +43,84 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
+    for (final brightness in Brightness.values) {
+      for (final width in [320.0, 390.0, 1000.0]) {
+        for (final scale in [1.0, 2.0]) {
+          testWidgets(
+            'composer actions share one row at $width and ${scale}x on $platform $brightness',
+            (tester) async {
+              addTearDown(tester.view.reset);
+              await initialize();
+              const model = AgentModelConfig(
+                id: 'a-very-long-model-name-with-extra-context',
+                reasoningEfforts: [
+                  AgentReasoningEffort.medium,
+                  AgentReasoningEffort.high,
+                ],
+                defaultReasoningEffort: AgentReasoningEffort.medium,
+              );
+              delegate.state.value = AgentUiState(
+                enabled: true,
+                configured: true,
+                availableModels: const [model],
+                defaultModelSelection: model.defaultSelection,
+              );
+              await repository.create(title: 'Composer layout');
+              await mountAgentUi(
+                tester,
+                AgentConversationView(
+                  repository: repository,
+                  delegate: delegate,
+                  readDatasetGeneration: () => 'synthetic-layout-data',
+                  modelPickerBuilder: (conversation, _, layout) =>
+                      AgentModelPicker(
+                        conversationId: conversation.id,
+                        delegate: delegate,
+                        layoutBuilder: layout,
+                      ),
+                ),
+                size: Size(width, 1000),
+                scale: scale,
+                brightness: brightness,
+              );
+              final keys = [
+                'agent-attach-file',
+                'agent-model-picker',
+                'agent-mode-picker',
+                'agent-send',
+              ];
+              final rects = keys
+                  .map((key) => tester.getRect(find.byKey(ValueKey(key))))
+                  .toList();
+              final row = tester.getRect(
+                find.byKey(const ValueKey('agent-composer-actions')),
+              );
+              for (final rect in rects) {
+                expect(rect.center.dy, closeTo(rects.first.center.dy, 1));
+                expect(rect.left, greaterThanOrEqualTo(row.left));
+                expect(rect.right, lessThanOrEqualTo(row.right));
+                expect(
+                  rect.height,
+                  greaterThanOrEqualTo(
+                    platform == TargetPlatform.android ? 48 : 24,
+                  ),
+                );
+                expect(
+                  rect.width,
+                  greaterThanOrEqualTo(
+                    platform == TargetPlatform.android ? 48 : 24,
+                  ),
+                );
+              }
+              expect(tester.takeException(), isNull);
+            },
+            variant: TargetPlatformVariant.only(platform),
+          );
+        }
+      }
+    }
+  }
   testWidgets(
     'new conversations save their own initial model and thinking choice',
     (tester) async {
