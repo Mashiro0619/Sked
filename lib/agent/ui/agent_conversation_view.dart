@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:flutter/services.dart';
@@ -10,6 +11,7 @@ import '../../application/operation_contracts.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/sked_surface.dart';
 import '../../theme/sked_expressive_theme.dart';
+import '../../theme/sked_menu_style.dart';
 import '../../widgets/desktop_window_host.dart';
 import '../../widgets/expressive_dialog.dart';
 import '../../widgets/sked_expressive_loading_indicator.dart';
@@ -20,6 +22,7 @@ import '../../widgets/workspace_navigation.dart';
 import 'agent_conversation_list.dart';
 import 'agent_message_content.dart';
 import 'agent_model_picker.dart';
+import 'agent_model_labels.dart';
 import 'agent_selectable_text.dart';
 import 'agent_transcript.dart';
 import 'agent_attachment_view.dart';
@@ -1488,7 +1491,11 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                 }, size: 18),
                 if (!compact) ...[
                   const SizedBox(width: 6),
-                  Text(_modeLabel(l, conversation.mode), maxLines: 1),
+                  Text(
+                    _modeLabel(l, conversation.mode),
+                    style: Theme.of(context).textTheme.labelLarge,
+                    maxLines: 1,
+                  ),
                   const Icon(Icons.expand_more_rounded, size: 18),
                 ],
               ],
@@ -2037,30 +2044,69 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                       const SizedBox(height: 4),
                       LayoutBuilder(
                         builder: (context, constraints) {
-                          final permissionLabel = TextPainter(
-                            text: TextSpan(
-                              text: _modeLabel(l, conversation.mode),
-                              style: DefaultTextStyle.of(context).style,
-                            ),
-                            textDirection: Directionality.of(context),
-                            textScaler: MediaQuery.textScalerOf(context),
-                          )..layout();
-                          final permissionWidth = permissionLabel.width + 62;
-                          permissionLabel.dispose();
+                          final style = Theme.of(context).textTheme.labelLarge;
+                          double labelWidth(String label) {
+                            final measure = TextPainter(
+                              text: TextSpan(text: label, style: style),
+                              textDirection: Directionality.of(context),
+                              textScaler: MediaQuery.textScalerOf(context),
+                            )..layout();
+                            final width = measure.width;
+                            measure.dispose();
+                            return width;
+                          }
+
+                          final permissionWidth =
+                              labelWidth(_modeLabel(l, conversation.mode)) + 62;
+                          final selection = _runtime.selectionFor(
+                            conversation.id,
+                          );
+                          final buttonWidth = SkedMenuStyle.of(context).desktop
+                              ? 32.0
+                              : 48.0;
                           final pickerWidth = widget.modelPickerBuilder == null
-                              ? 0
-                              : 112 *
-                                    MediaQuery.textScalerOf(context).scale(14) /
-                                    14;
-                          final buttonWidth =
-                              48 +
-                              ((widget.binaryAttachments != null ||
-                                      widget.readDatasetGeneration != null)
-                                  ? 48
-                                  : 0);
+                              ? 0.0
+                              : math.min(
+                                  320.0,
+                                  math.max(
+                                    buttonWidth,
+                                    labelWidth(
+                                          selection?.modelId ??
+                                              l.agentChooseModel,
+                                        ) +
+                                        (selection == null
+                                            ? 0
+                                            : labelWidth(
+                                                    agentReasoningEffortLabel(
+                                                      l,
+                                                      selection.reasoningEffort,
+                                                    ),
+                                                  ) +
+                                                  11) +
+                                        36,
+                                  ),
+                                );
+                          final hasAttachment =
+                              widget.binaryAttachments != null ||
+                              widget.readDatasetGeneration != null;
+                          final spacingWidth =
+                              (hasAttachment ? 4.0 : 0.0) +
+                              4 +
+                              (widget.modelPickerBuilder == null ? 0 : 4);
+                          final otherWidth =
+                              buttonWidth +
+                              (hasAttachment ? buttonWidth : 0) +
+                              spacingWidth;
                           final compactPermission =
                               constraints.maxWidth <
-                              permissionWidth + pickerWidth + buttonWidth + 8;
+                              permissionWidth + pickerWidth + otherWidth;
+                          final wrapActions =
+                              constraints.maxWidth <
+                              48 +
+                                  otherWidth +
+                                  (widget.modelPickerBuilder == null
+                                      ? 0
+                                      : buttonWidth);
                           Widget layout(
                             Widget? picker,
                             Widget status,
@@ -2068,120 +2114,118 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Row(
+                              _AgentComposerActions(
                                 key: const ValueKey('agent-composer-actions'),
-                                children: [
-                                  if (widget.binaryAttachments != null)
-                                    IconButton(
-                                      key: const ValueKey('agent-attach-file'),
-                                      tooltip: l.agentAttachAnyFile,
-                                      icon: const Icon(Icons.add_rounded),
-                                      onPressed:
-                                          _canModifyBinaryAttachments(
-                                                conversation.id,
-                                              ) &&
-                                              !widget.binaryAttachments!
-                                                  .hasPending(
-                                                    conversation.id,
-                                                  ) &&
-                                              !widget.binaryAttachments!
-                                                  .isImporting(
-                                                    conversation.id,
-                                                  ) &&
-                                              !_busy.contains(
-                                                'attachment-${conversation.id}',
-                                              )
-                                          ? () => _attachBinaryFile(
-                                              conversation.id,
-                                            )
-                                          : null,
-                                    )
-                                  else if (widget.readDatasetGeneration != null)
-                                    IconButton(
-                                      key: const ValueKey('agent-attach-file'),
-                                      tooltip: l.agentAttachFile,
-                                      icon: const Icon(Icons.add_rounded),
-                                      onPressed:
-                                          _canModifyAttachments(
-                                                conversation.id,
-                                              ) &&
-                                              _attachments.pending(
-                                                    conversation.id,
-                                                  ) ==
-                                                  null &&
-                                              !_busy.contains(
-                                                'attachment-${conversation.id}',
-                                              )
-                                          ? () => _attachFile(conversation.id)
-                                          : null,
-                                    ),
-                                  if (picker != null) ...[
-                                    Expanded(child: picker),
-                                    const SizedBox(width: 4),
-                                  ] else
-                                    const Spacer(),
-                                  _permissionPicker(
-                                    conversation,
-                                    l,
-                                    compact: compactPermission,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  SkedSpringBuilder(
-                                    value: active ? 1 : 0,
-                                    speed: SkedMotionSpeed.fast,
-                                    builder: (context, value, _) {
-                                      final progress = value.clamp(0.0, 1.0);
-                                      return IconButton.filled(
-                                        key: ValueKey(
-                                          active ? 'agent-stop' : 'agent-send',
+                                wrap: wrapActions,
+                                picker: picker,
+                                permission: _permissionPicker(
+                                  conversation,
+                                  l,
+                                  compact: compactPermission,
+                                ),
+                                attachment: widget.binaryAttachments != null
+                                    ? IconButton(
+                                        key: const ValueKey(
+                                          'agent-attach-file',
                                         ),
-                                        tooltip: active
-                                            ? l.agentStop
-                                            : l.agentSend,
-                                        onPressed: active
-                                            ? _busy.contains(
-                                                    'stop-${conversation.id}',
-                                                  )
-                                                  ? null
-                                                  : () => _perform(
-                                                      'stop-${conversation.id}',
-                                                      () =>
-                                                          widget.delegate.stop(
-                                                            conversation.id,
-                                                          ),
-                                                    )
-                                            : canSend &&
-                                                  !sending &&
-                                                  _hasInput(conversation)
-                                            ? () => _send(conversation)
+                                        tooltip: l.agentAttachAnyFile,
+                                        icon: const Icon(Icons.add_rounded),
+                                        onPressed:
+                                            _canModifyBinaryAttachments(
+                                                  conversation.id,
+                                                ) &&
+                                                !widget.binaryAttachments!
+                                                    .hasPending(
+                                                      conversation.id,
+                                                    ) &&
+                                                !widget.binaryAttachments!
+                                                    .isImporting(
+                                                      conversation.id,
+                                                    ) &&
+                                                !_busy.contains(
+                                                  'attachment-${conversation.id}',
+                                                )
+                                            ? () => _attachBinaryFile(
+                                                conversation.id,
+                                              )
                                             : null,
-                                        icon: Stack(
-                                          alignment: Alignment.center,
-                                          children: [
-                                            Opacity(
-                                              opacity: 1 - progress,
-                                              child: Transform.scale(
-                                                scale: 1 - 0.25 * progress,
-                                                child: const Icon(
-                                                  Icons.arrow_upward_rounded,
-                                                ),
-                                              ),
-                                            ),
-                                            Opacity(
-                                              opacity: progress,
-                                              child: Transform.scale(
-                                                scale: 0.75 + 0.25 * progress,
-                                                child: const Icon(
-                                                  Icons.stop_rounded,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
+                                      )
+                                    : widget.readDatasetGeneration != null
+                                    ? IconButton(
+                                        key: const ValueKey(
+                                          'agent-attach-file',
                                         ),
-                                      );
-                                    },
-                                  ),
-                                ],
+                                        tooltip: l.agentAttachFile,
+                                        icon: const Icon(Icons.add_rounded),
+                                        onPressed:
+                                            _canModifyAttachments(
+                                                  conversation.id,
+                                                ) &&
+                                                _attachments.pending(
+                                                      conversation.id,
+                                                    ) ==
+                                                    null &&
+                                                !_busy.contains(
+                                                  'attachment-${conversation.id}',
+                                                )
+                                            ? () => _attachFile(conversation.id)
+                                            : null,
+                                      )
+                                    : null,
+                                send: SkedSpringBuilder(
+                                  value: active ? 1 : 0,
+                                  speed: SkedMotionSpeed.fast,
+                                  builder: (context, value, _) {
+                                    final progress = value.clamp(0.0, 1.0);
+                                    return IconButton.filled(
+                                      key: ValueKey(
+                                        active ? 'agent-stop' : 'agent-send',
+                                      ),
+                                      tooltip: active
+                                          ? l.agentStop
+                                          : l.agentSend,
+                                      onPressed: active
+                                          ? _busy.contains(
+                                                  'stop-${conversation.id}',
+                                                )
+                                                ? null
+                                                : () => _perform(
+                                                    'stop-${conversation.id}',
+                                                    () => widget.delegate.stop(
+                                                      conversation.id,
+                                                    ),
+                                                  )
+                                          : canSend &&
+                                                !sending &&
+                                                _hasInput(conversation)
+                                          ? () => _send(conversation)
+                                          : null,
+                                      icon: Stack(
+                                        alignment: Alignment.center,
+                                        children: [
+                                          Opacity(
+                                            opacity: 1 - progress,
+                                            child: Transform.scale(
+                                              scale: 1 - 0.25 * progress,
+                                              child: const Icon(
+                                                Icons.arrow_upward_rounded,
+                                              ),
+                                            ),
+                                          ),
+                                          Opacity(
+                                            opacity: progress,
+                                            child: Transform.scale(
+                                              scale: 0.75 + 0.25 * progress,
+                                              child: const Icon(
+                                                Icons.stop_rounded,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
                               ),
                               status,
                             ],
@@ -2202,6 +2246,71 @@ class _AgentConversationViewState extends State<AgentConversationView> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _AgentComposerActions extends StatelessWidget {
+  const _AgentComposerActions({
+    super.key,
+    required this.permission,
+    required this.send,
+    required this.wrap,
+    this.attachment,
+    this.picker,
+  });
+
+  final Widget? attachment;
+  final Widget permission;
+  final Widget? picker;
+  final Widget send;
+  final bool wrap;
+
+  @override
+  Widget build(BuildContext context) {
+    final leading = [?attachment, permission];
+    final trailing = [
+      if (picker case final picker?) ...[
+        Expanded(
+          child: Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 320),
+              child: picker,
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
+      ] else
+        const Spacer(),
+      send,
+    ];
+    if (wrap) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Wrap(spacing: 4, runSpacing: 4, children: leading),
+          const SizedBox(height: 4),
+          Row(children: trailing),
+        ],
+      );
+    }
+    return Row(
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (attachment case final attachment?) ...[
+              attachment,
+              const SizedBox(width: 4),
+            ],
+            permission,
+          ],
+        ),
+        const SizedBox(width: 4),
+        ...trailing,
+      ],
     );
   }
 }

@@ -302,6 +302,9 @@ class _AgentModelPickerState extends State<AgentModelPicker>
           ? l.agentThinkingEffort
           : agentReasoningEffortLabel(l, effort);
       final modelLabel = selection?.modelId ?? l.agentChooseModel;
+      final triggerLabel = selection == null
+          ? modelLabel
+          : '$modelLabel · $effortLabel';
       final control = MenuAnchor(
         controller: _menu,
         childFocusNode: _focus,
@@ -521,15 +524,14 @@ class _AgentModelPickerState extends State<AgentModelPicker>
           ),
         ],
         builder: (context, controller, _) => Tooltip(
-          message: '$modelLabel · $effortLabel',
+          message: triggerLabel,
           child: Semantics(
             button: true,
             enabled: enabled && state.availableModels.isNotEmpty,
-            label: '${l.agentModelSelection}: $modelLabel · $effortLabel',
+            label: '${l.agentModelSelection}: $triggerLabel',
             expanded: controller.isOpen,
             child: Material(
-              color: Theme.of(context).colorScheme.surfaceContainerHigh,
-              shape: skedShapeSchemeOf(context).selection,
+              type: MaterialType.transparency,
               child: InkWell(
                 key: const ValueKey('agent-model-picker'),
                 focusNode: _focus,
@@ -555,6 +557,8 @@ class _AgentModelPickerState extends State<AgentModelPicker>
                     : null,
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
+                    minWidth: menuStyle.desktop ? 32 : 48,
+                    maxWidth: 320,
                     minHeight: menuStyle.desktop ? 32 : 48,
                   ),
                   child: Padding(
@@ -564,50 +568,58 @@ class _AgentModelPickerState extends State<AgentModelPicker>
                     ),
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final style = DefaultTextStyle.of(context).style;
-                        final measure = TextPainter(
-                          text: TextSpan(text: effortLabel, style: style),
-                          textDirection: Directionality.of(context),
-                          textScaler: MediaQuery.textScalerOf(context),
-                        )..layout();
-                        final showIcon = constraints.maxWidth >= 220;
-                        final effortWidth = math.min(
-                          measure.width,
-                          math.max(
-                            0.0,
-                            constraints.maxWidth -
-                                (showIcon ? 20 : 0) -
-                                16 -
-                                16 -
-                                16,
-                          ),
+                        final style = Theme.of(context).textTheme.labelLarge;
+                        final textScaler = MediaQuery.textScalerOf(context);
+                        double labelWidth(String label) {
+                          final measure = TextPainter(
+                            text: TextSpan(text: label, style: style),
+                            textDirection: Directionality.of(context),
+                            textScaler: textScaler,
+                          )..layout();
+                          final width = measure.width;
+                          measure.dispose();
+                          return width;
+                        }
+
+                        final effortWidth = labelWidth(effortLabel);
+                        final minimumModelWidth = math.min(
+                          labelWidth(modelLabel),
+                          textScaler.scale(32),
                         );
-                        measure.dispose();
+                        // Reserve a readable part of the model before retaining
+                        // the inline effort. The full choice stays in the menu,
+                        // tooltip and semantic label when this row is narrow.
+                        final showEffort =
+                            selection != null &&
+                            constraints.maxWidth >=
+                                minimumModelWidth + effortWidth + 11 + 4 + 16;
                         return Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            if (showIcon) ...[
-                              const Icon(Icons.auto_awesome_outlined, size: 16),
-                              const SizedBox(width: 4),
-                            ],
-                            Expanded(
+                            Flexible(
+                              fit: FlexFit.loose,
                               child: Text(
                                 modelLabel,
+                                style: style,
+                                textDirection: selection == null
+                                    ? Directionality.of(context)
+                                    : TextDirection.ltr,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            const SizedBox(width: 4),
-                            const Icon(Icons.circle, size: 3),
-                            const SizedBox(width: 4),
-                            SizedBox(
-                              width: effortWidth,
-                              child: Text(
+                            if (showEffort) ...[
+                              const SizedBox(width: 4),
+                              const Icon(Icons.circle, size: 3),
+                              const SizedBox(width: 4),
+                              Text(
                                 effortLabel,
                                 key: const ValueKey('agent-model-effort-label'),
+                                style: style,
                                 maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
+                            ],
+                            const SizedBox(width: 4),
                             const Icon(Icons.expand_more_rounded, size: 16),
                           ],
                         );
@@ -646,7 +658,13 @@ class _AgentModelPickerState extends State<AgentModelPicker>
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
-            children: [control, status],
+            children: [
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: control,
+              ),
+              status,
+            ],
           );
     },
   );

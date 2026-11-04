@@ -150,6 +150,59 @@ void main() {
   }
 
   testWidgets(
+    'compact trigger retains the full choice and opens the existing effort menu',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      try {
+        await initialize(tester, models: const [modelA]);
+        await mountAgentUi(
+          tester,
+          Align(
+            alignment: AlignmentDirectional.topStart,
+            child: SizedBox(width: 120, child: view()),
+          ),
+          size: const Size(320, 740),
+          scale: 2,
+        );
+        final trigger = find.byKey(const ValueKey('agent-model-picker'));
+        expect(tester.getSize(trigger).width, lessThanOrEqualTo(120));
+        expect(tester.getSize(trigger).width, greaterThanOrEqualTo(48));
+        expect(tester.getSize(trigger).height, greaterThanOrEqualTo(48));
+        expect(trigger.hitTestable(), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('agent-model-effort-label')),
+          findsNothing,
+        );
+        final tooltip = tester.widget<Tooltip>(
+          find.descendant(
+            of: find.byType(AgentModelPicker),
+            matching: find.byType(Tooltip),
+          ),
+        );
+        expect(tooltip.message, 'model-a · Low');
+        expect(find.bySemanticsLabel(RegExp('model-a.*Low')), findsWidgets);
+        await open(tester);
+        expect(find.text('Low'), findsWidgets);
+        final slider = tester.widget<Slider>(find.byType(Slider));
+        expect(slider.divisions, 1);
+        slider.onChanged!(1);
+        slider.onChangeEnd!(1);
+        await tester.pumpAndSettle();
+        await delegate.selectionWrite;
+        expect(
+          delegate.choices.single.reasoningEffort,
+          AgentReasoningEffort.high,
+        );
+        expect(delegate.calls, isEmpty);
+        expect(tester.takeException(), isNull);
+      } finally {
+        semantics.dispose();
+      }
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  testWidgets(
     'one combined entry switches model for next run without sending',
     (tester) async {
       await initialize(tester, running: true);

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
+import 'package:flutter/rendering.dart' show RenderCustomPaint;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
@@ -78,6 +79,20 @@ void main() {
         delegate: delegate,
         active: active,
         interactive: interactive,
+      );
+  Widget composerView({TextDirection direction = TextDirection.ltr}) =>
+      Directionality(
+        textDirection: direction,
+        child: AgentConversationView(
+          repository: repository,
+          delegate: delegate,
+          readDatasetGeneration: () => 'synthetic-layout-data',
+          modelPickerBuilder: (conversation, _, layout) => AgentModelPicker(
+            conversationId: conversation.id,
+            delegate: delegate,
+            layoutBuilder: layout,
+          ),
+        ),
       );
   Future<void> settle(WidgetTester tester) async {
     await tester.pumpAndSettle();
@@ -472,7 +487,11 @@ void main() {
     },
   );
 
-  for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
+  for (final platform in [
+    TargetPlatform.android,
+    TargetPlatform.iOS,
+    TargetPlatform.windows,
+  ]) {
     for (final brightness in Brightness.values) {
       for (final width in [320.0, 390.0, 1000.0]) {
         for (final scale in [1.0, 2.0]) {
@@ -498,25 +517,15 @@ void main() {
               await repository.create(title: 'Composer layout');
               await mountAgentUi(
                 tester,
-                AgentConversationView(
-                  repository: repository,
-                  delegate: delegate,
-                  readDatasetGeneration: () => 'synthetic-layout-data',
-                  modelPickerBuilder: (conversation, _, layout) =>
-                      AgentModelPicker(
-                        conversationId: conversation.id,
-                        delegate: delegate,
-                        layoutBuilder: layout,
-                      ),
-                ),
+                composerView(),
                 size: Size(width, 1000),
                 scale: scale,
                 brightness: brightness,
               );
               final keys = [
                 'agent-attach-file',
-                'agent-model-picker',
                 'agent-mode-picker',
+                'agent-model-picker',
                 'agent-send',
               ];
               final rects = keys
@@ -532,15 +541,23 @@ void main() {
                 expect(
                   rect.height,
                   greaterThanOrEqualTo(
-                    platform == TargetPlatform.android ? 48 : 24,
+                    platform == TargetPlatform.windows ? 24 : 48,
                   ),
                 );
                 expect(
                   rect.width,
                   greaterThanOrEqualTo(
-                    platform == TargetPlatform.android ? 48 : 24,
+                    platform == TargetPlatform.windows ? 24 : 48,
                   ),
                 );
+              }
+              for (var i = 1; i < rects.length; i++) {
+                expect(rects[i - 1].right, lessThanOrEqualTo(rects[i].left));
+              }
+              expect(rects[2].width, lessThanOrEqualTo(320));
+              expect(rects.last.right, closeTo(row.right, 1));
+              for (final key in keys) {
+                expect(find.byKey(ValueKey(key)).hitTestable(), findsOneWidget);
               }
               expect(tester.takeException(), isNull);
             },
@@ -550,6 +567,279 @@ void main() {
       }
     }
   }
+  for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
+    for (final selected in [false, true]) {
+      for (final direction in TextDirection.values) {
+        testWidgets(
+          'short model control keeps its width from 600 to 1000 on $platform $direction selected=$selected',
+          (tester) async {
+            addTearDown(tester.view.reset);
+            await initialize();
+            const model = AgentModelConfig(
+              id: 'model-a',
+              reasoningEfforts: [AgentReasoningEffort.low],
+              defaultReasoningEffort: AgentReasoningEffort.low,
+            );
+            delegate.state.value = AgentUiState(
+              enabled: true,
+              configured: true,
+              availableModels: const [model],
+              defaultModelSelection: selected ? model.defaultSelection : null,
+            );
+            await repository.create(title: 'Compact composer');
+            final widths = <double>[];
+            for (final width in [600.0, 1000.0]) {
+              await mountAgentUi(
+                tester,
+                composerView(direction: direction),
+                size: Size(width, 900),
+              );
+              final picker = find.byKey(const ValueKey('agent-model-picker'));
+              widths.add(tester.getSize(picker).width);
+              final row = tester.getRect(
+                find.byKey(const ValueKey('agent-composer-actions')),
+              );
+              final send = tester.getRect(
+                find.byKey(const ValueKey('agent-send')),
+              );
+              final permission = tester.getRect(
+                find.byKey(const ValueKey('agent-mode-picker')),
+              );
+              final attachment = tester.getRect(
+                find.byKey(const ValueKey('agent-attach-file')),
+              );
+              if (direction == TextDirection.ltr) {
+                expect(attachment.left, closeTo(row.left, 1));
+                expect(permission.left - attachment.right, closeTo(4, 1));
+                expect(send.right, closeTo(row.right, 1));
+                expect(tester.getRect(picker).right + 4, closeTo(send.left, 1));
+              } else {
+                expect(attachment.right, closeTo(row.right, 1));
+                expect(attachment.left - permission.right, closeTo(4, 1));
+                expect(send.left, closeTo(row.left, 1));
+                expect(tester.getRect(picker).left - 4, closeTo(send.right, 1));
+              }
+              if (!selected) {
+                final l = AppLocalizations.of(tester.element(picker));
+                expect(find.text(l.agentChooseModel), findsOneWidget);
+                expect(find.text(l.agentThinkingEffort), findsNothing);
+                expect(
+                  find.byKey(const ValueKey('agent-model-effort-label')),
+                  findsNothing,
+                );
+              }
+              expect(tester.takeException(), isNull);
+            }
+            expect(widths.first, lessThan(320));
+            expect(widths.last, closeTo(widths.first, 1));
+          },
+          variant: TargetPlatformVariant.only(platform),
+        );
+      }
+    }
+  }
+  for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
+    for (final width in [320.0, 390.0]) {
+      for (final direction in TextDirection.values) {
+        testWidgets(
+          'compact model group stays reachable with 2x text and IME at $width on $platform $direction',
+          (tester) async {
+            addTearDown(tester.view.reset);
+            await initialize();
+            const model = AgentModelConfig(
+              id: 'a-very-long-model-name-with-extra-context',
+              reasoningEfforts: [AgentReasoningEffort.medium],
+              defaultReasoningEffort: AgentReasoningEffort.medium,
+            );
+            delegate.state.value = AgentUiState(
+              enabled: true,
+              configured: true,
+              availableModels: const [model],
+              defaultModelSelection: model.defaultSelection,
+            );
+            await repository.create(title: 'IME layout');
+            await mountAgentUi(
+              tester,
+              composerView(direction: direction),
+              size: Size(width, 740),
+              scale: 2,
+              keyboard: 280,
+            );
+            await tester.enterText(
+              find.byKey(const ValueKey('agent-composer')),
+              'Check active touch targets',
+            );
+            await settle(tester);
+            final composer = find.byKey(const ValueKey('agent-composer'));
+            final input = tester.widget<TextField>(composer);
+            final insets = MediaQuery.viewInsetsOf(tester.element(composer));
+            // Selection handles intentionally own their overlay's input. Probe
+            // the underlying controls while preserving the focused draft/IME.
+            tester
+                .state<EditableTextState>(
+                  find.descendant(
+                    of: composer,
+                    matching: find.byType(EditableText),
+                  ),
+                )
+                .hideToolbar();
+            await tester.pump();
+            expect(input.focusNode!.hasFocus, isTrue);
+            expect(input.controller!.text, 'Check active touch targets');
+            expect(MediaQuery.viewInsetsOf(tester.element(composer)), insets);
+            final keys = [
+              'agent-attach-file',
+              'agent-mode-picker',
+              'agent-model-picker',
+              'agent-send',
+            ];
+            await tester.ensureVisible(
+              find.byKey(const ValueKey('agent-composer-actions')),
+            );
+            final rects = keys
+                .map((key) => tester.getRect(find.byKey(ValueKey(key))))
+                .toList();
+            for (var i = 0; i < rects.length; i++) {
+              expect(rects[i].width, greaterThanOrEqualTo(48));
+              expect(rects[i].height, greaterThanOrEqualTo(48));
+              expect(rects[i].center.dy, closeTo(rects.first.center.dy, 1));
+              expect(
+                find.byKey(ValueKey(keys[i])).hitTestable(),
+                findsOneWidget,
+              );
+              final target = tester.renderObject(find.byKey(ValueKey(keys[i])));
+              for (final x in [
+                rects[i].left + 2,
+                rects[i].center.dx,
+                rects[i].right - 2,
+              ]) {
+                for (final y in [
+                  rects[i].top + 2,
+                  rects[i].center.dy,
+                  rects[i].bottom - 2,
+                ]) {
+                  final point = Offset(x, y);
+                  final path = tester.hitTestOnBinding(point).path;
+                  expect(
+                    path.any((entry) => identical(entry.target, target)),
+                    isTrue,
+                    reason:
+                        '${keys[i]} must receive input at $point within ${rects[i]}; '
+                        'target=${target.runtimeType}, '
+                        'hit=${path.map((entry) => entry.target.runtimeType).join(', ')}, '
+                        'painters=${path.where((entry) => entry.target is RenderCustomPaint).map((entry) => (entry.target as RenderCustomPaint).painter?.runtimeType).join(', ')}',
+                  );
+                }
+              }
+              if (i > 0) {
+                if (direction == TextDirection.ltr) {
+                  expect(rects[i - 1].right, lessThanOrEqualTo(rects[i].left));
+                } else {
+                  expect(rects[i].right, lessThanOrEqualTo(rects[i - 1].left));
+                }
+              }
+            }
+            await tester.tap(find.byKey(const ValueKey('agent-model-picker')));
+            await tester.pumpAndSettle();
+            expect(
+              find.byKey(const ValueKey('agent-effort-value')),
+              findsOneWidget,
+            );
+            expect(tester.takeException(), isNull);
+          },
+          variant: TargetPlatformVariant.only(platform),
+        );
+      }
+    }
+  }
+  testWidgets('permission label collapses before inline effort is hidden', (
+    tester,
+  ) async {
+    addTearDown(tester.view.reset);
+    await initialize();
+    const model = AgentModelConfig(
+      id: 'a-very-long-model-name-with-extra-context',
+      reasoningEfforts: [AgentReasoningEffort.medium],
+      defaultReasoningEffort: AgentReasoningEffort.medium,
+    );
+    delegate.state.value = AgentUiState(
+      enabled: true,
+      configured: true,
+      availableModels: const [model],
+      defaultModelSelection: model.defaultSelection,
+    );
+    await repository.create(title: 'Compression order');
+    for (final layout in [
+      (width: 1000.0, scale: 1.0),
+      (width: 390.0, scale: 1.0),
+      (width: 320.0, scale: 2.0),
+    ]) {
+      await mountAgentUi(
+        tester,
+        composerView(),
+        size: Size(layout.width, 900),
+        scale: layout.scale,
+      );
+      final permission = find.byKey(const ValueKey('agent-mode-picker'));
+      expect(
+        find.descendant(of: permission, matching: find.byType(Text)),
+        layout.width == 1000 ? findsOneWidget : findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey('agent-model-effort-label')),
+        layout.scale == 1 ? findsOneWidget : findsNothing,
+      );
+      expect(delegate.calls, isEmpty);
+      expect(tester.takeException(), isNull);
+    }
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+  testWidgets(
+    'composer wraps action groups only when four minimum targets cannot fit',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      await initialize();
+      const model = AgentModelConfig(
+        id: 'model-a',
+        reasoningEfforts: [AgentReasoningEffort.low],
+        defaultReasoningEffort: AgentReasoningEffort.low,
+      );
+      delegate.state.value = AgentUiState(
+        enabled: true,
+        configured: true,
+        availableModels: const [model],
+        defaultModelSelection: model.defaultSelection,
+      );
+      await repository.create(title: 'Wrap');
+      for (final width in [320.0, 230.0]) {
+        await mountAgentUi(tester, composerView(), size: Size(width, 900));
+        final attachment = tester.getRect(
+          find.byKey(const ValueKey('agent-attach-file')),
+        );
+        final permission = tester.getRect(
+          find.byKey(const ValueKey('agent-mode-picker')),
+        );
+        final picker = tester.getRect(
+          find.byKey(const ValueKey('agent-model-picker')),
+        );
+        final send = tester.getRect(find.byKey(const ValueKey('agent-send')));
+        expect(attachment.center.dy, closeTo(permission.center.dy, 1));
+        expect(picker.center.dy, closeTo(send.center.dy, 1));
+        if (width == 320) {
+          expect(permission.center.dy, closeTo(picker.center.dy, 1));
+        } else {
+          expect(picker.top, greaterThanOrEqualTo(permission.bottom + 4));
+        }
+        for (final rect in [attachment, permission, picker, send]) {
+          expect(rect.width, greaterThanOrEqualTo(48));
+          expect(rect.height, greaterThanOrEqualTo(48));
+          expect(rect.left, greaterThanOrEqualTo(0));
+          expect(rect.right, lessThanOrEqualTo(width));
+        }
+        expect(tester.takeException(), isNull);
+      }
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
   testWidgets(
     'new conversations save their own initial model and thinking choice',
     (tester) async {
