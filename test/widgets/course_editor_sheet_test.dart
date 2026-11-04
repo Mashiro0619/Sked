@@ -901,6 +901,9 @@ void main() {
   testWidgets('course reminder editor supports inherit, disabled, and custom', (
     tester,
   ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 600);
+    addTearDown(tester.view.reset);
     CourseItem? savedCourse;
     await _pumpEditorHost(
       tester,
@@ -925,11 +928,30 @@ void main() {
       find.byKey(const ValueKey('course-reminder-behavior')),
       findsOneWidget,
     );
+    final reminder = find.byKey(const ValueKey('course-reminder-behavior'));
+    final formScroll = tester.state<ScrollableState>(
+      find.ancestor(of: reminder, matching: find.byType(Scrollable)).first,
+    );
+    final reminderRect = tester.getRect(reminder);
+    final scrollOffset = formScroll.position.pixels;
+    expect(tester.testTextInput.isVisible, isFalse);
     final disabled = find.text('No reminder');
     await tester.ensureVisible(disabled);
     await tester.tap(disabled);
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('course-reminder-behavior')));
+    expect(tester.getRect(reminder), reminderRect);
+    expect(formScroll.position.pixels, scrollOffset);
+    expect(tester.testTextInput.isVisible, isFalse);
+    final nameEditor = tester.widget<EditableText>(
+      find.descendant(
+        of: find.widgetWithText(TextField, 'Course name'),
+        matching: find.byType(EditableText),
+      ),
+    );
+    expect(nameEditor.focusNode.hasFocus, isFalse);
+    expect(nameEditor.controller.text, 'Reminder course');
+    expect(reminder.hitTestable(), findsOneWidget);
+    await tester.tap(reminder);
     await tester.pumpAndSettle();
     final custom = find.text('Custom').last;
     await tester.ensureVisible(custom);

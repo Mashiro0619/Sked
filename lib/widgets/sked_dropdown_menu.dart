@@ -153,9 +153,9 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>>
         if (_restoreTriggerFocus) {
           _triggerFocus.requestFocus();
         } else if (_triggerFocus.hasFocus) {
-          _triggerFocus.unfocus(
-            disposition: UnfocusDisposition.previouslyFocusedChild,
-          );
+          // Release pointer focus without returning to the previously edited
+          // TextField, which would reopen its IME and scroll the form to it.
+          _triggerFocus.unfocus();
         }
       }
     });
