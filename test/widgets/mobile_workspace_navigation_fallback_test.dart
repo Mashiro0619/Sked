@@ -276,7 +276,7 @@ void main() {
   );
 
   testWidgets(
-    'fallback disappears with visible navigation or a single enabled workspace',
+    'single business workspace hides its fallback while the drawer follows Agent enablement',
     (t) async {
       final p = await _mount(t, hidden: false);
       await p.settingsCommands.updateStudentToolbarNavigationVisibility(
@@ -295,8 +295,16 @@ void main() {
       expect(_bar, findsNothing);
       expect(_key('workspace-main-navigation').hitTestable(), findsOneWidget);
       await _openMainDrawer(t);
-      expect(_key('workspace-resource-mode-student'), findsNothing);
+      final student = _key('workspace-resource-mode-student');
+      final agent = _key('workspace-agent-entry');
+      expect(student.hitTestable(), findsOneWidget);
       expect(_key('workspace-resource-mode-general'), findsNothing);
+      expect(agent.hitTestable(), findsOneWidget);
+      expect(t.getSize(agent).width, greaterThanOrEqualTo(48));
+      expect(t.getSize(agent).height, greaterThanOrEqualTo(48));
+      expect(t.widget<ListTile>(student).selected, isTrue);
+      expect(t.widget<ListTile>(agent).selected, isFalse);
+      expect(t.widget<ListTile>(agent).enabled, isTrue);
       final settings = _key('workspace-resource-settings');
       await t.ensureVisible(settings);
       await t.pumpAndSettle();
@@ -304,12 +312,35 @@ void main() {
       await t.binding.handlePopRoute();
       await t.pumpAndSettle();
       expect(_key('workspace-resource-scrim'), findsNothing);
+      await p.agent.setEnabled(false);
+      await t.pumpAndSettle();
+      expect(_menu, findsNothing);
+      expect(_bar, findsNothing);
+      await _openMainDrawer(t);
+      expect(student, findsNothing);
+      expect(_key('workspace-resource-mode-general'), findsNothing);
+      expect(agent, findsNothing);
+      await t.ensureVisible(settings);
+      await t.pumpAndSettle();
+      expect(settings.hitTestable(), findsOneWidget);
+      await t.binding.handlePopRoute();
+      await t.pumpAndSettle();
+      expect(_key('workspace-resource-scrim'), findsNothing);
+      await p.agent.setEnabled(true);
+      await t.pumpAndSettle();
+      expect(_menu, findsNothing);
+      expect(_bar, findsNothing);
       await p.workspaces.setEnabled(AppMode.general, true);
       await t.pumpAndSettle();
       expect(_menu.hitTestable(), findsOneWidget);
       await p.settingsCommands.updateHideHomeWorkspaceNavigation(false);
       await t.pumpAndSettle();
       expect(_bar, findsOneWidget);
+      expect(t.widget<NavigationBar>(_bar).destinations, hasLength(3));
+      expect(
+        _key('adaptive-shell-agent-destination').hitTestable(),
+        findsOneWidget,
+      );
       expect(_menu, findsNothing);
       expect(t.takeException(), isNull);
     },

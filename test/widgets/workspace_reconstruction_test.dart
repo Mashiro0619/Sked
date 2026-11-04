@@ -503,16 +503,44 @@ void main() {
     },
   );
   testWidgets(
-    'single workspace removes disabled pages and settings targets without a search',
+    'single business workspace removes disabled pages and preserves the enabled Agent destination',
     (tester) async {
       final p = await workspaceProvider();
+      addTearDown(p.dispose);
       await p.workspaces.setEnabled(AppMode.student, false);
       await tester.pumpWidget(WorkspaceHarness(provider: p));
       await tester.pumpAndSettle();
       expect(find.byType(HomeScreen, skipOffstage: false), findsNothing);
       expect(find.byType(GeneralScheduleHomeScreen), findsOneWidget);
       expect(find.byType(NavigationBar), findsNothing);
+      final rail = find.byType(NavigationRail);
+      final agent = find.byKey(const ValueKey('adaptive-shell-agent-entry'));
+      final general = find.byKey(
+        const ValueKey('adaptive-shell-general-selected'),
+      );
+      expect(rail, findsOneWidget);
+      expect(tester.widget<NavigationRail>(rail).destinations, hasLength(2));
+      expect(tester.widget<NavigationRail>(rail).selectedIndex, 0);
+      expect(general.hitTestable(), findsOneWidget);
+      expect(agent.hitTestable(), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('adaptive-shell-student-entry')),
+        findsNothing,
+      );
+      await p.agent.setEnabled(false);
+      await tester.pumpAndSettle();
       expect(find.byType(NavigationRail), findsNothing);
+      expect(find.byType(NavigationBar), findsNothing);
+      expect(agent, findsNothing);
+      expect(find.byType(HomeScreen, skipOffstage: false), findsNothing);
+      expect(find.byType(GeneralScheduleHomeScreen), findsOneWidget);
+      expect(p.workspaceView.activeMode, AppMode.general);
+      await p.agent.setEnabled(true);
+      await tester.pumpAndSettle();
+      expect(rail, findsOneWidget);
+      expect(tester.widget<NavigationRail>(rail).destinations, hasLength(2));
+      expect(agent.hitTestable(), findsOneWidget);
+      expect(p.workspaceView.activeMode, AppMode.general);
       await tester.pumpWidget(
         WorkspaceHarness(provider: p, home: const SettingsPage()),
       );
@@ -547,7 +575,6 @@ void main() {
       );
       expect(p.workspaceView.isEnabled(AppMode.student), isFalse);
       await tester.pumpWidget(const SizedBox.shrink());
-      p.dispose();
     },
   );
   for (final savedStudentTheme in [null, 'light']) {
