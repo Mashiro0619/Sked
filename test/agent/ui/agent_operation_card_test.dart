@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/ui/agent_operation_card.dart';
+import 'package:sked/l10n/app_localizations.dart';
 
 import 'agent_ui_test_support.dart';
 
@@ -117,4 +120,182 @@ void main() {
     expect(find.text('Reminder scheduling is pending.'), findsOneWidget);
     expect(find.text('Result needs checking'), findsNothing);
   });
+
+  for (final status in ['outcome_unknown', 'outcomeUnknown']) {
+    testWidgets(
+      'a persisted $status error remains uncertain and cannot claim or open a changed target',
+      (tester) async {
+        addTearDown(tester.view.reset);
+        final receipt = <String, Object?>{
+          'operationId': 'data/legacy/uncertain',
+          'status': status,
+          'error': {'code': 'operationRecoveryRequired'},
+          'changes': [
+            {
+              'action': 'created',
+              'label': 'Unconfirmed study event',
+              'ref': {
+                'kind': 'event',
+                'id': 'unconfirmed',
+                'parentId': 'calendar',
+              },
+            },
+          ],
+        };
+        final before = jsonEncode(receipt);
+        var undone = false;
+        Map<String, Object?>? opened;
+        await mountAgentUi(
+          tester,
+          AgentOperationCard(
+            receipt: receipt,
+            onUndo: () => undone = true,
+            onOpenResource: (ref) => opened = ref,
+          ),
+        );
+        final l = AppLocalizations.of(
+          tester.element(find.byType(AgentOperationCard)),
+        );
+        expect(find.text(l.agentActionUncertain), findsOneWidget);
+        expect(find.byIcon(Icons.pending_outlined), findsOneWidget);
+        expect(find.text(l.agentActionFailed), findsNothing);
+        expect(find.text(l.agentActionApplied), findsNothing);
+        expect(find.text(l.agentChangesSaved), findsNothing);
+        expect(find.byIcon(Icons.check_circle_outline), findsNothing);
+        expect(find.text('Unconfirmed study event'), findsOneWidget);
+        expect(
+          find.text('${l.agentChangeCreated} · Unconfirmed study event'),
+          findsNothing,
+        );
+        expect(find.byTooltip(l.agentViewObject), findsNothing);
+        expect(find.text(l.agentUndo), findsNothing);
+        expect(undone, isFalse);
+        expect(opened, isNull);
+        expect(jsonEncode(receipt), before);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  for (final state in [
+    (
+      label: 'unknown effect',
+      fields: <String, Object?>{'effectStatus': 'unknown'},
+    ),
+    (
+      label: 'pending effect',
+      fields: <String, Object?>{'effectStatus': 'pending'},
+    ),
+    (
+      label: 'recovery reservation',
+      fields: <String, Object?>{'recoveryRequired': true},
+    ),
+    (
+      label: 'unfinished receipt',
+      fields: <String, Object?>{'receiptFinalized': false},
+    ),
+    (
+      label: 'unknown data write',
+      fields: <String, Object?>{
+        'status': 'applied',
+        'effectStatus': 'applied',
+        'dataStatus': 'unknown',
+        'receiptFinalized': true,
+        'recoveryRequired': false,
+      },
+    ),
+    (
+      label: 'pending effect status',
+      fields: <String, Object?>{'status': 'effectsPending'},
+    ),
+  ]) {
+    testWidgets(
+      'an external ${state.label} uses the durable runtime review wording',
+      (tester) async {
+        addTearDown(tester.view.reset);
+        final receipt = <String, Object?>{
+          'kind': 'external',
+          'operationId': 'data/external/review',
+          ...state.fields,
+        };
+        final before = jsonEncode(receipt);
+        await mountAgentUi(
+          tester,
+          AgentOperationCard(receipt: receipt, onUndo: () {}),
+        );
+        final l = AppLocalizations.of(
+          tester.element(find.byType(AgentOperationCard)),
+        );
+        expect(find.text(l.agentActionUncertain), findsOneWidget);
+        expect(find.byIcon(Icons.pending_outlined), findsOneWidget);
+        expect(find.text(l.agentActionFailed), findsNothing);
+        expect(find.text(l.agentActionApplied), findsNothing);
+        expect(find.text(l.agentChangesSaved), findsNothing);
+        expect(find.text(l.agentUndo), findsNothing);
+        expect(jsonEncode(receipt), before);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  for (final status in <String?>['failed', 'not_executed', null]) {
+    testWidgets(
+      'a ${status ?? 'plain'} error is not a completed or uncertain action',
+      (tester) async {
+        addTearDown(tester.view.reset);
+        final receipt = <String, Object?>{
+          if (status != null) 'status': status,
+          'error': {
+            'code': status == 'not_executed' ? 'cancelled' : 'toolFailed',
+          },
+        };
+        await mountAgentUi(
+          tester,
+          AgentOperationCard(receipt: receipt, onUndo: () {}),
+        );
+        final l = AppLocalizations.of(
+          tester.element(find.byType(AgentOperationCard)),
+        );
+        expect(find.text(l.agentActionFailed), findsOneWidget);
+        expect(find.byIcon(Icons.error_outline), findsOneWidget);
+        expect(find.text(l.agentActionUncertain), findsNothing);
+        expect(find.text(l.agentActionApplied), findsNothing);
+        expect(find.text(l.agentChangesSaved), findsNothing);
+        expect(find.text(l.agentUndo), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets(
+    'a finalized external effect remains completed without a main-data undo',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      await mountAgentUi(
+        tester,
+        AgentOperationCard(
+          receipt: const {
+            'kind': 'external',
+            'operationId': 'data/external/applied',
+            'status': 'applied',
+            'effectStatus': 'applied',
+            'dataStatus': 'unchanged',
+            'receiptFinalized': true,
+            'recoveryRequired': false,
+          },
+          onUndo: () {},
+        ),
+      );
+      final l = AppLocalizations.of(
+        tester.element(find.byType(AgentOperationCard)),
+      );
+      expect(find.text(l.agentActionApplied), findsOneWidget);
+      expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
+      expect(find.text(l.agentActionUncertain), findsNothing);
+      expect(find.text(l.agentActionFailed), findsNothing);
+      expect(find.text(l.agentChangesSaved), findsNothing);
+      expect(find.text(l.agentUndo), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

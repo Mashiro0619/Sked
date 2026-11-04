@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../application/resource_contracts.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/school_site_models.dart' show validSchoolSiteId;
+import '../runtime/operation_outcome.dart';
 import 'agent_conversation_receipt.dart';
 import 'agent_setting_labels.dart';
 import 'agent_selectable_text.dart';
@@ -51,6 +52,7 @@ class AgentOperationCard extends StatelessWidget {
         receipt['effectStatus'] == 'applied';
     final prepared = receipt.containsKey('planId') && receipt['status'] == null;
     final uncertain =
+        requiresAgentOutcomeReview(receipt) ||
         receipt['effectStatus'] == 'unknown' ||
         receipt['effectStatus'] == 'pending' ||
         receipt['status'] == 'partial';
