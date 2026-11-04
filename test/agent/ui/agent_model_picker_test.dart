@@ -226,6 +226,289 @@ void main() {
   );
 
   testWidgets(
+    'menu focus can hide the IME across native frames without cancelling selection',
+    (tester) async {
+      await initialize(tester, models: const [modelA]);
+      try {
+        await mountAgentUi(
+          tester,
+          Column(
+            children: [
+              const TextField(key: ValueKey('model-test-composer')),
+              view(),
+            ],
+          ),
+          size: const Size(390, 844),
+        );
+        await tester.showKeyboard(
+          find.byKey(const ValueKey('model-test-composer')),
+        );
+        tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+        await tester.pumpAndSettle();
+        expect(tester.testTextInput.isVisible, isTrue);
+        await open(tester);
+        expect(tester.testTextInput.isVisible, isFalse);
+        for (final bottom in [240.0, 120.0, 0.0]) {
+          tester.view.viewInsets = FakeViewPadding(bottom: bottom);
+          await tester.pumpAndSettle();
+          expect(find.byType(Slider), findsOneWidget);
+          expect(delegate.choices, isEmpty);
+        }
+        final slider = tester.widget<Slider>(find.byType(Slider));
+        slider.onChanged!(1);
+        slider.onChangeEnd!(1);
+        await tester.pumpAndSettle();
+        await delegate.selectionWrite;
+        expect(
+          delegate.choices.single.reasoningEffort,
+          AgentReasoningEffort.high,
+        );
+        expect(
+          repository.selected!.modelSelection?.reasoningEffort,
+          AgentReasoningEffort.high,
+        );
+        expect(delegate.calls, isEmpty);
+        expect(tester.takeException(), isNull);
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+      }
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  for (final nested in [false, true]) {
+    for (final dismiss in ['back', 'escape', 'outside']) {
+      for (final animations in [true, false]) {
+        testWidgets(
+          '$dismiss discards the model preview and releases its ${nested ? 'nested' : 'root'} route with animations=$animations',
+          (tester) async {
+            await initialize(tester, models: const [modelA]);
+            try {
+              await mountAgentUi(
+                tester,
+                nested
+                    ? Navigator(
+                        onGenerateRoute: (_) => MaterialPageRoute<void>(
+                          builder: (_) => const Text('Nested workspace'),
+                        ),
+                      )
+                    : const Text('Original workspace'),
+              );
+              final navigator = tester.state<NavigatorState>(
+                find.byType(Navigator).last,
+              );
+              navigator.push<void>(
+                MaterialPageRoute<void>(
+                  builder: (context) => Scaffold(
+                    body: MediaQuery(
+                      data: MediaQuery.of(context)
+                          .copyWith(disableAnimations: !animations),
+                      child: view(),
+                    ),
+                  ),
+                ),
+              );
+              await tester.pumpAndSettle();
+              await open(tester);
+              final previousSlider = tester.widget<Slider>(find.byType(Slider));
+              previousSlider.onChanged!(1);
+              await tester.pump();
+              expect(delegate.choices, isEmpty);
+              switch (dismiss) {
+                case 'back':
+                  if (nested) {
+                    await navigator.maybePop();
+                  } else {
+                    await tester.binding.handlePopRoute();
+                  }
+                case 'escape':
+                  await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+                case 'outside':
+                  await tester.tapAt(const Offset(12, 790));
+              }
+              // A gesture release queued after dismissal must already be invalid,
+              // including while the menu's close animation still runs.
+              previousSlider.onChangeEnd!(1);
+              await tester.pumpAndSettle();
+              expect(find.byType(AgentModelPicker), findsOneWidget);
+              expect(find.byType(Slider), findsNothing);
+              expect(delegate.choices, isEmpty);
+              expect(delegate.state.value.selectionFor(id), low);
+              expect(
+                tester
+                    .widget<Text>(
+                      find.byKey(const ValueKey('agent-model-effort-label')),
+                    )
+                    .data,
+                'Low',
+              );
+              await navigator.maybePop();
+              await tester.pumpAndSettle();
+              expect(find.byType(AgentModelPicker), findsNothing);
+              expect(navigator.canPop(), isFalse);
+              expect(tester.takeException(), isNull);
+            } finally {
+              await tester.pumpWidget(const SizedBox.shrink());
+              await tester.pumpAndSettle();
+            }
+          },
+          variant: TargetPlatformVariant.only(TargetPlatform.android),
+        );
+      }
+    }
+  }
+
+  testWidgets(
+    'ancestor scroll closes the menu before a late slider release can save',
+    (tester) async {
+      await initialize(tester, models: const [modelA]);
+      try {
+        await mountAgentUi(
+          tester,
+          SingleChildScrollView(
+            child: Column(children: [view(), const SizedBox(height: 1200)]),
+          ),
+        );
+        await open(tester);
+        final previousSlider = tester.widget<Slider>(find.byType(Slider));
+        previousSlider.onChanged!(1);
+        await tester.pump();
+        final scroll = tester.state<ScrollableState>(
+          find.ancestor(
+            of: find.byType(AgentModelPicker),
+            matching: find.byType(Scrollable),
+          ),
+        );
+        final scrolling = scroll.position.animateTo(
+          80,
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.linear,
+        );
+        previousSlider.onChangeEnd!(1);
+        await tester.pumpAndSettle();
+        await scrolling;
+        expect(find.byType(Slider), findsNothing);
+        expect(delegate.choices, isEmpty);
+        expect(delegate.state.value.selectionFor(id), low);
+        expect(
+          tester.state<NavigatorState>(find.byType(Navigator)).canPop(),
+          isFalse,
+        );
+        expect(tester.takeException(), isNull);
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+      }
+    },
+  );
+
+  for (final change in ['keyboard', 'window', 'density', 'padding']) {
+    testWidgets(
+      'new $change geometry cancels the menu and rejects a pending release',
+      (tester) async {
+        await initialize(tester, models: const [modelA]);
+        try {
+          await mountAgentUi(tester, view());
+          await open(tester);
+          final route = ModalRoute.of(
+            tester.element(find.byType(AgentModelPicker)),
+          )!;
+          final previousSlider = tester.widget<Slider>(find.byType(Slider));
+          previousSlider.onChanged!(1);
+          await tester.pump();
+          switch (change) {
+            case 'keyboard':
+              tester.view.viewInsets = const FakeViewPadding(bottom: 240);
+            case 'window':
+              tester.view.physicalSize = const Size(480, 820);
+            case 'density':
+              tester.view.devicePixelRatio = 2;
+            case 'padding':
+              tester.view.viewPadding = const FakeViewPadding(left: 24);
+          }
+          previousSlider.onChangeEnd!(1);
+          await tester.pumpAndSettle();
+          expect(find.byType(Slider), findsNothing);
+          expect(delegate.choices, isEmpty);
+          expect(delegate.state.value.selectionFor(id), low);
+          expect(route.willHandlePopInternally, isFalse);
+          expect(tester.takeException(), isNull);
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pumpAndSettle();
+        }
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+    );
+  }
+
+  testWidgets(
+    'covering the host cancels its menu without closing the newer route',
+    (tester) async {
+      await initialize(tester, models: const [modelA]);
+      try {
+        await mountAgentUi(tester, view());
+        final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+        await open(tester);
+        final previousSlider = tester.widget<Slider>(find.byType(Slider));
+        previousSlider.onChanged!(1);
+        navigator.push<void>(
+          MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(body: Text('Covering task')),
+          ),
+        );
+        await tester.pumpAndSettle();
+        previousSlider.onChangeEnd!(1);
+        await tester.pumpAndSettle();
+        expect(find.text('Covering task'), findsOneWidget);
+        expect(delegate.choices, isEmpty);
+        await navigator.maybePop();
+        await tester.pumpAndSettle();
+        expect(find.byType(AgentModelPicker), findsOneWidget);
+        expect(find.byType(Slider), findsNothing);
+        expect(navigator.canPop(), isFalse);
+        expect(tester.takeException(), isNull);
+      } finally {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+      }
+    },
+  );
+
+  testWidgets('removing an open picker releases its route history', (
+    tester,
+  ) async {
+    await initialize(tester, models: const [modelA]);
+    final visible = ValueNotifier(true);
+    addTearDown(visible.dispose);
+    try {
+      await mountAgentUi(
+        tester,
+        ValueListenableBuilder<bool>(
+          valueListenable: visible,
+          builder: (_, show, _) => show ? view() : const Text('Picker removed'),
+        ),
+      );
+      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+      await open(tester);
+      final previousSlider = tester.widget<Slider>(find.byType(Slider));
+      expect(navigator.canPop(), isTrue);
+      visible.value = false;
+      await tester.pumpAndSettle();
+      previousSlider.onChangeEnd!(1);
+      await tester.pumpAndSettle();
+      expect(find.text('Picker removed'), findsOneWidget);
+      expect(navigator.canPop(), isFalse);
+      expect(delegate.choices, isEmpty);
+      expect(tester.takeException(), isNull);
+    } finally {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+    }
+  });
+
+  testWidgets(
     'late failed save cannot publish an error to the next conversation',
     (tester) async {
       await initialize(tester);

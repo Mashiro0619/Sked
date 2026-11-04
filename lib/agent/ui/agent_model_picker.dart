@@ -17,6 +17,13 @@ typedef AgentModelPickerLayoutBuilder = Widget Function(
   Widget status,
 );
 
+typedef _ModelMenuGeometry = ({
+  Size size,
+  double pixelRatio,
+  EdgeInsets padding,
+  EdgeInsets insets,
+});
+
 bool agentConversationModelReady(AgentUiState state, String conversationId) {
   final selection = state.selectionFor(conversationId);
   return selection != null &&
@@ -56,6 +63,11 @@ class _AgentModelPickerState extends State<AgentModelPicker>
   Object? _openToken;
   List<AgentModelConfig>? _openModels;
   AgentReasoningEffort? _preview;
+  LocalHistoryEntry? _menuHistory;
+  ModalRoute<dynamic>? _openRoute;
+  _ModelMenuGeometry? _menuGeometry;
+  int _menuGeneration = 0;
+  bool _ownerCurrent = true;
 
   @override
   void initState() {
@@ -66,6 +78,8 @@ class _AgentModelPickerState extends State<AgentModelPicker>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _generation++;
+    _endMenuSession();
     _focus.dispose();
     _sliderFocus.dispose();
     super.dispose();
@@ -73,7 +87,42 @@ class _AgentModelPickerState extends State<AgentModelPicker>
 
   @override
   void didChangeMetrics() {
+    final previous = _menuGeometry;
+    if (previous == null) return;
+    final current = _readGeometry();
+    // Taking menu focus can hide the IME over several native frames. Reduced
+    // obstruction keeps the old bounds safe and must not cancel that choice.
+    if (current.size == previous.size &&
+        current.pixelRatio == previous.pixelRatio &&
+        current.padding == previous.padding &&
+        current.insets.left <= previous.insets.left &&
+        current.insets.top <= previous.insets.top &&
+        current.insets.right <= previous.insets.right &&
+        current.insets.bottom <= previous.insets.bottom) {
+      _menuGeometry = current;
+      return;
+    }
     _invalidateMenu();
+  }
+
+  _ModelMenuGeometry _readGeometry() {
+    final view = View.of(context);
+    return (
+      size: view.physicalSize,
+      pixelRatio: view.devicePixelRatio,
+      padding: EdgeInsets.fromViewPadding(view.viewPadding, 1),
+      insets: EdgeInsets.fromViewPadding(view.viewInsets, 1),
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _ownerCurrent =
+        (ModalRoute.isCurrentOf(context) ?? true) &&
+        TickerMode.valuesOf(context).enabled &&
+        FocusScope.of(context).canRequestFocus;
+    if (_openToken != null && !_ownerCurrent) _invalidateMenu();
   }
 
   @override
@@ -90,23 +139,76 @@ class _AgentModelPickerState extends State<AgentModelPicker>
     }
   }
 
-  void _invalidateMenu() {
+  void _endMenuSession() {
+    _menuGeneration++;
     _openGeneration = null;
     _openToken = null;
     _openModels = null;
+    _openRoute = null;
+    _menuGeometry = null;
+    _preview = null;
+    final history = _menuHistory;
+    _menuHistory = null;
+    history?.remove();
+  }
+
+  void _menuClosed() {
+    _endMenuSession();
+    if (mounted) setState(() {});
+  }
+
+  void _menuAnimationChanged(AnimationStatus status) {
+    if (_openToken != null &&
+        (status == AnimationStatus.reverse ||
+            status == AnimationStatus.dismissed)) {
+      // Internal Escape and ancestor scrolling close MenuAnchor directly.
+      // onClose waits for the animation, but their old callbacks expire now.
+      _endMenuSession();
+      if (mounted) setState(() {});
+    }
+  }
+
+  void _dismissMenu() {
+    if (_openToken == null && !_menu.isOpen) return;
+    // Invalidate before the close animation so a cancelled drag cannot save.
+    _endMenuSession();
+    if (_menu.isOpen) _menu.close();
+    if (mounted) setState(() {});
+  }
+
+  void _invalidateMenu() {
+    _endMenuSession();
+    final generation = _menuGeneration;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (_menu.isOpen) {
-        _menu.close();
-      } else if (_preview != null) {
-        setState(() => _preview = null);
-      }
+      if (!mounted || generation != _menuGeneration) return;
+      if (_menu.isOpen) _menu.close();
+      setState(() {});
     });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  void _registerMenuHistory(Object token) {
+    final route = ModalRoute.of<dynamic>(context);
+    _openRoute = route;
+    if (route == null) return;
+    final entry = LocalHistoryEntry(
+      impliesAppBarDismissal: false,
+      onRemove: () {
+        if (mounted && identical(token, _openToken)) {
+          _menuHistory = null;
+          _dismissMenu();
+        }
+      },
+    );
+    _menuHistory = entry;
+    route.addLocalHistoryEntry(entry);
   }
 
   bool get _sessionCurrent {
     final state = widget.delegate.state.value;
     return mounted &&
+        _ownerCurrent &&
+        _openRoute?.isCurrent != false &&
         widget.enabled &&
         state.enabled &&
         !state.maintenance &&
@@ -197,12 +299,8 @@ class _AgentModelPickerState extends State<AgentModelPicker>
           maximumSize: WidgetStatePropertyAll(Size(width, height)),
         ),
         clipBehavior: Clip.antiAlias,
-        onClose: () {
-          _openGeneration = null;
-          _openToken = null;
-          _openModels = null;
-          if (mounted) setState(() => _preview = null);
-        },
+        onClose: _menuClosed,
+        onAnimationStatusChanged: _menuAnimationChanged,
         menuChildren: [
           SizedBox(
             width: width,
@@ -428,12 +526,15 @@ class _AgentModelPickerState extends State<AgentModelPicker>
                 onTap: enabled && state.availableModels.isNotEmpty
                     ? () {
                         if (controller.isOpen) {
-                          controller.close();
+                          _dismissMenu();
                           return;
                         }
+                        _menuGeneration++;
                         _openGeneration = _generation;
-                        _openToken = Object();
+                        final token = _openToken = Object();
                         _openModels = List.of(state.availableModels);
+                        _menuGeometry = _readGeometry();
+                        _registerMenuHistory(token);
                         setState(() {
                           _modelsVisible = model == null;
                           _preview = null;
