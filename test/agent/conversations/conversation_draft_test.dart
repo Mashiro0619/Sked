@@ -249,7 +249,7 @@ void main() {
     expect(archive.terminatedIds, {expired.id});
   });
 
-  test('ordinary backup reads preserve draft but successful restore invalidates it', () async {
+  test('backup participants preserve draft until the restore owner confirms completion', () async {
     await repository.create(title: 'Saved');
     final draft = await repository.createDraft(title: 'New chat');
     await repository.update(
@@ -267,6 +267,9 @@ void main() {
       ConversationArchive(revision: archive.revision + 1),
       validateOwner: () {},
     );
+    expect(repository.draftConversation!.draft, 'Unsent');
+    expect(repository.selectedId, draft.id);
+    repository.discardDraftAfterDataBoundary();
     repository.resumeAfterMaintenance();
     expect(repository.draftConversation, isNull);
     expect(repository.selected, isNull);

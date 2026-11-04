@@ -472,7 +472,9 @@ class ConversationRepository extends ChangeNotifier {
           ? ConversationArchive()
           : ConversationArchive.decode(loaded.source!);
       _archive = archive;
-      _reconcileDraft();
+      // This is one participant of a larger restore. Keep the volatile input
+      // even if an incoming durable chat has the same ID until the owner has
+      // confirmed every participant and cleared its recovery journal.
       _loaded = true;
       _blocked = false;
       recovered = loaded.recovered;
@@ -500,7 +502,7 @@ class ConversationRepository extends ChangeNotifier {
       );
     }
     try {
-      await _save(target, discardDraft: true);
+      await _save(target, reconcileDraft: false);
       final confirmed = await _storage.load();
       validateOwner();
       if (confirmed.source != target.encode()) {
@@ -694,7 +696,7 @@ class ConversationRepository extends ChangeNotifier {
   Future<void> _save(
     ConversationArchive candidate, {
     bool selectDurable = false,
-    bool discardDraft = false,
+    bool reconcileDraft = true,
   }) async {
     final source = candidate.encode();
     // Every writer observes the same strict quotas and relationship checks as
@@ -708,12 +710,8 @@ class ConversationRepository extends ChangeNotifier {
       rethrow;
     }
     _archive = candidate;
-    if (discardDraft) {
-      _discardDraft();
-    } else {
-      _reconcileDraft();
-      if (selectDurable) _draftSelected = false;
-    }
+    if (reconcileDraft) _reconcileDraft();
+    if (selectDurable) _draftSelected = false;
     _notify();
   }
 

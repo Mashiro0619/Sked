@@ -394,6 +394,7 @@ class SelectiveBackupService extends ChangeNotifier {
           await _devicePreferences.freezeAndDrain();
           await _agent.conversations.waitForPendingWrites();
           await _agent.knowledgeRepository.waitForPendingWrites();
+          bool completesDataRestore;
           if (_admitting case final plan?) {
             final conversations = await _agent.conversations
                 .readFrozenForRestore(validateOwner: _validateOwner);
@@ -413,8 +414,17 @@ class SelectiveBackupService extends ChangeNotifier {
               ),
             );
             plan.validateCurrent(current);
+            completesDataRestore = plan.owners.isNotEmpty;
+          } else {
+            // A resume with no fixed target is an empty operation. A pending
+            // restore can complete without selecting or replacing any chat.
+            completesDataRestore = await journal.read() != null;
           }
           await action();
+          if (completesDataRestore) {
+            _validateOwner();
+            _agent.completeSuccessfulDataRestore();
+          }
         } finally {
           try {
             _pending = await journal.read() != null;
@@ -425,7 +435,6 @@ class SelectiveBackupService extends ChangeNotifier {
             _devicePreferences.resume();
             _agent.conversations.resumeAfterMaintenance();
             _agent.knowledgeRepository.resumeAfterMaintenance();
-            _agent.binaryAttachments.invalidatePendingAfterDataBoundary();
           }
           _onRecoveryChanged(_pending);
           _notify();

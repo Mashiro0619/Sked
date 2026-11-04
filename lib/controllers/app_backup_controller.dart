@@ -100,6 +100,7 @@ class AppBackupController {
   /// changing the main archive. The initiating Agent scope is excluded by its
   /// owner to avoid waiting for this restore from inside itself.
   Future<void> Function()? drainAgent;
+  VoidCallback? _onDataRestoreCompleted;
   SchoolSiteRestoreLease? _activeSchoolSiteRestoreLease;
   StorageLoadStatus? _journalRecoveryLoadStatus;
   List<String> _journalRecoveryArtifacts = const [];
@@ -121,6 +122,7 @@ class AppBackupController {
     if (_selective != null) {
       throw StateError('Selective backup is already bound.');
     }
+    _onDataRestoreCompleted = agent.completeSuccessfulDataRestore;
     _selective = SelectiveBackupService(
       agent: agent,
       devicePreferences: devicePreferences,
@@ -845,6 +847,9 @@ class AppBackupController {
       Error.throwWithStackTrace(error, stackTrace);
     }
     _clearAppBackupRestoreJournalTracking();
+    // The complete restore and its recovery share this confirmed terminal
+    // point. Reservation, decoding, rollback and cleanup failure retain input.
+    _onDataRestoreCompleted?.call();
   }
 
   void _trackAppBackupRestoreJournal({

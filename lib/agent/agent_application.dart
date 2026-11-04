@@ -369,6 +369,10 @@ class AgentApplication extends ChangeNotifier {
       stage = AgentInitializationFailure.conversationStorage;
       await _pruneHistory(initializing: true);
       if (_disposed || _suspended || _clearSuspended) return;
+      // Maintenance can freeze a dormant Agent before its chat archive has
+      // ever been loaded. Release could not resume attachments until now.
+      await _resumeAttachmentsAfterMaintenance();
+      if (_disposed || _suspended || _clearSuspended) return;
       _attachmentConversationIds = {
         for (final conversation in conversations.ownedConversations)
           conversation.id,
@@ -615,6 +619,18 @@ class AgentApplication extends ChangeNotifier {
     _notify();
   }
 
+  /// Restore owners call this only after all participants and their recovery
+  /// journal have been confirmed. Reservation, rollback and empty selections
+  /// retain the unsent input and verified attachment publication retries.
+  void completeSuccessfulDataRestore() {
+    if (_disposed) return;
+    conversations.discardDraftAfterDataBoundary();
+    binaryAttachments.invalidatePendingAfterDataBoundary();
+    _attachmentDataGeneration = mutations.generation;
+    _scheduleAttachmentCollection();
+    _notify();
+  }
+
   Future<void> _saveSettings(
     AgentSettings value, {
     AgentSettings? expectedSettings,
@@ -646,7 +662,9 @@ class AgentApplication extends ChangeNotifier {
     final generation = mutations.generation;
     if (generation != _attachmentDataGeneration) {
       _attachmentDataGeneration = generation;
-      binaryAttachments.invalidatePendingAfterDataBoundary();
+      if (!_maintenance.isReserved) {
+        binaryAttachments.invalidatePendingAfterDataBoundary();
+      }
     }
     runtime.refreshSettings();
     _pruneHistory().ignore();
@@ -742,6 +760,7 @@ class AgentApplication extends ChangeNotifier {
     }
     _attachmentFreeze = null;
     binaryAttachments.resume();
+    if (_attachmentCollectionRequested) _scheduleAttachmentCollection();
   }
 
   void _conversationsChanged() {
@@ -755,25 +774,30 @@ class AgentApplication extends ChangeNotifier {
     if (removed) _scheduleAttachmentCollection();
   }
 
+  bool get _canCollectAttachments =>
+      _initialized &&
+      !_disposed &&
+      !_suspended &&
+      !_clearSuspended &&
+      !_maintenance.isReserved &&
+      !_attachmentRecoveryRequired &&
+      conversations.canWrite &&
+      _attachmentFreeze == null;
+
   void _scheduleAttachmentCollection() {
-    if (!_initialized ||
-        _disposed ||
-        _suspended ||
-        _clearSuspended ||
-        _maintenance.isReserved ||
-        _attachmentRecoveryRequired ||
-        !conversations.canWrite) {
-      return;
-    }
+    if (_disposed) return;
     _attachmentCollectionRequested = true;
-    if (_attachmentCollection != null) return;
+    if (!_canCollectAttachments || _attachmentCollection != null) return;
     _attachmentCollection = _collectAttachments().whenComplete(() {
       _attachmentCollection = null;
+      if (_attachmentCollectionRequested && _canCollectAttachments) {
+        _scheduleAttachmentCollection();
+      }
     });
   }
 
   Future<void> _collectAttachments() async {
-    while (_attachmentCollectionRequested) {
+    while (_attachmentCollectionRequested && _canCollectAttachments) {
       _attachmentCollectionRequested = false;
       try {
         await binaryAttachments.collectGarbage();

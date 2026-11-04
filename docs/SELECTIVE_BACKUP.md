@@ -22,6 +22,8 @@ API 密钥、Cookie、系统授权、设备运行许可和操作回执不进入�
 
 聊天恢复只发布可阅读历史，包括回复和历史版本、来源与附件引用。旧运行、审批、输入队列、工具续传和重做能力不恢复；导入前缀通过 `executionHistoryStart` 与新的执行历史分开。普通文字中的引用不因恢复而当作授权或业务目标。
 
+全新会话首次发送前的正文、来源与文件引用只属于本次应用生命周期，不进入备份清单。普通备份读取、预览、设置和导航保留该草稿。完整恢复或存在实际写入的选择性恢复在全部目标读回且完成标记清除后丢弃恢复前的新会话草稿，选择性恢复是否勾选聊天不改变此边界；失败、取消、空选择和没有待恢复目标的继续操作保留草稿。未选持久聊天中的既有草稿和历史继续保留，来源仍记录采集时的数据世代，不为旧来源补造新的授权。维护释放后按全部剩余聊天、历史版本和待发送引用回收附件，仍有引用的文件不会因丢弃新会话草稿而删除。
+
 ## 固定目标与故障恢复
 
 恢复预约先阻止新业务写入，排空已经接受的主库及侧库操作、连接保存、设备偏好保存和附件写入，然后冻结聊天、知识及设备偏好拥有者。所有参与仓储先准备和验证目标，二进制先写入专用暂存存储；任何预检失败都不开始业务写入。未返回准备结果就失败的附件参与者负责清理自己的部分暂存内容。
@@ -41,6 +43,8 @@ Agent 选择性恢复在接管恢复之前重新核对固定目标；已经发�
 - [纯选择与依赖规划](../test/backup/selective_backup_planner_test.dart)和[主数据合并](../test/backup/selective_backup_app_data_test.dart)覆盖未选保留、共享依赖、子对象重绑及导入权限边界。
 - [归档检查](../test/backup/selective_backup_codec_test.dart)覆盖字节、摘要、预算、路径和版本拒绝；[journal](../test/backup/selective_restore_journal_test.dart)及[协调器](../test/backup/selective_restore_coordinator_test.dart)覆盖持久阶段和实际结果核对。
 - [真实应用组合](../test/backup/selective_backup_service_test.dart)覆盖保存、排他、部分暂存失败和恢复；[原生仓储重开](../test/backup/selective_backup_recovery_test.dart)在系统临时目录使用主库、学校、聊天、知识、附件和 journal 的文件实现，验证新的运行时继续同一目标。
+- [恢复与新会话草稿](../test/backup/backup_draft_boundary_test.dart)覆盖真实完整与选择性恢复的成功、失败、取消和空操作，完成清理失败后的继续恢复，临时选择不写入聊天存档，以及维护释放后保留历史引用并回收旧草稿文件。
+- [懒加载恢复边界](../test/backup/backup_dormant_agent_test.dart)核对恢复前后不读取聊天与附件，首次进入完成服务恢复后即可附文件，并继续清理真正无引用的文件。
 - [选择页](../test/backup/selective_backup_page_test.dart)及[设置入口](../test/widgets/settings_backup_restore_progress_test.dart)覆盖窄窗、放大字号、旧文件与文本、滚动和取消后的筛选与选择保留、重新载入来源后的筛选清空、恢复进度、故障继续和离开页面后的保存所有权。
 - [设备偏好](../test/backup/selective_backup_device_test.dart)覆盖严格读取、相同与不同平台、未选保留、两组之间中断、写后读回和重新绑定真实 UI 拥有者；[导出取消](../test/backup/selective_backup_cancellation_test.dart)核对挂起读取取消及占用释放。
 - [Agent 工具](../test/backup/selective_backup_tools_test.dart)通过真实应用运行作用域验证选择、权限、保存及发起者排空，并覆盖非法与重复选择、同会话来源约束、准备后人工修改目标，以及主库保存后阶段写入失败的未知结果和沿用同一恢复身份、数据世代及仓储目标的生命周期恢复。模型和原生目的地使用确定性替身；这些测试不代替实际平台文件选择器、真实 API、浏览器刷新或实体设备验收。
