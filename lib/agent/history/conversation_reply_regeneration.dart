@@ -32,6 +32,7 @@ ProviderRequest conversationReplyRequest(
 
 /// A provider may ignore the omitted tool definitions. Such a response is
 /// rejected before publishing a reply, and never enters the normal tool loop.
+/// A completed response without readable text cannot replace the old reply.
 void validateConversationReplyResponse(ProviderResponse response) {
   if (response.toolCalls.isNotEmpty ||
       response.responseItems.any(
@@ -52,5 +53,8 @@ void validateConversationReplyResponse(ProviderResponse response) {
     throw const ConversationHistoryException(
       ConversationHistoryError.invalidSelection,
     );
+  }
+  if (response.text.trim().isEmpty) {
+    throw const ProviderException(ProviderError.incompleteResponse);
   }
 }

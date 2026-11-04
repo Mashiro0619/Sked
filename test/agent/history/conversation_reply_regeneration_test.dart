@@ -84,4 +84,43 @@ void main() {
       );
     },
   );
+
+  test('an empty or whitespace completion cannot replace a readable reply', () {
+    for (final text in ['', ' \n\r\t ', '\u00a0\u3000']) {
+      for (final withContinuation in [false, true]) {
+        expect(
+          () => validateConversationReplyResponse(
+            ProviderResponse(
+              text: text,
+              toolCalls: [],
+              responseItems: withContinuation
+                  ? [
+                      {
+                        'type': 'reasoning',
+                        'id': 'only-reasoning',
+                        'summary': [],
+                      },
+                    ]
+                  : [],
+              finishReason: 'stop',
+            ),
+          ),
+          throwsA(
+            isA<ProviderException>().having(
+              (error) => error.code,
+              'code',
+              ProviderError.incompleteResponse,
+            ),
+          ),
+        );
+      }
+    }
+    final response = ProviderResponse(
+      text: '\n Revised explanation \n',
+      toolCalls: [],
+      finishReason: 'stop',
+    );
+    validateConversationReplyResponse(response);
+    expect(response.text, '\n Revised explanation \n');
+  });
 }

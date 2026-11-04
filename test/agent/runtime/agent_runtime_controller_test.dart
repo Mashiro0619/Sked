@@ -1723,6 +1723,103 @@ void registerReplyRegenerationTests() {
     );
   }
 
+  for (final emptyOutput in [true, false]) {
+    test(
+      'real Responses HTTP ${emptyOutput ? 'empty output' : 'whitespace completion'} preserves the current reply and existing versions',
+      () async {
+        var requestCount = 0;
+        final client = MockClient((request) async {
+          requestCount++;
+          final replacingWithEmpty = requestCount == 3;
+          final text = requestCount == 1
+              ? 'Original safe reply'
+              : requestCount == 2
+              ? 'Revised safe reply'
+              : ' \n\r\t\u00a0\u3000';
+          return http.Response(
+            jsonEncode({
+              'id': 'provider-response-$requestCount',
+              'status': 'completed',
+              'output': [
+                if (!replacingWithEmpty || !emptyOutput)
+                  {
+                    'type': 'message',
+                    'id': 'provider-message-$requestCount',
+                    'role': 'assistant',
+                    'status': 'completed',
+                    'content': [
+                      {'type': 'output_text', 'text': text, 'annotations': []},
+                    ],
+                  },
+              ],
+              'usage': {
+                'input_tokens': 2,
+                'output_tokens': 1,
+                'total_tokens': 3,
+              },
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        });
+        addTearDown(client.close);
+        final provider = ProviderClient(client: client);
+        final h = await _Harness.create(
+          protocol: AgentModelProtocol.responses,
+          handler: (request, cancellation) => provider.stream(
+            request,
+            apiKey: _key,
+            cancellation: cancellation,
+          ),
+        );
+        addTearDown(h.dispose);
+        await h.runtime.send(h.id, 'Original request');
+        final replyId = h.repository.find(h.id)!.messages.last.id;
+        await h.runtime.regenerateReply(h.id, replyId);
+        final before = h.repository.find(h.id)!;
+        expect(before.messages.last.text, 'Revised safe reply');
+        expect(before.replyRevisions, hasLength(2));
+        await h.runtime.regenerateReply(h.id, replyId);
+
+        final after = h.repository.find(h.id)!;
+        expect(
+          after.messages.map((message) => message.toJson()),
+          before.messages.map((message) => message.toJson()),
+        );
+        expect(
+          after.replyRevisions.map((revision) => revision.toJson()),
+          before.replyRevisions.map((revision) => revision.toJson()),
+        );
+        expect(
+          after.turns.map((turn) => turn.toJson()),
+          before.turns.map((turn) => turn.toJson()),
+        );
+        expect(after.runs.last.status, ConversationRunStatus.interrupted);
+        expect(
+          after.runs.last.requests.single.outcome,
+          ConversationAttemptOutcome.completed,
+        );
+        expect(requestCount, 3);
+        final durable = ConversationArchive.decode(h.storage.source!)
+            .conversations
+            .single;
+        expect(
+          durable.messages.map((message) => message.toJson()),
+          before.messages.map((message) => message.toJson()),
+        );
+        expect(
+          durable.replyRevisions.map((revision) => revision.toJson()),
+          before.replyRevisions.map((revision) => revision.toJson()),
+        );
+        final state = h.runtime.state.value.runFor(h.id);
+        expect(state.phase, AgentUiPhase.failed);
+        expect(state.errorMessage, 'provider.incompleteResponse');
+        expect(state.replyTargetMessageId, replyId);
+        expect(state.streamingText, isEmpty);
+      },
+    );
+  }
+
   for (final secretLocation in ['summary', 'encrypted_content']) {
     test(
       'reply regeneration rejects a credential echoed in Responses $secretLocation without changing the reply',

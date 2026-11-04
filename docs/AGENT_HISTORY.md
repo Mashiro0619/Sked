@@ -46,14 +46,16 @@
 
 重新生成较早的回复时，请求使用截至该回复的已核验上下文；成功后保留之后的用户请求、工具记录与业务回执，不撤销或重放后续操作。下一次普通发送读取替换后的活动回复及保留的后续历史。浏览旧回复版本只改变阅读内容，不改变活动消息或下一次请求上下文。
 
+重生成要求完成响应包含非空、非纯空白的正文。空输出或只有隐藏推理续传项的完成响应按回复不完整处理，保留原文与原有版本，不用空内容覆盖可读回复；错误状态不展示服务响应正文。
+
 ## 验证入口
 
 - [完整范围与严格归属](../test/agent/history/conversation_history_preflight_test.dart)：跨轮次选择、旧历史、缺绑定、不可逆效果及导入前缀。
 - [持久阶段与重复点击](../test/agent/history/conversation_redo_coordinator_test.dart)：全部预检、跨仓储故障、日志回执丢失、停止与继续。
 - [真实主库逆变更](../test/agent/history/conversation_main_undo_test.dart)：重建摘要、目标漂移、一次保存、实际终态及最终权限。
 - [知识整段逆变更](../test/agent/history/knowledge_history_undo_test.dart)：连续编辑、人工穿插、净空结果、重启及未知保存、双槽恢复与旧格式。
-- [文字回复边界](../test/agent/history/conversation_reply_regeneration_test.dart)：空工具请求与服务返回非法工具调用的拒绝。
-- [原位回复运行](../test/agent/runtime/agent_runtime_controller_test.dart)：原回复流式身份、较早回复替换后的完整后续历史、取消与失败保留原文，以及新回复协议续传项的替换与清除。
+- [文字回复边界](../test/agent/history/conversation_reply_regeneration_test.dart)：空工具请求、非法工具调用与空白正文的拒绝。
+- [原位回复运行](../test/agent/runtime/agent_runtime_controller_test.dart)：原回复流式身份、较早回复替换后的完整后续历史、取消与失败保留原文、新回复协议续传项的替换与清除，以及合成 HTTP 经过实际 Responses 解码后的空输出与空白完成拒绝。
 - [正式应用与界面](../test/agent/history/conversation_history_application_test.dart)：真实工具调用归属、主库与知识逆变更、跨仓储中断及重启恢复、存储重试、清理标记回执丢失、重做失败后继续、未执行票据清理、网页交接去重，以及手机大字编辑和桌面回复版本查看。
 - [独立恢复标记](../test/agent/history/conversation_history_marker_test.dart)：原生文件重新打开、损坏拒写，以及 Web 适配器的偏好存储替身验证。
 
