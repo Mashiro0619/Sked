@@ -4274,33 +4274,53 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('empty timetable import menu tracks layout changes', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(600, 900));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    final storage = _BlockingTimetableStorage(null);
-    final provider = await _createEmptyProvider(storage);
-    addTearDown(provider.dispose);
-    await _pumpHomeScreenWithProvider(tester, provider);
+  testWidgets(
+    'empty timetable import menu closes on layout changes and reopens within new bounds',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(600, 900);
+      addTearDown(tester.view.reset);
+      final storage = _BlockingTimetableStorage(null);
+      final provider = await _createEmptyProvider(storage);
+      addTearDown(provider.dispose);
+      await _pumpHomeScreenWithProvider(tester, provider);
 
-    final anchor = find.byKey(const ValueKey('empty-timetable-import-button'));
-    await tester.tap(anchor);
-    await tester.pumpAndSettle();
-    final initialMenuRect = _emptyTimetableImportMenuRect(tester);
+      final anchor = find.byKey(
+        const ValueKey('empty-timetable-import-button'),
+      );
+      await tester.tap(anchor);
+      await tester.pumpAndSettle();
+      final initialMenuRect = _emptyTimetableImportMenuRect(tester);
+      final mainBefore = provider.session.committedData.encode();
+      final writesBefore = storage.saveCount;
 
-    await tester.binding.setSurfaceSize(const Size(320, 568));
-    await tester.pumpAndSettle();
+      tester.view.physicalSize = const Size(320, 568);
+      await tester.pumpAndSettle();
 
-    final updatedAnchorRect = tester.getRect(anchor);
-    final updatedMenuRect = _emptyTimetableImportMenuRect(tester);
-    expect(updatedMenuRect, isNot(initialMenuRect));
-    expect(updatedMenuRect.center.dx, closeTo(updatedAnchorRect.center.dx, 1));
-    expect(updatedMenuRect.left, greaterThanOrEqualTo(8));
-    expect(updatedMenuRect.right, lessThanOrEqualTo(312));
-    expect(updatedMenuRect.bottom, lessThanOrEqualTo(560));
-    expect(tester.takeException(), isNull);
-  });
+      for (final action in ['files', 'text', 'web']) {
+        expect(
+          find.byKey(ValueKey('empty-timetable-import-$action')),
+          findsNothing,
+        );
+      }
+      expect(provider.session.committedData.encode(), mainBefore);
+      expect(storage.saveCount, writesBefore);
+      expect(anchor.hitTestable(), findsOneWidget);
+      await tester.tap(anchor);
+      await tester.pumpAndSettle();
+      final updatedAnchorRect = tester.getRect(anchor);
+      final updatedMenuRect = _emptyTimetableImportMenuRect(tester);
+      expect(updatedMenuRect, isNot(initialMenuRect));
+      expect(
+        updatedMenuRect.center.dx,
+        closeTo(updatedAnchorRect.center.dx, 1),
+      );
+      expect(updatedMenuRect.left, greaterThanOrEqualTo(8));
+      expect(updatedMenuRect.right, lessThanOrEqualTo(312));
+      expect(updatedMenuRect.bottom, lessThanOrEqualTo(560));
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('new timetable failure keeps its draft and can be retried', (
     tester,

@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui' show SemanticsRole;
+import 'dart:ui' show FlutterView, SemanticsRole;
 
 import 'package:material_ui/material_ui.dart';
 
@@ -25,6 +25,49 @@ Future<T?> showSkedMenu<T>({
   bool useRootNavigator = false,
   String? semanticLabel,
   RouteSettings? routeSettings,
+}) => _showSkedMenu<T>(
+  context: context,
+  items: items,
+  position: position,
+  positionBuilder: positionBuilder,
+  initialValue: initialValue,
+  constraints: constraints,
+  requestFocus: requestFocus,
+  useRootNavigator: useRootNavigator,
+  semanticLabel: semanticLabel,
+  routeSettings: routeSettings,
+  session: _SkedMenuSession(),
+);
+
+class _SkedMenuSession {
+  bool valid = true;
+  VoidCallback? onInvalidated;
+  ModalRoute<dynamic>? _route;
+
+  // The route can finish before its Future delivers the result. Keep an
+  // unbuilt route open, but do not mistake a popped/removed route for a live
+  // menu while its source is temporarily reparented or opens another menu.
+  bool get isOpen => _route?.isActive ?? true;
+
+  void invalidate() {
+    if (!valid) return;
+    valid = false;
+    onInvalidated?.call();
+  }
+}
+
+Future<T?> _showSkedMenu<T>({
+  required BuildContext context,
+  required List<PopupMenuEntry<T>> items,
+  RelativeRect? position,
+  PopupMenuPositionBuilder? positionBuilder,
+  T? initialValue,
+  BoxConstraints? constraints,
+  bool? requestFocus,
+  bool useRootNavigator = false,
+  String? semanticLabel,
+  RouteSettings? routeSettings,
+  required _SkedMenuSession session,
 }) {
   assert((position == null) != (positionBuilder == null));
   final menu = SkedMenuStyle.of(context);
@@ -35,7 +78,8 @@ Future<T?> showSkedMenu<T>({
   return showMenu<T>(
     context: context,
     items: [
-      if (items.isNotEmpty) _SkedMenuMetricsGuard<T>(item: items.first),
+      if (items.isNotEmpty)
+        _SkedMenuMetricsGuard<T>(item: items.first, session: session),
       ...items.skip(1),
     ],
     positionBuilder: (layoutContext, layoutConstraints) {
@@ -84,7 +128,7 @@ Future<T?> showSkedMenu<T>({
     clipBehavior: Clip.antiAlias,
     popUpAnimationStyle: SkedMotionPolicy.of(context)
         .routeStyle(AppMotion.menuAnimationStyle),
-  );
+  ).then((value) => session.valid ? value : null);
 }
 
 class SkedPopupMenuButton<T> extends StatelessWidget {
@@ -198,10 +242,25 @@ class _SkedPopupMenuButton<T> extends PopupMenuButton<T> {
 class _SkedPopupMenuButtonState<T> extends PopupMenuButtonState<T> {
   bool _expanded = false;
   int _menuGeneration = 0;
+  _SkedMenuSession? _menuSession;
+
+  void _invalidateMenu() {
+    if (_menuSession?.isOpen == false) return;
+    _menuSession?.invalidate();
+    _menuSession = null;
+    _expanded = false;
+    _menuGeneration++;
+  }
+
+  @override
+  void deactivate() {
+    _invalidateMenu();
+    super.deactivate();
+  }
 
   @override
   void showButtonMenu() {
-    if (!widget.enabled) return;
+    if (!widget.enabled || (_expanded && _menuSession?.isOpen != false)) return;
     final items = widget.itemBuilder(context);
     if (items.isEmpty) return;
     final button = context.findRenderObject() as RenderBox?;
@@ -213,20 +272,22 @@ class _SkedPopupMenuButtonState<T> extends PopupMenuButtonState<T> {
             as RenderBox?;
     if (button == null || overlay == null) return;
     final generation = ++_menuGeneration;
+    final session = _menuSession = _SkedMenuSession();
     RelativeRect? lastPosition;
     widget.onOpened?.call();
     setState(() => _expanded = true);
     unawaited(
-      showSkedMenu<T>(
+      _showSkedMenu<T>(
         context: context,
         items: items,
+        session: session,
         initialValue: widget.initialValue,
         constraints: widget.constraints,
         requestFocus: widget.requestFocus,
         useRootNavigator: widget.useRootNavigator,
         routeSettings: widget.routeSettings,
         positionBuilder: (_, _) {
-          if (!button.attached || !overlay.attached) {
+          if (!session.valid || !button.attached || !overlay.attached) {
             return lastPosition ?? RelativeRect.fill;
           }
           var offset = widget.offset;
@@ -243,8 +304,9 @@ class _SkedPopupMenuButtonState<T> extends PopupMenuButtonState<T> {
           );
         },
       ).then((value) {
-        if (!mounted) return;
-        if (generation == _menuGeneration) setState(() => _expanded = false);
+        if (!mounted || generation != _menuGeneration) return;
+        _menuSession = null;
+        setState(() => _expanded = false);
         if (value == null) {
           widget.onCanceled?.call();
         } else {
@@ -304,13 +366,14 @@ class _SkedPopupMenuButtonState<T> extends PopupMenuButtonState<T> {
   }
 }
 
-/// A metrics change invalidates the route's captured menu constraints. Dismiss
-/// this menu without selecting instead of keeping it under a new keyboard or
-/// across a resized viewport. Never pop a later route above the menu.
+/// Shrinking keyboard occlusion leaves the captured bounds safe and can result
+/// from this menu taking focus. Other viewport changes invalidate this session.
+/// Never pop a later route above the menu or accept a queued stale selection.
 class _SkedMenuMetricsGuard<T> extends PopupMenuEntry<T> {
-  const _SkedMenuMetricsGuard({required this.item});
+  const _SkedMenuMetricsGuard({required this.item, required this.session});
 
   final PopupMenuEntry<T> item;
+  final _SkedMenuSession session;
   @override
   double get height => item.height;
   @override
@@ -322,29 +385,87 @@ class _SkedMenuMetricsGuard<T> extends PopupMenuEntry<T> {
 
 class _SkedMenuMetricsGuardState<T> extends State<_SkedMenuMetricsGuard<T>>
     with WidgetsBindingObserver {
-  bool _invalidated = false;
+  FlutterView? _view;
+  Size? _physicalSize;
+  double? _pixelRatio;
+  EdgeInsets? _viewPadding, _viewInsets;
+  ModalRoute<T>? _route;
+  NavigatorState? _navigator;
+  bool _closeScheduled = false;
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    widget.session.onInvalidated = _closeIfCurrent;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _route = ModalRoute.of<T>(context);
+    widget.session._route = _route;
+    _navigator = Navigator.of(context);
+    final view = View.of(context);
+    if (!identical(_view, view)) {
+      if (_view != null) widget.session.invalidate();
+      _view = view;
+      _captureMetrics(view);
+    }
+  }
+
+  void _captureMetrics(FlutterView view) {
+    _physicalSize = view.physicalSize;
+    _pixelRatio = view.devicePixelRatio;
+    _viewPadding = EdgeInsets.fromViewPadding(
+      view.viewPadding,
+      view.devicePixelRatio,
+    );
+    _viewInsets = EdgeInsets.fromViewPadding(
+      view.viewInsets,
+      view.devicePixelRatio,
+    );
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    widget.session.onInvalidated = null;
     super.dispose();
   }
 
   @override
   void didChangeMetrics() {
-    _invalidated = true;
-    _closeIfCurrent();
+    final view = _view;
+    if (view == null || !widget.session.valid) return;
+    final insets = EdgeInsets.fromViewPadding(
+      view.viewInsets,
+      view.devicePixelRatio,
+    );
+    final sameGeometry =
+        _physicalSize == view.physicalSize &&
+        _pixelRatio == view.devicePixelRatio &&
+        _viewPadding ==
+            EdgeInsets.fromViewPadding(view.viewPadding, view.devicePixelRatio);
+    final previousInsets = _viewInsets!;
+    final occlusionDidNotGrow =
+        insets.left <= previousInsets.left &&
+        insets.top <= previousInsets.top &&
+        insets.right <= previousInsets.right &&
+        insets.bottom <= previousInsets.bottom;
+    _captureMetrics(view);
+    // An unchanged target view can also receive another view's notification.
+    // Keyboard close animations may report several decreasing inset frames.
+    if (sameGeometry && occlusionDidNotGrow) return;
+    widget.session.invalidate();
   }
 
   void _closeIfCurrent() {
+    if (_closeScheduled) return;
+    _closeScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && ModalRoute.isCurrentOf(context) == true) {
-        Navigator.of(context).pop<T>();
+      _closeScheduled = false;
+      if (mounted && _route?.isCurrent == true && _navigator?.mounted == true) {
+        _navigator!.pop<T>();
       }
     });
     WidgetsBinding.instance.ensureVisualUpdate();
@@ -352,10 +473,13 @@ class _SkedMenuMetricsGuardState<T> extends State<_SkedMenuMetricsGuard<T>>
 
   @override
   Widget build(BuildContext context) {
-    if (ModalRoute.isCurrentOf(context) == true && _invalidated) {
+    if (_route?.isCurrent == true && !widget.session.valid) {
       _closeIfCurrent();
     }
-    return widget.item;
+    return IgnorePointer(
+      ignoring: !widget.session.valid,
+      child: ExcludeFocus(excluding: !widget.session.valid, child: widget.item),
+    );
   }
 }
 

@@ -14,6 +14,7 @@ import 'package:sked/widgets/sked_popup_menu.dart';
 enum _Kind { popup, dropdown }
 
 const _trigger = ValueKey('adaptive-menu-trigger');
+const _composer = ValueKey('adaptive-menu-composer');
 const _shortEntries = [
   DropdownMenuEntry(value: 'week', label: 'Week'),
   DropdownMenuEntry(value: 'day', label: 'Day'),
@@ -26,6 +27,7 @@ Future<({List<String?> selected, GlobalKey<NavigatorState> navigator})> _mount(
   double scale = 1,
   double fieldWidth = 720,
   double top = 64,
+  bool withComposer = false,
   bool iconTrigger = false,
   List<DropdownMenuEntry<String>> entries = _shortEntries,
 }) async {
@@ -52,6 +54,13 @@ Future<({List<String?> selected, GlobalKey<NavigatorState> navigator})> _mount(
         resizeToAvoidBottomInset: false,
         body: Stack(
           children: [
+            if (withComposer)
+              const Positioned(
+                left: 24,
+                right: 24,
+                top: 64,
+                child: TextField(key: _composer),
+              ),
             Positioned(
               left: 24,
               top: top,
@@ -109,6 +118,16 @@ Future<void> _open(WidgetTester tester) async {
   await tester.pumpAndSettle();
   expect(_surface(), findsOneWidget);
 }
+
+PopupMenuButtonState<String> _popupState(WidgetTester tester, Finder trigger) =>
+    tester.state<PopupMenuButtonState<String>>(
+      find.descendant(
+        of: trigger,
+        matching: find.byWidgetPredicate(
+          (widget) => widget is PopupMenuButton<String>,
+        ),
+      ),
+    );
 
 void main() {
   for (final platform in [TargetPlatform.windows, TargetPlatform.android]) {
@@ -316,29 +335,213 @@ void main() {
     expect(tester.takeException(), isNull);
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
-  testWidgets(
-    'metrics invalidation never closes a later dialog above a popup',
-    (tester) async {
-      final fixture = await _mount(tester, kind: _Kind.popup);
-      await _open(tester);
-      unawaited(
-        showDialog<void>(
-          context: fixture.navigator.currentContext!,
-          builder: (_) => const AlertDialog(content: Text('Later dialog')),
-        ),
-      );
+  testWidgets('popup focus can close the IME without canceling its selection', (
+    tester,
+  ) async {
+    final fixture = await _mount(
+      tester,
+      kind: _Kind.popup,
+      size: const Size(390, 844),
+      fieldWidth: 280,
+      top: 240,
+      withComposer: true,
+    );
+    await tester.showKeyboard(find.byKey(_composer));
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pumpAndSettle();
+    expect(tester.testTextInput.isVisible, isTrue);
+    final previousCalls = tester.testTextInput.log.length;
+    await _open(tester);
+    expect(
+      tester.testTextInput.log.skip(previousCalls).map((call) => call.method),
+      contains('TextInput.hide'),
+    );
+    expect(tester.testTextInput.isVisible, isFalse);
+    // Android reports the resulting keyboard close after the focus request,
+    // potentially over several frames. Keep the menu and its pending choice.
+    for (final bottom in [200.0, 100.0, 0.0]) {
+      tester.view.viewInsets = FakeViewPadding(bottom: bottom);
       await tester.pumpAndSettle();
-      tester.view.viewInsets = const FakeViewPadding(bottom: 420);
-      await tester.pumpAndSettle();
-      expect(find.text('Later dialog'), findsOneWidget);
-      fixture.navigator.currentState!.pop();
-      await tester.pumpAndSettle();
-      expect(_surface(), findsNothing);
+      expect(_surface(), findsOneWidget);
       expect(fixture.selected, isEmpty);
-      expect(tester.takeException(), isNull);
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.windows),
-  );
+    }
+    await tester.tap(_menuLabel('Day'));
+    await tester.pumpAndSettle();
+    expect(fixture.selected, ['day']);
+    expect(_surface(), findsNothing);
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  testWidgets('a DPI change rejects a choice queued before popup dismissal', (
+    tester,
+  ) async {
+    final fixture = await _mount(tester, kind: _Kind.popup);
+    await _open(tester);
+    tester.view.devicePixelRatio = 2;
+    // Deliver a result before the post-frame dismissal can run. It belongs to
+    // the invalidated viewport and must not reach the owner's selection action.
+    fixture.navigator.currentState!.pop('day');
+    await tester.pumpAndSettle();
+    expect(fixture.selected, isEmpty);
+    expect(_surface(), findsNothing);
+    expect(fixture.navigator.currentState!.canPop(), isFalse);
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+
+  testWidgets('a disabled popup keeps its menu but blocks new openings', (
+    tester,
+  ) async {
+    final selected = <String>[];
+    var enabled = true;
+    late StateSetter update;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: StatefulBuilder(
+            builder: (context, setState) {
+              update = setState;
+              return SkedPopupMenuButton<String>(
+                key: _trigger,
+                enabled: enabled,
+                onSelected: selected.add,
+                itemBuilder: (_) => const [
+                  SkedPopupMenuItem(value: 'day', child: Text('Day')),
+                ],
+                child: const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Text('Choose'),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+    update(() => enabled = false);
+    await tester.pumpAndSettle();
+    expect(_surface(), findsOneWidget);
+    await tester.tap(_menuLabel('Day'));
+    await tester.pumpAndSettle();
+    expect(selected, ['day']);
+    expect(_surface(), findsNothing);
+    await tester.tap(find.byKey(_trigger));
+    _popupState(tester, find.byKey(_trigger)).showButtonMenu();
+    await tester.pumpAndSettle();
+    expect(_surface(), findsNothing);
+    expect(selected, ['day']);
+    update(() => enabled = true);
+    await tester.pumpAndSettle();
+    await _open(tester);
+    await tester.tap(_menuLabel('Day'));
+    await tester.pumpAndSettle();
+    expect(selected, ['day', 'day']);
+    expect(_surface(), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('popup can reopen immediately after its route is removed', (
+    tester,
+  ) async {
+    final fixture = await _mount(tester, kind: _Kind.popup);
+    await _open(tester);
+    final routeA = ModalRoute.of(tester.element(_menuLabel('Day')))!;
+    final launcher = _popupState(tester, find.byKey(_trigger));
+    fixture.navigator.currentState!.removeRoute(routeA);
+    expect(routeA.isActive, isFalse);
+    launcher.showButtonMenu();
+    await tester.pumpAndSettle();
+    expect(_surface(), findsOneWidget);
+    final routeB = ModalRoute.of(tester.element(_menuLabel('Day')))!;
+    expect(routeB, isNot(same(routeA)));
+    expect(routeB.isActive, isTrue);
+    await tester.tap(_menuLabel('Day'));
+    await tester.pumpAndSettle();
+    expect(fixture.selected, ['day']);
+    expect(_surface(), findsNothing);
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+
+  for (final poppedBeforeReparent in [true, false]) {
+    testWidgets(
+      poppedBeforeReparent
+          ? 'a popped choice survives source reparenting before result delivery'
+          : 'source reparenting retires a still-live popup session',
+      (tester) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = const Size(460, 820);
+        addTearDown(tester.view.reset);
+        final moved = ValueNotifier(false);
+        addTearDown(moved.dispose);
+        final sourceKey = GlobalKey();
+        final selected = <String>[];
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: moved,
+                  child: SkedPopupMenuButton<String>(
+                    key: sourceKey,
+                    onSelected: selected.add,
+                    itemBuilder: (_) => const [
+                      SkedPopupMenuItem(value: 'day', child: Text('Day')),
+                    ],
+                    child: const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text('Choose'),
+                    ),
+                  ),
+                  builder: (context, reparented, child) => reparented
+                      ? Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [child!],
+                        )
+                      : Row(mainAxisSize: MainAxisSize.min, children: [child!]),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final launcher = _popupState(tester, find.byKey(sourceKey));
+        // Keep the route result in the real async zone while widget frames run
+        // in the fake zone. This makes the completed-but-undelivered interval
+        // observable without waiting on device I/O or wall-clock delays.
+        await tester.runAsync(() => tester.tap(find.byKey(sourceKey)));
+        await tester.pumpAndSettle();
+        final route = ModalRoute.of(tester.element(_menuLabel('Day')))!;
+        if (poppedBeforeReparent) {
+          await tester.tap(_menuLabel('Day'));
+          expect(route.isActive, isFalse);
+          expect(selected, isEmpty);
+        }
+        moved.value = true;
+        await tester.pump();
+        expect(
+          _popupState(tester, find.byKey(sourceKey)),
+          same(launcher),
+          reason: 'The source survives the GlobalKey reparenting.',
+        );
+        await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+        await tester.pumpAndSettle();
+        expect(selected, poppedBeforeReparent ? ['day'] : isEmpty);
+        expect(route.isActive, isFalse);
+        expect(_surface(), findsNothing);
+        if (!poppedBeforeReparent) {
+          launcher.showButtonMenu();
+          await tester.pumpAndSettle();
+          await tester.tap(_menuLabel('Day'));
+          await tester.pumpAndSettle();
+          expect(selected, ['day']);
+          expect(_surface(), findsNothing);
+        }
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+    );
+  }
 
   testWidgets('popup geometry survives a source deactivated during reflow', (
     tester,
@@ -470,6 +673,30 @@ void main() {
       );
     }
   }
+
+  testWidgets(
+    'metrics invalidation never closes a later dialog above a popup',
+    (tester) async {
+      final fixture = await _mount(tester, kind: _Kind.popup);
+      await _open(tester);
+      unawaited(
+        showDialog<void>(
+          context: fixture.navigator.currentContext!,
+          builder: (_) => const AlertDialog(content: Text('Later dialog')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      tester.view.viewInsets = const FakeViewPadding(bottom: 420);
+      await tester.pumpAndSettle();
+      expect(find.text('Later dialog'), findsOneWidget);
+      fixture.navigator.currentState!.pop();
+      await tester.pumpAndSettle();
+      expect(_surface(), findsNothing);
+      expect(fixture.selected, isEmpty);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
 
   testWidgets('nested settings menus lay out during a 2x route animation', (
     tester,
