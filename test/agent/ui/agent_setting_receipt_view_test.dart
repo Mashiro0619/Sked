@@ -97,6 +97,13 @@ void main() {
                       'action': 'set',
                       'endpoint': 'https://receipt.invalid/v1',
                       'model': 'receipt-model',
+                      'models': [
+                        {
+                          'id': 'receipt-model',
+                          'reasoningEfforts': ['medium'],
+                          'defaultReasoningEffort': 'medium',
+                        },
+                      ],
                     },
                     true,
                   ),
