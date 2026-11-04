@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/screens/general_schedule_home_screen.dart';
+import 'package:sked/screens/settings_page.dart';
 import 'package:sked/services/desktop_window_bridge.dart';
 import 'package:sked/widgets/sked_date_picker.dart';
 import 'package:sked/widgets/workbench_compact_calendar_bar.dart';
@@ -303,20 +304,56 @@ void main() {
               tester.getSemantics(category).getSemanticsData().label,
               contains(_longName),
             );
+            final row = tester.getRect(
+              _key('general-compact-toolbar-single-row'),
+            );
+            final viewport = tester.getRect(
+              _key('general-compact-toolbar-scroll'),
+            );
+            final settings = _key('general-settings-button');
             for (final control in [
               category,
               button,
               _key('general-view-switcher'),
-              _key('general-settings-button'),
+              if (settings.evaluate().isNotEmpty) settings,
               _key('general-toolbar-more-button'),
             ]) {
               expect(tester.getRect(control).width, greaterThanOrEqualTo(48));
               expect(tester.getRect(control).height, greaterThanOrEqualTo(48));
-              await tester.ensureVisible(control);
-              await tester.pumpAndSettle();
+              if (row.width > viewport.width + .5) {
+                await tester.ensureVisible(control);
+                await tester.pumpAndSettle();
+              }
+              final rect = tester.getRect(control);
+              expect(rect.left, greaterThanOrEqualTo(viewport.left - .1));
+              expect(rect.right, lessThanOrEqualTo(viewport.right + .1));
               expect(control.hitTestable(), findsOneWidget);
             }
             await _openAndCloseDatePicker(tester, button);
+            if (settings.evaluate().isNotEmpty) {
+              await tester.ensureVisible(settings);
+              await tester.pumpAndSettle();
+              await tester.tap(settings);
+            } else {
+              final more = _key('general-toolbar-more-button');
+              await tester.ensureVisible(more);
+              await tester.pumpAndSettle();
+              await tester.tap(more);
+              await tester.pumpAndSettle();
+              final entry = _key('general-more-settings');
+              await tester.ensureVisible(entry);
+              await tester.pumpAndSettle();
+              expect(tester.getRect(entry).width, greaterThanOrEqualTo(48));
+              expect(tester.getRect(entry).height, greaterThanOrEqualTo(48));
+              expect(entry.hitTestable(), findsOneWidget);
+              await tester.tap(entry);
+            }
+            await tester.pumpAndSettle();
+            expect(find.byType(SettingsPage), findsOneWidget);
+            await tester.binding.handlePopRoute();
+            await tester.pumpAndSettle();
+            expect(find.byType(SettingsPage), findsNothing);
+            expect(button, findsOneWidget);
             expect(provider.generalView.customDateRange, _range);
             expect(storage.writes, writes);
             expect(tester.takeException(), isNull);

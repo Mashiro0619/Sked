@@ -548,14 +548,20 @@ void main() {
           final storage = CalendarStorage(sample(shortName: true));
           final p = await workspaceProvider(storage: storage, locale: 'zh');
           addTearDown(p.dispose);
+          final before = storage.writes;
+          final mainBefore = p.session.committedData.encode();
           await home(
             t,
             p,
             scale: scale,
             brightness: scale == 1.3 ? Brightness.dark : Brightness.light,
           );
-          final before = storage.writes;
           final toolbar = find.byType(SkedWorkspaceToolbar).hitTestable().first;
+          final toolbarWidget = t.widget<SkedWorkspaceToolbar>(toolbar);
+          final toolbarRect = t.getRect(toolbar);
+          expect(key('general-compact-toolbar-rows'), findsNothing);
+          expect(key('general-compact-toolbar-single-row'), findsOneWidget);
+          final row = t.getRect(key('general-compact-toolbar-single-row'));
           final surface = t.widget<Material>(
             find.descendant(of: toolbar, matching: find.byType(Material)).first,
           );
@@ -570,16 +576,50 @@ void main() {
             'general-date-title-button',
             'general-view-switcher',
             'general-toolbar-more-button',
-            'general-toolbar-more-button',
           ];
           for (final value in controls) {
             expect(key(value).hitTestable(), findsOneWidget);
             final rect = t.getRect(key(value));
             expect(rect.left, greaterThanOrEqualTo(0));
             expect(rect.right, lessThanOrEqualTo(width));
+            expect(rect.width, greaterThanOrEqualTo(48));
             expect(rect.height, greaterThanOrEqualTo(48));
+            expect(rect.center.dy, closeTo(row.center.dy, 1));
           }
-          expect(t.getSize(toolbar).height, lessThanOrEqualTo(52));
+          var contentHeight = 48.0;
+          for (final value in controls.take(2)) {
+            final text = find.descendant(
+              of: key(value),
+              matching: find.byType(RichText),
+            );
+            final paragraph = t.renderObject<RenderParagraph>(text);
+            final measuredHeight = paragraph.getMinIntrinsicHeight(
+              paragraph.size.width,
+            );
+            expect(paragraph.size.height, closeTo(measuredHeight, .01));
+            final textRect = t.getRect(text);
+            final controlRect = t.getRect(key(value));
+            expect(textRect.top, greaterThanOrEqualTo(controlRect.top - .01));
+            expect(
+              textRect.bottom,
+              lessThanOrEqualTo(controlRect.bottom + .01),
+            );
+            if (measuredHeight > contentHeight) {
+              contentHeight = measuredHeight;
+            }
+          }
+          expect(row.height, closeTo(contentHeight, .01));
+          final toolbarPadding = toolbarWidget.padding.resolve(
+            Directionality.of(t.element(toolbar)),
+          );
+          expect(
+            toolbarRect.height,
+            closeTo(row.height + toolbarPadding.vertical, .01),
+          );
+          final viewport = t.getRect(key('general-week-pager'));
+          expect(viewport.top, greaterThanOrEqualTo(toolbarRect.bottom - .01));
+          expect(viewport.height, greaterThan(0));
+          expect(p.session.committedData.encode(), mainBefore);
           expect(storage.writes, before);
           await openWeek(t);
           expect(key('sked-date-selection-label'), findsNothing);

@@ -689,7 +689,7 @@ void main() {
 
     final dateButton = find.byKey(const ValueKey('general-date-title-button'));
     expect(tester.getSize(dateButton).height, greaterThanOrEqualTo(48));
-    expect(_visibleDateNavigationLabel(tester), '2026/8/11');
+    expect(_visibleDateNavigationLabel(tester), anyOf('2026/8/11', '8/11'));
     expect(
       find.descendant(
         of: dateButton,

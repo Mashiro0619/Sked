@@ -192,15 +192,17 @@ void main() {
           expect(key('general-compact-toolbar-rows'), findsNothing);
           expect(row.top, 28);
           expectReadableToolbarHeight(t, row, key('general-date-title-button'));
+          final viewport = t.getRect(key('general-compact-toolbar-scroll'));
           for (final name in [
             'general-calendar-selector',
             'general-date-title-button',
             'general-view-switcher',
             'general-toolbar-more-button',
-            'general-toolbar-more-button',
           ]) {
-            await t.ensureVisible(key(name));
-            await t.pumpAndSettle();
+            if (row.width > viewport.width + .5) {
+              await t.ensureVisible(key(name));
+              await t.pumpAndSettle();
+            }
             final item = t.getRect(key(name));
             expect(item.center.dy, closeTo(row.center.dy, 1), reason: name);
             expect(item.width, greaterThanOrEqualTo(48));
@@ -212,7 +214,6 @@ void main() {
           final scrolling = t.widget<SingleChildScrollView>(
             key('general-compact-toolbar-scroll'),
           );
-          final viewport = t.getRect(key('general-compact-toolbar-scroll'));
           expect(
             scrolling.physics,
             row.width > viewport.width + .5

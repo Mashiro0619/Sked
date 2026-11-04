@@ -3,7 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/app_runtime.dart';
+import 'package:sked/screens/settings_page.dart';
 import 'package:sked/widgets/sked_date_picker.dart';
+import 'package:sked/widgets/workspace_navigation.dart';
 
 import '../support/mobile_layout_data.dart';
 import '../support/workspace_harness.dart';
@@ -36,6 +38,8 @@ Future<(AppRuntime, _Storage)> home(
   String view = generalViewWeek,
   GeneralDateRange? range,
   List<String> hidden = const [],
+  List<String> order = generalToolbarNavigationDefaultOrder,
+  bool hideWorkspaceNavigation = false,
   String format = generalDateLabelFormatSlash,
 }) async {
   t.view.devicePixelRatio = 1;
@@ -46,12 +50,14 @@ Future<(AppRuntime, _Storage)> home(
   final selected =
       range ?? GeneralDateRange(DateTime(2026, 9, 22), DateTime(2026, 9, 24));
   final data = base.copyWith(
+    hideHomeWorkspaceNavigation: hideWorkspaceNavigation,
     generalMode: base.generalMode.copyWith(
       selectedDateIso: selected.start.toIso8601String().split('T').first,
       defaultView: view,
       dateLabelFormat: format,
       customDateRange: view == generalViewWeek ? selected : null,
       hiddenToolbarNavigationIds: hidden,
+      toolbarNavigationOrder: order,
       schedules: [
         for (final s in base.generalMode.schedules) s.copyWith(name: name),
       ],
@@ -196,7 +202,6 @@ void main() {
             'general-calendar-selector',
             'general-date-title-button',
             'general-view-switcher',
-            'general-settings-button',
             'general-toolbar-more-button',
           ]) {
             final rect = t.getRect(key(id));
@@ -205,6 +210,28 @@ void main() {
             expect(rect.height, greaterThanOrEqualTo(48));
             expect(rect.left, greaterThanOrEqualTo(0));
             expect(rect.right, lessThanOrEqualTo(width));
+            expect(key(id).hitTestable(), findsOneWidget);
+          }
+          final settings = key('general-settings-button');
+          if (settings.evaluate().isNotEmpty) {
+            final rect = t.getRect(settings);
+            expect(rect.center.dy, closeTo(row.center.dy, 1));
+            expect(rect.width, greaterThanOrEqualTo(48));
+            expect(rect.height, greaterThanOrEqualTo(48));
+            expect(rect.right, lessThanOrEqualTo(width));
+            expect(settings.hitTestable(), findsOneWidget);
+          } else {
+            await t.tap(key('general-toolbar-more-button'));
+            await t.pumpAndSettle();
+            final entry = key('general-more-settings');
+            await t.ensureVisible(entry);
+            await t.pumpAndSettle();
+            expect(entry.hitTestable(), findsOneWidget);
+            await t.tap(entry);
+            await t.pumpAndSettle();
+            expect(find.byType(SettingsPage), findsOneWidget);
+            await t.binding.handlePopRoute();
+            await t.pumpAndSettle();
           }
           expect(storage.writes, before);
           expect(t.takeException(), isNull);
@@ -213,4 +240,66 @@ void main() {
       );
     }
   }
+
+  testWidgets(
+    'responsive More restores configured secondary shortcuts with zero writes',
+    (t) async {
+      const order = [
+        'settings',
+        'category',
+        'date',
+        'view',
+        'workspace',
+        'more',
+      ];
+      final (p, storage) = await home(
+        t,
+        width: 320,
+        scale: 2,
+        name: 'My calendar notes',
+        order: order,
+        hideWorkspaceNavigation: true,
+      );
+      final before = storage.writes;
+      expect(key('general-settings-button'), findsNothing);
+      expect(find.byType(WorkspaceModeMenu), findsNothing);
+      for (final id in [
+        'workspace-main-navigation',
+        'general-calendar-selector',
+        'general-date-title-button',
+        'general-view-switcher',
+        'general-toolbar-more-button',
+      ]) {
+        final rect = t.getRect(key(id));
+        expect(rect.left, greaterThanOrEqualTo(0));
+        expect(rect.right, lessThanOrEqualTo(320));
+        expect(rect.width, greaterThanOrEqualTo(48));
+        expect(rect.height, greaterThanOrEqualTo(48));
+        expect(key(id).hitTestable(), findsOneWidget);
+      }
+      await t.tap(key('general-toolbar-more-button'));
+      await t.pumpAndSettle();
+      final settings = key('general-more-settings');
+      final workspace = key('general-more-workspace-student');
+      expect(t.getRect(settings).top, lessThan(t.getRect(workspace).top));
+      await t.ensureVisible(settings);
+      await t.pumpAndSettle();
+      expect(settings.hitTestable(), findsOneWidget);
+      await t.binding.handlePopRoute();
+      await t.pumpAndSettle();
+      t.view.physicalSize = const Size(500, 900);
+      await t.pumpAndSettle();
+      expect(key('general-settings-button').hitTestable(), findsOneWidget);
+      expect(find.byType(WorkspaceModeMenu).hitTestable(), findsOneWidget);
+      expect(
+        t.getRect(key('general-settings-button')).left,
+        lessThan(t.getRect(key('general-calendar-selector')).left),
+      );
+      expect(p.generalView.data.toolbarNavigationOrder, order);
+      expect(p.generalView.data.hiddenToolbarNavigationIds, isEmpty);
+      expect(storage.writes, before);
+      expect(t.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
 }

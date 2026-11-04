@@ -491,13 +491,14 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
                     hiddenNavigationIds: snapshot.hiddenToolbarNavigationIds,
                     hiddenItemsBehavior: snapshot.toolbarHiddenItemsBehavior,
                     moreButtonKey: _toolbarMoreButtonKey,
-                    compactMoreButton: compactTouch
-                        ? _compactMoreButton(
+                    compactMoreButtonBuilder: compactTouch
+                        ? (overflowIds) => _compactMoreButton(
                             context,
                             general,
                             snapshot,
                             filter,
                             view,
+                            overflowIds: overflowIds,
                           )
                         : null,
                     selectedDate: selectedDate,
@@ -1296,11 +1297,15 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     GeneralViewState general,
     _GeneralHomeSnapshot snapshot,
     _GeneralOccurrenceFilter filter,
-    String view,
-  ) {
+    String view, {
+    Set<String> overflowIds = const {},
+  }) {
     final commands = context.read<GeneralCommands>();
     final l = AppLocalizations.of(context);
-    final hidden = snapshot.hiddenToolbarNavigationIds;
+    final hidden = {
+      ...snapshot.hiddenToolbarNavigationIds,
+      ...overflowIds,
+    }.toList(growable: false);
     final placement = MobileToolbarLayout.resolve(
       order: snapshot.toolbarNavigationOrder,
       hiddenIds: hidden,
@@ -2556,7 +2561,7 @@ class _GeneralToolbarLayout extends StatelessWidget {
     required this.hiddenNavigationIds,
     required this.hiddenItemsBehavior,
     required this.moreButtonKey,
-    this.compactMoreButton,
+    this.compactMoreButtonBuilder,
   });
 
   final String categoryLabel;
@@ -2581,7 +2586,7 @@ class _GeneralToolbarLayout extends StatelessWidget {
   final List<String> hiddenNavigationIds;
   final String hiddenItemsBehavior;
   final GlobalKey moreButtonKey;
-  final Widget? compactMoreButton;
+  final Widget Function(Set<String> overflowIds)? compactMoreButtonBuilder;
 
   Widget _compact(BuildContext context) {
     final m = WorkbenchChromeMetrics.of(context);
@@ -2635,11 +2640,9 @@ class _GeneralToolbarLayout extends StatelessWidget {
         tooltip: settingsLabel,
       ),
       'workspace': const WorkspaceModeMenu(),
-      'more': compactMoreButton!,
       'date': navigation(true),
       'view': navigation(false),
     };
-    final ids = placement.toolbarIds;
     double textWidth(String label, TextStyle? style) {
       final painter = TextPainter(
         text: TextSpan(text: label, style: style),
@@ -2692,15 +2695,47 @@ class _GeneralToolbarLayout extends StatelessWidget {
     );
     return LayoutBuilder(
       builder: (context, constraints) {
+        var ids = placement.toolbarIds;
         final hasCategory = ids.contains('category');
         final hasDate = ids.contains('date');
-        final fixedWidth =
-            ids.where((id) => id != 'category' && id != 'date').length *
+        final minimumLabelsWidth =
+            (hasCategory ? 48 : 0) + (hasDate ? minimumDateWidth : 0);
+        double fixedActionsWidth(List<String> orderedIds) =>
+            orderedIds.where((id) => id != 'category' && id != 'date').length *
             m.iconTarget;
-        final minimumWidth =
-            fixedWidth +
-            (hasCategory ? 48 : 0) +
-            (hasDate ? minimumDateWidth : 0);
+        final secondaryCount = ids
+            .where((id) => id == 'settings' || id == 'workspace')
+            .length;
+        final preferredLabelsWidth =
+            (hasCategory ? desiredCategoryWidth : 0) +
+            (hasDate
+                ? hasCategory && yearlessDate != null
+                      ? math.min(desiredDateWidth, dateDemand(yearlessDate))
+                      : desiredDateWidth
+                : 0);
+        final primaryFixedWidth =
+            fixedActionsWidth(ids) - secondaryCount * m.iconTarget;
+        final labelsWidth =
+            primaryFixedWidth + preferredLabelsWidth <=
+                constraints.maxWidth + .5
+            ? preferredLabelsWidth
+            : minimumLabelsWidth;
+        final overflowIds = <String>{};
+        // The main navigation trigger is outside this title slot. Recover
+        // secondary shortcuts in More to keep the category and month/day when
+        // they can fit, and always before minimum targets need scrolling.
+        // Saved visibility and order stay intact.
+        for (final id in placement.toolbarIds.reversed) {
+          if (fixedActionsWidth(ids) + labelsWidth <=
+              constraints.maxWidth + .5) {
+            break;
+          }
+          if (id != 'settings' && id != 'workspace') continue;
+          overflowIds.add(id);
+          ids = ids.where((value) => value != id).toList(growable: false);
+        }
+        final fixedWidth = fixedActionsWidth(ids);
+        final minimumWidth = fixedWidth + minimumLabelsWidth;
         final contentWidth = math.max(constraints.maxWidth, minimumWidth);
         final labelBudget = contentWidth - fixedWidth;
         // Give up a redundant year before ellipsizing the category, not only
@@ -2718,9 +2753,8 @@ class _GeneralToolbarLayout extends StatelessWidget {
             ? math.min(preferredDateWidth, labelBudget - 48)
             : labelBudget;
         final categoryWidth = hasCategory ? labelBudget - dateWidth : 0.0;
-        // Keep the date before the secondary category name. A range can use two
-        // lines, but each endpoint stays intact; scroll only when their minimum
-        // width and the existing touch targets cannot fit in this window.
+        // Keep the category complete when a readable date endpoint fits. A
+        // range may wrap, but its endpoints and all primary targets stay intact.
         return SingleChildScrollView(
           key: const ValueKey('general-compact-toolbar-scroll'),
           scrollDirection: Axis.horizontal,
@@ -2747,7 +2781,9 @@ class _GeneralToolbarLayout extends StatelessWidget {
                           'date' => dateWidth,
                           _ => m.iconTarget,
                         },
-                        child: actions[id]!,
+                        child: id == 'more'
+                            ? compactMoreButtonBuilder!(overflowIds)
+                            : actions[id]!,
                       ),
                   ],
                 ),
@@ -2761,7 +2797,7 @@ class _GeneralToolbarLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (compactMoreButton != null) return _compact(context);
+    if (compactMoreButtonBuilder != null) return _compact(context);
     final l10n = AppLocalizations.of(context);
     return SizedBox(
       width: double.infinity,

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -10,6 +11,7 @@ import 'package:sked/screens/general_schedule_home_screen.dart';
 import 'package:sked/widgets/general_event_details_sheet.dart';
 import 'package:sked/widgets/sked_popup_menu.dart';
 import 'package:sked/widgets/sked_date_picker.dart';
+import 'package:sked/widgets/sked_expressive_components.dart';
 import 'package:sked/widgets/workspace_navigation.dart';
 import 'package:sked/screens/general_display_settings_page.dart';
 
@@ -131,6 +133,7 @@ void main() {
             final p = await workspaceProvider(storage: storage, locale: 'zh');
             addTearDown(p.dispose);
             final before = storage.writes;
+            final mainBefore = p.session.committedData.encode();
             await _home(t, p, scale: scale, brightness: brightness);
             expect(p.generalView.data.fitWeekColumnsToWidth, isTrue);
             final viewport = t.getRect(_key('general-week-pager'));
@@ -146,21 +149,66 @@ void main() {
               isA<PageScrollPhysics>(),
             );
             final toolbar = _key('general-workspace-toolbar');
+            final toolbarWidget = t.widget<SkedWorkspaceToolbar>(toolbar);
+            final toolbarRect = t.getRect(toolbar);
             expect(_key('general-compact-toolbar-rows'), findsNothing);
+            expect(_key('general-compact-toolbar-single-row'), findsOneWidget);
             final row = t.getRect(_key('general-compact-toolbar-single-row'));
-            for (final name in [
+            final controls = [
               'general-calendar-selector',
               'general-date-title-button',
               'general-view-switcher',
               'general-toolbar-more-button',
-            ]) {
-              expect(t.getCenter(_key(name)).dy, closeTo(row.center.dy, 1));
+            ];
+            for (final name in controls) {
+              expect(_key(name).hitTestable(), findsOneWidget);
+              final rect = t.getRect(_key(name));
+              expect(rect.left, greaterThanOrEqualTo(toolbarRect.left));
+              expect(rect.right, lessThanOrEqualTo(toolbarRect.right + .01));
+              expect(rect.width, greaterThanOrEqualTo(48));
+              expect(rect.height, greaterThanOrEqualTo(48));
+              expect(rect.center.dy, closeTo(row.center.dy, 1));
             }
-            expect(t.getSize(toolbar).height, lessThanOrEqualTo(52));
+            var contentHeight = 48.0;
+            for (final name in controls.take(2)) {
+              final text = find.descendant(
+                of: _key(name),
+                matching: find.byType(RichText),
+              );
+              final paragraph = t.renderObject<RenderParagraph>(text);
+              final measuredHeight = paragraph.getMinIntrinsicHeight(
+                paragraph.size.width,
+              );
+              expect(paragraph.size.height, closeTo(measuredHeight, .01));
+              final textRect = t.getRect(text);
+              final controlRect = t.getRect(_key(name));
+              expect(textRect.top, greaterThanOrEqualTo(controlRect.top - .01));
+              expect(
+                textRect.bottom,
+                lessThanOrEqualTo(controlRect.bottom + .01),
+              );
+              if (measuredHeight > contentHeight) {
+                contentHeight = measuredHeight;
+              }
+            }
+            expect(row.height, closeTo(contentHeight, .01));
+            final toolbarPadding = toolbarWidget.padding.resolve(
+              Directionality.of(t.element(toolbar)),
+            );
+            expect(
+              toolbarRect.height,
+              closeTo(row.height + toolbarPadding.vertical, .01),
+            );
+            expect(
+              viewport.top,
+              greaterThanOrEqualTo(toolbarRect.bottom - .01),
+            );
+            expect(viewport.height, greaterThan(0));
             expect(_key('general-previous-period'), findsNothing);
             expect(_key('general-next-period'), findsNothing);
             expect(_key('general-reminders-action'), findsNothing);
             expect(_key('general-day-agenda-toggle'), findsNothing);
+            expect(p.session.committedData.encode(), mainBefore);
             expect(
               storage.writes,
               before,
