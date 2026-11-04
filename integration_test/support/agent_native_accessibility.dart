@@ -10,14 +10,14 @@ import 'package:sked/agent/conversations/conversation_models.dart';
 import 'package:sked/agent/knowledge/knowledge_models.dart';
 import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/ui/agent_knowledge_view.dart';
-import 'package:sked/agent/ui/agent_model_settings_form.dart';
 import 'package:sked/agent/ui/agent_operation_card.dart';
 import 'package:sked/agent/ui/agent_plan_preview.dart';
-import 'package:sked/agent/ui/agent_preferences_form.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/screens/agent_page.dart';
+import 'package:sked/screens/agent_connection_settings_page.dart';
+import 'package:sked/screens/agent_preferences_settings_page.dart';
 import 'package:sked/screens/agent_settings_page.dart';
 import 'package:sked/theme/sked_expressive_theme.dart';
 
@@ -435,7 +435,7 @@ class _MsaaScenario {
       lessThanOrEqualTo(1),
       reason: 'The requested control must identify one published tap action.',
     );
-    // Text and Tab labels can merge into an actionable ancestor. Do not search
+    // Text and navigation labels can merge into an actionable ancestor. Do not search
     // that ancestor's other descendants for an unrelated action.
     final node = actions.isEmpty
         ? publishedFrom(object)
@@ -447,6 +447,7 @@ class _MsaaScenario {
       'id': node.id,
       'label': data.label,
       'role': data.role.name,
+      'isButton': data.flagsCollection.isButton,
       'hasTap': data.hasAction(ui.SemanticsAction.tap),
       'selected': data.flagsCollection.isSelected == ui.Tristate.isTrue,
       'mergedIntoParent': node.isMergedIntoParent,
@@ -497,11 +498,7 @@ class _MsaaScenario {
     if (purpose == 'editable-value') {
       expect(result['matchedEditableValues'], greaterThan(0));
     } else {
-      final roles = purpose == 'tab'
-          ? {37, 43}
-          : purpose == 'button'
-          ? {43, 56, 57, 58, 62}
-          : {41, 42};
+      final roles = purpose == 'button' ? {43, 56, 57, 58, 62} : {41, 42};
       expect(
         matches.any(
           (match) =>
@@ -615,62 +612,74 @@ class _MsaaScenario {
 
   Future<void> settings() async {
     final labels = [
-      l.agentModelSettings,
+      l.agentConnectionAndModels,
       l.agentRunPreferences,
       l.agentSkills,
       l.agentMemories,
     ];
     final suffixes = [
-      'settings-model',
+      'settings-connection',
       'settings-preferences',
       'settings-skills',
       'settings-memory',
     ];
-    final tabs = <Map<String, Object?>>[];
-    report['settingsTabs'] = tabs;
+    final destinations = [
+      'agent-settings-connection',
+      'agent-settings-preferences',
+      'agent-settings-skills',
+      'agent-settings-memories',
+    ];
+    final pages = <Map<String, Object?>>[];
+    report['settingsPages'] = pages;
+    report['settingsHierarchy'] = 'overview / category / item';
     await at('settings-open', () async {
       await tap(key('agent-conversation-menu'));
       await tap(key('agent-settings'));
       await until(
         () =>
             find.byType(AgentSettingsPage).hitTestable().evaluate().length == 1,
-        'the independent Agent settings page',
+        'the Agent settings overview page',
       );
     });
     for (var index = 0; index < labels.length; index++) {
       await at(suffixes[index], () async {
-        final tab = find.widgetWithText(Tab, labels[index]);
-        await tap(tab);
-        final controller = DefaultTabController.of(tester.element(tab));
-        await until(
-          () => controller.index == index && !controller.indexIsChanging,
-          'the selected settings tab',
-        );
+        final destination = key(destinations[index]);
+        await reveal(destination);
+        final node = actionEvidence(destination.hitTestable());
+        expect(node['isButton'], isTrue);
+        expect(node['label'], contains(labels[index]));
+        await native(suffixes[index], labels[index], 'button');
+        await tap(destination);
         final content = switch (index) {
-          0 => find.byType(AgentModelSettingsForm),
-          1 => find.byType(AgentPreferencesForm),
+          0 => find.byType(AgentConnectionSettingsPage),
+          1 => find.byType(AgentPreferencesSettingsPage),
           2 => find.byWidgetPredicate(
             (widget) =>
                 widget is AgentKnowledgeView &&
+                widget.pageEditor &&
                 widget.kind == KnowledgeKind.skill,
           ),
           _ => find.byWidgetPredicate(
             (widget) =>
                 widget is AgentKnowledgeView &&
+                widget.pageEditor &&
                 widget.kind == KnowledgeKind.memory,
           ),
         };
         await until(
           () => content.hitTestable().evaluate().length == 1,
-          'the selected real settings form',
+          'the current child settings page',
         );
-        final node = actionEvidence(tab.hitTestable());
-        expect(node['role'], 'tab');
-        expect(node['selected'], isTrue);
-        expect(node['label'], contains(labels[index]));
-        tabs.add({
+        expect(
+          ModalRoute.of(tester.element(content.hitTestable()))?.isCurrent,
+          isTrue,
+        );
+        expect(destination.hitTestable(), findsNothing);
+        pages.add({
           'index': index,
+          'destination': destinations[index],
           'title': labels[index],
+          'currentChildRoute': true,
           'contentType': tester
               .widget(content.hitTestable())
               .runtimeType
@@ -678,10 +687,19 @@ class _MsaaScenario {
           if (index >= 2) 'knowledgeKind': index == 2 ? 'skill' : 'memory',
           ...node,
         });
-        await native(suffixes[index], labels[index], 'tab');
+        await tap(find.byType(BackButton).hitTestable());
+        await until(
+          () =>
+              key('agent-settings-connection')
+                  .hitTestable()
+                  .evaluate()
+                  .length ==
+              1,
+          'the settings overview after child-page Back',
+        );
       });
     }
-    expect(tabs.map((item) => item['id']).toSet(), hasLength(4));
+    expect(pages.map((item) => item['id']).toSet(), hasLength(4));
     await at('settings-return', () async {
       final back = find.descendant(
         of: find.byType(AgentSettingsPage),
@@ -692,7 +710,7 @@ class _MsaaScenario {
         () =>
             find.byType(AgentSettingsPage).evaluate().isEmpty &&
             composer.evaluate().length == 1,
-        'return from independent settings',
+        'return from the Agent settings overview',
       );
       expect(
         tester.widget<TextField>(composer).controller!.text,

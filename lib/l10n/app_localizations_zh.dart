@@ -3550,6 +3550,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get agentSettingsTitle => 'Agent 设置';
 
   @override
+  String get agentConnectionAndModels => '连接与模型';
+
+  @override
+  String get agentConnectionSettings => '连接设置';
+
+  @override
+  String get agentSettingsChanged => '设置已在其他位置更新，请重新打开本页载入最新内容。';
+
+  @override
+  String get agentSettingsSaveFailed => '设置保存失败，修改内容已保留。';
+
+  @override
   String get agentSettingsSummary => '管理模型与 Agent 偏好';
 
   @override
@@ -7524,6 +7536,18 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentSettingsTitle => 'Agent 設定';
+
+  @override
+  String get agentConnectionAndModels => '連線與模型';
+
+  @override
+  String get agentConnectionSettings => '連線設定';
+
+  @override
+  String get agentSettingsChanged => '設定已在其他位置更新，請重新開啟本頁載入最新內容。';
+
+  @override
+  String get agentSettingsSaveFailed => '設定儲存失敗，修改內容已保留。';
 
   @override
   String get agentSettingsSummary => '管理模型與 Agent 偏好';

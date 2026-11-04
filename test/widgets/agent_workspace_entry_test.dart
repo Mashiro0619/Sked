@@ -18,10 +18,14 @@ import 'package:sked/agent/tools/application_tool_host.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/controllers/settings_view_state.dart';
 import 'package:sked/controllers/workspace_view_state.dart';
+import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/agent_settings.dart';
 import 'package:sked/models/app_mode.dart';
 import 'package:sked/screens/adaptive_sked_shell.dart';
+import 'package:sked/screens/agent_connection_settings_page.dart';
+import 'package:sked/screens/agent_model_settings_page.dart';
 import 'package:sked/screens/agent_page.dart';
+import 'package:sked/screens/agent_preferences_settings_page.dart';
 import 'package:sked/screens/agent_settings_page.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/screens/workspace_features_page.dart';
@@ -194,11 +198,29 @@ class _Application extends ChangeNotifier implements AgentApplication {
     AgentSettings value, {
     AgentCredentialAction credentialAction = AgentCredentialAction.keep,
     String? rawKey,
+    AgentSettings? expectedSettings,
   }) async {
     await beforeConfigure?.call();
     settings = value;
     this.credentialAction = credentialAction;
     suppliedKey = rawKey;
+    runtime.refreshSettings();
+    notifyListeners();
+  }
+
+  @override
+  Future<void> configurePreferences(
+    AgentSettings value, {
+    AgentSettings? expectedSettings,
+  }) async {
+    await beforeConfigure?.call();
+    settings = settings.copyWith(
+      systemInstructions: value.systemInstructions,
+      maxModelRounds: value.maxModelRounds,
+      maxToolCalls: value.maxToolCalls,
+      maxTotalTokens: value.maxTotalTokens,
+      historyRetentionDays: value.historyRetentionDays,
+    );
     runtime.refreshSettings();
     notifyListeners();
   }
@@ -225,6 +247,46 @@ Future<void> _until(WidgetTester tester, bool Function() ready) async {
     await tester.pump(const Duration(milliseconds: 10));
   }
   expect(ready(), isTrue);
+}
+
+Future<void> _settleSettingsUi(WidgetTester tester) async {
+  await tester.pumpAndSettle();
+  await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _revealSettingsUi(WidgetTester tester, Finder target) async {
+  // Let caret scrolling and real route futures finish before locating an action.
+  await _settleSettingsUi(tester);
+  await Scrollable.ensureVisible(tester.element(target), alignment: 0.5);
+  await _settleSettingsUi(tester);
+  if (target.hitTestable().evaluate().isEmpty) {
+    final scroll = find
+        .ancestor(of: target, matching: find.byType(Scrollable))
+        .first;
+    final direction = tester.getCenter(target).dy < tester.getRect(scroll).top
+        ? 180.0
+        : -180.0;
+    await tester.dragUntilVisible(
+      target.hitTestable(),
+      scroll,
+      Offset(0, direction),
+      maxIteration: 24,
+    );
+    await _settleSettingsUi(tester);
+  }
+}
+
+Future<void> _tapSettingsUi(WidgetTester tester, Finder target) async {
+  await _revealSettingsUi(tester, target);
+  expect(target.hitTestable(), findsOneWidget);
+  await tester.runAsync(() => tester.tap(target.hitTestable()));
+  await _settleSettingsUi(tester);
+}
+
+Future<void> _backSettingsUi(WidgetTester tester) async {
+  await tester.runAsync(tester.binding.handlePopRoute);
+  await _settleSettingsUi(tester);
 }
 
 Future<WorkspacePaneController> _mountFrame(
@@ -255,49 +317,85 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('model and run preference tabs retain separate unsaved drafts', (
-    tester,
-  ) async {
-    final application = await _Application.create();
-    addTearDown(application.dispose);
-    addTearDown(tester.view.reset);
-    await mountAgentUi(
-      tester,
-      ChangeNotifierProvider<AgentApplication>.value(
-        value: application,
-        child: const AgentSettingsPage(),
-      ),
-    );
-    await tester.ensureVisible(_key('agent-endpoint'));
-    await tester.enterText(_key('agent-endpoint'), 'https://draft.example/v1');
-    await tester.ensureVisible(find.text('Run preferences'));
-    await tester.tap(find.text('Run preferences'));
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      _key('agent-system-instructions'),
-      'Keep this unsaved preference',
-    );
-    await tester.ensureVisible(find.text('Agent model settings'));
-    await tester.tap(find.text('Agent model settings'));
-    await tester.pumpAndSettle();
-    expect(
-      tester.widget<TextFormField>(_key('agent-endpoint')).controller!.text,
-      'https://draft.example/v1',
-    );
-    await tester.ensureVisible(find.text('Run preferences'));
-    await tester.tap(find.text('Run preferences'));
-    await tester.pumpAndSettle();
-    expect(
-      tester
-          .widget<TextFormField>(_key('agent-system-instructions'))
-          .controller!
-          .text,
-      'Keep this unsaved preference',
-    );
-    expect(application.settings.endpoint, 'https://fixture.example/v1');
-    expect(application.settings.systemInstructions, isEmpty);
-    await tester.pumpWidget(const SizedBox());
-  });
+  testWidgets(
+    'connection model and run preference pages retain independent drafts',
+    (tester) async {
+      final application = (await tester.runAsync(_Application.create))!;
+      addTearDown(application.dispose);
+      addTearDown(tester.view.reset);
+      await mountAgentUi(
+        tester,
+        ChangeNotifierProvider<AgentApplication>.value(
+          value: application,
+          child: const AgentSettingsPage(),
+        ),
+      );
+      expect(find.byType(TabBar), findsNothing);
+      await _tapSettingsUi(tester, _key('agent-settings-connection'));
+      final parent = tester.state(find.byType(AgentConnectionSettingsPage));
+      await tester.enterText(
+        _key('agent-endpoint'),
+        'https://draft.example/v1',
+      );
+      await _tapSettingsUi(
+        tester,
+        _key('agent-configured-model-fixture-model'),
+      );
+      expect(find.byType(AgentModelSettingsPage), findsOneWidget);
+      await _tapSettingsUi(tester, _key('agent-model-effort-high'));
+      await _tapSettingsUi(tester, _key('agent-save-model'));
+      expect(find.byType(AgentModelSettingsPage), findsNothing);
+      expect(
+        tester.state(find.byType(AgentConnectionSettingsPage)),
+        same(parent),
+      );
+      expect(
+        application.settings.modelConfig('fixture-model')!.reasoningEfforts,
+        [AgentReasoningEffort.medium, AgentReasoningEffort.high],
+      );
+      expect(application.settings.endpoint, 'https://fixture.example/v1');
+      expect(application.settings.systemInstructions, isEmpty);
+      expect(
+        tester.widget<TextFormField>(_key('agent-endpoint')).controller!.text,
+        'https://draft.example/v1',
+      );
+      await _tapSettingsUi(tester, _key('agent-save-connection'));
+      expect(find.byType(AgentConnectionSettingsPage), findsNothing);
+      expect(_key('agent-settings-preferences').hitTestable(), findsOneWidget);
+      await _tapSettingsUi(tester, _key('agent-settings-preferences'));
+      await tester.enterText(
+        _key('agent-system-instructions'),
+        'Keep this unsaved preference',
+      );
+      expect(application.settings.systemInstructions, isEmpty);
+      await _backSettingsUi(tester);
+      final l = AppLocalizations.of(tester.element(find.byType(AlertDialog)));
+      await _tapSettingsUi(tester, find.widgetWithText(TextButton, l.cancel));
+      expect(find.byType(AgentPreferencesSettingsPage), findsOneWidget);
+      expect(
+        tester
+            .widget<TextFormField>(_key('agent-system-instructions'))
+            .controller!
+            .text,
+        'Keep this unsaved preference',
+      );
+      expect(application.settings.endpoint, 'https://draft.example/v1');
+      await _tapSettingsUi(tester, _key('agent-save-preferences'));
+      expect(find.byType(AgentPreferencesSettingsPage), findsNothing);
+      expect(_key('agent-settings-connection').hitTestable(), findsOneWidget);
+      expect(
+        application.settings.systemInstructions,
+        'Keep this unsaved preference',
+      );
+      expect(application.settings.endpoint, 'https://draft.example/v1');
+      expect(
+        application.settings.modelConfig('fixture-model')!.reasoningEfforts,
+        [AgentReasoningEffort.medium, AgentReasoningEffort.high],
+      );
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 
   testWidgets(
     'follow-up remains available while the original send awaits its model run',
@@ -727,69 +825,85 @@ void main() {
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
   );
 
-  testWidgets('model settings route forwards its key only to configure at 2x', (
-    tester,
-  ) async {
-    final application = await _Application.create();
-    addTearDown(application.dispose);
-    addTearDown(tester.view.reset);
-    await mountAgentUi(
-      tester,
-      ChangeNotifierProvider<AgentApplication>.value(
-        value: application,
-        child: const AgentPage(),
-      ),
-      size: const Size(390, 844),
-      scale: 2,
-    );
-    await tester.tap(_key('agent-conversation-menu'));
-    await tester.pumpAndSettle();
-    await tester.tap(_key('agent-settings'));
-    await tester.pumpAndSettle();
-    expect(find.byType(AgentSettingsPage), findsOneWidget);
-    expect(find.text('Agent model settings'), findsOneWidget);
-    await tester.ensureVisible(_key('agent-model'));
-    await tester.enterText(_key('agent-model'), 'changed-model');
-    await tester.ensureVisible(_key('agent-add-model'));
-    await tester.pumpAndSettle();
-    await tester.tap(_key('agent-add-model'));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(_key('agent-model-options-changed-model'));
-    await tester.pumpAndSettle();
-    await tester.tap(_key('agent-model-options-changed-model'));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(_key('agent-model-effort-changed-model-medium'));
-    await tester.pumpAndSettle();
-    await tester.tap(_key('agent-model-effort-changed-model-medium'));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(_key('agent-default-effort-changed-model'));
-    await tester.pumpAndSettle();
-    await tester.tap(_key('agent-default-effort-changed-model'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Medium').last);
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(_key('agent-api-key'));
-    await tester.enterText(_key('agent-api-key'), 'transient-fixture-key');
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(_key('agent-save-model'));
-    await tester.pumpAndSettle();
-    await tester.tap(_key('agent-save-model'));
-    await tester.pumpAndSettle();
-    expect(application.settings.model, 'fixture-model');
-    expect(
-      application.settings.availableModels.map((model) => model.id),
-      contains('changed-model'),
-    );
-    expect(application.suppliedKey, 'transient-fixture-key');
-    expect(application.credentialAction, AgentCredentialAction.replace);
-    expect(
-      application.storage.source,
-      isNot(contains('transient-fixture-key')),
-    );
-    expect(find.byType(AgentSettingsPage), findsNothing);
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox.shrink());
-  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+  testWidgets(
+    'nested model and connection routes pass credentials only on connection save at 2x',
+    (tester) async {
+      final application = (await tester.runAsync(_Application.create))!;
+      addTearDown(application.dispose);
+      addTearDown(tester.view.reset);
+      await mountAgentUi(
+        tester,
+        ChangeNotifierProvider<AgentApplication>.value(
+          value: application,
+          child: const AgentPage(),
+        ),
+        size: const Size(390, 844),
+        scale: 2,
+      );
+      await _tapSettingsUi(tester, _key('agent-conversation-menu'));
+      await _tapSettingsUi(tester, _key('agent-settings'));
+      expect(find.byType(AgentSettingsPage), findsOneWidget);
+      await _tapSettingsUi(tester, _key('agent-settings-connection'));
+      final parent = tester.state(find.byType(AgentConnectionSettingsPage));
+      await _revealSettingsUi(tester, _key('agent-api-key'));
+      await tester.enterText(_key('agent-api-key'), 'transient-fixture-key');
+      await _tapSettingsUi(tester, _key('agent-add-model'));
+      expect(find.byType(AgentModelSettingsPage), findsOneWidget);
+      await _revealSettingsUi(tester, _key('agent-model'));
+      await tester.enterText(_key('agent-model'), 'changed-model');
+      await _tapSettingsUi(tester, _key('agent-model-effort-medium'));
+      await _tapSettingsUi(tester, _key('agent-default-effort-null'));
+      final l = AppLocalizations.of(
+        tester.element(find.byType(AgentModelSettingsPage)),
+      );
+      await _tapSettingsUi(
+        tester,
+        find.widgetWithText(MenuItemButton, l.agentEffortMedium),
+      );
+      await _tapSettingsUi(tester, _key('agent-save-model'));
+      expect(find.byType(AgentModelSettingsPage), findsNothing);
+      expect(
+        tester.state(find.byType(AgentConnectionSettingsPage)),
+        same(parent),
+      );
+      expect(application.settings.model, 'fixture-model');
+      expect(
+        application.settings.modelConfig('changed-model'),
+        const AgentModelConfig(
+          id: 'changed-model',
+          reasoningEfforts: [AgentReasoningEffort.medium],
+          defaultReasoningEffort: AgentReasoningEffort.medium,
+        ),
+      );
+      expect(application.suppliedKey, isNull);
+      expect(application.credentialAction, AgentCredentialAction.keep);
+      expect(
+        tester.widget<TextFormField>(_key('agent-api-key')).controller!.text,
+        'transient-fixture-key',
+      );
+      expect(
+        application.storage.source,
+        isNot(contains('transient-fixture-key')),
+      );
+      await _tapSettingsUi(tester, _key('agent-save-connection'));
+      expect(application.suppliedKey, 'transient-fixture-key');
+      expect(application.credentialAction, AgentCredentialAction.replace);
+      expect(
+        application.storage.source,
+        isNot(contains('transient-fixture-key')),
+      );
+      expect(find.byType(AgentConnectionSettingsPage), findsNothing);
+      expect(find.byType(AgentSettingsPage), findsOneWidget);
+      expect(_key('agent-settings-connection').hitTestable(), findsOneWidget);
+      expect(find.byType(AgentPage, skipOffstage: false), findsOneWidget);
+      await _backSettingsUi(tester);
+      expect(find.byType(AgentSettingsPage), findsNothing);
+      expect(find.byType(AgentPage), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
 
   testWidgets(
     'feature management has one Agent switch independent of workspaces',
@@ -848,44 +962,85 @@ void main() {
     variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
 
-  testWidgets('model save keeps its own route until persistence completes', (
-    tester,
-  ) async {
-    final application = await _Application.create();
-    final saving = Completer<void>();
-    application.beforeConfigure = () => saving.future;
-    addTearDown(application.dispose);
-    addTearDown(tester.view.reset);
-    addTearDown(() {
-      if (!saving.isCompleted) saving.complete();
-    });
-    await mountAgentUi(
-      tester,
-      ChangeNotifierProvider<AgentApplication>.value(
-        value: application,
-        child: const AgentPage(),
-      ),
-    );
-    await tester.tap(_key('agent-conversation-menu'));
-    await tester.pumpAndSettle();
-    await tester.tap(_key('agent-settings'));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(_key('agent-save-model'));
-    await tester.tap(_key('agent-save-model'));
-    await tester.pump();
-    await tester.binding.handlePopRoute();
-    await tester.pump();
-    expect(find.byType(AgentSettingsPage), findsOneWidget);
-    await tester.tap(find.byType(BackButton));
-    await tester.pump();
-    expect(find.byType(AgentSettingsPage), findsOneWidget);
-    saving.complete();
-    await tester.pumpAndSettle();
-    expect(find.byType(AgentSettingsPage), findsNothing);
-    expect(find.byType(AgentPage), findsOneWidget);
-    expect(tester.takeException(), isNull);
-    await tester.pumpWidget(const SizedBox.shrink());
-  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+  testWidgets(
+    'connection save keeps its own route until persistence completes',
+    (tester) async {
+      final application = (await tester.runAsync(_Application.create))!;
+      final saving = (await tester.runAsync(() async => Completer<void>()))!;
+      final entered = (await tester.runAsync(() async => Completer<void>()))!;
+      application.beforeConfigure = () {
+        entered.complete();
+        return saving.future;
+      };
+      addTearDown(application.dispose);
+      addTearDown(tester.view.reset);
+      addTearDown(() {
+        if (!saving.isCompleted) saving.complete();
+      });
+      await mountAgentUi(
+        tester,
+        ChangeNotifierProvider<AgentApplication>.value(
+          value: application,
+          child: const AgentPage(),
+        ),
+      );
+      await _tapSettingsUi(tester, _key('agent-conversation-menu'));
+      await _tapSettingsUi(tester, _key('agent-settings'));
+      await _tapSettingsUi(tester, _key('agent-settings-connection'));
+      final source = ModalRoute.of(
+        tester.element(find.byType(AgentConnectionSettingsPage)),
+      )!;
+      await tester.enterText(
+        _key('agent-endpoint'),
+        'https://saved.example/v1',
+      );
+      await _revealSettingsUi(tester, _key('agent-save-connection'));
+      await tester.runAsync(() async {
+        await tester.tap(_key('agent-save-connection').hitTestable());
+        await entered.future.timeout(const Duration(seconds: 10));
+      });
+      await tester.pump();
+      expect(application.settings.endpoint, 'https://fixture.example/v1');
+      expect(
+        tester.widget<FilledButton>(_key('agent-save-connection')).onPressed,
+        isNull,
+      );
+      await _backSettingsUi(tester);
+      expect(find.byType(AgentConnectionSettingsPage), findsOneWidget);
+      expect(source.isCurrent, isTrue);
+      expect(find.byType(AlertDialog), findsNothing);
+      await _tapSettingsUi(
+        tester,
+        find.descendant(
+          of: find.byType(AgentConnectionSettingsPage),
+          matching: find.byType(BackButton),
+        ),
+      );
+      expect(find.byType(AgentConnectionSettingsPage), findsOneWidget);
+      expect(source.isCurrent, isTrue);
+      expect(
+        find.byType(AgentSettingsPage, skipOffstage: false),
+        findsOneWidget,
+      );
+      await tester.runAsync(() async {
+        saving.complete();
+        await Future<void>.delayed(Duration.zero);
+      });
+      await _settleSettingsUi(tester);
+      expect(application.settings.endpoint, 'https://saved.example/v1');
+      expect(find.byType(AgentConnectionSettingsPage), findsNothing);
+      expect(source.isActive, isFalse);
+      expect(find.byType(AgentSettingsPage), findsOneWidget);
+      expect(_key('agent-settings-connection').hitTestable(), findsOneWidget);
+      expect(find.byType(AgentPage, skipOffstage: false), findsOneWidget);
+      await _backSettingsUi(tester);
+      expect(find.byType(AgentSettingsPage), findsNothing);
+      expect(find.byType(AgentPage), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
 
   testWidgets(
     'desktop schedule and timetable reopen the same running full workspace',

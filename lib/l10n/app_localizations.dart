@@ -6732,6 +6732,30 @@ abstract class AppLocalizations {
   /// **'Agent settings'**
   String get agentSettingsTitle;
 
+  /// No description provided for @agentConnectionAndModels.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection and models'**
+  String get agentConnectionAndModels;
+
+  /// No description provided for @agentConnectionSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Connection settings'**
+  String get agentConnectionSettings;
+
+  /// No description provided for @agentSettingsChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings changed elsewhere. Reopen this page to load the latest values.'**
+  String get agentSettingsChanged;
+
+  /// No description provided for @agentSettingsSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save settings. Your changes are still here.'**
+  String get agentSettingsSaveFailed;
+
   /// No description provided for @agentSettingsSummary.
   ///
   /// In en, this message translates to:

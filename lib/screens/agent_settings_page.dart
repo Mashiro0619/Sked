@@ -1,17 +1,18 @@
-import 'package:flutter/foundation.dart';
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
 import '../agent/agent_application.dart';
 import '../agent/knowledge/knowledge_models.dart';
 import '../agent/ui/agent_knowledge_view.dart';
-import '../agent/ui/agent_model_settings_form.dart';
-import '../agent/ui/agent_preferences_form.dart';
-import '../models/agent_settings.dart';
 import '../l10n/app_localizations.dart';
+import '../widgets/settings_list.dart';
 import '../widgets/settings_page_header.dart';
+import 'agent_connection_settings_page.dart';
+import 'agent_preferences_settings_page.dart';
 
-/// The model connection is edited separately from conversation drafts.
+/// Agent settings follow the same page hierarchy as the app's other settings.
 class AgentSettingsPage extends StatefulWidget {
   const AgentSettingsPage({super.key});
 
@@ -32,8 +33,8 @@ class AgentSettingsPage extends StatefulWidget {
 }
 
 class _AgentSettingsPageState extends State<AgentSettingsPage> {
-  bool _saving = false;
   AgentApplication? _initializationAttempt;
+  bool _opening = false;
 
   @override
   void didChangeDependencies() {
@@ -48,191 +49,104 @@ class _AgentSettingsPageState extends State<AgentSettingsPage> {
     });
   }
 
-  Future<void> _save(AgentModelSettingsChange change) async {
-    if (_saving) throw StateError('Agent settings are already being saved.');
-    setState(() => _saving = true);
+  Future<void> _open(Widget page) async {
+    if (_opening || ModalRoute.of(context)?.isCurrent != true) return;
+    final application = context.read<AgentApplication>();
+    setState(() => _opening = true);
     try {
-      await context.read<AgentApplication>().configure(
-        change.settings,
-        credentialAction: change.credentialAction,
-        rawKey: change.apiKey,
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => ChangeNotifierProvider<AgentApplication>.value(
+            value: application,
+            child: page,
+          ),
+        ),
       );
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) setState(() => _opening = false);
     }
-  }
-
-  Future<void> _savePreferences(AgentSettings settings) async {
-    if (_saving) throw StateError('Agent settings are already being saved.');
-    setState(() => _saving = true);
-    try {
-      await context.read<AgentApplication>().configurePreferences(settings);
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  void _saved() {
-    final route = ModalRoute.of(context);
-    // The host must publish its cleared saving guard before asking the route
-    // to pop. A late completion must never close a newer route above it.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && route?.isCurrent == true) {
-        Navigator.of(context).maybePop();
-      }
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     final application = context.watch<AgentApplication>();
-    final displayedSettings = application.settings;
-    void checkDisplayedConnection() {
-      if (application.settings != displayedSettings) {
-        throw StateError('The saved connection changed before this request.');
-      }
-    }
-
     final l = AppLocalizations.of(context);
-    Widget settingsTab(String label, {Key? key}) {
-      final tab = Tab(key: key, text: label);
-      if (kIsWeb || defaultTargetPlatform != TargetPlatform.windows) return tab;
-      // The Windows bridge reads the button flag, not the explicit tab role.
-      // TabBar merges this flag with its own label, role, selection and action.
-      return PreferredSize(
-        preferredSize: tab.preferredSize,
-        child: Semantics(button: true, child: tab),
-      );
-    }
-
-    final tabs = TabBar(
-      isScrollable: true,
-      tabs: [
-        settingsTab(l.agentModelSettings),
-        settingsTab(l.agentRunPreferences),
-        settingsTab(
-          l.agentSkills,
-          key: const ValueKey('agent-settings-skills'),
-        ),
-        settingsTab(
-          l.agentMemories,
-          key: const ValueKey('agent-settings-memories'),
-        ),
-      ],
+    final uri = Uri.tryParse(application.settings.endpoint);
+    final endpoint = uri?.host.isNotEmpty == true
+        ? uri!.host
+        : l.backupParserEndpointUnset;
+    Widget destination(
+      String key,
+      String title,
+      IconData icon,
+      Widget page, {
+      String? value,
+    }) => SettingsConnectedTile(
+      key: ValueKey(key),
+      leading: Icon(icon),
+      title: title,
+      value: value,
+      trailing: const Icon(Icons.chevron_right),
+      onTap: _opening ? null : () => unawaited(_open(page)),
     );
-    return DefaultTabController(
-      length: 4,
-      child: PopScope<void>(
-        canPop: !_saving,
-        child: SettingsPageScaffold(
-          title: l.agentSettingsTitle,
-          headerBottom: PreferredSize(
-            preferredSize: tabs.preferredSize,
-            child: AbsorbPointer(
-              absorbing: _saving,
-              child: ExcludeFocus(excluding: _saving, child: tabs),
-            ),
+    return SettingsPageScaffold(
+      title: l.agentSettingsTitle,
+      bodyBuilder: (_, header) => ResponsiveSettingsSingleColumnBody(
+        headerSliver: header,
+        scrollViewKey: const PageStorageKey('agent-settings-overview-scroll'),
+        children: [
+          SettingsConnectedGroup(
+            tonal: true,
+            children: [
+              destination(
+                'agent-settings-connection',
+                l.agentConnectionAndModels,
+                Icons.hub_outlined,
+                const AgentConnectionSettingsPage(),
+                value: endpoint,
+              ),
+              destination(
+                'agent-settings-preferences',
+                l.agentRunPreferences,
+                Icons.tune,
+                const AgentPreferencesSettingsPage(),
+              ),
+              destination(
+                'agent-settings-skills',
+                l.agentSkills,
+                Icons.auto_awesome_outlined,
+                const _AgentKnowledgeSettingsPage(kind: KnowledgeKind.skill),
+              ),
+              destination(
+                'agent-settings-memories',
+                l.agentMemories,
+                Icons.psychology_outlined,
+                const _AgentKnowledgeSettingsPage(kind: KnowledgeKind.memory),
+              ),
+            ],
           ),
-          bodyBuilder: (context, header) {
-            final content = TabBarView(
-              physics: _saving ? const NeverScrollableScrollPhysics() : null,
-              children: [
-                _KeptSettingsForm(
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 720),
-                      child: AgentModelSettingsForm(
-                        settings: displayedSettings,
-                        suggestedModelId: displayedSettings.models.isEmpty
-                            ? application.suggestedModelId
-                            : null,
-                        showTitle: false,
-                        onSave: _save,
-                        onSaved: _saved,
-                        onProbe: (cancellation) {
-                          checkDisplayedConnection();
-                          return application.probeConnection(
-                            allowInsecureHttp:
-                                Uri.tryParse(displayedSettings.endpoint)
-                                    ?.scheme ==
-                                'http',
-                            cancellation: cancellation,
-                          );
-                        },
-                        onListModels: (cancellation) {
-                          checkDisplayedConnection();
-                          return application.listConnectionModels(
-                            allowInsecureHttp:
-                                Uri.tryParse(displayedSettings.endpoint)
-                                    ?.scheme ==
-                                'http',
-                            cancellation: cancellation,
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-                _KeptSettingsForm(
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 720),
-                      child: AgentPreferencesForm(
-                        settings: application.settings,
-                        onSave: _savePreferences,
-                      ),
-                    ),
-                  ),
-                ),
-                _KeptSettingsForm(
-                  child: Builder(
-                    builder: (_) => AgentKnowledgeView(
-                      service: application.knowledge,
-                      kind: KnowledgeKind.skill,
-                    ),
-                  ),
-                ),
-                _KeptSettingsForm(
-                  child: Builder(
-                    builder: (_) => AgentKnowledgeView(
-                      service: application.knowledge,
-                      kind: KnowledgeKind.memory,
-                    ),
-                  ),
-                ),
-              ],
-            );
-            // Desktop titles stay outside the independently scrolling tabs.
-            if (header == null) return content;
-            return NestedScrollView(
-              headerSliverBuilder: (context, innerBoxIsScrolled) => [header],
-              body: content,
-            );
-          },
-        ),
+        ],
       ),
     );
   }
 }
 
-class _KeptSettingsForm extends StatefulWidget {
-  const _KeptSettingsForm({required this.child});
-  final Widget child;
-
-  @override
-  State<_KeptSettingsForm> createState() => _KeptSettingsFormState();
-}
-
-class _KeptSettingsFormState extends State<_KeptSettingsForm>
-    with AutomaticKeepAliveClientMixin<_KeptSettingsForm> {
-  @override
-  bool get wantKeepAlive => true;
+class _AgentKnowledgeSettingsPage extends StatelessWidget {
+  const _AgentKnowledgeSettingsPage({required this.kind});
+  final KnowledgeKind kind;
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
-    return widget.child;
+    final application = context.read<AgentApplication>();
+    final l = AppLocalizations.of(context);
+    return SettingsPageScaffold(
+      title: kind == KnowledgeKind.skill ? l.agentSkills : l.agentMemories,
+      bodyBuilder: (_, header) => AgentKnowledgeView(
+        service: application.knowledge,
+        kind: kind,
+        pageEditor: true,
+        headerSliver: header,
+      ),
+    );
   }
 }

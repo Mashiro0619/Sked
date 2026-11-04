@@ -19,6 +19,7 @@ const _createdBody = 'Prefer quiet mornings for the synthetic reading session.';
 const _updatedTitle = 'Updated synthetic study preference';
 const _updatedBody =
     'Prefer quiet afternoons for the synthetic reading session.';
+const _cancelledBody = 'This synthetic memory edit must remain unsaved.';
 
 class _KnowledgeTransport extends http.BaseClient {
   var attempts = 0;
@@ -164,6 +165,9 @@ class AgentKnowledgeJourney implements AgentNativeFeature {
 
   Finder _page() => find.byType(AgentSettingsPage);
   Finder _editor() => find.byType(AgentKnowledgeEditor);
+  Finder _knowledgePage() => find.byWidgetPredicate(
+    (widget) => widget is AgentKnowledgeView && widget.pageEditor,
+  );
 
   Future<Map<String, Object?>> _openSettings(
     AgentFeatureJourney journey,
@@ -174,16 +178,16 @@ class AgentKnowledgeJourney implements AgentNativeFeature {
     );
     await journey.tap(
       journey.key('agent-settings'),
-      'the standalone Agent settings action',
+      'the Agent settings overview action',
     );
     await journey.until(
       () => _page().evaluate().length == 1,
-      'the standalone Agent settings route',
+      'the Agent settings overview route',
     );
     final context = journey.tester.element(_page());
     requireAgentFeature(
       ModalRoute.of(context)?.isCurrent == true,
-      'Agent settings did not become the current standalone route.',
+      'Agent settings did not become the current overview route.',
     );
     requireAgentFeature(
       identical(context.read<AgentApplication>(), journey.session.app.agent),
@@ -191,40 +195,60 @@ class AgentKnowledgeJourney implements AgentNativeFeature {
     );
     return {
       'openedFrom': 'agent-conversation-menu / agent-settings',
-      'standaloneRoute': true,
+      'overviewRoute': true,
+      'pageHierarchy': 'overview / knowledge / record',
       'sameApplication': true,
       'configuration': journey.configurationAt(context),
     };
   }
 
-  Future<Map<String, Object?>> _selectTab(
+  Future<void> _backToOverview(AgentFeatureJourney journey) async {
+    if (_knowledgePage().evaluate().isNotEmpty) {
+      await journey.tap(
+        find.byType(BackButton).hitTestable(),
+        'the knowledge settings Back button',
+      );
+      await journey.until(
+        () =>
+            _knowledgePage().evaluate().isEmpty &&
+            _page().hitTestable().evaluate().length == 1,
+        'the Agent settings overview after child-page Back',
+      );
+    }
+    requireAgentFeature(
+      _page().hitTestable().evaluate().length == 1 &&
+          ModalRoute.of(journey.tester.element(_page()))?.isCurrent == true,
+      'The child settings page did not return to its overview.',
+    );
+  }
+
+  Future<Map<String, Object?>> _openKnowledgePage(
     AgentFeatureJourney journey,
     KnowledgeKind kind,
   ) async {
-    final tab = journey.key(
+    await _backToOverview(journey);
+    final destination = journey.key(
       kind == KnowledgeKind.memory
           ? 'agent-settings-memories'
           : 'agent-settings-skills',
     );
-    await journey.reveal(tab, 'the ${kind.name} settings tab');
-    await journey.tap(tab, 'the ${kind.name} settings tab');
-    final controller = DefaultTabController.of(journey.tester.element(tab));
-    final expectedIndex = kind == KnowledgeKind.memory ? 3 : 2;
+    await journey.reveal(destination, 'the ${kind.name} settings destination');
+    await journey.tap(destination, 'the ${kind.name} settings destination');
     await journey.until(
-      () => controller.index == expectedIndex && !controller.indexIsChanging,
-      'the settled ${kind.name} settings tab',
+      () => _knowledgePage().hitTestable().evaluate().length == 1,
+      'the current ${kind.name} child settings page',
     );
     final add = journey.key('knowledge-add-${kind.name}');
     await journey.reveal(add, 'the ${kind.name} add action');
     final view = journey.tester.widget<AgentKnowledgeView>(
       find.ancestor(of: add, matching: find.byType(AgentKnowledgeView)),
     );
-    final index = controller.index;
     requireAgentFeature(
-      index == expectedIndex &&
-          view.kind == kind &&
+      view.kind == kind &&
+          view.pageEditor &&
+          ModalRoute.of(journey.tester.element(add))?.isCurrent == true &&
           identical(view.service, journey.session.app.agent.knowledge),
-      'The visible settings tab did not use the expected shared knowledge owner.',
+      'The current knowledge page did not use the expected shared owner.',
     );
     requireAgentFeature(
       journey.tester.widget<FilledButton>(add).onPressed != null,
@@ -232,7 +256,7 @@ class AgentKnowledgeJourney implements AgentNativeFeature {
     );
     return {
       'kind': view.kind.name,
-      'tabIndex': index,
+      'childPage': true,
       'addAction': 'knowledge-add-${kind.name}',
       'addActionReachable': add.hitTestable().evaluate().length == 1,
       'sameKnowledgeService': true,
@@ -261,7 +285,7 @@ class AgentKnowledgeJourney implements AgentNativeFeature {
       'The chat draft was not persisted before opening settings.',
     );
     final settings = await _openSettings(journey);
-    final memoryTab = await _selectTab(journey, KnowledgeKind.memory);
+    final memoryPage = await _openKnowledgePage(journey, KnowledgeKind.memory);
     final knowledge = _knowledgeState(journey);
     requireAgentFeature(
       knowledge['archiveRevision'] == 0 &&
@@ -274,7 +298,7 @@ class AgentKnowledgeJourney implements AgentNativeFeature {
     _assertOffline();
     return {
       ...settings,
-      'memoryTab': memoryTab,
+      'memoryPage': memoryPage,
       'draftBeforeSettings': _draft,
       'storedDraftBeforeSettings': persisted.conversations
           .singleWhere((item) => item.id == agentNativeLongId)
@@ -289,12 +313,15 @@ class AgentKnowledgeJourney implements AgentNativeFeature {
     KnowledgeRecord? record,
   }) async {
     await journey.until(
-      () => _editor().evaluate().length == 1,
-      'the actual memory editor dialog',
+      () => _editor().hitTestable().evaluate().length == 1,
+      'the actual memory editor child page',
     );
     final editor = journey.tester.widget<AgentKnowledgeEditor>(_editor());
     requireAgentFeature(
       editor.kind == KnowledgeKind.memory &&
+          editor.pagePresentation &&
+          ModalRoute.of(journey.tester.element(_editor()))?.isCurrent == true &&
+          find.byType(AlertDialog).evaluate().isEmpty &&
           identical(editor.service, journey.session.app.agent.knowledge) &&
           editor.record?.key == record?.key &&
           editor.record?.revision == record?.revision,
@@ -472,11 +499,12 @@ class AgentKnowledgeJourney implements AgentNativeFeature {
   }
 
   Future<void> _backToChat(AgentFeatureJourney journey) async {
+    await _backToOverview(journey);
     final back = find.descendant(
       of: _page(),
       matching: find.byType(BackButton),
     );
-    await journey.tap(back, 'the standalone Agent settings Back button');
+    await journey.tap(back, 'the Agent settings overview Back button');
     await journey.until(
       () =>
           _page().evaluate().isEmpty && journey.composer.evaluate().length == 1,
@@ -498,7 +526,7 @@ class AgentKnowledgeJourney implements AgentNativeFeature {
   ) async {
     await _backToChat(journey);
     final settings = await _openSettings(journey);
-    final memoryTab = await _selectTab(journey, KnowledgeKind.memory);
+    final memoryPage = await _openKnowledgePage(journey, KnowledgeKind.memory);
     final updated = _updated!;
     await _openRecord(journey, updated);
     final editor = journey.tester.widget<AgentKnowledgeEditor>(_editor());
@@ -515,25 +543,45 @@ class AgentKnowledgeJourney implements AgentNativeFeature {
       reopened['title'] == _updatedTitle && reopened['body'] == _updatedBody,
       'Reopening settings lost the updated memory values.',
     );
-    final cancelText = AppLocalizations.of(journey.tester.element(_editor()))
-        .cancel;
+    final l = AppLocalizations.of(journey.tester.element(_editor()));
+    await journey.reveal(
+      journey.key('knowledge-body'),
+      'the reopened memory body',
+    );
+    await journey.tester.enterText(
+      journey.key('knowledge-body'),
+      _cancelledBody,
+    );
+    requireAgentFeature(
+      _input(journey, 'knowledge-body') == _cancelledBody,
+      'The reopened editor did not retain the unsaved cancellation draft.',
+    );
     final cancel = find.descendant(
       of: _editor(),
-      matching: find.widgetWithText(TextButton, cancelText),
+      matching: find.widgetWithText(TextButton, l.cancel),
     );
-    await journey.reveal(cancel, 'the unchanged editor Cancel button');
-    await journey.tap(cancel, 'the unchanged editor Cancel button');
+    await journey.reveal(cancel, 'the dirty editor Cancel button');
+    await journey.tap(cancel, 'the dirty editor Cancel button');
+    await journey.until(
+      () => find.byType(AlertDialog).hitTestable().evaluate().length == 1,
+      'the unsaved memory discard confirmation',
+    );
+    final discard = find.descendant(
+      of: find.byType(AlertDialog),
+      matching: find.widgetWithText(FilledButton, l.discardChangesAndExit),
+    );
+    await journey.tap(discard, 'the explicit memory draft discard action');
     await journey.until(
       () => _editor().evaluate().isEmpty,
       'the cancelled editor to close',
     );
-    final skillsTab = await _selectTab(journey, KnowledgeKind.skill);
+    final skillsPage = await _openKnowledgePage(journey, KnowledgeKind.skill);
     final skillCount = journey.session.app.agent.knowledge
         .list(KnowledgeKind.skill)
         .length;
     requireAgentFeature(
       skillCount > 0,
-      'The reachable Skills tab did not load the bundled catalog.',
+      'The reachable Skills page did not load the bundled catalog.',
     );
     final readback = await _reloadSingle(journey);
     _assertRecord(readback, _updatedTitle, _updatedBody, updated.revision);
@@ -546,10 +594,11 @@ class AgentKnowledgeJourney implements AgentNativeFeature {
     return {
       ...settings,
       'returnedToOriginalChatBeforeReopen': true,
-      'memoryTab': memoryTab,
+      'memoryPage': memoryPage,
       'editor': reopened,
       'editorCancelledWithButton': true,
-      'skillsTab': skillsTab,
+      'unsavedDraftDiscardedWithConfirmation': true,
+      'skillsPage': skillsPage,
       'skillCount': skillCount,
       'recordAfterCancel': _record(journey, readback),
     };

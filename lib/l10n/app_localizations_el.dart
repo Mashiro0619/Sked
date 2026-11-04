@@ -3850,6 +3850,20 @@ class AppLocalizationsEl extends AppLocalizations {
   String get agentSettingsTitle => 'Agent settings';
 
   @override
+  String get agentConnectionAndModels => 'Connection and models';
+
+  @override
+  String get agentConnectionSettings => 'Connection settings';
+
+  @override
+  String get agentSettingsChanged =>
+      'Settings changed elsewhere. Reopen this page to load the latest values.';
+
+  @override
+  String get agentSettingsSaveFailed =>
+      'Couldn\'t save settings. Your changes are still here.';
+
+  @override
   String get agentSettingsSummary => 'Manage models and Agent preferences';
 
   @override

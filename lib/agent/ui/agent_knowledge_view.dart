@@ -8,23 +8,39 @@ import '../../utils/unique_id.dart';
 import '../../widgets/expressive_dialog.dart';
 import '../../widgets/expressive_empty_state.dart';
 import '../../widgets/sked_expressive_loading_indicator.dart';
+import '../../widgets/settings_list.dart';
+import '../../widgets/settings_page_header.dart';
+import '../../widgets/sked_task_session.dart';
 import '../knowledge/knowledge_service.dart';
+import 'agent_settings_exit_guard.dart';
 
 class AgentKnowledgeView extends StatefulWidget {
   const AgentKnowledgeView({
     super.key,
     required this.service,
     required this.kind,
+    this.pageEditor = false,
+    this.headerSliver,
   });
   final AgentKnowledgeService service;
   final KnowledgeKind kind;
+  final bool pageEditor;
+  final Widget? headerSliver;
   @override
   State<AgentKnowledgeView> createState() => _AgentKnowledgeViewState();
 }
 
 class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
   final _search = TextEditingController();
-  bool _loading = true, _failed = false, _opening = false;
+  final _uiSessions = <SkedTaskSession>{};
+  bool _loading = true, _failed = false;
+  bool _routeCurrent = false;
+  int _interactionGeneration = 0;
+  Object? _loadRequest;
+  Object? _openRequest;
+  SkedTaskSession? _readSession;
+
+  bool get _opening => _openRequest != null;
   @override
   void initState() {
     super.initState();
@@ -32,103 +48,249 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final current = ModalRoute.of(context)?.isCurrent == true;
+    if (_routeCurrent && !current) _interactionGeneration++;
+    _routeCurrent = current;
+    _checkUiSessions();
+  }
+
+  @override
+  void didUpdateWidget(AgentKnowledgeView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.service != widget.service ||
+        oldWidget.kind != widget.kind ||
+        oldWidget.pageEditor != widget.pageEditor) {
+      _interactionGeneration++;
+      _checkUiSessions();
+      if (oldWidget.service != widget.service) unawaited(_load());
+    }
+  }
+
+  void _checkUiSessions() {
+    for (final session in _uiSessions.toList()) {
+      session.check();
+    }
+    final read = _readSession;
+    if (read != null && !read.isCurrent) {
+      // A local read may not be cancellable. Retire its UI request now so a
+      // returned page can open another record before the old read completes.
+      _readSession = null;
+      _openRequest = null;
+      _retireUiSession(read);
+    }
+  }
+
+  SkedTaskSession _createUiSession() {
+    final service = widget.service;
+    final kind = widget.kind;
+    final pageEditor = widget.pageEditor;
+    final route = ModalRoute.of(context);
+    final generation = _interactionGeneration;
+    final session = SkedTaskSession(
+      ownerRoute: route,
+      isOwnerActive: () => mounted && route?.isCurrent == true,
+      isTargetCurrent: () =>
+          mounted &&
+          generation == _interactionGeneration &&
+          identical(widget.service, service) &&
+          widget.kind == kind &&
+          widget.pageEditor == pageEditor,
+    );
+    _uiSessions.add(session);
+    return session;
+  }
+
+  void _retireUiSession(SkedTaskSession session) {
+    _uiSessions.remove(session);
+    session.dispose();
+  }
+
+  void _showFeedback(String message, {String? undoOperationId}) {
+    final session = _createUiSession();
+    if (!session.isCurrent) {
+      _retireUiSession(session);
+      return;
+    }
+    final l = AppLocalizations.of(context);
+    final controller = ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        action: undoOperationId == null
+            ? null
+            : SnackBarAction(
+                label: l.agentKnowledgeUndo,
+                onPressed: () {
+                  if (session.isCurrent) unawaited(_undo(undoOperationId));
+                },
+              ),
+      ),
+    );
+    unawaited(controller.closed.then<void>((_) => _retireUiSession(session)));
+  }
+
+  @override
   void dispose() {
+    for (final session in _uiSessions.toList()) {
+      session.dispose();
+    }
+    _uiSessions.clear();
     _search.dispose();
     super.dispose();
   }
 
   Future<void> _load({bool reload = false}) async {
+    final service = widget.service;
+    final request = Object();
+    _loadRequest = request;
+    bool current() =>
+        mounted &&
+        identical(widget.service, service) &&
+        identical(_loadRequest, request);
     setState(() {
       _loading = true;
       _failed = false;
     });
     try {
-      await widget.service.initialize(reload: reload);
+      await service.initialize(reload: reload);
     } catch (_) {
-      if (mounted) setState(() => _failed = true);
+      if (current()) setState(() => _failed = true);
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (current()) setState(() => _loading = false);
     }
   }
 
-  Future<void> _open([KnowledgeRecord? item]) async {
-    if (_opening) return;
-    setState(() => _opening = true);
+  Future<void> _open({KnowledgeRecord? item, required int generation}) async {
+    if (_opening ||
+        generation != _interactionGeneration ||
+        ModalRoute.of(context)?.isCurrent != true)
+      return;
+    final service = widget.service;
+    final kind = widget.kind;
+    final pageEditor = widget.pageEditor;
+    final route = ModalRoute.of(context);
+    final request = Object();
+    final readSession = _createUiSession();
+    _readSession = readSession;
+    bool editorOpened = false;
+    bool current() =>
+        mounted &&
+        identical(_openRequest, request) &&
+        identical(widget.service, service) &&
+        widget.kind == kind &&
+        widget.pageEditor == pageEditor &&
+        identical(ModalRoute.of(context), route) &&
+        route?.isCurrent == true;
+    setState(() => _openRequest = request);
     try {
       final record = item == null
           ? null
-          : await widget.service.read(item.kind, item.id);
-      if (!mounted) return;
-      final receipt = await showExpressiveDialog<KnowledgeReceipt>(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => AgentKnowledgeEditor(
-          service: widget.service,
-          kind: widget.kind,
-          record: record,
-        ),
+          : await service.read(item.kind, item.id);
+      if (!current() || !readSession.isCurrent) return;
+      _readSession = null;
+      _retireUiSession(readSession);
+      editorOpened = true;
+      final editor = AgentKnowledgeEditor(
+        service: service,
+        kind: kind,
+        record: record,
+        pagePresentation: pageEditor,
       );
-      if (!mounted || receipt == null) return;
+      final receipt = pageEditor
+          ? await Navigator.of(context).push<KnowledgeReceipt>(
+              MaterialPageRoute<KnowledgeReceipt>(builder: (_) => editor),
+            )
+          : await showExpressiveDialog<KnowledgeReceipt>(
+              context: context,
+              barrierDismissible: false,
+              builder: (_) => editor,
+            );
+      if (!current() || receipt == null) return;
       final l = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l.agentKnowledgeSaved),
-          action: SnackBarAction(
-            label: l.agentKnowledgeUndo,
-            onPressed: () => unawaited(_undo(receipt.operationId)),
-          ),
-        ),
+      _showFeedback(
+        l.agentKnowledgeSaved,
+        undoOperationId: receipt.operationId,
       );
     } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context).agentKnowledgeStorageFailed,
-            ),
-          ),
-        );
+      if (current() && (editorOpened || readSession.isCurrent)) {
+        _showFeedback(AppLocalizations.of(context).agentKnowledgeStorageFailed);
       }
     } finally {
-      if (mounted) setState(() => _opening = false);
+      if (identical(_readSession, readSession)) _readSession = null;
+      _retireUiSession(readSession);
+      if (mounted && identical(_openRequest, request)) {
+        setState(() => _openRequest = null);
+      }
     }
   }
 
   Future<void> _undo(String operationId) async {
+    if (ModalRoute.of(context)?.isCurrent != true) return;
+    final service = widget.service;
+    final session = _createUiSession();
     try {
-      await widget.service.undoFromUi(operationId);
+      await service.undoFromUi(operationId);
     } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context).agentKnowledgeConflict),
-          ),
-        );
+      if (session.isCurrent) {
+        _showFeedback(AppLocalizations.of(context).agentKnowledgeConflict);
       }
+    } finally {
+      _retireUiSession(session);
     }
+  }
+
+  Widget _statusBody(Widget child) {
+    final header = widget.headerSliver;
+    return CustomScrollView(
+      slivers: [
+        ?header,
+        // Status actions contain LayoutBuilders. Fill the remaining viewport
+        // without intrinsic sizing, and let taller feedback scroll normally.
+        SliverLayoutBuilder(
+          builder: (context, constraints) => SliverToBoxAdapter(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight:
+                    (constraints.viewportMainAxisExtent -
+                            constraints.precedingScrollExtent)
+                        .clamp(0.0, double.infinity)
+                        .toDouble(),
+              ),
+              child: child,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final generation = _interactionGeneration;
     final skill = widget.kind == KnowledgeKind.skill;
     return ListenableBuilder(
       listenable: widget.service,
       builder: (context, _) {
         if (_loading) {
-          return const Center(child: SkedExpressiveLoadingIndicator());
+          return _statusBody(
+            const Center(child: SkedExpressiveLoadingIndicator()),
+          );
         }
         if (_failed || !widget.service.ready) {
-          return ExpressiveEmptyState(
-            icon: Icons.sync_problem_outlined,
-            title: l.agentKnowledgeUnavailable,
-            message: l.agentKnowledgeStorageFailed,
-            actions: [
-              FilledButton.tonal(
-                onPressed: () => unawaited(_load(reload: true)),
-                child: Text(l.agentKnowledgeReload),
-              ),
-            ],
+          return _statusBody(
+            ExpressiveEmptyState(
+              icon: Icons.sync_problem_outlined,
+              title: l.agentKnowledgeUnavailable,
+              message: l.agentKnowledgeStorageFailed,
+              actions: [
+                FilledButton.tonal(
+                  onPressed: () => unawaited(_load(reload: true)),
+                  child: Text(l.agentKnowledgeReload),
+                ),
+              ],
+            ),
           );
         }
         final items = widget.service.list(widget.kind, query: _search.text);
@@ -137,6 +299,7 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
             constraints: const BoxConstraints(maxWidth: 760),
             child: CustomScrollView(
               slivers: [
+                ?widget.headerSliver,
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
@@ -172,7 +335,9 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
                               ),
                               onPressed: _opening
                                   ? null
-                                  : () => unawaited(_open()),
+                                  : () => unawaited(
+                                      _open(generation: generation),
+                                    ),
                               icon: const Icon(Icons.add),
                               label: Text(l.agentKnowledgeAdd),
                             );
@@ -266,7 +431,12 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
                                 trailing: const Icon(Icons.chevron_right),
                                 onTap: _opening
                                     ? null
-                                    : () => unawaited(_open(item)),
+                                    : () => unawaited(
+                                        _open(
+                                          item: item,
+                                          generation: generation,
+                                        ),
+                                      ),
                               ),
                             );
                           },
@@ -287,15 +457,18 @@ class AgentKnowledgeEditor extends StatefulWidget {
     required this.service,
     required this.kind,
     this.record,
+    this.pagePresentation = false,
   });
   final AgentKnowledgeService service;
   final KnowledgeKind kind;
   final KnowledgeRecord? record;
+  final bool pagePresentation;
   @override
   State<AgentKnowledgeEditor> createState() => _AgentKnowledgeEditorState();
 }
 
-class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor> {
+class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor>
+    with AgentSettingsExitGuard<AgentKnowledgeEditor> {
   final _form = GlobalKey<FormState>();
   late final _title = TextEditingController(text: widget.record?.title ?? '');
   late final _summary = TextEditingController(
@@ -319,6 +492,28 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor> {
   late bool _enabled = widget.record?.enabled ?? true;
   bool _saving = false;
   KnowledgeError? _error;
+
+  @override
+  Object get settingsDraftFingerprint => (
+    _title.text,
+    _summary.text,
+    _body.text,
+    _source.text,
+    _triggers.text,
+    _requiredTools.text,
+    _optionalTools.text,
+    _enabled,
+  );
+
+  @override
+  bool get settingsExitBlocked => _saving;
+
+  @override
+  void initState() {
+    super.initState();
+    initializeSettingsDraftGuard();
+  }
+
   @override
   void dispose() {
     for (final controller in [
@@ -336,7 +531,9 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor> {
   }
 
   Future<void> _save({bool original = false, bool delete = false}) async {
-    if (_saving || (!original && !delete && !_form.currentState!.validate())) {
+    if (_saving ||
+        ModalRoute.of(context)?.isCurrent != true ||
+        (!original && !delete && !_form.currentState!.validate())) {
       return;
     }
     setState(() {
@@ -385,7 +582,10 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor> {
         plan = widget.service.prepareSave(draft);
       }
       final receipt = await widget.service.saveFromUi(plan);
-      if (mounted) Navigator.of(context).pop(receipt);
+      if (mounted) {
+        setState(() => _saving = false);
+        completeSettingsSave<KnowledgeReceipt>(receipt);
+      }
     } on KnowledgeException catch (error) {
       if (mounted) setState(() => _error = error.code);
     } catch (_) {
@@ -397,6 +597,7 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor> {
 
   Future<void> _delete() async {
     final l = AppLocalizations.of(context);
+    final route = ModalRoute.of(context);
     final confirmed = await showExpressiveDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -414,7 +615,9 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor> {
         ],
       ),
     );
-    if (confirmed == true && mounted) await _save(delete: true);
+    if (confirmed == true && mounted && route?.isCurrent == true) {
+      await _save(delete: true);
+    }
   }
 
   @override
@@ -422,157 +625,178 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor> {
     final l = AppLocalizations.of(context);
     final skill = widget.kind == KnowledgeKind.skill;
     final colors = Theme.of(context).colorScheme;
+    final content = Form(
+      key: _form,
+      onChanged: () => setState(() {}),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextFormField(
+            key: const ValueKey('knowledge-title'),
+            controller: _title,
+            enabled: !_saving,
+            maxLength: 256,
+            decoration: InputDecoration(labelText: l.agentKnowledgeTitle),
+            validator: (value) => value == null || value.trim().isEmpty
+                ? l.agentRequiredField
+                : null,
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            key: const ValueKey('knowledge-summary'),
+            controller: _summary,
+            enabled: !_saving,
+            maxLength: 2048,
+            decoration: InputDecoration(labelText: l.agentKnowledgeSummary),
+            minLines: 1,
+            maxLines: 3,
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            key: const ValueKey('knowledge-body'),
+            controller: _body,
+            enabled: !_saving,
+            minLines: 6,
+            maxLines: 14,
+            decoration: InputDecoration(
+              filled: true,
+              alignLabelWithHint: true,
+              labelText: l.agentKnowledgeBody,
+            ),
+            validator: (value) => value == null || value.trim().isEmpty
+                ? l.agentRequiredField
+                : null,
+          ),
+          if (widget.record != null &&
+              widget.service.originalChanged(widget.record!))
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(l.agentKnowledgeOriginalChanged),
+            ),
+          if (!skill) ...[
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _source,
+              enabled: !_saving,
+              maxLength: 2048,
+              decoration: InputDecoration(labelText: l.agentKnowledgeSource),
+              minLines: 1,
+              maxLines: 3,
+            ),
+          ],
+          if (skill)
+            ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              title: Text(l.agentSkillAdvanced),
+              children: [
+                for (final entry in [
+                  (_triggers, l.agentSkillTriggers),
+                  (_requiredTools, l.agentSkillRequiredTools),
+                  (_optionalTools, l.agentSkillOptionalTools),
+                ])
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: TextFormField(
+                      controller: entry.$1,
+                      enabled: !_saving,
+                      minLines: 2,
+                      maxLines: 5,
+                      decoration: InputDecoration(
+                        labelText: entry.$2,
+                        alignLabelWithHint: true,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            title: Text(l.agentKnowledgeEnabled),
+            value: _enabled,
+            onChanged: _saving
+                ? null
+                : (value) => setState(() => _enabled = value),
+          ),
+          if (_error != null)
+            Text(switch (_error) {
+              KnowledgeError.conflict => l.agentKnowledgeConflict,
+              KnowledgeError.invalid ||
+              KnowledgeError.limit => l.agentKnowledgeInvalid,
+              _ => l.agentKnowledgeStorageFailed,
+            }, style: TextStyle(color: colors.error)),
+        ],
+      ),
+    );
+    final actions = <Widget>[
+      if (widget.record?.builtIn == true)
+        TextButton(
+          key: const ValueKey('knowledge-restore-original'),
+          onPressed: _saving ? null : () => unawaited(_save(original: true)),
+          child: Text(l.agentKnowledgeRestoreOriginal),
+        ),
+      if (widget.record != null && !widget.record!.builtIn)
+        TextButton(
+          key: const ValueKey('knowledge-delete'),
+          onPressed: _saving ? null : () => unawaited(_delete()),
+          child: Text(l.agentKnowledgeDelete),
+        ),
+      TextButton(
+        onPressed: _saving
+            ? null
+            : widget.pagePresentation
+            ? requestSettingsExit
+            : () => Navigator.pop(context),
+        child: Text(l.cancel),
+      ),
+      FilledButton(
+        key: const ValueKey('knowledge-save'),
+        onPressed: _saving ? null : () => unawaited(_save()),
+        child: Text(_saving ? l.agentSaving : l.save),
+      ),
+    ];
+    final title = widget.record == null
+        ? l.agentKnowledgeAdd
+        : widget.pagePresentation
+        ? widget.record!.title
+        : l.agentKnowledgeEdit;
+    if (widget.pagePresentation) {
+      return guardSettingsPage(
+        SettingsPageScaffold(
+          title: title,
+          bodyBuilder: (_, header) => ResponsiveSettingsSingleColumnBody(
+            headerSliver: header,
+            scrollViewKey: const PageStorageKey(
+              'agent-knowledge-editor-scroll',
+            ),
+            children: [
+              content,
+              const SizedBox(height: 20),
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 8,
+                runSpacing: 8,
+                children: actions,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return PopScope(
       canPop: !_saving,
       child: AlertDialog(
-        title: Text(
-          widget.record == null ? l.agentKnowledgeAdd : l.agentKnowledgeEdit,
-        ),
+        title: Text(title),
         content: SizedBox(
           width: 640,
           child: ConstrainedBox(
             constraints: BoxConstraints(
               maxHeight: MediaQuery.sizeOf(context).height * 0.65,
             ),
-            child: SingleChildScrollView(
-              child: Form(
-                key: _form,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TextFormField(
-                      key: const ValueKey('knowledge-title'),
-                      controller: _title,
-                      enabled: !_saving,
-                      maxLength: 256,
-                      decoration: InputDecoration(
-                        labelText: l.agentKnowledgeTitle,
-                      ),
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty
-                          ? l.agentRequiredField
-                          : null,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      key: const ValueKey('knowledge-summary'),
-                      controller: _summary,
-                      enabled: !_saving,
-                      maxLength: 2048,
-                      decoration: InputDecoration(
-                        labelText: l.agentKnowledgeSummary,
-                      ),
-                      minLines: 1,
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      key: const ValueKey('knowledge-body'),
-                      controller: _body,
-                      enabled: !_saving,
-                      minLines: 6,
-                      maxLines: 14,
-                      decoration: InputDecoration(
-                        filled: true,
-                        alignLabelWithHint: true,
-                        labelText: l.agentKnowledgeBody,
-                      ),
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty
-                          ? l.agentRequiredField
-                          : null,
-                    ),
-                    if (widget.record != null &&
-                        widget.service.originalChanged(widget.record!))
-                      Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: Text(l.agentKnowledgeOriginalChanged),
-                      ),
-                    if (!skill) ...[
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _source,
-                        enabled: !_saving,
-                        maxLength: 2048,
-                        decoration: InputDecoration(
-                          labelText: l.agentKnowledgeSource,
-                        ),
-                        minLines: 1,
-                        maxLines: 3,
-                      ),
-                    ],
-                    if (skill)
-                      ExpansionTile(
-                        tilePadding: EdgeInsets.zero,
-                        title: Text(l.agentSkillAdvanced),
-                        children: [
-                          for (final entry in [
-                            (_triggers, l.agentSkillTriggers),
-                            (_requiredTools, l.agentSkillRequiredTools),
-                            (_optionalTools, l.agentSkillOptionalTools),
-                          ])
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: TextFormField(
-                                controller: entry.$1,
-                                enabled: !_saving,
-                                minLines: 2,
-                                maxLines: 5,
-                                decoration: InputDecoration(
-                                  labelText: entry.$2,
-                                  alignLabelWithHint: true,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    SwitchListTile.adaptive(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(l.agentKnowledgeEnabled),
-                      value: _enabled,
-                      onChanged: _saving
-                          ? null
-                          : (value) => setState(() => _enabled = value),
-                    ),
-                    if (_error != null)
-                      Text(switch (_error) {
-                        KnowledgeError.conflict => l.agentKnowledgeConflict,
-                        KnowledgeError.invalid ||
-                        KnowledgeError.limit => l.agentKnowledgeInvalid,
-                        _ => l.agentKnowledgeStorageFailed,
-                      }, style: TextStyle(color: colors.error)),
-                  ],
-                ),
-              ),
-            ),
+            child: SingleChildScrollView(child: content),
           ),
         ),
-        actions: [
-          if (widget.record?.builtIn == true)
-            TextButton(
-              key: const ValueKey('knowledge-restore-original'),
-              onPressed: _saving
-                  ? null
-                  : () => unawaited(_save(original: true)),
-              child: Text(l.agentKnowledgeRestoreOriginal),
-            ),
-          if (widget.record != null && !widget.record!.builtIn)
-            TextButton(
-              key: const ValueKey('knowledge-delete'),
-              onPressed: _saving ? null : () => unawaited(_delete()),
-              child: Text(l.agentKnowledgeDelete),
-            ),
-          TextButton(
-            onPressed: _saving ? null : () => Navigator.pop(context),
-            child: Text(l.cancel),
-          ),
-          FilledButton(
-            key: const ValueKey('knowledge-save'),
-            onPressed: _saving ? null : () => unawaited(_save()),
-            child: Text(_saving ? l.agentSaving : l.save),
-          ),
-        ],
+        actions: actions,
       ),
     );
   }

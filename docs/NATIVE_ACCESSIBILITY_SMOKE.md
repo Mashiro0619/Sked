@@ -46,20 +46,20 @@ physical-size or DPR override is applied.
 
 After the original workspace tree is unmounted, each Agent scenario creates a
 fresh `AgentNativeSession` with explicit memory owners and production codecs.
-The real home side navigation opens the full Agent page; New conversation
-leads to the actual composer. Independent Agent settings are opened through the
-conversation menu; all four tabs must publish distinct actionable semantics
-and select their corresponding product form. The named native control must
-use the MSAA page-tab role (37) or the Windows push-button compatibility role
-(43). Windows bridges that map legacy semantics flags may expose the latter
-while Flutter retains the tab role. Both native roles still require distinct,
-unmerged framework tab nodes with tap actions, selected state and matching
-content; static-text (41), window and container matches never pass.
+The real home side navigation opens the central Agent workspace; New
+conversation leads to the actual composer. The conversation menu opens the
+Agent settings overview. Its four category entrances must publish distinct
+actionable button semantics and open their matching child routes. The named
+native control must use the MSAA push-button role (43); static-text (41), window
+and container matches never pass. Each child page must become the current
+route, hide its overview entrance, and return to the same overview through Back.
+This smoke checks the overview and category routes. Knowledge record editing
+is covered by the separate Agent feature journey.
 Returning from settings must preserve the registered-input draft and make no
 provider request or main-data change.
 
 Action checks resolve the unique published tap node inside the requested
-control's render subtree. Merged text and tab labels may use their nearest
+control's render subtree. Merged text and category labels may use their nearest
 published ancestor; unrelated actions elsewhere in that ancestor never count.
 Hidden nodes and ambiguous controls fail the check.
 
