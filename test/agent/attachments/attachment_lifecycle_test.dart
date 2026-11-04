@@ -88,6 +88,59 @@ void main() {
     expect(sent, isEmpty);
   });
 
+  test('a captured import cancellation cannot cancel a newer file in the same conversation', () async {
+    final id = await conversation();
+    final files = app.agent.binaryAttachments;
+    expect(files.importCancellation(id), isNull);
+    final first = _HeldLengthFile('first.png');
+    final second = _HeldLengthFile('second.png');
+    final third = _HeldLengthFile('third.png');
+    addTearDown(() {
+      for (final file in [first, second, third]) {
+        if (!file.release.isCompleted) file.release.complete();
+      }
+    });
+    Future<void> addFile(_HeldLengthFile file) =>
+        files.attach(id, file, canModify: () => true);
+
+    final firstImport = addFile(first);
+    await first.entered.future;
+    final oldCancel = files.importCancellation(id)!;
+    first.release.complete();
+    await firstImport;
+    expect(files.importCancellation(id), isNull);
+
+    final secondImport = addFile(second);
+    final secondCompleted = expectLater(secondImport, completes);
+    await second.entered.future;
+    oldCancel();
+    second.release.complete();
+    await secondCompleted;
+    expect(
+      app.agent.conversations.find(id)!.attachments.map((file) => file.name),
+      ['first.png', 'second.png'],
+    );
+
+    final thirdRejected = expectLater(
+      addFile(third),
+      throwsA(
+        isA<AttachmentException>().having(
+          (error) => error.code,
+          'code',
+          AttachmentError.cancelled,
+        ),
+      ),
+    );
+    await third.entered.future;
+    files.importCancellation(id)!();
+    third.release.complete();
+    await thirdRejected;
+    expect(files.progressFor(id)?.delivery, AttachmentDelivery.cancelled);
+    expect(files.importCancellation(id), isNull);
+    expect(app.agent.conversations.find(id)!.attachments, hasLength(2));
+    expect(sent, isEmpty);
+  });
+
   test('unsent attachments survive collection without a persisted conversation row', () async {
     final id = await conversation(draft: true);
     await attach(id);
@@ -349,4 +402,21 @@ class _BlobStorage extends MemoryAttachmentStorage {
     await writeGate?.future;
     await super.write(id, bytes);
   }
+}
+
+class _HeldLengthFile extends XFile {
+  _HeldLengthFile(String name) : super(name, name: name);
+  final entered = Completer<void>();
+  final release = Completer<void>();
+  final bytes = Uint8List.fromList([1, 2, 3]);
+  @override
+  Future<int> length() async {
+    if (!entered.isCompleted) entered.complete();
+    await release.future;
+    return bytes.length;
+  }
+
+  @override
+  Stream<Uint8List> openRead([int? start, int? end]) =>
+      Stream.value(Uint8List.sublistView(bytes, start ?? 0, end));
 }

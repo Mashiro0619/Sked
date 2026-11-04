@@ -10,6 +10,7 @@ import 'package:sked/agent/attachments/conversation_attachments.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
+import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/widgets/sked_popup_menu.dart';
 
 import 'agent_ui_test_support.dart';
@@ -44,6 +45,35 @@ void main() {
         await tester.pumpAndSettle();
         expect(fixture.conversations.selected!.attachments, isEmpty);
         expect(fixture.blobs.values, isEmpty);
+        expect(fixture.delegate.calls, isEmpty);
+        final l = AppLocalizations.of(
+          tester.element(find.byType(AgentConversationView)),
+        );
+        expect(find.text(l.agentFileConflict), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    _testWithFixture(
+      'old picker failure cannot surface after ${changesActivity ? 'activity' : 'interaction'} is restored',
+      (tester, fixture) async {
+        final picker = Completer<XFile?>();
+        fixture.pick = () => picker.future;
+        await mountAgentUi(tester, fixture.view());
+        await tester.tap(find.byKey(const ValueKey('agent-attach-file')));
+        await tester.pump();
+        await mountAgentUi(
+          tester,
+          fixture.view(active: !changesActivity, interactive: changesActivity),
+        );
+        await mountAgentUi(tester, fixture.view());
+        picker.completeError(StateError('private-picker-error'));
+        await tester.pumpAndSettle();
+        final l = AppLocalizations.of(
+          tester.element(find.byType(AgentConversationView)),
+        );
+        expect(find.text(l.agentFileUnavailable), findsNothing);
+        expect(fixture.conversations.selected!.attachments, isEmpty);
         expect(fixture.delegate.calls, isEmpty);
         expect(tester.takeException(), isNull);
       },
@@ -181,7 +211,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(fixture.conversations.selected!.attachments, isEmpty);
       expect(fixture.blobs.values, isEmpty);
-      expect(find.textContaining('conversation changed while'), findsOneWidget);
+      expect(find.textContaining('conversation changed while'), findsNothing);
+      expect(fixture.delegate.calls, isEmpty);
     },
   );
 

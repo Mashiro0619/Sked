@@ -174,19 +174,44 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   ) => _perform('attachment-$id', () async {
     final service = widget.binaryAttachments;
     if (service == null) return;
+    final repository = _repository;
+    final uiGeneration = _uiGeneration;
+    final dataGeneration = widget.readDatasetGeneration?.call();
+    bool isCurrent() =>
+        _uiSessionCurrent(uiGeneration, id) &&
+        identical(repository, _repository) &&
+        identical(service, widget.binaryAttachments) &&
+        dataGeneration == widget.readDatasetGeneration?.call();
     if (mounted) setState(() => _binaryAttachmentError = null);
     try {
       await action(service);
     } on AttachmentException catch (error) {
-      if (mounted && _repository.selectedId == id) {
+      if (isCurrent()) {
         setState(() => _binaryAttachmentError = error.code);
       }
     } catch (_) {
-      if (mounted && _repository.selectedId == id) {
+      if (isCurrent()) {
         setState(() => _binaryAttachmentError = AttachmentError.unavailable);
       }
     }
   });
+
+  VoidCallback? _cancelAttachmentImport(
+    String id,
+    ConversationAttachments service,
+  ) {
+    final cancel = service.importCancellation(id);
+    if (cancel == null) return null;
+    final repository = _repository;
+    final uiGeneration = _uiGeneration;
+    return () {
+      if (_uiSessionCurrent(uiGeneration, id) &&
+          identical(repository, _repository) &&
+          identical(service, widget.binaryAttachments)) {
+        cancel();
+      }
+    };
+  }
 
   Future<void> _attachBinaryFile(String id) =>
       _binaryAction(id, (service) async {
@@ -284,9 +309,17 @@ class _AgentConversationViewState extends State<AgentConversationView> {
             _canModifyAttachments(id),
       );
     } on TextFileTooLargeException {
-      if (mounted) setState(() => _attachmentTooLarge = true);
+      if (_uiSessionCurrent(uiGeneration, id) &&
+          identical(repository, _repository) &&
+          generation == widget.readDatasetGeneration!()) {
+        setState(() => _attachmentTooLarge = true);
+      }
     } catch (_) {
-      if (mounted) setState(() => _attachmentFailed = true);
+      if (_uiSessionCurrent(uiGeneration, id) &&
+          identical(repository, _repository) &&
+          generation == widget.readDatasetGeneration!()) {
+        setState(() => _attachmentFailed = true);
+      }
     }
   });
 
@@ -1752,6 +1785,9 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     AgentConversation conversation,
     ConversationMessage message,
   ) => AgentAttachmentList(
+    conversationId: conversation.id,
+    active: widget.active,
+    interactive: widget.interactive,
     attachments: conversation.attachments,
     ids: message.attachmentIds,
     repository: widget.binaryAttachments!.repository,
@@ -1954,6 +1990,9 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                 if (conversation.draftAttachmentIds.isNotEmpty)
                   AgentAttachmentList(
                     key: const ValueKey('agent-draft-attachments'),
+                    conversationId: conversation.id,
+                    active: widget.active,
+                    interactive: widget.interactive,
                     attachments: conversation.attachments,
                     ids: conversation.draftAttachmentIds,
                     repository: service.repository,
@@ -1984,7 +2023,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                         service.progressFor(conversation.id) ??
                         const AttachmentProgress(AttachmentDelivery.saving),
                     onCancel: service.isImporting(conversation.id)
-                        ? () => service.cancelImport(conversation.id)
+                        ? _cancelAttachmentImport(conversation.id, service)
                         : null,
                   ),
               ],

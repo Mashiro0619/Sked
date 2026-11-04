@@ -32,6 +32,12 @@ class ConversationAttachments extends ChangeNotifier {
   bool isImporting(String conversationId) =>
       _tokens.containsKey(conversationId);
   void cancelImport(String conversationId) => _tokens[conversationId]?.cancel();
+
+  /// A UI action belongs to the import shown when that action was created.
+  /// Reusing it later can cancel only that token, never a newer file import.
+  VoidCallback? importCancellation(String conversationId) =>
+      _tokens[conversationId]?.cancel;
+
   void transferProgress(String conversationId, AttachmentProgress progress) {
     if (!_disposed && !_frozen) {
       _progress[conversationId] = progress;
