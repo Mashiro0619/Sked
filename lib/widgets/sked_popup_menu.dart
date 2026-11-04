@@ -140,10 +140,9 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
       padding: padding,
       offset: offset,
       position: position,
-      constraints: SkedMenuStyle.constraintsFor(
-        context,
-        requested: constraints,
-      ),
+      // Keep the caller's bounds. showSkedMenu applies the current overlay's
+      // safe area and keyboard geometry when the menu actually opens.
+      constraints: constraints,
       style: style,
       iconSize: iconSize,
       color: menu.surface,

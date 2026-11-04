@@ -205,6 +205,93 @@ void main() {
     );
   }
 
+  for (final callerConstraints in [
+    null,
+    const BoxConstraints(minWidth: 216, maxWidth: 240, maxHeight: 200),
+  ]) {
+    testWidgets(
+      'stable popup recomputes ${callerConstraints == null ? 'default' : 'caller'} bounds after a consumed keyboard',
+      (tester) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = const Size(760, 360);
+        tester.view.viewInsets = const FakeViewPadding(bottom: 240);
+        addTearDown(tester.view.reset);
+        final selected = <String>[];
+        var canceled = 0;
+        // Keep the same child while Scaffold consumes the keyboard inset. Its
+        // local MediaQuery does not change when the real inset later disappears.
+        final popup = SkedPopupMenuButton<String>(
+          key: _trigger,
+          constraints: callerConstraints,
+          itemBuilder: (_) => [
+            for (var index = 0; index < 20; index++)
+              SkedPopupMenuItem(value: '$index', child: Text('Option $index')),
+          ],
+          onSelected: selected.add,
+          onCanceled: () => canceled++,
+          child: const Padding(
+            padding: EdgeInsets.all(12),
+            child: Text('Choose'),
+          ),
+        );
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Align(alignment: Alignment.topLeft, child: popup),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          MediaQuery.viewInsetsOf(tester.element(find.byKey(_trigger))),
+          EdgeInsets.zero,
+        );
+        tester.view.viewInsets = const FakeViewPadding();
+        await tester.pumpAndSettle();
+
+        void expectCurrentBounds() {
+          final size = tester.getSize(_surface());
+          expect(size.height, callerConstraints?.maxHeight ?? 344);
+          if (callerConstraints != null) {
+            expect(
+              size.width,
+              inInclusiveRange(
+                callerConstraints.minWidth,
+                callerConstraints.maxWidth,
+              ),
+            );
+          }
+        }
+
+        await _open(tester);
+        expectCurrentBounds();
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+        expect(_surface(), findsNothing);
+        expect(canceled, 1);
+        expect(selected, isEmpty);
+
+        await _open(tester);
+        expectCurrentBounds();
+        await tester.scrollUntilVisible(
+          _menuLabel('Option 19'),
+          150,
+          scrollable: find.descendant(
+            of: _surface(),
+            matching: find.byType(Scrollable),
+          ),
+        );
+        await tester.tap(_menuLabel('Option 19'));
+        await tester.pumpAndSettle();
+        expect(selected, ['19']);
+        expect(canceled, 1);
+        expect(_surface(), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+    );
+  }
+
   testWidgets('a newly shown keyboard dismisses a popup without selecting', (
     tester,
   ) async {
