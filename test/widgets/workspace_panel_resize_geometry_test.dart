@@ -95,13 +95,13 @@ void main() {
                       ? [
                           'general-view-switcher',
                           'general-day-agenda-toggle',
-                          'assistant-toggle',
+                          'workspace-assistant-preview-entry',
                           'general-add-event',
                         ]
                       : [
                           'student-today',
                           'student-view-toggle',
-                          'assistant-toggle',
+                          'workspace-assistant-preview-entry',
                         ])
                 key: t.getRect(_key(key)),
             };
@@ -127,7 +127,7 @@ void main() {
               }
             }
 
-            await t.tap(_key('assistant-toggle'));
+            await t.tap(_key('workspace-assistant-preview-entry'));
             await t.pumpAndSettle();
             expectStableCommands();
             await t.enterText(
@@ -209,7 +209,7 @@ void main() {
             expect(_calendarRect(t), previous);
             expectStableCommands();
             expect(pane.draft.text, 'Keep this draft while resizing');
-            await t.tap(_key('assistant-toggle'));
+            await t.tap(_key('workspace-assistant-preview-entry'));
             await t.pumpAndSettle();
             expect(_calendarRect(t), calendar);
             expectStableCommands();
@@ -268,7 +268,7 @@ void main() {
           final reminderElement = _key('general-reminders-list')
               .evaluate()
               .single;
-          await t.tap(_key('assistant-toggle'));
+          await t.tap(_key('workspace-assistant-preview-entry'));
           await t.pumpAndSettle();
           expect(_key('general-reminders-list'), findsOneWidget);
           expect(find.byType(AssistantPreviewPane), findsOneWidget);
@@ -351,7 +351,7 @@ void main() {
           final assistantWidth = t
               .getSize(_key('workspace-assistant-pane'))
               .width;
-          await t.tap(_key('assistant-toggle'));
+          await t.tap(_key('workspace-assistant-preview-entry'));
           await t.pumpAndSettle();
           expect(
             _calendarRect(t).width,

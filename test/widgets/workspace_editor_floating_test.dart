@@ -104,7 +104,7 @@ void main() {
       await t.pumpAndSettle();
       final editor = find.byType(GeneralEventEditorSheet);
       final element = t.element(editor);
-      await t.tap(key('assistant-toggle'));
+      await t.tap(key('workspace-assistant-preview-entry'));
       await t.pumpAndSettle();
       expect(find.byType(AssistantPreviewPane), findsOneWidget);
       expect(editor, findsOneWidget);

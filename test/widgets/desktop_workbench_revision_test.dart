@@ -334,7 +334,9 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
       expect(find.byType(AssistantPreviewPane), findsNothing);
-      await tester.tap(find.byKey(const ValueKey('assistant-toggle')));
+      await tester.tap(
+        find.byKey(const ValueKey('workspace-assistant-preview-entry')),
+      );
       await tester.pumpAndSettle();
       expect(find.byType(AssistantPreviewPane), findsOneWidget);
       await tester.enterText(
@@ -361,7 +363,9 @@ void main() {
       // restores the previously open assistant without losing its draft.
       expect(find.byType(AssistantPreviewPane), findsNothing);
       expect(
-        find.byKey(const ValueKey('assistant-toggle')).hitTestable(),
+        find
+            .byKey(const ValueKey('workspace-assistant-preview-entry'))
+            .hitTestable(),
         findsNothing,
       );
       await tester.tap(find.byKey(const ValueKey('workspace-editor-close')));
@@ -391,8 +395,13 @@ void main() {
       expect(prefs.hasError, isFalse);
       expect(writes, [true]);
       expect(find.byType(AssistantPreviewPane), findsNothing);
-      expect(find.byKey(const ValueKey('assistant-toggle')), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('assistant-toggle')));
+      expect(
+        find.byKey(const ValueKey('workspace-assistant-preview-entry')),
+        findsOneWidget,
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('workspace-assistant-preview-entry')),
+      );
       await tester.pumpAndSettle();
       expect(prefs.assistantVisible, isTrue);
       expect(writes, [true]);
@@ -408,7 +417,9 @@ void main() {
         find.byType(GeneralEventEditorSheet, skipOffstage: false),
         findsNothing,
       );
-      await tester.tap(find.byKey(const ValueKey('assistant-toggle')));
+      await tester.tap(
+        find.byKey(const ValueKey('workspace-assistant-preview-entry')),
+      );
       await tester.pumpAndSettle();
       expect(find.byType(AssistantPreviewPane), findsNothing);
       expect(writes, [true]);
@@ -417,16 +428,24 @@ void main() {
       expect(prefs.assistantVisible, isTrue);
       expect(prefs.hasError, isTrue);
       expect(find.byType(AssistantPreviewPane), findsNothing);
-      expect(find.byKey(const ValueKey('assistant-toggle')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('workspace-assistant-preview-entry')),
+        findsOneWidget,
+      );
       succeed = true;
       expect(await prefs.retry(), isTrue);
       await tester.pumpAndSettle();
       expect(prefs.assistantVisible, isFalse);
-      expect(find.byKey(const ValueKey('assistant-toggle')), findsNothing);
+      expect(
+        find.byKey(const ValueKey('workspace-assistant-preview-entry')),
+        findsNothing,
+      );
       expect(await prefs.setAssistantVisible(true), isTrue);
       await tester.pumpAndSettle();
       expect(find.byType(AssistantPreviewPane), findsNothing);
-      await tester.tap(find.byKey(const ValueKey('assistant-toggle')));
+      await tester.tap(
+        find.byKey(const ValueKey('workspace-assistant-preview-entry')),
+      );
       await tester.pumpAndSettle();
       expect(find.byType(AssistantPreviewPane), findsOneWidget);
       expect(

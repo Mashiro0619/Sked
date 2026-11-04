@@ -232,7 +232,7 @@ void main() {
           await p.workspaces.switchMode(AppMode.student);
           await t.pumpAndSettle();
           final studentWrites = storage.writes;
-          expect(key('assistant-toggle'), findsNothing);
+          expect(key('workspace-assistant-preview-entry'), findsNothing);
           expectReadableDates(t);
           expect(p.settingsView.fitWeekColumnsToWidth, isTrue);
           final toolbar = find.byType(SkedWorkspaceToolbar).hitTestable().first;
@@ -340,7 +340,8 @@ void main() {
         await t.pumpAndSettle();
         expect(p.studentView.timetables, isEmpty);
         expect(p.agent.settings.enabled, isTrue);
-        expect(key('assistant-toggle'), findsNothing);
+        expect(key('workspace-assistant-preview-entry'), findsNothing);
+        expect(find.byType(AgentPage), findsNothing);
         final toolbar = t.getRect(key('student-workspace-toolbar'));
         final settings = t.getRect(key('student-toolbar-more-button'));
         final title = t.getRect(
@@ -362,13 +363,15 @@ void main() {
         expect(key('workspace-main-navigation').hitTestable(), findsOneWidget);
         await t.tap(key('workspace-main-navigation'));
         await t.pumpAndSettle();
-        expect(key('assistant-toggle'), findsNothing);
+        expect(key('workspace-assistant-preview-entry'), findsNothing);
         expect(key('workspace-agent-entry'), findsOneWidget);
+        expect(find.byType(AgentPage), findsNothing);
         await t.ensureVisible(key('workspace-agent-entry'));
         await t.pumpAndSettle();
         await t.tap(key('workspace-agent-entry'));
         await t.pumpAndSettle();
         expect(find.byType(AgentPage), findsOneWidget);
+        expect(key('workspace-assistant-preview-entry'), findsNothing);
         expect(t.takeException(), isNull);
       },
       variant: TargetPlatformVariant.only(TargetPlatform.android),

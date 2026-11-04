@@ -88,7 +88,10 @@ void main() {
           t.widget<TextField>(field).controller!.text,
           'Resizable editor draft',
         );
-        expect(_key('assistant-toggle').hitTestable(), findsNothing);
+        expect(
+          _key('workspace-assistant-preview-entry').hitTestable(),
+          findsNothing,
+        );
         await t.tap(_key('workspace-editor-close'));
         await t.pumpAndSettle();
         await t.tap(
@@ -99,7 +102,7 @@ void main() {
         );
         await t.pumpAndSettle();
         expect(editor, findsNothing);
-        await t.tap(_key('assistant-toggle'));
+        await t.tap(_key('workspace-assistant-preview-entry'));
         await t.pumpAndSettle();
         await t.enterText(_key('assistant-draft'), 'Resizable AI draft');
         await t.drag(
@@ -117,7 +120,7 @@ void main() {
           t.widget<TextField>(_key('assistant-draft')).controller!.text,
           'Resizable AI draft',
         );
-        await t.tap(_key('assistant-toggle'));
+        await t.tap(_key('workspace-assistant-preview-entry'));
         await t.pumpAndSettle();
         expect(editor, findsNothing);
         expect(t.takeException(), isNull);
@@ -148,7 +151,7 @@ void main() {
           );
           await t.pumpAndSettle();
           expect(find.byType(AssistantPreviewPane), findsNothing);
-          await t.tap(_key('assistant-toggle'));
+          await t.tap(_key('workspace-assistant-preview-entry'));
           await t.pumpAndSettle();
           final sidebar = t.getRect(_key('workspace-resource-width'));
           final canvas = t.getRect(_key('workspace-canvas-viewport'));
@@ -365,7 +368,7 @@ void main() {
               collapsed,
             );
             expect(
-              _key('assistant-toggle').hitTestable(),
+              _key('workspace-assistant-preview-entry').hitTestable(),
               frame.controller.floatingEditor ? findsNothing : findsOneWidget,
             );
           }
@@ -394,7 +397,7 @@ void main() {
             expect(frame.controller.hasPaneTasks, isFalse, reason: key);
             expectStable();
           }
-          await t.tap(_key('assistant-toggle'));
+          await t.tap(_key('workspace-assistant-preview-entry'));
           await t.pumpAndSettle();
           expectStable();
           expect(find.byType(AssistantPreviewPane), findsOneWidget);

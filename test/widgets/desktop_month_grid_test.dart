@@ -1726,7 +1726,7 @@ void main() {
         final toolbar = t.getRect(_key('general-workspace-toolbar'));
         final calendar = t.getRect(_key('workspace-canvas-viewport'));
         final supporting = t.getRect(_key('workspace-supporting-pane'));
-        await t.tap(_key('assistant-toggle'));
+        await t.tap(_key('workspace-assistant-preview-entry'));
         await t.pumpAndSettle();
         await t.drag(
           _key('workspace-assistant-resize'),
