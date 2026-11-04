@@ -19,6 +19,7 @@ class AgentMessageContent extends StatelessWidget {
     this.isUser = false,
     this.isNotice = false,
     this.streaming = false,
+    this.showCopy = true,
   });
 
   final String text;
@@ -26,6 +27,7 @@ class AgentMessageContent extends StatelessWidget {
   final bool isUser;
   final bool isNotice;
   final bool streaming;
+  final bool showCopy;
 
   @override
   Widget build(BuildContext context) {
@@ -152,7 +154,7 @@ class AgentMessageContent extends StatelessWidget {
                   )
                 else
                   body,
-                if (!streaming && !isNotice)
+                if (showCopy && !streaming && !isNotice)
                   AgentCopyButton(text: text, label: l.agentCopyMessage),
               ],
             ),

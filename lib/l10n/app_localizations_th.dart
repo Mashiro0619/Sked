@@ -4175,6 +4175,17 @@ class AppLocalizationsTh extends AppLocalizations {
   String get agentHistoryVersions => 'Message history';
 
   @override
+  String get agentPreviousReply => 'Previous reply version';
+
+  @override
+  String get agentNextReply => 'Next reply version';
+
+  @override
+  String agentReplyVersion(int current, int total) {
+    return '$current/$total';
+  }
+
+  @override
   String get agentRedoExplanation =>
       'This undoes Agent changes from this entire turn onward, then runs only the edited request. Manual edits and other conversations are preserved.';
 

@@ -7470,6 +7470,24 @@ abstract class AppLocalizations {
   /// **'Message history'**
   String get agentHistoryVersions;
 
+  /// No description provided for @agentPreviousReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous reply version'**
+  String get agentPreviousReply;
+
+  /// No description provided for @agentNextReply.
+  ///
+  /// In en, this message translates to:
+  /// **'Next reply version'**
+  String get agentNextReply;
+
+  /// No description provided for @agentReplyVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'{current}/{total}'**
+  String agentReplyVersion(int current, int total);
+
   /// No description provided for @agentRedoExplanation.
   ///
   /// In en, this message translates to:

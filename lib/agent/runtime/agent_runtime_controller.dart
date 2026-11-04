@@ -312,7 +312,7 @@ class AgentRuntimeController implements AgentUiDelegate {
     final run = _runs[conversationId];
     unawaited(
       completion.catchError((Object error) {
-        _failDisplay(conversationId, _safeError(error));
+        _failDisplay(conversationId, _safeError(error), run: run);
       }),
     );
     if (run == null || !await run.started.future) {
@@ -463,6 +463,7 @@ class AgentRuntimeController implements AgentUiDelegate {
   }
 
   Future<void> _drainQueuedLoop(String conversationId) async {
+    _Run? attemptedRun;
     try {
       final previous = _runs[conversationId];
       await previous?.done;
@@ -474,14 +475,16 @@ class AgentRuntimeController implements AgentUiDelegate {
       }
       while (!_disposed && _automaticQueues.contains(conversationId)) {
         if (pendingInputCount(conversationId) == 0) return;
-        await _start(conversationId, consumeQueued: true);
+        final completion = _start(conversationId, consumeQueued: true);
+        attemptedRun = _runs[conversationId];
+        await completion;
         if (repository.find(conversationId)?.status !=
             ConversationStatus.idle) {
           return;
         }
       }
     } catch (error) {
-      _failDisplay(conversationId, _safeError(error));
+      _failDisplay(conversationId, _safeError(error), run: attemptedRun);
     }
   }
 
@@ -632,18 +635,19 @@ class AgentRuntimeController implements AgentUiDelegate {
         );
       }
       if (failure != null) {
-        _failDisplay(conversationId, _safeError(failure));
+        _failDisplay(conversationId, _safeError(failure), run: run);
       } else if (run.outcomeUnknown) {
         _failDisplay(
           conversationId,
           AgentRuntimeError.interruptedRunNeedsReview.name,
+          run: run,
         );
       } else {
         _setDisplay(run, const AgentUiRunState());
       }
       return result;
     } catch (error) {
-      _failDisplay(conversationId, _safeError(error));
+      _failDisplay(conversationId, _safeError(error), run: run);
       rethrow;
     } finally {
       _finishApproval(run);
@@ -655,7 +659,7 @@ class AgentRuntimeController implements AgentUiDelegate {
         try {
           await _saveUsage(run, allowCancelled: true);
         } catch (_) {
-          _failDisplay(conversationId, 'storageUnavailable');
+          _failDisplay(conversationId, 'storageUnavailable', run: run);
         }
       }
       if (identical(_runs[conversationId], run)) _runs.remove(conversationId);
@@ -666,7 +670,7 @@ class AgentRuntimeController implements AgentUiDelegate {
       try {
         onRunSettled?.call(run.scope);
       } catch (_) {
-        _failDisplay(conversationId, 'cleanupFailure');
+        _failDisplay(conversationId, 'cleanupFailure', run: run);
       }
       run.settled.complete();
       if (!run.started.isCompleted) run.started.complete(false);
@@ -861,7 +865,11 @@ class AgentRuntimeController implements AgentUiDelegate {
         );
       }
     } on AgentRuntimeException catch (error) {
-      _failDisplay(conversationId, error.code.name);
+      _failDisplay(
+        conversationId,
+        error.code.name,
+        replyTargetMessageId: replyMessageId,
+      );
       rethrow;
     }
     final settings = configuredSettings.copyWith(model: selection.modelId);
@@ -870,15 +878,27 @@ class AgentRuntimeController implements AgentUiDelegate {
       settings.validate();
       endpoint = resolveEndpoint(settings);
     } catch (_) {
-      _failDisplay(conversationId, 'unconfigured');
+      _failDisplay(
+        conversationId,
+        'unconfigured',
+        replyTargetMessageId: replyMessageId,
+      );
       throw const AgentRuntimeException(AgentRuntimeError.unconfigured);
     }
     if (!settings.enabled) {
-      _failDisplay(conversationId, 'disabled');
+      _failDisplay(
+        conversationId,
+        'disabled',
+        replyTargetMessageId: replyMessageId,
+      );
       throw const AgentRuntimeException(AgentRuntimeError.disabled);
     }
     if (settings.model.trim().isEmpty || settings.endpoint.isEmpty) {
-      _failDisplay(conversationId, 'unconfigured');
+      _failDisplay(
+        conversationId,
+        'unconfigured',
+        replyTargetMessageId: replyMessageId,
+      );
       throw const AgentRuntimeException(AgentRuntimeError.unconfigured);
     }
     if (readMaintenance()) {
@@ -890,7 +910,11 @@ class AgentRuntimeController implements AgentUiDelegate {
     final fingerprint = _fingerprint(settings, endpoint);
     if (conversation.connectionFingerprint != null &&
         conversation.connectionFingerprint != fingerprint) {
-      _failDisplay(conversationId, 'connectionChanged');
+      _failDisplay(
+        conversationId,
+        'connectionChanged',
+        replyTargetMessageId: replyMessageId,
+      );
       throw const AgentRuntimeException(AgentRuntimeError.connectionChanged);
     }
     final run = _Run(
@@ -1041,7 +1065,7 @@ class AgentRuntimeController implements AgentUiDelegate {
           ),
         );
       } else {
-        _failDisplay(conversationId, _safeError(error));
+        _failDisplay(conversationId, _safeError(error), run: run);
       }
       rethrow;
     } finally {
@@ -1054,7 +1078,7 @@ class AgentRuntimeController implements AgentUiDelegate {
       try {
         onRunSettled?.call(run.scope);
       } catch (_) {
-        _failDisplay(conversationId, 'cleanupFailure');
+        _failDisplay(conversationId, 'cleanupFailure', run: run);
       }
       run.settled.complete();
       if (!run.started.isCompleted) run.started.complete(false);
@@ -1300,7 +1324,7 @@ class AgentRuntimeController implements AgentUiDelegate {
           failure = const AgentRuntimeException(
             AgentRuntimeError.storageUnavailable,
           );
-          _failDisplay(run.conversationId, 'storageUnavailable');
+          _failDisplay(run.conversationId, 'storageUnavailable', run: run);
         }
       }
       if (failure == null && repository.find(run.conversationId) != null) {
@@ -1510,6 +1534,7 @@ class AgentRuntimeController implements AgentUiDelegate {
     );
     _checkRun(run);
     validateConversationReplyResponse(response);
+    _validateResponse(response, conversation, run);
     final totalTokens = run.usage.requests.fold<int>(
       0,
       (total, request) => total + (request.usage?.totalTokens ?? 0),
@@ -1553,13 +1578,11 @@ class AgentRuntimeController implements AgentUiDelegate {
         messages: [
           for (final message in current.messages)
             if (message.id == original.id)
-              ConversationMessage(
-                id: original.id,
-                role: original.role,
+              original.copyWith(
                 text: response.text,
-                createdAt: original.createdAt,
                 modelSelection: run.modelSelection,
                 providerProtocol: run.settings.protocol,
+                responseItems: response.responseItems,
               )
             else
               message,
@@ -2103,6 +2126,8 @@ class AgentRuntimeController implements AgentUiDelegate {
     final previous = _display[conversation.id] ?? const AgentUiRunState();
     return AgentUiRunState(
       phase: previous.phase,
+      runId: previous.runId,
+      replyTargetMessageId: previous.replyTargetMessageId,
       streamingText: previous.streamingText,
       errorMessage: previous.errorMessage,
       pendingApproval: previous.pendingApproval,
@@ -2298,6 +2323,8 @@ class AgentRuntimeController implements AgentUiDelegate {
     if (!_disposed && repository.find(run.conversationId) != null) {
       _display[run.conversationId] = AgentUiRunState(
         phase: value.phase,
+        runId: run.id,
+        replyTargetMessageId: run.replyMessageId,
         streamingText: value.streamingText,
         errorMessage: value.errorMessage,
         pendingApproval: value.pendingApproval,
@@ -2309,17 +2336,27 @@ class AgentRuntimeController implements AgentUiDelegate {
     }
   }
 
-  void _failDisplay(String id, String error) {
+  void _failDisplay(
+    String id,
+    String error, {
+    _Run? run,
+    String? replyTargetMessageId,
+  }) {
     if (!_disposed && repository.find(id) != null) {
+      final previous = _display[id];
+      // A settled run may report cleanup failure after it leaves _runs. Its
+      // explicit identity must not overwrite a newer attempt's display.
+      if (run != null && previous?.runId != run.id) return;
       _display[id] = AgentUiRunState(
         phase: AgentUiPhase.failed,
+        runId: run?.id,
+        replyTargetMessageId: run == null
+            ? replyTargetMessageId
+            : run.replyMessageId,
         errorMessage: error,
         recoveryRequired:
-            _runs[id]?.recoveryRequired ??
-            _display[id]?.recoveryRequired ??
-            false,
-        modelSelection:
-            _runs[id]?.modelSelection ?? _display[id]?.modelSelection,
+            run?.recoveryRequired ?? previous?.recoveryRequired ?? false,
+        modelSelection: run?.modelSelection ?? previous?.modelSelection,
         requiresModelSelection: error == 'modelSelectionRequired',
       );
       _publish();

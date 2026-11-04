@@ -21,6 +21,8 @@ class AgentUiApproval {
 class AgentUiRunState {
   const AgentUiRunState({
     this.phase = AgentUiPhase.idle,
+    this.runId,
+    this.replyTargetMessageId,
     this.streamingText = '',
     this.errorMessage,
     this.pendingApproval,
@@ -30,6 +32,13 @@ class AgentUiRunState {
   });
 
   final AgentUiPhase phase;
+
+  /// Application-owned run identity, including text-only reply replacement.
+  final String? runId;
+
+  /// Existing reply slot receiving this run's streaming text. Ordinary sends
+  /// have no target and append at the end of the transcript.
+  final String? replyTargetMessageId;
 
   /// Current, not-yet-persisted assistant text; no simulated messages.
   final String streamingText;

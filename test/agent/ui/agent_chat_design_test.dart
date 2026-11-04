@@ -125,7 +125,7 @@ void main() {
       expect(scroll.position.maxScrollExtent, greaterThan(0));
       await tester.drag(transcript, const Offset(0, 550));
       await tester.pumpAndSettle();
-      final before = scroll.offset;
+      final before = visibleMessage(tester);
       expect(scroll.position.extentAfter, greaterThan(72));
       final composer = find.byKey(const ValueKey('agent-composer'));
       await tester.enterText(composer, 'Preserve this draft');
@@ -143,7 +143,9 @@ void main() {
         },
       );
       await tester.pumpAndSettle();
-      expect(scroll.offset, closeTo(before, 1));
+      final after = visibleMessage(tester);
+      expect(after.$1, before.$1);
+      expect(after.$2, closeTo(before.$2, 0.01));
       expect(field.controller!.selection.baseOffset, 5);
       expect(field.focusNode!.hasFocus, isTrue);
       final latest = find.byKey(const ValueKey('agent-jump-latest'));
@@ -158,7 +160,10 @@ void main() {
       );
       await tester.tap(latest);
       await tester.pumpAndSettle();
-      expect(scroll.position.extentAfter, lessThan(1));
+      final currentScroll = tester
+          .widget<CustomScrollView>(transcript)
+          .controller!;
+      expect(currentScroll.position.extentAfter, lessThan(1));
       expect(repository.selected!.draft, 'Preserve this draft');
       expect(tester.takeException(), isNull);
     },

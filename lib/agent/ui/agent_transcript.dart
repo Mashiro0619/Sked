@@ -20,6 +20,7 @@ class AgentTranscript extends StatefulWidget {
     required this.active,
     required this.scrollViewKey,
     required this.onReadingChanged,
+    this.contentRevision,
   });
 
   final List<Widget> children;
@@ -27,6 +28,10 @@ class AgentTranscript extends StatefulWidget {
   final bool active;
   final Key scrollViewKey;
   final VoidCallback onReadingChanged;
+
+  /// Changes when the host replaces or streams text in an existing message.
+  /// Rebase a distant reader once before layout changes above its anchor.
+  final Object? contentRevision;
 
   @override
   State<AgentTranscript> createState() => AgentTranscriptState();
@@ -70,6 +75,11 @@ class AgentTranscriptState extends State<AgentTranscript> {
     super.didUpdateWidget(oldWidget);
     if (widget.active && !oldWidget.active) {
       _recenter();
+    } else if (widget.active &&
+        !widget.position.followLatest &&
+        widget.contentRevision != oldWidget.contentRevision) {
+      _remember();
+      if (_center != widget.position.anchor) _recenter();
     }
     if (widget.position.followLatest) _schedulePosition();
   }
@@ -130,6 +140,21 @@ class AgentTranscriptState extends State<AgentTranscript> {
   }
 
   void followLatest() => _schedulePosition();
+
+  /// Opens the selected reply at its stable transcript identity. Streaming or
+  /// browsing another saved version then changes this message in place instead
+  /// of following the conversation's final message.
+  bool reveal(LocalKey anchor, {double fraction = 0}) {
+    if (!mounted || !widget.active || !_ids.contains(anchor)) return false;
+    widget.position
+      ..anchor = anchor
+      ..fraction = fraction.clamp(-1.0, 1.0)
+      ..followLatest = false
+      ..unread = false;
+    setState(_recenter);
+    widget.onReadingChanged();
+    return true;
+  }
 
   void _schedulePosition() {
     if (_scheduled) return;

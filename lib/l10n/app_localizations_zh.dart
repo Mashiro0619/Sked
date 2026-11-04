@@ -3931,6 +3931,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get agentHistoryVersions => '消息历史';
 
   @override
+  String get agentPreviousReply => '上一个回复版本';
+
+  @override
+  String get agentNextReply => '下一个回复版本';
+
+  @override
+  String agentReplyVersion(int current, int total) {
+    return '$current/$total';
+  }
+
+  @override
   String get agentRedoExplanation =>
       '这会撤销从本轮开始的 Agent 操作，然后仅执行编辑后的请求。手动编辑和其他会话保持不变。';
 
@@ -7895,6 +7906,17 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentHistoryVersions => '訊息歷史';
+
+  @override
+  String get agentPreviousReply => '上一個回覆版本';
+
+  @override
+  String get agentNextReply => '下一個回覆版本';
+
+  @override
+  String agentReplyVersion(int current, int total) {
+    return '$current/$total';
+  }
 
   @override
   String get agentRedoExplanation =>

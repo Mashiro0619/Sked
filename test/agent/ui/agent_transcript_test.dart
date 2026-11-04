@@ -8,11 +8,11 @@ void main() {
   const paneScrollKey = ValueKey('pane-scroll');
   const fullScrollKey = ValueKey('full-scroll');
 
-  List<Widget> messages() => [
+  List<Widget> messages([Map<int, double> heights = const {}]) => [
     for (var index = 0; index < 512; index++)
       SizedBox(
         key: ValueKey('message-$index'),
-        height: index.isEven ? 120 : 274,
+        height: heights[index] ?? (index.isEven ? 120 : 274),
         child: Text('Saved message $index'),
       ),
   ];
@@ -21,6 +21,8 @@ void main() {
     AgentReadingPosition position, {
     required bool full,
     double paneWidth = 400,
+    Map<int, double> heights = const {},
+    Object? revision,
   }) => MaterialApp(
     home: Scaffold(
       body: Stack(
@@ -36,7 +38,8 @@ void main() {
                 active: !full,
                 scrollViewKey: paneScrollKey,
                 onReadingChanged: () {},
-                children: messages(),
+                contentRevision: revision,
+                children: messages(heights),
               ),
             ),
           ),
@@ -50,7 +53,8 @@ void main() {
                 active: true,
                 scrollViewKey: fullScrollKey,
                 onReadingChanged: () {},
-                children: messages(),
+                contentRevision: revision,
+                children: messages(heights),
               ),
             ),
         ],
@@ -157,6 +161,64 @@ void main() {
       expectSameReading(visibleMessage(tester, paneScrollKey), fullReading);
       expect(position.anchor, ValueKey(fullReading.$1));
       expect(position.followLatest, isFalse);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets(
+    'in-place reply reveal keeps its original position while text grows',
+    (tester) async {
+      final position = AgentReadingPosition();
+      await tester.pumpWidget(host(position, full: true, revision: 0));
+      await tester.pumpAndSettle();
+      final state = tester.state<AgentTranscriptState>(find.byKey(fullKey));
+      expect(state.reveal(const ValueKey('message-120')), isTrue);
+      await tester.pumpAndSettle();
+      final before = visibleMessage(tester, fullScrollKey);
+      expect(before.$1, 'message-120');
+      expect(position.followLatest, isFalse);
+      await tester.pumpWidget(
+        host(
+          position,
+          full: true,
+          heights: const {40: 1800, 120: 640},
+          revision: 1,
+        ),
+      );
+      await tester.pumpAndSettle();
+      final after = visibleMessage(tester, fullScrollKey);
+      expect(after.$1, before.$1);
+      expect(after.$2 * after.$3, closeTo(before.$2 * before.$3, 4));
+      final scroll = tester
+          .widget<CustomScrollView>(find.byKey(fullScrollKey))
+          .controller!;
+      expect(scroll.position.extentAfter, greaterThan(10000));
+      expect(position.unread, isFalse);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets(
+    'changed earlier content preserves a reader who already scrolled upward',
+    (tester) async {
+      final position = AgentReadingPosition();
+      await tester.pumpWidget(host(position, full: true, revision: 0));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byKey(fullScrollKey), const Offset(0, 740));
+      await tester.pumpAndSettle();
+      final before = visibleMessage(tester, fullScrollKey);
+      expect(position.followLatest, isFalse);
+      await tester.pumpWidget(
+        host(position, full: true, heights: const {40: 1800}, revision: 1),
+      );
+      await tester.pumpAndSettle();
+      expectSameReading(visibleMessage(tester, fullScrollKey), before);
+      final inactive = tester.state<AgentTranscriptState>(
+        find.byKey(paneKey, skipOffstage: false),
+      );
+      expect(inactive.reveal(const ValueKey('message-120')), isFalse);
       expect(tester.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),

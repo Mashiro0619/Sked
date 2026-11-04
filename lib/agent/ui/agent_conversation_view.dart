@@ -21,6 +21,7 @@ import '../../widgets/workspace_frame.dart';
 import '../../widgets/workspace_navigation.dart';
 import 'agent_conversation_list.dart';
 import 'agent_message_content.dart';
+import 'agent_message_actions.dart';
 import 'agent_model_picker.dart';
 import 'agent_model_labels.dart';
 import 'agent_selectable_text.dart';
@@ -46,6 +47,7 @@ class _AgentDraftBuffer {
   final writes = <String, Future<void>>{};
   final reading = <String, AgentReadingPosition>{};
   final historyDrafts = <String, String>{};
+  final replyVersions = <(String, String), String>{};
 }
 
 /// Shared content for a desktop panel or a phone route. The host owns routing,
@@ -137,7 +139,9 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   Map<String, String> get _savedDrafts => _draftBuffer.saved;
   Map<String, Future<void>> get _draftWrites => _draftBuffer.writes;
   final _transcripts = <String, GlobalKey<AgentTranscriptState>>{};
-  final _transcriptVersions = <String, (int, String?, String?, int, String)>{};
+  final _transcriptVersions = <String, Object>{};
+  final _replyRuns = <String, (String?, String)>{};
+  final _replyBrowseRevisions = <String, int>{};
   bool _historyVisible = true;
   bool _hostActive = true;
   bool _initialDraftScheduled = false;
@@ -396,6 +400,8 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       _draftBuffer = _draftBuffers[_repository] ??= _AgentDraftBuffer();
       _transcripts.clear();
       _transcriptVersions.clear();
+      _replyRuns.clear();
+      _replyBrowseRevisions.clear();
       _shownId = null;
       _synchronizeDraft();
       if (!_repository.isLoaded) unawaited(_load());
@@ -462,28 +468,83 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final id = conversation?.id;
     final switched = id != _shownId;
     var changedContent = false;
+    String? revealReply;
     if (id != null) {
       final state = _runtime.runFor(id);
-      final version = (
-        conversation!.messages.length,
-        conversation.messages.lastOrNull?.id,
-        conversation.messages.lastOrNull?.text,
-        conversation.sources.length,
-        state.streamingText,
-      );
+      final version = _transcriptRevision(conversation!, state);
       changedContent = _transcriptVersions[id] != version;
       _transcriptVersions[id] = version;
-      if (!switched && changedContent && !_reading(id).followLatest) {
+      final target = state.replyTargetMessageId;
+      if (state.isActive && target != null) {
+        final replyRun = (state.runId, target);
+        if (_replyRuns[id] != replyRun) {
+          _draftBuffer.replyVersions.remove((id, target));
+          if (_uiActive) revealReply = target;
+        }
+        _replyRuns[id] = replyRun;
+      } else {
+        _replyRuns.remove(id);
+      }
+      if (!switched &&
+          changedContent &&
+          target == null &&
+          !_reading(id).followLatest) {
         _reading(id).unread = true;
       }
     }
     setState(_synchronizeDraft);
     _scheduleInitialDraft();
-    if (switched) {
+    if (id != null && revealReply != null) {
+      _revealReply(id, revealReply);
+    } else if (switched) {
       _restoreReading(id);
     } else if (id != null && changedContent && _reading(id).followLatest) {
       _scrollToEnd(id);
     }
+  }
+
+  Object _transcriptRevision(
+    AgentConversation conversation,
+    AgentUiRunState state,
+  ) => (
+    Object.hashAll(
+      conversation.messages.map(
+        (message) => (
+          message.id,
+          message.text,
+          message.attachmentDelivery,
+          Object.hashAll(message.attachmentIds),
+          Object.hashAll(
+            message.toolCalls.map(
+              (call) => (call.id, call.name, call.arguments),
+            ),
+          ),
+        ),
+      ),
+    ),
+    Object.hashAll(
+      conversation.sources.map(
+        (source) => (source.id, source.text, source.provenance?.title),
+      ),
+    ),
+    state.runId,
+    state.replyTargetMessageId,
+    state.streamingText,
+    state.phase,
+    state.errorMessage,
+  );
+
+  void _revealReply(String conversationId, String messageId) {
+    if (!_uiActive) return;
+    final generation = _uiGeneration;
+    _reading(conversationId).followLatest = false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_uiSessionCurrent(generation, conversationId) || !_hostActive)
+        return;
+      _transcripts[conversationId]?.currentState?.reveal(
+        ValueKey('agent-message-group-$messageId'),
+      );
+    });
   }
 
   void _restoreReading(String? id) {
@@ -569,6 +630,15 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     bool Function()? isCurrent,
   }) async {
     if (!(isCurrent?.call() ?? _uiActive) || _busy.contains(action)) return;
+    final generation = _uiGeneration;
+    final conversationId = _repository.selectedId;
+    final repository = _repository;
+    final delegate = widget.delegate;
+    bool ownerCurrent() =>
+        _uiSessionCurrent(generation, conversationId) &&
+        identical(repository, _repository) &&
+        identical(delegate, widget.delegate) &&
+        (isCurrent?.call() ?? true);
     setState(() {
       _busy.add(action);
       _failed = false;
@@ -577,7 +647,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       await operation();
     } catch (_) {
       // Runtime-specific details arrive separately through its redacted state.
-      if (mounted) setState(() => _failed = true);
+      if (ownerCurrent()) setState(() => _failed = true);
     } finally {
       if (mounted) setState(() => _busy.remove(action));
     }
@@ -1004,13 +1074,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     if (conversation != null) {
       _transcriptVersions.putIfAbsent(
         conversation.id,
-        () => (
-          conversation.messages.length,
-          conversation.messages.lastOrNull?.id,
-          conversation.messages.lastOrNull?.text,
-          conversation.sources.length,
-          state.streamingText,
-        ),
+        () => _transcriptRevision(conversation, state),
       );
     }
     final canvas = SkedSurface(
@@ -1159,36 +1223,19 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                   label: Text(l.agentContinue),
                 ),
               ],
-              if (state.streamingText.isNotEmpty)
+              if (state.replyTargetMessageId == null &&
+                  state.streamingText.isNotEmpty)
                 _messageText(
                   l.agentAssistant,
                   state.streamingText,
                   streaming: true,
                   key: const ValueKey('agent-streaming-text'),
                 ),
-              if (state.phase == AgentUiPhase.running)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.auto_awesome_outlined,
-                        size: 18,
-                        color: colors.primary,
-                      ),
-                      const SizedBox(width: 8),
-                      Flexible(child: Text(l.agentRunning)),
-                    ],
-                  ),
-                ),
-              if (state.phase == AgentUiPhase.stopped ||
-                  (state.phase == AgentUiPhase.idle &&
-                      conversation?.status == ConversationStatus.interrupted))
-                _notice(l.agentStopped),
-              if (state.phase == AgentUiPhase.failed ||
-                  state.errorMessage != null)
-                _notice(_errorMessage(state.errorMessage, l), error: true),
-              if (conversation != null && state.pendingApproval != null)
+              if (state.replyTargetMessageId == null)
+                ..._runStatusWidgets(state, conversation, l),
+              if (state.replyTargetMessageId == null &&
+                  conversation != null &&
+                  state.pendingApproval != null)
                 _approval(conversation.id, state.pendingApproval!, writable, l),
             ];
             final composer = conversation == null
@@ -1224,6 +1271,10 @@ class _AgentConversationViewState extends State<AgentConversationView> {
               scrollViewKey: ValueKey('agent-transcript-$id'),
               position: _reading(id),
               active: _hostActive,
+              contentRevision: (
+                _transcriptVersions[id],
+                _replyBrowseRevisions[id],
+              ),
               onReadingChanged: () {
                 if (mounted) setState(() {});
               },
@@ -1595,6 +1646,15 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       for (final message in conversation.messages)
         if (message.role == ConversationRole.tool) message.toolCallId,
     };
+    final latestMessageId = conversation.messages
+        .where(
+          (message) =>
+              (message.role == ConversationRole.user ||
+                  message.role == ConversationRole.assistant) &&
+              message.text.isNotEmpty,
+        )
+        .lastOrNull
+        ?.id;
     return [
       for (final source in conversation.sources)
         ExpansionTile(
@@ -1701,84 +1761,203 @@ class _AgentConversationViewState extends State<AgentConversationView> {
             ],
           )
         else
-          Column(
-            key: ValueKey('agent-message-group-${message.id}'),
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (message.attachmentIds.isNotEmpty &&
-                  widget.binaryAttachments != null)
-                _messageAttachments(conversation, message),
-              if (message.text.isNotEmpty)
-                _messageText(
-                  switch (message.role) {
-                    ConversationRole.user => l.agentYou,
-                    ConversationRole.assistant => l.agentAssistant,
-                    _ => l.agentNotice,
-                  },
-                  message.text,
-                  key: ValueKey('agent-message-${message.id}'),
-                ),
-              if (conversation.pendingRedo == null &&
-                  !conversation.archived &&
-                  !_runtime.runFor(conversation.id).isActive &&
-                  _repository.canWrite &&
-                  !_runtime.maintenance)
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: Wrap(
-                    children: [
-                      if (message.role == ConversationRole.user &&
-                          widget.history != null &&
-                          conversation.turns.any(
-                            (turn) => turn.requestMessageId == message.id,
-                          ))
-                        TextButton.icon(
-                          key: ValueKey('agent-edit-redo-${message.id}'),
-                          onPressed:
-                              _busy.contains('history-${conversation.id}')
-                              ? null
-                              : () => _editHistory(conversation, message),
-                          icon: const Icon(Icons.edit_outlined, size: 18),
-                          label: Text(l.agentEditAndRedo),
-                        ),
-                      if (message.role == ConversationRole.assistant &&
-                          message.toolCalls.isEmpty &&
-                          widget.onRegenerateReply != null)
-                        TextButton.icon(
-                          key: ValueKey('agent-regenerate-${message.id}'),
-                          onPressed:
-                              _busy.contains('regenerate-${conversation.id}')
-                              ? null
-                              : () => _perform(
-                                  'regenerate-${conversation.id}',
-                                  () => widget.onRegenerateReply!(
-                                    conversation.id,
-                                    message.id,
-                                  ),
-                                ),
-                          icon: const Icon(Icons.refresh, size: 18),
-                          label: Text(l.agentRegenerateReply),
-                        ),
-                    ],
-                  ),
-                ),
-              for (final call in message.toolCalls.where(
-                (call) => !completedCalls.contains(call.id),
-              ))
-                ExpansionTile(
-                  key: ValueKey('agent-tool-${call.id}'),
-                  title: Text(l.agentActivityDetails),
-                  leading: const Icon(Icons.bolt_outlined, size: 20),
-                  childrenPadding: const EdgeInsets.all(16),
-                  children: [
-                    AgentSelectableText(call.name),
-                    const SizedBox(height: 8),
-                    AgentSelectableText(_prettyJson(call.arguments)),
-                  ],
-                ),
-            ],
+          _conversationMessage(
+            conversation,
+            message,
+            l,
+            completedCalls: completedCalls,
+            latest: message.id == latestMessageId,
           ),
     ];
+  }
+
+  List<(String id, String text)> _replyChoices(
+    AgentConversation conversation,
+    ConversationMessage message,
+  ) {
+    final choices = <(String, String)>[
+      for (final revision in conversation.replyRevisions)
+        if (revision.messageId == message.id) (revision.id, revision.text),
+    ];
+    if (choices.isEmpty || choices.last.$2 != message.text) {
+      choices.add(('current-${message.id}', message.text));
+    }
+    return choices;
+  }
+
+  List<Widget> _runStatusWidgets(
+    AgentUiRunState state,
+    AgentConversation? conversation,
+    AppLocalizations l,
+  ) => [
+    if (state.phase == AgentUiPhase.running)
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            Icon(
+              Icons.auto_awesome_outlined,
+              size: 18,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 8),
+            Flexible(child: Text(l.agentRunning)),
+          ],
+        ),
+      ),
+    if (state.phase == AgentUiPhase.stopped ||
+        (state.replyTargetMessageId == null &&
+            state.phase == AgentUiPhase.idle &&
+            conversation?.status == ConversationStatus.interrupted))
+      _notice(l.agentStopped),
+    if (state.phase == AgentUiPhase.failed || state.errorMessage != null)
+      _notice(_errorMessage(state.errorMessage, l), error: true),
+  ];
+
+  Future<void> _regenerateReply(
+    AgentConversation conversation,
+    ConversationMessage message,
+  ) {
+    final generation = _uiGeneration;
+    _draftBuffer.replyVersions.remove((conversation.id, message.id));
+    _revealReply(conversation.id, message.id);
+    return _perform(
+      'regenerate-${conversation.id}',
+      () => widget.onRegenerateReply!(conversation.id, message.id),
+      isCurrent: () => _uiSessionCurrent(generation, conversation.id),
+    );
+  }
+
+  Widget _conversationMessage(
+    AgentConversation conversation,
+    ConversationMessage message,
+    AppLocalizations l, {
+    required Set<String?> completedCalls,
+    required bool latest,
+  }) {
+    final state = _runtime.runFor(conversation.id);
+    final target = state.replyTargetMessageId == message.id;
+    final replacing = target && state.isActive;
+    final choices = _replyChoices(conversation, message);
+    final selected = _draftBuffer.replyVersions[(conversation.id, message.id)];
+    final savedIndex = choices.indexWhere((choice) => choice.$1 == selected);
+    final index = savedIndex < 0 ? choices.length - 1 : savedIndex;
+    final text = replacing && state.streamingText.isNotEmpty
+        ? state.streamingText
+        : choices[index].$2;
+    final canModifyHistory =
+        conversation.pendingRedo == null &&
+        !conversation.archived &&
+        !state.isActive &&
+        !state.recoveryRequired &&
+        _repository.canWrite &&
+        _runtime.enabled &&
+        !_runtime.maintenance;
+    final generation = _uiGeneration;
+    return AgentMessageActions(
+      key: ValueKey('agent-message-group-${message.id}'),
+      messageId: message.id,
+      copyText: replacing ? '' : text,
+      isUser: message.role == ConversationRole.user,
+      active: widget.active,
+      interactive: _uiActive,
+      alwaysVisible: latest || choices.length > 1,
+      versionCount: choices.length,
+      versionIndex: index,
+      showEditAndRedo:
+          !conversation.archived &&
+          message.role == ConversationRole.user &&
+          widget.history != null &&
+          conversation.turns.any((turn) => turn.requestMessageId == message.id),
+      showRegenerate:
+          !conversation.archived &&
+          message.role == ConversationRole.assistant &&
+          message.toolCalls.isEmpty &&
+          message.text.isNotEmpty &&
+          widget.onRegenerateReply != null,
+      onVersionSelected: !replacing && choices.length > 1
+          ? (next) {
+              if (!_uiSessionCurrent(generation, conversation.id) ||
+                  next < 0 ||
+                  next >= choices.length)
+                return;
+              setState(() {
+                _draftBuffer.replyVersions[(conversation.id, message.id)] =
+                    choices[next].$1;
+                _replyBrowseRevisions.update(
+                  conversation.id,
+                  (value) => value + 1,
+                  ifAbsent: () => 1,
+                );
+              });
+              _revealReply(conversation.id, message.id);
+            }
+          : null,
+      onEditAndRedo:
+          canModifyHistory &&
+              message.role == ConversationRole.user &&
+              widget.history != null &&
+              conversation.turns.any(
+                (turn) => turn.requestMessageId == message.id,
+              ) &&
+              !_busy.contains('history-${conversation.id}')
+          ? () => unawaited(_editHistory(conversation, message))
+          : null,
+      onRegenerate:
+          canModifyHistory &&
+              message.role == ConversationRole.assistant &&
+              message.toolCalls.isEmpty &&
+              message.text.isNotEmpty &&
+              widget.onRegenerateReply != null &&
+              !_busy.contains('regenerate-${conversation.id}')
+          ? () => unawaited(_regenerateReply(conversation, message))
+          : null,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (message.attachmentIds.isNotEmpty &&
+              widget.binaryAttachments != null)
+            _messageAttachments(conversation, message),
+          if (text.isNotEmpty)
+            _messageText(
+              switch (message.role) {
+                ConversationRole.user => l.agentYou,
+                ConversationRole.assistant => l.agentAssistant,
+                _ => l.agentNotice,
+              },
+              text,
+              key: ValueKey('agent-message-${message.id}'),
+              streaming: replacing && state.streamingText.isNotEmpty,
+              showCopy: false,
+            ),
+          if (target) ..._runStatusWidgets(state, conversation, l),
+          if (target && state.pendingApproval != null)
+            _approval(
+              conversation.id,
+              state.pendingApproval!,
+              _uiActive &&
+                  _repository.canWrite &&
+                  _runtime.enabled &&
+                  !_runtime.maintenance,
+              l,
+            ),
+          for (final call in message.toolCalls.where(
+            (call) => !completedCalls.contains(call.id),
+          ))
+            ExpansionTile(
+              key: ValueKey('agent-tool-${call.id}'),
+              title: Text(l.agentActivityDetails),
+              leading: const Icon(Icons.bolt_outlined, size: 20),
+              childrenPadding: const EdgeInsets.all(16),
+              children: [
+                AgentSelectableText(call.name),
+                const SizedBox(height: 8),
+                AgentSelectableText(_prettyJson(call.arguments)),
+              ],
+            ),
+        ],
+      ),
+    );
   }
 
   Widget _messageAttachments(
@@ -1811,6 +1990,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     String text, {
     Key? key,
     bool streaming = false,
+    bool showCopy = true,
   }) {
     final l = AppLocalizations.of(context);
     return AgentMessageContent(
@@ -1820,6 +2000,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       isUser: role == l.agentYou,
       isNotice: role != l.agentYou && role != l.agentAssistant,
       streaming: streaming,
+      showCopy: showCopy,
     );
   }
 
@@ -1860,56 +2041,68 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     AgentUiApproval plan,
     bool writable,
     AppLocalizations l,
-  ) => Padding(
-    padding: const EdgeInsets.all(16),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          plan.details['kind'] == 'httpTransport'
-              ? l.agentHttpTransportApproval
-              : l.agentApprovalRequired,
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 8),
-        AgentPlanPreview(details: plan.details),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            FilledButton(
-              key: const ValueKey('agent-approve'),
-              onPressed: writable && !_busy.contains('approval-$id')
-                  ? () => _perform(
-                      'approval-$id',
-                      () => widget.delegate.approve(id, plan.id),
-                    )
-                  : null,
-              child: Text(
-                plan.details['kind'] == 'httpTransport'
-                    ? l.confirm
-                    : l.agentApprove,
+  ) {
+    final generation = _uiGeneration;
+    final delegate = widget.delegate;
+    final runId = _runtime.runFor(id).runId;
+    bool isCurrent() =>
+        _uiSessionCurrent(generation, id) &&
+        identical(delegate, widget.delegate) &&
+        _runtime.runFor(id).runId == runId &&
+        identical(_runtime.runFor(id).pendingApproval, plan);
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            plan.details['kind'] == 'httpTransport'
+                ? l.agentHttpTransportApproval
+                : l.agentApprovalRequired,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          AgentPlanPreview(details: plan.details),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              FilledButton(
+                key: const ValueKey('agent-approve'),
+                onPressed: writable && !_busy.contains('approval-$id')
+                    ? () => _perform(
+                        'approval-$id',
+                        () => delegate.approve(id, plan.id),
+                        isCurrent: isCurrent,
+                      )
+                    : null,
+                child: Text(
+                  plan.details['kind'] == 'httpTransport'
+                      ? l.confirm
+                      : l.agentApprove,
+                ),
               ),
-            ),
-            OutlinedButton(
-              key: const ValueKey('agent-reject'),
-              onPressed: writable && !_busy.contains('approval-$id')
-                  ? () => _perform(
-                      'approval-$id',
-                      () => widget.delegate.reject(id, plan.id),
-                    )
-                  : null,
-              child: Text(
-                plan.details['kind'] == 'httpTransport'
-                    ? l.cancel
-                    : l.agentReject,
+              OutlinedButton(
+                key: const ValueKey('agent-reject'),
+                onPressed: writable && !_busy.contains('approval-$id')
+                    ? () => _perform(
+                        'approval-$id',
+                        () => delegate.reject(id, plan.id),
+                        isCurrent: isCurrent,
+                      )
+                    : null,
+                child: Text(
+                  plan.details['kind'] == 'httpTransport'
+                      ? l.cancel
+                      : l.agentReject,
+                ),
               ),
-            ),
-          ],
-        ),
-      ],
-    ),
-  );
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _composerWidget(
     AgentConversation conversation,

@@ -326,7 +326,7 @@ void main() {
         await tester.tap(find.byKey(const ValueKey('agent-confirm-redo')));
         await tester.pumpAndSettle();
         expect(find.byKey(const ValueKey('agent-redo-input')), findsNothing);
-        expect(tester.widget<TextButton>(edit).onPressed, isNull);
+        expect(tester.widget<IconButton>(edit).onPressed, isNull);
         expect(history.calls, isEmpty);
         changeHost(() {
           if (invalidation == 'interaction hidden') {

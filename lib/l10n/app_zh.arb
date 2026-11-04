@@ -2745,6 +2745,17 @@
   "@agentRegenerateReply": {},
   "agentHistoryVersions": "消息历史",
   "@agentHistoryVersions": {},
+  "agentPreviousReply": "上一个回复版本",
+  "@agentPreviousReply": {},
+  "agentNextReply": "下一个回复版本",
+  "@agentNextReply": {},
+  "agentReplyVersion": "{current}/{total}",
+  "@agentReplyVersion": {
+    "placeholders": {
+      "current": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
   "agentRedoExplanation": "这会撤销从本轮开始的 Agent 操作，然后仅执行编辑后的请求。手动编辑和其他会话保持不变。",
   "@agentRedoExplanation": {},
   "agentRedoPending": "历史重做尚未完成，请先继续此操作再发送新请求。",

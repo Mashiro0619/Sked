@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/runtime/agent_runtime_controller.dart';
@@ -57,6 +59,7 @@ class _OperationHarness {
 void main() {
   registerRecoveryTests();
   registerUsageTests();
+  registerReplyRegenerationTests();
   test('unsent input and request preferences remain volatile until runtime acceptance', () async {
     final entered = Completer<void>();
     final stream = StreamController<ProviderEvent>();
@@ -186,11 +189,17 @@ void main() {
       await h.repository.update(h.id, (item) => item.copyWith(draft: 'hello'));
       final send = h.runtime.send(h.id, 'hello');
       await entered.future;
+      final runId = h.repository.find(h.id)!.runId;
+      expect(runId, isNotNull);
+      expect(h.runtime.state.value.runFor(h.id).runId, runId);
+      expect(h.runtime.state.value.runFor(h.id).replyTargetMessageId, isNull);
       final writes = h.storage.saves;
       stream.add(const ProviderTextDelta('one'));
       stream.add(const ProviderTextDelta(' two'));
       await pumpEventQueue();
       expect(h.runtime.state.value.runFor(h.id).streamingText, 'one two');
+      expect(h.runtime.state.value.runFor(h.id).runId, runId);
+      expect(h.runtime.state.value.runFor(h.id).replyTargetMessageId, isNull);
       expect(h.storage.saves, writes);
       stream.add(ProviderCompleted(_response('one two')));
       await stream.close();
@@ -200,6 +209,8 @@ void main() {
         'one two',
       ]);
       expect(h.runtime.state.value.runFor(h.id).phase, AgentUiPhase.idle);
+      expect(h.runtime.state.value.runFor(h.id).runId, runId);
+      expect(h.runtime.state.value.runFor(h.id).replyTargetMessageId, isNull);
     },
   );
 
@@ -1091,6 +1102,642 @@ void main() {
     expect(h.repository.find(h.id)!.messages, isEmpty);
     key.complete(_key);
   });
+}
+
+void registerReplyRegenerationTests() {
+  test('reply regeneration streams into its original slot and preserves later recorded turns', () async {
+    final stream = StreamController<ProviderEvent>();
+    final entered = Completer<void>();
+    var round = 0;
+    var executions = 0;
+    late _Harness h;
+    h = await _Harness.create(
+      handler: (request, _) {
+        switch (round++) {
+          case 0:
+            return _events(_response('Original earlier reply'));
+          case 1:
+            return _events(
+              _response(
+                'Reading the later request',
+                calls: [_call('later-query')],
+              ),
+            );
+          case 2:
+            return _events(_response('Later recorded result'));
+          case 3:
+            expect(request.tools, isEmpty);
+            expect(
+              request.messages
+                  .where((message) => message.role != ProviderRole.system)
+                  .map((message) => message.text),
+              ['First request', 'Original earlier reply'],
+            );
+            entered.complete();
+            return stream.stream;
+          case 4:
+            expect(request.tools, isNotEmpty);
+            expect(
+              request.messages
+                  .where((message) => message.role != ProviderRole.system)
+                  .map((message) => message.text),
+              h.repository.find(h.id)!.messages.map((message) => message.text),
+            );
+            expect(
+              request.messages
+                  .singleWhere((message) => message.toolCallId == 'later-query')
+                  .text,
+              jsonEncode({'status': 'read', 'recordId': 'later-record'}),
+            );
+            expect(
+              request.messages.any(
+                (message) => message.text == 'Original earlier reply',
+              ),
+              isFalse,
+            );
+            return _events(_response('Following the active reply'));
+          default:
+            throw StateError('Unexpected provider request');
+        }
+      },
+      execute: (_, scope, _) async {
+        scope.checkActive();
+        executions++;
+        return {'status': 'read', 'recordId': 'later-record'};
+      },
+    );
+    addTearDown(h.dispose);
+    await h.runtime.send(h.id, 'First request');
+    await h.runtime.send(h.id, 'Later request');
+    await h.repository.update(
+      h.id,
+      (conversation) => conversation.copyWith(draft: 'Keep this unsent input'),
+    );
+    final before = h.repository.find(h.id)!;
+    final original = before.messages[1];
+    final other = await h.repository.create(title: 'Other chat');
+    await h.repository.select(h.id);
+
+    final regeneration = h.runtime.regenerateReply(h.id, original.id);
+    await entered.future;
+    final runId = h.repository.find(h.id)!.runId;
+    expect(runId, isNotNull);
+    expect(h.runtime.state.value.runFor(h.id).runId, runId);
+    expect(
+      h.runtime.state.value.runFor(h.id).replyTargetMessageId,
+      original.id,
+    );
+    final writes = h.storage.saves;
+    final streaming = _waitStreamingText(h, 'Replacement in progress');
+    stream.add(const ProviderTextDelta('Replacement in progress'));
+    await streaming;
+    expect(h.storage.saves, writes);
+    expect(h.runtime.state.value.runFor(h.id).runId, runId);
+    expect(
+      h.runtime.state.value.runFor(h.id).replyTargetMessageId,
+      original.id,
+    );
+    final durable = ConversationArchive.decode(h.storage.source!).conversations
+        .singleWhere((conversation) => conversation.id == h.id);
+    expect(
+      durable.messages.map((message) => message.toJson()),
+      before.messages.map((message) => message.toJson()),
+    );
+    expect(durable.replyRevisions, isEmpty);
+
+    await h.repository.select(other.id);
+    h.runtime.refreshSettings();
+    expect(h.runtime.state.value.runFor(h.id).runId, runId);
+    expect(
+      h.runtime.state.value.runFor(h.id).replyTargetMessageId,
+      original.id,
+    );
+    expect(
+      h.runtime.state.value.runFor(h.id).streamingText,
+      'Replacement in progress',
+    );
+    expect(h.runtime.state.value.runFor(other.id).isActive, isFalse);
+    expect(h.runtime.state.value.runFor(other.id).replyTargetMessageId, isNull);
+    stream.add(
+      ProviderCompleted(_response('Replacement in progress, complete')),
+    );
+    await stream.close();
+    await regeneration;
+
+    final after = h.repository.find(h.id)!;
+    expect(h.repository.selected!.id, other.id);
+    expect(after.draft, 'Keep this unsent input');
+    expect(
+      after.messages.map((message) => message.id),
+      before.messages.map((message) => message.id),
+    );
+    expect(after.messages[1].text, 'Replacement in progress, complete');
+    expect(after.messages[1].createdAt, original.createdAt);
+    expect(after.messages.first.toJson(), before.messages.first.toJson());
+    expect(
+      after.messages.skip(2).map((message) => message.toJson()),
+      before.messages.skip(2).map((message) => message.toJson()),
+    );
+    expect(
+      after.turns.map((turn) => turn.toJson()),
+      before.turns.map((turn) => turn.toJson()),
+    );
+    expect(
+      after.runs.take(before.runs.length).map((run) => run.toJson()),
+      before.runs.map((run) => run.toJson()),
+    );
+    expect(after.runs.last.id, runId);
+    expect(after.runs.last.status, ConversationRunStatus.completed);
+    expect(after.replyRevisions.map((revision) => revision.text), [
+      'Original earlier reply',
+      'Replacement in progress, complete',
+    ]);
+    expect(h.runtime.state.value.runFor(h.id).phase, AgentUiPhase.idle);
+    expect(h.runtime.state.value.runFor(h.id).runId, runId);
+    expect(
+      h.runtime.state.value.runFor(h.id).replyTargetMessageId,
+      original.id,
+    );
+    expect(h.runtime.state.value.runFor(h.id).streamingText, isEmpty);
+    expect(executions, 1);
+
+    await h.runtime.send(h.id, 'Next request');
+    expect(h.runtime.state.value.runFor(h.id).replyTargetMessageId, isNull);
+    expect(h.runtime.state.value.runFor(h.id).runId, isNot(runId));
+    expect(h.provider.requests, hasLength(5));
+    expect(executions, 1);
+  });
+
+  for (final failure in {
+    'connection change': AgentRuntimeError.connectionChanged,
+    'model strength removal': AgentRuntimeError.modelSelectionRequired,
+    'missing endpoint': AgentRuntimeError.unconfigured,
+  }.entries) {
+    for (final regenerate in [false, true]) {
+      test(
+        '${regenerate ? 'regenerating another reply' : 'ordinary send'} preflight after ${failure.key} never inherits a settled regeneration target',
+        () async {
+          var responses = 0;
+          final h = await _Harness.create(
+            handler: (_, _) =>
+                _events(_response('Saved response ${++responses}')),
+          );
+          addTearDown(h.dispose);
+          await h.runtime.send(h.id, 'Earlier request');
+          final earlierReply = h.repository.find(h.id)!.messages.last;
+          await h.runtime.send(h.id, 'Later request');
+          final laterReply = h.repository.find(h.id)!.messages.last;
+          await h.runtime.regenerateReply(h.id, earlierReply.id);
+          final completedRunId = h.runtime.state.value.runFor(h.id).runId;
+          expect(completedRunId, isNotNull);
+          expect(h.runtime.state.value.runFor(h.id).phase, AgentUiPhase.idle);
+          expect(
+            h.runtime.state.value.runFor(h.id).replyTargetMessageId,
+            earlierReply.id,
+          );
+          expect(h.repository.find(h.id)!.messages[1].text, 'Saved response 3');
+          await h.repository.update(
+            h.id,
+            (conversation) =>
+                conversation.copyWith(draft: 'Unaccepted next request'),
+          );
+          final before = h.repository.find(h.id)!;
+          final source = h.storage.source;
+          switch (failure.value) {
+            case AgentRuntimeError.connectionChanged:
+              h.settings = h.settings.copyWith(
+                endpoint: 'https://other.example/v1',
+              );
+            case AgentRuntimeError.modelSelectionRequired:
+              h.settings = h.settings.copyWith(
+                models: const [
+                  AgentModelConfig(
+                    id: 'fixture-model',
+                    reasoningEfforts: [AgentReasoningEffort.low],
+                    defaultReasoningEffort: AgentReasoningEffort.low,
+                  ),
+                ],
+              );
+            case AgentRuntimeError.unconfigured:
+              h.settings = h.settings.copyWith(endpoint: '');
+            default:
+              throw StateError('Unexpected preflight failure fixture');
+          }
+          h.runtime.refreshSettings();
+          await expectLater(
+            regenerate
+                ? h.runtime.regenerateReply(h.id, laterReply.id)
+                : h.runtime.send(h.id, 'Unaccepted next request'),
+            throwsA(_runtimeError(failure.value)),
+          );
+          final state = h.runtime.state.value.runFor(h.id);
+          expect(state.phase, AgentUiPhase.failed);
+          expect(state.errorMessage, failure.value.name);
+          expect(state.runId, isNull);
+          expect(
+            state.replyTargetMessageId,
+            regenerate ? laterReply.id : isNull,
+          );
+          expect(state.streamingText, isEmpty);
+          expect(h.runtime.isRunning(h.id), isFalse);
+          expect(h.provider.requests, hasLength(3));
+          expect(h.storage.source, source);
+          expect(h.repository.find(h.id)!.toJson(), before.toJson());
+          expect(h.repository.find(h.id)!.runId, completedRunId);
+          h.runtime.refreshSettings();
+          expect(h.runtime.state.value.runFor(h.id).runId, isNull);
+          expect(
+            h.runtime.state.value.runFor(h.id).replyTargetMessageId,
+            regenerate ? laterReply.id : isNull,
+          );
+        },
+      );
+    }
+  }
+
+  test(
+    'reply regeneration cleanup failure retains its settled run identity',
+    () async {
+      var failCleanup = false;
+      final h = await _Harness.create(
+        onRunSettled: (_) {
+          if (failCleanup) throw StateError('Synthetic cleanup failure');
+        },
+      );
+      addTearDown(h.dispose);
+      await h.runtime.send(h.id, 'Original request');
+      final original = h.repository.find(h.id)!.messages.last;
+      failCleanup = true;
+      await h.runtime.regenerateReply(h.id, original.id);
+      final state = h.runtime.state.value.runFor(h.id);
+      expect(state.phase, AgentUiPhase.failed);
+      expect(state.errorMessage, 'cleanupFailure');
+      expect(state.runId, h.repository.find(h.id)!.runId);
+      expect(state.runId, isNotNull);
+      expect(state.replyTargetMessageId, original.id);
+      expect(h.runtime.isRunning(h.id), isFalse);
+      expect(
+        h.repository.find(h.id)!.runs.last.status,
+        ConversationRunStatus.completed,
+      );
+      expect(h.repository.find(h.id)!.replyRevisions, hasLength(2));
+    },
+  );
+
+  test('a settled regeneration cleanup cannot overwrite a newer failed send attempt', () async {
+    var startNextAttempt = false;
+    Future<void>? nextAssertion;
+    late _Harness h;
+    h = await _Harness.create(
+      onRunSettled: (_) {
+        if (!startNextAttempt) return;
+        startNextAttempt = false;
+        h.settings = h.settings.copyWith(endpoint: 'https://other.example/v1');
+        h.runtime.refreshSettings();
+        nextAssertion = expectLater(
+          h.runtime.send(h.id, 'New unaccepted request'),
+          throwsA(_runtimeError(AgentRuntimeError.connectionChanged)),
+        );
+        throw StateError('Synthetic late cleanup failure');
+      },
+    );
+    addTearDown(h.dispose);
+    await h.runtime.send(h.id, 'Original request');
+    final original = h.repository.find(h.id)!.messages.last;
+    startNextAttempt = true;
+    await h.runtime.regenerateReply(h.id, original.id);
+    expect(nextAssertion, isNotNull);
+    await nextAssertion!;
+    final state = h.runtime.state.value.runFor(h.id);
+    expect(state.phase, AgentUiPhase.failed);
+    expect(state.errorMessage, 'connectionChanged');
+    expect(state.runId, isNull);
+    expect(state.replyTargetMessageId, isNull);
+    expect(h.provider.requests, hasLength(2));
+    expect(
+      h.repository.find(h.id)!.runs.last.status,
+      ConversationRunStatus.completed,
+    );
+    expect(h.repository.find(h.id)!.replyRevisions, hasLength(2));
+  });
+
+  for (final ending in [
+    'cancelled',
+    'provider failure',
+    'unsolicited tool',
+    'reply save failure',
+  ]) {
+    test(
+      '$ending reply regeneration preserves the old reply and later messages',
+      () async {
+        final stream = StreamController<ProviderEvent>();
+        final entered = Completer<void>();
+        var round = 0;
+        var executions = 0;
+        final h = await _Harness.create(
+          handler: (_, _) {
+            if (round++ < 2) return _events(_response('Saved reply $round'));
+            entered.complete();
+            return stream.stream;
+          },
+          execute: (_, _, _) async {
+            executions++;
+            return {'status': 'read'};
+          },
+        );
+        addTearDown(h.dispose);
+        await h.runtime.send(h.id, 'Original request');
+        await h.runtime.send(h.id, 'Later request');
+        final before = h.repository.find(h.id)!;
+        final original = before.messages[1];
+        final regeneration = h.runtime.regenerateReply(h.id, original.id);
+        await entered.future;
+        final runId = h.runtime.state.value.runFor(h.id).runId;
+        expect(runId, isNotNull);
+        expect(
+          h.runtime.state.value.runFor(h.id).replyTargetMessageId,
+          original.id,
+        );
+        final streaming = _waitStreamingText(h, 'Incomplete replacement');
+        stream.add(const ProviderTextDelta('Incomplete replacement'));
+        await streaming;
+        expect(h.repository.find(h.id)!.messages[1].text, original.text);
+
+        Future<void>? stopping;
+        switch (ending) {
+          case 'cancelled':
+            stopping = h.runtime.stop(h.id);
+            stream.add(
+              ProviderCompleted(_response('Late cancelled replacement')),
+            );
+          case 'provider failure':
+            stream.addError(
+              const ProviderException(ProviderError.transportFailure),
+            );
+          case 'unsolicited tool':
+            stream.add(
+              ProviderCompleted(
+                _response(
+                  'Invalid replacement',
+                  calls: [_call('must-not-run')],
+                ),
+              ),
+            );
+          case 'reply save failure':
+            h.storage.beforeSave = (value) async {
+              final candidate = ConversationArchive.decode(value)
+                  .conversations
+                  .single;
+              if (candidate.messages[1].text == 'Uncommitted replacement') {
+                throw StateError('Synthetic reply save failure');
+              }
+            };
+            stream.add(ProviderCompleted(_response('Uncommitted replacement')));
+        }
+        await stream.close();
+        if (stopping != null) await stopping;
+        await regeneration;
+
+        final after = h.repository.find(h.id)!;
+        expect(
+          after.messages.map((message) => message.toJson()),
+          before.messages.map((message) => message.toJson()),
+        );
+        expect(
+          after.turns.map((turn) => turn.toJson()),
+          before.turns.map((turn) => turn.toJson()),
+        );
+        expect(after.replyRevisions, isEmpty);
+        final state = h.runtime.state.value.runFor(h.id);
+        expect(state.runId, runId);
+        expect(state.replyTargetMessageId, original.id);
+        expect(state.streamingText, isEmpty);
+        expect(
+          state.phase,
+          ending == 'cancelled' ? AgentUiPhase.stopped : AgentUiPhase.failed,
+        );
+        expect(h.provider.requests, hasLength(3));
+        expect(executions, 0);
+        final durable = ConversationArchive.decode(h.storage.source!)
+            .conversations
+            .single;
+        expect(
+          durable.messages.map((message) => message.toJson()),
+          before.messages.map((message) => message.toJson()),
+        );
+        expect(durable.replyRevisions, isEmpty);
+        if (ending == 'reply save failure') {
+          expect(h.repository.blocked, isTrue);
+          h.storage.beforeSave = null;
+          await h.repository.load();
+          expect(h.repository.find(h.id)!.messages[1].text, original.text);
+          expect(h.repository.find(h.id)!.replyRevisions, isEmpty);
+        } else {
+          expect(after.runs.last.status, ConversationRunStatus.interrupted);
+        }
+      },
+    );
+  }
+
+  for (final secretLocation in ['summary', 'encrypted_content']) {
+    test(
+      'reply regeneration rejects a credential echoed in Responses $secretLocation without changing the reply',
+      () async {
+        var requestCount = 0;
+        final client = MockClient((request) async {
+          requestCount++;
+          expect(request.headers['Authorization'], 'Bearer $_key');
+          expect(request.body, isNot(contains(_key)));
+          final regenerating = requestCount == 2;
+          return http.Response(
+            jsonEncode({
+              'id': 'provider-response-$requestCount',
+              'status': 'completed',
+              'output': [
+                {
+                  'type': 'reasoning',
+                  'id': 'reasoning-$requestCount',
+                  'summary': [
+                    {
+                      'type': 'summary_text',
+                      'text': regenerating && secretLocation == 'summary'
+                          ? 'Echoed $_key'
+                          : 'Safe summary',
+                    },
+                  ],
+                  if (secretLocation == 'encrypted_content')
+                    'encrypted_content': regenerating
+                        ? 'Echoed $_key'
+                        : 'Safe continuation',
+                },
+                {
+                  'type': 'message',
+                  'id': 'provider-message-$requestCount',
+                  'role': 'assistant',
+                  'status': 'completed',
+                  'content': [
+                    {
+                      'type': 'output_text',
+                      'text': regenerating
+                          ? 'Safe replacement text'
+                          : 'Original safe reply',
+                      'annotations': [],
+                    },
+                  ],
+                },
+              ],
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        });
+        addTearDown(client.close);
+        final provider = ProviderClient(client: client);
+        final h = await _Harness.create(
+          protocol: AgentModelProtocol.responses,
+          handler: (request, cancellation) => provider.stream(
+            request,
+            apiKey: _key,
+            cancellation: cancellation,
+          ),
+        );
+        addTearDown(h.dispose);
+        await h.runtime.send(h.id, 'Original request');
+        final before = h.repository.find(h.id)!;
+        final original = before.messages.last;
+        expect(original.text, 'Original safe reply');
+        await h.runtime.regenerateReply(h.id, original.id);
+
+        final after = h.repository.find(h.id)!;
+        expect(
+          after.messages.map((message) => message.toJson()),
+          before.messages.map((message) => message.toJson()),
+        );
+        expect(after.replyRevisions, isEmpty);
+        expect(h.storage.source, isNot(contains(_key)));
+        expect(requestCount, 2);
+        final state = h.runtime.state.value.runFor(h.id);
+        expect(state.phase, AgentUiPhase.failed);
+        expect(state.replyTargetMessageId, original.id);
+        expect(state.errorMessage, 'sensitiveContent');
+        expect(state.streamingText, isEmpty);
+        expect(
+          jsonEncode({
+            'error': state.errorMessage,
+            'text': state.streamingText,
+          }),
+          isNot(contains(_key)),
+        );
+      },
+    );
+  }
+
+  for (final withContinuation in [false, true]) {
+    test(
+      'regenerated Responses reply ${withContinuation ? 'replaces' : 'clears'} the original continuation for the next request',
+      () async {
+        final originalItems = <Map<String, Object?>>[
+          {
+            'type': 'reasoning',
+            'id': 'old-reasoning',
+            'encrypted_content': 'old-continuation',
+            'summary': [],
+          },
+          {
+            'type': 'message',
+            'id': 'old-provider-message',
+            'role': 'assistant',
+            'status': 'completed',
+            'content': [
+              {
+                'type': 'output_text',
+                'text': 'Original response',
+                'annotations': [],
+              },
+            ],
+          },
+        ];
+        final replacementItems = <Map<String, Object?>>[
+          {
+            'type': 'reasoning',
+            'id': 'new-reasoning',
+            'encrypted_content': 'new-continuation',
+            'summary': [],
+          },
+          {
+            'type': 'message',
+            'id': 'new-provider-message',
+            'role': 'assistant',
+            'status': 'completed',
+            'content': [
+              {
+                'type': 'output_text',
+                'text': 'Replacement response',
+                'annotations': [],
+              },
+            ],
+          },
+        ];
+        final expectedItems = withContinuation
+            ? replacementItems
+            : <Map<String, Object?>>[];
+        var round = 0;
+        final h = await _Harness.create(
+          protocol: AgentModelProtocol.responses,
+          handler: (request, _) {
+            switch (round++) {
+              case 0:
+                return _events(
+                  _response('Original response', responseItems: originalItems),
+                );
+              case 1:
+                expect(request.tools, isEmpty);
+                expect(request.messages.last.responseItems, originalItems);
+                return _events(
+                  _response(
+                    'Replacement response',
+                    responseItems: expectedItems,
+                  ),
+                );
+              case 2:
+                final reply = request.messages.singleWhere(
+                  (message) => message.role == ProviderRole.assistant,
+                );
+                expect(reply.text, 'Replacement response');
+                expect(reply.responseItems, expectedItems);
+                return _events(_response('Following the replacement'));
+              default:
+                throw StateError('Unexpected provider request');
+            }
+          },
+        );
+        addTearDown(h.dispose);
+        await h.runtime.send(h.id, 'Original request');
+        final original = h.repository.find(h.id)!.messages.last;
+        await h.runtime.regenerateReply(h.id, original.id);
+        final reply = h.repository.find(h.id)!.messages.last;
+        expect(reply.id, original.id);
+        expect(reply.createdAt, original.createdAt);
+        expect(reply.providerProtocol, AgentModelProtocol.responses);
+        expect(reply.responseItems, expectedItems);
+        final durableReply = ConversationArchive.decode(h.storage.source!)
+            .conversations
+            .single
+            .messages
+            .last;
+        expect(durableReply.toJson(), reply.toJson());
+        await h.runtime.send(h.id, 'Use the active replacement');
+        expect(h.provider.requests, hasLength(3));
+        expect(
+          h.repository
+              .find(h.id)!
+              .replyRevisions
+              .map((revision) => revision.text),
+          ['Original response', 'Replacement response'],
+        );
+      },
+    );
+  }
 }
 
 void registerUsageTests() {
@@ -2176,10 +2823,12 @@ ProviderToolCall _call(String id) =>
 ProviderResponse _response(
   String text, {
   List<ProviderToolCall> calls = const [],
+  List<Map<String, Object?>> responseItems = const [],
 }) => ProviderResponse(
   text: text,
   toolCalls: calls,
   finishReason: calls.isEmpty ? 'stop' : 'tool_calls',
+  responseItems: responseItems,
 );
 Stream<ProviderEvent> _events(ProviderResponse response) =>
     Stream.value(ProviderCompleted(response));
@@ -2193,6 +2842,22 @@ Future<void> _waitPhase(_Harness harness, AgentUiPhase phase) {
   final ready = Completer<void>();
   void changed() {
     if (harness.runtime.state.value.runFor(harness.id).phase != phase) return;
+    harness.runtime.state.removeListener(changed);
+    ready.complete();
+  }
+
+  harness.runtime.state.addListener(changed);
+  return ready.future;
+}
+
+Future<void> _waitStreamingText(_Harness harness, String text) {
+  if (harness.runtime.state.value.runFor(harness.id).streamingText == text) {
+    return Future.value();
+  }
+  final ready = Completer<void>();
+  void changed() {
+    if (harness.runtime.state.value.runFor(harness.id).streamingText != text)
+      return;
     harness.runtime.state.removeListener(changed);
     ready.complete();
   }

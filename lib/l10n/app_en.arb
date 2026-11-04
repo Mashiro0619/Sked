@@ -2815,6 +2815,17 @@
   "@agentRegenerateReply": {},
   "agentHistoryVersions": "Message history",
   "@agentHistoryVersions": {},
+  "agentPreviousReply": "Previous reply version",
+  "@agentPreviousReply": {},
+  "agentNextReply": "Next reply version",
+  "@agentNextReply": {},
+  "agentReplyVersion": "{current}/{total}",
+  "@agentReplyVersion": {
+    "placeholders": {
+      "current": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
   "agentRedoExplanation": "This undoes Agent changes from this entire turn onward, then runs only the edited request. Manual edits and other conversations are preserved.",
   "@agentRedoExplanation": {},
   "agentRedoPending": "History redo is unfinished. Continue this operation before sending another request.",

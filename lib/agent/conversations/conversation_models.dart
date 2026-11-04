@@ -87,6 +87,8 @@ class ConversationMessage {
     String? text,
     ConversationRole? role,
     AgentModelSelection? modelSelection,
+    AgentModelProtocol? providerProtocol,
+    Iterable<Map<String, Object?>>? responseItems,
     Iterable<String>? attachmentIds,
     AttachmentDelivery? attachmentDelivery,
   }) => ConversationMessage(
@@ -96,9 +98,9 @@ class ConversationMessage {
     createdAt: createdAt,
     toolCalls: toolCalls,
     toolCallId: toolCallId,
-    responseItems: responseItems,
+    responseItems: responseItems ?? this.responseItems,
     modelSelection: modelSelection ?? this.modelSelection,
-    providerProtocol: providerProtocol,
+    providerProtocol: providerProtocol ?? this.providerProtocol,
     attachmentIds: attachmentIds ?? this.attachmentIds,
     attachmentDelivery: attachmentDelivery ?? this.attachmentDelivery,
   );
