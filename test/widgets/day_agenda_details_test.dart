@@ -58,11 +58,15 @@ Future<AppRuntime> mount(
   );
   await t.pumpAndSettle();
   if (!fixed) {
-    if (k('general-day-agenda-toggle').evaluate().isEmpty) {
+    final toggle = k('general-day-agenda-toggle');
+    if (toggle.evaluate().isEmpty) {
       await t.tap(k('general-desktop-toolbar-more'));
       await t.pumpAndSettle();
     }
-    await t.tap(k('general-day-agenda-toggle'));
+    await t.ensureVisible(toggle);
+    await t.pumpAndSettle();
+    expect(toggle.hitTestable(), findsOneWidget);
+    await t.tap(toggle);
     await t.pumpAndSettle();
   }
   return p;

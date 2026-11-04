@@ -298,6 +298,9 @@ void main() {
           await t.tap(_key('general-desktop-toolbar-more'));
           await t.pumpAndSettle();
         }
+        await t.ensureVisible(entry);
+        await t.pumpAndSettle();
+        expect(entry.hitTestable(), findsOneWidget);
         await t.tap(entry);
         await t.pumpAndSettle();
         final title = locale == 'zh' ? '复习计划' : 'Review session';

@@ -3012,6 +3012,38 @@ void main() {
         final selector = find.byKey(
           const ValueKey('student-timetable-picker-button'),
         );
+        final timetable = selector.evaluate().isNotEmpty
+            ? selector
+            : find.byKey(
+                ValueKey(
+                  'resource-timetable-${provider.studentView.activeTimetable.id}',
+                ),
+              );
+        if (timetable.evaluate().isEmpty) {
+          final navigationList = find.byKey(
+            const PageStorageKey('workspace-resource-navigation-list'),
+          );
+          final resourceList = find.byKey(
+            const PageStorageKey('workspace-resource-list'),
+          );
+          final scrollable = find
+              .descendant(
+                of: navigationList.evaluate().isNotEmpty
+                    ? navigationList
+                    : resourceList,
+                matching: find.byType(Scrollable),
+              )
+              .first;
+          await tester.scrollUntilVisible(
+            timetable,
+            150,
+            scrollable: scrollable,
+            maxScrolls: 20,
+          );
+        }
+        await tester.ensureVisible(timetable);
+        await tester.pumpAndSettle();
+        expect(timetable.hitTestable(), findsOneWidget);
         final settings = find.byWidgetPredicate(
           (widget) =>
               widget.key == const ValueKey('student-settings-button') ||
@@ -3022,14 +3054,7 @@ void main() {
           settings,
           find.byKey(const ValueKey('student-view-toggle-button')),
           find.byKey(const ValueKey('student-week-picker-button')),
-          if (selector.evaluate().isNotEmpty)
-            selector
-          else
-            find.byKey(
-              ValueKey(
-                'resource-timetable-${provider.studentView.activeTimetable.id}',
-              ),
-            ),
+          timetable,
         ];
         for (final action in actions) {
           final rect = tester.getRect(action);

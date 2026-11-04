@@ -431,11 +431,15 @@ void main() {
             ),
           );
           await t.pumpAndSettle();
-          if (k('general-reminders-action').evaluate().isEmpty) {
+          final reminders = k('general-reminders-action');
+          if (reminders.evaluate().isEmpty) {
             await t.tap(k('general-desktop-toolbar-more'));
             await t.pumpAndSettle();
           }
-          await t.tap(k('general-reminders-action'));
+          await t.ensureVisible(reminders);
+          await t.pumpAndSettle();
+          expect(reminders.hitTestable(), findsOneWidget);
+          await t.tap(reminders);
           await t.pumpAndSettle();
           final rows = t
               .widgetList<ExpressiveDialogOption>(
