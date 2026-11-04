@@ -23,7 +23,6 @@ import '../widgets/desktop_window_host.dart';
 import '../widgets/sked_task_route.dart';
 import '../widgets/sked_task_session.dart';
 import '../widgets/workspace_route_lifecycle.dart';
-import 'agent_page.dart';
 import 'agent_settings_page.dart';
 import 'workspace_features_page.dart';
 
@@ -156,7 +155,7 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
     if (!routeWorkspaceEnabled) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
     context.watch<AgentApplication?>();
-    return PopScope(
+    return PopScope<SchoolWebHandoffRouteResult>(
       canPop: true,
       child: Scaffold(
         appBar: WorkbenchAppBar(
@@ -569,7 +568,7 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
       return;
     }
     setState(() => _returnToWebPagePopped = true);
-    completeSkedTaskRoute(context);
+    completeSkedTaskRoute<SchoolWebHandoffRouteResult>(context);
   }
 
   Future<void> _openConfiguration() async {
@@ -634,16 +633,16 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
         isCurrent: () => owner.isCurrent,
       );
       if (!mounted || !owner.isCurrent) return;
-      FocusManager.instance.primaryFocus?.unfocus();
+      if (owner.ownerRoute?.isCurrent == true) {
+        FocusManager.instance.primaryFocus?.unfocus();
+      }
       if (widget.openConversation != null) {
         await widget.openConversation!(context, result.conversationId);
       } else {
-        await handoff.repository.select(result.conversationId);
-        if (!mounted || !owner.isCurrent) return;
-        // This preparation route still covers the desktop workspace. Push the
-        // shared conversation host visibly above it; opening only the hidden
-        // workspace pane would leave the user on the source editor.
-        await AgentPage.open(context);
+        completeSkedTaskRoute(
+          context,
+          SchoolWebHandoffRouteResult(conversationId: result.conversationId),
+        );
       }
     } on OperationProblem catch (error) {
       if (mounted) {

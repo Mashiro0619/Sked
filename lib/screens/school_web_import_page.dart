@@ -18,6 +18,10 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../models/school_site_models.dart';
 import '../agent/agent_application.dart';
+import '../agent/imports/school_web_handoff.dart';
+import '../controllers/app_data_maintenance.dart';
+import '../controllers/workspace_commands.dart';
+import '../controllers/workspace_view_state.dart';
 import '../providers/app_scope.dart';
 import '../screens/school_html_import_page.dart';
 import '../services/school_site_service.dart';
@@ -26,6 +30,8 @@ import '../services/school_web_session_service.dart';
 import '../utils/platform_capabilities.dart';
 import '../widgets/expressive_dialog.dart';
 import '../widgets/expressive_empty_state.dart';
+import '../widgets/sked_task_route.dart';
+import '../widgets/sked_task_session.dart';
 
 /// Factory seam for driving the real browser callbacks in widget tests.
 ///
@@ -227,7 +233,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
     if (!routeWorkspaceEnabled) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
     final pane = _activePane;
-    return PopScope<void>(
+    return PopScope<SchoolWebHandoffRouteResult>(
       canPop: _allowRouteExit,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) {
@@ -734,7 +740,6 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
     }
     setState(() => _isExitConfirmationOpen = true);
     final l10n = AppLocalizations.of(context);
-    final navigator = Navigator.of(context);
     try {
       final shouldExit = await showExpressiveDialog<bool>(
         context: context,
@@ -769,7 +774,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
       );
       if (shouldExit == true && mounted) {
         setState(() => _allowRouteExit = true);
-        navigator.pop();
+        completeSkedTaskRoute<SchoolWebHandoffRouteResult>(context);
       }
     } finally {
       if (mounted && !_allowRouteExit) {
@@ -1479,6 +1484,14 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
     final capturedAt = DateTime.now().toUtc();
     final extractionGeneration = pane.loadGeneration;
     final extractionDocumentRevision = pane.documentRevision;
+    final owner = SkedTaskSession(
+      maintenance: context.read<AppDataMaintenance?>(),
+      workspaceView: context.read<WorkspaceViewState?>(),
+      workspaces: context.read<WorkspaceCommands?>(),
+      workspace: AppMode.student,
+      ownerRoute: ModalRoute.of(context),
+      isOwnerActive: () => mounted,
+    );
     setState(() => _isParsing = true);
     try {
       final source = await _pageService.extractSource(
@@ -1502,22 +1515,27 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
       if (!mounted || _hasBlockingDialog || _isExitConfirmationOpen) {
         return;
       }
-      await Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) {
-            final page = SchoolHtmlImportPage(
-              initialContent: source.content,
-              initialUrl: source.url,
-              initialTitle: source.title,
-              initialContentTruncated: source.wasTruncated,
-              initialCapturedAt: capturedAt,
-              initialDatasetGeneration: sourceGeneration,
-              showReturnToWebPageButton: true,
-            );
-            return scope?.wrap(page) ?? page;
-          },
-        ),
-      );
+      final result = await Navigator.of(context)
+          .push<SchoolWebHandoffRouteResult>(
+            MaterialPageRoute<SchoolWebHandoffRouteResult>(
+              builder: (_) {
+                final page = SchoolHtmlImportPage(
+                  initialContent: source.content,
+                  initialUrl: source.url,
+                  initialTitle: source.title,
+                  initialContentTruncated: source.wasTruncated,
+                  initialCapturedAt: capturedAt,
+                  initialDatasetGeneration: sourceGeneration,
+                  showReturnToWebPageButton: true,
+                );
+                return scope?.wrap(page) ?? page;
+              },
+            ),
+          );
+      if (result != null && mounted && owner.isCurrent) {
+        setState(() => _allowRouteExit = true);
+        completeSkedTaskRoute(context, result);
+      }
     } on FormatException catch (error) {
       if (!mounted) {
         return;
@@ -1531,6 +1549,7 @@ class _SchoolWebImportPageState extends State<SchoolWebImportPage>
         _showMessage(l10n.importFailedCheckContent);
       }
     } finally {
+      owner.dispose();
       if (mounted) {
         setState(() => _isParsing = false);
       }

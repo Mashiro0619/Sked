@@ -18,6 +18,7 @@ import 'package:sked/services/export_service.dart';
 import 'package:sked/widgets/assistant_pane.dart';
 
 import '../../support/workspace_harness.dart';
+import '../../support/agent_workspace_navigation.dart';
 
 Future<void> _until(
   WidgetTester tester,
@@ -267,11 +268,9 @@ void main() {
   }
 
   Future<void> backFromFullWorkspace(WidgetTester tester) async {
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AgentPage),
-        matching: find.byType(BackButton),
-      ),
+    await selectAgentShellDestination(
+      tester,
+      app.workspaceView.activeMode.value,
     );
     await tester.pumpAndSettle();
     expect(find.byType(AgentPage), findsNothing);

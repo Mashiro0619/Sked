@@ -4,9 +4,11 @@ import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
+import '../agent/imports/school_web_handoff.dart';
 import '../controllers/app_data_maintenance.dart';
 import '../controllers/data_transfer_controller.dart';
 import '../controllers/student_view_state.dart';
+import '../controllers/workspace_commands.dart';
 import '../controllers/workspace_view_state.dart';
 import '../models/school_import_models.dart';
 import '../models/import_count_limits.dart';
@@ -18,6 +20,8 @@ import '../widgets/expressive_dialog.dart';
 import '../widgets/period_time_set_picker_dialog.dart';
 import '../widgets/sked_floating_anchor.dart';
 import '../widgets/imported_start_dates_dialog.dart';
+import '../widgets/sked_task_session.dart';
+import 'agent_page.dart';
 import 'school_sites_page.dart';
 
 class _TimetableImportChoice {
@@ -264,11 +268,46 @@ class TimetableImportFlow {
     }
   }
 
-  static Future<void> openSchoolSitesPage(BuildContext context) async {
+  static Future<SchoolWebHandoffRouteResult?> openSchoolSitesPage(
+    BuildContext context, {
+    WidgetBuilder? schoolSitesPageBuilder,
+    bool activateConversation = true,
+  }) async {
     final appScope = AppScope.capture(context)!;
-    await Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => appScope.wrap(SchoolSitesPage())));
+    final caller = ModalRoute.of(context);
+    final owner = SkedTaskSession(
+      maintenance: context.read<AppDataMaintenance>(),
+      workspaceView: context.read<WorkspaceViewState>(),
+      workspaces: context.read<WorkspaceCommands>(),
+      workspace: AppMode.student,
+      ownerRoute: caller,
+      isOwnerActive: () => context.mounted,
+    );
+    try {
+      final result = await Navigator.of(context)
+          .push<SchoolWebHandoffRouteResult>(
+            MaterialPageRoute<SchoolWebHandoffRouteResult>(
+              builder: (routeContext) => appScope.wrap(
+                schoolSitesPageBuilder?.call(routeContext) ?? SchoolSitesPage(),
+              ),
+            ),
+          );
+      if (result == null ||
+          !context.mounted ||
+          !owner.isCurrent ||
+          caller?.isCurrent == false) {
+        return null;
+      }
+      if (activateConversation) {
+        await AgentPage.openConversation(
+          context,
+          conversationId: result.conversationId,
+        );
+      }
+      return result;
+    } finally {
+      owner.dispose();
+    }
   }
 
   static Future<_TimetableImportChoice?> _pickImportBundledPeriodTimeSets(

@@ -5,14 +5,51 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
+import 'package:sked/agent/history/conversation_history.dart';
+import 'package:sked/agent/history/conversation_history_service.dart';
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/agent_settings.dart';
 import 'package:sked/agent/ui/agent_model_picker.dart';
+import 'package:sked/widgets/sked_popup_menu.dart';
 
 import 'agent_ui_test_support.dart';
+
+class _AcceptedSendDelegate extends UiDelegate {
+  _AcceptedSendDelegate(super.repository);
+
+  final sendStarted = Completer<void>();
+  final allowSend = Completer<void>();
+
+  @override
+  Future<void> send(String conversationId, String text) async {
+    await super.send(conversationId, text);
+    sendStarted.complete();
+    await allowSend.future;
+  }
+
+  void release() {
+    if (!allowSend.isCompleted) allowSend.complete();
+  }
+}
+
+class _RecordingHistoryService implements ConversationHistoryService {
+  final calls = <(String, String, String)>[];
+
+  @override
+  Future<void> editAndRedo(
+    String conversationId,
+    String messageId,
+    String text,
+  ) async {
+    calls.add((conversationId, messageId, text));
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 void main() {
   late UiMemoryStorage storage;
@@ -35,13 +72,405 @@ void main() {
     repository.dispose();
     delegate.state.dispose();
   });
-  Widget view() =>
-      AgentConversationView(repository: repository, delegate: delegate);
+  Widget view({bool active = true, bool interactive = true}) =>
+      AgentConversationView(
+        repository: repository,
+        delegate: delegate,
+        active: active,
+        interactive: interactive,
+      );
   Future<void> settle(WidgetTester tester) async {
     await tester.pumpAndSettle();
     await repository.waitForPendingWrites();
     await tester.pumpAndSettle();
   }
+
+  for (final changesActivity in [true, false]) {
+    testWidgets(
+      'rename confirmation expires after ${changesActivity ? 'activity' : 'interaction'} is hidden and restored',
+      (tester) async {
+        addTearDown(tester.view.reset);
+        await initialize();
+        final conversation = await repository.create(title: 'Original title');
+        await mountAgentUi(tester, view());
+        final retainedState = tester.state(find.byType(AgentConversationView));
+        await tester.tap(find.byKey(const ValueKey('agent-conversation-menu')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Rename'));
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byKey(const ValueKey('agent-rename-input')),
+          'Expired title',
+        );
+        await mountAgentUi(
+          tester,
+          view(active: !changesActivity, interactive: changesActivity),
+        );
+        await mountAgentUi(tester, view());
+        expect(
+          tester.state(find.byType(AgentConversationView)),
+          same(retainedState),
+        );
+        await tester.tap(find.text('Save'));
+        await settle(tester);
+        expect(repository.find(conversation.id)!.title, 'Original title');
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  for (final changesActivity in [true, false]) {
+    for (final action in ['new', 'select', 'send', 'queue', 'steer']) {
+      testWidgets(
+        '$action waiting for draft storage expires after ${changesActivity ? 'activity' : 'interaction'} is hidden and restored',
+        (tester) async {
+          addTearDown(tester.view.reset);
+          await initialize();
+          final first = await repository.create(title: 'First conversation');
+          final second = await repository.create(title: 'Second conversation');
+          await repository.select(first.id);
+          if (action == 'queue' || action == 'steer') {
+            delegate.state.value = AgentUiState(
+              enabled: true,
+              configured: true,
+              runs: {
+                first.id: const AgentUiRunState(phase: AgentUiPhase.running),
+              },
+            );
+          }
+          var active = true;
+          var interactive = true;
+          late StateSetter changeHost;
+          await mountAgentUi(
+            tester,
+            StatefulBuilder(
+              builder: (_, setState) {
+                changeHost = setState;
+                return view(active: active, interactive: interactive);
+              },
+            ),
+          );
+          final retainedState = tester.state(
+            find.byType(AgentConversationView),
+          );
+          final gate = Completer<void>();
+          final saveStarted = Completer<void>();
+          storage.beforeSave = () {
+            if (!saveStarted.isCompleted) saveStarted.complete();
+            return gate.future;
+          };
+          addTearDown(() {
+            if (!gate.isCompleted) gate.complete();
+          });
+          await tester.enterText(
+            find.byKey(const ValueKey('agent-composer')),
+            'Keep this accepted draft',
+          );
+          await tester.pump();
+          expect(saveStarted.isCompleted, isTrue);
+          if (action == 'select') {
+            await tester.tap(find.byKey(const ValueKey('agent-history')));
+            await tester.pumpAndSettle();
+            await tester.tap(
+              find.byKey(ValueKey('agent-history-${second.id}')),
+            );
+          } else {
+            final trigger = find.byKey(ValueKey('agent-$action'));
+            await tester.ensureVisible(trigger);
+            await tester.tap(trigger);
+          }
+          await tester.pump();
+          changeHost(() {
+            if (changesActivity) {
+              active = false;
+            } else {
+              interactive = false;
+            }
+          });
+          await tester.pump();
+          changeHost(() {
+            active = true;
+            interactive = true;
+          });
+          await tester.pump();
+          expect(
+            tester.state(find.byType(AgentConversationView)),
+            same(retainedState),
+          );
+          expect(gate.isCompleted, isFalse);
+          gate.complete();
+          await settle(tester);
+          expect(repository.conversations, hasLength(2));
+          expect(repository.selectedId, first.id);
+          expect(repository.find(first.id)!.draft, 'Keep this accepted draft');
+          expect(delegate.calls, isEmpty);
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
+
+  for (final invalidation in [
+    'activity hidden',
+    'interaction hidden',
+    'host reentry',
+  ]) {
+    testWidgets(
+      'edit and redo waiting for draft storage expires after $invalidation',
+      (tester) async {
+        addTearDown(tester.view.reset);
+        await initialize();
+        final conversation = await repository.create(title: 'History draft');
+        const requestId = 'history-request';
+        const originalRequest = 'Original request';
+        const revisedRequest = 'Revise the original request';
+        final createdAt = DateTime.utc(2026, 10, 29);
+        await repository.update(
+          conversation.id,
+          (current) => current.copyWith(
+            messages: [
+              ConversationMessage(
+                id: requestId,
+                role: ConversationRole.user,
+                text: originalRequest,
+                createdAt: createdAt,
+              ),
+              ConversationMessage(
+                id: 'history-reply',
+                role: ConversationRole.assistant,
+                text: 'Original reply',
+                createdAt: createdAt,
+              ),
+            ],
+            runs: [
+              ConversationRunUsage(
+                id: 'history-run',
+                startedAt: createdAt,
+                settledAt: createdAt,
+                kind: ConversationRunKind.model,
+                protocol: 'openai_chat_completions',
+                model: 'fixture-model',
+                reasoningEffort: AgentReasoningEffort.medium,
+                status: ConversationRunStatus.completed,
+              ),
+            ],
+            turns: [
+              ConversationTurn(
+                id: 'history-turn',
+                requestMessageId: requestId,
+                ownershipComplete: true,
+                messageIds: const [requestId, 'history-reply'],
+                runIds: const ['history-run'],
+              ),
+            ],
+          ),
+        );
+        final history = _RecordingHistoryService();
+        var active = true;
+        var interactive = true;
+        late StateSetter changeHost;
+        await mountAgentUi(
+          tester,
+          StatefulBuilder(
+            builder: (_, setState) {
+              changeHost = setState;
+              return AgentConversationView(
+                repository: repository,
+                delegate: delegate,
+                history: history,
+                active: active,
+                interactive: interactive,
+              );
+            },
+          ),
+        );
+        final retainedState = tester.state(find.byType(AgentConversationView));
+        final gate = Completer<void>();
+        final saveStarted = Completer<void>();
+        storage.beforeSave = () {
+          if (!saveStarted.isCompleted) saveStarted.complete();
+          return gate.future;
+        };
+        addTearDown(() {
+          if (!gate.isCompleted) gate.complete();
+        });
+        await tester.enterText(
+          find.byKey(const ValueKey('agent-composer')),
+          'Keep this accepted draft',
+        );
+        await tester.pump();
+        expect(saveStarted.isCompleted, isTrue);
+        final edit = find.byKey(const ValueKey('agent-edit-redo-$requestId'));
+        await tester.ensureVisible(edit);
+        await tester.tap(edit);
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byKey(const ValueKey('agent-redo-input')),
+          revisedRequest,
+        );
+        await tester.tap(find.byKey(const ValueKey('agent-confirm-redo')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('agent-redo-input')), findsNothing);
+        expect(tester.widget<TextButton>(edit).onPressed, isNull);
+        expect(history.calls, isEmpty);
+        changeHost(() {
+          if (invalidation == 'interaction hidden') {
+            interactive = false;
+          } else {
+            active = false;
+          }
+        });
+        await tester.pump();
+        if (invalidation == 'host reentry') {
+          changeHost(() => active = true);
+          await tester.pump();
+        }
+        expect(
+          tester.state(find.byType(AgentConversationView)),
+          same(retainedState),
+        );
+        expect(gate.isCompleted, isFalse);
+        gate.complete();
+        await settle(tester);
+        expect(history.calls, isEmpty);
+        expect(repository.selectedId, conversation.id);
+        expect(repository.selected!.draft, 'Keep this accepted draft');
+        expect(repository.selected!.messages.first.text, originalRequest);
+        expect(repository.selected!.pendingRedo, isNull);
+        changeHost(() {
+          active = true;
+          interactive = true;
+        });
+        await settle(tester);
+        expect(history.calls, isEmpty);
+        await tester.ensureVisible(edit);
+        await tester.tap(edit);
+        await tester.pumpAndSettle();
+        expect(
+          tester
+              .widget<TextField>(find.byKey(const ValueKey('agent-redo-input')))
+              .controller!
+              .text,
+          revisedRequest,
+        );
+        await tester.tap(find.byKey(const ValueKey('agent-confirm-redo')));
+        await settle(tester);
+        expect(history.calls, [(conversation.id, requestId, revisedRequest)]);
+        expect(delegate.calls, isEmpty);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  for (final menu in ['permission', 'conversation']) {
+    for (final invalidation in ['conversation switch', 'host reentry']) {
+      testWidgets('$menu menu rejects queued results after $invalidation', (
+        tester,
+      ) async {
+        addTearDown(tester.view.reset);
+        await initialize();
+        final first = await repository.create(title: 'First conversation');
+        final second = await repository.create(title: 'Second conversation');
+        await repository.select(first.id);
+        var active = true;
+        late StateSetter changeHost;
+        await mountAgentUi(
+          tester,
+          StatefulBuilder(
+            builder: (_, setState) {
+              changeHost = setState;
+              return view(active: active);
+            },
+          ),
+        );
+        final key = menu == 'permission'
+            ? 'agent-mode-picker'
+            : 'agent-conversation-menu';
+        await tester.tap(find.byKey(ValueKey(key)));
+        await tester.pumpAndSettle();
+        final void Function() deliverLateResult;
+        if (menu == 'permission') {
+          final popup = tester.widget<SkedPopupMenuButton<AgentPermissionMode>>(
+            find.byKey(ValueKey(key)),
+          );
+          final onSelected = popup.onSelected!;
+          deliverLateResult = () => onSelected(AgentPermissionMode.full);
+        } else {
+          final popup = tester.widget<SkedPopupMenuButton<String>>(
+            find.byKey(ValueKey(key)),
+          );
+          final onSelected = popup.onSelected!;
+          deliverLateResult = () => onSelected('archive');
+        }
+        if (invalidation == 'conversation switch') {
+          await repository.select(second.id);
+        } else {
+          changeHost(() => active = false);
+          await tester.pump();
+          changeHost(() => active = true);
+        }
+        await tester.pumpAndSettle();
+        deliverLateResult();
+        await settle(tester);
+        expect(delegate.calls, isEmpty);
+        expect(repository.find(first.id)!.mode, AgentPermissionMode.ask);
+        expect(repository.find(second.id)!.mode, AgentPermissionMode.ask);
+        expect(repository.find(first.id)!.archived, isFalse);
+        expect(repository.find(second.id)!.archived, isFalse);
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
+  testWidgets(
+    'a send already accepted by the delegate completes after the retained host is hidden',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      await initialize();
+      delegate.state.dispose();
+      final accepted = _AcceptedSendDelegate(repository);
+      delegate = accepted;
+      addTearDown(accepted.release);
+      final conversation = await repository.create(title: 'Accepted send');
+      var active = true;
+      late StateSetter changeHost;
+      await mountAgentUi(
+        tester,
+        StatefulBuilder(
+          builder: (_, setState) {
+            changeHost = setState;
+            return view(active: active);
+          },
+        ),
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('agent-composer')),
+        'Finish the accepted request',
+      );
+      await settle(tester);
+      await tester.tap(find.byKey(const ValueKey('agent-send')));
+      for (
+        var attempt = 0;
+        attempt < 120 && !accepted.sendStarted.isCompleted;
+        attempt++
+      ) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      expect(accepted.sendStarted.isCompleted, isTrue);
+      changeHost(() => active = false);
+      await tester.pump();
+      expect(accepted.allowSend.isCompleted, isFalse);
+      accepted.release();
+      await settle(tester);
+      expect(delegate.calls, [
+        'send:${conversation.id}:Finish the accepted request',
+      ]);
+      changeHost(() => active = true);
+      await settle(tester);
+      expect(delegate.calls, hasLength(1));
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
     for (final brightness in Brightness.values) {
@@ -759,11 +1188,11 @@ void main() {
   );
 
   testWidgets(
-    'closing a panel does not cancel a send waiting for its draft save',
+    'closing a panel preserves the accepted draft write but does not start its pending send',
     (tester) async {
       addTearDown(tester.view.reset);
       await initialize();
-      final conversation = await repository.create(title: 'Queued send');
+      await repository.create(title: 'Queued send');
       await mountAgentUi(tester, view());
       final gate = Completer<void>();
       storage.beforeSave = () => gate.future;
@@ -778,7 +1207,7 @@ void main() {
       gate.complete();
       await tester.pumpAndSettle();
       await repository.waitForPendingWrites();
-      expect(delegate.calls, ['send:${conversation.id}:Keep working']);
+      expect(delegate.calls, isEmpty);
       expect(repository.selected!.draft, 'Keep working');
     },
   );

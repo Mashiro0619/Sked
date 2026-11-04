@@ -16,8 +16,13 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
+import '../agent/imports/school_web_handoff.dart';
+import '../controllers/app_data_maintenance.dart';
+import '../controllers/workspace_commands.dart';
+import '../controllers/workspace_view_state.dart';
 import '../models/school_site_models.dart';
 import '../providers/app_scope.dart';
 import '../services/export_service.dart';
@@ -30,6 +35,8 @@ import '../widgets/expressive_dialog.dart';
 import '../widgets/export_save_flow.dart';
 import '../widgets/expressive_empty_state.dart';
 import '../widgets/sked_popup_menu.dart';
+import '../widgets/sked_task_route.dart';
+import '../widgets/sked_task_session.dart';
 import 'school_web_import_page.dart';
 
 enum _SchoolSitesMenuAction {
@@ -835,10 +842,26 @@ class _SchoolSitesPageState extends State<SchoolSitesPage>
     final page =
         widget.webImportPageBuilder?.call(site) ??
         SchoolWebImportPage(site: site);
+    final owner = SkedTaskSession(
+      maintenance: context.read<AppDataMaintenance?>(),
+      workspaceView: context.read<WorkspaceViewState?>(),
+      workspaces: context.read<WorkspaceCommands?>(),
+      workspace: AppMode.student,
+      ownerRoute: ModalRoute.of(context),
+      isOwnerActive: () => mounted,
+    );
     try {
-      await Navigator.of(context)
-          .push(MaterialPageRoute(builder: (_) => scope?.wrap(page) ?? page));
+      final result = await Navigator.of(context)
+          .push<SchoolWebHandoffRouteResult>(
+            MaterialPageRoute<SchoolWebHandoffRouteResult>(
+              builder: (_) => scope?.wrap(page) ?? page,
+            ),
+          );
+      if (result != null && mounted && owner.isCurrent) {
+        completeSkedTaskRoute(context, result);
+      }
     } finally {
+      owner.dispose();
       _setWebImportOpen(false);
     }
   }

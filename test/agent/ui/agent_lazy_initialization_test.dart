@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:provider/provider.dart';
 import 'package:sked/agent/agent_application.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
 import 'package:sked/agent/conversations/conversation_models.dart';
@@ -15,6 +14,7 @@ import 'package:sked/screens/agent_page.dart';
 import 'package:sked/screens/agent_settings_page.dart';
 
 import '../../support/workspace_harness.dart';
+import '../../support/agent_workspace_navigation.dart';
 
 class _Storage extends ConversationStorage {
   _Storage() : super.base();
@@ -53,6 +53,14 @@ class _FailureApplication extends ChangeNotifier implements AgentApplication {
   bool get isInitialized => false;
   @override
   AgentSettings get settings => const AgentSettings();
+  @override
+  int navigationRevision = 0;
+  @override
+  void requestShowConversation() {
+    navigationRevision++;
+    notifyListeners();
+  }
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
@@ -117,21 +125,9 @@ void main() {
   }
 
   Future<void> mountEntry(WidgetTester tester) async {
-    await tester.pumpWidget(
-      WorkspaceHarness(
-        provider: app,
-        home: Scaffold(
-          body: Builder(
-            builder: (context) => TextButton(
-              key: const ValueKey('open-agent'),
-              onPressed: () => unawaited(AgentPage.open(context)),
-              child: const Text('Open Agent'),
-            ),
-          ),
-        ),
-      ),
-    );
-    await tester.tap(_key('open-agent'));
+    await tester.pumpWidget(WorkspaceHarness(provider: app));
+    await tester.pumpAndSettle();
+    await selectAgentShellDestination(tester, 'agent');
   }
 
   testWidgets('a retained hidden host loads only when first shown', (
@@ -179,134 +175,147 @@ void main() {
     await app.agent.quiesce();
   });
 
-  testWidgets('loading full chat keeps settings and return reachable', (
-    tester,
-  ) async {
-    await create();
-    final original = _storedChat();
-    storage.source = original;
-    final gate = Completer<void>();
-    storage.gate = gate;
-    addTearDown(() {
-      if (!gate.isCompleted) gate.complete();
-    });
-    await mountEntry(tester);
-    await _until(tester, () => storage.started.isCompleted);
-    await _until(tester, () => _routeReady(tester, find.byType(AgentPage)));
-    expect(_key('agent-initialization-header'), findsOneWidget);
-    expect(_key('agent-initialization-back').hitTestable(), findsOneWidget);
-    expect(_key('agent-initialization-settings').hitTestable(), findsOneWidget);
-    expect(find.byType(AgentConversationView), findsNothing);
+  testWidgets(
+    'loading embedded chat keeps settings and main navigation reachable',
+    (tester) async {
+      await create();
+      final original = _storedChat();
+      storage.source = original;
+      final gate = Completer<void>();
+      storage.gate = gate;
+      addTearDown(() {
+        if (!gate.isCompleted) gate.complete();
+      });
+      await mountEntry(tester);
+      await _until(tester, () => storage.started.isCompleted);
+      await _until(tester, () => _routeReady(tester, find.byType(AgentPage)));
+      expect(_key('agent-initialization-header'), findsOneWidget);
+      expect(_key('agent-initialization-back'), findsNothing);
+      expect(_key('workspace-main-navigation').hitTestable(), findsOneWidget);
+      expect(
+        _key('agent-initialization-settings').hitTestable(),
+        findsOneWidget,
+      );
+      expect(find.byType(AgentConversationView), findsNothing);
 
-    await tester.tap(_key('agent-initialization-settings'));
-    await _until(
-      tester,
-      () => _routeReady(tester, find.byType(AgentSettingsPage)),
-    );
-    expect(find.byType(AgentSettingsPage), findsOneWidget);
-    expect(storage.loads, 1);
-    expect(app.agent.runtime.state.value.runs, isEmpty);
-    await tester.binding.handlePopRoute();
-    await _until(
-      tester,
-      () =>
-          find.byType(AgentSettingsPage).evaluate().isEmpty &&
-          _key('agent-initialization-back').hitTestable().evaluate().isNotEmpty,
-    );
-    await tester.tap(_key('agent-initialization-back'));
-    await _until(
-      tester,
-      () =>
-          find.byType(AgentPage).evaluate().isEmpty &&
-          !AgentPage.isOpen(app.agent) &&
-          _key('open-agent').hitTestable().evaluate().isNotEmpty,
-    );
-    expect(find.byType(AgentPage), findsNothing);
-    expect(_key('open-agent').hitTestable(), findsOneWidget);
-    expect(AgentPage.isOpen(app.agent), isFalse);
-    expect(storage.source, original);
-    expect(storage.saves, isEmpty);
+      await tester.tap(_key('agent-initialization-settings'));
+      await _until(
+        tester,
+        () => _routeReady(tester, find.byType(AgentSettingsPage)),
+      );
+      expect(find.byType(AgentSettingsPage), findsOneWidget);
+      expect(storage.loads, 1);
+      expect(app.agent.runtime.state.value.runs, isEmpty);
+      await tester.binding.handlePopRoute();
+      await _until(
+        tester,
+        () =>
+            find.byType(AgentSettingsPage).evaluate().isEmpty &&
+            _key('workspace-main-navigation')
+                .hitTestable()
+                .evaluate()
+                .isNotEmpty,
+      );
+      await selectAgentShellDestination(tester, 'student');
+      await _until(tester, () => find.byType(AgentPage).evaluate().isEmpty);
+      expect(find.byType(AgentPage), findsNothing);
+      expect(find.byType(AgentPage, skipOffstage: false), findsOneWidget);
+      expect(storage.source, original);
+      expect(storage.saves, isEmpty);
 
-    gate.complete();
-    storage.gate = null;
-    await tester.pumpAndSettle();
-    expect(find.byType(AgentPage), findsNothing);
-    expect(app.agent.isInitialized, isTrue);
-    expect(app.agent.conversations.find('stored-chat')!.draft, 'Stored draft');
-    expect(storage.source, original);
-    expect(storage.saves, isEmpty);
-    expect(tester.takeException(), isNull);
-  });
+      gate.complete();
+      storage.gate = null;
+      await tester.pumpAndSettle();
+      expect(find.byType(AgentPage), findsNothing);
+      expect(app.agent.isInitialized, isTrue);
+      expect(
+        app.agent.conversations.find('stored-chat')!.draft,
+        'Stored draft',
+      );
+      expect(storage.source, original);
+      expect(storage.saves, isEmpty);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-  testWidgets('failed full chat returns, opens settings and retries intact', (
-    tester,
-  ) async {
-    await create();
-    final original = _storedChat();
-    const rawError = 'fixture-secret /private/chat-file failed';
-    storage.source = original;
-    storage.failure = const ConversationStorageException(rawError);
-    await mountEntry(tester);
-    await _until(tester, () => app.agent.initializationError);
-    await tester.pumpAndSettle();
-    final l = AppLocalizations.of(tester.element(find.byType(AgentPage)));
-    expect(find.text(l.agentInitializationFailed), findsOneWidget);
-    expect(find.text(l.agentInitializationConversationStorage), findsOneWidget);
-    expect(find.textContaining(rawError), findsNothing);
-    expect(_key('agent-initialization-back').hitTestable(), findsOneWidget);
-    expect(_key('agent-initialization-settings').hitTestable(), findsOneWidget);
-    expect(storage.saves, isEmpty);
+  testWidgets(
+    'failed embedded chat switches content, opens settings and retries intact',
+    (tester) async {
+      await create();
+      final original = _storedChat();
+      const rawError = 'fixture-secret /private/chat-file failed';
+      storage.source = original;
+      storage.failure = const ConversationStorageException(rawError);
+      await mountEntry(tester);
+      await _until(tester, () => app.agent.initializationError);
+      await tester.pumpAndSettle();
+      final l = AppLocalizations.of(tester.element(find.byType(AgentPage)));
+      expect(find.text(l.agentInitializationFailed), findsOneWidget);
+      expect(
+        find.text(l.agentInitializationConversationStorage),
+        findsOneWidget,
+      );
+      expect(find.textContaining(rawError), findsNothing);
+      expect(_key('agent-initialization-back'), findsNothing);
+      expect(_key('workspace-main-navigation').hitTestable(), findsOneWidget);
+      expect(
+        _key('agent-initialization-settings').hitTestable(),
+        findsOneWidget,
+      );
+      expect(storage.saves, isEmpty);
 
-    await tester.tap(_key('agent-initialization-settings'));
-    await tester.pumpAndSettle();
-    expect(find.byType(AgentSettingsPage), findsOneWidget);
-    expect(app.agent.runtime.state.value.runs, isEmpty);
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
-    await tester.tap(_key('agent-initialization-back'));
-    await tester.pumpAndSettle();
-    expect(find.byType(AgentPage), findsNothing);
-    final failedLoads = storage.loads;
-    await tester.tap(_key('open-agent'));
-    await tester.pumpAndSettle();
-    expect(storage.loads, failedLoads);
-    expect(_key('agent-initialization-header'), findsOneWidget);
+      await tester.tap(_key('agent-initialization-settings'));
+      await tester.pumpAndSettle();
+      expect(find.byType(AgentSettingsPage), findsOneWidget);
+      expect(app.agent.runtime.state.value.runs, isEmpty);
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      await selectAgentShellDestination(tester, 'student');
+      await tester.pumpAndSettle();
+      expect(find.byType(AgentPage), findsNothing);
+      final failedLoads = storage.loads;
+      await selectAgentShellDestination(tester, 'agent');
+      await tester.pumpAndSettle();
+      expect(storage.loads, failedLoads);
+      expect(_key('agent-initialization-header'), findsOneWidget);
 
-    storage.failure = null;
-    await tester.tap(_key('agent-initialization-retry'));
-    await tester.pumpAndSettle();
-    expect(app.agent.isInitialized, isTrue);
-    expect(_key('agent-initialization-header'), findsNothing);
-    expect(find.byType(AgentConversationView), findsOneWidget);
-    expect(find.byType(BackButton), findsOneWidget);
-    final chat = app.agent.conversations.find('stored-chat')!;
-    expect(chat.draft, 'Stored draft');
-    expect(chat.messages.single.text, 'Stored message');
-    expect(storage.source, original);
-    expect(storage.saves, isEmpty);
-    expect(tester.takeException(), isNull);
-  });
+      storage.failure = null;
+      await tester.tap(_key('agent-initialization-retry'));
+      await tester.pumpAndSettle();
+      expect(app.agent.isInitialized, isTrue);
+      expect(_key('agent-initialization-header'), findsNothing);
+      expect(find.byType(AgentConversationView), findsOneWidget);
+      expect(find.byType(BackButton), findsNothing);
+      final chat = app.agent.conversations.find('stored-chat')!;
+      expect(chat.draft, 'Stored draft');
+      expect(chat.messages.single.text, 'Stored message');
+      expect(storage.source, original);
+      expect(storage.saves, isEmpty);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   for (final failure in AgentInitializationFailure.values) {
     testWidgets(
-      'short full chat shows safe ${failure.name} failure',
+      'short embedded chat shows safe ${failure.name} failure',
       (tester) async {
         await create();
         final application = _FailureApplication(failure);
         addTearDown(application.dispose);
         addTearDown(tester.view.reset);
         tester.view.devicePixelRatio = 1;
-        tester.view.physicalSize = const Size(320, 180);
+        // The embedded shell also budgets its three-destination bottom bar.
+        // Keep a short content area while leaving room for the 48 dp header.
+        tester.view.physicalSize = const Size(320, 320);
         await tester.pumpWidget(
           WorkspaceHarness(
             provider: app,
+            agentApplication: application,
             textScale: 2,
-            home: ChangeNotifierProvider<AgentApplication>.value(
-              value: application,
-              child: const AgentPage(),
-            ),
           ),
         );
+        await tester.pumpAndSettle();
+        await selectAgentShellDestination(tester, 'agent');
         await tester.pumpAndSettle();
         final l = AppLocalizations.of(tester.element(find.byType(AgentPage)));
         final reason = switch (failure) {
@@ -318,18 +327,24 @@ void main() {
             l.agentInitializationConnectionStorage,
         };
         expect(find.text(reason), findsOneWidget);
-        expect(_key('agent-initialization-back').hitTestable(), findsOneWidget);
+        expect(_key('agent-initialization-back'), findsNothing);
+        expect(_key('workspace-main-navigation').hitTestable(), findsOneWidget);
         expect(
           _key('agent-initialization-settings').hitTestable(),
           findsOneWidget,
         );
         for (final key in [
-          'agent-initialization-back',
+          'workspace-main-navigation',
           'agent-initialization-settings',
         ]) {
           final size = tester.getSize(_key(key));
-          expect(size.width, greaterThanOrEqualTo(48));
-          expect(size.height, greaterThanOrEqualTo(48));
+          final desktopNavigation =
+              key == 'workspace-main-navigation' &&
+              Theme.of(tester.element(_key(key))).platform ==
+                  TargetPlatform.windows;
+          final minimumTarget = desktopNavigation ? 32.0 : 48.0;
+          expect(size.width, greaterThanOrEqualTo(minimumTarget));
+          expect(size.height, greaterThanOrEqualTo(minimumTarget));
         }
         final retry = _key('agent-initialization-retry');
         await tester.ensureVisible(retry);
@@ -337,6 +352,7 @@ void main() {
         expect(retry.hitTestable(), findsOneWidget);
         final viewport = tester.getRect(_key('agent-initialization-scroll'));
         final rect = tester.getRect(retry);
+        expect(viewport.height, greaterThanOrEqualTo(rect.height));
         expect(rect.top, greaterThanOrEqualTo(viewport.top));
         expect(rect.bottom, lessThanOrEqualTo(viewport.bottom));
         expect(tester.takeException(), isNull);

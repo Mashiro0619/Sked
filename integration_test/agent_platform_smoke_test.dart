@@ -1,43 +1,36 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/rendering.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/agent/conversations/conversation_models.dart';
 import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/ui/agent_operation_card.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/screens/agent_page.dart';
+import 'package:sked/screens/adaptive_sked_shell.dart';
 
 import '../test/agent/acceptance/acceptance_harness.dart';
 import '../test/support/workspace_harness.dart';
+import '../test/support/agent_workspace_navigation.dart';
 
 // Run on a dedicated emulator/device, for example:
 // flutter test --no-pub -d emulator-5562 integration_test/agent_platform_smoke_test.dart
 //
-// This renders the real product page on the native Flutter surface. Data,
+// This renders the real main shell on the native Flutter surface. Data,
 // credentials, provider transport and native side effects are synthetic. Text
 // uses the registered test keyboard and taps are framework-injected; passing
 // does not constitute IME, physical-device keyboard, accessibility, gesture or
 // notification acceptance.
 Finder _key(String value) => find.byKey(ValueKey(value));
-
-class _Entry extends StatelessWidget {
-  const _Entry();
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    body: Center(
-      child: FilledButton(
-        key: const ValueKey('open-product-agent'),
-        onPressed: () => unawaited(AgentPage.open(context)),
-        child: const Text('Open Agent'),
-      ),
-    ),
-  );
-}
+final _captureBoundary = GlobalKey();
 
 Future<void> _until(
   WidgetTester tester,
@@ -65,22 +58,83 @@ Future<void> _tap(WidgetTester tester, Finder target) async {
 }
 
 Future<void> _open(WidgetTester tester) async {
-  await _tap(tester, _key('open-product-agent'));
+  await selectAgentShellDestination(tester, 'agent');
   await _until(
     tester,
-    () => _key('agent-composer').evaluate().isNotEmpty,
-    'the product Agent composer',
+    () => _key('agent-composer').hitTestable().evaluate().isNotEmpty,
+    'the embedded product Agent composer',
   );
   await tester.pumpAndSettle();
+  expect(find.byType(AdaptiveSkedShell), findsOneWidget);
+  expect(tester.widget<AgentPage>(find.byType(AgentPage)).embedded, isTrue);
+  expect(find.byType(BackButton), findsNothing);
+}
+
+Future<void> _captureShell(WidgetTester tester) async {
+  const configured = String.fromEnvironment('SKED_AGENT_SMOKE_CAPTURE_DIR');
+  final directory = configured.isEmpty
+      ? Platform.environment['SKED_AGENT_SMOKE_CAPTURE_DIR'] ?? ''
+      : configured;
+  if (directory.isEmpty) return;
+  final temporaryRoot = path.normalize(Directory.systemTemp.absolute.path);
+  if (!path.isAbsolute(directory) ||
+      !path.isWithin(temporaryRoot, path.normalize(directory))) {
+    throw ArgumentError(
+      'Agent captures require an isolated absolute directory inside the system temporary directory.',
+    );
+  }
+  final target = Directory(directory);
+  await target.create(recursive: true);
+  final boundary =
+      _captureBoundary.currentContext!.findRenderObject()!
+          as RenderRepaintBoundary;
+  await _until(
+    tester,
+    () => !boundary.debugNeedsPaint,
+    'a painted main-shell capture surface',
+  );
+  if (Platform.isWindows) {
+    expect(
+      boundary.size.width,
+      greaterThanOrEqualTo(1200),
+      reason: 'Windows shell capture requires a real client width of at least 1200 logical pixels.',
+    );
+    expect(_key('workspace-agent-entry').hitTestable(), findsOneWidget);
+  }
+  final image = await boundary.toImage(
+    pixelRatio: tester.view.devicePixelRatio,
+  );
+  try {
+    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    final file = File(
+      path.join(
+        target.path,
+        '${Platform.operatingSystem}-agent-main-shell.png',
+      ),
+    );
+    await file.writeAsBytes(bytes!.buffer.asUint8List(), flush: true);
+    debugPrint(
+      jsonEncode({
+        'capture': file.absolute.path,
+        'logicalWidth': boundary.size.width,
+        'logicalHeight': boundary.size.height,
+        'pixelWidth': image.width,
+        'pixelHeight': image.height,
+        'devicePixelRatio': tester.view.devicePixelRatio,
+        'host':
+            'AdaptiveSkedShell / embedded AgentPage / shared WorkspaceFrame',
+      }),
+    );
+  } finally {
+    image.dispose();
+  }
 }
 
 Future<void> _selectHistory(WidgetTester tester, String id) async {
   final list = find
       .byKey(const PageStorageKey('agent-conversation-list'))
       .hitTestable();
-  if (list.evaluate().isEmpty) {
-    await _tap(tester, _key('agent-history'));
-  }
+  await openAgentShellHistory(tester);
   await _until(
     tester,
     () => list.evaluate().length == 1,
@@ -247,7 +301,10 @@ void main() {
       final firstId = h.conversationId;
       try {
         await tester.pumpWidget(
-          WorkspaceHarness(provider: h.app, home: const _Entry()),
+          RepaintBoundary(
+            key: _captureBoundary,
+            child: WorkspaceHarness(provider: h.app),
+          ),
         );
         await tester.pumpAndSettle();
         await _open(tester);
@@ -339,11 +396,21 @@ void main() {
           }),
         );
         FocusManager.instance.primaryFocus?.unfocus();
-        await tester.pageBack();
+        final navigator = Navigator.of(
+          tester.element(find.byType(AdaptiveSkedShell)),
+        );
+        expect(await navigator.maybePop(), isFalse);
+        await tester.pump();
+        expect(find.byType(AgentPage), findsOneWidget);
+        await _captureShell(tester);
+        await selectAgentShellDestination(
+          tester,
+          h.app.workspaceView.activeMode.value,
+        );
         await _until(
           tester,
           () => find.byType(AgentPage).evaluate().isEmpty,
-          'the Agent route to close',
+          'the business main content to become visible',
         );
         await tester.pumpAndSettle();
         await _open(tester);
@@ -380,7 +447,6 @@ void main() {
           tester,
           () =>
               h.app.agent.conversations.selectedId == firstId &&
-              _key('agent-history-drawer').evaluate().isEmpty &&
               _key('agent-composer').hitTestable().evaluate().length == 1,
           'the original conversation',
         );
@@ -393,7 +459,6 @@ void main() {
           tester,
           () =>
               h.app.agent.conversations.selectedId == secondId &&
-              _key('agent-history-drawer').evaluate().isEmpty &&
               _key('agent-composer').hitTestable().evaluate().length == 1,
           'the second conversation',
         );
@@ -428,7 +493,10 @@ void main() {
       try {
         final before = h.saved.encode();
         await tester.pumpWidget(
-          WorkspaceHarness(provider: h.app, home: const _Entry()),
+          RepaintBoundary(
+            key: _captureBoundary,
+            child: WorkspaceHarness(provider: h.app),
+          ),
         );
         await tester.pumpAndSettle();
         await _open(tester);

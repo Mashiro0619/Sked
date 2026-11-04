@@ -6,8 +6,10 @@ import 'package:sked/controllers/settings_commands.dart';
 import 'package:sked/widgets/sked_popup_menu.dart';
 
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -19,14 +21,20 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/main.dart' show MyApp;
 import 'package:sked/providers/app_scope.dart';
 import 'package:sked/app_runtime.dart';
+import 'package:sked/agent/agent_application.dart';
+import 'package:sked/agent/conversations/conversation_storage.dart';
 import 'package:sked/controllers/app_lifecycle.dart'
     show bundledPrivacyPolicyVersion;
 import 'package:sked/screens/adaptive_sked_shell.dart';
+import 'package:sked/screens/agent_page.dart';
 import 'package:sked/screens/general_schedule_home_screen.dart';
 import 'package:sked/screens/home_screen.dart';
 import 'package:sked/theme/app_theme.dart';
 
 import '../support/data_transfer_codec.dart';
+import '../support/agent_workspace_navigation.dart';
+import '../support/workspace_harness.dart'
+    show WorkspaceHarness, workspaceProvider;
 
 class _MemoryStorage implements TimetableStorage {
   _MemoryStorage(this.data);
@@ -71,6 +79,33 @@ class _BlockingStorage extends _MemoryStorage {
   }
 }
 
+class _BlockingConversationStorage extends ConversationStorage {
+  _BlockingConversationStorage() : super.base();
+
+  String? source;
+  bool blockNextSave = false;
+  final saveStarted = Completer<void>();
+  final allowSave = Completer<void>();
+
+  @override
+  Future<ConversationStorageLoad> load() async =>
+      ConversationStorageLoad(source: source);
+
+  @override
+  Future<void> save(String value, {required int revision}) async {
+    if (blockNextSave) {
+      blockNextSave = false;
+      saveStarted.complete();
+      await allowSave.future;
+    }
+    source = value;
+  }
+
+  void release() {
+    if (!allowSave.isCompleted) allowSave.complete();
+  }
+}
+
 AppData _shellData({AppMode mode = AppMode.student, bool populated = false}) {
   final initial = buildInitialAppData(
     buildDefaultPeriodTimes(),
@@ -107,12 +142,14 @@ AppData _shellData({AppMode mode = AppMode.student, bool populated = false}) {
 Future<AppRuntime> _providerFor(
   TimetableStorage storage, {
   AppMode mode = AppMode.student,
+  ConversationStorage? agentConversationStorage,
 }) async {
   final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: storage,
     systemLocaleCodeResolver: () => defaultLocaleCode,
     uiStateSaveDelay: Duration.zero,
+    agentConversationStorage: agentConversationStorage,
   );
   await provider.lifecycle.load();
   if (provider.workspaceView.activeMode != mode) {
@@ -206,6 +243,14 @@ NavigationIndicator _navigationIndicator(
     matching: find.byType(NavigationIndicator),
   );
   return tester.widget<NavigationIndicator>(indicator);
+}
+
+void _expectAgentInactive(WidgetTester tester) {
+  final pages = tester.widgetList<AgentPage>(
+    find.byType(AgentPage, skipOffstage: false),
+  );
+  expect(pages.any((page) => page.active || page.interactive), isFalse);
+  expect(find.byType(AgentPage).hitTestable(), findsNothing);
 }
 
 Finder _tooltipWithMessage(String message) {
@@ -546,6 +591,431 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  for (final collapsed in [false, true]) {
+    for (final enabled in [false, true]) {
+      testWidgets(
+        'Agent rail exposes one named ${enabled ? 'enabled' : 'disabled'} button when ${collapsed ? 'collapsed' : 'expanded'}',
+        (tester) async {
+          final semantics = tester.ensureSemantics();
+          try {
+            final data = _shellData();
+            final provider = await _providerFor(
+              _MemoryStorage(
+                data.copyWith(
+                  homeWorkspaceNavigationCollapsed: collapsed,
+                  agentSettings: data.agentSettings.copyWith(enabled: true),
+                ),
+              ),
+            );
+            addTearDown(provider.dispose);
+            addTearDown(() => tester.binding.setSurfaceSize(null));
+            await tester.binding.setSurfaceSize(const Size(1200, 700));
+            await tester.pumpWidget(
+              _appFor(
+                provider,
+                textScaler: const TextScaler.linear(2),
+                platform: TargetPlatform.android,
+                disableAnimations: true,
+                enabled: enabled,
+              ),
+            );
+            await tester.pumpAndSettle();
+            final rail = find.byKey(
+              const ValueKey('adaptive-shell-navigation-rail'),
+            );
+            expect(tester.widget<NavigationRail>(rail).extended, !collapsed);
+            final entry = find.byKey(
+              const ValueKey('adaptive-shell-agent-entry'),
+            );
+            final label = AppLocalizations.of(tester.element(entry)).agentTitle;
+            final owner = tester.renderObject(rail).owner!.semanticsOwner!;
+            final namedNodes = <SemanticsNode>[];
+            void visit(SemanticsNode node) {
+              if (!node.isMergedIntoParent &&
+                  node.getSemanticsData().label.split('\n').contains(label)) {
+                namedNodes.add(node);
+              }
+              node.visitChildren((child) {
+                visit(child);
+                return true;
+              });
+            }
+
+            visit(owner.rootSemanticsNode!);
+            expect(namedNodes, hasLength(1));
+            final node = namedNodes.single;
+            final published = node.getSemanticsData();
+            expect(
+              published.label.split('\n').where((part) => part == label),
+              hasLength(1),
+            );
+            expect(published.flagsCollection.isButton, isTrue);
+            expect(
+              published.flagsCollection.isEnabled,
+              enabled ? ui.Tristate.isTrue : ui.Tristate.isFalse,
+            );
+            expect(published.tooltip, label);
+            expect(published.hasAction(ui.SemanticsAction.tap), enabled);
+            if (enabled) {
+              owner.performAction(node.id, ui.SemanticsAction.tap);
+              await tester.pumpAndSettle();
+              expect(find.byType(AgentPage), findsOneWidget);
+              expect(
+                tester.widget<AgentPage>(find.byType(AgentPage)).embedded,
+                isTrue,
+              );
+              expect(find.byType(BackButton), findsNothing);
+              expect(tester.widget<NavigationRail>(rail).selectedIndex, 2);
+            } else {
+              await tester.tap(entry);
+              await tester.pump();
+              expect(find.byType(AgentPage), findsNothing);
+            }
+            expect(tester.takeException(), isNull);
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pump();
+          } finally {
+            semantics.dispose();
+          }
+        },
+      );
+    }
+  }
+
+  testWidgets(
+    'Agent activation waits for settings and acknowledges visible content',
+    (tester) async {
+      final data = _shellData();
+      final storage = _MemoryStorage(
+        data.copyWith(
+          agentSettings: data.agentSettings.copyWith(enabled: true),
+        ),
+      );
+      final provider = await _providerFor(storage);
+      final settingsGate = Completer<void>();
+      addTearDown(provider.dispose);
+      addTearDown(() {
+        if (!settingsGate.isCompleted) settingsGate.complete();
+      });
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.binding.setSurfaceSize(const Size(800, 700));
+      await tester.pumpWidget(
+        _appFor(
+          provider,
+          platform: TargetPlatform.android,
+          onOpenSettings: () => settingsGate.future,
+        ),
+      );
+      await tester.pumpAndSettle();
+      final writesBeforeNavigation = storage.saveCount;
+      await tester.tap(
+        find.byKey(const ValueKey('adaptive-shell-settings-action')),
+      );
+      await tester.pump();
+      var activated = false;
+      final opening = AgentPage.open(
+        tester.element(find.byType(AdaptiveSkedShell)),
+      );
+      unawaited(opening.then((_) => activated = true));
+      await tester.pump(const Duration(milliseconds: 80));
+      expect(activated, isFalse);
+      expect(find.byType(AgentPage), findsNothing);
+      settingsGate.complete();
+      await tester.pumpAndSettle();
+      await opening;
+      expect(activated, isTrue);
+      expect(find.byType(AgentPage).hitTestable(), findsOneWidget);
+      expect(provider.workspaceView.activeMode, AppMode.student);
+      expect(storage.saveCount, writesBeforeNavigation);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'locked shell queues activation and host disposal invalidates it without replay',
+    (tester) async {
+      final data = _shellData();
+      final provider = await _providerFor(
+        _MemoryStorage(
+          data.copyWith(
+            agentSettings: data.agentSettings.copyWith(enabled: true),
+          ),
+        ),
+      );
+      addTearDown(provider.dispose);
+      await tester.pumpWidget(_appFor(provider, enabled: false));
+      await tester.pumpAndSettle();
+      var completed = false;
+      final opening = AgentPage.open(
+        tester.element(find.byType(AdaptiveSkedShell)),
+      );
+      unawaited(opening.then((_) => completed = true));
+      await tester.pump(const Duration(milliseconds: 80));
+      expect(completed, isFalse);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await opening;
+      expect(completed, isTrue);
+      await tester.pumpWidget(_appFor(provider));
+      await tester.pumpAndSettle();
+      expect(find.byType(AgentPage), findsNothing);
+      var secondCompleted = false;
+      await tester.pumpWidget(_appFor(provider, enabled: false));
+      final second = AgentPage.open(
+        tester.element(find.byType(AdaptiveSkedShell)),
+      );
+      unawaited(second.then((_) => secondCompleted = true));
+      await tester.pump(const Duration(milliseconds: 80));
+      expect(secondCompleted, isFalse);
+      await tester.pumpWidget(_appFor(provider, enabled: true));
+      await tester.pumpAndSettle();
+      await second;
+      expect(secondCompleted, isTrue);
+      expect(find.byType(AgentPage).hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'disabling Agent releases a queued activation while preserving the business selection',
+    (tester) async {
+      final data = _shellData();
+      final provider = await _providerFor(
+        _MemoryStorage(
+          data.copyWith(
+            agentSettings: data.agentSettings.copyWith(enabled: true),
+          ),
+        ),
+      );
+      addTearDown(provider.dispose);
+      await tester.pumpWidget(_appFor(provider, enabled: false));
+      await tester.pumpAndSettle();
+      var completed = false;
+      final opening = AgentPage.open(
+        tester.element(find.byType(AdaptiveSkedShell)),
+      );
+      unawaited(opening.then((_) => completed = true));
+      await tester.pump(const Duration(milliseconds: 80));
+      expect(completed, isFalse);
+      await provider.agent.setEnabled(false);
+      await tester.pumpAndSettle();
+      await opening;
+      expect(completed, isTrue);
+      expect(provider.workspaceView.activeMode, AppMode.student);
+      expect(find.byType(AgentPage, skipOffstage: false), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final cancellation in [
+    'same workspace',
+    'different workspace',
+    'host disposal',
+    'feature disable',
+  ]) {
+    testWidgets(
+      'Agent select waiting for storage is immediately invalidated by $cancellation',
+      (tester) async {
+        final data = _shellData();
+        final mainStorage = _MemoryStorage(
+          data.copyWith(
+            agentSettings: data.agentSettings.copyWith(enabled: true),
+          ),
+        );
+        final conversationStorage = _BlockingConversationStorage();
+        final provider = await _providerFor(
+          mainStorage,
+          agentConversationStorage: conversationStorage,
+        );
+        addTearDown(provider.dispose);
+        addTearDown(conversationStorage.release);
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await provider.agent.conversations.load();
+        final first = await provider.agent.conversations.create(
+          id: 'navigation-first',
+          title: 'First conversation',
+        );
+        final second = await provider.agent.conversations.create(
+          id: 'navigation-second',
+          title: 'Second conversation',
+        );
+        await tester.binding.setSurfaceSize(const Size(800, 700));
+        await tester.pumpWidget(
+          _appFor(provider, platform: TargetPlatform.android),
+        );
+        await tester.pumpAndSettle();
+        final mainWritesBeforeNavigation = mainStorage.saveCount;
+        conversationStorage.blockNextSave = true;
+        var completed = false;
+        final opening = AgentPage.openConversation(
+          tester.element(find.byType(AdaptiveSkedShell)),
+          conversationId: first.id,
+        );
+        unawaited(opening.then((_) => completed = true));
+        for (
+          var attempt = 0;
+          attempt < 120 && !conversationStorage.saveStarted.isCompleted;
+          attempt++
+        ) {
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        expect(conversationStorage.saveStarted.isCompleted, isTrue);
+        expect(provider.agent.conversations.selectedId, second.id);
+        expect(completed, isFalse);
+        switch (cancellation) {
+          case 'same workspace':
+            await selectAgentShellDestination(tester, 'student');
+          case 'different workspace':
+            await selectAgentShellDestination(tester, 'general');
+          case 'host disposal':
+            await tester.pumpWidget(const SizedBox.shrink());
+          case 'feature disable':
+            await provider.agent.setEnabled(false);
+        }
+        for (var attempt = 0; attempt < 120 && !completed; attempt++) {
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        expect(
+          completed,
+          isTrue,
+          reason: 'Navigation invalidation must release callers before storage finishes.',
+        );
+        expect(conversationStorage.allowSave.isCompleted, isFalse);
+        conversationStorage.release();
+        await provider.agent.conversations.waitForPendingWrites();
+        await opening;
+        if (cancellation == 'host disposal') {
+          await tester.pumpWidget(
+            _appFor(provider, platform: TargetPlatform.android),
+          );
+        }
+        await tester.pumpAndSettle();
+        _expectAgentInactive(tester);
+        expect(
+          provider.workspaceView.activeMode,
+          cancellation == 'different workspace'
+              ? AppMode.general
+              : AppMode.student,
+        );
+        if (cancellation == 'same workspace') {
+          expect(mainStorage.saveCount, mainWritesBeforeNavigation);
+        }
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+    );
+  }
+
+  testWidgets(
+    'replacing an enabled Agent invalidates blocked selection and registers the replacement',
+    (tester) async {
+      Future<void> waitUntil(bool Function() ready, {String? reason}) async {
+        for (var attempt = 0; attempt < 120 && !ready(); attempt++) {
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        expect(ready(), isTrue, reason: reason);
+      }
+
+      final data = _shellData();
+      final mainStorage = _MemoryStorage(
+        data.copyWith(
+          agentSettings: data.agentSettings.copyWith(enabled: true),
+        ),
+      );
+      final conversationStorage = _BlockingConversationStorage();
+      final provider = await _providerFor(
+        mainStorage,
+        agentConversationStorage: conversationStorage,
+      );
+      addTearDown(provider.dispose);
+      addTearDown(conversationStorage.release);
+      final replacement = await workspaceProvider();
+      addTearDown(replacement.dispose);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final oldApplication = provider.agent;
+      final newApplication = replacement.agent;
+      await oldApplication.conversations.load();
+      final oldTarget = await oldApplication.conversations.create(
+        id: 'old-navigation-target',
+        title: 'Old target',
+      );
+      final oldSelected = await oldApplication.conversations.create(
+        id: 'old-navigation-selected',
+        title: 'Old selected',
+      );
+      await newApplication.setEnabled(true);
+      await newApplication.initialize();
+      final newTarget = await newApplication.conversations.create(
+        id: 'replacement-navigation-target',
+        title: 'Replacement target',
+      );
+      final newSelected = await newApplication.conversations.create(
+        id: 'replacement-navigation-selected',
+        title: 'Replacement selected',
+      );
+      expect(oldApplication.settings.enabled, isTrue);
+      expect(newApplication.settings.enabled, isTrue);
+      await tester.binding.setSurfaceSize(const Size(800, 700));
+      Widget mount(AgentApplication application) =>
+          WorkspaceHarness(provider: provider, agentApplication: application);
+      await tester.pumpWidget(mount(oldApplication));
+      await tester.pumpAndSettle();
+      final shell = find.byType(AdaptiveSkedShell);
+      final shellState = tester.state<State<AdaptiveSkedShell>>(shell);
+      final mainWritesBeforeNavigation = mainStorage.saveCount;
+      final oldNavigationRevision = oldApplication.navigationRevision;
+      conversationStorage.blockNextSave = true;
+      var oldOpeningCompleted = false;
+      final oldOpening = AgentPage.openConversation(
+        tester.element(shell),
+        conversationId: oldTarget.id,
+      );
+      unawaited(oldOpening.then((_) => oldOpeningCompleted = true));
+      await waitUntil(() => conversationStorage.saveStarted.isCompleted);
+      expect(oldOpeningCompleted, isFalse);
+      expect(oldApplication.conversations.selectedId, oldSelected.id);
+
+      await tester.pumpWidget(mount(newApplication));
+      await waitUntil(
+        () => oldOpeningCompleted,
+        reason: 'Replacing the application must release callers before the old storage finishes.',
+      );
+      expect(tester.state<State<AdaptiveSkedShell>>(shell), same(shellState));
+      expect(conversationStorage.allowSave.isCompleted, isFalse);
+      expect(newApplication.conversations.selectedId, newSelected.id);
+      _expectAgentInactive(tester);
+
+      conversationStorage.release();
+      await oldApplication.conversations.waitForPendingWrites();
+      await oldOpening;
+      await tester.pumpAndSettle();
+      expect(oldApplication.conversations.selectedId, oldTarget.id);
+      expect(oldApplication.navigationRevision, oldNavigationRevision);
+      _expectAgentInactive(tester);
+
+      var newOpeningCompleted = false;
+      final newOpening = AgentPage.openApplication(
+        newApplication,
+        conversationId: newTarget.id,
+      );
+      unawaited(newOpening.then((_) => newOpeningCompleted = true));
+      await waitUntil(() => newOpeningCompleted);
+      await newOpening;
+      await tester.pumpAndSettle();
+      final visibleAgent = find.byType(AgentPage).hitTestable();
+      expect(visibleAgent, findsOneWidget);
+      expect(
+        tester.element(visibleAgent).read<AgentApplication>(),
+        same(newApplication),
+      );
+      expect(newApplication.conversations.selectedId, newTarget.id);
+      expect(provider.workspaceView.activeMode, AppMode.student);
+      expect(mainStorage.saveCount, mainWritesBeforeNavigation);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
   for (final height in [180.0, 200.0]) {
     testWidgets(
       'short $height large-text expanded rail scrolls Agent and settings into reach',
@@ -582,6 +1052,14 @@ void main() {
           const ValueKey('adaptive-shell-navigation-height-scroll'),
         );
         final agent = find.byKey(const ValueKey('adaptive-shell-agent-entry'));
+        final agentTouchTarget = find
+            .ancestor(
+              of: agent,
+              matching: find.byWidgetPredicate(
+                (widget) => widget is InkResponse && widget.onTap != null,
+              ),
+            )
+            .first;
         final settings = find.byKey(
           const ValueKey('adaptive-shell-settings-action'),
         );
@@ -593,18 +1071,31 @@ void main() {
         );
         expect(tester.takeException(), isNull);
 
-        for (final action in [agent, settings]) {
+        expect(agentTouchTarget, findsOneWidget);
+        for (final action in [agentTouchTarget, settings]) {
           await tester.ensureVisible(action);
           await tester.pumpAndSettle();
           final viewport = tester.getRect(heightScroll);
           final actionRect = tester.getRect(action);
           expect(action.hitTestable(), findsOneWidget);
+          expect(actionRect.left, greaterThanOrEqualTo(viewport.left));
+          expect(actionRect.right, lessThanOrEqualTo(viewport.right));
           expect(actionRect.top, greaterThanOrEqualTo(viewport.top));
           expect(actionRect.bottom, lessThanOrEqualTo(viewport.bottom));
+          expect(actionRect.width, greaterThanOrEqualTo(48));
           expect(actionRect.height, greaterThanOrEqualTo(48));
           expect(tester.takeException(), isNull);
         }
 
+        await tester.ensureVisible(agentTouchTarget);
+        await tester.pumpAndSettle();
+        final agentTouchPoint = tester.getCenter(agentTouchTarget);
+        expect(tester.getRect(agent).contains(agentTouchPoint), isFalse);
+        await tester.tapAt(agentTouchPoint);
+        await tester.pumpAndSettle();
+        expect(tester.widget<NavigationRail>(rail).selectedIndex, 2);
+        await tester.ensureVisible(settings);
+        await tester.pumpAndSettle();
         await tester.tap(settings);
         await tester.pumpAndSettle();
         expect(settingsOpened, 1);
@@ -621,6 +1112,7 @@ void main() {
         );
         expect(tester.takeException(), isNull);
       },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
     );
   }
 
@@ -1019,9 +1511,23 @@ void main() {
     await tester.pumpWidget(_appFor(provider));
     await tester.pumpAndSettle();
 
-    expect(find.byType(NavigationIndicator), findsNWidgets(2));
     final navigationBar = find.byKey(
       const ValueKey('adaptive-shell-navigation-bar'),
+    );
+    final destinationCount =
+        provider.workspaceView.enabledWorkspaces.length +
+        (provider.agent.settings.enabled ? 1 : 0);
+    expect(destinationCount, 3);
+    expect(
+      tester.widget<NavigationBar>(navigationBar).destinations,
+      hasLength(destinationCount),
+    );
+    expect(
+      find.descendant(
+        of: navigationBar,
+        matching: find.byType(NavigationIndicator),
+      ),
+      findsNWidgets(destinationCount),
     );
     final initialIndicator = _navigationIndicator(
       tester,
@@ -1033,6 +1539,13 @@ void main() {
       _navigationIndicator(
         tester,
         'adaptive-shell-general-destination',
+      ).animation.value,
+      0,
+    );
+    expect(
+      _navigationIndicator(
+        tester,
+        'adaptive-shell-agent-destination',
       ).animation.value,
       0,
     );
@@ -1051,6 +1564,13 @@ void main() {
       _navigationIndicator(
         tester,
         'adaptive-shell-student-destination',
+      ).animation.value,
+      0,
+    );
+    expect(
+      _navigationIndicator(
+        tester,
+        'adaptive-shell-agent-destination',
       ).animation.value,
       0,
     );

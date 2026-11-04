@@ -15,6 +15,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../widgets/text_transfer_widgets.dart';
 import '../agent/agent_application.dart';
+import '../agent/imports/school_web_handoff.dart';
 import '../backup/selective_backup_models.dart';
 import '../widgets/sked_task_session.dart';
 import '../controllers/app_backup_controller.dart';
@@ -59,6 +60,7 @@ import '../models/settings_destination.dart';
 import '../models/settings_catalog.dart';
 import 'workspace_features_page.dart';
 import 'agent_settings_page.dart';
+import 'agent_page.dart';
 import 'selective_backup_page.dart';
 import 'general_display_settings_page.dart';
 import 'developer_mode_page.dart';
@@ -117,6 +119,7 @@ class SettingsPage extends StatefulWidget {
     this.initialWorkspace,
     this.transferDirection,
     this.onThemeWorkspaceChanged,
+    this.schoolSitesPageBuilder,
   });
 
   final Future<PackageInfo> Function()? packageInfoLoader;
@@ -129,6 +132,8 @@ class SettingsPage extends StatefulWidget {
   final AppMode? initialWorkspace;
   final SettingsTransferDirection? transferDirection;
   final ValueChanged<AppMode>? onThemeWorkspaceChanged;
+  @visibleForTesting
+  final WidgetBuilder? schoolSitesPageBuilder;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -247,6 +252,7 @@ class _SettingsPageState extends State<SettingsPage>
                           storeUpdateService: widget.storeUpdateService,
                           updateDistribution: widget.updateDistribution,
                           notificationService: widget.notificationService,
+                          schoolSitesPageBuilder: widget.schoolSitesPageBuilder,
                         ),
                       ),
               ),
@@ -1540,9 +1546,118 @@ class _SettingsPageState extends State<SettingsPage>
   }
 
   Future<void> _openSchoolSitesPage() async {
-    await _guardFlow(_SettingsFlow.schoolSitesPage, () async {
-      await TimetableImportFlow.openSchoolSitesPage(context);
-    });
+    final owner = _captureWorkspaceTask(AppMode.student);
+    SchoolWebHandoffRouteResult? result;
+    try {
+      await _guardFlow(_SettingsFlow.schoolSitesPage, () async {
+        result = await TimetableImportFlow.openSchoolSitesPage(
+          context,
+          schoolSitesPageBuilder: widget.schoolSitesPageBuilder,
+          activateConversation: false,
+        );
+      });
+      if (result == null || !mounted || !owner.isCurrent) return;
+      var settingsRoot = this;
+      var parent = context.findAncestorStateOfType<_SettingsPageState>();
+      while (parent != null) {
+        settingsRoot = parent;
+        parent = parent.context.findAncestorStateOfType<_SettingsPageState>();
+      }
+      await settingsRoot._completeSchoolAgentHandoff(context, result!);
+    } finally {
+      owner.dispose();
+    }
+  }
+
+  Future<void> _completeSchoolAgentHandoff(
+    BuildContext sourceContext,
+    SchoolWebHandoffRouteResult result,
+  ) async {
+    if (!mounted || !sourceContext.mounted) return;
+    final settingsRoute = ModalRoute.of(context);
+    final sourceRoute = ModalRoute.of(sourceContext);
+    if (settingsRoute == null ||
+        sourceRoute == null ||
+        settingsRoute.isFirst ||
+        !settingsRoute.isCurrent ||
+        !sourceRoute.isCurrent) {
+      return;
+    }
+    final application = context.read<AgentApplication?>();
+    if (application == null || !application.settings.enabled) return;
+    final maintenance = context.read<AppDataMaintenance>();
+    final workspace = context.read<WorkspaceViewState>();
+    final dataSession = maintenance.dataSessionToken;
+    final resumeBoundary =
+        workspace.data.workspaceReminderNotBefore[AppMode.student];
+    final owner = _captureWorkspaceTask(AppMode.student);
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final failedMessage = AppLocalizations.of(context).agentOperationFailed;
+    try {
+      if (!identical(sourceRoute, settingsRoute)) {
+        final navigator = sourceRoute.navigator;
+        if (navigator == null || !sourceRoute.isCurrent) return;
+        await navigator.maybePop<void>();
+        await WidgetsBinding.instance.endOfFrame;
+        // The nested navigator publishes its updated pop handling after this
+        // frame. Let the outer PopScope rebuild before requesting its exit.
+        await WidgetsBinding.instance.endOfFrame;
+        if (!mounted ||
+            !owner.isCurrent ||
+            sourceRoute.isActive ||
+            !settingsRoute.isCurrent) {
+          return;
+        }
+      }
+      final navigator = settingsRoute.navigator;
+      if (navigator == null ||
+          !mounted ||
+          !owner.isCurrent ||
+          !settingsRoute.isCurrent) {
+        return;
+      }
+      await navigator.maybePop<void>();
+      await WidgetsBinding.instance.endOfFrame;
+      if (settingsRoute.isActive ||
+          !navigator.mounted ||
+          navigator.canPop() ||
+          !identical(dataSession, maintenance.dataSessionToken) ||
+          resumeBoundary !=
+              workspace.data.workspaceReminderNotBefore[AppMode.student] ||
+          !workspace.isEnabled(AppMode.student)) {
+        return;
+      }
+      // The outer shell is awaiting this settings route. Do not await its
+      // activation here: let that callback finish and release the settings gate.
+      unawaited(
+        _activateSchoolAgent(application, result, messenger, failedMessage),
+      );
+    } finally {
+      owner.dispose();
+    }
+  }
+
+  Future<void> _activateSchoolAgent(
+    AgentApplication application,
+    SchoolWebHandoffRouteResult result,
+    ScaffoldMessengerState? messenger,
+    String failedMessage,
+  ) async {
+    try {
+      await AgentPage.openApplication(
+        application,
+        conversationId: result.conversationId,
+      );
+    } catch (_) {
+      if (messenger == null || !messenger.mounted) return;
+      if (!identical(
+        messenger.context.read<AgentApplication?>(),
+        application,
+      )) {
+        return;
+      }
+      messenger.showSnackBar(SnackBar(content: Text(failedMessage)));
+    }
   }
 
   SkedTaskSession _captureWorkspaceTask(AppMode mode) {

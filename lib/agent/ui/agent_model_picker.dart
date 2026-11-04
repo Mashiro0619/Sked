@@ -42,11 +42,15 @@ class AgentModelPicker extends StatefulWidget {
     required this.conversationId,
     required this.delegate,
     this.enabled = true,
+    this.active = true,
+    this.interactive = true,
     this.layoutBuilder,
   });
   final String conversationId;
   final AgentUiDelegate delegate;
   final bool enabled;
+  final bool active;
+  final bool interactive;
   final AgentModelPickerLayoutBuilder? layoutBuilder;
   @override
   State<AgentModelPicker> createState() => _AgentModelPickerState();
@@ -134,7 +138,7 @@ class _AgentModelPickerState extends State<AgentModelPicker>
       _saving = false;
       _failed = false;
       _invalidateMenu();
-    } else if (!widget.enabled) {
+    } else if (!widget.enabled || !widget.active || !widget.interactive) {
       _invalidateMenu();
     }
   }
@@ -210,6 +214,8 @@ class _AgentModelPickerState extends State<AgentModelPicker>
         _ownerCurrent &&
         _openRoute?.isCurrent != false &&
         widget.enabled &&
+        widget.active &&
+        widget.interactive &&
         state.enabled &&
         !state.maintenance &&
         _openGeneration == _generation &&
@@ -272,7 +278,12 @@ class _AgentModelPickerState extends State<AgentModelPicker>
           .firstOrNull;
       final ready = agentConversationModelReady(state, widget.conversationId);
       final enabled =
-          widget.enabled && state.enabled && !state.maintenance && !_saving;
+          widget.enabled &&
+          widget.active &&
+          widget.interactive &&
+          state.enabled &&
+          !state.maintenance &&
+          !_saving;
       if (_openGeneration != null && !_sessionCurrent) _invalidateMenu();
       final menuToken = _openToken;
       final menuStyle = SkedMenuStyle.of(context);

@@ -18,6 +18,7 @@ import 'package:sked/screens/app_home_screen.dart';
 import 'package:sked/theme/sked_expressive_theme.dart';
 
 import 'agent_native_session.dart';
+import '../../test/support/agent_workspace_navigation.dart';
 
 const agentNativeJourneyProtocol = 'agent-native-journey-v1';
 
@@ -442,27 +443,19 @@ class _Journey {
   }
 
   Future<void> openFromHome() async {
-    if (key('workspace-agent-entry').hitTestable().evaluate().isEmpty) {
-      await tap(homeNavigation, 'the real main navigation drawer');
-      await until(
-        () => key('workspace-agent-entry').evaluate().length == 1,
-        'the real side navigation Agent entry',
-      );
-      await tester.ensureVisible(key('workspace-agent-entry'));
-      await tester.pump();
-    }
-    _homeEntry = 'home side navigation / Agent';
-    await tap(
-      key('workspace-agent-entry'),
-      'the real side navigation Agent entry',
-    );
+    _homeEntry = 'main shell navigation / Agent';
+    await selectAgentShellDestination(tester, 'agent');
     await until(
       () => composer.evaluate().length == 1 && session.app.agent.isInitialized,
       'the product Agent composer',
     );
     _require(
       find.byType(AgentPage).hitTestable().evaluate().length == 1,
-      'The production full Agent workspace did not open.',
+      'The production embedded Agent workspace did not open.',
+    );
+    _require(
+      tester.widget<AgentPage>(find.byType(AgentPage)).embedded,
+      'The native journey must use the shared main-shell content.',
     );
     assertOwner();
   }
@@ -758,14 +751,17 @@ class _Journey {
   }
 
   Future<void> closeFullPage() async {
-    final back = find.descendant(
-      of: find.byType(AgentPage),
-      matching: find.byType(BackButton),
+    await selectAgentShellDestination(
+      tester,
+      session.app.workspaceView.activeMode.name,
     );
-    await tap(back, 'the real Agent page Back button');
     await until(
-      () => find.byType(AgentPage).evaluate().isEmpty,
-      'the Agent route to finish closing',
+      () => find.byType(AgentPage).hitTestable().evaluate().isEmpty,
+      'the business destination after leaving Agent',
+    );
+    _require(
+      find.byType(AgentPage, skipOffstage: false).evaluate().length == 1,
+      'Leaving Agent must retain its existing main-shell host.',
     );
   }
 
@@ -775,7 +771,9 @@ class _Journey {
       field.controller!.text == _streamInput!.text,
       'The pending draft changed before navigation.',
     );
-    final history = key('agent-workspace-history').hitTestable();
+    final history = find
+        .byKey(const PageStorageKey('agent-conversation-list'))
+        .hitTestable();
     final wideHistory = history.evaluate().isNotEmpty;
     if (wideHistory) {
       final selected = find.descendant(
@@ -808,7 +806,7 @@ class _Journey {
     return {
       'before': before.toJson(),
       'edited': edited.toJson(),
-      'route': 'full AgentPage → home side navigation → full AgentPage',
+      'route': 'embedded Agent → main business destination → embedded Agent',
       'reopened': reopened.toJson(),
       'workspaceHistoryVisible': wideHistory,
       ...state(),
@@ -821,7 +819,7 @@ class _Journey {
         .byKey(const PageStorageKey('agent-conversation-list'))
         .hitTestable();
     if (list.evaluate().isEmpty) {
-      await tap(key('agent-history'), 'the real conversation History action');
+      await openAgentShellHistory(tester);
     }
     await until(
       () => list.evaluate().length == 1,
@@ -840,8 +838,8 @@ class _Journey {
     await until(
       () =>
           session.app.agent.conversations.selectedId == id &&
-          key('agent-history-drawer').evaluate().isEmpty &&
-          composer.evaluate().length == 1,
+          key('workspace-resource-scrim').hitTestable().evaluate().isEmpty &&
+          composer.hitTestable().evaluate().length == 1,
       'the selected conversation and closed history drawer',
     );
   }

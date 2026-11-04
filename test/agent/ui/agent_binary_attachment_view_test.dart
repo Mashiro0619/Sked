@@ -15,6 +15,41 @@ import 'package:sked/widgets/sked_popup_menu.dart';
 import 'agent_ui_test_support.dart';
 
 void main() {
+  for (final changesActivity in [true, false]) {
+    _testWithFixture(
+      'binary picker expires after ${changesActivity ? 'activity' : 'interaction'} is hidden and restored',
+      (tester, fixture) async {
+        final picker = Completer<XFile?>();
+        fixture.pick = () => picker.future;
+        await mountAgentUi(tester, fixture.view());
+        final retainedState = tester.state(find.byType(AgentConversationView));
+        await tester.tap(find.byKey(const ValueKey('agent-attach-file')));
+        await tester.pump();
+        await mountAgentUi(
+          tester,
+          fixture.view(active: !changesActivity, interactive: changesActivity),
+        );
+        await mountAgentUi(tester, fixture.view());
+        expect(
+          tester.state(find.byType(AgentConversationView)),
+          same(retainedState),
+        );
+        picker.complete(
+          XFile.fromData(
+            Uint8List.fromList([1]),
+            path: 'late.bin',
+            name: 'late.bin',
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(fixture.conversations.selected!.attachments, isEmpty);
+        expect(fixture.blobs.values, isEmpty);
+        expect(fixture.delegate.calls, isEmpty);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   _testWithFixture(
     'an arbitrary file is saved locally and can be sent without text',
     (tester, fixture) async {
@@ -424,13 +459,16 @@ class _Fixture {
     delegate.state.dispose();
   }
 
-  Widget view() => AgentConversationView(
-    repository: conversations,
-    delegate: delegate,
-    binaryAttachments: files,
-    readDatasetGeneration: () => generation,
-    pickBinaryAttachment: () => pick?.call() ?? Future.value(selected),
-  );
+  Widget view({bool active = true, bool interactive = true}) =>
+      AgentConversationView(
+        repository: conversations,
+        delegate: delegate,
+        active: active,
+        interactive: interactive,
+        binaryAttachments: files,
+        readDatasetGeneration: () => generation,
+        pickBinaryAttachment: () => pick?.call() ?? Future.value(selected),
+      );
 }
 
 class _StalledFile extends XFile {

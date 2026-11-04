@@ -15,6 +15,7 @@ import 'package:sked/screens/app_home_screen.dart';
 import 'package:sked/theme/sked_expressive_theme.dart';
 
 import 'agent_native_session.dart';
+import '../../test/support/agent_workspace_navigation.dart';
 
 const agentFeatureJourneyProtocol = 'agent-native-feature-journey-v1';
 
@@ -499,7 +500,12 @@ class AgentFeatureJourney {
 
   Future<Map<String, Object?>> openProduct() async {
     await tester.pumpWidget(AgentNativeApp(session: session, config: config));
-    const homeControls = ['workspace-agent-entry', 'workspace-main-navigation'];
+    const homeControls = [
+      'adaptive-shell-agent-destination',
+      'adaptive-shell-agent-entry',
+      'workspace-agent-entry',
+      'workspace-main-navigation',
+    ];
     await until(
       () =>
           find.byType(AppHomeScreen).evaluate().length == 1 &&
@@ -516,14 +522,7 @@ class AgentFeatureJourney {
     final homeControl = homeControls.firstWhere(
       (id) => key(id).hitTestable().evaluate().length == 1,
     );
-    if (homeControl != 'workspace-agent-entry') {
-      await tap(key(homeControl), 'the visible main navigation drawer');
-      await reveal(
-        key('workspace-agent-entry'),
-        'the side navigation Agent entry',
-      );
-    }
-    await tap(key('workspace-agent-entry'), 'the side navigation Agent entry');
+    await selectAgentShellDestination(tester, 'agent');
     await until(
       () => composer.evaluate().length == 1 && session.app.agent.isInitialized,
       'the actual Agent composer',
@@ -531,6 +530,10 @@ class AgentFeatureJourney {
     requireAgentFeature(
       find.byType(AgentPage).hitTestable().evaluate().length == 1,
       'The expected native product host did not open.',
+    );
+    requireAgentFeature(
+      tester.widget<AgentPage>(find.byType(AgentPage)).embedded,
+      'The native feature journey must use the shared main-shell content.',
     );
     final observedConfig = assertOwner();
     requireAgentFeature(
@@ -541,11 +544,11 @@ class AgentFeatureJourney {
     );
     return {
       ...state(),
-      'entry': 'home side navigation / Agent',
-      'entryControl': homeControl == 'workspace-agent-entry'
+      'entry': 'main shell navigation / Agent',
+      'entryControl': homeControl != 'workspace-main-navigation'
           ? homeControl
           : '$homeControl / workspace-agent-entry',
-      'host': 'AgentPage',
+      'host': 'main shell / embedded AgentPage / shared resources',
       'historyMessageCount':
           session.app.agent.conversations.selected!.messages.length,
       'initialDraft': field.controller!.text,

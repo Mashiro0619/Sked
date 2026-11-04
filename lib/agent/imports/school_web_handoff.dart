@@ -72,6 +72,14 @@ class SchoolWebHandoffResult {
   final bool created;
 }
 
+/// Returns a durably accepted handoff through the source, browser and sites
+/// routes before their original caller reveals the application-owned chat.
+class SchoolWebHandoffRouteResult {
+  const SchoolWebHandoffRouteResult({required this.conversationId});
+
+  final String conversationId;
+}
+
 /// Owns a fixed source/request identity across repeated clicks and navigation
 /// retries. Once the repository accepts a handoff, the application runtime owns
 /// execution independently of the source page's route lifetime.

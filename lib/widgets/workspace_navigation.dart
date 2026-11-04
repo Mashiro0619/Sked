@@ -36,6 +36,7 @@ class WorkspaceNavigationScope extends InheritedWidget {
     required this.onSelect,
     required this.onToggleResources,
     this.agentEnabled = false,
+    this.agentSelected = false,
     this.onOpenAgent,
     required super.child,
   });
@@ -45,6 +46,7 @@ class WorkspaceNavigationScope extends InheritedWidget {
   final ValueChanged<AppMode> onSelect;
   final VoidCallback onToggleResources;
   final bool agentEnabled;
+  final bool agentSelected;
   final VoidCallback? onOpenAgent;
   static WorkspaceNavigationScope? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<WorkspaceNavigationScope>();
@@ -55,6 +57,7 @@ class WorkspaceNavigationScope extends InheritedWidget {
       integrated != oldWidget.integrated ||
       onSelect != oldWidget.onSelect ||
       agentEnabled != oldWidget.agentEnabled ||
+      agentSelected != oldWidget.agentSelected ||
       onOpenAgent != oldWidget.onOpenAgent;
 }
 
@@ -203,6 +206,8 @@ class WorkspaceResourcePanel extends StatelessWidget {
     this.onOpenResources,
     this.onOpenResourcesAt,
     this.settingsFocusNode,
+    this.resourceIcon,
+    this.contentBuilder,
   });
   final String title;
   final List<Widget> children;
@@ -212,6 +217,8 @@ class WorkspaceResourcePanel extends StatelessWidget {
   final VoidCallback? onOpenResources;
   final ValueChanged<BuildContext>? onOpenResourcesAt;
   final FocusNode? settingsFocusNode;
+  final IconData? resourceIcon;
+  final Widget Function(bool shrinkWrap)? contentBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -277,7 +284,7 @@ class WorkspaceResourcePanel extends StatelessWidget {
     }
 
     final showModes =
-        workspace.enabledWorkspaces.length > 1 &&
+        workspace.enabledWorkspaces.length + (agentEnabled ? 1 : 0) > 1 &&
         (drawer || !preferences.hidden) &&
         (drawer || (scope?.integrated ?? true));
     final factor = WorkbenchLayoutPolicy.textFactor(m.textScale);
@@ -462,7 +469,9 @@ class WorkspaceResourcePanel extends StatelessWidget {
                   icon: mode == AppMode.student
                       ? Icons.school_outlined
                       : Icons.event_note_outlined,
-                  selected: workspace.activeMode == mode,
+                  selected:
+                      scope?.agentSelected != true &&
+                      (scope?.selectedMode ?? workspace.activeMode) == mode,
                   onTap: enabled ? () => selectWorkspace(context, mode) : null,
                 ),
             ],
@@ -471,12 +480,13 @@ class WorkspaceResourcePanel extends StatelessWidget {
                 id: 'workspace-agent-entry',
                 title: l.agentTitle,
                 icon: Icons.chat_bubble_outline,
+                selected: scope?.agentSelected == true,
                 onTap: enabled && onOpenAgent != null
                     ? () {
                         resourceScope?.close();
                         if (drawer) {
-                          // Let the drawer return focus to its trigger before
-                          // the full route captures its return-focus target.
+                          // Finish the drawer's focus return before switching
+                          // the retained central destination.
                           WidgetsBinding.instance.addPostFrameCallback((_) {
                             if (context.mounted) onOpenAgent();
                           });
@@ -506,9 +516,11 @@ class WorkspaceResourcePanel extends StatelessWidget {
                       child: Center(
                         child: Builder(
                           builder: (anchor) {
-                            final icon = workspace.activeMode == AppMode.student
-                                ? Icons.view_week_outlined
-                                : Icons.category_outlined;
+                            final icon =
+                                resourceIcon ??
+                                (workspace.activeMode == AppMode.student
+                                    ? Icons.view_week_outlined
+                                    : Icons.category_outlined);
                             if (!collapsed &&
                                 onOpenResourcesAt == null &&
                                 onOpenResources == null) {
@@ -617,16 +629,18 @@ class WorkspaceResourcePanel extends StatelessWidget {
                 child: _ResourcePaneReveal(
                   width: expandedWidth,
                   opacity: labelOpacity,
-                  child: ListView(
-                    key: const PageStorageKey('workspace-resource-list'),
-                    primary: false,
-                    shrinkWrap: shrinkWrap,
-                    physics: shrinkWrap
-                        ? const NeverScrollableScrollPhysics()
-                        : null,
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    children: [...children, ...actions],
-                  ),
+                  child:
+                      contentBuilder?.call(shrinkWrap) ??
+                      ListView(
+                        key: const PageStorageKey('workspace-resource-list'),
+                        primary: false,
+                        shrinkWrap: shrinkWrap,
+                        physics: shrinkWrap
+                            ? const NeverScrollableScrollPhysics()
+                            : null,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        children: [...children, ...actions],
+                      ),
                 ),
               ),
             ),

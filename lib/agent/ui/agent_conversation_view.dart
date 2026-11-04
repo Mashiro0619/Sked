@@ -15,6 +15,8 @@ import '../../widgets/expressive_dialog.dart';
 import '../../widgets/sked_expressive_loading_indicator.dart';
 import '../../widgets/sked_popup_menu.dart';
 import '../../widgets/sked_spring_builder.dart';
+import '../../widgets/workspace_frame.dart';
+import '../../widgets/workspace_navigation.dart';
 import 'agent_conversation_list.dart';
 import 'agent_message_content.dart';
 import 'agent_model_picker.dart';
@@ -45,6 +47,12 @@ class _AgentDraftBuffer {
 
 /// Shared content for a desktop panel or a phone route. The host owns routing,
 /// runtime lifetime and feature visibility; hiding this widget never stops a run.
+typedef AgentWorkspaceLayoutBuilder = Widget Function(
+  BuildContext context,
+  Widget content,
+  Widget Function(bool shrinkWrap) historyBuilder,
+);
+
 class AgentConversationView extends StatefulWidget {
   const AgentConversationView({
     super.key,
@@ -52,6 +60,10 @@ class AgentConversationView extends StatefulWidget {
     required this.delegate,
     this.showTitle = true,
     this.fullWorkspace = false,
+    this.embedded = false,
+    this.active = true,
+    this.interactive = true,
+    this.workspaceLayoutBuilder,
     this.modelPickerBuilder,
     this.canSendToModel,
     this.operationChanges,
@@ -71,6 +83,10 @@ class AgentConversationView extends StatefulWidget {
   final AgentUiDelegate delegate;
   final bool showTitle;
   final bool fullWorkspace;
+  final bool embedded;
+  final bool active;
+  final bool interactive;
+  final AgentWorkspaceLayoutBuilder? workspaceLayoutBuilder;
   final Widget Function(
     AgentConversation conversation,
     AgentUiRunState state,
@@ -99,6 +115,17 @@ class AgentConversationView extends StatefulWidget {
 }
 
 class _AgentConversationViewState extends State<AgentConversationView> {
+  bool get _uiActive =>
+      mounted &&
+      widget.active &&
+      widget.interactive &&
+      ModalRoute.of(context)?.isCurrent != false;
+  int _uiGeneration = 0;
+
+  bool _uiSessionCurrent(int generation, String? conversationId) =>
+      _uiActive &&
+      generation == _uiGeneration &&
+      _repository.selectedId == conversationId;
   final _composer = TextEditingController();
   final _composerFocus = FocusNode();
   late _AgentDraftBuffer _draftBuffer = _draftBuffers[_repository] ??=
@@ -128,7 +155,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
 
   bool _canModifyBinaryAttachments(String id) {
     final conversation = _repository.find(id);
-    return mounted &&
+    return _uiActive &&
         _repository.canWrite &&
         _repository.selectedId == id &&
         _runtime.enabled &&
@@ -161,11 +188,13 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       _binaryAction(id, (service) async {
         final repository = _repository;
         final generation = widget.readDatasetGeneration?.call();
+        final uiGeneration = _uiGeneration;
         final file = await widget.pickBinaryAttachment();
         if (file == null || !mounted) return;
         if (!identical(repository, _repository) ||
             !identical(service, widget.binaryAttachments) ||
             generation != widget.readDatasetGeneration?.call() ||
+            !_uiSessionCurrent(uiGeneration, id) ||
             !_canModifyBinaryAttachments(id)) {
           throw const AttachmentException(AttachmentError.conflict);
         }
@@ -175,24 +204,33 @@ class _AgentConversationViewState extends State<AgentConversationView> {
           canModify: () =>
               identical(repository, _repository) &&
               generation == widget.readDatasetGeneration?.call() &&
+              _uiSessionCurrent(uiGeneration, id) &&
               _canModifyBinaryAttachments(id),
         );
       });
 
-  Future<void> _retryBinaryAttachment(String id) => _binaryAction(id, (
-    service,
-  ) async {
-    final repository = _repository;
-    if (!repository.canWrite) {
-      if (widget.recoverConversations case final recover?) {
-        await recover();
-      } else {
-        await repository.load();
-      }
-    }
-    if (!mounted || !identical(repository, _repository)) return;
-    await service.retry(id, canModify: () => _canModifyBinaryAttachments(id));
-  });
+  Future<void> _retryBinaryAttachment(String id) =>
+      _binaryAction(id, (service) async {
+        final repository = _repository;
+        final uiGeneration = _uiGeneration;
+        if (!repository.canWrite) {
+          if (widget.recoverConversations case final recover?) {
+            await recover();
+          } else {
+            await repository.load();
+          }
+        }
+        if (!_uiSessionCurrent(uiGeneration, id) ||
+            !identical(repository, _repository)) {
+          return;
+        }
+        await service.retry(
+          id,
+          canModify: () =>
+              _uiSessionCurrent(uiGeneration, id) &&
+              _canModifyBinaryAttachments(id),
+        );
+      });
 
   bool _hasInput(AgentConversation conversation) =>
       _composer.text.trim().isNotEmpty ||
@@ -200,7 +238,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
 
   bool _canModifyAttachments(String id) {
     final conversation = _repository.find(id);
-    return mounted &&
+    return _uiActive &&
         _repository.canWrite &&
         _repository.selectedId == id &&
         _runtime.enabled &&
@@ -215,22 +253,31 @@ class _AgentConversationViewState extends State<AgentConversationView> {
 
   Future<void> _attachFile(String id) => _perform('attachment-$id', () async {
     final repository = _repository;
+    final uiGeneration = _uiGeneration;
+    final generation = widget.readDatasetGeneration!();
     setState(() {
       _attachmentTooLarge = false;
       _attachmentFailed = false;
     });
     try {
       final file = await widget.pickAttachment();
-      if (file == null || !mounted || !identical(repository, _repository)) {
+      if (file == null ||
+          !mounted ||
+          !_uiSessionCurrent(uiGeneration, id) ||
+          !identical(repository, _repository) ||
+          generation != widget.readDatasetGeneration!()) {
         return;
       }
       await _attachments.attach(
         id,
         file,
-        generation: widget.readDatasetGeneration!(),
+        generation: generation,
         locale: Localizations.localeOf(context).toLanguageTag(),
         canModify: () =>
-            identical(repository, _repository) && _canModifyAttachments(id),
+            identical(repository, _repository) &&
+            generation == widget.readDatasetGeneration!() &&
+            _uiSessionCurrent(uiGeneration, id) &&
+            _canModifyAttachments(id),
       );
     } on TextFileTooLargeException {
       if (mounted) setState(() => _attachmentTooLarge = true);
@@ -242,16 +289,21 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   Future<void> _retryAttachment(String id) =>
       _perform('attachment-$id', () async {
         final repository = _repository;
+        final uiGeneration = _uiGeneration;
         if (widget.recoverConversations != null) {
           await widget.recoverConversations!();
         } else {
           await repository.load();
         }
-        if (!mounted || !identical(repository, _repository)) return;
+        if (!_uiSessionCurrent(uiGeneration, id) ||
+            !identical(repository, _repository)) {
+          return;
+        }
         await _attachments.retry(
           id,
           generation: widget.readDatasetGeneration!(),
-          canModify: () => _canModifyAttachments(id),
+          canModify: () =>
+              _uiSessionCurrent(uiGeneration, id) && _canModifyAttachments(id),
         );
         if (mounted) {
           setState(() {
@@ -278,6 +330,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final active =
+        widget.active &&
         TickerMode.valuesOf(context).enabled &&
         FocusScope.of(context).canRequestFocus &&
         (ModalRoute.of(context)?.isCurrent ?? true);
@@ -289,6 +342,16 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   @override
   void didUpdateWidget(AgentConversationView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if ((oldWidget.active && !widget.active) ||
+        (oldWidget.interactive && !widget.interactive)) {
+      _uiGeneration++;
+    }
+    if (!widget.active) {
+      _hostActive = false;
+    } else if (!oldWidget.active) {
+      _hostActive = true;
+      _restoreReading(_repository.selectedId);
+    }
     if (oldWidget.repository != _repository) {
       oldWidget.repository.removeListener(_changed);
       _repository.addListener(_changed);
@@ -338,6 +401,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     }
     final selected = _repository.selected;
     if (_shownId != selected?.id) {
+      _uiGeneration++;
       _attachmentTooLarge = false;
       _attachmentFailed = false;
       _binaryAttachmentError = null;
@@ -437,9 +501,10 @@ class _AgentConversationViewState extends State<AgentConversationView> {
 
   Future<void> _perform(
     String action,
-    Future<void> Function() operation,
-  ) async {
-    if (_busy.contains(action)) return;
+    Future<void> Function() operation, {
+    bool Function()? isCurrent,
+  }) async {
+    if (!(isCurrent?.call() ?? _uiActive) || _busy.contains(action)) return;
     setState(() {
       _busy.add(action);
       _failed = false;
@@ -478,33 +543,47 @@ class _AgentConversationViewState extends State<AgentConversationView> {
 
   Future<void> _newConversation() => _perform('new', () async {
     final repository = _repository;
+    final uiGeneration = _uiGeneration;
+    final selectedId = repository.selectedId;
     final title = AppLocalizations.of(context).agentNewConversation;
-    await _flushDraft(_repository.selectedId);
-    if (!mounted || !identical(repository, _repository)) return;
+    await _flushDraft(selectedId);
+    if (!_uiSessionCurrent(uiGeneration, selectedId) ||
+        !identical(repository, _repository)) {
+      return;
+    }
     await repository.create(
       title: title,
       mode: _runtime.defaultMode,
       modelSelection: _runtime.defaultModelSelection,
     );
-    if (mounted) _composerFocus.requestFocus();
+    if (_uiActive) _composerFocus.requestFocus();
   });
 
   Future<void> _select(String id) => _perform('select', () async {
     final repository = _repository;
-    await _flushDraft(_repository.selectedId);
-    if (!mounted || !identical(repository, _repository)) return;
+    final uiGeneration = _uiGeneration;
+    final selectedId = repository.selectedId;
+    await _flushDraft(selectedId);
+    if (!_uiSessionCurrent(uiGeneration, selectedId) ||
+        !identical(repository, _repository)) {
+      return;
+    }
     await repository.select(id);
   });
 
   Future<void> _send(AgentConversation conversation) async {
     final repository = _repository;
+    final uiGeneration = _uiGeneration;
     final delegate = widget.delegate;
     final text = _composer.text;
     if (text.trim().isEmpty && conversation.draftAttachmentIds.isEmpty) return;
     _jumpToLatest(conversation.id);
     await _perform('send-${conversation.id}', () async {
       await _flushDraft(conversation.id);
-      if (!identical(repository, _repository)) return;
+      if (!_uiSessionCurrent(uiGeneration, conversation.id) ||
+          !identical(repository, _repository)) {
+        return;
+      }
       await delegate.send(conversation.id, text);
     });
   }
@@ -514,12 +593,16 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     required bool steering,
   }) async {
     final repository = _repository;
+    final uiGeneration = _uiGeneration;
     final delegate = widget.delegate;
     final text = _composer.text;
     if (text.trim().isEmpty && conversation.draftAttachmentIds.isEmpty) return;
     await _perform('queue-${conversation.id}', () async {
       await _flushDraft(conversation.id);
-      if (!identical(repository, _repository)) return;
+      if (!_uiSessionCurrent(uiGeneration, conversation.id) ||
+          !identical(repository, _repository)) {
+        return;
+      }
       if (steering) {
         await delegate.steer(conversation.id, text);
       } else {
@@ -529,13 +612,17 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   }
 
   Future<void> _rename(AgentConversation conversation) async {
+    if (!_uiActive) return;
     final repository = _repository;
+    final uiGeneration = _uiGeneration;
     final title = await showExpressiveDialog<String>(
       context: context,
       builder: (context) =>
           _RenameConversationDialog(title: conversation.title),
     );
-    if (title == null || !mounted || !identical(repository, _repository)) {
+    if (title == null ||
+        !_uiSessionCurrent(uiGeneration, conversation.id) ||
+        !identical(repository, _repository)) {
       return;
     }
     await _perform('rename', () async {
@@ -547,7 +634,9 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   }
 
   Future<void> _delete(AgentConversation conversation) async {
+    if (!_uiActive) return;
     final repository = _repository;
+    final uiGeneration = _uiGeneration;
     final delegate = widget.delegate;
     final l = AppLocalizations.of(context);
     final confirmed = await showExpressiveDialog<bool>(
@@ -567,7 +656,9 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         ],
       ),
     );
-    if (confirmed != true || !mounted || !identical(repository, _repository)) {
+    if (confirmed != true ||
+        !_uiSessionCurrent(uiGeneration, conversation.id) ||
+        !identical(repository, _repository)) {
       return;
     }
     await _perform('delete', () async {
@@ -585,25 +676,42 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     AgentConversation conversation,
     ConversationMessage message,
   ) async {
+    if (!_uiActive) return;
+    final repository = _repository;
+    final history = widget.history!;
+    final draftBuffer = _draftBuffer;
+    final uiGeneration = _uiGeneration;
     final l = AppLocalizations.of(context);
     final key = '${conversation.id}:${message.id}';
     final edited = await showExpressiveDialog<String>(
       context: context,
       builder: (context) => _EditHistoryDialog(
-        text: _draftBuffer.historyDrafts[key] ?? message.text,
+        text: draftBuffer.historyDrafts[key] ?? message.text,
         hasAttachments: message.attachmentIds.isNotEmpty,
-        onChanged: (text) => _draftBuffer.historyDrafts[key] = text,
+        onChanged: (text) => draftBuffer.historyDrafts[key] = text,
       ),
     );
-    if (edited == null || !mounted) return;
+    if (edited == null ||
+        !_uiSessionCurrent(uiGeneration, conversation.id) ||
+        !identical(repository, _repository) ||
+        !identical(history, widget.history)) {
+      return;
+    }
     await _perform('history-${conversation.id}', () async {
       await _flushDraft(conversation.id);
+      if (!_uiSessionCurrent(uiGeneration, conversation.id) ||
+          !identical(repository, _repository) ||
+          !identical(history, widget.history)) {
+        return;
+      }
       try {
-        await widget.history!.editAndRedo(conversation.id, message.id, edited);
-        _draftBuffer.historyDrafts.remove(key);
+        await history.editAndRedo(conversation.id, message.id, edited);
+        draftBuffer.historyDrafts.remove(key);
       } catch (_) {
-        if (!mounted) rethrow;
-        final pending = _repository.find(conversation.id)?.pendingRedo;
+        if (!mounted || !_uiSessionCurrent(uiGeneration, conversation.id)) {
+          rethrow;
+        }
+        final pending = repository.find(conversation.id)?.pendingRedo;
         if (pending != null &&
             pending.phase != ConversationRedoPhase.prepared) {
           rethrow;
@@ -626,9 +734,9 @@ class _AgentConversationViewState extends State<AgentConversationView> {
           ),
         );
         if (pending != null) {
-          await widget.history!.cancelPrepared(conversation.id);
+          await history.cancelPrepared(conversation.id);
         }
-        if (keep == true && mounted) {
+        if (keep == true && _uiSessionCurrent(uiGeneration, conversation.id)) {
           _draftChanged(conversation.id, edited);
           _composerFocus.requestFocus();
         }
@@ -689,19 +797,30 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   AgentConversationList _historyList(
     ValueChanged<String> onSelected, {
     Widget? header,
+    bool shrinkWrap = false,
+    bool Function()? isCurrent,
   }) => AgentConversationList(
     repository: _repository,
     onSelected: onSelected,
     header: header,
-    onRestore: _repository.canWrite && _runtime.enabled && !_runtime.maintenance
+    shrinkWrap: shrinkWrap,
+    onRestore:
+        (isCurrent?.call() ?? _uiActive) &&
+            _repository.canWrite &&
+            _runtime.enabled &&
+            !_runtime.maintenance
         ? (id) => _perform(
             'archive-$id',
             () => widget.delegate.setArchived(id, false),
+            isCurrent: isCurrent,
           )
         : null,
   );
 
   Future<void> _showHistory() async {
+    if (!_uiActive) return;
+    final uiGeneration = _uiGeneration;
+    final conversationId = _repository.selectedId;
     final l = AppLocalizations.of(context);
     final repository = _repository;
     final motion = SkedMotionPolicy.of(context);
@@ -745,6 +864,15 @@ class _AgentConversationViewState extends State<AgentConversationView> {
               child: SafeArea(
                 child: _historyList(
                   (id) => Navigator.of(sheetContext).pop(id),
+                  isCurrent: () =>
+                      mounted &&
+                      widget.active &&
+                      widget.interactive &&
+                      sheetContext.mounted &&
+                      ModalRoute.of(sheetContext)?.isCurrent == true &&
+                      uiGeneration == _uiGeneration &&
+                      identical(repository, _repository) &&
+                      repository.selectedId == conversationId,
                   header: Padding(
                     padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 8, 4),
                     child: Row(
@@ -773,7 +901,9 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         ),
       ),
     );
-    if (selected != null && mounted && identical(repository, _repository)) {
+    if (selected != null &&
+        _uiSessionCurrent(uiGeneration, conversationId) &&
+        identical(repository, _repository)) {
       await _select(selected);
     }
   }
@@ -784,7 +914,10 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final conversation = _repository.selected;
     final runtime = _runtime;
     final writable =
-        _repository.canWrite && runtime.enabled && !runtime.maintenance;
+        _uiActive &&
+        _repository.canWrite &&
+        runtime.enabled &&
+        !runtime.maintenance;
     final state = conversation == null
         ? const AgentUiRunState()
         : runtime.runFor(conversation.id);
@@ -801,16 +934,23 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         ),
       );
     }
-    return SkedSurface(
+    final canvas = SkedSurface(
       child: SafeArea(
         top: false,
         child: LayoutBuilder(
           builder: (context, constraints) {
             final wideHistory =
                 widget.fullWorkspace &&
+                !widget.embedded &&
                 constraints.maxWidth >=
                     980 * MediaQuery.textScalerOf(context).scale(14) / 14;
-            final header = _header(l, conversation, writable, wideHistory);
+            final header = _header(
+              context,
+              l,
+              conversation,
+              writable,
+              wideHistory,
+            );
             final body = <Widget>[
               if (_loading)
                 Padding(
@@ -1112,6 +1252,17 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         ),
       ),
     );
+    return widget.workspaceLayoutBuilder?.call(
+          context,
+          canvas,
+          (shrinkWrap) => Builder(
+            builder: (context) => _historyList((id) {
+              WorkspaceResourceScope.maybeOf(context)?.close();
+              unawaited(_select(id));
+            }, shrinkWrap: shrinkWrap),
+          ),
+        ) ??
+        canvas;
   }
 
   Widget _notice(String text, {bool error = false}) => Padding(
@@ -1128,11 +1279,13 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   );
 
   Widget _header(
+    BuildContext headerContext,
     AppLocalizations l,
     AgentConversation? conversation,
     bool writable,
     bool wideHistory,
   ) {
+    final uiGeneration = _uiGeneration;
     final title =
         conversation?.title ??
         (widget.showTitle || widget.fullWorkspace ? l.agentTitle : '');
@@ -1140,21 +1293,25 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: Row(
         children: [
-          if (widget.fullWorkspace) const BackButton(),
-          IconButton(
-            key: const ValueKey('agent-history'),
-            tooltip: wideHistory
-                ? (_historyVisible
-                      ? l.agentHideConversations
-                      : l.agentShowConversations)
-                : l.agentConversations,
-            onPressed: !_repository.isLoaded
-                ? null
-                : wideHistory
-                ? () => setState(() => _historyVisible = !_historyVisible)
-                : _showHistory,
-            icon: const Icon(Icons.view_sidebar_outlined),
-          ),
+          if (widget.embedded) ...[
+            ?workspaceMainNavigationButton(headerContext),
+          ] else if (widget.fullWorkspace)
+            const BackButton(),
+          if (!widget.embedded)
+            IconButton(
+              key: const ValueKey('agent-history'),
+              tooltip: wideHistory
+                  ? (_historyVisible
+                        ? l.agentHideConversations
+                        : l.agentShowConversations)
+                  : l.agentConversations,
+              onPressed: !_repository.isLoaded
+                  ? null
+                  : wideHistory
+                  ? () => setState(() => _historyVisible = !_historyVisible)
+                  : _showHistory,
+              icon: const Icon(Icons.view_sidebar_outlined),
+            ),
           Expanded(
             child: DesktopDragRegion(
               child: Tooltip(
@@ -1176,93 +1333,98 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                 : null,
             icon: const Icon(Icons.edit_square),
           ),
-          SkedPopupMenuButton<String>(
-            key: const ValueKey('agent-conversation-menu'),
-            tooltip: l.agentConversationActions,
-            enabled: !_runtime.maintenance,
-            onSelected: (value) {
-              switch (value) {
-                case 'settings':
-                  widget.delegate.openSettings();
-                case 'rename':
-                  if (conversation != null) unawaited(_rename(conversation));
-                case 'message-history':
-                  if (conversation != null) {
-                    unawaited(_showMessageHistory(conversation));
-                  }
-                case 'delete':
-                  if (conversation != null) unawaited(_delete(conversation));
-                case 'archive':
-                  if (conversation != null) {
-                    unawaited(
-                      _perform(
-                        'archive-${conversation.id}',
-                        () => widget.delegate.setArchived(
-                          conversation.id,
-                          !conversation.archived,
+          KeyedSubtree(
+            key: ValueKey(('agent-actions-session', uiGeneration)),
+            child: SkedPopupMenuButton<String>(
+              key: const ValueKey('agent-conversation-menu'),
+              tooltip: l.agentConversationActions,
+              enabled: _uiActive && !_runtime.maintenance,
+              onSelected: (value) {
+                if (!_uiSessionCurrent(uiGeneration, conversation?.id)) return;
+                switch (value) {
+                  case 'settings':
+                    widget.delegate.openSettings();
+                  case 'rename':
+                    if (conversation != null) unawaited(_rename(conversation));
+                  case 'message-history':
+                    if (conversation != null) {
+                      unawaited(_showMessageHistory(conversation));
+                    }
+                  case 'delete':
+                    if (conversation != null) unawaited(_delete(conversation));
+                  case 'archive':
+                    if (conversation != null) {
+                      unawaited(
+                        _perform(
+                          'archive-${conversation.id}',
+                          () => widget.delegate.setArchived(
+                            conversation.id,
+                            !conversation.archived,
+                          ),
                         ),
-                      ),
-                    );
-                  }
-                case 'export':
-                  if (conversation != null &&
-                      widget.onExportConversation != null) {
-                    unawaited(
-                      _perform('export-${conversation.id}', () async {
-                        final saved = await widget.onExportConversation!(
-                          conversation.id,
-                        );
-                        if (mounted) {
-                          setState(
-                            () => _exportedId = saved ? conversation.id : null,
+                      );
+                    }
+                  case 'export':
+                    if (conversation != null &&
+                        widget.onExportConversation != null) {
+                      unawaited(
+                        _perform('export-${conversation.id}', () async {
+                          final saved = await widget.onExportConversation!(
+                            conversation.id,
                           );
-                        }
-                      }),
-                    );
-                  }
-              }
-            },
-            itemBuilder: (context) => [
-              SkedPopupMenuItem(
-                key: const ValueKey('agent-settings'),
-                value: 'settings',
-                child: Text(l.agentSettingsTitle),
-              ),
-              if (conversation != null) ...[
-                const SkedPopupMenuDivider<String>(),
-                if (conversation.historyVersions.isNotEmpty ||
-                    conversation.replyRevisions.isNotEmpty)
-                  SkedPopupMenuItem(
-                    value: 'message-history',
-                    child: Text(l.agentHistoryVersions),
-                  ),
+                          if (mounted) {
+                            setState(
+                              () =>
+                                  _exportedId = saved ? conversation.id : null,
+                            );
+                          }
+                        }),
+                      );
+                    }
+                }
+              },
+              itemBuilder: (context) => [
                 SkedPopupMenuItem(
-                  value: 'rename',
-                  enabled: writable && !_busy.contains('rename'),
-                  child: Text(l.rename),
+                  key: const ValueKey('agent-settings'),
+                  value: 'settings',
+                  child: Text(l.agentSettingsTitle),
                 ),
-                SkedPopupMenuItem(
-                  value: 'archive',
-                  enabled: writable,
-                  child: Text(
-                    conversation.archived
-                        ? l.agentRestoreConversation
-                        : l.agentArchiveConversation,
-                  ),
-                ),
-                if (widget.onExportConversation != null)
+                if (conversation != null) ...[
+                  const SkedPopupMenuDivider<String>(),
+                  if (conversation.historyVersions.isNotEmpty ||
+                      conversation.replyRevisions.isNotEmpty)
+                    SkedPopupMenuItem(
+                      value: 'message-history',
+                      child: Text(l.agentHistoryVersions),
+                    ),
                   SkedPopupMenuItem(
-                    value: 'export',
+                    value: 'rename',
+                    enabled: writable && !_busy.contains('rename'),
+                    child: Text(l.rename),
+                  ),
+                  SkedPopupMenuItem(
+                    value: 'archive',
                     enabled: writable,
-                    child: Text(l.agentExportConversation),
+                    child: Text(
+                      conversation.archived
+                          ? l.agentRestoreConversation
+                          : l.agentArchiveConversation,
+                    ),
                   ),
-                SkedPopupMenuItem(
-                  value: 'delete',
-                  enabled: writable && !_busy.contains('delete'),
-                  child: Text(l.delete),
-                ),
+                  if (widget.onExportConversation != null)
+                    SkedPopupMenuItem(
+                      value: 'export',
+                      enabled: writable,
+                      child: Text(l.agentExportConversation),
+                    ),
+                  SkedPopupMenuItem(
+                    value: 'delete',
+                    enabled: writable && !_busy.contains('delete'),
+                    child: Text(l.delete),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
           if (widget.fullWorkspace) const DesktopCaptionSpacer(),
         ],
@@ -1274,55 +1436,68 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     AgentConversation conversation,
     AppLocalizations l, {
     bool compact = false,
-  }) => SkedPopupMenuButton<AgentPermissionMode>(
-    key: const ValueKey('agent-mode-picker'),
-    tooltip: "${l.agentPermissionMode}: ${_modeLabel(l, conversation.mode)}",
-    enabled:
-        _repository.canWrite &&
-        _runtime.enabled &&
-        !_runtime.maintenance &&
-        !conversation.archived &&
-        !_busy.contains('mode-${conversation.id}'),
-    initialValue: conversation.mode,
-    onSelected: (mode) => _perform(
-      'mode-${conversation.id}',
-      () => widget.delegate.setMode(conversation.id, mode),
-    ),
-    itemBuilder: (context) => [
-      for (final mode in AgentPermissionMode.values)
-        SkedCheckedPopupMenuItem(
-          key: ValueKey('agent-mode-${mode.name}'),
-          value: mode,
-          checked: conversation.mode == mode,
-          label: _modeLabel(l, mode),
-          description: _modeDescription(l, mode),
-        ),
-    ],
-    child: ConstrainedBox(
-      constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: compact ? 12 : 10,
-          vertical: 12,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(switch (conversation.mode) {
-              AgentPermissionMode.plan => Icons.visibility_outlined,
-              AgentPermissionMode.ask => Icons.verified_user_outlined,
-              AgentPermissionMode.full => Icons.bolt_rounded,
-            }, size: 18),
-            if (!compact) ...[
-              const SizedBox(width: 6),
-              Text(_modeLabel(l, conversation.mode), maxLines: 1),
-              const Icon(Icons.expand_more_rounded, size: 18),
-            ],
-          ],
+  }) {
+    final uiGeneration = _uiGeneration;
+    return KeyedSubtree(
+      key: ValueKey(('agent-mode-session', uiGeneration)),
+      child: SkedPopupMenuButton<AgentPermissionMode>(
+        key: const ValueKey('agent-mode-picker'),
+        tooltip:
+            "${l.agentPermissionMode}: ${_modeLabel(l, conversation.mode)}",
+        enabled:
+            _uiActive &&
+            _repository.canWrite &&
+            _runtime.enabled &&
+            !_runtime.maintenance &&
+            !conversation.archived &&
+            !_busy.contains('mode-${conversation.id}'),
+        initialValue: conversation.mode,
+        onSelected: (mode) {
+          if (!_uiSessionCurrent(uiGeneration, conversation.id)) return;
+          unawaited(
+            _perform(
+              'mode-${conversation.id}',
+              () => widget.delegate.setMode(conversation.id, mode),
+            ),
+          );
+        },
+        itemBuilder: (context) => [
+          for (final mode in AgentPermissionMode.values)
+            SkedCheckedPopupMenuItem(
+              key: ValueKey('agent-mode-${mode.name}'),
+              value: mode,
+              checked: conversation.mode == mode,
+              label: _modeLabel(l, mode),
+              description: _modeDescription(l, mode),
+            ),
+        ],
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? 12 : 10,
+              vertical: 12,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(switch (conversation.mode) {
+                  AgentPermissionMode.plan => Icons.visibility_outlined,
+                  AgentPermissionMode.ask => Icons.verified_user_outlined,
+                  AgentPermissionMode.full => Icons.bolt_rounded,
+                }, size: 18),
+                if (!compact) ...[
+                  const SizedBox(width: 6),
+                  Text(_modeLabel(l, conversation.mode), maxLines: 1),
+                  const Icon(Icons.expand_more_rounded, size: 18),
+                ],
+              ],
+            ),
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 
   List<Widget> _messageWidgets(
     AgentConversation conversation,
@@ -1665,6 +1840,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         (!active && _busy.contains('send-${conversation.id}')) ||
         _busy.contains('queue-${conversation.id}');
     final enabled =
+        _uiActive &&
         _repository.canWrite &&
         _runtime.enabled &&
         !_runtime.maintenance &&

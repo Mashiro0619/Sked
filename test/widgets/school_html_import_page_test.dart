@@ -4,13 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/imports/school_web_handoff.dart';
-import 'package:sked/agent/connection/agent_credential_store.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/agent_settings.dart';
 import 'package:sked/screens/school_html_import_page.dart';
-import 'package:sked/screens/agent_page.dart';
 import 'package:sked/services/school_import_content_sanitizer.dart';
 
 import '../support/school_import_preparation.dart';
@@ -20,11 +18,13 @@ class _MemoryConversations extends ConversationStorage {
   _MemoryConversations() : super.base();
   String? source;
   bool fail = false;
+  Future<void> Function()? beforeSave;
   @override
   Future<ConversationStorageLoad> load() async =>
       ConversationStorageLoad(source: source);
   @override
   Future<void> save(String value, {required int revision}) async {
+    await beforeSave?.call();
     if (fail) throw StateError('raw secret must not be shown');
     source = value;
   }
@@ -49,6 +49,7 @@ class _Fixture {
   );
   final starts = <String>[];
   final opened = <String>[];
+  final results = <SchoolWebHandoffRouteResult?>[];
   final configurations = <SchoolWebHandoffReadiness>[];
 }
 
@@ -67,6 +68,8 @@ Future<_Fixture> _mount(
   AgentSettings? settings,
   SchoolWebContentPreparer? prepare,
   bool inRoute = false,
+  bool observeConversationOpen = true,
+  Future<void> Function()? initializeHandoff,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = size;
@@ -86,7 +89,7 @@ Future<_Fixture> _mount(
   final handoff = SchoolWebHandoffController(
     repository: repository,
     readSettings: () => fixture.settings,
-    initialize: () async {},
+    initialize: initializeHandoff ?? () async {},
     startHandoff: (id) async {
       fixture.starts.add(id);
     },
@@ -103,9 +106,11 @@ Future<_Fixture> _mount(
     showReturnToWebPageButton: inRoute,
     contentPreparer: prepare ?? prepareSchoolImportContentForTest,
     handoffController: handoff,
-    openConversation: (context, id) async {
-      fixture.opened.add(id);
-    },
+    openConversation: observeConversationOpen
+        ? (context, id) async {
+            fixture.opened.add(id);
+          }
+        : null,
     openConfiguration: (context, readiness) async {
       fixture.configurations.add(readiness);
       fixture.settings = const AgentSettings(
@@ -130,9 +135,13 @@ Future<_Fixture> _mount(
           ? Builder(
               builder: (context) => Scaffold(
                 body: TextButton(
-                  onPressed: () => Navigator.of(
-                    context,
-                  ).push<void>(MaterialPageRoute<void>(builder: (_) => page)),
+                  onPressed: () => Navigator.of(context)
+                      .push<SchoolWebHandoffRouteResult>(
+                        MaterialPageRoute<SchoolWebHandoffRouteResult>(
+                          builder: (_) => page,
+                        ),
+                      )
+                      .then(fixture.results.add),
                   child: const Text('Open source'),
                 ),
               ),
@@ -157,65 +166,144 @@ Future<void> _press(WidgetTester tester, Finder button) async {
 
 void main() {
   testWidgets(
-    'desktop handoff opens a visible real conversation above the source route',
+    'desktop handoff returns its durable conversation to the source caller',
     (tester) async {
-      addTearDown(tester.view.reset);
-      tester.view.devicePixelRatio = 1;
-      tester.view.physicalSize = const Size(1280, 900);
-      final app = await workspaceProvider(
-        agentConversationStorage: _MemoryConversations(),
-        agentCredentialStore: MemoryAgentCredentialStore(),
+      final fixture = await _mount(
+        tester,
+        inRoute: true,
+        observeConversationOpen: false,
+        size: const Size(1280, 900),
       );
-      addTearDown(app.dispose);
-      await app.agent.configure(
-        const AgentSettings(
-          endpoint: 'https://fixture.example/v1',
-          model: 'fixture',
-          models: [
-            AgentModelConfig(
-              id: 'fixture',
-              reasoningEfforts: [AgentReasoningEffort.medium],
-              defaultReasoningEffort: AgentReasoningEffort.medium,
-            ),
-          ],
-        ),
+      await _press(tester, _compress);
+      final reviewed = _text(tester);
+      await _press(tester, _continue);
+      final result = fixture.results.single!;
+      final saved = ConversationArchive.decode(fixture.storage.source!);
+      expect(result.conversationId, saved.conversations.single.id);
+      expect(saved.conversations.single.sources.single.text, reviewed);
+      expect(fixture.starts, [result.conversationId]);
+      expect(fixture.repository.conversations, hasLength(1));
+      expect(fixture.opened, isEmpty);
+      expect(find.byType(SchoolHtmlImportPage), findsNothing);
+      expect(find.text('Open source'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets(
+    'failed route handoff keeps the source and returns success once on retry',
+    (tester) async {
+      final fixture = await _mount(
+        tester,
+        inRoute: true,
+        observeConversationOpen: false,
       );
-      await app.agent.setEnabled(true);
-      final started = <String>[];
-      await tester.pumpWidget(
-        WorkspaceHarness(
-          provider: app,
-          home: SchoolHtmlImportPage(
-            initialContent: '<table><tr><td>Reviewed Algebra</td></tr></table>',
-            initialTitle: 'School source',
-            contentPreparer: prepareSchoolImportContentForTest,
-            handoffController: SchoolWebHandoffController(
-              repository: app.agent.conversations,
-              readSettings: () => app.agent.settings,
-              initialize: app.agent.initialize,
-              startHandoff: (id) async => started.add(id),
-              readGeneration: () => app.agent.mutations.generation,
+      await _press(tester, _compress);
+      final reviewed = _text(tester);
+      fixture.storage.fail = true;
+      await _press(tester, _continue);
+      expect(fixture.results, isEmpty);
+      expect(fixture.starts, isEmpty);
+      expect(_text(tester), reviewed);
+      fixture.storage.fail = false;
+      await fixture.repository.load();
+      await tester.ensureVisible(_continue);
+      await tester.tap(_continue);
+      await tester.tap(_continue, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(fixture.results, hasLength(1));
+      expect(fixture.repository.conversations, hasLength(1));
+      expect(fixture.starts, [fixture.results.single!.conversationId]);
+      expect(find.text('Open source'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'return during handoff initialization produces no success result',
+    (tester) async {
+      final initialized = Completer<void>();
+      final fixture = await _mount(
+        tester,
+        inRoute: true,
+        observeConversationOpen: false,
+        initializeHandoff: () => initialized.future,
+      );
+      await _press(tester, _compress);
+      await tester.ensureVisible(_continue);
+      await tester.tap(_continue);
+      await tester.pump();
+      final l = AppLocalizations.of(tester.element(_editor));
+      await tester.tap(find.text(l.schoolHtmlImportReturnToWebPage));
+      await tester.pumpAndSettle();
+      initialized.complete();
+      await tester.pumpAndSettle();
+      expect(fixture.results, [null]);
+      expect(fixture.repository.conversations, isEmpty);
+      expect(fixture.starts, isEmpty);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'accepted source handoff completes its own covered route and retains a newer editor',
+    (tester) async {
+      final fixture = await _mount(
+        tester,
+        inRoute: true,
+        observeConversationOpen: false,
+      );
+      await _press(tester, _compress);
+      final saving = Completer<void>();
+      final saved = Completer<void>();
+      fixture.storage.beforeSave = () async {
+        saving.complete();
+        await saved.future;
+      };
+      final editorController = TextEditingController();
+      final editorFocus = FocusNode();
+      addTearDown(editorController.dispose);
+      addTearDown(editorFocus.dispose);
+      final navigator = Navigator.of(tester.element(_editor));
+      await tester.ensureVisible(_continue);
+      await tester.tap(_continue);
+      await saving.future;
+      navigator.push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => Scaffold(
+            body: TextField(
+              key: const ValueKey('newer-school-editor'),
+              controller: editorController,
+              focusNode: editorFocus,
             ),
           ),
         ),
       );
       await tester.pumpAndSettle();
-      await _press(tester, _compress);
-      final reviewed = _text(tester);
-      await _press(tester, _continue);
-      expect(find.byType(AgentPage), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const ValueKey('newer-school-editor')),
+        'Retain this draft',
+      );
+      saved.complete();
+      await tester.pumpAndSettle();
       expect(
-        find.byKey(const ValueKey('agent-composer')).hitTestable(),
+        find.byKey(const ValueKey('newer-school-editor')).hitTestable(),
         findsOneWidget,
       );
-      expect(started, [app.agent.conversations.selectedId]);
-      await tester.tap(find.byType(BackButton));
-      await tester.pumpAndSettle();
-      expect(_text(tester), reviewed);
-      expect(app.agent.conversations.conversations, hasLength(1));
-      await tester.pumpWidget(const SizedBox());
+      expect(editorController.text, 'Retain this draft');
+      expect(editorFocus.hasFocus, isTrue);
+      expect(
+        find.byType(SchoolHtmlImportPage, skipOffstage: false),
+        findsNothing,
+      );
+      expect(
+        fixture.results.single!.conversationId,
+        fixture.repository.conversations.single.id,
+      );
+      expect(fixture.starts, hasLength(1));
+      expect(tester.takeException(), isNull);
     },
-    variant: TargetPlatformVariant.only(TargetPlatform.windows),
   );
 
   for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {

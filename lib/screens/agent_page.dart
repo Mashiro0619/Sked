@@ -14,63 +14,147 @@ import '../agent/provider/provider.dart';
 import '../application/operation_contracts.dart';
 import '../l10n/app_localizations.dart';
 import '../models/agent_settings.dart';
+import '../controllers/settings_view_state.dart';
 import '../widgets/desktop_window_host.dart';
+import '../widgets/workspace_frame.dart';
+import '../widgets/workspace_navigation.dart';
 import 'agent_settings_page.dart';
 
-/// A full conversation workspace using the same application-owned repository
-/// and runtime as the desktop pane. Popping it does not stop a run.
-class AgentPage extends StatelessWidget {
-  const AgentPage({super.key});
+typedef AgentWorkspaceActivator = Future<bool> Function({
+  String? conversationId,
+  bool Function()? isCurrent,
+});
 
-  static final _openRoutes = Expando<Future<void>>('Agent workspace route');
+/// Retained main content backed by the application-owned repository and runtime.
+/// Selecting another destination never stops a run or recreates the repository.
+class AgentPage extends StatefulWidget {
+  const AgentPage({
+    super.key,
+    this.embedded = false,
+    this.active = true,
+    this.interactive = true,
+    this.onOpenSettings,
+    this.settingsFocusNode,
+  });
 
-  static bool isOpen(AgentApplication application) =>
-      _openRoutes[application] != null;
+  final bool embedded;
+  final bool active;
+  final bool interactive;
+  final VoidCallback? onOpenSettings;
+  final FocusNode? settingsFocusNode;
 
-  static Future<void> open(BuildContext context) async {
-    final application = context.read<AgentApplication>();
-    if (!application.settings.enabled) return;
-    final existing = _openRoutes[application];
-    if (existing != null) return existing;
-    final route = Navigator.of(context, rootNavigator: true).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => ChangeNotifierProvider<AgentApplication>.value(
-          value: application,
-          child: const AgentPage(),
-        ),
-      ),
-    );
-    _openRoutes[application] = route;
-    try {
-      await route;
-    } finally {
-      if (identical(_openRoutes[application], route)) {
-        _openRoutes[application] = null;
+  static final _workspaceActivators = Expando<AgentWorkspaceActivator>(
+    'Agent shell activation',
+  );
+
+  /// Only the root shell owns destination selection. Captured route scopes keep
+  /// the same application identity and can await that shell's acknowledgement.
+  static VoidCallback registerWorkspaceActivator(
+    AgentApplication application,
+    AgentWorkspaceActivator activate,
+  ) {
+    _workspaceActivators[application] = activate;
+    return () {
+      if (identical(_workspaceActivators[application], activate)) {
+        _workspaceActivators[application] = null;
       }
-    }
+    };
   }
 
-  /// Every product entry uses the same full conversation workspace.
-  static Future<void> openConversation(BuildContext context) => open(context);
+  /// Waits for central-content activation or invalidation of its shell/feature.
+  /// It never waits for a separate conversation route to close.
+  static Future<void> open(BuildContext context, {String? conversationId}) {
+    if (!context.mounted) return Future.value();
+    return _openApplication(
+      context.read<AgentApplication>(),
+      conversationId: conversationId,
+      isCurrent: () => context.mounted,
+    );
+  }
+
+  /// A completed source task can retire its own route before requesting the
+  /// destination through the captured application identity.
+  static Future<void> openApplication(
+    AgentApplication application, {
+    String? conversationId,
+  }) => _openApplication(application, conversationId: conversationId);
+
+  static Future<void> _openApplication(
+    AgentApplication application, {
+    String? conversationId,
+    bool Function()? isCurrent,
+  }) async {
+    final activate = _workspaceActivators[application];
+    if (activate == null || !application.settings.enabled) return;
+    // Register the entire request with the shell before selection can wait on
+    // storage. A newer destination or disposal must also cancel this phase.
+    await activate(conversationId: conversationId, isCurrent: isCurrent);
+  }
+
+  static Future<void> openConversation(
+    BuildContext context, {
+    String? conversationId,
+  }) => open(context, conversationId: conversationId);
+
+  @override
+  State<AgentPage> createState() => _AgentPageState();
+}
+
+class _AgentPageState extends State<AgentPage> {
+  final _pane = WorkspacePaneController();
+
+  @override
+  void dispose() {
+    _pane.dispose();
+    super.dispose();
+  }
+
+  Widget _workspace(
+    BuildContext context,
+    Widget content,
+    Widget Function(bool shrinkWrap) historyBuilder,
+  ) {
+    final settings = context.watch<SettingsViewState>();
+    return WorkspaceFrame(
+      key: const ValueKey('agent-workspace-frame'),
+      controller: _pane,
+      active: widget.active,
+      resourcesCollapsed: settings.homeWorkspaceNavigationCollapsed,
+      panelDisplayMode: settings.workspacePanelDisplayMode,
+      canvas: content,
+      resources: Builder(
+        builder: (context) {
+          final resources = WorkspaceResourceScope.maybeOf(context);
+          return WorkspaceResourcePanel(
+            title: AppLocalizations.of(context).agentConversations,
+            resourceIcon: Icons.history,
+            contentBuilder: historyBuilder,
+            onOpenResources:
+                resources?.canExpandInline == false &&
+                    resources?.drawerOpen != true
+                ? resources?.open
+                : null,
+            onSettings: widget.interactive ? widget.onOpenSettings : null,
+            settingsFocusNode: widget.settingsFocusNode,
+            children: const [],
+          );
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final application = context.watch<AgentApplication>();
-    final route = ModalRoute.of(context);
-    if (!application.settings.enabled &&
-        route?.isCurrent == true &&
-        route?.isFirst == false) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (context.mounted &&
-            !application.settings.enabled &&
-            route?.isCurrent == true) {
-          Navigator.of(context).maybePop();
-        }
-      });
-    }
-    return Scaffold(
-      body: SafeArea(child: const AgentConversationHost(fullWorkspace: true)),
+    if (!application.settings.enabled) return const SizedBox.shrink();
+    final host = AgentConversationHost(
+      fullWorkspace: true,
+      embedded: widget.embedded,
+      active: widget.active,
+      interactive: widget.interactive,
+      workspaceLayoutBuilder: widget.embedded ? _workspace : null,
     );
+    return widget.embedded ? host : Scaffold(body: SafeArea(child: host));
   }
 }
 
@@ -81,9 +165,15 @@ class AgentConversationHost extends StatefulWidget {
     super.key,
     this.fullWorkspace = false,
     this.active = true,
+    this.interactive = true,
+    this.embedded = false,
+    this.workspaceLayoutBuilder,
   });
   final bool fullWorkspace;
   final bool active;
+  final bool interactive;
+  final bool embedded;
+  final AgentWorkspaceLayoutBuilder? workspaceLayoutBuilder;
 
   @override
   State<AgentConversationHost> createState() => _AgentConversationHostState();
@@ -129,7 +219,7 @@ class _AgentConversationHostState extends State<AgentConversationHost> {
   }
 
   Future<void> _retryInitialization() async {
-    if (_retrying) return;
+    if (_retrying || !widget.active || !widget.interactive) return;
     setState(() => _retrying = true);
     try {
       await context.read<AgentApplication>().initialize();
@@ -141,12 +231,12 @@ class _AgentConversationHostState extends State<AgentConversationHost> {
   }
 
   Future<void> _openSettings() async {
-    if (_settingsOpen) return;
-    _settingsOpen = true;
+    if (_settingsOpen || !widget.active || !widget.interactive) return;
+    setState(() => _settingsOpen = true);
     try {
       await AgentSettingsPage.open(context);
     } finally {
-      _settingsOpen = false;
+      if (mounted) setState(() => _settingsOpen = false);
     }
   }
 
@@ -233,17 +323,24 @@ class _AgentConversationHostState extends State<AgentConversationHost> {
         visualDensity: VisualDensity.standard,
         tapTargetSize: MaterialTapTargetSize.padded,
       );
-      return Column(
+      final content = Column(
         children: [
           Padding(
             key: const ValueKey('agent-initialization-header'),
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             child: Row(
               children: [
-                BackButton(
-                  key: const ValueKey('agent-initialization-back'),
-                  style: navigationButtonStyle,
-                ),
+                if (widget.embedded)
+                  Builder(
+                    builder: (context) =>
+                        workspaceMainNavigationButton(context) ??
+                        const SizedBox.shrink(),
+                  )
+                else
+                  BackButton(
+                    key: const ValueKey('agent-initialization-back'),
+                    style: navigationButtonStyle,
+                  ),
                 Expanded(
                   child: DesktopDragRegion(
                     child: Text(
@@ -258,7 +355,9 @@ class _AgentConversationHostState extends State<AgentConversationHost> {
                   key: const ValueKey('agent-initialization-settings'),
                   tooltip: l.agentSettingsTitle,
                   style: navigationButtonStyle,
-                  onPressed: () => unawaited(_openSettings()),
+                  onPressed: widget.interactive
+                      ? () => unawaited(_openSettings())
+                      : null,
                   icon: const Icon(Icons.settings_outlined),
                 ),
                 const DesktopCaptionSpacer(),
@@ -268,16 +367,28 @@ class _AgentConversationHostState extends State<AgentConversationHost> {
           Expanded(child: status),
         ],
       );
+      return widget.workspaceLayoutBuilder?.call(
+            context,
+            content,
+            (_) => const SizedBox.shrink(),
+          ) ??
+          content;
     }
     return AgentConversationView(
       repository: application.conversations,
       showTitle: false,
       fullWorkspace: widget.fullWorkspace,
+      embedded: widget.embedded,
+      active: widget.active,
+      interactive: widget.interactive && !_settingsOpen,
+      workspaceLayoutBuilder: widget.workspaceLayoutBuilder,
       modelPickerBuilder: (conversation, _, layout) => AgentModelPicker(
         layoutBuilder: layout,
         conversationId: conversation.id,
         delegate: application.runtime,
         enabled: !conversation.archived,
+        active: widget.active,
+        interactive: widget.interactive && !_settingsOpen,
       ),
       canSendToModel: (id) =>
           agentConversationModelReady(application.runtime.state.value, id),

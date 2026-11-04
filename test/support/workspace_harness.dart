@@ -149,6 +149,7 @@ class WorkspaceHarness extends StatefulWidget {
     this.home,
     this.developerUiPreferences,
     this.layoutPreferences,
+    this.agentApplication,
     this.textScale = 1,
     this.textDirection,
     this.locale = const Locale('en'),
@@ -160,6 +161,7 @@ class WorkspaceHarness extends StatefulWidget {
   final Widget? home;
   final DeveloperUiPreferences? developerUiPreferences;
   final DesktopLayoutPreferences? layoutPreferences;
+  final AgentApplication? agentApplication;
   final double? textScale;
   final TextDirection? textDirection;
   final Locale locale;
@@ -212,6 +214,8 @@ class _WorkspaceHarnessState extends State<WorkspaceHarness> {
           ),
         ),
         ...AppScope.providersFor(provider),
+        if (widget.agentApplication case final application?)
+          ChangeNotifierProvider<AgentApplication>.value(value: application),
         // Explicit preview preferences identify the historical layout fixture.
         // Product and Agent tests use the application-owned Agent instead.
         if (developerUiPreferences != null)

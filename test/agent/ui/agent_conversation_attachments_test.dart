@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
@@ -7,6 +9,52 @@ import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'agent_ui_test_support.dart';
 
 void main() {
+  for (final changesActivity in [true, false]) {
+    testWidgets(
+      'text picker expires after ${changesActivity ? 'activity' : 'interaction'} is hidden and restored',
+      (tester) async {
+        addTearDown(tester.view.reset);
+        final repository = ConversationRepository(storage: UiMemoryStorage());
+        await repository.load();
+        await repository.create(title: 'Retained source draft');
+        final delegate = UiDelegate(repository);
+        final picker = Completer<PickedTextFile?>();
+        addTearDown(repository.dispose);
+        addTearDown(delegate.state.dispose);
+        Widget view({bool active = true, bool interactive = true}) =>
+            AgentConversationView(
+              repository: repository,
+              delegate: delegate,
+              active: active,
+              interactive: interactive,
+              readDatasetGeneration: () => 'same-data',
+              pickAttachment: () => picker.future,
+            );
+        await mountAgentUi(tester, view());
+        final retainedState = tester.state(find.byType(AgentConversationView));
+        await tester.tap(find.byKey(const ValueKey('agent-attach-file')));
+        await tester.pump();
+        await mountAgentUi(
+          tester,
+          view(active: !changesActivity, interactive: changesActivity),
+        );
+        await mountAgentUi(tester, view());
+        expect(
+          tester.state(find.byType(AgentConversationView)),
+          same(retainedState),
+        );
+        picker.complete(
+          const PickedTextFile(name: 'late.txt', text: 'Expired source'),
+        );
+        await tester.pumpAndSettle();
+        expect(repository.selected!.sources, isEmpty);
+        expect(delegate.calls, isEmpty);
+        expect(repository.canWrite, isTrue);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets(
     'attachment cancellation sends nothing and failed storage retains an explicit retry across reopening',
     (tester) async {

@@ -36,6 +36,48 @@ const double _compactRailWidth = 80;
 // overflow in the constrained leading/selection row.
 const double _permanentDrawerWidth = 240;
 
+String _destinationLabel(AppLocalizations l10n, int index) => switch (index) {
+  0 => l10n.studentTimetable,
+  1 => l10n.generalSchedule,
+  _ => l10n.agentTitle,
+};
+
+Icon _destinationIcon(int index, {bool selected = false, Color? color}) => Icon(
+  switch ((index, selected)) {
+    (0, false) => Icons.school_outlined,
+    (0, true) => Icons.school,
+    (1, false) => Icons.event_note_outlined,
+    (1, true) => Icons.event_note,
+    _ => Icons.chat_bubble_outline,
+  },
+  key: ValueKey(
+    'adaptive-shell-${switch (index) {
+      0 => 'student',
+      1 => 'general',
+      _ => 'agent',
+    }}-${selected ? 'selected' : 'entry'}',
+  ),
+  color: color,
+);
+
+Widget _railDestinationIcon(
+  AppLocalizations l10n,
+  int index, {
+  bool selected = false,
+  required bool enabled,
+}) {
+  final icon = _destinationIcon(index, selected: selected);
+  return index == 2
+      ? Semantics(
+          button: true,
+          enabled: enabled,
+          label: l10n.agentTitle,
+          tooltip: l10n.agentTitle,
+          child: icon,
+        )
+      : icon;
+}
+
 /// The persistent, adaptive root shell shown after recovery and onboarding.
 ///
 /// Both workspaces remain mounted so local page controllers, scroll positions,
@@ -71,7 +113,17 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
   bool _settingsOpen = false;
   bool _modeSwitchInFlight = false;
   bool _navigationToggleInFlight = false;
-  bool _agentOpen = false;
+  bool _agentSelected = false;
+  AgentApplication? _agentApplication;
+  int _agentNavigationRevision = 0;
+  bool _pendingAgentNavigation = false;
+  bool _agentNavigationScheduled = false;
+  VoidCallback? _unregisterAgentActivator;
+  final _agentActivationWaiters = <Completer<bool>>[];
+  int _agentRequestEpoch = 0;
+  bool _agentActivationPrepared = false;
+  bool _issuingAgentActivation = false;
+  bool _agentActivationCheckScheduled = false;
   Object? _navigationLayoutIdentity;
   late AppMode _committedMode;
   final _workspaceStackKey = GlobalKey<_AdaptiveWorkspaceStackState>();
@@ -84,9 +136,192 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
 
   @override
   void dispose() {
+    _unregisterAgentActivator?.call();
+    _cancelAgentActivation();
+    _agentApplication?.removeListener(_agentChanged);
     _studentWeekShortcutFocusNode.dispose();
     _settingsFocusNode.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    ModalRoute.isCurrentOf(context);
+    final application = context.read<AgentApplication?>();
+    if (identical(application, _agentApplication)) {
+      if (_pendingAgentNavigation) _scheduleAgentNavigation();
+      _checkAgentActivation();
+      return;
+    }
+    _unregisterAgentActivator?.call();
+    _cancelAgentActivation();
+    _agentApplication?.removeListener(_agentChanged);
+    _agentApplication = application;
+    _agentNavigationRevision = application?.navigationRevision ?? 0;
+    _pendingAgentNavigation = false;
+    application?.addListener(_agentChanged);
+    _unregisterAgentActivator = application == null
+        ? null
+        : AgentPage.registerWorkspaceActivator(
+            application,
+            _requestAgentActivation,
+          );
+    if (application?.settings.enabled != true) _agentSelected = false;
+  }
+
+  void _agentChanged() {
+    if (_agentApplication?.settings.enabled != true) {
+      _cancelAgentActivation();
+      if (_agentSelected) _scheduleAgentNavigation();
+      return;
+    }
+    final revision = _agentApplication?.navigationRevision ?? 0;
+    if (revision != _agentNavigationRevision) {
+      _agentNavigationRevision = revision;
+      if (!_issuingAgentActivation) _cancelAgentActivation();
+      _pendingAgentNavigation = true;
+    }
+    if (_pendingAgentNavigation ||
+        (_agentSelected && _agentApplication?.settings.enabled != true)) {
+      _scheduleAgentNavigation();
+    }
+  }
+
+  Future<bool> _requestAgentActivation({
+    String? conversationId,
+    bool Function()? isCurrent,
+  }) {
+    final application = _agentApplication;
+    if (!mounted ||
+        application?.settings.enabled != true ||
+        isCurrent?.call() == false) {
+      return Future.value(false);
+    }
+    _cancelAgentActivation();
+    final epoch = _agentRequestEpoch;
+    final waiter = Completer<bool>();
+    _agentActivationWaiters.add(waiter);
+    unawaited(
+      _prepareAgentActivation(
+        application!,
+        epoch,
+        waiter,
+        conversationId,
+        isCurrent,
+      ),
+    );
+    return waiter.future;
+  }
+
+  Future<void> _prepareAgentActivation(
+    AgentApplication application,
+    int epoch,
+    Completer<bool> waiter,
+    String? conversationId,
+    bool Function()? isCurrent,
+  ) async {
+    try {
+      if (conversationId != null) {
+        await application.conversations.select(conversationId);
+      }
+      if (!mounted ||
+          epoch != _agentRequestEpoch ||
+          !identical(application, _agentApplication) ||
+          !application.settings.enabled ||
+          isCurrent?.call() == false) {
+        _agentActivationWaiters.remove(waiter);
+        if (!waiter.isCompleted) waiter.complete(false);
+        return;
+      }
+      _agentActivationPrepared = true;
+      _issuingAgentActivation = true;
+      try {
+        application.requestShowConversation();
+      } finally {
+        _issuingAgentActivation = false;
+      }
+    } catch (error, stack) {
+      _agentActivationWaiters.remove(waiter);
+      if (!waiter.isCompleted) waiter.completeError(error, stack);
+    }
+  }
+
+  void _cancelAgentActivation() {
+    _agentRequestEpoch++;
+    _pendingAgentNavigation = false;
+    _agentActivationPrepared = false;
+    _completeAgentActivation(false);
+  }
+
+  void _completeAgentActivation(bool activated) {
+    final waiters = List.of(_agentActivationWaiters);
+    _agentActivationWaiters.clear();
+    for (final waiter in waiters) {
+      if (!waiter.isCompleted) waiter.complete(activated);
+    }
+  }
+
+  void _checkAgentActivation() {
+    if (_agentActivationWaiters.isEmpty ||
+        !_agentActivationPrepared ||
+        _agentActivationCheckScheduled) {
+      return;
+    }
+    _agentActivationCheckScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _agentActivationCheckScheduled = false;
+      if (!mounted || _agentApplication?.settings.enabled != true) {
+        _cancelAgentActivation();
+        return;
+      }
+      if (!_agentSelected || !_agentActivationPrepared) return;
+      if (!widget.enabled ||
+          uiCommandBusy ||
+          _modeSwitchInFlight ||
+          _navigationToggleInFlight ||
+          _settingsOpen ||
+          ModalRoute.of(context)?.isCurrent == false) {
+        return;
+      }
+      if (_workspaceStackKey.currentState?.selectionSettled == true) {
+        _completeAgentActivation(true);
+      } else {
+        _checkAgentActivation();
+      }
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  void _scheduleAgentNavigation() {
+    if (!mounted || _agentNavigationScheduled) return;
+    _agentNavigationScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _agentNavigationScheduled = false;
+      if (!mounted) return;
+      if (_agentApplication?.settings.enabled != true) {
+        _pendingAgentNavigation = false;
+        _cancelAgentActivation();
+        if (_agentSelected) setState(() => _agentSelected = false);
+        return;
+      }
+      if (!_pendingAgentNavigation ||
+          !widget.enabled ||
+          uiCommandBusy ||
+          _modeSwitchInFlight ||
+          _navigationToggleInFlight ||
+          _settingsOpen ||
+          ModalRoute.of(context)?.isCurrent == false) {
+        return;
+      }
+      _pendingAgentNavigation = false;
+      if (!_agentSelected) {
+        FocusManager.instance.primaryFocus?.unfocus();
+        setState(() => _agentSelected = true);
+      }
+      _checkAgentActivation();
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   @override
@@ -110,23 +345,38 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
         oldWidget.activeMode != widget.activeMode) {
       _committedMode = widget.activeMode;
     }
+    if (_pendingAgentNavigation) _scheduleAgentNavigation();
+    _checkAgentActivation();
   }
 
   AppMode get _effectiveMode => _committedMode;
 
-  int get _selectedIndex => _effectiveMode == AppMode.student ? 0 : 1;
+  int get _selectedIndex =>
+      _agentSelected ? 2 : (_effectiveMode == AppMode.student ? 0 : 1);
 
   Future<void> _selectWorkspace(int index) async {
     if (!widget.enabled ||
         uiCommandBusy ||
         _navigationToggleInFlight ||
-        _agentOpen ||
-        _settingsOpen ||
-        index == _selectedIndex) {
+        _settingsOpen) {
+      return;
+    }
+    if (index == 2) {
+      if (index == _selectedIndex) return;
+      await _openAgent();
       return;
     }
     final target = index == 0 ? AppMode.student : AppMode.general;
+    if (!widget.workspace.isEnabled(target)) return;
+    // Clicking the already selected business destination is still a newer
+    // navigation intent than a conversation selection waiting on storage.
+    _cancelAgentActivation();
+    if (index == _selectedIndex) return;
     FocusManager.instance.primaryFocus?.unfocus();
+    if (target == _committedMode) {
+      setState(() => _agentSelected = false);
+      return;
+    }
     _modeSwitchInFlight = true;
     try {
       final saved = await runUiCommand(
@@ -134,10 +384,15 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
         command: () => widget.workspaces.switchMode(target),
       );
       if (saved && mounted) {
-        setState(() => _committedMode = target);
+        setState(() {
+          _committedMode = target;
+          _agentSelected = false;
+        });
       }
     } finally {
       _modeSwitchInFlight = false;
+      if (_pendingAgentNavigation) _scheduleAgentNavigation();
+      _checkAgentActivation();
     }
   }
 
@@ -145,7 +400,6 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
     if (!widget.enabled ||
         uiCommandBusy ||
         _navigationToggleInFlight ||
-        _agentOpen ||
         _settingsOpen ||
         !mounted) {
       return;
@@ -154,7 +408,11 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
     try {
       await widget.onOpenSettings();
     } finally {
-      if (mounted) setState(() => _settingsOpen = false);
+      if (mounted) {
+        setState(() => _settingsOpen = false);
+        if (_pendingAgentNavigation) _scheduleAgentNavigation();
+        _checkAgentActivation();
+      }
     }
   }
 
@@ -162,7 +420,6 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
     if (!widget.enabled ||
         uiCommandBusy ||
         _navigationToggleInFlight ||
-        _agentOpen ||
         _settingsOpen ||
         !mounted) {
       return;
@@ -177,7 +434,11 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
             .updateHomeWorkspaceNavigationCollapsed(target),
       );
     } finally {
-      if (mounted) setState(() => _navigationToggleInFlight = false);
+      if (mounted) {
+        setState(() => _navigationToggleInFlight = false);
+        if (_pendingAgentNavigation) _scheduleAgentNavigation();
+        _checkAgentActivation();
+      }
     }
   }
 
@@ -192,25 +453,10 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
         uiCommandBusy ||
         _navigationToggleInFlight ||
         _settingsOpen ||
-        _agentOpen ||
         application?.settings.enabled != true) {
       return;
     }
-    final returnFocus = FocusManager.instance.primaryFocus;
-    FocusManager.instance.primaryFocus?.unfocus();
-    setState(() => _agentOpen = true);
-    try {
-      await AgentPage.open(context);
-    } finally {
-      if (mounted) {
-        setState(() => _agentOpen = false);
-        if (returnFocus?.context?.mounted == true &&
-            returnFocus!.canRequestFocus &&
-            ModalRoute.of(context)?.isCurrent != false) {
-          returnFocus.requestFocus();
-        }
-      }
-    }
+    await AgentPage.open(context);
   }
 
   void _openAgentFromNavigation() => unawaited(_openAgent());
@@ -234,18 +480,31 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
 
   @override
   Widget build(BuildContext context) {
+    final agentSnapshot = context
+        .select<
+          AgentApplication?,
+          ({AgentApplication? application, bool enabled})
+        >(
+          (application) => (
+            application: application,
+            enabled: application?.settings.enabled == true,
+          ),
+        );
+    final agentEnabled = agentSnapshot.enabled;
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final agentEnabled = context.select<AgentApplication?, bool>(
-          (application) => application?.settings.enabled == true,
-        );
+        final destinationIndices = [
+          if (widget.workspace.isEnabled(AppMode.student)) 0,
+          if (widget.workspace.isEnabled(AppMode.general)) 1,
+          if (agentEnabled) 2,
+        ];
         final compact = width < _compactNavigationBreakpoint;
         final supportsCollapsibleNavigation =
             width >= _permanentDrawerBreakpoint;
         final hideWorkspaceNavigation =
             widget.settings.hideHomeWorkspaceNavigation ||
-            widget.workspace.enabledWorkspaces.length < 2 ||
+            destinationIndices.length < 2 ||
             (WorkbenchChromeMetrics.of(context).desktop ||
                 (width >= AppBreakpoints.expanded &&
                     MediaQuery.textScalerOf(context).scale(14) / 14 <= 1.5));
@@ -261,16 +520,23 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
             : 'rail-large';
         _prepareNavigationLayout(navigationLayoutIdentity);
         final selectedIndex = _selectedIndex;
+        final navigationSelectedIndex = math.max(
+          0,
+          destinationIndices.indexOf(selectedIndex),
+        );
+        void selectNavigationDestination(int index) {
+          unawaited(_selectWorkspace(destinationIndices[index]));
+        }
+
         final showCompactNavigationBar = compact && !hideWorkspaceNavigation;
         final showWorkspaceSettingsAction = compact || hideWorkspaceNavigation;
         final compactSettingsEnabled =
             widget.enabled &&
             !uiCommandBusy &&
             !_navigationToggleInFlight &&
-            !_agentOpen &&
             !_settingsOpen;
         final workspaceStack = WorkspaceNavigationScope(
-          selectedMode: _effectiveMode,
+          selectedMode: _agentSelected ? null : _effectiveMode,
           enabled: compactSettingsEnabled,
           integrated:
               WorkbenchChromeMetrics.of(context).desktop ||
@@ -279,6 +545,7 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
           onSelect: _selectFromNavigation,
           onToggleResources: _toggleResourcesFromNavigation,
           agentEnabled: agentEnabled,
+          agentSelected: _agentSelected,
           onOpenAgent: _openAgentFromNavigation,
           child: _AdaptiveWorkspaceStack(
             key: _workspaceStackKey,
@@ -298,6 +565,20 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
                     showSettingsAction: showWorkspaceSettingsAction,
                     settingsEnabled: compactSettingsEnabled,
                     settingsAction: showWorkspaceSettingsAction
+                        ? _openSettingsFromWorkspace
+                        : null,
+                    settingsFocusNode: showWorkspaceSettingsAction && active
+                        ? _settingsFocusNode
+                        : null,
+                  ),
+            agentBuilder: (active, interactive) => !agentEnabled
+                ? const SizedBox.shrink()
+                : AgentPage(
+                    key: const ValueKey('agent-home'),
+                    embedded: true,
+                    active: active,
+                    interactive: interactive && compactSettingsEnabled,
+                    onOpenSettings: showWorkspaceSettingsAction
                         ? _openSettingsFromWorkspace
                         : null,
                     settingsFocusNode: showWorkspaceSettingsAction && active
@@ -329,32 +610,33 @@ class _AdaptiveSkedShellState extends State<AdaptiveSkedShell>
             ? const SizedBox.shrink()
             : compact
             ? _CompactWorkspaceNavigation(
-                selectedIndex: selectedIndex,
+                selectedIndex: navigationSelectedIndex,
+                destinationIndices: destinationIndices,
                 busy: uiCommandBusy,
-                enabled: widget.enabled,
-                onDestinationSelected: _selectWorkspace,
+                enabled: compactSettingsEnabled,
+                onDestinationSelected: selectNavigationDestination,
               )
             : !supportsCollapsibleNavigation
             ? _WorkspaceRail(
-                selectedIndex: selectedIndex,
+                selectedIndex: navigationSelectedIndex,
+                destinationIndices: destinationIndices,
                 busy: uiCommandBusy,
-                enabled: widget.enabled,
+                enabled: compactSettingsEnabled,
                 settingsBusy: _settingsOpen,
-                onDestinationSelected: _selectWorkspace,
+                onDestinationSelected: selectNavigationDestination,
                 onOpenSettings: _openSettings,
-                onOpenAgent: agentEnabled ? _openAgentFromNavigation : null,
                 settingsFocusNode: _settingsFocusNode,
               )
             : _ExpandableWorkspaceRail(
                 expanded: !navigationCollapsed,
                 interactionBlocked: _navigationToggleInFlight,
-                selectedIndex: selectedIndex,
+                selectedIndex: navigationSelectedIndex,
+                destinationIndices: destinationIndices,
                 busy: uiCommandBusy,
-                enabled: widget.enabled,
+                enabled: compactSettingsEnabled,
                 settingsBusy: _settingsOpen,
-                onDestinationSelected: _selectWorkspace,
+                onDestinationSelected: selectNavigationDestination,
                 onOpenSettings: _openSettings,
-                onOpenAgent: agentEnabled ? _openAgentFromNavigation : null,
                 settingsFocusNode: _settingsFocusNode,
                 collapseToggleTooltip: navigationCollapsed
                     ? AppLocalizations.of(context).expandWorkspaceNavigation
@@ -420,6 +702,7 @@ class _AdaptiveWorkspaceStack extends StatefulWidget {
     required this.studentPreferredFocusNode,
     required this.studentBuilder,
     required this.generalBuilder,
+    required this.agentBuilder,
   });
 
   final int selectedIndex;
@@ -428,6 +711,7 @@ class _AdaptiveWorkspaceStack extends StatefulWidget {
   final FocusNode studentPreferredFocusNode;
   final Widget Function(bool active, bool interactive) studentBuilder;
   final Widget Function(bool active, bool interactive) generalBuilder;
+  final Widget Function(bool active, bool interactive) agentBuilder;
 
   @override
   State<_AdaptiveWorkspaceStack> createState() =>
@@ -447,6 +731,8 @@ class _AdaptiveWorkspaceStackState extends State<_AdaptiveWorkspaceStack>
   bool _transitioning = false;
   bool _reversing = false;
   SkedMotionPolicy? _motion;
+  bool get selectionSettled =>
+      !_transitioning && _paintIndex == widget.selectedIndex;
 
   @override
   void initState() {
@@ -644,6 +930,7 @@ class _AdaptiveWorkspaceStackState extends State<_AdaptiveWorkspaceStack>
         children: [
           _slot(index: 0, childBuilder: widget.studentBuilder),
           _slot(index: 1, childBuilder: widget.generalBuilder),
+          _slot(index: 2, childBuilder: widget.agentBuilder),
         ],
       ),
     );
@@ -898,12 +1185,14 @@ class _AdaptiveNavigationFocusBridgeState
 class _CompactWorkspaceNavigation extends StatelessWidget {
   const _CompactWorkspaceNavigation({
     required this.selectedIndex,
+    required this.destinationIndices,
     required this.busy,
     required this.enabled,
     required this.onDestinationSelected,
   });
 
   final int selectedIndex;
+  final List<int> destinationIndices;
   final bool busy;
   final bool enabled;
   final ValueChanged<int> onDestinationSelected;
@@ -954,11 +1243,13 @@ class _CompactWorkspaceNavigation extends StatelessWidget {
         .clamp(maxScaleFactor: 1.3);
     final labelWidth = math.max(
       1.0,
-      (constraints.maxWidth - MediaQuery.paddingOf(context).horizontal) / 2 -
+      (constraints.maxWidth - MediaQuery.paddingOf(context).horizontal) /
+              destinationIndices.length -
           16,
     );
     var labelHeight = 0.0;
-    for (final label in [l10n.studentTimetable, l10n.generalSchedule]) {
+    for (final index in destinationIndices) {
+      final label = _destinationLabel(l10n, index);
       for (final states in [
         <WidgetState>{},
         {WidgetState.selected},
@@ -1001,39 +1292,34 @@ class _CompactWorkspaceNavigation extends StatelessWidget {
       onDestinationSelected: busy || !enabled ? null : onDestinationSelected,
       labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       destinations: [
-        for (final destination in [
-          NavigationDestination(
-            key: const ValueKey('adaptive-shell-student-destination'),
-            icon: Transform.translate(
-              offset: const Offset(0, 4),
-              child: const Icon(Icons.school_outlined),
-            ),
-            selectedIcon: Transform.translate(
-              offset: const Offset(0, 4),
-              child: Icon(Icons.school, color: selectedColor),
-            ),
-            label: l10n.studentTimetable,
-            enabled: enabled && !busy,
-          ),
-          NavigationDestination(
-            key: const ValueKey('adaptive-shell-general-destination'),
-            icon: Transform.translate(
-              offset: const Offset(0, 4),
-              child: const Icon(Icons.event_note_outlined),
-            ),
-            selectedIcon: Transform.translate(
-              offset: const Offset(0, 4),
-              child: Icon(Icons.event_note, color: selectedColor),
-            ),
-            label: l10n.generalSchedule,
-            enabled: enabled && !busy,
-          ),
-        ])
+        for (final index in destinationIndices)
           // NavigationDestination leaves Text.textAlign unspecified. Center
           // each wrapped line, not just its full-width paragraph box.
           DefaultTextStyle.merge(
             textAlign: TextAlign.center,
-            child: destination,
+            child: NavigationDestination(
+              key: ValueKey(
+                'adaptive-shell-${switch (index) {
+                  0 => 'student',
+                  1 => 'general',
+                  _ => 'agent',
+                }}-destination',
+              ),
+              icon: Transform.translate(
+                offset: const Offset(0, 4),
+                child: _destinationIcon(index),
+              ),
+              selectedIcon: Transform.translate(
+                offset: const Offset(0, 4),
+                child: _destinationIcon(
+                  index,
+                  selected: true,
+                  color: selectedColor,
+                ),
+              ),
+              label: _destinationLabel(l10n, index),
+              enabled: enabled && !busy,
+            ),
           ),
       ],
     );
@@ -1087,12 +1373,12 @@ class _ExpandableWorkspaceRail extends StatelessWidget {
     required this.expanded,
     required this.interactionBlocked,
     required this.selectedIndex,
+    required this.destinationIndices,
     required this.busy,
     required this.enabled,
     required this.settingsBusy,
     required this.onDestinationSelected,
     required this.onOpenSettings,
-    this.onOpenAgent,
     required this.settingsFocusNode,
     required this.collapseToggleTooltip,
     required this.onToggleCollapsed,
@@ -1101,12 +1387,12 @@ class _ExpandableWorkspaceRail extends StatelessWidget {
   final bool expanded;
   final bool interactionBlocked;
   final int selectedIndex;
+  final List<int> destinationIndices;
   final bool busy;
   final bool enabled;
   final bool settingsBusy;
   final ValueChanged<int> onDestinationSelected;
   final VoidCallback onOpenSettings;
-  final VoidCallback? onOpenAgent;
   final FocusNode settingsFocusNode;
   final String collapseToggleTooltip;
   final VoidCallback onToggleCollapsed;
@@ -1134,30 +1420,32 @@ class _ExpandableWorkspaceRail extends StatelessWidget {
         enabled: enabled,
         settingsBusy: settingsBusy,
         onOpenSettings: onOpenSettings,
-        onOpenAgent: onOpenAgent,
         settingsFocusNode: settingsFocusNode,
       ),
       destinations: [
-        NavigationRailDestination(
-          icon: const Icon(Icons.school_outlined),
-          selectedIcon: const Icon(Icons.school),
-          label: Text(
-            l10n.studentTimetable,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+        for (final index in destinationIndices)
+          NavigationRailDestination(
+            padding:
+                WorkbenchChromeMetrics.isDesktop(Theme.of(context).platform)
+                ? null
+                : const EdgeInsets.symmetric(vertical: 2),
+            icon: _railDestinationIcon(l10n, index, enabled: enabled && !busy),
+            selectedIcon: _railDestinationIcon(
+              l10n,
+              index,
+              selected: true,
+              enabled: enabled && !busy,
+            ),
+            label: ExcludeSemantics(
+              excluding: index == 2,
+              child: Text(
+                _destinationLabel(l10n, index),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            disabled: !enabled || busy,
           ),
-          disabled: !enabled || busy,
-        ),
-        NavigationRailDestination(
-          icon: const Icon(Icons.event_note_outlined),
-          selectedIcon: const Icon(Icons.event_note),
-          label: Text(
-            l10n.generalSchedule,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          disabled: !enabled || busy,
-        ),
       ],
     );
     final motionAwareRail = motion.spatialAnimationsEnabled
@@ -1175,11 +1463,7 @@ class _ExpandableWorkspaceRail extends StatelessWidget {
         const railSpacing = 16.0;
         const destinationViewport = kMinInteractiveDimension + 16;
         final dividerExtent = 16 + (DividerTheme.of(context).space ?? 16);
-        final settingsExtent =
-            kMinInteractiveDimension +
-            12 +
-            dividerExtent +
-            (onOpenAgent == null ? 0 : kMinInteractiveDimension);
+        final settingsExtent = kMinInteractiveDimension + 12 + dividerExtent;
         final minimumHeight =
             brandExtent +
             railSpacing +
@@ -1188,7 +1472,7 @@ class _ExpandableWorkspaceRail extends StatelessWidget {
             MediaQuery.paddingOf(context).vertical;
         final height = math.max(constraints.maxHeight, minimumHeight);
         // NavigationRail only scrolls destinations. At extreme heights its
-        // fixed brand, Agent and settings actions need whole-rail scrolling.
+        // fixed brand and settings action need whole-rail scrolling.
         return SingleChildScrollView(
           key: const ValueKey('adaptive-shell-navigation-height-scroll'),
           primary: false,
@@ -1306,7 +1590,6 @@ class _ExpandableRailSettingsAction extends StatelessWidget {
     required this.enabled,
     required this.settingsBusy,
     required this.onOpenSettings,
-    this.onOpenAgent,
     required this.settingsFocusNode,
   });
 
@@ -1314,7 +1597,6 @@ class _ExpandableRailSettingsAction extends StatelessWidget {
   final bool enabled;
   final bool settingsBusy;
   final VoidCallback onOpenSettings;
-  final VoidCallback? onOpenAgent;
   final FocusNode settingsFocusNode;
 
   @override
@@ -1341,42 +1623,6 @@ class _ExpandableRailSettingsAction extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (onOpenAgent != null)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: SkedTooltip(
-                        message: l10n.agentTitle,
-                        child: InkWell(
-                          key: const ValueKey('adaptive-shell-agent-entry'),
-                          onTap: actionEnabled ? onOpenAgent : null,
-                          borderRadius: BorderRadius.circular(16),
-                          child: SizedBox(
-                            height: 48,
-                            child: Row(
-                              children: [
-                                const SizedBox(
-                                  width: _compactRailWidth - 24,
-                                  child: Icon(Icons.chat_bubble_outline),
-                                ),
-                                Expanded(
-                                  child: ClipRect(
-                                    child: Opacity(
-                                      opacity: labelOpacity,
-                                      alwaysIncludeSemantics: true,
-                                      child: Text(
-                                        l10n.agentTitle,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
                   const Padding(
                     padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
                     child: Divider(),
@@ -1456,22 +1702,22 @@ class _ExpandableRailSettingsAction extends StatelessWidget {
 class _WorkspaceRail extends StatelessWidget {
   const _WorkspaceRail({
     required this.selectedIndex,
+    required this.destinationIndices,
     required this.busy,
     required this.enabled,
     required this.settingsBusy,
     required this.onDestinationSelected,
     required this.onOpenSettings,
-    this.onOpenAgent,
     required this.settingsFocusNode,
   });
 
   final int selectedIndex;
+  final List<int> destinationIndices;
   final bool busy;
   final bool enabled;
   final bool settingsBusy;
   final ValueChanged<int> onDestinationSelected;
   final VoidCallback onOpenSettings;
-  final VoidCallback? onOpenAgent;
   final FocusNode settingsFocusNode;
 
   @override
@@ -1484,10 +1730,7 @@ class _WorkspaceRail extends StatelessWidget {
           SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final settingsExtent =
-                    kMinInteractiveDimension +
-                    20 +
-                    (onOpenAgent == null ? 0 : kMinInteractiveDimension);
+                final settingsExtent = kMinInteractiveDimension + 20;
                 const destinationViewport = kMinInteractiveDimension + 16;
                 const brandExtent = 48.0 + 24.0;
                 final minimumHeight = settingsExtent + destinationViewport;
@@ -1530,34 +1773,30 @@ class _WorkspaceRail extends StatelessWidget {
                                   )
                                 : null,
                             destinations: [
-                              NavigationRailDestination(
-                                icon: const Icon(Icons.school_outlined),
-                                selectedIcon: const Icon(Icons.school),
-                                label: _WorkspaceRailLabel(
-                                  label: l10n.studentTimetable,
+                              for (final index in destinationIndices)
+                                NavigationRailDestination(
+                                  icon: _railDestinationIcon(
+                                    l10n,
+                                    index,
+                                    enabled: enabled && !busy,
+                                  ),
+                                  selectedIcon: _railDestinationIcon(
+                                    l10n,
+                                    index,
+                                    selected: true,
+                                    enabled: enabled && !busy,
+                                  ),
+                                  label: ExcludeSemantics(
+                                    excluding: index == 2,
+                                    child: _WorkspaceRailLabel(
+                                      label: _destinationLabel(l10n, index),
+                                    ),
+                                  ),
+                                  disabled: !enabled || busy,
                                 ),
-                                disabled: !enabled || busy,
-                              ),
-                              NavigationRailDestination(
-                                icon: const Icon(Icons.event_note_outlined),
-                                selectedIcon: const Icon(Icons.event_note),
-                                label: _WorkspaceRailLabel(
-                                  label: l10n.generalSchedule,
-                                ),
-                                disabled: !enabled || busy,
-                              ),
                             ],
                           ),
                         ),
-                        if (onOpenAgent != null)
-                          IconButton(
-                            key: const ValueKey('adaptive-shell-agent-entry'),
-                            tooltip: l10n.agentTitle,
-                            onPressed: busy || settingsBusy || !enabled
-                                ? null
-                                : onOpenAgent,
-                            icon: const Icon(Icons.chat_bubble_outline),
-                          ),
                         Padding(
                           padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
                           child: IconButton(

@@ -31,6 +31,7 @@ import 'package:sked/widgets/workspace_navigation.dart';
 
 import '../agent/ui/agent_ui_test_support.dart';
 import '../support/workspace_harness.dart';
+import '../support/agent_workspace_navigation.dart';
 
 Finder _key(String value) => find.byKey(ValueKey(value));
 
@@ -226,43 +227,26 @@ Future<void> _until(WidgetTester tester, bool Function() ready) async {
   expect(ready(), isTrue);
 }
 
-Future<void> _mountFrame(
+Future<WorkspacePaneController> _mountFrame(
   WidgetTester tester,
-  _Application application,
-  AssistantPaneController assistant,
-  WorkspacePaneController workspace, {
+  _Application application, {
   required Size size,
   double scale = 1,
-}) => mountAgentUi(
-  tester,
-  ChangeNotifierProvider<AgentApplication>.value(
-    value: application,
-    child: WorkspaceFrame(
-      controller: workspace,
-      assistantController: assistant,
-      panelDisplayMode: WorkspacePanelDisplayMode.sideBySide,
-      resources: const Text('Resources'),
-      canvas: Align(
-        alignment: Alignment.topLeft,
-        child: Builder(
-          builder: (context) {
-            final scope = AssistantPaneScope.of(context)!;
-            return scope.enabled
-                ? IconButton(
-                    key: const ValueKey('workspace-agent-entry'),
-                    tooltip: 'Agent',
-                    onPressed: scope.onToggle,
-                    icon: const Icon(Icons.chat_bubble_outline),
-                  )
-                : const SizedBox.shrink();
-          },
-        ),
-      ),
+}) async {
+  final app = await workspaceProvider();
+  addTearDown(app.dispose);
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = size;
+  await tester.pumpWidget(
+    WorkspaceHarness(
+      provider: app,
+      agentApplication: application,
+      textScale: scale,
     ),
-  ),
-  size: size,
-  scale: scale,
-);
+  );
+  await tester.pumpAndSettle();
+  return tester.widget<WorkspaceFrame>(find.byType(WorkspaceFrame)).controller;
+}
 
 void main() {
   setUp(() {
@@ -325,14 +309,8 @@ void main() {
       addTearDown(assistant.dispose);
       addTearDown(workspace.dispose);
       addTearDown(tester.view.reset);
-      await _mountFrame(
-        tester,
-        application,
-        assistant,
-        workspace,
-        size: const Size(1280, 1000),
-      );
-      await tester.tap(_key('workspace-agent-entry'));
+      await _mountFrame(tester, application, size: const Size(1280, 1000));
+      await selectAgentShellDestination(tester, 'agent');
       await tester.pumpAndSettle();
       await tester.enterText(_key('agent-composer'), 'First request');
       await tester.pump();
@@ -385,15 +363,13 @@ void main() {
       addTearDown(assistant.dispose);
       addTearDown(workspace.dispose);
       addTearDown(tester.view.reset);
-      await _mountFrame(
+      final retainedWorkspace = await _mountFrame(
         tester,
         application,
-        assistant,
-        workspace,
         size: const Size(720, 1000),
         scale: 2,
       );
-      await tester.tap(_key('workspace-agent-entry'));
+      await selectAgentShellDestination(tester, 'agent');
       await tester.pumpAndSettle();
       await tester.ensureVisible(_key('agent-composer'));
       await tester.tap(_key('agent-composer'));
@@ -401,7 +377,7 @@ void main() {
       final focus = tester.widget<TextField>(_key('agent-composer')).focusNode!;
       expect(focus.hasFocus, isTrue);
       unawaited(
-        workspace.show<void>(
+        retainedWorkspace.show<void>(
           (_) => const Center(child: Text('Foreground task')),
         ),
       );
@@ -409,7 +385,7 @@ void main() {
       expect(find.text('Foreground task'), findsNothing);
       expect(_key('agent-composer').hitTestable(), findsOneWidget);
       expect(focus.hasFocus, isTrue);
-      await workspace.close();
+      await retainedWorkspace.close();
       await tester.pumpAndSettle();
       expect(_key('agent-composer'), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -433,12 +409,10 @@ void main() {
           await _mountFrame(
             tester,
             application,
-            assistant,
-            workspace,
             size: desktop ? const Size(1440, 1000) : const Size(390, 844),
             scale: scale,
           );
-          await tester.tap(_key('workspace-agent-entry'));
+          await selectAgentShellDestination(tester, 'agent');
           await tester.pumpAndSettle();
           expect(find.byType(AgentPage), findsOneWidget);
           expect(find.byType(AssistantPreviewPane), findsNothing);
@@ -481,17 +455,13 @@ void main() {
           expect(second, isNot(first));
           await tester.ensureVisible(_key('agent-composer'));
           await tester.enterText(_key('agent-composer'), 'Second draft');
-          if (_key('agent-history-$first').hitTestable().evaluate().isEmpty) {
-            await tester.ensureVisible(_key('agent-history'));
-            await tester.tap(_key('agent-history'));
-            await tester.pumpAndSettle();
-          }
+          await openAgentShellHistory(tester);
           await tester.ensureVisible(_key('agent-history-$first'));
           await tester.tap(_key('agent-history-$first'));
           await tester.pumpAndSettle();
           await tester.ensureVisible(_key('agent-composer'));
           await tester.enterText(_key('agent-composer'), 'Next question');
-          await tester.tap(find.byType(BackButton));
+          await selectAgentShellDestination(tester, 'student');
           await tester.pumpAndSettle();
           expect(
             application.runtime.state.value.runFor(first).isActive,
@@ -506,7 +476,7 @@ void main() {
             tester.view.physicalSize = const Size(800, 1000);
             await tester.pumpAndSettle();
           }
-          await tester.tap(_key('workspace-agent-entry'));
+          await selectAgentShellDestination(tester, 'agent');
           await tester.pumpAndSettle();
           expect(
             tester.widget<TextField>(_key('agent-composer')).controller!.text,
@@ -616,7 +586,10 @@ void main() {
           'Read my calendar',
         );
         await tester.enterText(_key('agent-composer'), 'Keep this draft');
-        await tester.tap(find.byType(BackButton));
+        await selectAgentShellDestination(
+          tester,
+          app.workspaceView.activeMode.value,
+        );
         await tester.pumpAndSettle();
         if (desktop) tester.view.physicalSize = const Size(720, 1000);
         unawaited(
@@ -663,14 +636,8 @@ void main() {
       addTearDown(assistant.dispose);
       addTearDown(workspace.dispose);
       addTearDown(tester.view.reset);
-      await _mountFrame(
-        tester,
-        application,
-        assistant,
-        workspace,
-        size: const Size(1440, 1000),
-      );
-      await tester.tap(_key('workspace-agent-entry'));
+      await _mountFrame(tester, application, size: const Size(1440, 1000));
+      await selectAgentShellDestination(tester, 'agent');
       await tester.pumpAndSettle();
       final id = application.conversations.selectedId!;
       await tester.enterText(_key('agent-composer'), 'Read my schedule');
@@ -682,7 +649,10 @@ void main() {
       tester.view.physicalSize = const Size(720, 1000);
       await tester.pumpAndSettle();
       expect(find.byType(AgentPage), findsOneWidget);
-      expect(_key('agent-history'), findsOneWidget);
+      expect(
+        _key('workspace-resource-mode-student').hitTestable(),
+        findsOneWidget,
+      );
       expect(_key('agent-composer'), findsOneWidget);
       expect(application.conversations.selectedId, id);
       expect(application.provider.requests.length, 1);
@@ -692,17 +662,12 @@ void main() {
         'Keep this next question',
       );
       await tester.enterText(_key('agent-composer'), 'Edited in full chat');
-      await tester.tap(
-        find.descendant(
-          of: find.byType(AgentPage),
-          matching: find.byType(BackButton),
-        ),
-      );
+      await selectAgentShellDestination(tester, 'student');
       await tester.pumpAndSettle();
       expect(find.byType(AgentPage), findsNothing);
       expect(find.byType(AgentAssistantPane), findsNothing);
       expect(assistant.isOpen, isFalse);
-      await tester.tap(_key('workspace-agent-entry'));
+      await selectAgentShellDestination(tester, 'agent');
       await tester.pumpAndSettle();
       expect(
         tester.widget<TextField>(_key('agent-composer')).controller!.text,
@@ -734,14 +699,8 @@ void main() {
       addTearDown(assistant.dispose);
       addTearDown(workspace.dispose);
       addTearDown(tester.view.reset);
-      await _mountFrame(
-        tester,
-        application,
-        assistant,
-        workspace,
-        size: const Size(1440, 900),
-      );
-      await tester.tap(_key('workspace-agent-entry'));
+      await _mountFrame(tester, application, size: const Size(1440, 900));
+      await selectAgentShellDestination(tester, 'agent');
       await tester.pumpAndSettle();
       await tester.enterText(_key('agent-composer'), 'Preserved draft');
       await application.setEnabled(false);
@@ -759,7 +718,7 @@ void main() {
         tester.widget<TextField>(_key('agent-composer')).controller!.text,
         'Preserved draft',
       );
-      await tester.tap(find.byType(BackButton));
+      await selectAgentShellDestination(tester, 'student');
       await tester.pumpAndSettle();
       expect(assistant.isOpen, isFalse);
       expect(tester.takeException(), isNull);
@@ -969,9 +928,7 @@ void main() {
       await _until(tester, () => application.provider.requests.isNotEmpty);
       final id = application.conversations.selectedId!;
       await tester.enterText(_key('agent-composer'), 'Shared next question');
-      await tester.tap(find.byType(BackButton));
-      await tester.pumpAndSettle();
-      await tester.tap(_key('workspace-resource-mode-student'));
+      await selectAgentShellDestination(tester, 'student');
       await tester.pumpAndSettle();
       expect(app.workspaceView.activeMode, AppMode.student);
       expect(find.byType(AgentAssistantPane), findsNothing);

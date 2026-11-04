@@ -7,9 +7,6 @@ import 'dart:math' as math;
 
 import 'package:provider/provider.dart';
 
-import '../agent/agent_application.dart';
-import '../l10n/app_localizations.dart';
-import '../screens/agent_page.dart';
 import '../services/developer_ui_preferences.dart';
 import '../services/desktop_layout_preferences.dart';
 
@@ -479,10 +476,7 @@ class WorkspaceFrame extends StatefulWidget {
 }
 
 class _WorkspaceFrameState extends State<WorkspaceFrame> {
-  bool get _coveredByAgentWorkspace =>
-      _agentApplication != null &&
-      AgentPage.isOpen(_agentApplication!) &&
-      ModalRoute.of(context)?.isCurrent == false;
+  bool get _coveredByRoute => ModalRoute.of(context)?.isCurrent == false;
   late final AssistantPaneController _assistant =
       widget.assistantController ?? AssistantPaneController();
   final _assistantFocus = FocusScopeNode(debugLabel: 'Workspace assistant');
@@ -511,9 +505,6 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
   String? _selection;
   WorkspaceLayout? _layout;
   DeveloperUiPreferences? _developerUi;
-  AgentApplication? _agentApplication;
-  int _agentNavigationRevision = 0;
-  bool _agentRouteOpen = false;
 
   @override
   void didChangeDependencies() {
@@ -545,21 +536,13 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
       _resourceDrawerOpen = false;
     }
     final next = Provider.of<DeveloperUiPreferences?>(context, listen: false);
-    final nextAgent = Provider.of<AgentApplication?>(context, listen: false);
-    if (identical(next, _developerUi) &&
-        identical(nextAgent, _agentApplication)) {
+    if (identical(next, _developerUi)) {
       return;
     }
     if (!identical(next, _developerUi)) {
       _developerUi?.removeListener(_syncAssistantPreference);
       _developerUi = next;
       next?.addListener(_syncAssistantPreference);
-    }
-    if (!identical(nextAgent, _agentApplication)) {
-      _agentApplication?.removeListener(_syncAssistantPreference);
-      _agentApplication = nextAgent;
-      _agentNavigationRevision = nextAgent?.navigationRevision ?? 0;
-      nextAgent?.addListener(_syncAssistantPreference);
     }
     _syncAssistantPreference();
   }
@@ -569,23 +552,8 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
     // This persisted value enables the entry; it is not an open-state restore.
     // Loading/enabling it must never cover the calendar or steal focus.
     // Only a user navigation request opens the session-local panel.
-    if ((_agentApplication?.settings.enabled ??
-            _developerUi?.assistantVisible) ==
-        false) {
+    if (_developerUi?.assistantVisible == false) {
       _assistant.setOpen(false);
-    }
-    final navigationRevision = _agentApplication?.navigationRevision ?? 0;
-    if (navigationRevision != _agentNavigationRevision) {
-      // Consume requests in retained workspaces too, so activating one later
-      // cannot replay a request that belonged to another workspace.
-      _agentNavigationRevision = navigationRevision;
-      if (widget.active &&
-          _agentApplication?.settings.enabled == true &&
-          WorkbenchChromeMetrics.of(context).desktop) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && widget.active) unawaited(_openAgentPage());
-        });
-      }
     }
     setState(() {});
   }
@@ -639,37 +607,13 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
   }
 
   void _toggleAssistant() {
-    if (!mounted ||
-        !widget.active ||
-        _agentApplication?.settings.enabled == false) {
-      return;
-    }
-    if (_agentApplication != null) {
-      unawaited(_openAgentPage());
-      return;
-    }
+    if (!mounted || !widget.active) return;
     if (_layout?.assistantVisible == true) {
       _setAssistantOpen(false);
     } else {
       setState(() => _assistantLast = true);
       _setAssistantOpen(true);
       _requestAssistantFocus();
-    }
-  }
-
-  Future<void> _openAgentPage() async {
-    if (_agentRouteOpen ||
-        !widget.active ||
-        _agentApplication?.settings.enabled != true) {
-      return;
-    }
-    _agentRouteOpen = true;
-    _closeResources(restoreFocus: false);
-    _setAssistantOpen(false);
-    try {
-      await AgentPage.open(context);
-    } finally {
-      _agentRouteOpen = false;
     }
   }
 
@@ -871,7 +815,6 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
   @override
   void dispose() {
     _developerUi?.removeListener(_syncAssistantPreference);
-    _agentApplication?.removeListener(_syncAssistantPreference);
     widget.controller.removeListener(_detailChanged);
     _assistant.removeListener(_assistantChanged);
     _assistantFocus.dispose();
@@ -908,7 +851,7 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
         ? TraversalEdgeBehavior.closedLoop
         : TraversalEdgeBehavior.parentScope;
     final interactive =
-        widget.active && policy.detailVisible && !_coveredByAgentWorkspace;
+        widget.active && policy.detailVisible && !_coveredByRoute;
     return Offstage(
       offstage: !policy.detailVisible,
       child: FocusScope(
@@ -1113,12 +1056,6 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
                 : SkedSurfaceRole.content,
             child: !previewEnabled
                 ? const SizedBox.shrink()
-                : _agentApplication != null
-                ? AgentAssistantPane(
-                    active: interactive,
-                    onClose: () => _setAssistantOpen(false),
-                    onExpand: () => unawaited(_openAgentPage()),
-                  )
                 : AssistantPreviewPane(
                     onClose: () => _setAssistantOpen(false),
                     controller: _assistant,
@@ -1357,11 +1294,9 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
       builder: (context, _) => LayoutBuilder(
         builder: (context, constraints) {
           final controller = widget.controller;
-          final active = widget.active && !_coveredByAgentWorkspace;
+          final active = widget.active && !_coveredByRoute;
           final previewEnabled =
-              _agentApplication?.settings.enabled ??
-              _developerUi?.assistantVisible ??
-              widget.assistantPreview;
+              _developerUi?.assistantVisible ?? widget.assistantPreview;
           final editingTask =
               WorkbenchChromeMetrics.of(context).desktop &&
                   controller.hasEditorPanel
@@ -1431,7 +1366,6 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
             final editorLayout = resolveLayout(false);
             final assistantOpen =
                 previewEnabled &&
-                (_agentApplication == null || metrics.desktop) &&
                 _assistant.isOpen &&
                 (editingTask == null ||
                     editorLayout.dockedDetail ||
@@ -1801,9 +1735,6 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
           return AssistantPaneScope(
             controller: _assistant,
             enabled: previewEnabled,
-            title: _agentApplication == null
-                ? null
-                : AppLocalizations.of(context).agentTitle,
             visible: policy.assistantVisible,
             onToggle: _toggleAssistant,
             child: PopScope(

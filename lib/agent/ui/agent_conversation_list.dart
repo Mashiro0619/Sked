@@ -12,12 +12,14 @@ class AgentConversationList extends StatefulWidget {
     required this.onSelected,
     this.onRestore,
     this.header,
+    this.shrinkWrap = false,
   });
 
   final ConversationRepository repository;
   final ValueChanged<String> onSelected;
   final ValueChanged<String>? onRestore;
   final Widget? header;
+  final bool shrinkWrap;
 
   @override
   State<AgentConversationList> createState() => _AgentConversationListState();
@@ -45,6 +47,11 @@ class _AgentConversationListState extends State<AgentConversationList> {
               ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
         return CustomScrollView(
           key: const PageStorageKey('agent-conversation-list'),
+          primary: false,
+          shrinkWrap: widget.shrinkWrap,
+          physics: widget.shrinkWrap
+              ? const NeverScrollableScrollPhysics()
+              : null,
           slivers: [
             if (widget.header case final header?)
               SliverToBoxAdapter(child: header),

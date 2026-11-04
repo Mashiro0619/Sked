@@ -91,7 +91,13 @@ void main() {
     });
   }
 
-  Widget view() => AgentModelPicker(conversationId: id, delegate: delegate);
+  Widget view({bool active = true, bool interactive = true}) =>
+      AgentModelPicker(
+        conversationId: id,
+        delegate: delegate,
+        active: active,
+        interactive: interactive,
+      );
   Future<void> open(WidgetTester tester) async {
     await tester.tap(find.byKey(const ValueKey('agent-model-picker')));
     await tester.pumpAndSettle();
@@ -102,6 +108,45 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('agent-model-choice-model-b')));
     await tester.pumpAndSettle();
+  }
+
+  for (final changesActivity in [true, false]) {
+    testWidgets(
+      'retained picker drops its old token after ${changesActivity ? 'activity' : 'interaction'} falls',
+      (tester) async {
+        await initialize(tester);
+        await mountAgentUi(tester, view());
+        final retainedState = tester.state(find.byType(AgentModelPicker));
+        await open(tester);
+        final previousSlider = tester.widget<Slider>(find.byType(Slider));
+        previousSlider.onChanged!(1);
+        await tester.pump();
+        await mountAgentUi(
+          tester,
+          view(active: !changesActivity, interactive: changesActivity),
+        );
+        await mountAgentUi(tester, view());
+        expect(
+          tester.state(find.byType(AgentModelPicker)),
+          same(retainedState),
+        );
+        await open(tester);
+        previousSlider.onChangeEnd!(1);
+        await tester.pumpAndSettle();
+        expect(delegate.choices, isEmpty);
+        expect(tester.widget<Slider>(find.byType(Slider)).value, 0);
+        final freshSlider = tester.widget<Slider>(find.byType(Slider));
+        freshSlider.onChanged!(1);
+        freshSlider.onChangeEnd!(1);
+        await tester.pumpAndSettle();
+        expect(delegate.choices, hasLength(1));
+        expect(
+          delegate.choices.single.reasoningEffort,
+          AgentReasoningEffort.high,
+        );
+        expect(tester.takeException(), isNull);
+      },
+    );
   }
 
   testWidgets(
