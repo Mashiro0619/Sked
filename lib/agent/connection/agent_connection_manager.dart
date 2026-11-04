@@ -145,9 +145,15 @@ class AgentConnectionManager {
     AgentSettings settings, {
     required AgentCredentialAction credentialAction,
     String? rawKey,
+    AgentSettings? expectedSettings,
   }) => _enqueue(() async {
     _requireReady();
-    return _save(settings, credentialAction: credentialAction, rawKey: rawKey);
+    return _save(
+      settings,
+      credentialAction: credentialAction,
+      rawKey: rawKey,
+      expectedSettings: expectedSettings,
+    );
   });
 
   Future<String> readKeyFor(AgentSettings snapshot) => _enqueue(() async {
@@ -388,10 +394,16 @@ class AgentConnectionManager {
     String? rawKey,
     _LegacyRetirement? legacyRetirement,
     AgentLegacyMigrationStatus? migrationStatus,
+    AgentSettings? expectedSettings,
   }) async {
     _checkActive();
     _validate(input);
     final original = _current();
+    if (expectedSettings != null && original != expectedSettings) {
+      throw const AgentConnectionException(
+        AgentConnectionErrorCode.configurationChanged,
+      );
+    }
     final canonical = normalizeAgentEndpoint(input.endpoint);
     String? key;
     String? reference;
@@ -452,7 +464,8 @@ class AgentConnectionManager {
     await _writeVerified(AgentCredentialSlot.pending, record);
     _checkActive();
     final latest = _current();
-    if (_connectionDigest(latest) != _connectionDigest(original)) {
+    if (_connectionDigest(latest) != _connectionDigest(original) ||
+        (expectedSettings != null && latest != expectedSettings)) {
       throw _failure(AgentConnectionErrorCode.configurationChanged);
     }
     desired = latest.copyWith(

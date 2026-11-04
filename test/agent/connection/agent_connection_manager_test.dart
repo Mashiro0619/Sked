@@ -162,6 +162,52 @@ void main() {
     );
   });
 
+  test('guarded saves recheck the snapshot after credential IO', () async {
+    final connection = await seeded();
+    final baseline = current;
+    final before = commits;
+    vault.afterWrite = (slot, value) {
+      if (slot == AgentCredentialSlot.pending && value != null) {
+        current = current.copyWith(systemInstructions: 'Newer preferences');
+      }
+    };
+    await expectLater(
+      connection.save(
+        baseline.copyWith(model: 'model-a'),
+        credentialAction: AgentCredentialAction.keep,
+        expectedSettings: baseline,
+      ),
+      error(AgentConnectionErrorCode.configurationChanged),
+    );
+    expect(commits, before);
+    expect(current.systemInstructions, 'Newer preferences');
+    vault.afterWrite = null;
+    await connection.initialize(migrateLegacy: false);
+    expect(await connection.readKeyFor(current), 'old-key');
+    expect(current.systemInstructions, 'Newer preferences');
+    expect(vault.values.keys, [AgentCredentialSlot.active]);
+  });
+
+  test('stale guarded saves do not touch credentials or settings', () async {
+    final connection = await seeded();
+    final baseline = current;
+    current = current.copyWith(systemInstructions: 'Newer preferences');
+    final before = commits;
+    vault.events.clear();
+    await expectLater(
+      connection.save(
+        baseline,
+        credentialAction: AgentCredentialAction.replace,
+        rawKey: 'replacement-key',
+        expectedSettings: baseline,
+      ),
+      error(AgentConnectionErrorCode.configurationChanged),
+    );
+    expect(commits, before);
+    expect(vault.events, isEmpty);
+    expect(connection.status.needsRecovery, isFalse);
+  });
+
   test(
     'legacy pending credential digest survives the model-list schema migration',
     () async {

@@ -48,12 +48,21 @@ class _ConversationStorage extends ConversationStorage {
 class _CredentialStore extends MemoryAgentCredentialStore {
   bool failRead = false;
   int reads = 0;
+  int writes = 0;
+  Future<void> Function(AgentCredentialSlot, String?)? beforeWrite;
 
   @override
   Future<String?> read(AgentCredentialSlot slot) async {
     reads++;
     if (failRead) throw StateError('fixture credential read failure');
     return super.read(slot);
+  }
+
+  @override
+  Future<void> write(AgentCredentialSlot slot, String? value) async {
+    writes++;
+    await beforeWrite?.call(slot, value);
+    await super.write(slot, value);
   }
 }
 
@@ -759,6 +768,98 @@ void main() {
     expect(app.agent.settings.endpoint, before);
     expect(app.session.data.localeCode, 'ja');
     expect(app.session.committedData.localeCode, isNot('ja'));
+  });
+
+  test('queued connection saves reject the old committed settings', () async {
+    await ready(AgentPermissionMode.full);
+    final baseline = app.agent.settings;
+    final entered = Completer<void>();
+    final release = Completer<void>();
+    addTearDown(() {
+      if (!release.isCompleted) release.complete();
+    });
+    credentials.beforeWrite = (slot, _) async {
+      if (slot != AgentCredentialSlot.pending || entered.isCompleted) return;
+      entered.complete();
+      await release.future;
+    };
+    final writes = credentials.writes;
+    final first = app.agent.configure(
+      baseline.copyWith(endpoint: 'https://first.example/v1'),
+      expectedSettings: baseline,
+    );
+    await entered.future.timeout(const Duration(seconds: 5));
+    final stale = expectLater(
+      app.agent.configure(
+        baseline.copyWith(endpoint: 'https://stale.example/v1'),
+        expectedSettings: baseline,
+      ),
+      throwsA(
+        isA<AgentConnectionException>().having(
+          (error) => error.code,
+          'code',
+          AgentConnectionErrorCode.configurationChanged,
+        ),
+      ),
+    );
+    release.complete();
+    await first;
+    await stale;
+    expect(app.agent.settings.endpoint, 'https://first.example/v1');
+    expect(credentials.writes - writes, 3);
+    expect(app.agent.connections.status.needsRecovery, isFalse);
+    expect(provider.requests, isEmpty);
+    final current = app.agent.settings;
+    await app.agent.configure(
+      current.copyWith(endpoint: 'https://accepted.example/v1'),
+      expectedSettings: current,
+    );
+    expect(app.agent.settings.endpoint, 'https://accepted.example/v1');
+  });
+
+  test('queued preferences cannot restore a stale settings page', () async {
+    await ready(AgentPermissionMode.full);
+    final baseline = app.agent.settings;
+    final entered = Completer<void>();
+    final release = Completer<void>();
+    addTearDown(() {
+      if (!release.isCompleted) release.complete();
+    });
+    credentials.beforeWrite = (slot, _) async {
+      if (slot != AgentCredentialSlot.pending || entered.isCompleted) return;
+      entered.complete();
+      await release.future;
+    };
+    final first = app.agent.configure(
+      baseline.copyWith(endpoint: 'https://new.example/v1'),
+      expectedSettings: baseline,
+    );
+    await entered.future.timeout(const Duration(seconds: 5));
+    final stale = expectLater(
+      app.agent.configurePreferences(
+        baseline.copyWith(systemInstructions: 'Unsaved old page'),
+        expectedSettings: baseline,
+      ),
+      throwsA(
+        isA<AgentConnectionException>().having(
+          (error) => error.code,
+          'code',
+          AgentConnectionErrorCode.configurationChanged,
+        ),
+      ),
+    );
+    release.complete();
+    await first;
+    await stale;
+    expect(app.agent.settings.endpoint, 'https://new.example/v1');
+    expect(app.agent.settings.systemInstructions, baseline.systemInstructions);
+    final current = app.agent.settings;
+    await app.agent.configurePreferences(
+      current.copyWith(systemInstructions: 'Current page'),
+      expectedSettings: current,
+    );
+    expect(app.agent.settings.systemInstructions, 'Current page');
+    expect(app.agent.settings.endpoint, current.endpoint);
   });
 
   test(

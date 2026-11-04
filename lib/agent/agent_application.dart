@@ -407,6 +407,7 @@ class AgentApplication extends ChangeNotifier {
     AgentSettings value, {
     AgentCredentialAction credentialAction = AgentCredentialAction.keep,
     String? rawKey,
+    AgentSettings? expectedSettings,
   }) {
     final changesTransport =
         value.endpoint != settings.endpoint ||
@@ -418,12 +419,14 @@ class AgentApplication extends ChangeNotifier {
     }
     return _configureSerially(() async {
       await initialize();
+      _checkExpectedSettings(expectedSettings);
       await connections.save(
         value,
         credentialAction: credentialAction,
         rawKey: rawKey,
+        expectedSettings: expectedSettings,
       );
-    }).whenComplete(() {
+    }, expectedSettings: expectedSettings).whenComplete(() {
       if (changesTransport) _disableRequests--;
       runtime.refreshSettings();
       _notify();
@@ -501,12 +504,24 @@ class AgentApplication extends ChangeNotifier {
     }
   }
 
-  Future<void> _configureSerially(Future<void> Function() action) {
+  void _checkExpectedSettings(AgentSettings? expectedSettings) {
+    if (expectedSettings != null && settings != expectedSettings) {
+      throw const AgentConnectionException(
+        AgentConnectionErrorCode.configurationChanged,
+      );
+    }
+  }
+
+  Future<void> _configureSerially(
+    Future<void> Function() action, {
+    AgentSettings? expectedSettings,
+  }) {
     final result = _configurationTail.then((_) {
       if (_disposed || _suspended || _clearSuspended) {
         throw StateError('Agent is closed.');
       }
       _session.ensureMutationAllowed();
+      _checkExpectedSettings(expectedSettings);
       return action();
     });
     _configurationTail = result.then<void>(
@@ -517,19 +532,22 @@ class AgentApplication extends ChangeNotifier {
   }
 
   /// Preferences apply to future runs; a running request keeps its snapshot.
-  Future<void> configurePreferences(AgentSettings value) =>
-      _configureSerially(() async {
-        value.validate();
-        await _saveSettings(
-          settings.copyWith(
-            systemInstructions: value.systemInstructions,
-            maxModelRounds: value.maxModelRounds,
-            maxToolCalls: value.maxToolCalls,
-            maxTotalTokens: value.maxTotalTokens,
-            historyRetentionDays: value.historyRetentionDays,
-          ),
-        );
-      });
+  Future<void> configurePreferences(
+    AgentSettings value, {
+    AgentSettings? expectedSettings,
+  }) => _configureSerially(() async {
+    value.validate();
+    await _saveSettings(
+      settings.copyWith(
+        systemInstructions: value.systemInstructions,
+        maxModelRounds: value.maxModelRounds,
+        maxToolCalls: value.maxToolCalls,
+        maxTotalTokens: value.maxTotalTokens,
+        historyRetentionDays: value.historyRetentionDays,
+      ),
+      expectedSettings: expectedSettings,
+    );
+  }, expectedSettings: expectedSettings);
 
   Future<void> _pruneHistory({bool initializing = false}) async {
     if ((!_initialized && !initializing) ||
@@ -597,11 +615,16 @@ class AgentApplication extends ChangeNotifier {
     _notify();
   }
 
-  Future<void> _saveSettings(AgentSettings value) async {
+  Future<void> _saveSettings(
+    AgentSettings value, {
+    AgentSettings? expectedSettings,
+  }) async {
     if (_disposed) throw StateError('Agent is closed.');
+    _checkExpectedSettings(expectedSettings);
     final baseline = mutationDigest(settings.toJson());
     await _persistence.flushPendingUiStateSaves();
     await _session.repository.waitForPendingWrites(propagateErrors: true);
+    _checkExpectedSettings(expectedSettings);
     if (mutationDigest(settings.toJson()) != baseline) {
       throw const AgentConnectionException(
         AgentConnectionErrorCode.configurationChanged,
