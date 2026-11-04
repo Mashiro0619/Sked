@@ -140,6 +140,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   final _transcriptVersions = <String, (int, String?, String?, int, String)>{};
   bool _historyVisible = true;
   bool _hostActive = true;
+  bool _initialDraftScheduled = false;
 
   AgentReadingPosition _reading(String id) =>
       _draftBuffer.reading.putIfAbsent(id, AgentReadingPosition.new);
@@ -340,6 +341,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final becameActive = active && !_hostActive;
     _hostActive = active;
     if (becameActive) _restoreReading(_repository.selectedId);
+    _scheduleInitialDraft();
   }
 
   @override
@@ -395,7 +397,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         unawaited(_draftWrites.remove(id));
       }
     }
-    for (final conversation in _repository.conversations) {
+    for (final conversation in _repository.ownedConversations) {
       final id = conversation.id;
       if (!_drafts.containsKey(id) || _drafts[id] == _savedDrafts[id]) {
         _drafts[id] = conversation.draft;
@@ -443,6 +445,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       }
     }
     setState(_synchronizeDraft);
+    _scheduleInitialDraft();
     if (switched) {
       _restoreReading(id);
     } else if (id != null && changedContent && _reading(id).followLatest) {
@@ -499,7 +502,32 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       if (mounted) setState(() => _failed = true);
     } finally {
       if (mounted) setState(() => _loading = false);
+      _scheduleInitialDraft();
     }
+  }
+
+  void _scheduleInitialDraft() {
+    if (_initialDraftScheduled ||
+        !_uiActive ||
+        !_repository.isLoaded ||
+        !_repository.canWrite ||
+        _repository.selected != null) {
+      return;
+    }
+    _initialDraftScheduled = true;
+    final repository = _repository;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        if (_uiActive &&
+            identical(repository, _repository) &&
+            repository.canWrite &&
+            repository.selected == null) {
+          await _newConversation(focusComposer: false);
+        }
+      } finally {
+        _initialDraftScheduled = false;
+      }
+    });
   }
 
   Future<void> _perform(
@@ -544,23 +572,38 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     if (id != null) await _draftWrites[id];
   }
 
-  Future<void> _newConversation() => _perform('new', () async {
-    final repository = _repository;
-    final uiGeneration = _uiGeneration;
-    final selectedId = repository.selectedId;
-    final title = AppLocalizations.of(context).agentNewConversation;
-    await _flushDraft(selectedId);
-    if (!_uiSessionCurrent(uiGeneration, selectedId) ||
-        !identical(repository, _repository)) {
-      return;
-    }
-    await repository.create(
-      title: title,
-      mode: _runtime.defaultMode,
-      modelSelection: _runtime.defaultModelSelection,
-    );
-    if (_uiActive) _composerFocus.requestFocus();
-  });
+  Future<void> _newConversation({bool focusComposer = true}) =>
+      _perform('new', () async {
+        final repository = _repository;
+        final uiGeneration = _uiGeneration;
+        final selectedId = repository.selectedId;
+        final title = AppLocalizations.of(context).agentNewConversation;
+        await _flushDraft(selectedId);
+        if (!_uiSessionCurrent(uiGeneration, selectedId) ||
+            !identical(repository, _repository)) {
+          return;
+        }
+        try {
+          await repository.createDraft(
+            title: title,
+            mode: _runtime.defaultMode,
+            modelSelection: _runtime.defaultModelSelection,
+            validate: () {
+              if (!_uiSessionCurrent(uiGeneration, selectedId) ||
+                  !identical(repository, _repository)) {
+                throw StateError('This New chat request is no longer active.');
+              }
+            },
+          );
+        } catch (_) {
+          if (!_uiSessionCurrent(uiGeneration, selectedId) ||
+              !identical(repository, _repository)) {
+            return;
+          }
+          rethrow;
+        }
+        if (focusComposer && _uiActive) _composerFocus.requestFocus();
+      });
 
   Future<void> _select(String id) => _perform('select', () async {
     final repository = _repository;
@@ -1392,7 +1435,8 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                   value: 'settings',
                   child: Text(l.agentSettingsTitle),
                 ),
-                if (conversation != null) ...[
+                if (conversation != null &&
+                    !_repository.isDraft(conversation.id)) ...[
                   const SkedPopupMenuDivider<String>(),
                   if (conversation.historyVersions.isNotEmpty ||
                       conversation.replyRevisions.isNotEmpty)
@@ -1873,6 +1917,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       );
     }
     final continued =
+        !_repository.isDraft(conversation.id) &&
         !active &&
         (state.phase == AgentUiPhase.stopped ||
             conversation.status == ConversationStatus.interrupted ||

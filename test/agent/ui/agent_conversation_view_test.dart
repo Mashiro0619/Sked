@@ -840,8 +840,34 @@ void main() {
     },
     variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
+  testWidgets('opening and typing in New chat never persists empty history', (
+    tester,
+  ) async {
+    addTearDown(tester.view.reset);
+    await initialize();
+    await mountAgentUi(tester, view());
+    await settle(tester);
+    final draftId = repository.selectedId!;
+    expect(repository.isDraft(draftId), isTrue);
+    expect(repository.conversations, isEmpty);
+    expect(storage.source, isNull);
+    expect(find.byKey(const ValueKey('agent-composer')), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const ValueKey('agent-composer')),
+      'Keep this unsent draft',
+    );
+    await settle(tester);
+    await tester.tap(find.byKey(const ValueKey('agent-new')));
+    await settle(tester);
+    expect(repository.selectedId, draftId);
+    expect(repository.selected!.draft, 'Keep this unsent draft');
+    expect(repository.conversations, isEmpty);
+    expect(storage.source, isNull);
+    expect(delegate.calls, isEmpty);
+  });
+
   testWidgets(
-    'new conversations save their own initial model and thinking choice',
+    'new drafts retain their initial model until the first message is saved',
     (tester) async {
       addTearDown(tester.view.reset);
       await initialize();
@@ -879,6 +905,22 @@ void main() {
       await settle(tester);
       final firstId = repository.selectedId!;
       expect(repository.find(firstId)!.modelSelection, firstSelection);
+      expect(repository.isDraft(firstId), isTrue);
+      expect(storage.source, isNull);
+      await repository.update(
+        firstId,
+        (current) => current.copyWith(
+          messages: [
+            ConversationMessage(
+              id: 'first-user-message',
+              role: ConversationRole.user,
+              text: 'Start this conversation',
+              createdAt: DateTime.utc(2026, 10, 29),
+            ),
+          ],
+        ),
+      );
+      expect(repository.isDraft(firstId), isFalse);
 
       delegate.state.value = AgentUiState(
         enabled: true,
@@ -892,6 +934,8 @@ void main() {
       await settle(tester);
       expect(repository.selected!.modelSelection, secondSelection);
       expect(repository.find(firstId)!.modelSelection, firstSelection);
+      expect(repository.conversations, hasLength(1));
+      expect(repository.isDraft(repository.selectedId), isTrue);
       expect(delegate.calls, isEmpty);
     },
   );

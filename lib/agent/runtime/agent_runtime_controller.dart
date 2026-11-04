@@ -2115,7 +2115,7 @@ class AgentRuntimeController implements AgentUiDelegate {
   /// Queue validation follows durable/settings changes, never each token delta.
   void _refreshSelectionRequirements(AgentSettings settings) {
     _selectionRequirements.clear();
-    for (final conversation in repository.conversations) {
+    for (final conversation in repository.ownedConversations) {
       final pending = conversation.executionMessages
           .where((message) => _queuedInput(message) != null)
           .firstOrNull
@@ -2346,12 +2346,12 @@ class AgentRuntimeController implements AgentUiDelegate {
       availableModels: settings.availableModels,
       defaultModelSelection: settings.defaultModelSelection,
       modelSelections: {
-        for (final conversation in repository.conversations)
+        for (final conversation in repository.ownedConversations)
           if (conversation.modelSelection != null)
             conversation.id: conversation.modelSelection!,
       },
       runs: {
-        for (final conversation in repository.conversations)
+        for (final conversation in repository.ownedConversations)
           conversation.id: _selectionState(conversation),
       },
     );

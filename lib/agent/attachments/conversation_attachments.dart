@@ -285,13 +285,13 @@ class ConversationAttachments extends ChangeNotifier {
     if (_frozen || !conversations.canWrite) return;
     _pending.removeWhere((id, _) => conversations.find(id) == null);
     final references = <String>{
-      for (final conversation in conversations.conversations)
+      for (final conversation in conversations.ownedConversations)
         ...conversationAttachmentIds(conversation),
       for (final pending in _pending.values) pending.attachment.id,
     };
     // Remove stale metadata before deleting its bytes. A failed archive save
     // leaves all bytes intact and cannot damage another message's reference.
-    for (final conversation in conversations.conversations.toList()) {
+    for (final conversation in conversations.ownedConversations.toList()) {
       if (conversation.attachments.any((a) => !references.contains(a.id))) {
         await conversations.update(
           conversation.id,

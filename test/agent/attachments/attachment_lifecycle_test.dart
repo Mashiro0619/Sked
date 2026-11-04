@@ -58,10 +58,13 @@ void main() {
     app.dispose();
   });
 
-  Future<String> conversation() async {
+  Future<String> conversation({bool draft = false}) async {
     await app.agent.initialize();
     await app.agent.quiesce();
-    return (await app.agent.conversations.create(title: 'Attachment')).id;
+    return (draft
+            ? await app.agent.conversations.createDraft(title: 'Attachment')
+            : await app.agent.conversations.create(title: 'Attachment'))
+        .id;
   }
 
   Future<void> attach(String id) => app.agent.binaryAttachments.attach(
@@ -83,6 +86,75 @@ void main() {
     expect(blobs.readCalls, 0);
     expect(blobs.writeCalls, 0);
     expect(sent, isEmpty);
+  });
+
+  test('unsent attachments survive collection without a persisted conversation row', () async {
+    final id = await conversation(draft: true);
+    await attach(id);
+    final draft = app.agent.conversations.find(id)!;
+    final attachment = draft.attachments.single;
+    expect(draft.draftAttachmentIds, [attachment.id]);
+    expect(app.agent.conversations.conversations, isEmpty);
+    expect(chats.source, isNull);
+    await app.agent.binaryAttachments.collectGarbage();
+    expect(await app.agent.attachmentStore.readBytes(attachment), [1, 2, 3]);
+    expect(blobs.values.keys, [attachment.id]);
+    expect(chats.source, isNull);
+    await app.agent.conversations.delete(id);
+    await app.agent.quiesce();
+    expect(blobs.values, isEmpty);
+    expect(chats.source, isNull);
+  });
+
+  test(
+    'feature disable and reenable retain the volatile attachment draft',
+    () async {
+      final id = await conversation(draft: true);
+      await attach(id);
+      final attachment = app.agent.conversations.find(id)!.attachments.single;
+      await app.agent.setEnabled(false);
+      expect(app.agent.conversations.isDraft(id), isTrue);
+      expect(chats.source, isNull);
+      await app.agent.setEnabled(true);
+      await app.agent.binaryAttachments.collectGarbage();
+      expect(app.agent.conversations.find(id)!.draftAttachmentIds, [
+        attachment.id,
+      ]);
+      expect(await app.agent.attachmentStore.readBytes(attachment), [1, 2, 3]);
+      expect(chats.source, isNull);
+      expect(sent, isEmpty);
+    },
+  );
+
+  test('the first attachment-only send persists references before provider dispatch', () async {
+    await app.agent.configure(
+      const AgentSettings(
+        endpoint: 'https://fixture.example/v1',
+        model: 'fixture',
+        protocol: AgentModelProtocol.responses,
+        models: [
+          AgentModelConfig(
+            id: 'fixture',
+            reasoningEfforts: [AgentReasoningEffort.medium],
+            defaultReasoningEffort: AgentReasoningEffort.medium,
+          ),
+        ],
+      ),
+    );
+    final id = await conversation(draft: true);
+    await attach(id);
+    expect(chats.source, isNull);
+    await app.agent.runtime.send(id, '');
+    final accepted = ConversationArchive.decode(chats.source!)
+        .conversations
+        .single;
+    expect(accepted.id, id);
+    expect(accepted.messages.first.role, ConversationRole.user);
+    expect(accepted.messages.first.text, isEmpty);
+    expect(accepted.messages.first.attachmentIds, hasLength(1));
+    expect(accepted.draftAttachmentIds, isEmpty);
+    expect(app.agent.conversations.isDraft(id), isFalse);
+    expect(jsonEncode(sent.single), contains('data:image/png;base64,AQID'));
   });
 
   test('application runtime sends stored binary and publishes real transport progress', () async {

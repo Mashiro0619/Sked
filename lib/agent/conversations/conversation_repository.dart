@@ -25,6 +25,8 @@ class ConversationRepository extends ChangeNotifier {
   final DateTime Function() _clock;
   final String Function() _id;
   ConversationArchive _archive = ConversationArchive();
+  AgentConversation? _draftConversation;
+  bool _draftSelected = false;
   Future<void> _tail = Future<void>.value();
   final _deleting = <String>{};
   bool _loaded = false;
@@ -87,16 +89,39 @@ class ConversationRepository extends ChangeNotifier {
   /// establish the surviving archive before any in-memory content can be saved.
   void resumeAfterFailedDataClear() {
     if (_disposed) return;
+    _discardDraft();
     _frozen = false;
     _blocked = true;
     _notify();
   }
 
-  String? get selectedId => _archive.selectedId;
+  /// Restore/clear owners call this after draining old work at a real data
+  /// boundary. Ordinary navigation, settings and backup reads retain input.
+  void discardDraftAfterDataBoundary() {
+    if (_disposed || _draftConversation == null) return;
+    _discardDraft();
+    _notify();
+  }
+
+  String? get selectedId =>
+      _draftSelected ? _draftConversation?.id : _archive.selectedId;
+
+  /// Durable history only. Unsent conversations do not appear in exports,
+  /// backups, management tools or the history sidebar.
   List<AgentConversation> get conversations => _archive.conversations;
+
+  /// The application also owns one unsent conversation for this repository's
+  /// lifetime. Runtime state and attachment collection include that draft.
+  List<AgentConversation> get ownedConversations =>
+      List.unmodifiable([...conversations, ?_draftConversation]);
+  AgentConversation? get draftConversation => _draftConversation;
+  bool isDraft(String? id) => id != null && _draftConversation?.id == id;
   AgentConversation? get selected => find(selectedId);
-  AgentConversation? find(String? id) =>
-      conversations.where((conversation) => conversation.id == id).firstOrNull;
+  AgentConversation? find(String? id) => isDraft(id)
+      ? _draftConversation
+      : conversations
+            .where((conversation) => conversation.id == id)
+            .firstOrNull;
 
   Future<void> load() => _enqueue(() async {
     if (_disposed || _frozen) {
@@ -108,6 +133,7 @@ class ConversationRepository extends ChangeNotifier {
           ? ConversationArchive()
           : ConversationArchive.decode(result.source!);
       _archive = next;
+      _reconcileDraft();
       _loaded = true;
       _blocked = false;
       recovered = result.recovered;
@@ -178,14 +204,49 @@ class ConversationRepository extends ChangeNotifier {
         conversations: [...conversations, conversation],
         selectedId: conversation.id,
       ),
+      selectDurable: true,
     );
     return conversation;
+  });
+
+  /// Opening New chat is an in-memory action. Repeated clicks reuse its unsent
+  /// input; selecting saved history or another workspace does not discard it.
+  /// The first accepted user message promotes it in the runtime's normal save.
+  Future<AgentConversation> createDraft({
+    required String title,
+    AgentPermissionMode mode = AgentPermissionMode.ask,
+    AgentModelSelection? modelSelection,
+    String? id,
+    void Function()? validate,
+  }) => _enqueue(() async {
+    _checkWritable();
+    validate?.call();
+    final draft =
+        _draftConversation ??
+        _newConversation(title, mode, id: id, modelSelection: modelSelection);
+    _validateDraft(draft);
+    _draftConversation = draft;
+    _draftSelected = true;
+    _notify();
+    return draft;
   });
 
   Future<void> select(String id) => _enqueue(() async {
     _checkWritable();
     _requireConversation(id);
-    if (selectedId != id) await _save(_next(selectedId: id));
+    if (isDraft(id)) {
+      if (!_draftSelected) {
+        _draftSelected = true;
+        _notify();
+      }
+      return;
+    }
+    if (_archive.selectedId != id) {
+      await _save(_next(selectedId: id), selectDurable: true);
+    } else if (_draftSelected) {
+      _draftSelected = false;
+      _notify();
+    }
   });
 
   /// Retention removes only completed, inactive conversations. Tombstones keep
@@ -221,9 +282,9 @@ class ConversationRepository extends ChangeNotifier {
     await _save(
       ConversationArchive(
         revision: _archive.revision + 1,
-        selectedId: removed.contains(selectedId)
+        selectedId: removed.contains(_archive.selectedId)
             ? remaining.lastOrNull?.id
-            : selectedId,
+            : _archive.selectedId,
         conversations: remaining,
         handoffs: _archive.handoffs,
         terminatedIds: {..._archive.terminatedIds, ...removed},
@@ -253,6 +314,29 @@ class ConversationRepository extends ChangeNotifier {
         'Conversation identity cannot be changed.',
       );
     }
+    if (isDraft(id)) {
+      if (next.messages.isEmpty) {
+        _validateDraft(next);
+        _draftConversation = next;
+        _notify();
+        return next;
+      }
+      if (!next.messages.any(
+        (message) => message.role == ConversationRole.user,
+      )) {
+        throw const OperationProblem(
+          OperationErrorCode.invalidArgument,
+          'An unsent conversation must begin with an accepted user message.',
+        );
+      }
+      await _save(
+        _next(
+          conversations: [...conversations, next],
+          selectedId: _draftSelected ? next.id : _archive.selectedId,
+        ),
+      );
+      return next;
+    }
     await _save(
       _next(
         conversations: [
@@ -279,6 +363,11 @@ class ConversationRepository extends ChangeNotifier {
           );
         }
         validate?.call(find(id)!);
+        if (isDraft(id)) {
+          _discardDraft();
+          _notify();
+          return;
+        }
         if (find(id)!.pendingRedo != null) {
           throw const ConversationStorageException(
             'Finish or cancel the pending history redo before deleting this conversation.',
@@ -288,9 +377,9 @@ class ConversationRepository extends ChangeNotifier {
         await _save(
           ConversationArchive(
             revision: _archive.revision + 1,
-            selectedId: selectedId == id
+            selectedId: _archive.selectedId == id
                 ? remaining.lastOrNull?.id
-                : selectedId,
+                : _archive.selectedId,
             conversations: remaining,
             handoffs: _archive.handoffs,
             terminatedIds: {..._archive.terminatedIds, id},
@@ -360,6 +449,7 @@ class ConversationRepository extends ChangeNotifier {
           ),
         ],
       ),
+      selectDurable: true,
     );
     return (conversation: conversation, created: true);
   });
@@ -382,6 +472,7 @@ class ConversationRepository extends ChangeNotifier {
           ? ConversationArchive()
           : ConversationArchive.decode(loaded.source!);
       _archive = archive;
+      _reconcileDraft();
       _loaded = true;
       _blocked = false;
       recovered = loaded.recovered;
@@ -409,7 +500,7 @@ class ConversationRepository extends ChangeNotifier {
       );
     }
     try {
-      await _save(target);
+      await _save(target, discardDraft: true);
       final confirmed = await _storage.load();
       validateOwner();
       if (confirmed.source != target.encode()) {
@@ -562,7 +653,49 @@ class ConversationRepository extends ChangeNotifier {
     selectedId: selectedId ?? _archive.selectedId,
   );
 
-  Future<void> _save(ConversationArchive candidate) async {
+  void _validateDraft(AgentConversation draft) {
+    if (draft.messages.isNotEmpty ||
+        draft.runs.isNotEmpty ||
+        draft.turns.isNotEmpty ||
+        draft.historyVersions.isNotEmpty ||
+        draft.replyRevisions.isNotEmpty ||
+        draft.redoBatches.isNotEmpty ||
+        draft.archived ||
+        draft.status != ConversationStatus.idle ||
+        draft.runId != null ||
+        draft.connectionFingerprint != null) {
+      throw const OperationProblem(
+        OperationErrorCode.invalidArgument,
+        'Unsent input cannot contain executable conversation history.',
+      );
+    }
+    ConversationArchive.decode(
+      ConversationArchive(
+        selectedId: draft.id,
+        conversations: [draft],
+      ).encode(),
+    );
+  }
+
+  void _discardDraft() {
+    _draftConversation = null;
+    _draftSelected = false;
+  }
+
+  void _reconcileDraft() {
+    final draftId = _draftConversation?.id;
+    if (draftId != null &&
+        (_archive.conversations.any((item) => item.id == draftId) ||
+            _archive.terminatedIds.contains(draftId))) {
+      _discardDraft();
+    }
+  }
+
+  Future<void> _save(
+    ConversationArchive candidate, {
+    bool selectDurable = false,
+    bool discardDraft = false,
+  }) async {
     final source = candidate.encode();
     // Every writer observes the same strict quotas and relationship checks as
     // restart decoding, before any persistent state is modified.
@@ -575,6 +708,12 @@ class ConversationRepository extends ChangeNotifier {
       rethrow;
     }
     _archive = candidate;
+    if (discardDraft) {
+      _discardDraft();
+    } else {
+      _reconcileDraft();
+      if (selectDurable) _draftSelected = false;
+    }
     _notify();
   }
 
@@ -610,6 +749,7 @@ class ConversationRepository extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _frozen = true;
+    _discardDraft();
     super.dispose();
   }
 }

@@ -370,7 +370,8 @@ class AgentApplication extends ChangeNotifier {
       await _pruneHistory(initializing: true);
       if (_disposed || _suspended || _clearSuspended) return;
       _attachmentConversationIds = {
-        for (final conversation in conversations.conversations) conversation.id,
+        for (final conversation in conversations.ownedConversations)
+          conversation.id,
       };
       _initialized = true;
       _scheduleAttachmentCollection();
@@ -723,7 +724,8 @@ class AgentApplication extends ChangeNotifier {
   void _conversationsChanged() {
     if (!conversations.isLoaded) return;
     final ids = {
-      for (final conversation in conversations.conversations) conversation.id,
+      for (final conversation in conversations.ownedConversations)
+        conversation.id,
     };
     final removed = _attachmentConversationIds.any((id) => !ids.contains(id));
     _attachmentConversationIds = ids;

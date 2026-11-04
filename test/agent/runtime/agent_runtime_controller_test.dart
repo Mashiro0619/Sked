@@ -57,6 +57,112 @@ class _OperationHarness {
 void main() {
   registerRecoveryTests();
   registerUsageTests();
+  test('unsent input and request preferences remain volatile until runtime acceptance', () async {
+    final entered = Completer<void>();
+    final stream = StreamController<ProviderEvent>();
+    late _Harness h;
+    h = await _Harness.create(
+      draft: true,
+      handler: (request, _) {
+        final accepted = ConversationArchive.decode(h.storage.source!)
+            .conversations
+            .single;
+        expect(accepted.id, h.id);
+        expect(accepted.messages.single.text, 'First draft request');
+        expect(
+          accepted.turns.single.requestMessageId,
+          accepted.messages.single.id,
+        );
+        expect(accepted.runId, accepted.runs.single.id);
+        expect(accepted.status, ConversationStatus.running);
+        expect(accepted.mode, AgentPermissionMode.plan);
+        expect(accepted.draft, isEmpty);
+        entered.complete();
+        return stream.stream;
+      },
+    );
+    addTearDown(h.dispose);
+    await h.runtime.setMode(h.id, AgentPermissionMode.plan);
+    await h.runtime.setModelSelection(h.id, h.settings.defaultModelSelection!);
+    await h.repository.update(
+      h.id,
+      (item) => item.copyWith(draft: 'First draft request'),
+    );
+    expect(h.storage.saves, 0);
+    expect(h.storage.source, isNull);
+    expect(h.repository.conversations, isEmpty);
+    expect(
+      h.runtime.state.value.selectionFor(h.id),
+      h.settings.defaultModelSelection,
+    );
+    final send = h.runtime.send(h.id, 'First draft request');
+    await entered.future;
+    expect(h.repository.isDraft(h.id), isFalse);
+    stream.add(ProviderCompleted(_response('Accepted')));
+    await stream.close();
+    await send;
+    expect(h.repository.find(h.id)!.messages.map((item) => item.text), [
+      'First draft request',
+      'Accepted',
+    ]);
+  });
+
+  test('failed first-message storage leaves the unsent draft intact and sends no request', () async {
+    final h = await _Harness.create(draft: true);
+    addTearDown(h.dispose);
+    await h.repository.update(
+      h.id,
+      (item) => item.copyWith(draft: 'Keep this draft'),
+    );
+    h.storage.failure = StateError('synthetic first-message failure');
+    await expectLater(
+      h.runtime.send(h.id, 'Keep this draft'),
+      throwsStateError,
+    );
+    expect(h.provider.requests, isEmpty);
+    expect(h.storage.source, isNull);
+    expect(h.repository.isDraft(h.id), isTrue);
+    expect(h.repository.find(h.id)!.draft, 'Keep this draft');
+    expect(h.repository.find(h.id)!.messages, isEmpty);
+    h.storage.failure = null;
+    await h.repository.load();
+    await h.runtime.send(h.id, 'Keep this draft');
+    expect(h.provider.requests, hasLength(1));
+    expect(
+      h.repository
+          .find(h.id)!
+          .messages
+          .where((item) => item.role == ConversationRole.user),
+      hasLength(1),
+    );
+  });
+
+  test('cancelling before credential resolution does not persist an empty new chat', () async {
+    final key = Completer<String>();
+    final entered = Completer<void>();
+    final h = await _Harness.create(
+      draft: true,
+      readKey: (_) {
+        entered.complete();
+        return key.future;
+      },
+    );
+    addTearDown(h.dispose);
+    final send = h.runtime.send(h.id, 'Unaccepted input');
+    final assertion = expectLater(
+      send,
+      throwsA(_runtimeError(AgentRuntimeError.cancelled)),
+    );
+    await entered.future;
+    await h.runtime.stop(h.id);
+    await assertion;
+    expect(h.provider.requests, isEmpty);
+    expect(h.storage.source, isNull);
+    expect(h.storage.saves, 0);
+    expect(h.repository.isDraft(h.id), isTrue);
+    key.complete(_key);
+  });
+
   test(
     'persists accepted message and run before request, tokens only update UI',
     () async {
@@ -2149,6 +2255,7 @@ class _Harness {
   AgentSettings settings;
   late AgentRuntimeController runtime;
   static Future<_Harness> create({
+    bool draft = false,
     AgentPermissionMode mode = AgentPermissionMode.ask,
     AgentModelProtocol protocol = AgentModelProtocol.chatCompletions,
     _Handler? handler,
@@ -2167,7 +2274,9 @@ class _Harness {
       idGenerator: () => 'id-${id++}',
     );
     await repository.load();
-    final conversation = await repository.create(title: 'test', mode: mode);
+    final conversation = draft
+        ? await repository.createDraft(title: 'test', mode: mode)
+        : await repository.create(title: 'test', mode: mode);
     final provider = _FakeProvider(
       handler ?? (_, _) => _events(_response('done')),
     );
