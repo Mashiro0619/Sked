@@ -335,6 +335,70 @@ void main() {
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
   );
 
+  testWidgets('popup geometry survives a source deactivated during reflow', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(330, 760);
+    addTearDown(tester.view.reset);
+    Future<String?>? result;
+    final navigator = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(
+      MaterialApp(
+        navigatorKey: navigator,
+        home: Scaffold(
+          body: LayoutBuilder(
+            builder: (context, constraints) => constraints.maxWidth >= 600
+                ? const Text('Wide workspace')
+                : Builder(
+                    builder: (anchor) => TextButton(
+                      key: _trigger,
+                      onPressed: () {
+                        final button = anchor.findRenderObject()! as RenderBox;
+                        final overlay =
+                            navigator.currentState!.overlay!.context
+                                    .findRenderObject()!
+                                as RenderBox;
+                        var lastPosition = RelativeRect.fill;
+                        result = showSkedMenu<String>(
+                          context: anchor,
+                          positionBuilder: (_, _) {
+                            if (!button.attached || !overlay.attached) {
+                              return lastPosition;
+                            }
+                            final origin = button.localToGlobal(
+                              Offset(0, button.size.height),
+                              ancestor: overlay,
+                            );
+                            return lastPosition = RelativeRect.fromRect(
+                              origin & button.size,
+                              Offset.zero & overlay.size,
+                            );
+                          },
+                          items: const [
+                            SkedPopupMenuItem(value: 'day', child: Text('Day')),
+                          ],
+                        );
+                      },
+                      child: const Text('Choose'),
+                    ),
+                  ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _open(tester);
+    tester.view.physicalSize = const Size(1440, 1000);
+    await tester.pumpAndSettle();
+    expect(find.text('Wide workspace'), findsOneWidget);
+    expect(_surface(), findsNothing);
+    expect(result, isNotNull);
+    expect(await result!, isNull);
+    expect(navigator.currentState!.canPop(), isFalse);
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+
   testWidgets('nested settings menus lay out during a 2x route animation', (
     tester,
   ) async {

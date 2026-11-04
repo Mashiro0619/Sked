@@ -42,9 +42,10 @@ Future<T?> showSkedMenu<T>({
       final anchor =
           positionBuilder?.call(layoutContext, layoutConstraints) ?? position!;
       final overlay = Offset.zero & layoutConstraints.biggest;
-      final viewportContext = context.mounted ? context : layoutContext;
-      final available = SkedMenuStyle.availableRectOf(viewportContext);
-      final media = MediaQuery.of(Overlay.of(viewportContext).context);
+      // The source may have been deactivated while remaining mounted during
+      // reflow. Only the menu's own live context can resolve its current overlay.
+      final available = SkedMenuStyle.availableRectOf(layoutContext);
+      final media = MediaQuery.of(Overlay.of(layoutContext).context);
       if (media.viewInsets == EdgeInsets.zero) return anchor;
       final bounds = anchor.toRect(overlay);
       final left = bounds.left.clamp(
@@ -205,7 +206,11 @@ class _SkedPopupMenuButtonState<T> extends PopupMenuButtonState<T> {
     if (items.isEmpty) return;
     final button = context.findRenderObject() as RenderBox?;
     final overlay =
-        Navigator.of(context).overlay?.context.findRenderObject() as RenderBox?;
+        Navigator.of(
+              context,
+              rootNavigator: widget.useRootNavigator,
+            ).overlay?.context.findRenderObject()
+            as RenderBox?;
     if (button == null || overlay == null) return;
     final generation = ++_menuGeneration;
     RelativeRect? lastPosition;
