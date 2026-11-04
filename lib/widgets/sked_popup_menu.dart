@@ -266,7 +266,15 @@ class _SkedPopupMenuButtonState<T> extends PopupMenuButtonState<T> {
           focusNode: button.focusNode,
           onTap: button.enabled ? showButtonMenu : null,
           customBorder: skedShapeSchemeOf(context).selection,
-          child: button.child,
+          // Keep the role and state below SkedTooltip's semantic boundary so
+          // they merge with InkWell's tap action instead of making a second,
+          // unactionable button above the tooltip.
+          child: Semantics(
+            button: true,
+            enabled: button.enabled,
+            expanded: _expanded,
+            child: button.child,
+          ),
         ),
       );
       trigger = button.style?.tapTargetSize == MaterialTapTargetSize.padded
@@ -283,16 +291,16 @@ class _SkedPopupMenuButtonState<T> extends PopupMenuButtonState<T> {
         padding: button.padding,
         tooltip:
             button.tooltip ?? MaterialLocalizations.of(context).showMenuTooltip,
-        icon: button.icon ?? const Icon(Icons.more_horiz),
+        // IconButton already owns a semantic boundary and its tap action.
+        // Put the popup state inside it instead of creating a second button.
+        icon: Semantics(
+          expanded: _expanded,
+          child: button.icon ?? const Icon(Icons.more_horiz),
+        ),
         onPressed: button.enabled ? showButtonMenu : null,
       );
     }
-    return Semantics(
-      button: true,
-      enabled: button.enabled,
-      expanded: _expanded,
-      child: trigger,
-    );
+    return Semantics(child: trigger);
   }
 }
 

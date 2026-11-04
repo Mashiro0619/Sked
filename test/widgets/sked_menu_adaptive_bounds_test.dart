@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:ui' show CheckedState;
+import 'dart:ui' show CheckedState, SemanticsAction, Tristate;
 
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -26,6 +26,7 @@ Future<({List<String?> selected, GlobalKey<NavigatorState> navigator})> _mount(
   double scale = 1,
   double fieldWidth = 720,
   double top = 64,
+  bool iconTrigger = false,
   List<DropdownMenuEntry<String>> entries = _shortEntries,
 }) async {
   tester.view.devicePixelRatio = 1;
@@ -73,10 +74,14 @@ Future<({List<String?> selected, GlobalKey<NavigatorState> navigator})> _mount(
                           ),
                       ],
                       onSelected: selected.add,
-                      child: const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: Text('Choose'),
-                      ),
+                      tooltip: 'Choose view',
+                      icon: iconTrigger ? const Icon(Icons.view_agenda) : null,
+                      child: iconTrigger
+                          ? null
+                          : const Padding(
+                              padding: EdgeInsets.all(12),
+                              child: Text('Choose'),
+                            ),
                     ),
             ),
           ],
@@ -398,6 +403,73 @@ void main() {
     expect(navigator.currentState!.canPop(), isFalse);
     expect(tester.takeException(), isNull);
   }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+
+  for (final platform in [TargetPlatform.windows, TargetPlatform.android]) {
+    for (final icon in [false, true]) {
+      testWidgets(
+        '${icon ? 'icon' : 'child'} popup has one actionable button on $platform',
+        (tester) async {
+          final semantics = tester.ensureSemantics();
+          try {
+            final fixture = await _mount(
+              tester,
+              kind: _Kind.popup,
+              fieldWidth: icon ? 48 : 280,
+              iconTrigger: icon,
+            );
+            List<SemanticsNode> buttons() {
+              final result = <SemanticsNode>[];
+              void visit(SemanticsNode node) {
+                final data = node.getSemanticsData();
+                if (data.flagsCollection.isButton &&
+                    data.flagsCollection.isEnabled == Tristate.isTrue) {
+                  result.add(node);
+                }
+                node.visitChildren((child) {
+                  visit(child);
+                  return true;
+                });
+              }
+
+              visit(tester.getSemantics(find.byKey(_trigger)));
+              return result;
+            }
+
+            final closed = buttons();
+            expect(closed, hasLength(1));
+            final data = closed.single.getSemanticsData();
+            expect(data.hasAction(SemanticsAction.tap), isTrue);
+            expect(data.flagsCollection.isExpanded, Tristate.isFalse);
+            expect('${data.label} ${data.tooltip}', contains('Choose'));
+            closed.single.owner!.performAction(
+              closed.single.id,
+              SemanticsAction.tap,
+            );
+            await tester.pumpAndSettle();
+            expect(_surface(), findsOneWidget);
+            final choice = tester.getSemantics(_menuLabel('Day'));
+            expect(
+              choice.getSemanticsData().hasAction(SemanticsAction.tap),
+              isTrue,
+            );
+            choice.owner!.performAction(choice.id, SemanticsAction.tap);
+            await tester.pumpAndSettle();
+            expect(fixture.selected, ['day']);
+            expect(_surface(), findsNothing);
+            expect(buttons(), hasLength(1));
+            expect(
+              buttons().single.getSemanticsData().flagsCollection.isExpanded,
+              Tristate.isFalse,
+            );
+            expect(tester.takeException(), isNull);
+          } finally {
+            semantics.dispose();
+          }
+        },
+        variant: TargetPlatformVariant.only(platform),
+      );
+    }
+  }
 
   testWidgets('nested settings menus lay out during a 2x route animation', (
     tester,

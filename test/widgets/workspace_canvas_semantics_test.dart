@@ -34,6 +34,52 @@ List<int> _traversalAncestors(SemanticsNode node) {
   return result;
 }
 
+SemanticsNode _publishedButton(WidgetTester tester, Finder trigger) {
+  // The trigger's outer render object may have no node of its own. Start
+  // below its explicit semantic boundaries rather than getSemantics(trigger),
+  // which would return the canvas ancestor and include unrelated controls.
+  final boundaries = find.descendant(
+    of: trigger,
+    matching: find.byWidgetPredicate(
+      (widget) => widget is Semantics && widget.container,
+    ),
+    matchRoot: true,
+  );
+  expect(boundaries, findsWidgets);
+  final buttons = <int, SemanticsNode>{};
+  void visit(SemanticsNode node) {
+    final data = node.getSemanticsData();
+    if (data.flagsCollection.isButton &&
+        data.flagsCollection.isEnabled == ui.Tristate.isTrue) {
+      expect(
+        data.hasAction(ui.SemanticsAction.tap),
+        isTrue,
+        reason: 'Every enabled button must publish its tap action.',
+      );
+      expect(
+        '${data.label} ${data.tooltip}'.trim(),
+        isNotEmpty,
+        reason: 'Every enabled button must have an accessible name.',
+      );
+      buttons[node.id] = node;
+    }
+    node.visitChildren((child) {
+      visit(child);
+      return true;
+    });
+  }
+
+  for (final element in boundaries.evaluate()) {
+    visit(
+      tester.getSemantics(
+        find.byElementPredicate((candidate) => candidate == element),
+      ),
+    );
+  }
+  expect(buttons, hasLength(1));
+  return buttons.values.single;
+}
+
 void main() {
   final binding = _AuditedBinding();
   setUp(binding.audit.reset);
@@ -88,7 +134,8 @@ void main() {
         );
         expect(canvasBefore.label, isEmpty);
         final viewSwitcher = _key('general-view-switcher');
-        final viewSemantics = tester.getSemantics(viewSwitcher);
+        final viewSemantics = _publishedButton(tester, viewSwitcher);
+        final viewParentsBefore = _traversalAncestors(viewSemantics);
         expect(viewSemantics.id, isNot(canvasBefore.id));
         expect(
           viewSemantics.getSemanticsData().hasAction(ui.SemanticsAction.tap),
@@ -129,6 +176,11 @@ void main() {
           parentsBefore,
           reason:
               'Opening a pane must not move a live tooltip traversal subtree.',
+        );
+        expect(
+          _traversalAncestors(_publishedButton(tester, viewSwitcher)),
+          viewParentsBefore,
+          reason: 'Opening a pane must preserve the view button subtree.',
         );
         final canvasWithPanel = tester.getSemantics(canvas);
         expect(canvasWithPanel.id, canvasBefore.id);
@@ -206,6 +258,10 @@ void main() {
         expect(
           _traversalAncestors(tester.getSemantics(navigation)),
           parentsBefore,
+        );
+        expect(
+          _traversalAncestors(_publishedButton(tester, viewSwitcher)),
+          viewParentsBefore,
         );
         final canvasAfter = tester.getSemantics(canvas);
         expect(canvasAfter.id, canvasBefore.id);
