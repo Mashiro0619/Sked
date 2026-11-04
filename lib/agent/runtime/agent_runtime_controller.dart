@@ -161,7 +161,7 @@ class AgentRuntimeController implements AgentUiDelegate {
   final _display = <String, AgentUiRunState>{};
   final _selectionRequirements = <String, bool>{};
   final _queueDrains = <String, Future<void>>{};
-  final _automaticQueues = <String>{};
+  final _automaticQueues = <String, Object>{};
   final _queueEpochs = <String, int>{};
   final _httpTransportGrants = <String>{};
   String? _lastTransportConnection;
@@ -282,16 +282,25 @@ class AgentRuntimeController implements AgentUiDelegate {
   Future<void> _resumeConversation(
     String conversationId, {
     String? reservedRunId,
+    void Function(_Run run)? onRunCreated,
   }) async {
     if (_runs.containsKey(conversationId)) {
       throw const AgentRuntimeException(AgentRuntimeError.busy);
     }
-    _automaticQueues.add(conversationId);
+    final queueOwner = Object();
+    _automaticQueues[conversationId] = queueOwner;
     try {
-      await _start(conversationId, resume: true, reservedRunId: reservedRunId);
+      await _start(
+        conversationId,
+        resume: true,
+        reservedRunId: reservedRunId,
+        onRunCreated: onRunCreated,
+      );
       await _drainQueued(conversationId);
     } finally {
-      _automaticQueues.remove(conversationId);
+      if (identical(_automaticQueues[conversationId], queueOwner)) {
+        _automaticQueues.remove(conversationId);
+      }
     }
   }
 
@@ -305,21 +314,23 @@ class AgentRuntimeController implements AgentUiDelegate {
     if (runId.isEmpty || runId.length > 256) {
       throw const AgentRuntimeException(AgentRuntimeError.invalidMessage);
     }
+    _Run? run;
     final completion = _resumeConversation(
       conversationId,
       reservedRunId: runId,
+      onRunCreated: (created) => run = created,
     );
-    final run = _runs[conversationId];
     unawaited(
       completion.catchError((Object error) {
         _failDisplay(conversationId, _safeError(error), run: run);
       }),
     );
-    if (run == null || !await run.started.future) {
+    final ownedRun = run;
+    if (ownedRun == null || !await ownedRun.started.future) {
       await completion;
       throw const AgentRuntimeException(AgentRuntimeError.storageUnavailable);
     }
-    return run.id;
+    return ownedRun.id;
   }
 
   bool isRunning(String conversationId) => _runs.containsKey(conversationId);
@@ -443,7 +454,7 @@ class AgentRuntimeController implements AgentUiDelegate {
     }, expectedRunId: run.id);
     // Stop wins even if it arrives during the durable queue write.
     if ((_queueEpochs[conversationId] ?? 0) != queueEpoch) return;
-    _automaticQueues.add(conversationId);
+    _automaticQueues[conversationId] = Object();
     if (steering) _cancel(run, AgentRuntimeError.steered);
     // The caller waits only for durable acceptance, not the next model turn.
     unawaited(_drainQueued(conversationId));
@@ -465,21 +476,40 @@ class AgentRuntimeController implements AgentUiDelegate {
   Future<void> _drainQueuedLoop(String conversationId) async {
     _Run? attemptedRun;
     try {
-      final previous = _runs[conversationId];
-      await previous?.done;
-      if (previous?.outcomeUnknown == true) return;
-      if (previous != null &&
-          !previous.succeeded &&
-          previous.stopReason != AgentRuntimeError.steered) {
-        return;
-      }
-      while (!_disposed && _automaticQueues.contains(conversationId)) {
+      while (!_disposed && _automaticQueues.containsKey(conversationId)) {
+        final occupyingRun = _runs[conversationId];
+        if (occupyingRun != null) {
+          await occupyingRun.done;
+          if (occupyingRun.outcomeUnknown ||
+              (!occupyingRun.succeeded &&
+                  occupyingRun.stopReason != AgentRuntimeError.steered)) {
+            return;
+          }
+          // Settling callbacks may have admitted another run. Recheck actual
+          // occupancy before consuming any durable follow-up.
+          continue;
+        }
         if (pendingInputCount(conversationId) == 0) return;
-        final completion = _start(conversationId, consumeQueued: true);
-        attemptedRun = _runs[conversationId];
-        await completion;
-        if (repository.find(conversationId)?.status !=
-            ConversationStatus.idle) {
+        attemptedRun = null;
+        try {
+          await _start(
+            conversationId,
+            consumeQueued: true,
+            onRunCreated: (created) => attemptedRun = created,
+          );
+        } on AgentRuntimeException catch (error) {
+          if (error.code == AgentRuntimeError.busy &&
+              attemptedRun == null &&
+              _runs.containsKey(conversationId)) {
+            continue;
+          }
+          rethrow;
+        }
+        final completedRun = attemptedRun;
+        if (completedRun == null ||
+            completedRun.outcomeUnknown ||
+            (!completedRun.succeeded &&
+                completedRun.stopReason != AgentRuntimeError.steered)) {
           return;
         }
       }
@@ -793,6 +823,7 @@ class AgentRuntimeController implements AgentUiDelegate {
     String? replayBatchId,
     bool reuseReservedRun = false,
     String? replyMessageId,
+    void Function(_Run run)? onRunCreated,
   }) async {
     if (_disposed) {
       throw const AgentRuntimeException(AgentRuntimeError.disabled);
@@ -951,6 +982,7 @@ class AgentRuntimeController implements AgentUiDelegate {
       run.toolCalls = previous.tools.length;
     }
     _runs[conversationId] = run;
+    onRunCreated?.call(run);
     run.deadline = Timer(
       limits.totalTimeout,
       () => _cancel(run, AgentRuntimeError.timeout),
@@ -2343,6 +2375,8 @@ class AgentRuntimeController implements AgentUiDelegate {
     String? replyTargetMessageId,
   }) {
     if (!_disposed && repository.find(id) != null) {
+      final occupyingRun = _runs[id];
+      if (occupyingRun != null && !identical(occupyingRun, run)) return;
       final previous = _display[id];
       // A settled run may report cleanup failure after it leaves _runs. Its
       // explicit identity must not overwrite a newer attempt's display.

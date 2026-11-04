@@ -60,6 +60,7 @@ void main() {
   registerRecoveryTests();
   registerUsageTests();
   registerReplyRegenerationTests();
+  registerQueueOwnershipTests();
   test('unsent input and request preferences remain volatile until runtime acceptance', () async {
     final entered = Completer<void>();
     final stream = StreamController<ProviderEvent>();
@@ -1102,6 +1103,189 @@ void main() {
     expect(h.repository.find(h.id)!.messages, isEmpty);
     key.complete(_key);
   });
+}
+
+void registerQueueOwnershipTests() {
+  test('a queued follow-up waits for a run admitted by the previous settling callback', () async {
+    final queue = await _QueueOwnershipHarness.create();
+    addTearDown(queue.dispose);
+    await queue.startWithQueuedInputs(['queued']);
+    final h = queue.h;
+    final foreignRunId = h.runtime.describeRun(h.id)['runId'];
+    expect(h.runtime.state.value.runFor(h.id).phase, AgentUiPhase.running);
+    expect(h.runtime.state.value.runFor(h.id).runId, foreignRunId);
+    expect(h.runtime.pendingInputCount(h.id), 1);
+    expect(queue.providerInputs, ['initial']);
+    await queue.allowForeignProvider();
+    expect(queue.providerInputs, ['initial', 'foreign']);
+    expect(h.runtime.state.value.runFor(h.id).phase, AgentUiPhase.running);
+    expect(h.runtime.state.value.runFor(h.id).runId, foreignRunId);
+    expect(h.runtime.pendingInputCount(h.id), 1);
+    await queue.finishForeign();
+    await h.runtime.waitForIdle();
+    expect(queue.providerInputs, ['initial', 'foreign', 'queued']);
+    expect(h.runtime.pendingInputCount(h.id), 0);
+    expect(queue.userInputs, ['initial', 'foreign', 'queued']);
+  });
+
+  test('a reentrant run keeps its actual approval while a follow-up and busy resume wait', () async {
+    final queue = await _QueueOwnershipHarness.create(askApproval: true);
+    addTearDown(queue.dispose);
+    await queue.startWithQueuedInputs(['queued']);
+    final h = queue.h;
+    await queue.allowForeignProvider();
+    await queue.finishForeign(withTool: true);
+    await _waitPhase(h, AgentUiPhase.waitingApproval);
+    final before = h.runtime.state.value.runFor(h.id);
+    expect(before.pendingApproval!.id, 'foreign-approval');
+    expect(queue.executions, 0);
+    expect(h.runtime.pendingInputCount(h.id), 1);
+    await expectLater(
+      h.runtime.requestResume(h.id, runId: 'unclaimed-resume'),
+      throwsA(_runtimeError(AgentRuntimeError.busy)),
+    );
+    final after = h.runtime.state.value.runFor(h.id);
+    expect(after.phase, AgentUiPhase.waitingApproval);
+    expect(after.runId, before.runId);
+    expect(after.pendingApproval, same(before.pendingApproval));
+    expect(queue.providerInputs, ['initial', 'foreign']);
+    expect(queue.executions, 0);
+    await h.runtime.approve(h.id, 'foreign-approval');
+    await queue.foreignRun!;
+    await h.runtime.waitForIdle();
+    expect(queue.executions, 1);
+    expect(queue.providerInputs, ['initial', 'foreign', 'foreign', 'queued']);
+    expect(queue.userInputs, ['initial', 'foreign', 'queued']);
+    expect(h.runtime.pendingInputCount(h.id), 0);
+  });
+
+  test('a queued run settling into another run preserves the remaining queued input', () async {
+    final queue = await _QueueOwnershipHarness.create(reenterAfter: 2);
+    addTearDown(queue.dispose);
+    await queue.startWithQueuedInputs(['queued-first', 'queued-last']);
+    final h = queue.h;
+    expect(queue.providerInputs, ['initial', 'queued-first']);
+    expect(h.runtime.state.value.runFor(h.id).phase, AgentUiPhase.running);
+    expect(h.runtime.pendingInputCount(h.id), 1);
+    await queue.allowForeignProvider();
+    await queue.finishForeign();
+    await h.runtime.waitForIdle();
+    expect(queue.providerInputs, [
+      'initial',
+      'queued-first',
+      'foreign',
+      'queued-last',
+    ]);
+    expect(queue.userInputs, [
+      'initial',
+      'queued-first',
+      'foreign',
+      'queued-last',
+    ]);
+    expect(h.runtime.pendingInputCount(h.id), 0);
+    expect(h.repository.find(h.id)!.turns, hasLength(4));
+  });
+
+  test(
+    'a failed reentrant run retains the follow-up until explicit continuation',
+    () async {
+      final queue = await _QueueOwnershipHarness.create();
+      addTearDown(queue.dispose);
+      await queue.startWithQueuedInputs(['queued']);
+      final h = queue.h;
+      await queue.allowForeignProvider();
+      await queue.finishForeign(
+        error: const ProviderException(ProviderError.transportFailure),
+      );
+      await h.runtime.waitForIdle();
+      expect(queue.providerInputs, ['initial', 'foreign']);
+      expect(h.runtime.pendingInputCount(h.id), 1);
+      expect(h.runtime.state.value.runFor(h.id).phase, AgentUiPhase.failed);
+      expect(
+        h.runtime.state.value.runFor(h.id).errorMessage,
+        'provider.transportFailure',
+      );
+      await h.runtime.continueConversation(h.id);
+      await h.runtime.waitForIdle();
+      expect(queue.providerInputs, ['initial', 'foreign', 'queued']);
+      expect(queue.userInputs, ['initial', 'foreign', 'queued']);
+      expect(h.runtime.pendingInputCount(h.id), 0);
+    },
+  );
+
+  test(
+    'a failed resume finalizer cannot revoke a newer resume automatic queue',
+    () async {
+      final initial = StreamController<ProviderEvent>();
+      final resumed = StreamController<ProviderEvent>();
+      final initialEntered = Completer<void>();
+      final resumedEntered = Completer<void>();
+      final inputs = <String>[];
+      final h = await _Harness.create(
+        handler: (request, _) {
+          final input = request.messages
+              .lastWhere((message) => message.role == ProviderRole.user)
+              .text;
+          inputs.add(input);
+          if (input == 'initial') {
+            initialEntered.complete();
+            return initial.stream;
+          }
+          if (input == 'queued-first') {
+            resumedEntered.complete();
+            return resumed.stream;
+          }
+          return _events(_response('Completed $input'));
+        },
+      );
+      var retryStarted = false;
+      Future<void>? retry;
+      final validSettings = h.settings;
+      void retryOnPreflightFailure() {
+        if (retryStarted ||
+            h.runtime.state.value.runFor(h.id).errorMessage != 'unconfigured')
+          return;
+        retryStarted = true;
+        h.settings = validSettings;
+        h.runtime.refreshSettings();
+        retry = h.runtime.continueConversation(h.id);
+      }
+
+      addTearDown(() async {
+        h.runtime.state.removeListener(retryOnPreflightFailure);
+        h.runtime.cancelAll();
+        unawaited(initial.close());
+        unawaited(resumed.close());
+        await h.runtime.waitForIdle();
+        h.dispose();
+      });
+      final first = h.runtime.send(h.id, 'initial');
+      await initialEntered.future;
+      await h.runtime.queueFollowUp(h.id, 'queued-first');
+      await h.runtime.queueFollowUp(h.id, 'queued-last');
+      await h.runtime.stop(h.id);
+      await initial.close();
+      await first;
+      await h.runtime.waitForIdle();
+      expect(h.runtime.pendingInputCount(h.id), 2);
+      h.settings = h.settings.copyWith(endpoint: '');
+      h.runtime.refreshSettings();
+      h.runtime.state.addListener(retryOnPreflightFailure);
+      await expectLater(
+        h.runtime.continueConversation(h.id),
+        throwsA(_runtimeError(AgentRuntimeError.unconfigured)),
+      );
+      await resumedEntered.future;
+      expect(retryStarted, isTrue);
+      expect(h.runtime.pendingInputCount(h.id), 1);
+      resumed.add(ProviderCompleted(_response('First resumed reply')));
+      await resumed.close();
+      await retry!;
+      await h.runtime.waitForIdle();
+      expect(inputs, ['initial', 'queued-first', 'queued-last']);
+      expect(h.runtime.pendingInputCount(h.id), 0);
+    },
+  );
 }
 
 void registerReplyRegenerationTests() {
@@ -2998,6 +3182,136 @@ class _Harness {
     runtime.dispose();
     provider.close();
     repository.dispose();
+  }
+}
+
+class _QueueOwnershipHarness {
+  _QueueOwnershipHarness(this.reenterAfter, this.askApproval);
+  final int reenterAfter;
+  final bool askApproval;
+  late final _Harness h;
+  final initial = StreamController<ProviderEvent>();
+  final foreign = StreamController<ProviderEvent>();
+  final initialEntered = Completer<void>();
+  final foreignKeyEntered = Completer<void>();
+  final foreignKey = Completer<String>();
+  final foreignEntered = Completer<void>();
+  Future<void>? foreignRun;
+  int executions = 0;
+  int _settles = 0;
+  bool _reentered = false;
+  bool _closing = false;
+
+  List<String> get providerInputs => h.provider.requests
+      .map(
+        (request) => request.messages
+            .lastWhere((message) => message.role == ProviderRole.user)
+            .text,
+      )
+      .toList();
+  List<String> get userInputs => h.repository
+      .find(h.id)!
+      .messages
+      .where((message) => message.role == ConversationRole.user)
+      .map((message) => message.text)
+      .toList();
+
+  static Future<_QueueOwnershipHarness> create({
+    int reenterAfter = 1,
+    bool askApproval = false,
+  }) async {
+    final queue = _QueueOwnershipHarness(reenterAfter, askApproval);
+    var keyReads = 0;
+    var foreignRounds = 0;
+    queue.h = await _Harness.create(
+      readKey: (_) {
+        if (++keyReads == reenterAfter + 1) {
+          queue.foreignKeyEntered.complete();
+          return queue.foreignKey.future;
+        }
+        return Future.value(_key);
+      },
+      handler: (request, _) {
+        final input = request.messages
+            .lastWhere((message) => message.role == ProviderRole.user)
+            .text;
+        if (input == 'initial') {
+          queue.initialEntered.complete();
+          return queue.initial.stream;
+        }
+        if (input == 'foreign' && foreignRounds++ == 0) {
+          queue.foreignEntered.complete();
+          return queue.foreign.stream;
+        }
+        return _events(_response('Completed $input'));
+      },
+      execute: (call, scope, requestApproval) async {
+        if (queue.askApproval) {
+          final approval = await requestApproval(_Plan('foreign-approval'));
+          scope.checkMutation(
+            planId: 'foreign-approval',
+            approval: approval,
+            consumeApproval: true,
+          );
+        }
+        queue.executions++;
+        return {'status': 'read', 'id': call.id};
+      },
+      onRunSettled: (_) {
+        queue._settles++;
+        if (queue._closing ||
+            queue._reentered ||
+            queue._settles != reenterAfter)
+          return;
+        queue._reentered = true;
+        queue.foreignRun = queue.h.runtime.send(queue.h.id, 'foreign');
+      },
+    );
+    return queue;
+  }
+
+  Future<void> startWithQueuedInputs(List<String> inputs) async {
+    final first = h.runtime.send(h.id, 'initial');
+    await initialEntered.future;
+    for (final input in inputs) {
+      await h.runtime.queueFollowUp(h.id, input);
+    }
+    initial.add(ProviderCompleted(_response('Initial reply')));
+    await initial.close();
+    await first;
+    await foreignKeyEntered.future;
+  }
+
+  Future<void> allowForeignProvider() async {
+    foreignKey.complete(_key);
+    await foreignEntered.future;
+  }
+
+  Future<void> finishForeign({bool withTool = false, Object? error}) async {
+    if (error != null) {
+      foreign.addError(error);
+    } else {
+      foreign.add(
+        ProviderCompleted(
+          _response(
+            'Foreign reply',
+            calls: withTool ? [_call('foreign-operation')] : [],
+          ),
+        ),
+      );
+    }
+    await foreign.close();
+    if (!withTool) await foreignRun!;
+  }
+
+  Future<void> dispose() async {
+    _closing = true;
+    h.runtime.cancelAll();
+    if (!foreignKey.isCompleted) foreignKey.complete(_key);
+    unawaited(initial.close());
+    unawaited(foreign.close());
+    await h.runtime.waitForIdle();
+    h.dispose();
   }
 }
 
