@@ -412,7 +412,14 @@ void _registerPickerHandoffTests() {
           anchor,
           entry: editing ? 'Picker edit timetable' : 'Picker create timetable',
         );
-        expect(panel.top, closeTo(anchor.top, .1));
+        // The side navigation can put this low trigger near the bottom. Keep
+        // its captured anchor while fitting the measured panel in the work area.
+        final available = _availableBounds(tester);
+        final expectedTop = anchor.top.clamp(
+          available.top,
+          math.max(available.top, available.bottom - panel.height),
+        );
+        expect(panel.top, closeTo(expectedTop, .1));
         for (var frame = 0; frame < 3; frame++) {
           await tester.pump(const Duration(milliseconds: 100));
           expect(tester.getRect(_key('workspace-detail-surface')), panel);
