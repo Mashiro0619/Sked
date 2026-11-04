@@ -780,18 +780,17 @@ class AgentRuntimeController implements AgentUiDelegate {
     final signature = jsonEncode(
       before.messages.map((m) => m.toJson()).toList(),
     );
+    final source = before.executionMessages.toList();
+    _rejectHistorySecrets(source, run.apiKey);
     final recovered = await recoverAgentOperationHistory(
-      before.executionMessages.toList(),
+      source,
       readReceipt: readOperationReceipt,
       id: _id,
       clock: _clock,
       maxResultCharacters: limits.maxToolResultCharacters,
     );
     _checkRun(run);
-    _rejectSecret(
-      jsonEncode(recovered.messages.map((m) => m.toJson()).toList()),
-      run.apiKey,
-    );
+    _rejectHistorySecrets(recovered.messages, run.apiKey);
     run.recoveryRequired = recovered.blocked;
     if (recovered.changed) {
       await repository.update(run.conversationId, (current) {
@@ -1248,9 +1247,15 @@ class AgentRuntimeController implements AgentUiDelegate {
           // An already accepted write is awaited and its real result saved
           // even if Stop was pressed while the host was committing it.
           String encoded;
+          String? safeOperationId;
           try {
             encoded = jsonEncode(result);
-            _rejectSecret(encoded, run.apiKey);
+            final savedResult = jsonDecode(encoded);
+            _rejectSecretValues(savedResult, run.apiKey);
+            if (savedResult case {'operationId': final String operationId}
+                when operationId.length <= 256) {
+              safeOperationId = operationId;
+            }
           } catch (error) {
             run.outcomeUnknown = true;
             encoded = jsonEncode({
@@ -1264,9 +1269,7 @@ class AgentRuntimeController implements AgentUiDelegate {
             encoded = jsonEncode({
               'status': 'outcome_unknown',
               'error': {'code': 'result_budget_exceeded'},
-              if (result['operationId'] case final String operationId
-                  when operationId.length <= 256)
-                'operationId': operationId,
+              if (safeOperationId != null) 'operationId': safeOperationId,
             });
             toolFailure = const AgentRuntimeException(
               AgentRuntimeError.resultBudgetExceeded,
@@ -1903,7 +1906,7 @@ class AgentRuntimeController implements AgentUiDelegate {
         ...plan.summary(),
         'changes': [for (final change in plan.changes) change.toJson()],
       });
-      _rejectSecret(jsonEncode(details), run.apiKey);
+      _rejectSecretValues(details, run.apiKey);
       pending.presented = true;
       _setDisplay(
         run,
@@ -2548,9 +2551,16 @@ class AgentRuntimeController implements AgentUiDelegate {
     }
     for (final message in bounded) {
       _rejectSecret(message.text, run.apiKey);
-      _rejectSecret(jsonEncode(message.responseItems), run.apiKey);
+      _rejectSecretValues(message.responseItems, run.apiKey);
+      if (message.toolCallId case final String id) {
+        _rejectSecret(id, run.apiKey);
+      }
+      if (message.role == ProviderRole.tool) {
+        _rejectSecretJson(message.text, run.apiKey);
+      }
       for (final call in message.toolCalls) {
-        _rejectSecret(call.arguments, run.apiKey);
+        _rejectSecret(call.id, run.apiKey);
+        _rejectSecretJson(call.arguments, run.apiKey);
       }
     }
     return bounded;
@@ -2562,7 +2572,7 @@ class AgentRuntimeController implements AgentUiDelegate {
     _Run run,
   ) {
     _rejectSecret(response.text, run.apiKey);
-    _rejectSecret(jsonEncode(response.responseItems), run.apiKey);
+    _rejectSecretValues(response.responseItems, run.apiKey);
     final names = run.tools.map((tool) => tool.name).toSet();
     final ids = {
       for (final message in history.messages)
@@ -2575,8 +2585,9 @@ class AgentRuntimeController implements AgentUiDelegate {
       if (!ids.add(call.id)) {
         throw const AgentRuntimeException(AgentRuntimeError.duplicateToolCall);
       }
+      _rejectSecret(call.id, run.apiKey);
       _rejectSecret(call.arguments, run.apiKey);
-      call.decodedArguments;
+      _rejectSecretValues(call.decodedArguments, run.apiKey);
     }
   }
 }
@@ -2751,6 +2762,52 @@ String _defaultInstructions(AgentConversation conversation) =>
 void _rejectSecret(String text, String apiKey) {
   if (apiKey.isNotEmpty && text.contains(apiKey)) {
     throw const AgentRuntimeException(AgentRuntimeError.sensitiveContent);
+  }
+}
+
+void _rejectSecretValues(Object? value, String apiKey) {
+  if (apiKey.isEmpty) return;
+  final pending = <Object?>[value];
+  while (pending.isNotEmpty) {
+    final current = pending.removeLast();
+    if (current is String) {
+      _rejectSecret(current, apiKey);
+    } else if (current is Map<Object?, Object?>) {
+      for (final entry in current.entries) {
+        if (entry.key case final String key) _rejectSecret(key, apiKey);
+        pending.add(entry.value);
+      }
+    } else if (current is List<Object?>) {
+      pending.addAll(current);
+    }
+  }
+}
+
+void _rejectSecretJson(String text, String apiKey) {
+  _rejectSecret(text, apiKey);
+  if (apiKey.isEmpty) return;
+  Object? decoded;
+  try {
+    decoded = jsonDecode(text);
+  } on FormatException {
+    // Legacy history can contain non-JSON tool text; keep its existing boundary.
+    return;
+  }
+  _rejectSecretValues(decoded, apiKey);
+}
+
+void _rejectHistorySecrets(
+  Iterable<ConversationMessage> messages,
+  String apiKey,
+) {
+  for (final message in messages) {
+    _rejectSecretValues(message.toJson(), apiKey);
+    for (final call in message.toolCalls) {
+      _rejectSecretJson(call.arguments, apiKey);
+    }
+    if (message.role == ConversationRole.tool) {
+      _rejectSecretJson(message.text, apiKey);
+    }
   }
 }
 

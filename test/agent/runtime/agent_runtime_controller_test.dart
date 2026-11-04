@@ -844,6 +844,702 @@ void main() {
     expect(h.storage.source, isNot(contains(_key)));
   });
 
+  for (final entry in <String, ProviderToolCall>{
+    'Unicode escaped argument value': ProviderToolCall(
+      id: 'unsafe-call',
+      name: 'events.list',
+      arguments: r'{"title":"sk\u002druntime-fixture-key"}',
+    ),
+    'Unicode escaped nested argument value': ProviderToolCall(
+      id: 'unsafe-call',
+      name: 'events.list',
+      arguments: r'{"filters":[{"title":"sk\u002druntime-fixture-key"}]}',
+    ),
+    'Unicode escaped argument field name': ProviderToolCall(
+      id: 'unsafe-call',
+      name: 'events.list',
+      arguments: r'{"sk\u002druntime-fixture-key":"safe"}',
+    ),
+    'credential used as a tool call ID': _call(_key),
+  }.entries) {
+    test(
+      'HTTP ${entry.key} is rejected before tool execution or assistant persistence',
+      () async {
+        final call = entry.value;
+        if (call.id != _key) {
+          expect(call.arguments, isNot(contains(_key)));
+          expect(jsonEncode(jsonDecode(call.arguments)), contains(_key));
+        }
+        var requests = 0;
+        var executions = 0;
+        final client = MockClient((request) async {
+          requests++;
+          expect(request.headers['Authorization'], 'Bearer $_key');
+          return http.Response(
+            jsonEncode({
+              'id': 'unsafe-provider-response',
+              'choices': [
+                {
+                  'index': 0,
+                  'message': {
+                    'role': 'assistant',
+                    'content': '',
+                    'tool_calls': [
+                      {
+                        'id': call.id,
+                        'type': 'function',
+                        'function': {
+                          'name': ToolNameCodec.encode(call.name),
+                          'arguments': call.arguments,
+                        },
+                      },
+                    ],
+                  },
+                  'finish_reason': 'tool_calls',
+                },
+              ],
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        });
+        addTearDown(client.close);
+        final provider = ProviderClient(client: client);
+        final h = await _Harness.create(
+          handler: (request, cancellation) => provider.stream(
+            request,
+            apiKey: _key,
+            cancellation: cancellation,
+          ),
+          execute: (_, _, _) async {
+            executions++;
+            return {'status': 'read'};
+          },
+        );
+        addTearDown(h.dispose);
+        await h.runtime.send(h.id, 'query');
+
+        final durable = ConversationArchive.decode(h.storage.source!)
+            .conversations
+            .single;
+        expect(requests, 1);
+        expect(h.provider.requests, hasLength(1));
+        expect(executions, 0);
+        expect(durable.messages.map((message) => message.role), [
+          ConversationRole.user,
+        ]);
+        expect(durable.messages.single.text, 'query');
+        expect(durable.runs.single.status, ConversationRunStatus.interrupted);
+        expect(
+          durable.runs.single.requests.single.outcome,
+          ConversationAttemptOutcome.completed,
+        );
+        final state = h.runtime.state.value.runFor(h.id);
+        expect(state.phase, AgentUiPhase.failed);
+        expect(state.errorMessage, 'sensitiveContent');
+        expect(state.streamingText, isEmpty);
+        expect(h.storage.source, isNot(contains(_key)));
+      },
+    );
+  }
+
+  for (final keyEntry in const <String, String>{
+    'quoted key': 'sk-"quoted"-runtime-fixture-key',
+    'backslash key': r'sk-\backslash-runtime-fixture-key',
+  }.entries) {
+    for (final location in ['nested value', 'nested field name']) {
+      for (final regenerating in [false, true]) {
+        test(
+          '${regenerating ? 'regeneration' : 'ordinary reply'} rejects ${keyEntry.key} in HTTP Responses $location',
+          () async {
+            final apiKey = keyEntry.value;
+            var requests = 0;
+            final client = MockClient((request) async {
+              requests++;
+              expect(request.headers['Authorization'], 'Bearer $apiKey');
+              final unsafe = !regenerating || requests == 3;
+              final metadata = location == 'nested value'
+                  ? {
+                      'entries': [
+                        {'value': 'prefix $apiKey suffix'},
+                      ],
+                    }
+                  : {
+                      'entries': [
+                        {'prefix $apiKey suffix': 'safe'},
+                      ],
+                    };
+              if (unsafe) {
+                expect(jsonEncode(metadata), isNot(contains(apiKey)));
+              }
+              return http.Response(
+                jsonEncode({
+                  'id': 'provider-response-$requests',
+                  'status': 'completed',
+                  'output': [
+                    {
+                      'type': 'reasoning',
+                      'id': 'reasoning-$requests',
+                      'summary': [],
+                      'metadata': unsafe ? metadata : {'value': 'safe'},
+                    },
+                    {
+                      'type': 'message',
+                      'id': 'provider-message-$requests',
+                      'role': 'assistant',
+                      'status': 'completed',
+                      'content': [
+                        {
+                          'type': 'output_text',
+                          'text': requests == 1
+                              ? 'Original safe reply'
+                              : 'Revised safe reply',
+                          'annotations': [],
+                        },
+                      ],
+                    },
+                  ],
+                }),
+                200,
+                headers: {'content-type': 'application/json'},
+              );
+            });
+            addTearDown(client.close);
+            final provider = ProviderClient(client: client);
+            final h = await _Harness.create(
+              apiKey: apiKey,
+              protocol: AgentModelProtocol.responses,
+              handler: (request, cancellation) => provider.stream(
+                request,
+                apiKey: apiKey,
+                cancellation: cancellation,
+              ),
+            );
+            addTearDown(h.dispose);
+            await h.runtime.send(h.id, 'Original request');
+            AgentConversation? before;
+            String? replyId;
+            if (regenerating) {
+              replyId = h.repository.find(h.id)!.messages.last.id;
+              await h.runtime.regenerateReply(h.id, replyId);
+              before = h.repository.find(h.id)!;
+              expect(before.replyRevisions, hasLength(2));
+              await h.runtime.regenerateReply(h.id, replyId);
+            }
+
+            final after = h.repository.find(h.id)!;
+            final durable = ConversationArchive.decode(h.storage.source!)
+                .conversations
+                .single;
+            if (before != null) {
+              expect(
+                after.messages.map((message) => message.toJson()),
+                before.messages.map((message) => message.toJson()),
+              );
+              expect(
+                after.replyRevisions.map((revision) => revision.toJson()),
+                before.replyRevisions.map((revision) => revision.toJson()),
+              );
+              expect(
+                after.turns.map((turn) => turn.toJson()),
+                before.turns.map((turn) => turn.toJson()),
+              );
+            } else {
+              expect(after.messages.map((message) => message.role), [
+                ConversationRole.user,
+              ]);
+              expect(after.replyRevisions, isEmpty);
+            }
+            expect(
+              durable.messages.map((message) => message.toJson()),
+              after.messages.map((message) => message.toJson()),
+            );
+            expect(
+              durable.replyRevisions.map((revision) => revision.toJson()),
+              after.replyRevisions.map((revision) => revision.toJson()),
+            );
+            expect(requests, regenerating ? 3 : 1);
+            expect(after.runs.last.status, ConversationRunStatus.interrupted);
+            final state = h.runtime.state.value.runFor(h.id);
+            expect(state.phase, AgentUiPhase.failed);
+            expect(state.errorMessage, 'sensitiveContent');
+            expect(state.replyTargetMessageId, replyId);
+            expect(state.streamingText, isEmpty);
+          },
+        );
+      }
+    }
+  }
+
+  for (final location in [
+    'Unicode arguments',
+    'Unicode tool result',
+    'escaped arguments',
+    'escaped tool result',
+    'recoverable tool result',
+    'continuation value',
+    'continuation field name',
+    'call ID',
+  ]) {
+    test(
+      'sensitive historical $location prevents HTTP without rewriting the archive',
+      () async {
+        final apiKey = location.startsWith('Unicode') ? _key : _structuredKey;
+        final arguments = switch (location) {
+          'Unicode arguments' => r'{"title":"sk\u002druntime-fixture-key"}',
+          'escaped arguments' => jsonEncode({
+            'filters': [
+              {'title': apiKey},
+            ],
+          }),
+          'recoverable tool result' => jsonEncode({
+            'operationId': 'old-operation',
+          }),
+          _ => '{}',
+        };
+        final result = switch (location) {
+          'Unicode tool result' =>
+            r'{"status":"read","title":"sk\u002druntime-fixture-key"}',
+          'escaped tool result' => jsonEncode({
+            'status': 'read',
+            'metadata': [
+              {apiKey: 'safe'},
+            ],
+          }),
+          'recoverable tool result' => jsonEncode({
+            'status': 'outcome_unknown',
+            'operationId': 'old-operation',
+            'metadata': {apiKey: 'safe'},
+          }),
+          _ => '{"status":"read"}',
+        };
+        final responseItems = switch (location) {
+          'continuation value' => <Map<String, Object?>>[
+            {
+              'type': 'reasoning',
+              'summary': [],
+              'metadata': [
+                {'title': apiKey},
+              ],
+            },
+          ],
+          'continuation field name' => <Map<String, Object?>>[
+            {
+              'type': 'reasoning',
+              'summary': [],
+              'metadata': [
+                {apiKey: 'safe'},
+              ],
+            },
+          ],
+          _ => <Map<String, Object?>>[],
+        };
+        var requests = 0;
+        var executions = 0;
+        var receiptReads = 0;
+        final client = MockClient((_) async {
+          requests++;
+          throw StateError('Sensitive history reached HTTP.');
+        });
+        addTearDown(client.close);
+        final provider = ProviderClient(client: client);
+        final h = await _Harness.create(
+          apiKey: apiKey,
+          handler: (request, cancellation) => provider.stream(
+            request,
+            apiKey: apiKey,
+            cancellation: cancellation,
+          ),
+          execute: (_, _, _) async {
+            executions++;
+            return {'status': 'read'};
+          },
+          readOperationReceipt: (toolName, id) async {
+            receiptReads++;
+            return {'status': 'applied', 'operationId': id};
+          },
+        );
+        addTearDown(h.dispose);
+        await h.repository.update(
+          h.id,
+          (item) => item.copyWith(
+            messages: _toolHistory(
+              arguments: arguments,
+              result: result,
+              callId: location == 'call ID' ? apiKey : 'history-call',
+              toolName: location == 'recoverable tool result'
+                  ? 'external.commit'
+                  : 'events.list',
+              responseItems: responseItems,
+            ),
+          ),
+        );
+        final before = h.repository.find(h.id)!;
+        final source = h.storage.source;
+        final saves = h.storage.saves;
+        expect(arguments, isNot(contains(apiKey)));
+        expect(result, isNot(contains(apiKey)));
+
+        await expectLater(
+          h.runtime.send(h.id, 'New safe request'),
+          throwsA(_runtimeError(AgentRuntimeError.sensitiveContent)),
+        );
+        expect(requests, 0);
+        expect(h.provider.requests, isEmpty);
+        expect(executions, 0);
+        expect(receiptReads, 0);
+        expect(h.storage.saves, saves);
+        expect(h.storage.source, source);
+        expect(h.repository.find(h.id)!.toJson(), before.toJson());
+        expect(
+          ConversationArchive.decode(h.storage.source!)
+              .conversations
+              .single
+              .messages
+              .map((message) => message.toJson()),
+          before.messages.map((message) => message.toJson()),
+        );
+        final state = h.runtime.state.value.runFor(h.id);
+        expect(state.phase, AgentUiPhase.failed);
+        expect(state.errorMessage, 'sensitiveContent');
+        expect(state.streamingText, isEmpty);
+      },
+    );
+  }
+
+  for (final location in ['nested value', 'nested field name', 'custom JSON']) {
+    test(
+      'a tool result with a credential in $location records only a safe failure and stops remaining tools',
+      () async {
+        final details = location == 'nested field name'
+            ? [
+                {_structuredKey: 'safe'},
+              ]
+            : [
+                {'value': _structuredKey},
+              ];
+        var executions = 0;
+        final h = await _Harness.create(
+          apiKey: _structuredKey,
+          handler: (_, _) => _events(
+            _response('', calls: [_call('unsafe-result'), _call('later')]),
+          ),
+          execute: (_, _, _) async {
+            executions++;
+            return {
+              'status': 'committed',
+              'details': location == 'custom JSON'
+                  ? _SerializedToolValue(details)
+                  : details,
+            };
+          },
+        );
+        addTearDown(h.dispose);
+        await h.runtime.send(h.id, 'query');
+
+        final durable = ConversationArchive.decode(h.storage.source!)
+            .conversations
+            .single;
+        final result = durable.messages.singleWhere(
+          (message) => message.toolCallId == 'unsafe-result',
+        );
+        expect(jsonDecode(result.text), {
+          'status': 'outcome_unknown',
+          'error': {'code': 'sensitiveContent'},
+        });
+        final later = durable.messages.singleWhere(
+          (message) => message.toolCallId == 'later',
+        );
+        expect(jsonDecode(later.text), {
+          'status': 'not_executed',
+          'error': {'code': 'not_started'},
+        });
+        expect(executions, 1);
+        expect(h.provider.requests, hasLength(1));
+        expect(durable.runs.single.status, ConversationRunStatus.interrupted);
+        expect(
+          h.runtime.state.value.runFor(h.id).errorMessage,
+          'sensitiveContent',
+        );
+      },
+    );
+  }
+
+  for (final sensitiveIdentity in [false, true]) {
+    test(
+      'tiny result budget ${sensitiveIdentity ? 'excludes the rejected operation ID' : 'preserves the verified safe operation ID'}',
+      () async {
+        var executions = 0;
+        final h = await _Harness.create(
+          apiKey: _structuredKey,
+          mode: AgentPermissionMode.full,
+          limits: const AgentRuntimeLimits(maxToolResultCharacters: 1),
+          handler: (_, _) => _events(
+            _response('', calls: [_call('large-result'), _call('later')]),
+          ),
+          execute: (_, scope, _) async {
+            scope.checkMutation(planId: 'plan', consumeApproval: true);
+            executions++;
+            return {
+              'status': 'committed',
+              'operationId': sensitiveIdentity
+                  ? _structuredKey
+                  : 'safe-operation',
+              'details': 'A result larger than the configured budget.',
+            };
+          },
+        );
+        addTearDown(h.dispose);
+        await h.runtime.send(h.id, 'query');
+        final durable = ConversationArchive.decode(h.storage.source!)
+            .conversations
+            .single;
+        final result = durable.messages.singleWhere(
+          (message) => message.toolCallId == 'large-result',
+        );
+        expect(jsonDecode(result.text), {
+          'status': 'outcome_unknown',
+          'error': {'code': 'result_budget_exceeded'},
+          if (!sensitiveIdentity) 'operationId': 'safe-operation',
+        });
+        expect(executions, 1);
+        expect(h.provider.requests, hasLength(1));
+        expect(
+          jsonDecode(
+            durable.messages
+                .singleWhere((message) => message.toolCallId == 'later')
+                .text,
+          )['status'],
+          'not_executed',
+        );
+        expect(
+          h.runtime.state.value.runFor(h.id).errorMessage,
+          'resultBudgetExceeded',
+        );
+      },
+    );
+  }
+
+  for (final location in ['nested value', 'nested field name']) {
+    test(
+      'a credential in approval $location is never presented or authorized',
+      () async {
+        var commits = 0;
+        var published = false;
+        final h = await _Harness.create(
+          apiKey: _structuredKey,
+          handler: (_, _) => _events(_response('', calls: [_call('write')])),
+          execute: (_, scope, requestApproval) async {
+            final approval = await requestApproval(
+              _PlanWithDetails({
+                'entries': [
+                  if (location == 'nested value')
+                    {'value': _structuredKey}
+                  else
+                    {_structuredKey: 'safe'},
+                ],
+              }),
+            );
+            scope.checkMutation(
+              planId: 'safe-plan',
+              approval: approval,
+              consumeApproval: true,
+            );
+            commits++;
+            return {'status': 'committed'};
+          },
+        );
+        addTearDown(h.dispose);
+        void observeApproval() {
+          final approval = h.runtime.state.value.runFor(h.id).pendingApproval;
+          if (approval == null) return;
+          published = true;
+          unawaited(h.runtime.reject(h.id, approval.id));
+        }
+
+        h.runtime.state.addListener(observeApproval);
+        addTearDown(() => h.runtime.state.removeListener(observeApproval));
+        await h.runtime.send(h.id, 'change');
+        expect(published, false);
+        expect(commits, 0);
+        final state = h.runtime.state.value.runFor(h.id);
+        expect(state.pendingApproval, null);
+        expect(state.phase, AgentUiPhase.failed);
+        expect(state.errorMessage, 'sensitiveContent');
+        final durable = ConversationArchive.decode(h.storage.source!)
+            .conversations
+            .single;
+        expect(
+          jsonDecode(
+            durable.messages
+                .singleWhere((message) => message.toolCallId == 'write')
+                .text,
+          ),
+          {
+            'status': 'failed',
+            'error': {'code': 'tool_failure'},
+          },
+        );
+      },
+    );
+  }
+
+  test('literal Unicode escapes survive HTTP tool arguments and custom JSON results without a second decode', () async {
+    const literal = r'sk\u002druntime-fixture-key';
+    const ordinaryText = r'{"example":"sk\u002druntime-fixture-key"}';
+    var requests = 0;
+    var executions = 0;
+    final client = MockClient((request) async {
+      requests++;
+      expect(request.headers['Authorization'], 'Bearer $_key');
+      final toolReply = requests == 1;
+      if (!toolReply) {
+        final body = jsonDecode(request.body) as Map;
+        final messages = body['messages'] as List;
+        final result =
+            messages.singleWhere((message) => message['role'] == 'tool') as Map;
+        expect(jsonDecode(result['content'] as String), {
+          'status': 'read',
+          'details': {'title': literal},
+        });
+      }
+      return http.Response(
+        jsonEncode({
+          'id': 'literal-response-$requests',
+          'choices': [
+            {
+              'index': 0,
+              'message': {
+                'role': 'assistant',
+                'content': toolReply ? '' : ordinaryText,
+                if (toolReply)
+                  'tool_calls': [
+                    {
+                      'id': 'literal-call',
+                      'type': 'function',
+                      'function': {
+                        'name': ToolNameCodec.encode('events.list'),
+                        'arguments': jsonEncode({'title': literal}),
+                      },
+                    },
+                  ],
+              },
+              'finish_reason': toolReply ? 'tool_calls' : 'stop',
+            },
+          ],
+        }),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
+    });
+    addTearDown(client.close);
+    final provider = ProviderClient(client: client);
+    final h = await _Harness.create(
+      handler: (request, cancellation) =>
+          provider.stream(request, apiKey: _key, cancellation: cancellation),
+      execute: (call, scope, _) async {
+        scope.checkActive();
+        expect(call.decodedArguments, {'title': literal});
+        executions++;
+        return {
+          'status': 'read',
+          'details': _SerializedToolValue({'title': literal}),
+        };
+      },
+    );
+    addTearDown(h.dispose);
+    await h.runtime.send(h.id, ordinaryText);
+    final durable = ConversationArchive.decode(h.storage.source!)
+        .conversations
+        .single;
+    expect(requests, 2);
+    expect(executions, 1);
+    expect(durable.messages.first.text, ordinaryText);
+    expect(durable.messages.last.text, ordinaryText);
+    expect(
+      jsonDecode(
+        durable.messages
+            .singleWhere((message) => message.role == ConversationRole.tool)
+            .text,
+      ),
+      {
+        'status': 'read',
+        'details': {'title': literal},
+      },
+    );
+    expect(durable.runs.single.status, ConversationRunStatus.completed);
+    expect(h.runtime.state.value.runFor(h.id).phase, AgentUiPhase.idle);
+  });
+
+  test('JSON-looking ordinary text and continuation strings stay literal in the next HTTP Responses request', () async {
+    const ordinaryText = r'{"example":"sk\u002druntime-fixture-key"}';
+    var requests = 0;
+    final client = MockClient((request) async {
+      requests++;
+      if (requests == 2) {
+        final body = jsonDecode(request.body) as Map;
+        final input = body['input'] as List;
+        final reasoning =
+            input.singleWhere((item) => item['type'] == 'reasoning') as Map;
+        expect(reasoning['metadata'], {'example': ordinaryText});
+      }
+      return http.Response(
+        jsonEncode({
+          'id': 'literal-response-$requests',
+          'status': 'completed',
+          'output': [
+            {
+              'type': 'reasoning',
+              'id': 'literal-reasoning-$requests',
+              'summary': [],
+              'metadata': {'example': ordinaryText},
+            },
+            {
+              'type': 'message',
+              'id': 'literal-message-$requests',
+              'role': 'assistant',
+              'status': 'completed',
+              'content': [
+                {
+                  'type': 'output_text',
+                  'text': requests == 1 ? ordinaryText : 'Safe next reply',
+                  'annotations': [],
+                },
+              ],
+            },
+          ],
+        }),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
+    });
+    addTearDown(client.close);
+    final provider = ProviderClient(client: client);
+    final h = await _Harness.create(
+      protocol: AgentModelProtocol.responses,
+      handler: (request, cancellation) =>
+          provider.stream(request, apiKey: _key, cancellation: cancellation),
+    );
+    addTearDown(h.dispose);
+    await h.runtime.send(h.id, ordinaryText);
+    await h.runtime.send(h.id, 'Continue');
+    final durable = ConversationArchive.decode(h.storage.source!)
+        .conversations
+        .single;
+    final firstReply = durable.messages.firstWhere(
+      (message) => message.role == ConversationRole.assistant,
+    );
+    expect(firstReply.text, ordinaryText);
+    expect(firstReply.responseItems.first['metadata'], {
+      'example': ordinaryText,
+    });
+    expect(durable.messages.last.text, 'Safe next reply');
+    expect(requests, 2);
+    expect(h.provider.requests, hasLength(2));
+    expect(durable.runs.last.status, ConversationRunStatus.completed);
+    expect(h.runtime.state.value.runFor(h.id).phase, AgentUiPhase.idle);
+  });
+
   test(
     'stopping credential retrieval finishes without accepting or sending text',
     () async {
@@ -3099,6 +3795,40 @@ void registerRecoveryTests() {
 }
 
 const _key = 'sk-runtime-fixture-key';
+const _structuredKey = r'sk-"quote\backslash"-runtime-fixture-key';
+
+List<ConversationMessage> _toolHistory({
+  required String arguments,
+  required String result,
+  required String callId,
+  String toolName = 'events.list',
+  List<Map<String, Object?>> responseItems = const [],
+}) => [
+  ConversationMessage(
+    id: 'history-user',
+    role: ConversationRole.user,
+    text: 'Old request',
+    createdAt: DateTime.utc(2026),
+  ),
+  ConversationMessage(
+    id: 'history-assistant',
+    role: ConversationRole.assistant,
+    text: 'Old safe reply',
+    toolCalls: [
+      ConversationToolCall(id: callId, name: toolName, arguments: arguments),
+    ],
+    responseItems: responseItems,
+    createdAt: DateTime.utc(2026),
+  ),
+  ConversationMessage(
+    id: 'history-result',
+    role: ConversationRole.tool,
+    text: result,
+    toolCallId: callId,
+    createdAt: DateTime.utc(2026),
+  ),
+];
+
 ProviderToolCall _call(String id) =>
     ProviderToolCall(id: id, name: 'events.list', arguments: '{}');
 ProviderResponse _response(
@@ -3153,8 +3883,9 @@ typedef _Handler = Stream<ProviderEvent> Function(
 );
 
 class _FakeProvider extends ProviderClient {
-  _FakeProvider(this.handler);
+  _FakeProvider(this.handler, {this.expectedApiKey = _key});
   final _Handler handler;
+  final String expectedApiKey;
   final requests = <ProviderRequest>[];
   @override
   Stream<ProviderEvent> stream(
@@ -3162,7 +3893,7 @@ class _FakeProvider extends ProviderClient {
     required String apiKey,
     ProviderCancellationToken? cancellation,
   }) {
-    expect(apiKey, _key);
+    expect(apiKey, expectedApiKey);
     requests.add(request);
     return handler(request, cancellation);
   }
@@ -3204,6 +3935,7 @@ class _Harness {
     bool draft = false,
     AgentPermissionMode mode = AgentPermissionMode.ask,
     AgentModelProtocol protocol = AgentModelProtocol.chatCompletions,
+    String apiKey = _key,
     _Handler? handler,
     AgentToolExecutor? execute,
     AgentRuntimeLimits limits = const AgentRuntimeLimits(),
@@ -3225,6 +3957,7 @@ class _Harness {
         : await repository.create(title: 'test', mode: mode);
     final provider = _FakeProvider(
       handler ?? (_, _) => _events(_response('done')),
+      expectedApiKey: apiKey,
     );
     final harness = _Harness(
       storage,
@@ -3250,7 +3983,7 @@ class _Harness {
       repository: repository,
       provider: provider,
       readSettings: () => harness.settings,
-      readApiKey: readKey ?? (_) async => _key,
+      readApiKey: readKey ?? (_) async => apiKey,
       readTools:
           readTools ??
           (_) => [
@@ -3410,6 +4143,19 @@ class _QueueOwnershipHarness {
     await h.runtime.waitForIdle();
     h.dispose();
   }
+}
+
+class _SerializedToolValue {
+  _SerializedToolValue(this.value);
+  final Object? value;
+  Object? toJson() => value;
+}
+
+class _PlanWithDetails extends _Plan {
+  _PlanWithDetails(this.details) : super('safe-plan');
+  final Map<String, Object?> details;
+  @override
+  Map<String, Object?> summary() => {...super.summary(), 'metadata': details};
 }
 
 class _Plan implements PreparedMutation {
