@@ -162,12 +162,20 @@ void main() {
               _longName,
             );
             _expectFullWeekSemantics(tester);
-            for (final button in [_name, _week]) {
-              expect(tester.getRect(button).width, greaterThanOrEqualTo(48));
-              expect(tester.getRect(button).height, greaterThanOrEqualTo(48));
+            final viewport = Offset.zero & const Size(320, 900);
+            for (final button in [
+              _name,
+              _week,
+              _key('student-view-toggle-button'),
+              _key('student-toolbar-more-button'),
+            ]) {
+              final rect = tester.getRect(button);
+              expect(rect.width, greaterThanOrEqualTo(48));
+              expect(rect.height, greaterThanOrEqualTo(48));
+              expect(viewport.contains(rect.topLeft), isTrue);
+              expect(viewport.contains(rect.bottomRight), isTrue);
+              expect(button.hitTestable(), findsOneWidget);
             }
-            await tester.ensureVisible(_week);
-            await tester.pumpAndSettle();
             await tester.tap(_week);
             await tester.pumpAndSettle();
             expect(find.byType(SkedWeekPicker), findsOneWidget);
@@ -286,37 +294,42 @@ void main() {
     expect(tester.takeException(), isNull);
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
-  testWidgets(
-    'a long localized week wraps before hiding primary touch actions',
-    (tester) async {
-      await _mount(
-        tester,
-        width: 320,
-        locale: const Locale('de'),
-        brightness: Brightness.light,
-        scale: 1.8,
-      );
-      final paragraph = tester.renderObject<RenderParagraph>(_text(_week));
-      expect(paragraph.didExceedMaxLines, isFalse);
-      expect(tester.widget<Text>(_text(_week)).maxLines, isNull);
-      final viewport = Offset.zero & const Size(320, 900);
-      for (final button in [
-        _name,
-        _week,
-        _key('student-view-toggle-button'),
-        _key('student-toolbar-more-button'),
-      ]) {
-        final rect = tester.getRect(button);
-        expect(viewport.contains(rect.topLeft), isTrue);
-        expect(viewport.contains(rect.bottomRight), isTrue);
-        expect(rect.width, greaterThanOrEqualTo(48));
-        expect(rect.height, greaterThanOrEqualTo(48));
-      }
-      await tester.tap(_week);
-      await tester.pumpAndSettle();
-      expect(find.byType(SkedWeekPicker), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.android),
-  );
+  for (final (locale, scale) in [
+    (const Locale('de'), 1.8),
+    (const Locale('vi'), 2.0),
+  ]) {
+    testWidgets(
+      'a long $locale week wraps before hiding primary touch actions at $scale',
+      (tester) async {
+        await _mount(
+          tester,
+          width: 320,
+          locale: locale,
+          brightness: Brightness.light,
+          scale: scale,
+        );
+        _expectCompleteText(tester, _text(_week));
+        expect(tester.widget<Text>(_text(_week)).maxLines, isNull);
+        final viewport = Offset.zero & const Size(320, 900);
+        for (final button in [
+          _name,
+          _week,
+          _key('student-view-toggle-button'),
+          _key('student-toolbar-more-button'),
+        ]) {
+          final rect = tester.getRect(button);
+          expect(viewport.contains(rect.topLeft), isTrue);
+          expect(viewport.contains(rect.bottomRight), isTrue);
+          expect(rect.width, greaterThanOrEqualTo(48));
+          expect(rect.height, greaterThanOrEqualTo(48));
+          expect(button.hitTestable(), findsOneWidget);
+        }
+        await tester.tap(_week);
+        await tester.pumpAndSettle();
+        expect(find.byType(SkedWeekPicker), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+    );
+  }
 }

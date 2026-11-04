@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -13,25 +15,66 @@ import '../support/workspace_harness.dart';
 
 Finder key(String value) => find.byKey(ValueKey(value));
 
-void expectReadableToolbarHeight(WidgetTester tester, Rect row, Finder button) {
+void expectReadableToolbarHeight(
+  WidgetTester tester,
+  Rect row,
+  Finder button, {
+  int? maximumTextLines = 2,
+}) {
   final text = find.descendant(of: button, matching: find.byType(Text));
   final paragraph = tester.renderObject<RenderParagraph>(
     find.descendant(of: text, matching: find.byType(RichText)),
   );
-  final line = TextPainter(
-    text: TextSpan(text: '0', style: paragraph.text.style),
-    textDirection: TextDirection.ltr,
-    textScaler: MediaQuery.textScalerOf(tester.element(text)),
-  )..layout();
-  // Large text may use two complete date/week lines. Neither workspace may
-  // regain the old single-line ellipsis just to stay under 52dp.
-  expect(paragraph.didExceedMaxLines, isFalse);
-  expect(paragraph.size.height, lessThanOrEqualTo(line.height * 2 + .1));
-  expect(
-    row.height,
-    lessThanOrEqualTo((line.height * 2 + 16).clamp(52, double.infinity)),
-  );
-  line.dispose();
+  final naturalText = TextPainter(
+    text: paragraph.text,
+    textAlign: paragraph.textAlign,
+    textDirection: paragraph.textDirection,
+    textScaler: paragraph.textScaler,
+    locale: paragraph.locale,
+    strutStyle: paragraph.strutStyle,
+    textWidthBasis: paragraph.textWidthBasis,
+    textHeightBehavior: paragraph.textHeightBehavior,
+  )..layout(maxWidth: paragraph.size.width);
+  try {
+    // Date endpoints use at most two lines. A complete localized week title
+    // can need more lines after reserving the other controls' touch targets.
+    expect(paragraph.didExceedMaxLines, isFalse);
+    expect(paragraph.size.height, closeTo(naturalText.height, .1));
+    if (maximumTextLines != null) {
+      expect(
+        naturalText.computeLineMetrics().length,
+        lessThanOrEqualTo(maximumTextLines),
+      );
+    }
+    final value = paragraph.text.toPlainText();
+    for (var index = 0; index < value.length; index++) {
+      if (value[index].trim().isEmpty) continue;
+      final boxes = paragraph.getBoxesForSelection(
+        TextSelection(baseOffset: index, extentOffset: index + 1),
+      );
+      expect(boxes, isNotEmpty, reason: 'Missing glyph at $index in $value');
+      for (final box in boxes) {
+        expect(box.left, greaterThanOrEqualTo(-.1));
+        expect(box.right, lessThanOrEqualTo(paragraph.size.width + .1));
+        expect(box.top, greaterThanOrEqualTo(-.1));
+        expect(box.bottom, lessThanOrEqualTo(paragraph.size.height + .1));
+      }
+    }
+    final control = tester.getRect(button);
+    final textBounds = Rect.fromPoints(
+      paragraph.localToGlobal(Offset.zero),
+      paragraph.localToGlobal(paragraph.size.bottomRight(Offset.zero)),
+    );
+    expect(textBounds.left, greaterThanOrEqualTo(control.left - .1));
+    expect(textBounds.right, lessThanOrEqualTo(control.right + .1));
+    expect(textBounds.top, greaterThanOrEqualTo(control.top - .1));
+    expect(textBounds.bottom, lessThanOrEqualTo(control.bottom + .1));
+    // Compact touch chrome has no extra vertical padding or second safety
+    // inset: its height comes from the complete title and 48dp touch targets.
+    expect(row.height, closeTo(math.max(48, naturalText.height), .1));
+  } finally {
+    naturalText.dispose();
+  }
 }
 
 class _Storage extends WorkspaceMemoryStorage {
@@ -187,6 +230,7 @@ void main() {
           expect(storage.writes, before);
           await p.workspaces.switchMode(AppMode.student);
           await t.pumpAndSettle();
+          final studentWrites = storage.writes;
           expect(key('assistant-toggle'), findsNothing);
           expectReadableDates(t);
           expect(p.settingsView.fitWeekColumnsToWidth, isTrue);
@@ -197,13 +241,38 @@ void main() {
             t,
             toolbarRect,
             key('student-week-picker-button'),
+            maximumTextLines: null,
           );
+          for (final name in [
+            'student-timetable-picker-button',
+            'student-week-picker-button',
+            'student-view-toggle-button',
+            'student-toolbar-more-button',
+          ]) {
+            final item = t.getRect(key(name));
+            expect(item.width, greaterThanOrEqualTo(48), reason: name);
+            expect(item.height, greaterThanOrEqualTo(48), reason: name);
+            expect(item.left, greaterThanOrEqualTo(0), reason: name);
+            expect(item.right, lessThanOrEqualTo(width), reason: name);
+            expect(
+              item.top,
+              greaterThanOrEqualTo(toolbarRect.top),
+              reason: name,
+            );
+            expect(
+              item.bottom,
+              lessThanOrEqualTo(toolbarRect.bottom),
+              reason: name,
+            );
+            expect(key(name).hitTestable(), findsOneWidget, reason: name);
+          }
           final control = t.getRect(key('student-week-picker-button'));
           expect(control.top, closeTo(toolbarRect.top, 1));
           expect(
             t.getRect(key('timetable-day-header').hitTestable().first).top,
             closeTo(toolbarRect.bottom, 1),
           );
+          expect(storage.writes, studentWrites);
           expect(t.takeException(), isNull);
         },
         variant: TargetPlatformVariant.only(TargetPlatform.android),

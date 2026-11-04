@@ -125,10 +125,20 @@ ScrollPosition _position(WidgetTester tester) => tester
 Future<void> _dragToEnd(WidgetTester tester) async {
   expect(_position(tester).maxScrollExtent, greaterThan(0));
   final drag = Offset(0, -tester.getSize(_agenda).height * .8);
-  for (var attempt = 0; attempt < 12; attempt++) {
-    if (_position(tester).extentAfter < .5) break;
+  // Complete titles and large text can reduce the viewport and the distance
+  // covered by each real swipe. Reach the actual end, failing if a swipe stalls.
+  while (_position(tester).extentAfter >= .5) {
+    final before = _position(tester).extentAfter;
     await tester.drag(_agenda, drag);
     await tester.pumpAndSettle();
+    final remaining = _position(tester).extentAfter;
+    if (remaining >= .5) {
+      expect(
+        before - remaining,
+        greaterThan(.5),
+        reason: 'Each swipe must make progress toward the agenda tail',
+      );
+    }
   }
   expect(_position(tester).extentAfter, lessThan(.5));
 }

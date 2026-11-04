@@ -2807,35 +2807,69 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(581, 776));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     final base = _buildPopulatedStudentData();
-    final provider = AppRuntime(
-      dataTransferCodec: inlineDataTransferCodec,
-      storage: _MemoryTimetableStorage(
-        base.copyWith(
-          studentMode: base.studentMode.copyWith(
-            hiddenToolbarNavigationIds: const ['week'],
-          ),
+    final storage = _MemoryTimetableStorage(
+      base.copyWith(
+        studentMode: base.studentMode.copyWith(
+          hiddenToolbarNavigationIds: const ['week'],
         ),
       ),
+    );
+    final provider = AppRuntime(
+      dataTransferCodec: inlineDataTransferCodec,
+      storage: storage,
       systemLocaleCodeResolver: () => defaultLocaleCode,
       secretStore: const _NoopSecretStore(),
     );
     await provider.lifecycle.load();
     addTearDown(provider.dispose);
+    final mainBefore = provider.session.committedData.encode();
+    final writesBefore = storage.saveCount;
     await _pumpHomeScreenWithProvider(tester, provider);
 
-    final selector = tester.getRect(
+    final toolbarFinder = find.byKey(
+      const ValueKey('student-workspace-toolbar'),
+    );
+    final toolbar = tester.widget<SkedWorkspaceToolbar>(toolbarFinder);
+    final title = tester.getRect(find.byWidget(toolbar.title));
+    final controls = [
       find.byKey(const ValueKey('student-timetable-picker-button')),
-    );
-    final view = tester.getRect(
       find.byKey(const ValueKey('student-view-toggle-button')),
-    );
-    final settings = tester.getRect(
       find.byKey(const ValueKey('student-settings-button')),
-    );
+      find.byKey(const ValueKey('student-toolbar-more-button')),
+    ];
+    final rects = <Rect>[];
+    for (final control in controls) {
+      expect(control.hitTestable(), findsOneWidget);
+      final rect = tester.getRect(control);
+      expect(rect.width, greaterThanOrEqualTo(48));
+      expect(rect.height, greaterThanOrEqualTo(48));
+      expect(rect.left, greaterThanOrEqualTo(title.left - .01));
+      expect(rect.right, lessThanOrEqualTo(title.right + .01));
+      expect(rect.center.dy, closeTo(title.center.dy, 1));
+      rects.add(rect);
+    }
+    final selector = rects.first;
+    final remainingWidth =
+        title.width -
+        rects.skip(1).fold<double>(0, (width, rect) => width + rect.width) -
+        4 * (rects.length - 1);
 
-    expect(selector.width, greaterThan(350));
-    expect(selector.right, closeTo(view.left - 4, 0.01));
-    expect(view.right, closeTo(settings.left - 4, 0.01));
+    expect(selector.width, closeTo(remainingWidth, .01));
+    expect(selector.left, closeTo(title.left, .01));
+    for (var index = 1; index < rects.length; index++) {
+      expect(rects[index].left, closeTo(rects[index - 1].right + 4, .01));
+    }
+    expect(rects.last.right, closeTo(title.right, .01));
+    final label = tester.renderObject<RenderParagraph>(
+      find.descendant(of: controls.first, matching: find.byType(Text)),
+    );
+    expect(label.didExceedMaxLines, isFalse);
+    expect(
+      label.getMaxIntrinsicWidth(double.infinity),
+      lessThanOrEqualTo(label.size.width + .01),
+    );
+    expect(provider.session.committedData.encode(), mainBefore);
+    expect(storage.saveCount, writesBefore);
     expect(tester.takeException(), isNull);
   });
 

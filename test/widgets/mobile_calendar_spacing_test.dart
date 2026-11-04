@@ -187,7 +187,12 @@ void main() {
                     ? 'general-date-title-button'
                     : 'student-week-picker-button',
               );
-              chrome.expectReadableToolbarHeight(t, toolbarRect, dateButton);
+              chrome.expectReadableToolbarHeight(
+                t,
+                toolbarRect,
+                dateButton,
+                maximumTextLines: mode == AppMode.general ? 2 : null,
+              );
               expect(toolbarRect.height, greaterThanOrEqualTo(48));
               if (scale == 1) expect(toolbarRect.height, 48);
               expect(t.getRect(dateButton).width, greaterThanOrEqualTo(48));

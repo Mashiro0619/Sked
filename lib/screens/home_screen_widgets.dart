@@ -534,9 +534,18 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
             weekMinimum,
             measuredWeekWidth + 12,
           );
-          // Keep the week readable after the fixed navigation trigger takes
-          // space. The existing row scrolls when its controls cannot all fit.
-          final weekWidth = hasWeek ? desiredWeekWidth : 0.0;
+          // Reserve the selector and fixed actions before the localized week
+          // label. The week can wrap; scroll only if minimum targets cannot fit.
+          final maximumWeekWidth = math.max(
+            48.0,
+            availableWidth -
+                nonFlexibleWidth -
+                gapWidth -
+                (hasTimetable ? selectorMinimum : 0),
+          );
+          final weekWidth = hasWeek
+              ? math.min(desiredWeekWidth, maximumWeekWidth)
+              : 0.0;
           final flexibleWidth = math.max(
             selectorMinimum,
             availableWidth - nonFlexibleWidth - gapWidth - weekWidth,
