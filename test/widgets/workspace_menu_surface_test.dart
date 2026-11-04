@@ -260,6 +260,19 @@ void runWorkspaceMenuSurfaceTests({WorkspaceMenuSurfaceCapture? capture}) {
           }
 
           await _tap(tester, trigger);
+          final backMenu = tester.element(
+            _menuSurface(_menuOption(l10n.viewDay)),
+          );
+          expect(
+            await Navigator.of(context, rootNavigator: true).maybePop(),
+            isTrue,
+          );
+          await tester.pumpAndSettle();
+          expect(backMenu.mounted, isFalse);
+          expect(trigger.hitTestable(), findsOneWidget);
+          expect(weekLabel, findsOneWidget);
+
+          await _tap(tester, trigger);
           final selectionMenu = tester.element(
             _menuSurface(_menuOption(l10n.viewDay)),
           );

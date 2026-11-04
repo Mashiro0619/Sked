@@ -476,7 +476,6 @@ class WorkspaceFrame extends StatefulWidget {
 }
 
 class _WorkspaceFrameState extends State<WorkspaceFrame> {
-  bool get _coveredByRoute => ModalRoute.of(context)?.isCurrent == false;
   late final AssistantPaneController _assistant =
       widget.assistantController ?? AssistantPaneController();
   final _assistantFocus = FocusScopeNode(debugLabel: 'Workspace assistant');
@@ -850,8 +849,7 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
     controller.focusScope.traversalEdgeBehavior = floatingEditor
         ? TraversalEdgeBehavior.closedLoop
         : TraversalEdgeBehavior.parentScope;
-    final interactive =
-        widget.active && policy.detailVisible && !_coveredByRoute;
+    final interactive = widget.active && policy.detailVisible;
     return Offstage(
       offstage: !policy.detailVisible,
       child: FocusScope(
@@ -1294,7 +1292,10 @@ class _WorkspaceFrameState extends State<WorkspaceFrame> {
       builder: (context, _) => LayoutBuilder(
         builder: (context, constraints) {
           final controller = widget.controller;
-          final active = widget.active && !_coveredByRoute;
+          // The shell owns destination activity. A menu or confirmation may
+          // cover this route while still belonging to the visible workspace;
+          // keep its focus policy and native editor guard until it closes.
+          final active = widget.active;
           final previewEnabled =
               _developerUi?.assistantVisible ?? widget.assistantPreview;
           final editingTask =
