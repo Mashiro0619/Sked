@@ -11,6 +11,7 @@ import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/conversations/conversation_storage_codec.dart';
 import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/tools/application_tool_host.dart';
+import 'package:sked/agent/tools/agent_control_tool_adapters.dart';
 import 'package:sked/agent/skills/shared_skill_loader.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/application/operation_contracts.dart';
@@ -174,6 +175,61 @@ void main() {
       2 => _call('mutation.commit', {'planId': _lastTool(request)['planId']}),
       _ => _done(),
     };
+  }
+
+  for (final ending in ['stop', 'maintenance', 'shutdown']) {
+    test('$ending drains an open credential request without waiting for input', () async {
+      final conversation = await ready(AgentPermissionMode.ask);
+      final opened = Completer<void>();
+      final pending = Completer<AgentCredentialInput?>();
+      late ProviderCancellationToken cancellation;
+      app.agent.controlTools.bindCredentialInput((_, token) {
+        cancellation = token;
+        opened.complete();
+        return pending.future;
+      });
+      var round = 0;
+      provider.respond = (_) => switch (round++) {
+        0 => _call('capabilities.describe', {
+          'names': ['credentials.request_input'],
+        }),
+        1 => _call('credentials.request_input', {
+          'endpoint': 'https://fixture.example/v1',
+        }),
+        _ => _done(),
+      };
+      final writes = credentials.writes;
+      final run = app.agent.runtime.send(conversation.id, 'Update my API key');
+      await opened.future.timeout(const Duration(seconds: 5));
+      switch (ending) {
+        case 'stop':
+          await app.agent.runtime.stop(conversation.id);
+          await app.agent.runtime.waitForIdle().timeout(
+            const Duration(seconds: 5),
+          );
+        case 'maintenance':
+          await app.agent.quiesce().timeout(const Duration(seconds: 5));
+        case 'shutdown':
+          await app.shutdown.quiesce().timeout(const Duration(seconds: 5));
+      }
+      await run;
+      expect(cancellation.isCancelled, isTrue);
+      expect(app.agent.runtime.isRunning(conversation.id), isFalse);
+      expect(credentials.writes, writes);
+      // A host that ignored cancellation cannot leak a late secret to history.
+      final lateInput = AgentCredentialInput('late-fixture-key');
+      pending.complete(lateInput);
+      await pumpEventQueue();
+      expect(lateInput.take(), isNull);
+      expect(conversations.source, isNot(contains('late-fixture-key')));
+      if (ending == 'stop') {
+        await app.agent.runtime.send(conversation.id, 'A new request');
+        expect(
+          app.agent.conversations.find(conversation.id)!.messages.last.text,
+          'Done',
+        );
+      }
+    });
   }
 
   test('default-on Agent stays dormant until explicitly opened', () async {

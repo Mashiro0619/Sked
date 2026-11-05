@@ -607,7 +607,7 @@ Future<void> _schoolSites(AcceptanceHarness h) async {
 
 Future<void> _connection(AcceptanceHarness h) async {
   const syntheticSecret = 'synthetic-acceptance-key';
-  h.app.agent.controlTools.bindCredentialInput((endpoint) async {
+  h.app.agent.controlTools.bindCredentialInput((endpoint, _) async {
     expect(endpoint.toString(), 'https://new-acceptance.invalid/v1');
     return AgentCredentialInput(syntheticSecret);
   });

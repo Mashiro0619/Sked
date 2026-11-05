@@ -1,15 +1,48 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../provider/provider.dart' show ProviderCancellationToken;
 import 'agent_selectable_text.dart';
 
 /// The key is returned only to the owning host callback. It is never serialized
 /// as a tool argument, conversation message or credential status value.
-Future<String?> requestAgentCredential(BuildContext context, Uri endpoint) =>
-    showDialog<String>(
-      context: context,
-      builder: (_) => _AgentCredentialDialog(endpoint: endpoint),
+Future<String?> requestAgentCredential(
+  BuildContext context,
+  Uri endpoint, {
+  ProviderCancellationToken? cancellation,
+}) async {
+  if (cancellation?.isCancelled == true) return null;
+  final navigator = Navigator.of(context, rootNavigator: true);
+  final route = DialogRoute<String>(
+    context: context,
+    themes: InheritedTheme.capture(from: context, to: navigator.context),
+    builder: (_) => _AgentCredentialDialog(endpoint: endpoint),
+  );
+  var settled = false;
+  if (cancellation != null) {
+    unawaited(
+      cancellation.whenCancelled.then((_) {
+        // Host rebinding can happen during a build. Remove only this request's
+        // route after that frame, including when another dialog is now above it.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final owner = route.navigator;
+          if (!settled && owner != null && owner.mounted && route.isActive) {
+            owner.removeRoute(route);
+          }
+        });
+        WidgetsBinding.instance.ensureVisualUpdate();
+      }),
     );
+  }
+  try {
+    final value = await navigator.push(route);
+    return cancellation?.isCancelled == true ? null : value;
+  } finally {
+    settled = true;
+  }
+}
 
 class _AgentCredentialDialog extends StatefulWidget {
   const _AgentCredentialDialog({required this.endpoint});

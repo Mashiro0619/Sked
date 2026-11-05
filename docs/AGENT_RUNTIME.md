@@ -104,6 +104,8 @@ courses.display.list 返回真实周投影中的冲突组；courses.display.prep
 
 连接工具使用宿主安全输入句柄，原始密钥不经过模型参数。配置替换、清除、连接诊断和模型列表均绑定已保存的目的地与版本。诊断明确区分传输可达和实际工具调用能力；模型列表有边界，后续分页读取同一回执，不再次发出网络请求。共享偏好可准备修改，权限模式仍由用户控制。
 
+密钥输入等待绑定发起运行和当前宿主。停止、维护排空、退出或宿主解绑会取消等待并关闭该次输入框，不需要用户再提交或取消；其上后来打开的其他对话框保留。宿主忽略取消后迟到返回的密钥立即丢弃，不建立句柄、不保存到连接或会话。输入框的正常提交、手动取消与迟到输入清理分别由[输入界面回归](../test/agent/ui/agent_credential_input_test.dart)、[工具回归](../test/agent/tools/agent_control_tool_adapters_test.dart)和[应用排空回归](../test/agent/agent_application_test.dart)验证。
+
 设置页面保存携带其编辑时的已提交配置，应用配置队列在真正执行、初始化结束以及写入前核对该快照。排队期间其他页面或 Agent 已保存较新配置时，旧草稿保存失败并保留输入，不覆盖新连接、模型目录或偏好；凭据核验期间发生的配置变化同样拒绝写回。连接与偏好仍只保存各自字段，正在运行的请求保留已接受的配置快照。
 
 实现与回归：[连接控制工具](../lib/agent/tools/agent_control_tool_adapters.dart)、[会话工具](../lib/agent/tools/conversation_tool_adapters.dart)、[连接控制测试](../test/agent/tools/agent_control_tool_adapters_test.dart)、[会话工具测试](../test/agent/tools/conversation_tool_adapters_test.dart)。

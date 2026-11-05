@@ -144,9 +144,16 @@ class _AppHomeScreenState extends State<AppHomeScreen> {
       read: agenda?.effectForOperation,
       changes: agenda?.effectChanges,
     );
-    application.controlTools.bindCredentialInput((endpoint) async {
+    application.controlTools.bindCredentialInput((
+      endpoint,
+      cancellation,
+    ) async {
       if (!mounted) return null;
-      final key = await requestAgentCredential(context, endpoint);
+      final key = await requestAgentCredential(
+        context,
+        endpoint,
+        cancellation: cancellation,
+      );
       return key == null ? null : AgentCredentialInput(key);
     });
     application.platformTools.bindServices(

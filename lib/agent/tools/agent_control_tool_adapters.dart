@@ -35,6 +35,7 @@ typedef AgentConnectionWriter = Future<void> Function(
 });
 typedef AgentCredentialInputRequester = Future<AgentCredentialInput?> Function(
   Uri endpoint,
+  ProviderCancellationToken cancellation,
 );
 
 class _InputHandle {
@@ -71,11 +72,16 @@ class AgentControlToolAdapters {
   final Future<String> Function(AgentSettings) _readKey;
   final DateTime Function() _clock;
   final _inputs = <String, _InputHandle>{};
+  final _pendingInputs = <ProviderCancellationToken, OperationScope>{};
   AgentCredentialInputRequester? _requestInput;
   int _binding = 0;
   static const inputLifetime = Duration(minutes: 15);
 
   void bindCredentialInput(AgentCredentialInputRequester? request) {
+    for (final cancellation in _pendingInputs.keys.toList()) {
+      cancellation.cancel();
+    }
+    _pendingInputs.clear();
     for (final input in _inputs.values) {
       input.input.discard();
     }
@@ -85,6 +91,9 @@ class AgentControlToolAdapters {
   }
 
   void discardScope(OperationScope scope) {
+    for (final entry in _pendingInputs.entries.toList()) {
+      if (identical(entry.value, scope)) entry.key.cancel();
+    }
     _inputs.removeWhere((_, value) {
       if (!identical(value.scope, scope)) return false;
       value.input.discard();
@@ -165,14 +174,40 @@ class AgentControlToolAdapters {
           );
         }
         _pruneInputs();
-        if (_inputs.length >= 4) {
+        if (_inputs.length + _pendingInputs.length >= 4) {
           throw const OperationProblem(
             OperationErrorCode.busy,
             'Finish or discard a pending credential change first.',
           );
         }
         final binding = _binding;
-        final input = await request(Uri.parse(endpoint));
+        final cancellation = ProviderCancellationToken();
+        _pendingInputs[cancellation] = scope;
+        unawaited(scope.whenCancelled.then((_) => discardScope(scope)));
+        AgentCredentialInput? input;
+        try {
+          final requested =
+              Future<AgentCredentialInput?>.sync(
+                () => request(Uri.parse(endpoint), cancellation),
+              ).then((value) {
+                // A host can finish after cancellation or ignore its signal. Its
+                // late secret must never survive as an unowned input handle.
+                if (cancellation.isCancelled ||
+                    scope.isCancelled ||
+                    _binding != binding) {
+                  value?.discard();
+                  return null;
+                }
+                return value;
+              });
+          input = await Future.any([
+            requested,
+            cancellation.whenCancelled.then<AgentCredentialInput?>((_) => null),
+          ]);
+        } finally {
+          _pendingInputs.remove(cancellation);
+          cancellation.cancel();
+        }
         if (input == null) {
           throw const OperationProblem(
             OperationErrorCode.cancelled,
@@ -190,7 +225,6 @@ class AgentControlToolAdapters {
           }
           final id = generateUuidV4();
           _inputs[id] = _InputHandle(input, scope, endpoint, _clock().toUtc());
-          unawaited(scope.whenCancelled.then((_) => discardScope(scope)));
           return {
             'credentialHandle': id,
             'endpoint': _publicEndpoint(endpoint),

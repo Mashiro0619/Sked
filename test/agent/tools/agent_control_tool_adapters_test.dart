@@ -288,7 +288,7 @@ void main() {
 
   test('secure replacement uses an opaque handle and never returns or records the key', () async {
     const key = 'private-input-never-serialize';
-    control.bindCredentialInput((endpoint) async {
+    control.bindCredentialInput((endpoint, _) async {
       expect(endpoint.toString(), 'https://next.test/v1');
       return AgentCredentialInput(key);
     });
@@ -341,7 +341,7 @@ void main() {
   test(
     'handles cannot move across endpoints or runs and expire without saving',
     () async {
-      control.bindCredentialInput((_) async => AgentCredentialInput('key'));
+      control.bindCredentialInput((_, _) async => AgentCredentialInput('key'));
       final input = await h.call('credentials.request_input', {
         'endpoint': 'https://next.test/v1',
       });
@@ -393,7 +393,7 @@ void main() {
     () async {
       final opened = Completer<void>();
       final pending = Completer<AgentCredentialInput?>();
-      control.bindCredentialInput((_) {
+      control.bindCredentialInput((_, _) {
         opened.complete();
         return pending.future;
       });
@@ -406,17 +406,49 @@ void main() {
       );
       await opened.future;
       h.scope.cancel();
+      // Cancellation settles without waiting for the host to return input.
+      await expected.timeout(const Duration(seconds: 5));
       final input = AgentCredentialInput('discard-me');
       pending.complete(input);
-      await expected;
+      await pumpEventQueue();
       expect(input.take(), isNull);
+      expect(writes, 0);
+    },
+  );
+
+  test(
+    'rebinding the host cancels pending input and discards its late key',
+    () async {
+      final opened = Completer<void>();
+      final pending = Completer<AgentCredentialInput?>();
+      late ProviderCancellationToken cancellation;
+      control.bindCredentialInput((_, token) {
+        cancellation = token;
+        opened.complete();
+        return pending.future;
+      });
+      final action = h.call('credentials.request_input', {
+        'endpoint': 'https://model.test/v1',
+      });
+      final expected = expectLater(
+        action,
+        throwsA(_problem(OperationErrorCode.cancelled)),
+      );
+      await opened.future;
+      control.bindCredentialInput(null);
+      await expected.timeout(const Duration(seconds: 5));
+      expect(cancellation.isCancelled, isTrue);
+      final lateInput = AgentCredentialInput('late-rebound-key');
+      pending.complete(lateInput);
+      await pumpEventQueue();
+      expect(lateInput.take(), isNull);
       expect(writes, 0);
     },
   );
 
   test('plan mode does not open credential input and raw-key or permission arguments are rejected', () async {
     var opened = 0;
-    control.bindCredentialInput((_) async {
+    control.bindCredentialInput((_, _) async {
       opened++;
       return AgentCredentialInput('key');
     });
