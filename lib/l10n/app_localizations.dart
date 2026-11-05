@@ -7673,6 +7673,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This permanently deletes timetables, events, settings, school sites, chats and their files, skills, memories, local backups and recovery copies, API keys, and the local school sign-in session, then exits Sked. Exported files in other locations are kept. This cannot be undone.'**
   String get agentClearDataWarning;
+
+  /// No description provided for @agentActivityCourses.
+  ///
+  /// In en, this message translates to:
+  /// **'Courses'**
+  String get agentActivityCourses;
+
+  /// No description provided for @agentActivityFreeSlots.
+  ///
+  /// In en, this message translates to:
+  /// **'Free slots'**
+  String get agentActivityFreeSlots;
+
+  /// No description provided for @agentActivityConflicts.
+  ///
+  /// In en, this message translates to:
+  /// **'Conflict check'**
+  String get agentActivityConflicts;
 }
 
 class _AppLocalizationsDelegate

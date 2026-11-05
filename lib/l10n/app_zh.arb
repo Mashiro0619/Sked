@@ -2842,5 +2842,11 @@
     }
   },
   "agentClearDataWarning": "这会永久删除课表、日程、设置、学校站点、聊天及其文件、技能、记忆、本地备份和恢复副本、API 密钥，并清除本机学校登录会话，然后退出 Sked。已导出到其他位置的文件会保留。此操作无法撤销。",
-  "@agentClearDataWarning": {}
+  "@agentClearDataWarning": {},
+  "agentActivityCourses": "课程",
+  "@agentActivityCourses": {},
+  "agentActivityFreeSlots": "空闲时段",
+  "@agentActivityFreeSlots": {},
+  "agentActivityConflicts": "冲突检查",
+  "@agentActivityConflicts": {}
 }

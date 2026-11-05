@@ -7,40 +7,14 @@ import 'package:material_ui/material_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/sked_expressive_theme.dart';
 import '../../theme/sked_menu_style.dart';
+import 'agent_activity_summary.dart';
 import 'agent_conversation_timeline.dart';
 import 'agent_selectable_text.dart';
 
 /// Human-readable activity names do not imply permission or a saved outcome.
 /// The exact technical tool name remains available inside its detail view.
 String agentToolActivityLabel(AgentToolActivity tool, AppLocalizations l) {
-  final name = tool.name;
-  if (name == 'capabilities.describe' || name == 'resources.describe') {
-    return l.agentActivityCapabilities;
-  }
-  if (name.endsWith('.prepare') || name == 'selection.create') {
-    return l.agentActivityPrepare;
-  }
-  if (name.endsWith('.commit')) return l.agentActivityCommit;
-  if (name.startsWith('notifications.')) return l.agentActivityNotifications;
-  if (name.startsWith('skills.') ||
-      name.startsWith('memories.') ||
-      name.startsWith('knowledge.')) {
-    return l.agentActivityKnowledge;
-  }
-  if (name.startsWith('settings.')) return l.agentActivitySettings;
-  if (name.startsWith('platform.') || name.startsWith('external.')) {
-    return l.agentActivitySystem;
-  }
-  if (name.startsWith('agenda.') ||
-      name.startsWith('courses.') ||
-      name.startsWith('sources.') ||
-      name.startsWith('conversation.') ||
-      name.startsWith('selection.') ||
-      name.startsWith('resources.') ||
-      name == 'operations.status') {
-    return l.agentActivityRead;
-  }
-  return l.agentActivityTool;
+  return summarizeAgentToolActivity(tool, l).title;
 }
 
 String agentToolActivityStatusLabel(
@@ -297,7 +271,10 @@ class _AgentTurnActivityState extends State<AgentTurnActivity> {
                             itemCount: activity.tools.length,
                             itemBuilder: (context, index) {
                               final tool = activity.tools[index];
-                              final label = agentToolActivityLabel(tool, l);
+                              final description = summarizeAgentToolActivity(
+                                tool,
+                                l,
+                              );
                               final state = agentToolActivityStatusLabel(
                                 tool.status,
                                 l,
@@ -311,21 +288,45 @@ class _AgentTurnActivityState extends State<AgentTurnActivity> {
                                   size: 18,
                                   color: _statusColor(tool.status, colors),
                                 ),
-                                title: Text(label, maxLines: 2),
+                                title: Text(
+                                  description.title,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                                 subtitle:
-                                    tool.status ==
+                                    description.detail != null ||
+                                        tool.status ==
                                             AgentToolActivityStatus.failed ||
                                         tool.status ==
                                             AgentToolActivityStatus.uncertain
-                                    ? Text(
-                                        state,
-                                        style: theme.textTheme.labelMedium
-                                            ?.copyWith(
-                                              color: _statusColor(
-                                                tool.status,
-                                                colors,
-                                              ),
+                                    ? Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (description.detail != null)
+                                            Text(
+                                              description.detail!,
+                                              maxLines: 3,
+                                              overflow: TextOverflow.ellipsis,
                                             ),
+                                          if (tool.status ==
+                                                  AgentToolActivityStatus
+                                                      .failed ||
+                                              tool.status ==
+                                                  AgentToolActivityStatus
+                                                      .uncertain)
+                                            Text(
+                                              state,
+                                              style: theme.textTheme.labelMedium
+                                                  ?.copyWith(
+                                                    color: _statusColor(
+                                                      tool.status,
+                                                      colors,
+                                                    ),
+                                                  ),
+                                            ),
+                                        ],
                                       )
                                     : null,
                                 trailing: const Icon(

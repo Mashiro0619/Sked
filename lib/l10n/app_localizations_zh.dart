@@ -4043,6 +4043,15 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get agentClearDataWarning =>
       '这会永久删除课表、日程、设置、学校站点、聊天及其文件、技能、记忆、本地备份和恢复副本、API 密钥，并清除本机学校登录会话，然后退出 Sked。已导出到其他位置的文件会保留。此操作无法撤销。';
+
+  @override
+  String get agentActivityCourses => '课程';
+
+  @override
+  String get agentActivityFreeSlots => '空闲时段';
+
+  @override
+  String get agentActivityConflicts => '冲突检查';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -8086,4 +8095,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get agentClearDataWarning =>
       '這會永久刪除課表、日程、設定、學校站點、聊天及其檔案、技能、記憶、本機備份和復原副本、API 金鑰，並清除本機學校登入工作階段，然後結束 Sked。已匯出到其他位置的檔案會保留。此操作無法復原。';
+
+  @override
+  String get agentActivityCourses => '課程';
+
+  @override
+  String get agentActivityFreeSlots => '空閒時段';
+
+  @override
+  String get agentActivityConflicts => '衝突檢查';
 }

@@ -2844,5 +2844,11 @@
     }
   },
   "agentClearDataWarning": "這會永久刪除課表、日程、設定、學校站點、聊天及其檔案、技能、記憶、本機備份和復原副本、API 金鑰，並清除本機學校登入工作階段，然後結束 Sked。已匯出到其他位置的檔案會保留。此操作無法復原。",
-  "@agentClearDataWarning": {}
+  "@agentClearDataWarning": {},
+  "agentActivityCourses": "課程",
+  "@agentActivityCourses": {},
+  "agentActivityFreeSlots": "空閒時段",
+  "@agentActivityFreeSlots": {},
+  "agentActivityConflicts": "衝突檢查",
+  "@agentActivityConflicts": {}
 }
