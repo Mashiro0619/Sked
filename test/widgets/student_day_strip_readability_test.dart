@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
@@ -179,11 +180,13 @@ void main() {
   }
 
   testWidgets(
-    'large text fit fallback scrolls days before handing off a week',
+    'large text fit fallback keeps scroll through a live refresh before '
+    'handing off a week',
     (tester) async {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(320, 900);
+      final refreshes = <_ManualRefreshTimer>[];
       final app = await workspaceProvider(
         storage: WorkspaceMemoryStorage(
           _studentData(locale: 'en', fitToWidth: true),
@@ -195,7 +198,15 @@ void main() {
           WorkspaceHarness(
             provider: app,
             textScale: 2,
-            home: const HomeScreen(),
+            home: TimetableLiveRefreshScope(
+              now: () => DateTime(2026, 6, 15, 9),
+              createTimer: (_, callback) {
+                final timer = _ManualRefreshTimer(callback);
+                refreshes.add(timer);
+                return timer;
+              },
+              child: const HomeScreen(),
+            ),
           ),
         );
         await tester.pumpAndSettle();
@@ -209,6 +220,11 @@ void main() {
         await tester.drag(_strip(), const Offset(-90, 0));
         await tester.pumpAndSettle();
         expect(_stripPosition(tester).pixels, greaterThan(0));
+        final readingOffset = _stripPosition(tester).pixels;
+        expect(refreshes.last.isActive, isTrue);
+        refreshes.last.fire();
+        await tester.pumpAndSettle();
+        expect(_stripPosition(tester).pixels, closeTo(readingOffset, 0.01));
         expect(app.studentView.selectedWeek, 5);
 
         _stripPosition(tester).jumpTo(_stripPosition(tester).maxScrollExtent);
@@ -228,4 +244,30 @@ void main() {
       }
     },
   );
+}
+
+class _ManualRefreshTimer implements Timer {
+  _ManualRefreshTimer(this._callback);
+
+  final void Function() _callback;
+  bool _active = true;
+  int _tick = 0;
+
+  void fire() {
+    if (!_active) return;
+    _active = false;
+    _tick++;
+    _callback();
+  }
+
+  @override
+  bool get isActive => _active;
+
+  @override
+  int get tick => _tick;
+
+  @override
+  void cancel() {
+    _active = false;
+  }
 }

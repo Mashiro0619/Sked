@@ -755,6 +755,14 @@ class _StudentDayStrip extends StatefulWidget {
 class _StudentDayStripState extends State<_StudentDayStrip> {
   final ScrollController _scrollController = ScrollController();
   _DayStripMetrics? _lastMetrics;
+  ({
+    double viewportWidth,
+    double itemWidth,
+    double gap,
+    double padding,
+    TextDirection direction,
+  })?
+  _lastLayout;
 
   @override
   void initState() {
@@ -891,7 +899,17 @@ class _StudentDayStripState extends State<_StudentDayStrip> {
           minimumItemWidth: minimumItemWidth,
         );
         _lastMetrics = metrics;
-        _scheduleRevealSelected(metrics);
+        final layout = (
+          viewportWidth: constraints.maxWidth,
+          itemWidth: metrics.itemWidth,
+          gap: metrics.gap,
+          padding: metrics.padding,
+          direction: textDirection,
+        );
+        if (_lastLayout != layout) {
+          _lastLayout = layout;
+          _scheduleRevealSelected(metrics);
+        }
         final contentWidth =
             metrics.padding * 2 + metrics.itemWidth * 7 + metrics.gap * 6;
         final scrollable = contentWidth > constraints.maxWidth + 0.5;
