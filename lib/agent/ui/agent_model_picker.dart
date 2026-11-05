@@ -391,14 +391,16 @@ class _AgentModelPickerState extends State<AgentModelPicker>
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Text(
-                              effortLabel,
-                              key: const ValueKey('agent-effort-value'),
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.titleMedium
+                              l.agentModel,
+                              key: const ValueKey('agent-model-label'),
+                              style: Theme.of(context).textTheme.labelMedium
                                   ?.copyWith(
-                                    color: menuStyle.selectedForeground,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
                                   ),
                             ),
+                            const SizedBox(height: 4),
                             if (state.availableModels.length > 1 ||
                                 model == null)
                               MenuItemButton(
@@ -422,61 +424,141 @@ class _AgentModelPickerState extends State<AgentModelPicker>
                                     : null,
                                 child: Text(
                                   modelLabel,
-                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.titleSmall,
                                 ),
                               )
                             else
                               Padding(
                                 padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
+                                  vertical: 8,
+                                  horizontal: 10,
                                 ),
                                 child: Text(
                                   modelLabel,
-                                  textAlign: TextAlign.center,
-                                  style: menuStyle.labelStyle({}),
+                                  style: Theme.of(context).textTheme.titleSmall,
+                                ),
+                              ),
+                            const SizedBox(height: 16),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  flex: 2,
+                                  child: Text(
+                                    l.agentThinkingEffort,
+                                    key: const ValueKey('agent-effort-label'),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelMedium
+                                        ?.copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant,
+                                        ),
+                                  ),
+                                ),
+                                if (effort != null) ...[
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      effortLabel,
+                                      key: const ValueKey('agent-effort-value'),
+                                      textAlign: TextAlign.end,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelLarge
+                                          ?.copyWith(
+                                            color: menuStyle.selectedForeground,
+                                          ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            if (efforts.length > 1)
+                              MergeSemantics(
+                                child: Semantics(
+                                  label: l.agentThinkingEffort,
+                                  child: Slider(
+                                    key: const ValueKey('agent-effort-slider'),
+                                    focusNode: _sliderFocus,
+                                    value: math
+                                        .max(
+                                          0,
+                                          efforts.indexOf(
+                                            effort ?? efforts.first,
+                                          ),
+                                        )
+                                        .toDouble(),
+                                    min: 0,
+                                    max: (efforts.length - 1).toDouble(),
+                                    divisions: efforts.length - 1,
+                                    label: effortLabel,
+                                    semanticFormatterCallback: (value) =>
+                                        agentReasoningEffortLabel(
+                                          l,
+                                          efforts[value.round()],
+                                        ),
+                                    onChanged: enabled && model != null
+                                        ? (value) {
+                                            if (_isOpenSession(menuToken)) {
+                                              setState(
+                                                () => _preview =
+                                                    efforts[value.round()],
+                                              );
+                                            }
+                                          }
+                                        : null,
+                                    onChangeEnd: enabled && model != null
+                                        ? (value) => unawaited(
+                                            _select(
+                                              AgentModelSelection(
+                                                modelId: model.id,
+                                                reasoningEffort:
+                                                    efforts[value.round()],
+                                              ),
+                                              openToken: menuToken,
+                                            ),
+                                          )
+                                        : null,
+                                  ),
                                 ),
                               ),
                             if (efforts.length > 1)
-                              Slider(
-                                key: const ValueKey('agent-effort-slider'),
-                                focusNode: _sliderFocus,
-                                value: math
-                                    .max(
-                                      0,
-                                      efforts.indexOf(effort ?? efforts.first),
-                                    )
-                                    .toDouble(),
-                                min: 0,
-                                max: (efforts.length - 1).toDouble(),
-                                divisions: efforts.length - 1,
-                                label: effortLabel,
-                                semanticFormatterCallback: (value) =>
-                                    agentReasoningEffortLabel(
-                                      l,
-                                      efforts[value.round()],
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      agentReasoningEffortLabel(
+                                        l,
+                                        efforts.first,
+                                      ),
+                                      key: const ValueKey(
+                                        'agent-effort-minimum',
+                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall,
                                     ),
-                                onChanged: enabled && model != null
-                                    ? (value) {
-                                        if (_isOpenSession(menuToken)) {
-                                          setState(
-                                            () => _preview =
-                                                efforts[value.round()],
-                                          );
-                                        }
-                                      }
-                                    : null,
-                                onChangeEnd: enabled && model != null
-                                    ? (value) => unawaited(
-                                        _select(
-                                          AgentModelSelection(
-                                            modelId: model.id,
-                                            reasoningEffort:
-                                                efforts[value.round()],
-                                          ),
-                                          openToken: menuToken,
-                                        ),
-                                      )
-                                    : null,
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Text(
+                                      agentReasoningEffortLabel(
+                                        l,
+                                        efforts.last,
+                                      ),
+                                      key: const ValueKey(
+                                        'agent-effort-maximum',
+                                      ),
+                                      textAlign: TextAlign.end,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall,
+                                    ),
+                                  ),
+                                ],
                               ),
                             if (efforts.length == 1 &&
                                 (!ready ||

@@ -239,6 +239,95 @@ void main() {
     );
   }
 
+  for (final scale in [1.0, 2.0]) {
+    testWidgets(
+      'combined menu labels model and thinking effort at ${scale}x',
+      (tester) async {
+        await initialize(tester);
+        await mountAgentUi(
+          tester,
+          view(),
+          size: const Size(320, 740),
+          scale: scale,
+        );
+        await open(tester);
+        final modelLabel = find.byKey(const ValueKey('agent-model-label'));
+        final modelSwitch = find.byKey(const ValueKey('agent-model-switch'));
+        final effortLabel = find.byKey(const ValueKey('agent-effort-label'));
+        final current = find.byKey(const ValueKey('agent-effort-value'));
+        final minimum = find.byKey(const ValueKey('agent-effort-minimum'));
+        final maximum = find.byKey(const ValueKey('agent-effort-maximum'));
+        expect(tester.widget<Text>(modelLabel).data, 'Model');
+        expect(tester.widget<Text>(effortLabel).data, 'Thinking effort');
+        expect(
+          tester.getRect(modelLabel).bottom,
+          lessThanOrEqualTo(tester.getRect(modelSwitch).top),
+        );
+        expect(
+          tester.getRect(modelSwitch).bottom,
+          lessThan(tester.getRect(effortLabel).top),
+        );
+        expect(tester.widget<Text>(current).data, 'Low');
+        expect(tester.widget<Text>(minimum).data, 'Low');
+        expect(tester.widget<Text>(maximum).data, 'High');
+        expect(find.text('Medium'), findsNothing);
+        final slider = tester.widget<Slider>(find.byType(Slider));
+        expect(slider.divisions, 1);
+        final semantics = tester
+            .getSemantics(find.byType(Slider))
+            .getSemanticsData();
+        expect(semantics.label, contains('Thinking effort'));
+        expect(semantics.value, 'Low');
+        slider.onChanged!(1);
+        await tester.pump();
+        expect(tester.widget<Text>(current).data, 'High');
+        expect(delegate.choices, isEmpty);
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant({
+        TargetPlatform.windows,
+        TargetPlatform.android,
+      }),
+    );
+  }
+
+  testWidgets(
+    'a single configured effort is a labeled value without a slider range',
+    (tester) async {
+      await initialize(
+        tester,
+        models: const [modelB],
+        selection: modelB.defaultSelection,
+      );
+      await mountAgentUi(tester, view(), size: const Size(320, 740), scale: 2);
+      await open(tester);
+      expect(
+        tester
+            .widget<Text>(find.byKey(const ValueKey('agent-model-label')))
+            .data,
+        'Model',
+      );
+      expect(
+        tester
+            .widget<Text>(find.byKey(const ValueKey('agent-effort-label')))
+            .data,
+        'Thinking effort',
+      );
+      expect(
+        tester
+            .widget<Text>(find.byKey(const ValueKey('agent-effort-value')))
+            .data,
+        'Medium',
+      );
+      expect(find.byType(Slider), findsNothing);
+      expect(find.byKey(const ValueKey('agent-effort-minimum')), findsNothing);
+      expect(find.byKey(const ValueKey('agent-effort-maximum')), findsNothing);
+      expect(find.byKey(const ValueKey('agent-model-switch')), findsNothing);
+      expect(delegate.choices, isEmpty);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets(
     'compact trigger retains the full choice and opens the existing effort menu',
     (tester) async {
@@ -389,7 +478,10 @@ void main() {
         final sliders = <SemanticsNode>[];
         void visit(SemanticsNode node) {
           final data = node.getSemanticsData();
-          if (data.value == 'Low' && data.hasAction(SemanticsAction.increase)) {
+          // The field label and slider export one merged accessible control.
+          if (!node.isMergedIntoParent &&
+              data.value == 'Low' &&
+              data.hasAction(SemanticsAction.increase)) {
             sliders.add(node);
           }
           node.visitChildren((child) {
