@@ -7,10 +7,10 @@ import '../../application/resource_queries.dart';
 import '../../controllers/app_session.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/app_data_commit.dart';
-import '../../utils/time_utils.dart';
 import '../../widgets/settings_page_header.dart';
 import '../../widgets/workbench_chrome_metrics.dart';
 import 'agent_selectable_text.dart';
+import 'agent_change_fields.dart';
 
 /// Opens the current stored object without enabling its workspace, changing
 /// visibility or turning a read-only inspection into another Agent mutation.
@@ -74,27 +74,8 @@ class AgentResourceView extends StatelessWidget {
                   }
                   final values = record.values;
                   final label = values['name'] ?? values['title'];
-                  final effectiveTime = values['effectiveTime'];
-                  final rows = <(String, Object?)>[
-                    (l.timetableName, values['timetableName']),
-                    (l.calendar, values['calendarName']),
-                    (l.semesterStartDate, values['startDate']),
-                    (l.totalWeeks, values['totalWeeks']),
-                    (l.dayOfWeek, values['dayOfWeek']),
-                    (l.semesterWeeks, values['semesterWeeks']),
-                    (
-                      l.startTime,
-                      values['start'] ?? _time(effectiveTime, 'startMinutes'),
-                    ),
-                    (
-                      l.endTime,
-                      values['end'] ?? _time(effectiveTime, 'endMinutes'),
-                    ),
-                    (l.teacherName, values['teacher']),
-                    (l.location, values['location']),
-                    (l.credits, values['credit']),
-                    (l.remarks, values['remarks'] ?? values['notes']),
-                  ];
+                  final rows = agentReadableFields(context, values)
+                    ..remove(l.name);
                   return ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
@@ -103,21 +84,20 @@ class AgentResourceView extends StatelessWidget {
                           label,
                           style: Theme.of(context).textTheme.headlineSmall,
                         ),
-                      for (final row in rows)
-                        if (row.$2 != null && row.$2.toString().isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  row.$1,
-                                  style: Theme.of(context).textTheme.labelLarge,
-                                ),
-                                AgentSelectableText(_display(row.$2)),
-                              ],
-                            ),
+                      for (final row in rows.entries)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                row.key,
+                                style: Theme.of(context).textTheme.labelLarge,
+                              ),
+                              AgentSelectableText(row.value),
+                            ],
                           ),
+                        ),
                       ExpansionTile(
                         title: Text(l.agentPlanDetails),
                         children: [
@@ -141,10 +121,3 @@ class AgentResourceView extends StatelessWidget {
     );
   }
 }
-
-String _display(Object? value) =>
-    value is List ? value.join(', ') : value.toString();
-
-String? _time(Object? values, String key) => values is Map && values[key] is int
-    ? formatMinutes(values[key] as int)
-    : null;

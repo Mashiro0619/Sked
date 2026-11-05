@@ -165,10 +165,22 @@ void main() {
             findsOneWidget,
           );
           await tester.ensureVisible(tile);
-          await tester.tap(find.text(item.name));
+          await tester.tap(find.text(item.name).first);
+          await tester.pumpAndSettle();
+          final details = find.descendant(
+            of: tile,
+            matching: find.widgetWithText(ExpansionTile, l.agentPlanDetails),
+          );
+          await tester.ensureVisible(details);
+          await tester.tap(
+            find.descendant(
+              of: details,
+              matching: find.text(l.agentPlanDetails),
+            ),
+          );
           await tester.pumpAndSettle();
           final displayed = tester.widget<SelectableText>(
-            find.descendant(of: tile, matching: find.byType(SelectableText)),
+            find.descendant(of: details, matching: find.byType(SelectableText)),
           );
           final original = (approval.details['changes'] as List)
               .cast<Map>()
@@ -181,7 +193,8 @@ void main() {
             l.agentValueBefore: original['before'],
             l.agentValueAfter: original['after'],
           });
-          await tester.tap(find.text(item.name));
+          await tester.ensureVisible(find.text(item.name).first);
+          await tester.tap(find.text(item.name).first);
           await tester.pumpAndSettle();
         }
         expect(jsonEncode(prepared), preparedJson);

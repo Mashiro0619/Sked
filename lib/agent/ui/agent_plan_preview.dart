@@ -1,10 +1,9 @@
-import 'dart:convert';
-
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
 import 'agent_setting_labels.dart';
 import 'agent_selectable_text.dart';
+import 'agent_change_fields.dart';
 
 /// Only the host's concrete clear change enables destructive presentation.
 bool agentPlanClearsLocalData(Map<String, Object?> details) =>
@@ -82,17 +81,7 @@ class _AgentPlanPreviewState extends State<AgentPlanPreview> {
                   ? l.delete
                   : l.agentKnowledgeEdit,
             ),
-            children: [
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: AgentSelectableText(
-                  const JsonEncoder.withIndent('  ').convert({
-                    l.agentValueBefore: change['before'],
-                    l.agentValueAfter: change['after'],
-                  }),
-                ),
-              ),
-            ],
+            children: [AgentChangeFields(change: change)],
           ),
         if (_shown < changes.length)
           TextButton(

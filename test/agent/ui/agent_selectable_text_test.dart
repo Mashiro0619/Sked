@@ -56,6 +56,9 @@ void main() {
       expect(expected.length, greaterThan(160));
       await tester.tap(find.text('Proposed event'));
       await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text(l.agentPlanDetails));
+      await tester.tap(find.text(l.agentPlanDetails));
+      await tester.pumpAndSettle();
       var node = _expectReadonlyText(tester, expected);
       final owner = _semanticsOwner(tester);
       expect(
