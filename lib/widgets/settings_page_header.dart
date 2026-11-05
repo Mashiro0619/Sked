@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../services/desktop_window_bridge.dart';
 import '../theme/sked_surface.dart';
 import 'adaptive_navigation_scope.dart';
 import 'desktop_window_host.dart';
@@ -169,6 +170,23 @@ class SettingsPageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final captionInLeading =
+        DesktopWindowBridge.instance.available &&
+        Directionality.of(context) == TextDirection.rtl;
+    Widget? compactLeading(bool wide, VoidCallback? callback) {
+      final button = wide ? null : BackButton(onPressed: callback);
+      if (!captionInLeading) return button;
+      // Window controls stay on the physical right. The row's layout direction
+      // does not change the BackButton's inherited page direction.
+      return Row(
+        textDirection: TextDirection.ltr,
+        children: [
+          if (button != null) SizedBox(width: kToolbarHeight, child: button),
+          const DesktopCaptionSpacer(),
+        ],
+      );
+    }
+
     if (toolbar) {
       final metrics = WorkbenchChromeMetrics.of(context);
       final wide = AdaptiveNavigationScope.isWide(context);
@@ -177,11 +195,17 @@ class SettingsPageHeader extends StatelessWidget {
         primary: false,
         toolbarHeight: metrics.toolbarHeight,
         automaticallyImplyLeading: false,
-        leading: wide ? null : BackButton(onPressed: onBack),
+        leading: compactLeading(wide, onBack),
+        leadingWidth: captionInLeading
+            ? (wide ? 0 : kToolbarHeight) + metrics.captionWidth
+            : null,
         title: _SettingsCompactTitle(compactTitle ?? title),
         bottom: bottom,
         reserveCaption: false,
-        actions: [...actions, const DesktopCaptionSpacer()],
+        actions: [
+          ...actions,
+          if (!captionInLeading) const DesktopCaptionSpacer(),
+        ],
       );
     }
     return SliverLayoutBuilder(
@@ -205,10 +229,16 @@ class SettingsPageHeader extends StatelessWidget {
             primary: false,
             toolbarHeight: metrics.toolbarHeight,
             automaticallyImplyLeading: false,
-            leading: wide ? null : BackButton(onPressed: back),
+            leading: compactLeading(wide, back),
+            leadingWidth: captionInLeading
+                ? (wide ? 0 : kToolbarHeight) + metrics.captionWidth
+                : null,
             title: _SettingsCompactTitle(compactTitle ?? title),
             bottom: bottom,
-            actions: [...actions, const DesktopCaptionSpacer()],
+            actions: [
+              ...actions,
+              if (!captionInLeading) const DesktopCaptionSpacer(),
+            ],
             flexibleSpace: const DesktopDragRegion(child: SizedBox.expand()),
             backgroundColor: SkedSurfaceRole.frame.resolve(colors),
             elevation: 0,
