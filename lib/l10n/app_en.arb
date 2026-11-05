@@ -2932,5 +2932,7 @@
   "schoolWebAgentImportTask": "Organize and import a timetable from the reviewed school page. Ask me about missing details.",
   "@schoolWebAgentImportTask": {},
   "schoolWebAgentSourceTitle": "School page",
-  "@schoolWebAgentSourceTitle": {}
+  "@schoolWebAgentSourceTitle": {},
+  "agentKnowledgeFullSource": "Full source text",
+  "@agentKnowledgeFullSource": {}
 }

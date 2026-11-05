@@ -4387,4 +4387,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get schoolWebAgentSourceTitle => 'School page';
+
+  @override
+  String get agentKnowledgeFullSource => 'Full source text';
 }

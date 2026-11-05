@@ -619,7 +619,16 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor>
   late final _summary = TextEditingController(
     text: widget.record?.summary ?? '',
   );
-  late final _body = TextEditingController(text: widget.record?.body ?? '');
+  late String _bodyPrefix = _builtinBodyPrefix(
+    widget.record,
+    widget.record?.body ?? '',
+  );
+  late final _canInspectSource = _bodyPrefix.isNotEmpty;
+  bool _fullSourceVisible = false;
+  late final _body = TextEditingController(
+    text: (widget.record?.body ?? '').substring(_bodyPrefix.length),
+  );
+  final _bodyScroll = ScrollController(keepScrollOffset: false);
   late final _source = TextEditingController(
     text: widget.record?.sourceNote ?? '',
   );
@@ -638,11 +647,41 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor>
   bool _saving = false;
   KnowledgeError? _error;
 
+  String get _bodySource =>
+      _fullSourceVisible ? _body.text : '$_bodyPrefix${_body.text}';
+
+  void _toggleSourceView() {
+    final source = _bodySource;
+    final selection = _body.selection;
+    final oldPrefixLength = _fullSourceVisible ? 0 : _bodyPrefix.length;
+    setState(() {
+      _fullSourceVisible = !_fullSourceVisible;
+      _bodyPrefix = _builtinBodyPrefix(widget.record, source);
+      final prefixLength = _fullSourceVisible ? 0 : _bodyPrefix.length;
+      final visible = source.substring(prefixLength);
+      int mappedOffset(int offset) =>
+          (offset + oldPrefixLength - prefixLength).clamp(0, visible.length);
+      _body.value = TextEditingValue(
+        text: visible,
+        // Inspecting the complete source starts at its metadata, rather than
+        // scrolling the newly revealed preamble out of view to follow a caret.
+        selection: _fullSourceVisible
+            ? const TextSelection.collapsed(offset: 0)
+            : selection.isValid
+            ? TextSelection(
+                baseOffset: mappedOffset(selection.baseOffset),
+                extentOffset: mappedOffset(selection.extentOffset),
+              )
+            : const TextSelection.collapsed(offset: 0),
+      );
+    });
+  }
+
   @override
   Object get settingsDraftFingerprint => (
     _title.text,
     _summary.text,
-    _body.text,
+    _bodySource,
     _source.text,
     _triggers.text,
     _requiredTools.text,
@@ -661,6 +700,7 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor>
 
   @override
   void dispose() {
+    _bodyScroll.dispose();
     for (final controller in [
       _title,
       _summary,
@@ -698,7 +738,7 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor>
                 kind: widget.kind,
                 id: _newId,
                 title: _title.text.trim(),
-                body: _body.text,
+                body: _bodySource,
                 summary: _summary.text.trim(),
                 enabled: _enabled,
                 sourceNote: _source.text.trim(),
@@ -709,7 +749,7 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor>
             : before.copyWith(
                 title: _title.text.trim(),
                 summary: _summary.text.trim(),
-                body: _body.text,
+                body: _bodySource,
                 sourceNote: _source.text.trim(),
                 enabled: _enabled,
                 triggers: _lines(_triggers.text),
@@ -719,7 +759,7 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor>
                     before.usesOriginal &&
                     _title.text.trim() == before.title &&
                     _summary.text.trim() == before.summary &&
-                    _body.text == before.body &&
+                    _bodySource == before.body &&
                     _triggers.text == before.triggers.join('\n') &&
                     _requiredTools.text == before.requiredTools.join('\n') &&
                     _optionalTools.text == before.optionalTools.join('\n'),
@@ -798,20 +838,41 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor>
             maxLines: 3,
           ),
           const SizedBox(height: 12),
-          TextFormField(
-            key: const ValueKey('knowledge-body'),
-            controller: _body,
-            enabled: !_saving,
-            minLines: 6,
-            maxLines: 14,
-            decoration: InputDecoration(
-              filled: true,
-              alignLabelWithHint: true,
-              labelText: l.agentKnowledgeBody,
+          if (_canInspectSource)
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: TextButton.icon(
+                key: const ValueKey('knowledge-source-toggle'),
+                onPressed: _saving ? null : _toggleSourceView,
+                icon: Icon(_fullSourceVisible ? Icons.subject : Icons.code),
+                label: Text(
+                  _fullSourceVisible
+                      ? l.agentKnowledgeBody
+                      : l.agentKnowledgeFullSource,
+                ),
+              ),
             ),
-            validator: (value) => value == null || value.trim().isEmpty
-                ? l.agentRequiredField
-                : null,
+          // Different representations must not share field undo history: an
+          // undo from source mode cannot insert the hidden prefix into content.
+          KeyedSubtree(
+            key: ValueKey('knowledge-body-source-$_fullSourceVisible'),
+            child: TextFormField(
+              key: const ValueKey('knowledge-body'),
+              controller: _body,
+              scrollController: _bodyScroll,
+              enabled: !_saving,
+              minLines: 6,
+              maxLines: 14,
+              decoration: InputDecoration(
+                filled: true,
+                alignLabelWithHint: true,
+                labelText: _fullSourceVisible
+                    ? l.agentKnowledgeFullSource
+                    : l.agentKnowledgeBody,
+              ),
+              validator: (_) =>
+                  _bodySource.trim().isEmpty ? l.agentRequiredField : null,
+            ),
           ),
           if (widget.record != null &&
               widget.service.originalChanged(widget.record!))
@@ -945,6 +1006,37 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor>
       ),
     );
   }
+}
+
+/// Hides only a recognized built-in preamble. The caller retains these exact
+/// bytes and rejoins them on save; arbitrary/custom source is never stripped.
+String _builtinBodyPrefix(KnowledgeRecord? record, String source) {
+  if (record == null || record.kind != KnowledgeKind.skill || !record.builtIn) {
+    return '';
+  }
+  final match = RegExp(
+    r'^---\r?\n(.*?)\r?\n---\r?\n',
+    dotAll: true,
+  ).firstMatch(source);
+  if (match == null) return '';
+  final metadata = <String, String>{};
+  for (final line in match.group(1)!.split(RegExp(r'\r?\n'))) {
+    final colon = line.indexOf(': ');
+    if (colon < 1 || metadata.containsKey(line.substring(0, colon))) return '';
+    metadata[line.substring(0, colon)] = line.substring(colon + 2);
+  }
+  if (metadata.length != 3 ||
+      metadata['id'] != record.id ||
+      metadata['version'] != record.baseVersion ||
+      metadata['summary'] != record.summary) {
+    return '';
+  }
+  var end = match.end;
+  final heading = RegExp(
+    '^(?:\\r?\\n)?# ${RegExp.escape(record.title)}\\r?\\n(?:\\r?\\n)?',
+  ).firstMatch(source.substring(end));
+  if (heading != null) end += heading.end;
+  return source.substring(0, end);
 }
 
 List<String> _lines(String text) => text

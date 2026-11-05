@@ -4073,6 +4073,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get schoolWebAgentSourceTitle => '学校网页';
+
+  @override
+  String get agentKnowledgeFullSource => '完整源文本';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -8146,4 +8149,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get schoolWebAgentSourceTitle => '學校網頁';
+
+  @override
+  String get agentKnowledgeFullSource => '完整來源文字';
 }

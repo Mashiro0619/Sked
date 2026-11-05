@@ -7733,6 +7733,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'School page'**
   String get schoolWebAgentSourceTitle;
+
+  /// No description provided for @agentKnowledgeFullSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Full source text'**
+  String get agentKnowledgeFullSource;
 }
 
 class _AppLocalizationsDelegate
