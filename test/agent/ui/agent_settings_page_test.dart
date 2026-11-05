@@ -689,6 +689,29 @@ void main() {
         }
 
         final before = positions();
+        void expectCompleteLabel(Finder chip) {
+          final paragraph = tester.renderObject<RenderParagraph>(
+            find.descendant(of: chip, matching: find.byType(RichText)),
+          );
+          final text = paragraph.text.toPlainText();
+          expect(paragraph.didExceedMaxLines, isFalse);
+          for (var index = 0; index < text.length; index++) {
+            final boxes = paragraph.getBoxesForSelection(
+              TextSelection(baseOffset: index, extentOffset: index + 1),
+            );
+            expect(boxes, isNotEmpty);
+            for (final box in boxes) {
+              expect(box.left, greaterThanOrEqualTo(-.1));
+              expect(
+                box.right,
+                lessThanOrEqualTo(paragraph.size.width + .1),
+                reason:
+                    '$text / ${paragraph.text.style} / ${tester.getSize(chip)}',
+              );
+            }
+          }
+        }
+
         if (scene.size.width == 320 && scene.scale == 2) {
           // Full English tier names require one column at this width/scale.
           expect(
@@ -712,10 +735,12 @@ void main() {
           expect(rect.width, greaterThanOrEqualTo(48));
           expect(rect.height, greaterThanOrEqualTo(48));
           final selected = tester.widget<FilterChip>(chip).selected;
+          expectCompleteLabel(chip);
           // The padded bottom edge belongs to the action, not only its semantics.
           await tester.tapAt(rect.bottomCenter - const Offset(0, 1));
           await settleUi(tester);
           expect(tester.widget<FilterChip>(chip).selected, !selected);
+          expectCompleteLabel(chip);
           expect(positions(), before);
         }
         final dropdown = find.byType(SkedDropdownMenu<AgentReasoningEffort>);

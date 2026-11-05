@@ -289,7 +289,7 @@ class _AgentModelSettingsPageState extends State<AgentModelSettingsPage>
   }
 }
 
-/// The widest localized option fixes the column budget before selection, so
+/// The widest tier label fixes the column budget before selection, so
 /// checkmarks cannot move an option into another row while it is being edited.
 class _EffortChoices extends StatelessWidget {
   const _EffortChoices({required this.selected, required this.onChanged});
@@ -312,7 +312,11 @@ class _EffortChoices extends StatelessWidget {
         textScaler: MediaQuery.textScalerOf(context),
         textDirection: Directionality.of(context),
       )..layout();
-      final width = painter.width + 56;
+      // The checkmark slot grows with the label's line height. Reserving a
+      // fixed 24dp slot clips selected English labels at large text scales.
+      final checkmarkWidth = painter.height > 24 ? painter.height : 24.0;
+      // Also include both 1dp outline edges around the padded chip content.
+      final width = (painter.width + checkmarkWidth + 32 + 2).ceilToDouble();
       if (width > minimumWidth) minimumWidth = width;
       painter.dispose();
     }
@@ -343,6 +347,11 @@ class _EffortChoices extends StatelessWidget {
                       key: ValueKey('agent-model-effort-${entry.key.name}'),
                       label: Text(entry.value, style: style),
                       selected: selected.contains(entry.key),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      labelPadding: const EdgeInsets.symmetric(horizontal: 8),
                       materialTapTargetSize: MaterialTapTargetSize.padded,
                       visualDensity: VisualDensity.standard,
                       onSelected: onChanged == null
