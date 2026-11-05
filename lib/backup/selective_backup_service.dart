@@ -461,7 +461,7 @@ class SelectiveBackupService extends ChangeNotifier {
         replacements.remove(conversation.id) ?? conversation,
       ...replacements.values,
     ];
-    return ConversationArchive(
+    final target = ConversationArchive(
       revision: current.revision + 1,
       conversations: merged,
       selectedId: current.selectedId ?? merged.firstOrNull?.id,
@@ -470,6 +470,11 @@ class SelectiveBackupService extends ChangeNotifier {
       ),
       terminatedIds: current.terminatedIds.difference(restoredIds),
     );
+    // Individual imported chats can be valid while their merged archive
+    // exceeds a quota or violates a shared reference. Reject that target before
+    // admitting the journal or applying any other restore participant.
+    ConversationArchive.decode(target.encode());
+    return target;
   }
 
   void _notify() {

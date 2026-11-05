@@ -10,7 +10,25 @@ import 'package:sked/backup/selective_restore_coordinator.dart';
 import 'package:sked/models/school_site_models.dart';
 import 'package:sked/application/operation_contracts.dart';
 
+import '../support/memory_conversation_storage.dart';
 import '../support/workspace_harness.dart';
+
+class _CountingJournal extends MemorySelectiveRestoreJournal {
+  int writes = 0;
+
+  @override
+  Future<void> write(SelectiveRestoreState state) async {
+    writes++;
+    await super.write(state);
+  }
+}
+
+AgentConversation _chat(String id, {String? title}) => AgentConversation(
+  id: id,
+  title: title ?? id,
+  createdAt: DateTime.utc(2026, 11, 5),
+  updatedAt: DateTime.utc(2026, 11, 5),
+);
 
 class _FailAfterMainJournal extends MemorySelectiveRestoreJournal {
   bool fail = true;
@@ -109,6 +127,103 @@ void main() {
       expect(restored.pendingRedo, isNull);
     },
   );
+
+  for (final (existingCount, incomingId) in [
+    (199, 'incoming'),
+    (200, 'local-0'),
+  ]) {
+    test(
+      'chat restore accepts $existingCount existing chats with target $incomingId at the archive limit',
+      () async {
+        final storage = MemoryConversationStorage()
+          ..source = ConversationArchive(
+            conversations: List.generate(
+              existingCount,
+              (i) => _chat('local-$i'),
+            ),
+          ).encode();
+        final runtime = await workspaceProvider(
+          agentConversationStorage: storage,
+        );
+        addTearDown(runtime.dispose);
+        final service = runtime.backups.selective;
+        final source = buildSelectiveBackupInventory(
+          appData: runtime.session.committedData,
+          conversations: [_chat(incomingId, title: 'Restored chat')],
+        );
+        final plan = await service.prepareRestore(
+          source,
+          BackupSelection(
+            objects: [
+              BackupObjectKey(BackupObjectKind.conversation, incomingId),
+            ],
+          ),
+        );
+
+        await service.restore(plan);
+
+        final saved = ConversationArchive.decode(storage.source!);
+        expect(saved.conversations, hasLength(200));
+        expect(
+          saved.conversations
+              .singleWhere((chat) => chat.id == incomingId)
+              .title,
+          'Restored chat',
+        );
+        expect(await service.journal.read(), isNull);
+        expect(service.recoveryPending, isFalse);
+        expect(runtime.session.canWrite, isTrue);
+      },
+    );
+  }
+
+  test('an oversized merged chat archive is rejected before journal admission or main-data changes', () async {
+    final storage = MemoryConversationStorage()
+      ..source = ConversationArchive(
+        conversations: List.generate(200, (i) => _chat('local-$i')),
+      ).encode();
+    final journal = _CountingJournal();
+    final runtime = await workspaceProvider(
+      agentConversationStorage: storage,
+      selectiveRestoreJournal: journal,
+    );
+    addTearDown(runtime.dispose);
+    final service = runtime.backups.selective;
+    await service.inventory();
+    final before = runtime.session.committedData;
+    final beforeChats = storage.source;
+    final calendar = before.generalMode.schedules.first;
+    final source = buildSelectiveBackupInventory(
+      appData: before.copyWith(
+        generalMode: before.generalMode.withSchedule(
+          calendar.copyWith(name: 'Must not be applied'),
+        ),
+      ),
+      conversations: [_chat('incoming')],
+    );
+    final plan = await service.prepareRestore(
+      source,
+      BackupSelection(
+        objects: [
+          BackupObjectKey(BackupObjectKind.calendar, calendar.id),
+          const BackupObjectKey(BackupObjectKind.conversation, 'incoming'),
+        ],
+      ),
+    );
+
+    await expectLater(service.restore(plan), throwsFormatException);
+
+    expect(journal.writes, 0);
+    expect(await journal.read(), isNull);
+    expect(runtime.session.committedData.toJson(), before.toJson());
+    expect(storage.source, beforeChats);
+    expect(service.recoveryPending, isFalse);
+    expect(runtime.session.canWrite, isTrue);
+    expect(runtime.agent.conversations.canWrite, isTrue);
+    await service.resume();
+    expect(journal.writes, 0);
+    expect(runtime.session.canWrite, isTrue);
+  });
 
   test('a partially prepared attachment stage is cleaned without admitting any data write', () async {
     final staging = _FailSecondStagedFile();
