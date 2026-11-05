@@ -2001,6 +2001,9 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       isNotice: role != l.agentYou && role != l.agentAssistant,
       streaming: streaming,
       showCopy: showCopy,
+      active: widget.active,
+      interactive: _uiActive,
+      interactionRevision: _uiGeneration,
     );
   }
 
