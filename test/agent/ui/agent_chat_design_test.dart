@@ -269,6 +269,10 @@ void main() {
         find.byKey(const ValueKey('agent-history-drawer')),
         findsOneWidget,
       );
+      await tester.tap(
+        find.byKey(const ValueKey('agent-history-search-toggle')),
+      );
+      await tester.pumpAndSettle();
       final search = find.byKey(const ValueKey('agent-history-search'));
       await tester.ensureVisible(search);
       await tester.enterText(search, 'Planning');
@@ -324,6 +328,10 @@ void main() {
       );
       expect(field.controller!.text, 'First draft');
       expect(repository.find(second.id)!.draft, 'Second draft');
+      await tester.tap(
+        find.byKey(const ValueKey('agent-history-search-toggle')),
+      );
+      await tester.pumpAndSettle();
       await tester.enterText(
         find.byKey(const ValueKey('agent-history-search')),
         'Another',

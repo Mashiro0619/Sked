@@ -100,6 +100,15 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  Future<void> newConversation(WidgetTester tester) async {
+    await tester.tap(find.byKey(const ValueKey('agent-history')));
+    await tester.pumpAndSettle();
+    final trigger = find.byKey(const ValueKey('agent-history-new'));
+    await tester.ensureVisible(trigger);
+    await tester.tap(trigger.hitTestable());
+    await tester.pumpAndSettle();
+  }
+
   for (final changesActivity in [true, false]) {
     testWidgets(
       'rename confirmation expires after ${changesActivity ? 'activity' : 'interaction'} is hidden and restored',
@@ -189,6 +198,8 @@ void main() {
             await tester.tap(
               find.byKey(ValueKey('agent-history-${second.id}')),
             );
+          } else if (action == 'new') {
+            await newConversation(tester);
           } else {
             final trigger = find.byKey(ValueKey('agent-$action'));
             await tester.ensureVisible(trigger);
@@ -857,7 +868,7 @@ void main() {
       'Keep this unsent draft',
     );
     await settle(tester);
-    await tester.tap(find.byKey(const ValueKey('agent-new')));
+    await newConversation(tester);
     await settle(tester);
     expect(repository.selectedId, draftId);
     expect(repository.selected!.draft, 'Keep this unsent draft');
@@ -901,7 +912,7 @@ void main() {
         defaultModelSelection: firstSelection,
       );
       await mountAgentUi(tester, view());
-      await tester.tap(find.byKey(const ValueKey('agent-new')));
+      await newConversation(tester);
       await settle(tester);
       final firstId = repository.selectedId!;
       expect(repository.find(firstId)!.modelSelection, firstSelection);
@@ -930,7 +941,7 @@ void main() {
         modelSelections: {firstId: firstSelection},
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('agent-new')));
+      await newConversation(tester);
       await settle(tester);
       expect(repository.selected!.modelSelection, secondSelection);
       expect(repository.find(firstId)!.modelSelection, firstSelection);
@@ -1031,7 +1042,11 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('agent-history')));
       await tester.pumpAndSettle();
       expect(find.byKey(ValueKey('agent-history-${first.id}')), findsNothing);
-      await tester.tap(find.byKey(const ValueKey('agent-history-archived')));
+      await tester.tap(find.byKey(const ValueKey('agent-history-more')));
+      await tester.pumpAndSettle();
+      final archived = find.byKey(const ValueKey('agent-history-archived'));
+      await tester.ensureVisible(archived);
+      await tester.tap(archived.hitTestable());
       await tester.pumpAndSettle();
       expect(find.byKey(ValueKey('agent-history-${first.id}')), findsOneWidget);
       await tester.tap(find.byKey(ValueKey('agent-restore-${first.id}')));
@@ -1189,7 +1204,7 @@ void main() {
         defaultMode: AgentPermissionMode.full,
       );
       await mountAgentUi(tester, view());
-      await tester.tap(find.byKey(const ValueKey('agent-new')));
+      await newConversation(tester);
       await settle(tester);
       expect(repository.selected!.mode, AgentPermissionMode.full);
       expect(delegate.calls, isEmpty);

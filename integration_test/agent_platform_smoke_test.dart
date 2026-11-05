@@ -421,15 +421,20 @@ void main() {
         expect(h.app.agent.conversations.selectedId, firstId);
         expect(provider.requests, hasLength(4));
 
-        await _tap(tester, _key('agent-new'));
+        await openAgentShellHistory(tester);
+        await _tap(tester, _key('agent-history-new'));
         await _until(
           tester,
           () =>
-              h.app.agent.conversations.conversations.length == 2 &&
-              h.app.agent.conversations.selectedId != firstId,
-          'a separate second conversation',
+              h.app.agent.conversations.selectedId != firstId &&
+              h.app.agent.conversations.isDraft(
+                h.app.agent.conversations.selectedId,
+              ) &&
+              _key('agent-composer').hitTestable().evaluate().length == 1,
+          'a separate unsent second conversation',
         );
         final secondId = h.app.agent.conversations.selectedId!;
+        expect(h.app.agent.conversations.conversations, hasLength(1));
         expect(
           tester.widget<TextField>(_key('agent-composer')).controller!.text,
           isEmpty,
@@ -439,7 +444,7 @@ void main() {
         await _until(
           tester,
           () => h.app.agent.conversations.find(secondId)!.draft == secondDraft,
-          'the second persisted draft',
+          'the second local draft',
         );
         FocusManager.instance.primaryFocus?.unfocus();
         await _selectHistory(tester, firstId);
@@ -454,13 +459,14 @@ void main() {
           tester.widget<TextField>(_key('agent-composer')).controller!.text,
           firstDraft,
         );
-        await _selectHistory(tester, secondId);
+        await openAgentShellHistory(tester);
+        await _tap(tester, _key('agent-history-new'));
         await _until(
           tester,
           () =>
               h.app.agent.conversations.selectedId == secondId &&
               _key('agent-composer').hitTestable().evaluate().length == 1,
-          'the second conversation',
+          'the preserved unsent second conversation',
         );
         expect(
           tester.widget<TextField>(_key('agent-composer')).controller!.text,
@@ -468,6 +474,8 @@ void main() {
         );
         expect(h.app.agent.conversations.find(firstId)!.messages, isNotEmpty);
         expect(h.app.agent.conversations.find(secondId)!.messages, isEmpty);
+        expect(h.app.agent.conversations.isDraft(secondId), isTrue);
+        expect(h.app.agent.conversations.conversations, hasLength(1));
         expect(provider.requests, hasLength(4));
         expect(tester.takeException(), isNull);
         binding.reportData = {

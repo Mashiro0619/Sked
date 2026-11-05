@@ -21,6 +21,7 @@ import 'package:sked/screens/agent_preferences_settings_page.dart';
 import 'package:sked/screens/agent_settings_page.dart';
 import 'package:sked/theme/sked_expressive_theme.dart';
 
+import '../../test/support/agent_workspace_navigation.dart';
 import 'agent_native_session.dart';
 
 const _changeCount = 21;
@@ -555,7 +556,8 @@ class _MsaaScenario {
             composer.evaluate().length == 1 && session.app.agent.isInitialized,
         'the production Agent composer',
       );
-      await tap(key('agent-new'));
+      await openAgentShellHistory(tester);
+      await tap(key('agent-history-new'));
       await until(
         () =>
             session.app.agent.conversations.selectedId != agentNativeLongId &&

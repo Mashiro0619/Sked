@@ -17,6 +17,7 @@ import '../../widgets/expressive_dialog.dart';
 import '../../widgets/sked_expressive_loading_indicator.dart';
 import '../../widgets/sked_popup_menu.dart';
 import '../../widgets/sked_spring_builder.dart';
+import '../../widgets/workbench_chrome_metrics.dart';
 import '../../widgets/workspace_frame.dart';
 import '../../widgets/workspace_navigation.dart';
 import 'agent_conversation_list.dart';
@@ -947,16 +948,32 @@ class _AgentConversationViewState extends State<AgentConversationView> {
 
   AgentConversationList _historyList(
     ValueChanged<String> onSelected, {
+    VoidCallback? onNewConversation,
     Widget? header,
     bool shrinkWrap = false,
+    bool active = true,
     bool Function()? isCurrent,
   }) => AgentConversationList(
     repository: _repository,
     onSelected: onSelected,
+    active: widget.active && active,
+    interactive: widget.interactive && !_runtime.maintenance,
+    onNewConversation:
+        widget.active &&
+            active &&
+            widget.interactive &&
+            _repository.canWrite &&
+            _runtime.enabled &&
+            !_runtime.maintenance &&
+            !_busy.contains('new')
+        ? (onNewConversation ?? () => unawaited(_newConversation()))
+        : null,
     header: header,
     shrinkWrap: shrinkWrap,
     onRestore:
-        (isCurrent?.call() ?? _uiActive) &&
+        widget.active &&
+            active &&
+            widget.interactive &&
             _repository.canWrite &&
             _runtime.enabled &&
             !_runtime.maintenance
@@ -968,6 +985,26 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         : null,
   );
 
+  Future<void> _newFromResources(WorkspaceResourceScope? resources) async {
+    final repository = _repository;
+    final generation = _uiGeneration;
+    final selectedId = repository.selectedId;
+    if (!_uiSessionCurrent(generation, selectedId)) return;
+    resources?.close();
+    // A resource drawer is part of the frame, so its focus exclusion retires
+    // with the next layout rather than a Navigator completion Future.
+    if (resources?.drawerOpen == true) {
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    if (_uiSessionCurrent(generation, selectedId) &&
+        identical(repository, _repository) &&
+        _repository.canWrite &&
+        _runtime.enabled &&
+        !_runtime.maintenance) {
+      await _newConversation();
+    }
+  }
+
   Future<void> _showHistory() async {
     if (!_uiActive) return;
     final uiGeneration = _uiGeneration;
@@ -976,6 +1013,8 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final repository = _repository;
     final motion = SkedMotionPolicy.of(context);
     final direction = Directionality.of(context);
+    var createDraft = false;
+    TransitionRoute<dynamic>? historyRoute;
     final selected = await showGeneralDialog<String>(
       context: context,
       barrierDismissible: true,
@@ -998,64 +1037,91 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                 ),
         );
       },
-      pageBuilder: (sheetContext, _, _) => InheritedTheme.captureAll(
-        context,
-        Align(
-          alignment: AlignmentDirectional.centerStart,
-          child: Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
-            ),
-            child: Drawer(
-              key: const ValueKey('agent-history-drawer'),
-              width: (MediaQuery.sizeOf(sheetContext).width - 24).clamp(
-                0.0,
-                420.0,
+      pageBuilder: (sheetContext, _, _) {
+        historyRoute = ModalRoute.of(sheetContext);
+        bool historyCurrent() =>
+            mounted &&
+            widget.active &&
+            widget.interactive &&
+            sheetContext.mounted &&
+            ModalRoute.of(sheetContext)?.isCurrent == true &&
+            uiGeneration == _uiGeneration &&
+            identical(repository, _repository) &&
+            repository.selectedId == conversationId;
+        return InheritedTheme.captureAll(
+          context,
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
               ),
-              child: SafeArea(
-                child: _historyList(
-                  (id) => Navigator.of(sheetContext).pop(id),
-                  isCurrent: () =>
-                      mounted &&
-                      widget.active &&
-                      widget.interactive &&
-                      sheetContext.mounted &&
-                      ModalRoute.of(sheetContext)?.isCurrent == true &&
-                      uiGeneration == _uiGeneration &&
-                      identical(repository, _repository) &&
-                      repository.selectedId == conversationId,
-                  header: Padding(
-                    padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 8, 4),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            l.agentConversations,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(sheetContext).textTheme.titleLarge,
+              child: Drawer(
+                key: const ValueKey('agent-history-drawer'),
+                width: (MediaQuery.sizeOf(sheetContext).width - 24).clamp(
+                  0.0,
+                  420.0,
+                ),
+                child: SafeArea(
+                  child: _historyList(
+                    (id) => Navigator.of(sheetContext).pop(id),
+                    onNewConversation: () {
+                      if (!historyCurrent()) return;
+                      createDraft = true;
+                      Navigator.of(sheetContext).pop();
+                    },
+                    isCurrent: historyCurrent,
+                    header: Padding(
+                      padding: const EdgeInsetsDirectional.fromSTEB(
+                        20,
+                        12,
+                        8,
+                        4,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              l.agentConversations,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(sheetContext)
+                                  .textTheme
+                                  .titleLarge,
+                            ),
                           ),
-                        ),
-                        IconButton(
-                          key: const ValueKey('agent-history-close'),
-                          tooltip: l.cancel,
-                          onPressed: () => Navigator.of(sheetContext).pop(),
-                          icon: const Icon(Icons.close_rounded),
-                        ),
-                      ],
+                          IconButton(
+                            key: const ValueKey('agent-history-close'),
+                            tooltip: l.cancel,
+                            onPressed: () {
+                              if (historyCurrent()) {
+                                Navigator.of(sheetContext).pop();
+                              }
+                            },
+                            icon: const Icon(Icons.close_rounded),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
-    if (selected != null &&
-        _uiSessionCurrent(uiGeneration, conversationId) &&
+    await historyRoute?.completed;
+    if (_uiSessionCurrent(uiGeneration, conversationId) &&
         identical(repository, _repository)) {
-      await _select(selected);
+      if (createDraft &&
+          _repository.canWrite &&
+          _runtime.enabled &&
+          !_runtime.maintenance) {
+        await _newConversation();
+      } else if (selected != null) {
+        await _select(selected);
+      }
     }
   }
 
@@ -1185,25 +1251,25 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                 _notice(l.agentConfigureFirst),
               if (conversation == null || conversation.messages.isEmpty)
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  padding: const EdgeInsets.symmetric(vertical: 24),
                   child: Column(
                     children: [
                       Icon(
                         Icons.auto_awesome_rounded,
-                        size: 36,
+                        size: 28,
                         color: colors.primary,
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        l.agentChatWelcome,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.headlineSmall,
                       ),
                       const SizedBox(height: 12),
                       Text(
+                        l.agentChatWelcome,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
                         l.agentEmptyConversation,
                         textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyLarge,
+                        style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],
                   ),
@@ -1241,16 +1307,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                 _approval(conversation.id, state.pendingApproval!, writable, l),
             ];
             final composer = conversation == null
-                ? Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: FilledButton.icon(
-                      onPressed: writable && !_busy.contains('new')
-                          ? _newConversation
-                          : null,
-                      icon: const Icon(Icons.edit_square),
-                      label: Text(l.agentNewConversation),
-                    ),
-                  )
+                ? const SizedBox.shrink()
                 : _composerWidget(
                     conversation,
                     state,
@@ -1364,6 +1421,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                                         color: colors.surfaceContainerLow,
                                         child: _historyList(
                                           (id) => unawaited(_select(id)),
+                                          active: _historyVisible,
                                         ),
                                       ),
                                     ),
@@ -1388,10 +1446,25 @@ class _AgentConversationViewState extends State<AgentConversationView> {
           context,
           canvas,
           (shrinkWrap) => Builder(
-            builder: (context) => _historyList((id) {
-              WorkspaceResourceScope.maybeOf(context)?.close();
-              unawaited(_select(id));
-            }, shrinkWrap: shrinkWrap),
+            builder: (context) {
+              final resources = WorkspaceResourceScope.maybeOf(context);
+              final layout = WorkspaceCanvasScope.maybeOf(context);
+              return _historyList(
+                (id) {
+                  resources?.close();
+                  unawaited(_select(id));
+                },
+                onNewConversation: () =>
+                    unawaited(_newFromResources(resources)),
+                shrinkWrap: shrinkWrap,
+                active:
+                    resources == null ||
+                    resources.drawerOpen ||
+                    layout == null ||
+                    layout.resourcePresentation ==
+                        WorkspaceResourcePresentation.expanded,
+              );
+            },
           ),
         ) ??
         canvas;
@@ -1418,149 +1491,162 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     bool wideHistory,
   ) {
     final uiGeneration = _uiGeneration;
-    final title =
-        conversation?.title ??
-        (widget.showTitle || widget.fullWorkspace ? l.agentTitle : '');
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      child: Row(
-        children: [
-          if (widget.embedded) ...[
-            ?workspaceMainNavigationButton(headerContext),
-          ] else if (widget.fullWorkspace)
-            const BackButton(),
-          if (!widget.embedded)
-            IconButton(
-              key: const ValueKey('agent-history'),
-              tooltip: wideHistory
-                  ? (_historyVisible
-                        ? l.agentHideConversations
-                        : l.agentShowConversations)
-                  : l.agentConversations,
-              onPressed: !_repository.isLoaded
-                  ? null
-                  : wideHistory
-                  ? () => setState(() => _historyVisible = !_historyVisible)
-                  : _showHistory,
-              icon: const Icon(Icons.view_sidebar_outlined),
-            ),
-          Expanded(
-            child: DesktopDragRegion(
-              child: Tooltip(
-                message: title,
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleMedium,
+    final title = _repository.isDraft(conversation?.id)
+        ? l.agentTitle
+        : conversation?.title ??
+              (widget.showTitle || widget.fullWorkspace ? l.agentTitle : '');
+    final metrics = WorkbenchChromeMetrics.of(headerContext);
+    final titleText = Text(
+      title,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: Theme.of(headerContext).textTheme.titleMedium,
+    );
+    final heading = metrics.desktop
+        ? DesktopDragRegion(child: IgnorePointer(child: titleText))
+        : Tooltip(message: title, child: titleText);
+    final row = Row(
+      children: [
+        if (widget.embedded) ...[
+          ?workspaceMainNavigationButton(headerContext),
+        ] else if (widget.fullWorkspace)
+          const BackButton(),
+        if (!widget.embedded)
+          IconButton(
+            key: const ValueKey('agent-history'),
+            tooltip: wideHistory
+                ? (_historyVisible
+                      ? l.agentHideConversations
+                      : l.agentShowConversations)
+                : l.agentConversations,
+            onPressed: !_repository.isLoaded
+                ? null
+                : wideHistory
+                ? () => setState(() => _historyVisible = !_historyVisible)
+                : _showHistory,
+            icon: const Icon(Icons.view_sidebar_outlined),
+          ),
+        Expanded(child: heading),
+        KeyedSubtree(
+          key: ValueKey(('agent-actions-session', uiGeneration)),
+          child: SkedPopupMenuButton<String>(
+            key: const ValueKey('agent-conversation-menu'),
+            tooltip: l.agentConversationActions,
+            enabled: _uiActive && !_runtime.maintenance,
+            onSelected: (value) {
+              if (!_uiSessionCurrent(uiGeneration, conversation?.id)) return;
+              switch (value) {
+                case 'settings':
+                  widget.delegate.openSettings();
+                case 'rename':
+                  if (conversation != null) unawaited(_rename(conversation));
+                case 'message-history':
+                  if (conversation != null) {
+                    unawaited(_showMessageHistory(conversation));
+                  }
+                case 'delete':
+                  if (conversation != null) unawaited(_delete(conversation));
+                case 'archive':
+                  if (conversation != null) {
+                    unawaited(
+                      _perform(
+                        'archive-${conversation.id}',
+                        () => widget.delegate.setArchived(
+                          conversation.id,
+                          !conversation.archived,
+                        ),
+                      ),
+                    );
+                  }
+                case 'export':
+                  if (conversation != null &&
+                      widget.onExportConversation != null) {
+                    unawaited(
+                      _perform('export-${conversation.id}', () async {
+                        final saved = await widget.onExportConversation!(
+                          conversation.id,
+                        );
+                        if (mounted) {
+                          setState(
+                            () => _exportedId = saved ? conversation.id : null,
+                          );
+                        }
+                      }),
+                    );
+                  }
+              }
+            },
+            itemBuilder: (context) => [
+              SkedPopupMenuItem(
+                key: const ValueKey('agent-settings'),
+                value: 'settings',
+                child: Text(l.agentSettingsTitle),
+              ),
+              if (conversation != null &&
+                  !_repository.isDraft(conversation.id)) ...[
+                const SkedPopupMenuDivider<String>(),
+                if (conversation.historyVersions.isNotEmpty ||
+                    conversation.replyRevisions.isNotEmpty)
+                  SkedPopupMenuItem(
+                    value: 'message-history',
+                    child: Text(l.agentHistoryVersions),
+                  ),
+                SkedPopupMenuItem(
+                  value: 'rename',
+                  enabled: writable && !_busy.contains('rename'),
+                  child: Text(l.rename),
+                ),
+                SkedPopupMenuItem(
+                  value: 'archive',
+                  enabled: writable,
+                  child: Text(
+                    conversation.archived
+                        ? l.agentRestoreConversation
+                        : l.agentArchiveConversation,
+                  ),
+                ),
+                if (widget.onExportConversation != null)
+                  SkedPopupMenuItem(
+                    value: 'export',
+                    enabled: writable,
+                    child: Text(l.agentExportConversation),
+                  ),
+                SkedPopupMenuItem(
+                  value: 'delete',
+                  enabled: writable && !_busy.contains('delete'),
+                  child: Text(l.delete),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+    return SkedSurface(
+      role: SkedSurfaceRole.frame,
+      shape: Border(
+        bottom: BorderSide(
+          color: Theme.of(headerContext).colorScheme.outlineVariant,
+        ),
+      ),
+      child: SizedBox(
+        height: metrics.toolbarHeight,
+        child: IconButtonTheme(
+          data: IconButtonThemeData(style: metrics.iconStyle),
+          child: Row(
+            // Native captions remain physically right-aligned in RTL too.
+            textDirection: TextDirection.ltr,
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: row,
                 ),
               ),
-            ),
+              if (widget.fullWorkspace) const DesktopCaptionSpacer(),
+            ],
           ),
-          IconButton.filledTonal(
-            key: const ValueKey('agent-new'),
-            tooltip: l.agentNewConversation,
-            onPressed: writable && !_busy.contains('new')
-                ? _newConversation
-                : null,
-            icon: const Icon(Icons.edit_square),
-          ),
-          KeyedSubtree(
-            key: ValueKey(('agent-actions-session', uiGeneration)),
-            child: SkedPopupMenuButton<String>(
-              key: const ValueKey('agent-conversation-menu'),
-              tooltip: l.agentConversationActions,
-              enabled: _uiActive && !_runtime.maintenance,
-              onSelected: (value) {
-                if (!_uiSessionCurrent(uiGeneration, conversation?.id)) return;
-                switch (value) {
-                  case 'settings':
-                    widget.delegate.openSettings();
-                  case 'rename':
-                    if (conversation != null) unawaited(_rename(conversation));
-                  case 'message-history':
-                    if (conversation != null) {
-                      unawaited(_showMessageHistory(conversation));
-                    }
-                  case 'delete':
-                    if (conversation != null) unawaited(_delete(conversation));
-                  case 'archive':
-                    if (conversation != null) {
-                      unawaited(
-                        _perform(
-                          'archive-${conversation.id}',
-                          () => widget.delegate.setArchived(
-                            conversation.id,
-                            !conversation.archived,
-                          ),
-                        ),
-                      );
-                    }
-                  case 'export':
-                    if (conversation != null &&
-                        widget.onExportConversation != null) {
-                      unawaited(
-                        _perform('export-${conversation.id}', () async {
-                          final saved = await widget.onExportConversation!(
-                            conversation.id,
-                          );
-                          if (mounted) {
-                            setState(
-                              () =>
-                                  _exportedId = saved ? conversation.id : null,
-                            );
-                          }
-                        }),
-                      );
-                    }
-                }
-              },
-              itemBuilder: (context) => [
-                SkedPopupMenuItem(
-                  key: const ValueKey('agent-settings'),
-                  value: 'settings',
-                  child: Text(l.agentSettingsTitle),
-                ),
-                if (conversation != null &&
-                    !_repository.isDraft(conversation.id)) ...[
-                  const SkedPopupMenuDivider<String>(),
-                  if (conversation.historyVersions.isNotEmpty ||
-                      conversation.replyRevisions.isNotEmpty)
-                    SkedPopupMenuItem(
-                      value: 'message-history',
-                      child: Text(l.agentHistoryVersions),
-                    ),
-                  SkedPopupMenuItem(
-                    value: 'rename',
-                    enabled: writable && !_busy.contains('rename'),
-                    child: Text(l.rename),
-                  ),
-                  SkedPopupMenuItem(
-                    value: 'archive',
-                    enabled: writable,
-                    child: Text(
-                      conversation.archived
-                          ? l.agentRestoreConversation
-                          : l.agentArchiveConversation,
-                    ),
-                  ),
-                  if (widget.onExportConversation != null)
-                    SkedPopupMenuItem(
-                      value: 'export',
-                      enabled: writable,
-                      child: Text(l.agentExportConversation),
-                    ),
-                  SkedPopupMenuItem(
-                    value: 'delete',
-                    enabled: writable && !_busy.contains('delete'),
-                    child: Text(l.delete),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          if (widget.fullWorkspace) const DesktopCaptionSpacer(),
-        ],
+        ),
       ),
     );
   }
@@ -2130,7 +2216,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
             conversation.status == ConversationStatus.interrupted ||
             widget.delegate.pendingInputCount(conversation.id) > 0);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: Shortcuts(
         shortcuts: const {
           SingleActivator(LogicalKeyboardKey.enter, control: true):
@@ -2266,9 +2352,14 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                           border: InputBorder.none,
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 8,
+                          // Android's collapsed handle reaches 39dp below the
+                          // caret once its 48dp hit area is included. Keep it
+                          // above the action row, including when it fades out.
+                          contentPadding: EdgeInsets.fromLTRB(
+                            8,
+                            8,
+                            8,
+                            SkedMenuStyle.of(context).desktop ? 8 : 36,
                           ),
                         ),
                         onChanged: (value) =>

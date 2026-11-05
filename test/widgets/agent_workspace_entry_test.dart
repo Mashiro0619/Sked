@@ -546,8 +546,9 @@ void main() {
             application.conversations.find(first)!.mode,
             AgentPermissionMode.plan,
           );
-          await tester.ensureVisible(_key('agent-new'));
-          await tester.tap(_key('agent-new'));
+          await openAgentShellHistory(tester);
+          await tester.ensureVisible(_key('agent-history-new'));
+          await tester.tap(_key('agent-history-new').hitTestable());
           await tester.pumpAndSettle();
           final second = application.conversations.selectedId!;
           expect(second, isNot(first));
@@ -661,7 +662,9 @@ void main() {
         expect(find.byType(AssistantPreviewPane), findsNothing);
         expect(find.byType(AgentPage), findsOneWidget);
         expect(find.byType(AgentAssistantPane), findsNothing);
-        await tester.tap(_key('agent-new'));
+        await openAgentShellHistory(tester);
+        await tester.ensureVisible(_key('agent-history-new'));
+        await tester.tap(_key('agent-history-new').hitTestable());
         await tester.pumpAndSettle();
         final conversation = app.agent.conversations.selectedId!;
         await tester.tap(_key('agent-mode-picker'));
