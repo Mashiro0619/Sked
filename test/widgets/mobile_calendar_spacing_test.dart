@@ -192,9 +192,18 @@ void main() {
                 toolbarRect,
                 dateButton,
                 maximumTextLines: mode == AppMode.general ? 2 : null,
+                reflowControls: mode == AppMode.student
+                    ? [
+                        key('student-timetable-picker-button'),
+                        key('student-view-toggle-button'),
+                        key('student-toolbar-more-button'),
+                      ]
+                    : const [],
               );
               expect(toolbarRect.height, greaterThanOrEqualTo(48));
-              if (scale == 1) expect(toolbarRect.height, 48);
+              if (scale == 1 && mode == AppMode.general) {
+                expect(toolbarRect.height, 48);
+              }
               expect(t.getRect(dateButton).width, greaterThanOrEqualTo(48));
               expect(t.getRect(dateButton).height, greaterThanOrEqualTo(48));
               expect(headerRect.top, closeTo(toolbarRect.bottom, .1));

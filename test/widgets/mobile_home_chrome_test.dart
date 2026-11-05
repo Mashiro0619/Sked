@@ -20,6 +20,7 @@ void expectReadableToolbarHeight(
   Rect row,
   Finder button, {
   int? maximumTextLines = 2,
+  Iterable<Finder> reflowControls = const [],
 }) {
   final text = find.descendant(of: button, matching: find.byType(Text));
   final paragraph = tester.renderObject<RenderParagraph>(
@@ -69,9 +70,33 @@ void expectReadableToolbarHeight(
     expect(textBounds.right, lessThanOrEqualTo(control.right + .1));
     expect(textBounds.top, greaterThanOrEqualTo(control.top - .1));
     expect(textBounds.bottom, lessThanOrEqualTo(control.bottom + .1));
-    // Compact touch chrome has no extra vertical padding or second safety
-    // inset: its height comes from the complete title and 48dp touch targets.
-    expect(row.height, closeTo(math.max(48, naturalText.height), .1));
+    // The title itself stays content-sized. The student toolbar may place
+    // the remaining controls on a second 48dp row to preserve name ink.
+    final titleHeight = math.max(48.0, naturalText.height);
+    expect(control.height, closeTo(titleHeight, .1));
+    final controls = [control, ...reflowControls.map(tester.getRect)];
+    var expectedHeight = titleHeight;
+    if (reflowControls.isNotEmpty) {
+      final bounds = controls.reduce(
+        (value, next) => value.expandToInclude(next),
+      );
+      expect(bounds.top, closeTo(row.top, .1));
+      expect(bounds.bottom, closeTo(row.bottom, .1));
+      final nextRow = controls
+          .where((rect) => rect.top >= control.bottom - .1)
+          .toList();
+      if (nextRow.isNotEmpty) {
+        expect(nextRow.first.top, closeTo(control.bottom + 4, .1));
+        for (final item in nextRow) {
+          expect(item.top, closeTo(nextRow.first.top, .1));
+          expect(item.height, closeTo(48, .1));
+        }
+        expectedHeight += 4 + 48;
+      }
+    }
+    // Neither the one-row nor reflow case adds another safety inset or
+    // unexplained vertical padding around the measured controls.
+    expect(row.height, closeTo(expectedHeight, .1));
   } finally {
     naturalText.dispose();
   }
@@ -243,6 +268,11 @@ void main() {
             toolbarRect,
             key('student-week-picker-button'),
             maximumTextLines: null,
+            reflowControls: [
+              key('student-timetable-picker-button'),
+              key('student-view-toggle-button'),
+              key('student-toolbar-more-button'),
+            ],
           );
           for (final name in [
             'student-timetable-picker-button',

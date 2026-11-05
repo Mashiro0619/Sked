@@ -5297,23 +5297,82 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets(
-    'student toolbar scrolls horizontally when all actions cannot fit',
-    (tester) async {
-      await tester.binding.setSurfaceSize(const Size(200, 568));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-      final provider = await _createProvider();
-      await _pumpHomeScreenWithProvider(tester, provider);
-
-      final toolbar = find.byKey(const ValueKey('student-workspace-toolbar'));
-      expect(
-        find.descendant(
-          of: toolbar,
-          matching: find.byType(SingleChildScrollView),
-        ),
-        findsOneWidget,
-      );
-      expect(tester.takeException(), isNull);
-    },
-  );
+  for (final scale in [1.0, 2.0]) {
+    testWidgets(
+      'student toolbar at 200px/$scale keeps controls reachable in order',
+      (tester) async {
+        const size = Size(200, 568);
+        await tester.binding.setSurfaceSize(size);
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final provider = await _createProvider();
+        addTearDown(() async {
+          await _resetWidgetTree(tester);
+          provider.dispose();
+        });
+        await _pumpHomeScreenWithProvider(
+          tester,
+          provider,
+          textScaler: TextScaler.linear(scale),
+        );
+        final controls = [
+          for (final key in [
+            'student-timetable-picker-button',
+            'student-week-picker-button',
+            'student-view-toggle-button',
+            'student-toolbar-more-button',
+          ])
+            find.byKey(ValueKey(key)),
+        ];
+        final rects = controls.map(tester.getRect).toList();
+        for (var index = 1; index < rects.length; index++) {
+          final previous = rects[index - 1];
+          final current = rects[index];
+          expect(
+            current.top >= previous.bottom - .1 ||
+                current.left >= previous.right - .1,
+            isTrue,
+            reason:
+                'Controls keep their logical order across rows or scrolling.',
+          );
+        }
+        for (final control in controls) {
+          await tester.ensureVisible(control);
+          await tester.pumpAndSettle();
+          final rect = tester.getRect(control);
+          expect(rect.width, greaterThanOrEqualTo(48));
+          expect(rect.height, greaterThanOrEqualTo(48));
+          expect(
+            (Offset.zero & size).inflate(.1).contains(rect.topLeft),
+            isTrue,
+          );
+          expect(
+            (Offset.zero & size).inflate(.1).contains(rect.bottomRight),
+            isTrue,
+          );
+          expect(control.hitTestable(), findsOneWidget);
+        }
+        for (final control in controls.take(2)) {
+          final text = tester.renderObject<RenderParagraph>(
+            find.descendant(of: control, matching: find.byType(RichText)),
+          );
+          expect(text.textScaler.scale(14), closeTo(14 * scale, .01));
+          final firstGlyph = text.getBoxesForSelection(
+            const TextSelection(baseOffset: 0, extentOffset: 1),
+          );
+          expect(firstGlyph, isNotEmpty);
+          for (final box in firstGlyph) {
+            expect(box.left, greaterThanOrEqualTo(-.1));
+            expect(box.right, lessThanOrEqualTo(text.size.width + .1));
+          }
+        }
+        await tester.ensureVisible(controls[2]);
+        await tester.pumpAndSettle();
+        await tester.tap(controls[2]);
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('student-day-strip')), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+    );
+  }
 }
