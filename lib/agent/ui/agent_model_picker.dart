@@ -312,12 +312,15 @@ class _AgentModelPickerState extends State<AgentModelPicker>
         style: menuStyle.menuStyle.copyWith(
           maximumSize: WidgetStatePropertyAll(Size(width, height)),
         ),
+        crossAxisUnconstrained: false,
         clipBehavior: Clip.antiAlias,
         onClose: _menuClosed,
         onAnimationStatusChanged: _menuAnimationChanged,
         menuChildren: [
           SizedBox(
-            width: width,
+            // The panel budget includes MenuAnchor's own surface padding.
+            // Reserving it here keeps the full border inside the overlay clip.
+            width: math.max(0, width - menuStyle.padding.horizontal),
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 maxHeight: math.max(0, height - menuStyle.padding.vertical),

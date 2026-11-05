@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
-import 'package:flutter/semantics.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
@@ -108,6 +108,96 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('agent-model-choice-model-b')));
     await tester.pumpAndSettle();
+  }
+
+  void expectMenuSurfaceVisible(WidgetTester tester, Finder item) {
+    Element? surface;
+    tester.element(item).visitAncestorElements((element) {
+      if (element.widget is Material) {
+        surface = element;
+        return false;
+      }
+      return true;
+    });
+    expect(surface, isNotNull);
+    final box = surface!.findRenderObject()! as RenderBox;
+    final localBounds = Offset.zero & box.size;
+    final bounds = MatrixUtils.transformRect(
+      box.getTransformTo(null),
+      localBounds,
+    );
+    final window =
+        Offset.zero & (tester.view.physicalSize / tester.view.devicePixelRatio);
+    expect(bounds.intersect(window), bounds);
+    for (RenderObject child = box; child.parent != null;) {
+      final parent = child.parent!;
+      final clip = parent.describeApproximatePaintClip(child);
+      if (clip != null) {
+        final paintedBounds = MatrixUtils.transformRect(
+          box.getTransformTo(parent),
+          localBounds,
+        );
+        expect(
+          clip.inflate(0.01).contains(paintedBounds.topLeft) &&
+              clip.inflate(0.01).contains(paintedBounds.bottomRight),
+          isTrue,
+          reason:
+              'The complete menu surface $paintedBounds must fit the ${parent.runtimeType} clip $clip.',
+        );
+      }
+      child = parent;
+    }
+  }
+
+  for (final scene in [
+    (size: const Size(1440, 900), scale: 1.0),
+    (size: const Size(390, 844), scale: 1.0),
+    (size: const Size(320, 740), scale: 2.0),
+  ]) {
+    testWidgets(
+      'complete model menu surface stays visible at ${scene.size} ${scene.scale}x',
+      (tester) async {
+        const longModel = AgentModelConfig(
+          id: 'local-reasoning-model-with-a-long-display-name',
+          reasoningEfforts: [AgentReasoningEffort.medium],
+          defaultReasoningEffort: AgentReasoningEffort.medium,
+        );
+        await initialize(tester, models: const [modelA, longModel]);
+        await mountAgentUi(
+          tester,
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Align(
+              alignment: Alignment.bottomRight,
+              child: SizedBox(width: 180, child: view()),
+            ),
+          ),
+          size: scene.size,
+          scale: scene.scale,
+        );
+        await open(tester);
+        final modelSwitch = find.byKey(const ValueKey('agent-model-switch'));
+        expectMenuSurfaceVisible(tester, modelSwitch);
+        await tester.tap(modelSwitch);
+        await tester.pumpAndSettle();
+        final choice = find.byKey(
+          ValueKey('agent-model-choice-${longModel.id}'),
+        );
+        expectMenuSurfaceVisible(tester, choice);
+        await tester.ensureVisible(choice);
+        await tester.pumpAndSettle();
+        expect(choice.hitTestable(), findsOneWidget);
+        await tester.tap(choice);
+        await tester.pumpAndSettle();
+        await delegate.selectionWrite;
+        expect(repository.selected!.modelSelection, longModel.defaultSelection);
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant({
+        TargetPlatform.windows,
+        TargetPlatform.android,
+      }),
+    );
   }
 
   for (final changesActivity in [true, false]) {
