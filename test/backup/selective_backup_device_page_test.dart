@@ -8,6 +8,7 @@ import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/screens/selective_backup_page.dart';
 import 'package:sked/services/device_preferences_store.dart';
+import 'package:sked/widgets/sked_confirmation_dialog.dart';
 
 import '../support/workspace_harness.dart';
 
@@ -74,6 +75,22 @@ void main() {
       final unsupported = find.byKey(
         const ValueKey('backup-object-deviceSettings:windows.desktopLayout'),
       );
+      final group = find.byKey(const ValueKey('backup-group-deviceSettings'));
+      await tester.scrollUntilVisible(group, 450, scrollable: scrollable);
+      await tester.pumpAndSettle();
+      expect(find.text(l.selectiveBackupUnsupportedGroups(2)), findsOneWidget);
+      expect(
+        tester
+            .widget<Checkbox>(
+              find.byKey(
+                const ValueKey('backup-group-selection-deviceSettings'),
+              ),
+            )
+            .onChanged,
+        isNull,
+      );
+      await tester.tap(group);
+      await tester.pumpAndSettle();
       await tester.scrollUntilVisible(unsupported, 450, scrollable: scrollable);
       final row = tester.widget<CheckboxListTile>(unsupported);
       expect(row.value, isFalse);
@@ -102,7 +119,13 @@ void main() {
       });
       await tester.pumpAndSettle();
       expect(find.text(l.selectiveBackupConfirmTitle), findsOneWidget);
-      expect(find.text(l.selectiveBackupUnsupportedGroups(2)), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(SkedConfirmationDialog),
+          matching: find.text(l.selectiveBackupUnsupportedGroups(2)),
+        ),
+        findsOneWidget,
+      );
       expect(
         find.textContaining(l.selectiveBackupDeviceUnsupported('Windows')),
         findsWidgets,

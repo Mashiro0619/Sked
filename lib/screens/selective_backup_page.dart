@@ -43,6 +43,7 @@ class _SelectiveBackupPageState extends State<SelectiveBackupPage> {
   SelectiveBackupBundle? _bundle;
   final _objects = <BackupObjectKey>{};
   final _files = <String>{};
+  final _expandedGroups = <BackupObjectKind>{};
   final _searchController = TextEditingController();
   String _search = '';
   bool _restoring = false, _working = false, _reviewing = false;
@@ -108,6 +109,9 @@ class _SelectiveBackupPageState extends State<SelectiveBackupPage> {
         ),
       );
     _files.clear();
+    _expandedGroups
+      ..clear()
+      ..addAll(_objects.map((key) => key.kind));
     _searchController.clear();
     _search = '';
     _error = null;
@@ -408,12 +412,15 @@ class _SelectiveBackupPageState extends State<SelectiveBackupPage> {
         .toList();
   }
 
-  void _toggleObject(BackupObjectKey key, bool selected) {
+  void _toggleObject(BackupObjectKey key, bool selected) =>
+      _toggleObjects([key], selected);
+
+  void _toggleObjects(Iterable<BackupObjectKey> keys, bool selected) {
     setState(() {
       if (selected) {
-        _objects.add(key);
+        _objects.addAll(keys);
       } else {
-        _objects.remove(key);
+        _objects.removeAll(keys);
       }
       final includedIds = _includedFiles()
           .map((record) => record.key.id)
@@ -482,7 +489,7 @@ class _SelectiveBackupPageState extends State<SelectiveBackupPage> {
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
         ),
-      if (_working || widget.service.isBusy)
+      if ((bundle == null || pending) && (_working || widget.service.isBusy))
         const Padding(
           padding: EdgeInsets.symmetric(vertical: 12),
           child: LinearProgressIndicator(),
@@ -512,7 +519,6 @@ class _SelectiveBackupPageState extends State<SelectiveBackupPage> {
           runSpacing: 8,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Text(l.selectiveBackupSelectedCount(_objects.length)),
             TextButton(
               onPressed: _busy
                   ? null
@@ -556,32 +562,6 @@ class _SelectiveBackupPageState extends State<SelectiveBackupPage> {
           l.selectiveBackupExclusions,
           style: Theme.of(context).textTheme.bodySmall,
         ),
-        const SizedBox(height: 16),
-        Align(
-          alignment: AlignmentDirectional.centerEnd,
-          child: FilledButton.icon(
-            key: const ValueKey('selective-backup-primary'),
-            onPressed: _busy || _objects.isEmpty
-                ? null
-                : _restoring
-                ? _restore
-                : _save,
-            icon: Icon(
-              _restoring
-                  ? Icons.restore
-                  : widget.shareOnExport
-                  ? Icons.share_outlined
-                  : Icons.save_alt,
-            ),
-            label: Text(
-              _restoring
-                  ? l.selectiveBackupReviewRestore
-                  : widget.shareOnExport
-                  ? l.shareBackupTitle
-                  : l.selectiveBackupSave,
-            ),
-          ),
-        ),
       ],
       const SizedBox(height: 32),
     ];
@@ -589,23 +569,109 @@ class _SelectiveBackupPageState extends State<SelectiveBackupPage> {
       canPop: !_working || widget.service.isBusy,
       child: SettingsPageScaffold(
         title: l.selectiveBackupTitle,
-        bodyBuilder: (context, header) => CustomScrollView(
-          slivers: [
-            ?header,
-            SliverPadding(
-              padding: const EdgeInsets.all(16),
-              sliver: SliverList.builder(
-                itemCount: rows.length,
-                itemBuilder: (context, index) => Align(
-                  alignment: Alignment.topCenter,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 880),
-                    child: SizedBox(width: double.infinity, child: rows[index]),
+        bodyBuilder: (context, header) => Column(
+          children: [
+            Expanded(
+              child: CustomScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                slivers: [
+                  ?header,
+                  SliverPadding(
+                    padding: const EdgeInsets.all(16),
+                    sliver: SliverList.builder(
+                      itemCount: rows.length,
+                      itemBuilder: (context, index) => Align(
+                        alignment: Alignment.topCenter,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 880),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: rows[index],
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
+            if (bundle != null && !pending) ...[
+              if (_working || widget.service.isBusy)
+                const LinearProgressIndicator(),
+              _selectionActions(l),
+            ],
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _selectionActions(AppLocalizations l) {
+    final colors = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      key: const ValueKey('selective-backup-actions'),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border(top: BorderSide(color: colors.outlineVariant)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Center(
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 880),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final count = Text(
+                  l.selectiveBackupSelectedCount(_objects.length),
+                  key: const ValueKey('selective-backup-selection-count'),
+                );
+                final primary = FilledButton.icon(
+                  key: const ValueKey('selective-backup-primary'),
+                  onPressed: _busy || _objects.isEmpty
+                      ? null
+                      : _restoring
+                      ? _restore
+                      : _save,
+                  icon: Icon(
+                    _restoring
+                        ? Icons.restore
+                        : widget.shareOnExport
+                        ? Icons.share_outlined
+                        : Icons.save_alt,
+                  ),
+                  label: Text(
+                    _restoring
+                        ? l.selectiveBackupReviewRestore
+                        : widget.shareOnExport
+                        ? l.shareBackupTitle
+                        : l.selectiveBackupSave,
+                  ),
+                );
+                final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+                if (constraints.maxWidth < 320 * scale) {
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [count, const SizedBox(height: 8), primary],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(child: count),
+                    const SizedBox(width: 16),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: constraints.maxWidth * .65,
+                      ),
+                      child: primary,
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
         ),
       ),
     );
@@ -627,32 +693,102 @@ class _SelectiveBackupPageState extends State<SelectiveBackupPage> {
         )
         .toList();
     if (records.isEmpty) return const [];
+    final selectable = records
+        .where(
+          (record) => !_restoring || widget.service.supportsDeviceGroup(record),
+        )
+        .toList();
+    final selected = selectable
+        .where((record) => _objects.contains(record.key))
+        .length;
+    final allSelected = selectable.isNotEmpty && selected == selectable.length;
+    final expanded = _search.isNotEmpty || _expandedGroups.contains(kind);
     return [
       Padding(
-        padding: const EdgeInsets.only(top: 16, bottom: 6),
-        child: Text(group, style: Theme.of(context).textTheme.titleMedium),
-      ),
-      for (final record in records)
-        CheckboxListTile(
-          key: ValueKey('backup-object-${record.key}'),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-          value: _objects.contains(record.key),
-          title: Text(_recordLabel(record, l)),
-          subtitle: _restoring && !widget.service.supportsDeviceGroup(record)
-              ? Text(
-                  l.selectiveBackupDeviceUnsupported(
-                    devicePreferencePlatformLabel(
-                      devicePreferencePlatform(record),
-                    ),
+        padding: const EdgeInsets.only(top: 12, bottom: 4),
+        child: Card(
+          margin: EdgeInsets.zero,
+          child: Semantics(
+            expanded: expanded,
+            child: ListTile(
+              key: ValueKey('backup-group-${kind.name}'),
+              contentPadding: const EdgeInsetsDirectional.only(
+                start: 4,
+                end: 16,
+              ),
+              leading: Tooltip(
+                message:
+                    '$group: ${allSelected ? l.selectiveBackupClearSelection : l.selectiveBackupSelectAll}',
+                child: Checkbox(
+                  key: ValueKey('backup-group-selection-${kind.name}'),
+                  tristate: true,
+                  value: allSelected
+                      ? true
+                      : selected == 0
+                      ? false
+                      : null,
+                  onChanged: _busy || selectable.isEmpty
+                      ? null
+                      : (_) => _toggleObjects(
+                          selectable.map((record) => record.key),
+                          !allSelected,
+                        ),
+                ),
+              ),
+              title: Row(
+                children: [
+                  Expanded(child: Text(group)),
+                  const SizedBox(width: 12),
+                  Text(
+                    '$selected/${records.length}',
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
-                )
-              : null,
-          controlAffinity: ListTileControlAffinity.leading,
-          onChanged:
-              _busy || _restoring && !widget.service.supportsDeviceGroup(record)
-              ? null
-              : (value) => _toggleObject(record.key, value == true),
+                ],
+              ),
+              subtitle: _restoring && selectable.length != records.length
+                  ? Text(
+                      l.selectiveBackupUnsupportedGroups(
+                        records.length - selectable.length,
+                      ),
+                    )
+                  : null,
+              trailing: _search.isNotEmpty
+                  ? null
+                  : Icon(expanded ? Icons.expand_less : Icons.expand_more),
+              onTap: _search.isNotEmpty
+                  ? null
+                  : () => setState(() {
+                      if (!_expandedGroups.remove(kind)) {
+                        _expandedGroups.add(kind);
+                      }
+                    }),
+            ),
+          ),
         ),
+      ),
+      if (expanded)
+        for (final record in records)
+          CheckboxListTile(
+            key: ValueKey('backup-object-${record.key}'),
+            contentPadding: const EdgeInsetsDirectional.only(start: 24, end: 4),
+            value: _objects.contains(record.key),
+            title: Text(_recordLabel(record, l)),
+            subtitle: _restoring && !widget.service.supportsDeviceGroup(record)
+                ? Text(
+                    l.selectiveBackupDeviceUnsupported(
+                      devicePreferencePlatformLabel(
+                        devicePreferencePlatform(record),
+                      ),
+                    ),
+                  )
+                : null,
+            controlAffinity: ListTileControlAffinity.leading,
+            onChanged:
+                _busy ||
+                    _restoring && !widget.service.supportsDeviceGroup(record)
+                ? null
+                : (value) => _toggleObject(record.key, value == true),
+          ),
     ];
   }
 
