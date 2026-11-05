@@ -15,9 +15,11 @@ import '../application/operation_contracts.dart';
 import '../l10n/app_localizations.dart';
 import '../models/agent_settings.dart';
 import '../controllers/settings_view_state.dart';
+import '../theme/sked_surface.dart';
 import '../widgets/desktop_window_host.dart';
 import '../widgets/workspace_frame.dart';
 import '../widgets/workspace_navigation.dart';
+import '../widgets/workbench_chrome_metrics.dart';
 import 'agent_settings_page.dart';
 
 typedef AgentWorkspaceActivator = Future<bool> Function({
@@ -319,51 +321,71 @@ class _AgentConversationHostState extends State<AgentConversationHost> {
     if (!application.isInitialized) {
       final status = _initializationStatus(application, l);
       if (!widget.fullWorkspace) return status;
-      final navigationButtonStyle = IconButton.styleFrom(
-        minimumSize: const Size.square(48),
-        visualDensity: VisualDensity.standard,
-        tapTargetSize: MaterialTapTargetSize.padded,
-      );
       final content = Column(
         children: [
-          Padding(
-            key: const ValueKey('agent-initialization-header'),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            child: Row(
-              children: [
-                if (widget.embedded)
-                  Builder(
-                    builder: (context) =>
-                        workspaceMainNavigationButton(context) ??
-                        const SizedBox.shrink(),
-                  )
-                else
-                  BackButton(
-                    key: const ValueKey('agent-initialization-back'),
-                    style: navigationButtonStyle,
+          Builder(
+            builder: (headerContext) {
+              final metrics = WorkbenchChromeMetrics.of(headerContext);
+              final title = Text(
+                l.agentTitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(headerContext).textTheme.titleMedium,
+              );
+              return SkedSurface(
+                key: const ValueKey('agent-initialization-header'),
+                role: SkedSurfaceRole.frame,
+                shape: Border(
+                  bottom: BorderSide(
+                    color: Theme.of(headerContext).colorScheme.outlineVariant,
                   ),
-                Expanded(
-                  child: DesktopDragRegion(
-                    child: Text(
-                      l.agentTitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium,
+                ),
+                child: SizedBox(
+                  height: metrics.toolbarHeight,
+                  child: IconButtonTheme(
+                    data: IconButtonThemeData(style: metrics.iconStyle),
+                    child: Row(
+                      textDirection: TextDirection.ltr,
+                      children: [
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: Row(
+                              children: [
+                                if (widget.embedded) ...[
+                                  ?workspaceMainNavigationButton(headerContext),
+                                ] else
+                                  const BackButton(
+                                    key: ValueKey('agent-initialization-back'),
+                                  ),
+                                Expanded(
+                                  child: metrics.desktop
+                                      ? DesktopDragRegion(
+                                          child: IgnorePointer(child: title),
+                                        )
+                                      : title,
+                                ),
+                                IconButton(
+                                  key: const ValueKey(
+                                    'agent-initialization-settings',
+                                  ),
+                                  tooltip: l.agentSettingsTitle,
+                                  onPressed: widget.active && widget.interactive
+                                      ? () => unawaited(_openSettings())
+                                      : null,
+                                  icon: const Icon(Icons.settings_outlined),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const DesktopCaptionSpacer(),
+                      ],
                     ),
                   ),
                 ),
-                IconButton(
-                  key: const ValueKey('agent-initialization-settings'),
-                  tooltip: l.agentSettingsTitle,
-                  style: navigationButtonStyle,
-                  onPressed: widget.interactive
-                      ? () => unawaited(_openSettings())
-                      : null,
-                  icon: const Icon(Icons.settings_outlined),
-                ),
-                const DesktopCaptionSpacer(),
-              ],
-            ),
+              );
+            },
           ),
           Expanded(child: status),
         ],
