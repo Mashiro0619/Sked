@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:ui' show Tristate;
+import 'dart:ui' show SemanticsAction, Tristate;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -261,8 +261,18 @@ Future<void> _expectDraft(WidgetTester tester, _DraftOwner owner) async {
   expect(composer.enabled, isTrue);
   expect(composer.readOnly, isFalse);
   expect(composer.focusNode!.hasFocus, isFalse);
-  final data = tester.getSemantics(_key('agent-composer')).getSemanticsData();
+  final data = tester
+      .getSemantics(
+        find.descendant(
+          of: _key('agent-composer'),
+          matching: find.byType(EditableText),
+        ),
+      )
+      .getSemanticsData();
   expect(data.flagsCollection.isTextField, isTrue);
+  expect(data.flagsCollection.isMultiline, isTrue);
+  expect(data.hasAction(SemanticsAction.focus), isTrue);
+  expect(data.hasAction(SemanticsAction.tap), isTrue);
   expect(data.flagsCollection.isEnabled, Tristate.isTrue);
 }
 
