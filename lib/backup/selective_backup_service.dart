@@ -178,8 +178,7 @@ class SelectiveBackupService extends ChangeNotifier {
   }
 
   Future<SelectiveBackupBundle> _inventory() async {
-    await _agent.initialize();
-    await _agent.knowledge.initialize();
+    await _agent.prepareBackupRead();
     final data = _readData();
     final conversations = List<AgentConversation>.of(
       _agent.conversations.conversations,
@@ -760,6 +759,13 @@ class _CredentialParticipant implements BackupRestoreParticipant {
         'The connection changed during restore preparation.',
       );
     }
+    // Only a selected connection needs the keyring. Read both slots before
+    // admitting any business write; an unreadable or future credential format
+    // must not first be discovered after the main-data target has committed.
+    // A readable unreconciled state is allowed: apply owns that reconciliation.
+    await agent.connections.isReconciledForRestore(
+      AgentSettings.fromJson(target.descriptor['before']),
+    );
   }
 
   @override

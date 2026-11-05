@@ -241,6 +241,7 @@ class AgentApplication extends ChangeNotifier {
   late final StreamSubscription<AppDataCommit> _commits;
   VoidCallback? onOpenSettings;
   Future<void>? _initializing;
+  Future<void>? _loadingConversations;
   Future<void> _configurationTail = Future.value();
   bool _initialized = false;
   bool _initializationError = false;
@@ -347,6 +348,44 @@ class AgentApplication extends ChangeNotifier {
     return operation;
   }
 
+  /// Backups read application-owned data without activating the executor or
+  /// opening the keyring. Broken side stores still fail explicitly; they must
+  /// never be exported as an empty archive. Retention belongs to Agent startup,
+  /// not to a user reading the backup inventory.
+  Future<void> prepareBackupRead() async {
+    void requireAvailable() {
+      if (!_knowledgeAvailable() || _session.repository.isWriteStateUnknown) {
+        throw StateError('Application storage is not ready for backup.');
+      }
+    }
+
+    requireAvailable();
+    if (conversations.blocked) {
+      throw const ConversationStorageException(
+        'Recover conversation storage before reading a backup.',
+      );
+    }
+    await _loadConversations();
+    await knowledge.initialize();
+    // A completed restore can leave the dormant attachment owner frozen until
+    // its chat references are loaded. Exporting selected files needs the same
+    // read gate as first entry, but does not need a model connection.
+    await _resumeAttachmentsAfterMaintenance();
+    requireAvailable();
+    if (!conversations.canWrite) {
+      throw const ConversationStorageException(
+        'Conversation storage is unavailable for backup.',
+      );
+    }
+  }
+
+  Future<void> _loadConversations() {
+    if (conversations.isLoaded && !conversations.blocked) return Future.value();
+    return _loadingConversations ??= conversations.load().whenComplete(
+      () => _loadingConversations = null,
+    );
+  }
+
   Future<void> _initialize() async {
     _initializationError = false;
     _initializationFailure = null;
@@ -360,9 +399,7 @@ class AgentApplication extends ChangeNotifier {
         throw StateError('Application storage is not ready.');
       }
       stage = AgentInitializationFailure.conversationStorage;
-      if (!conversations.isLoaded || conversations.blocked) {
-        await conversations.load();
-      }
+      await _loadConversations();
       stage = AgentInitializationFailure.connectionStorage;
       await connections.initialize();
       if (_disposed || _suspended || _clearSuspended) return;
