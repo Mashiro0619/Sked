@@ -21,9 +21,14 @@ class AgentTranscript extends StatefulWidget {
     required this.scrollViewKey,
     required this.onReadingChanged,
     this.contentRevision,
+    this.footer,
   });
 
   final List<Widget> children;
+
+  /// An eagerly mounted editor below the lazy message list. It is not a
+  /// message, indexed semantic child, or remembered reading anchor.
+  final Widget? footer;
   final AgentReadingPosition position;
   final bool active;
   final Key scrollViewKey;
@@ -290,6 +295,19 @@ class AgentTranscriptState extends State<AgentTranscript> {
                       addSemanticIndexes: false,
                     ),
                   ),
+                  if (widget.footer case final footer?)
+                    SliverToBoxAdapter(
+                      child: Align(
+                        alignment: Alignment.topCenter,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 812),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: footer,
+                          ),
+                        ),
+                      ),
+                    ),
                   const SliverToBoxAdapter(child: SizedBox(height: 24)),
                 ],
               ),

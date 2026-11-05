@@ -6,6 +6,7 @@ import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_model_picker.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
+import 'package:sked/agent/ui/agent_transcript.dart';
 import 'package:sked/models/agent_settings.dart';
 
 import 'agent_ui_test_support.dart';
@@ -237,4 +238,132 @@ void main() {
     },
     variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
+  for (final scene in [
+    (name: 'tall keyboard', size: const Size(320, 740), keyboard: 400.0),
+    (name: 'short window', size: const Size(320, 210), keyboard: 0.0),
+    (name: 'reading history', size: const Size(320, 740), keyboard: 400.0),
+  ]) {
+    testWidgets(
+      'IME client and composing text survive $scene and returning to pinned input',
+      (tester) async {
+        addTearDown(tester.view.reset);
+        await initialize();
+        if (scene.name == 'reading history') {
+          await repository.update(
+            id,
+            (value) => value.copyWith(
+              messages: [
+                for (var index = 0; index < 30; index++)
+                  ConversationMessage(
+                    id: 'history-$index',
+                    role: ConversationRole.user,
+                    text: 'Earlier message $index',
+                    createdAt: DateTime.utc(2026, 11, 5),
+                  ),
+              ],
+            ),
+          );
+        }
+        await mountAgentUi(
+          tester,
+          view(),
+          size: const Size(320, 740),
+          scale: 2,
+        );
+        if (scene.name == 'reading history') {
+          await tester.drag(key('agent-transcript-$id'), const Offset(0, 1200));
+          await tester.pumpAndSettle();
+        }
+        final field = tester.widget<TextField>(key('agent-composer'));
+        final editable = find.descendant(
+          of: find.byKey(const ValueKey('agent-composer'), skipOffstage: false),
+          matching: find.byType(EditableText, skipOffstage: false),
+          skipOffstage: false,
+        );
+        final originalState = tester.state<EditableTextState>(editable);
+        final reading = tester
+            .widget<AgentTranscript>(find.byType(AgentTranscript))
+            .position;
+        final anchor = reading.anchor;
+        if (scene.name == 'reading history') {
+          expect(reading.followLatest, isFalse);
+          expect(anchor, isNotNull);
+        }
+        field.focusNode!.requestFocus();
+        await tester.pumpAndSettle();
+        await tester.showKeyboard(key('agent-composer'));
+        int clientAttachments() => tester.testTextInput.log
+            .where((call) => call.method == 'TextInput.setClient')
+            .length;
+        final originalClientAttachments = clientAttachments();
+        const selection = TextSelection(baseOffset: 2, extentOffset: 5);
+        const composing = TextRange(start: 1, end: 6);
+        var value = TextEditingValue(
+          text: draft,
+          selection: selection,
+          composing: composing,
+        );
+        tester.testTextInput.updateEditingValue(value);
+        await settle(tester);
+        void expectConnected() {
+          expect(
+            tester.state<EditableTextState>(editable),
+            same(originalState),
+          );
+          expect(field.focusNode!.hasFocus, isTrue);
+          expect(tester.testTextInput.hasAnyClients, isTrue);
+          expect(clientAttachments(), originalClientAttachments);
+          expect(tester.testTextInput.isVisible, isTrue);
+          expect(field.controller!.value, value);
+        }
+
+        expectConnected();
+        await mountAgentUi(
+          tester,
+          view(),
+          size: const Size(320, 740),
+          scale: 2,
+          keyboard: 280,
+        );
+        expect(key('agent-composer-body-scroll'), findsOneWidget);
+        expectConnected();
+        await mountAgentUi(
+          tester,
+          view(),
+          size: scene.size,
+          scale: 2,
+          keyboard: scene.keyboard,
+        );
+        expect(key('agent-composer-body-scroll'), findsNothing);
+        expectConnected();
+        if (scene.name == 'reading history') expect(reading.anchor, anchor);
+        // Send through the existing client while the editor may be below the
+        // visible history; showing the keyboard again would mask a disconnect.
+        value = value.copyWith(text: '$draft\n窗口变化期间继续输入');
+        tester.testTextInput.updateEditingValue(value);
+        await settle(tester);
+        expectConnected();
+        expect(repository.selected!.draft, value.text);
+        await mountAgentUi(
+          tester,
+          view(),
+          size: const Size(320, 740),
+          scale: 2,
+        );
+        expect(key('agent-composer-body-scroll'), findsOneWidget);
+        expectConnected();
+        // Deliver through the existing platform client. enterText/showKeyboard
+        // would reconnect a disposed EditableText and conceal this regression.
+        tester.testTextInput.updateEditingValue(
+          value.copyWith(text: '$draft\n继续输入'),
+        );
+        await settle(tester);
+        expect(field.controller!.text, '$draft\n继续输入');
+        expect(repository.selected!.draft, '$draft\n继续输入');
+        expect(tester.takeException(), isNull);
+        await files.close();
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+    );
+  }
 }

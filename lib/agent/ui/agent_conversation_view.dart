@@ -166,6 +166,8 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       generation == _uiGeneration &&
       _repository.selectedId == conversationId;
   final _composer = TextEditingController();
+  // Reparent the editor without replacing its platform text-input client.
+  final _composerField = GlobalKey();
   final _composerFocus = FocusNode();
   late _AgentDraftBuffer _draftBuffer = _draftBuffers[_repository] ??=
       _AgentDraftBuffer();
@@ -1417,20 +1419,22 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                     scrollWithTranscript: scrollWithTranscript,
                   );
             final id = conversation?.id ?? '';
-            Widget transcript(List<Widget> children) => AgentTranscript(
-              key: _transcripts.putIfAbsent(id, GlobalKey.new),
-              scrollViewKey: ValueKey('agent-transcript-$id'),
-              position: _reading(id),
-              active: _hostActive,
-              contentRevision: (
-                _transcriptVersions[id],
-                _replyBrowseRevisions[id],
-              ),
-              onReadingChanged: () {
-                if (mounted) setState(() {});
-              },
-              children: children,
-            );
+            Widget transcript(List<Widget> children, {Widget? footer}) =>
+                AgentTranscript(
+                  key: _transcripts.putIfAbsent(id, GlobalKey.new),
+                  scrollViewKey: ValueKey('agent-transcript-$id'),
+                  position: _reading(id),
+                  active: _hostActive,
+                  contentRevision: (
+                    _transcriptVersions[id],
+                    _replyBrowseRevisions[id],
+                  ),
+                  onReadingChanged: () {
+                    if (mounted) setState(() {});
+                  },
+                  footer: footer,
+                  children: children,
+                );
             final content = LayoutBuilder(
               builder: (context, contentConstraints) {
                 final budget = _composerBudget(
@@ -1439,10 +1443,10 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                 );
                 if (contentConstraints.maxHeight <
                     budget.minimumComposer + budget.minimumTranscript) {
-                  return transcript([
-                    ...body,
-                    composer(scrollWithTranscript: true),
-                  ]);
+                  return transcript(
+                    body,
+                    footer: composer(scrollWithTranscript: true),
+                  );
                 }
                 final maxComposerHeight = math
                     .max(
@@ -2603,35 +2607,38 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                           label: Text(l.agentContinue),
                         ),
                       ),
-                    TextField(
-                      key: const ValueKey('agent-composer'),
-                      controller: _composer,
-                      focusNode: _composerFocus,
-                      enabled: enabled,
-                      minLines: 1,
-                      maxLines: 5,
-                      maxLength: 128 * 1024,
-                      textInputAction: TextInputAction.newline,
-                      style: Theme.of(context).textTheme.bodyLarge,
-                      decoration: InputDecoration(
-                        filled: false,
-                        hintText: l.agentMessageHint,
-                        counterText: '',
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        // Android's collapsed handle reaches 39dp below the
-                        // caret once its 48dp hit area is included. Keep it
-                        // above the action row, including when it fades out.
-                        contentPadding: EdgeInsets.fromLTRB(
-                          8,
-                          8,
-                          8,
-                          SkedMenuStyle.of(context).desktop ? 8 : 36,
+                    KeyedSubtree(
+                      key: _composerField,
+                      child: TextField(
+                        key: const ValueKey('agent-composer'),
+                        controller: _composer,
+                        focusNode: _composerFocus,
+                        enabled: enabled,
+                        minLines: 1,
+                        maxLines: 5,
+                        maxLength: 128 * 1024,
+                        textInputAction: TextInputAction.newline,
+                        style: Theme.of(context).textTheme.bodyLarge,
+                        decoration: InputDecoration(
+                          filled: false,
+                          hintText: l.agentMessageHint,
+                          counterText: '',
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          // Android's collapsed handle reaches 39dp below the
+                          // caret once its 48dp hit area is included. Keep it
+                          // above the action row, including when it fades out.
+                          contentPadding: EdgeInsets.fromLTRB(
+                            8,
+                            8,
+                            8,
+                            SkedMenuStyle.of(context).desktop ? 8 : 36,
+                          ),
                         ),
+                        onChanged: (value) =>
+                            _draftChanged(conversation.id, value),
                       ),
-                      onChanged: (value) =>
-                          _draftChanged(conversation.id, value),
                     ),
                     if (active && _hasInput(conversation))
                       Wrap(
