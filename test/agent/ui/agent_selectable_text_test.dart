@@ -185,7 +185,7 @@ void main() {
         size: const Size(720, 1000),
       );
       if (testCase.expand) {
-        await tester.tap(find.byType(ExpansionTile));
+        await tester.tap(find.byKey(const ValueKey('agent-receipt-details')));
         await tester.pumpAndSettle();
       }
       _expectReadonlyText(tester, testCase.text);

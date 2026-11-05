@@ -8,6 +8,66 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'agent_ui_test_support.dart';
 
 void main() {
+  for (final scale in [1.0, 2.0]) {
+    testWidgets('receipt actions stay reachable at $scale text scale', (
+      tester,
+    ) async {
+      addTearDown(tester.view.reset);
+      var undone = false;
+      const receipt = <String, Object?>{
+        'status': 'committed',
+        'operationId': 'layout/receipt',
+        'changeCount': 1,
+        'changes': [
+          {'action': 'created', 'label': 'Mathematics'},
+        ],
+        'notificationEffect': {'state': 'pending'},
+      };
+      await mountAgentUi(
+        tester,
+        SingleChildScrollView(
+          child: AgentOperationCard(
+            receipt: receipt,
+            onUndo: () => undone = true,
+          ),
+        ),
+        size: Size(scale == 1 ? 390 : 320, 844),
+        scale: scale,
+        locale: const Locale('zh'),
+      );
+      final l = AppLocalizations.of(
+        tester.element(find.byType(AgentOperationCard)),
+      );
+      final undo = find.widgetWithText(TextButton, l.agentUndo);
+      final detail = find.byKey(const ValueKey('agent-receipt-details'));
+      expect(tester.getSize(undo).height, greaterThanOrEqualTo(48));
+      expect(tester.getSize(detail).height, greaterThanOrEqualTo(48));
+      if (scale == 1) {
+        expect(
+          (tester.getRect(undo).top - tester.getRect(detail).top).abs(),
+          lessThan(1),
+        );
+      }
+      expect(find.text(l.agentNotificationEffect('pending')), findsOneWidget);
+      expect(find.text(l.agentChangesSaved), findsOneWidget);
+      await tester.tap(detail);
+      await tester.pumpAndSettle();
+      expect(
+        find.text(const JsonEncoder.withIndent('  ').convert(receipt)),
+        findsOneWidget,
+      );
+      await tester.tap(detail);
+      await tester.pumpAndSettle();
+      expect(
+        find.text(const JsonEncoder.withIndent('  ').convert(receipt)),
+        findsNothing,
+      );
+      await tester.tap(undo);
+      expect(undone, isTrue);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets(
     'a committed receipt shows real object labels and actionable undo',
     (tester) async {

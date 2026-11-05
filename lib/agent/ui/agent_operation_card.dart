@@ -13,7 +13,7 @@ import 'agent_selectable_text.dart';
 
 /// Host receipts provide the outcome. Assistant prose never sets this card's
 /// saved, failed or uncertain state.
-class AgentOperationCard extends StatelessWidget {
+class AgentOperationCard extends StatefulWidget {
   const AgentOperationCard({
     super.key,
     required this.receipt,
@@ -45,7 +45,28 @@ class AgentOperationCard extends StatelessWidget {
   }
 
   @override
+  State<AgentOperationCard> createState() => _AgentOperationCardState();
+}
+
+class _AgentOperationCardState extends State<AgentOperationCard> {
+  bool _showDetails = false;
+  Map<String, Object?> get receipt => widget.receipt;
+
+  @override
+  void didUpdateWidget(AgentOperationCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if ((oldWidget.receipt['operationId'] ?? oldWidget.receipt['planId']) !=
+        (receipt['operationId'] ?? receipt['planId'])) {
+      _showDetails = false;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final onUndo = widget.onUndo;
+    final onOpenResource = widget.onOpenResource;
+    final onOpenConversation = widget.onOpenConversation;
+    final canOpenConversation = widget.canOpenConversation;
     final l = AppLocalizations.of(context);
     final applied =
         receipt['status'] == 'committed' ||
@@ -102,7 +123,9 @@ class AgentOperationCard extends StatelessWidget {
         : null;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Card.outlined(
+      child: Card.filled(
+        margin: EdgeInsets.zero,
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(
@@ -119,20 +142,32 @@ class AgentOperationCard extends StatelessWidget {
                         ? Icons.preview_outlined
                         : Icons.error_outline,
                     size: 20,
+                    color: uncertain
+                        ? Theme.of(context).colorScheme.tertiary
+                        : !applied && !prepared
+                        ? Theme.of(context).colorScheme.error
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleSmall,
+                    child: Wrap(
+                      spacing: 12,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          title,
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        if (changeCount case final int count)
+                          Text(
+                            l.agentChangeCount(count),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                      ],
                     ),
                   ),
                 ],
               ),
-              if (changeCount case final int count) ...[
-                const SizedBox(height: 6),
-                Text(l.agentChangeCount(count)),
-              ],
               if (receipt['notificationEffect'] case final Map effect)
                 if (effect['state'] != 'notRequired') ...[
                   const SizedBox(height: 6),
@@ -141,7 +176,7 @@ class AgentOperationCard extends StatelessWidget {
               for (final change in changes) ...[
                 const SizedBox(height: 6),
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(child: Text(_changeText(change, l))),
                     if (change['conversationId'] case final String id)
@@ -150,7 +185,7 @@ class AgentOperationCard extends StatelessWidget {
                         IconButton(
                           tooltip: l.agentViewObject,
                           icon: const Icon(Icons.open_in_new, size: 20),
-                          onPressed: () => onOpenConversation!(id),
+                          onPressed: () => onOpenConversation(id),
                         ),
                     if (change['ref'] is Map &&
                         change['action'] != 'deleted' &&
@@ -158,7 +193,7 @@ class AgentOperationCard extends StatelessWidget {
                       IconButton(
                         tooltip: l.agentViewObject,
                         icon: const Icon(Icons.open_in_new, size: 20),
-                        onPressed: () => onOpenResource!(
+                        onPressed: () => onOpenResource(
                           Map<String, Object?>.from(change['ref'] as Map),
                         ),
                       ),
@@ -167,27 +202,41 @@ class AgentOperationCard extends StatelessWidget {
               ],
               if (receipt['hasMoreChanges'] == true) Text(l.agentMoreChanges),
               if (receipt['stoppedAfterCommit'] == true) Text(l.agentStopped),
-              if (applied &&
-                  receipt['kind'] != 'external' &&
-                  receipt['undoOf'] == null &&
-                  onUndo != null)
+              Wrap(
+                key: const ValueKey('agent-receipt-actions'),
+                spacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  if (applied &&
+                      receipt['kind'] != 'external' &&
+                      receipt['undoOf'] == null &&
+                      onUndo != null)
+                    TextButton.icon(
+                      onPressed: onUndo,
+                      icon: const Icon(Icons.undo),
+                      label: Text(l.agentUndo),
+                    ),
+                  if (!namedObjects)
+                    Semantics(
+                      expanded: _showDetails,
+                      child: TextButton.icon(
+                        key: const ValueKey('agent-receipt-details'),
+                        onPressed: () =>
+                            setState(() => _showDetails = !_showDetails),
+                        icon: Icon(
+                          _showDetails ? Icons.expand_less : Icons.expand_more,
+                        ),
+                        label: Text(l.agentPlanDetails),
+                      ),
+                    ),
+                ],
+              ),
+              if (!namedObjects && _showDetails)
                 Align(
                   alignment: AlignmentDirectional.centerStart,
-                  child: TextButton.icon(
-                    onPressed: onUndo,
-                    icon: const Icon(Icons.undo),
-                    label: Text(l.agentUndo),
+                  child: AgentSelectableText(
+                    const JsonEncoder.withIndent('  ').convert(receipt),
                   ),
-                ),
-              if (!namedObjects)
-                ExpansionTile(
-                  tilePadding: EdgeInsets.zero,
-                  title: Text(l.agentPlanDetails),
-                  children: [
-                    AgentSelectableText(
-                      const JsonEncoder.withIndent('  ').convert(receipt),
-                    ),
-                  ],
                 ),
             ],
           ),
