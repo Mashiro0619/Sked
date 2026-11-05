@@ -28,6 +28,8 @@ Agent 资源侧栏和主抽屉读取同一本地历史，提供标题搜索、�
 
 首次进入空历史时直接显示可输入的聊天界面，未发送草稿不进入会话历史。新建入口复用应用当前的未发送草稿；首次消息保存成功后才出现在历史列表，初始模型和权限随该草稿保留。归档、导出及历史版本操作只对已保存会话显示。
 
+空历史的草稿创建等待当前宿主可交互；工作区转场、返回或重新激活后重新核对当前来源。旧宿主任务不会在另一个仓库创建草稿，已选会话及恢复选择保持原位，整个首次激活过程不写入存档。
+
 未发送聊天的主标题显示 Agent，不重复放置新建按钮。标题沿用主工作台的工具栏高度与操作预算，桌面拖动文字不产生悬停提示，系统窗口按钮始终保留在物理右侧，包括 RTL。正文与输入栏两侧统一留白，空态使用简短引导和紧凑间距；小窗口与大字号保持导航、会话入口及发送操作可达。
 
 ## 阅读与输入
@@ -83,6 +85,7 @@ Windows 中，Agent 自有的纯文本选择区域在同一个只读语义节点
 - [历史操作、搜索与来源边界](../test/agent/ui/agent_conversation_list_test.dart)
 - [主标题、窗口预算及窄窗入口](../test/agent/ui/agent_shell_layout_test.dart)
 - [加载与失败标题的导航、拖动及窗口预算](../test/agent/ui/agent_initialization_shell_layout_test.dart)
+- [空历史首次激活与迟到创稿来源](../test/agent/ui/agent_initial_draft_activation_test.dart)
 - [设置工具栏的 RTL 返回与窗口按钮避让](../test/widgets/settings_toolbar_caption_layout_test.dart)
 - [只读文本名称、选择与复制回归](../test/agent/ui/agent_selectable_text_test.dart)
 - [阅读锚点回归](../test/agent/ui/agent_transcript_test.dart)

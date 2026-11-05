@@ -176,6 +176,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   bool _historyVisible = true;
   bool _hostActive = true;
   bool _initialDraftScheduled = false;
+  bool _initialDraftRetry = false;
 
   AgentReadingPosition _reading(String id) =>
       _draftBuffer.reading.putIfAbsent(id, AgentReadingPosition.new);
@@ -447,6 +448,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       oldWidget.binaryAttachments?.removeListener(_changed);
       widget.binaryAttachments?.addListener(_changed);
     }
+    _scheduleInitialDraft();
   }
 
   @override
@@ -635,18 +637,25 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   }
 
   void _scheduleInitialDraft() {
-    if (_initialDraftScheduled ||
-        !_uiActive ||
+    if (!_uiActive ||
         !_repository.isLoaded ||
         !_repository.canWrite ||
         _repository.selected != null) {
       return;
     }
+    if (_initialDraftScheduled) {
+      // Availability may return while an older source is still completing.
+      // Retry only this explicit request after that source has finished.
+      _initialDraftRetry = true;
+      return;
+    }
     _initialDraftScheduled = true;
     final repository = _repository;
+    final uiGeneration = _uiGeneration;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
         if (_uiActive &&
+            uiGeneration == _uiGeneration &&
             identical(repository, _repository) &&
             repository.canWrite &&
             repository.selected == null) {
@@ -654,8 +663,12 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         }
       } finally {
         _initialDraftScheduled = false;
+        final retry = _initialDraftRetry;
+        _initialDraftRetry = false;
+        if (retry) _scheduleInitialDraft();
       }
     });
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   Future<void> _perform(
