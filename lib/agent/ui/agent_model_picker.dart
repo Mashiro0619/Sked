@@ -8,6 +8,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/agent_settings.dart';
 import '../../theme/sked_expressive_theme.dart';
 import '../../theme/sked_menu_style.dart';
+import '../../theme/sked_surface.dart';
 import '../../widgets/sked_menu_item_content.dart';
 import 'agent_model_labels.dart';
 import 'agent_ui_delegate.dart';
@@ -311,6 +312,15 @@ class _AgentModelPickerState extends State<AgentModelPicker>
         animated: SkedMotionPolicy.of(context).spatialAnimationsEnabled,
         style: menuStyle.menuStyle.copyWith(
           maximumSize: WidgetStatePropertyAll(Size(width, height)),
+          backgroundColor: WidgetStatePropertyAll(
+            Theme.of(context).colorScheme.surfaceContainerHigh,
+          ),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+              side: BorderSide(color: menuStyle.outline.withValues(alpha: .5)),
+            ),
+          ),
         ),
         crossAxisUnconstrained: false,
         clipBehavior: Clip.antiAlias,
@@ -385,180 +395,234 @@ class _AgentModelPickerState extends State<AgentModelPicker>
                         ],
                       )
                     : Padding(
-                        padding: const EdgeInsets.all(12),
+                        key: const ValueKey('agent-model-panel'),
+                        padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Text(
-                              l.agentModel,
-                              key: const ValueKey('agent-model-label'),
-                              style: Theme.of(context).textTheme.labelMedium
-                                  ?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
-                            ),
-                            const SizedBox(height: 4),
-                            if (state.availableModels.length > 1 ||
-                                model == null)
-                              MenuItemButton(
-                                key: const ValueKey('agent-model-switch'),
-                                closeOnActivate: false,
-                                style: menuStyle.itemStyle(),
-                                trailingIcon:
-                                    state.availableModels.length > 1 ||
-                                        model == null
-                                    ? const Icon(Icons.chevron_right_rounded)
-                                    : null,
-                                onPressed:
-                                    enabled &&
-                                        (state.availableModels.length > 1 ||
-                                            model == null)
-                                    ? () {
-                                        if (_isOpenSession(menuToken)) {
-                                          setState(() => _modelsVisible = true);
-                                        }
-                                      }
-                                    : null,
-                                child: Text(
-                                  modelLabel,
-                                  style: Theme.of(context).textTheme.titleSmall,
-                                ),
-                              )
-                            else
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                  horizontal: 10,
-                                ),
-                                child: Text(
-                                  modelLabel,
-                                  style: Theme.of(context).textTheme.titleSmall,
-                                ),
-                              ),
-                            const SizedBox(height: 16),
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  flex: 2,
-                                  child: Text(
-                                    l.agentThinkingEffort,
-                                    key: const ValueKey('agent-effort-label'),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .labelMedium
-                                        ?.copyWith(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurfaceVariant,
-                                        ),
-                                  ),
-                                ),
-                                if (effort != null) ...[
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      effortLabel,
-                                      key: const ValueKey('agent-effort-value'),
-                                      textAlign: TextAlign.end,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelLarge
-                                          ?.copyWith(
-                                            color: menuStyle.selectedForeground,
-                                          ),
+                                SizedBox(
+                                  width: menuStyle.desktop ? 32 : 48,
+                                  height: menuStyle.desktop ? 32 : 48,
+                                  child: ExcludeSemantics(
+                                    child: Icon(
+                                      Icons.bolt_outlined,
+                                      size: 20,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
                                     ),
                                   ),
-                                ],
+                                ),
+                                Expanded(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 6),
+                                        child: Semantics(
+                                          label: l.agentThinkingEffort,
+                                          child: Text(
+                                            effortLabel,
+                                            key: const ValueKey(
+                                              'agent-effort-value',
+                                            ),
+                                            textAlign: TextAlign.center,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleMedium
+                                                ?.copyWith(
+                                                  color: menuStyle
+                                                      .selectedForeground,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                        ),
+                                      ),
+                                      if (state.availableModels.length > 1 ||
+                                          model == null)
+                                        Tooltip(
+                                          message:
+                                              '${l.agentModel}: $modelLabel',
+                                          child: TextButton(
+                                            key: const ValueKey(
+                                              'agent-model-switch',
+                                            ),
+                                            style: TextButton.styleFrom(
+                                              minimumSize: Size(
+                                                0,
+                                                menuStyle.desktop ? 32 : 48,
+                                              ),
+                                              tapTargetSize:
+                                                  MaterialTapTargetSize
+                                                      .shrinkWrap,
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 4,
+                                                  ),
+                                              foregroundColor: Theme.of(context)
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
+                                              textStyle: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyMedium,
+                                            ),
+                                            onPressed: enabled
+                                                ? () {
+                                                    if (_isOpenSession(
+                                                      menuToken,
+                                                    )) {
+                                                      setState(
+                                                        () => _modelsVisible =
+                                                            true,
+                                                      );
+                                                    }
+                                                  }
+                                                : null,
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Flexible(
+                                                  child: Text(
+                                                    modelLabel,
+                                                    maxLines: 2,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                ),
+                                                const Icon(
+                                                  Icons.chevron_right_rounded,
+                                                  size: 16,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        )
+                                      else
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            vertical: 6,
+                                          ),
+                                          child: Tooltip(
+                                            message:
+                                                '${l.agentModel}: $modelLabel',
+                                            child: Text(
+                                              modelLabel,
+                                              textAlign: TextAlign.center,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyMedium
+                                                  ?.copyWith(
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurfaceVariant,
+                                                  ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  key: const ValueKey('agent-effort-reset'),
+                                  tooltip: model == null
+                                      ? l.agentDefaultEffort
+                                      : '${l.agentDefaultEffort}: ${agentReasoningEffortLabel(l, model.defaultReasoningEffort)}',
+                                  constraints: BoxConstraints.tightFor(
+                                    width: menuStyle.desktop ? 32 : 48,
+                                    height: menuStyle.desktop ? 32 : 48,
+                                  ),
+                                  padding: EdgeInsets.zero,
+                                  iconSize: 20,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                  onPressed:
+                                      enabled &&
+                                          model != null &&
+                                          (effort !=
+                                                  model
+                                                      .defaultReasoningEffort ||
+                                              _preview != null ||
+                                              !ready)
+                                      ? () {
+                                          if (widget.delegate.state.value
+                                                  .selectionFor(
+                                                    widget.conversationId,
+                                                  )
+                                                  ?.modelId !=
+                                              model.id) {
+                                            return;
+                                          }
+                                          unawaited(
+                                            _select(
+                                              model.defaultSelection,
+                                              openToken: menuToken,
+                                            ),
+                                          );
+                                        }
+                                      : null,
+                                  icon: const Icon(Icons.restart_alt_rounded),
+                                ),
                               ],
                             ),
                             if (efforts.length > 1)
-                              MergeSemantics(
-                                child: Semantics(
-                                  label: l.agentThinkingEffort,
-                                  child: Slider(
-                                    key: const ValueKey('agent-effort-slider'),
-                                    focusNode: _sliderFocus,
-                                    value: math
-                                        .max(
-                                          0,
-                                          efforts.indexOf(
-                                            effort ?? efforts.first,
-                                          ),
-                                        )
-                                        .toDouble(),
-                                    min: 0,
-                                    max: (efforts.length - 1).toDouble(),
-                                    divisions: efforts.length - 1,
-                                    label: effortLabel,
-                                    semanticFormatterCallback: (value) =>
-                                        agentReasoningEffortLabel(
-                                          l,
-                                          efforts[value.round()],
-                                        ),
-                                    onChanged: enabled && model != null
-                                        ? (value) {
-                                            if (_isOpenSession(menuToken)) {
-                                              setState(
-                                                () => _preview =
-                                                    efforts[value.round()],
-                                              );
-                                            }
-                                          }
-                                        : null,
-                                    onChangeEnd: enabled && model != null
-                                        ? (value) => unawaited(
-                                            _select(
-                                              AgentModelSelection(
-                                                modelId: model.id,
-                                                reasoningEffort:
-                                                    efforts[value.round()],
-                                              ),
-                                              openToken: menuToken,
+                              SliderTheme(
+                                data: _compactEffortSliderTheme(context),
+                                child: MergeSemantics(
+                                  child: Semantics(
+                                    label: l.agentThinkingEffort,
+                                    child: Slider(
+                                      key: const ValueKey(
+                                        'agent-effort-slider',
+                                      ),
+                                      focusNode: _sliderFocus,
+                                      value: math
+                                          .max(
+                                            0,
+                                            efforts.indexOf(
+                                              effort ?? efforts.first,
                                             ),
                                           )
-                                        : null,
+                                          .toDouble(),
+                                      min: 0,
+                                      max: (efforts.length - 1).toDouble(),
+                                      divisions: efforts.length - 1,
+                                      label: effortLabel,
+                                      semanticFormatterCallback: (value) =>
+                                          agentReasoningEffortLabel(
+                                            l,
+                                            efforts[value.round()],
+                                          ),
+                                      onChanged: enabled && model != null
+                                          ? (value) {
+                                              if (_isOpenSession(menuToken)) {
+                                                setState(
+                                                  () => _preview =
+                                                      efforts[value.round()],
+                                                );
+                                              }
+                                            }
+                                          : null,
+                                      onChangeEnd: enabled && model != null
+                                          ? (value) => unawaited(
+                                              _select(
+                                                AgentModelSelection(
+                                                  modelId: model.id,
+                                                  reasoningEffort:
+                                                      efforts[value.round()],
+                                                ),
+                                                openToken: menuToken,
+                                              ),
+                                            )
+                                          : null,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            if (efforts.length > 1)
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      agentReasoningEffortLabel(
-                                        l,
-                                        efforts.first,
-                                      ),
-                                      key: const ValueKey(
-                                        'agent-effort-minimum',
-                                      ),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelSmall,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Text(
-                                      agentReasoningEffortLabel(
-                                        l,
-                                        efforts.last,
-                                      ),
-                                      key: const ValueKey(
-                                        'agent-effort-maximum',
-                                      ),
-                                      textAlign: TextAlign.end,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelSmall,
-                                    ),
-                                  ),
-                                ],
                               ),
                             if (efforts.length == 1 &&
                                 (!ready ||
@@ -752,5 +816,29 @@ class _AgentModelPickerState extends State<AgentModelPicker>
             ],
           );
     },
+  );
+}
+
+SliderThemeData _compactEffortSliderTheme(BuildContext context) {
+  final colors = Theme.of(context).colorScheme;
+  final track = skedReadableAccent(colors, surface: Colors.white);
+  return SliderTheme.of(context).copyWith(
+    trackHeight: 28,
+    trackShape: const RoundedRectSliderTrackShape(),
+    trackGap: 0,
+    thumbShape: const RoundSliderThumbShape(
+      enabledThumbRadius: 16,
+      elevation: 1,
+      pressedElevation: 2,
+    ),
+    thumbColor: Colors.white,
+    activeTrackColor: track,
+    inactiveTrackColor: colors.onSurface.withValues(alpha: .12),
+    tickMarkShape: const RoundSliderTickMarkShape(tickMarkRadius: 2),
+    activeTickMarkColor: Colors.white.withValues(alpha: .45),
+    inactiveTickMarkColor: colors.onSurface.withValues(alpha: .35),
+    overlayShape: const RoundSliderOverlayShape(overlayRadius: 22),
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+    showValueIndicator: ShowValueIndicator.never,
   );
 }

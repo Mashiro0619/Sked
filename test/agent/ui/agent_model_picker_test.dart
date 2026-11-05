@@ -241,7 +241,7 @@ void main() {
 
   for (final scale in [1.0, 2.0]) {
     testWidgets(
-      'combined menu labels model and thinking effort at ${scale}x',
+      'compact menu keeps effort above model and names slider values at ${scale}x',
       (tester) async {
         await initialize(tester);
         await mountAgentUi(
@@ -251,28 +251,31 @@ void main() {
           scale: scale,
         );
         await open(tester);
-        final modelLabel = find.byKey(const ValueKey('agent-model-label'));
         final modelSwitch = find.byKey(const ValueKey('agent-model-switch'));
-        final effortLabel = find.byKey(const ValueKey('agent-effort-label'));
         final current = find.byKey(const ValueKey('agent-effort-value'));
-        final minimum = find.byKey(const ValueKey('agent-effort-minimum'));
-        final maximum = find.byKey(const ValueKey('agent-effort-maximum'));
-        expect(tester.widget<Text>(modelLabel).data, 'Model');
-        expect(tester.widget<Text>(effortLabel).data, 'Thinking effort');
         expect(
-          tester.getRect(modelLabel).bottom,
+          tester.getRect(current).bottom,
           lessThanOrEqualTo(tester.getRect(modelSwitch).top),
         );
         expect(
-          tester.getRect(modelSwitch).bottom,
-          lessThan(tester.getRect(effortLabel).top),
+          tester.getCenter(current).dx,
+          closeTo(tester.getCenter(modelSwitch).dx, .1),
         );
         expect(tester.widget<Text>(current).data, 'Low');
-        expect(tester.widget<Text>(minimum).data, 'Low');
-        expect(tester.widget<Text>(maximum).data, 'High');
+        expect(find.text('Thinking effort'), findsNothing);
         expect(find.text('Medium'), findsNothing);
         final slider = tester.widget<Slider>(find.byType(Slider));
         expect(slider.divisions, 1);
+        expect(slider.semanticFormatterCallback!(0), 'Low');
+        expect(slider.semanticFormatterCallback!(1), 'High');
+        if (scale == 1) {
+          expect(
+            tester
+                .getSize(find.byKey(const ValueKey('agent-model-panel')))
+                .height,
+            lessThanOrEqualTo(140),
+          );
+        }
         final semantics = tester
             .getSemantics(find.byType(Slider))
             .getSemanticsData();
@@ -301,18 +304,7 @@ void main() {
       );
       await mountAgentUi(tester, view(), size: const Size(320, 740), scale: 2);
       await open(tester);
-      expect(
-        tester
-            .widget<Text>(find.byKey(const ValueKey('agent-model-label')))
-            .data,
-        'Model',
-      );
-      expect(
-        tester
-            .widget<Text>(find.byKey(const ValueKey('agent-effort-label')))
-            .data,
-        'Thinking effort',
-      );
+      expect(find.text('model-b'), findsWidgets);
       expect(
         tester
             .widget<Text>(find.byKey(const ValueKey('agent-effort-value')))
@@ -327,6 +319,62 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('reset uses this model default and old reset callbacks expire', (
+    tester,
+  ) async {
+    await initialize(
+      tester,
+      selection: const AgentModelSelection(
+        modelId: 'model-a',
+        reasoningEffort: AgentReasoningEffort.high,
+      ),
+    );
+    await mountAgentUi(tester, view());
+    await open(tester);
+    final reset = find.byKey(const ValueKey('agent-effort-reset'));
+    final previous = tester.widget<IconButton>(reset).onPressed!;
+    await tester.tap(reset);
+    await tester.pumpAndSettle();
+    expect(delegate.choices, [modelA.defaultSelection]);
+    expect(repository.selected!.modelSelection, modelA.defaultSelection);
+    expect(tester.widget<IconButton>(reset).onPressed, isNull);
+    final slider = tester.widget<Slider>(find.byType(Slider));
+    slider.onChanged!(1);
+    await tester.pump();
+    await tester.tap(reset);
+    await tester.pumpAndSettle();
+    expect(tester.widget<Slider>(find.byType(Slider)).value, 0);
+    expect(delegate.choices, hasLength(1));
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    previous();
+    await tester.pumpAndSettle();
+    expect(delegate.choices, hasLength(1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a previous model reset cannot change a newly selected model', (
+    tester,
+  ) async {
+    await initialize(
+      tester,
+      selection: const AgentModelSelection(
+        modelId: 'model-a',
+        reasoningEffort: AgentReasoningEffort.high,
+      ),
+    );
+    await mountAgentUi(tester, view());
+    await open(tester);
+    final previous = tester
+        .widget<IconButton>(find.byKey(const ValueKey('agent-effort-reset')))
+        .onPressed!;
+    await chooseB(tester);
+    previous();
+    await tester.pumpAndSettle();
+    expect(delegate.choices, [modelB.defaultSelection]);
+    expect(repository.selected!.modelSelection, modelB.defaultSelection);
+  });
 
   testWidgets(
     'compact trigger retains the full choice and opens the existing effort menu',
