@@ -11,6 +11,7 @@ import 'package:sked/widgets/sked_date_picker.dart';
 import 'package:sked/widgets/sked_expressive_components.dart';
 
 import '../support/mobile_layout_data.dart';
+import '../support/agent_workspace_navigation.dart';
 import '../support/workspace_harness.dart';
 
 Finder key(String value) => find.byKey(ValueKey(value));
@@ -394,11 +395,17 @@ void main() {
         await t.tap(key('workspace-main-navigation'));
         await t.pumpAndSettle();
         expect(key('workspace-assistant-preview-entry'), findsNothing);
-        expect(key('workspace-agent-entry'), findsOneWidget);
+        // The bottom navigation already owns the Agent destination. This
+        // resource drawer must not duplicate it, even for an empty timetable.
+        expect(key('workspace-agent-entry'), findsNothing);
         expect(find.byType(AgentPage), findsNothing);
-        await t.ensureVisible(key('workspace-agent-entry'));
+        await t.binding.handlePopRoute();
         await t.pumpAndSettle();
-        await t.tap(key('workspace-agent-entry'));
+        expect(
+          key('adaptive-shell-agent-destination').hitTestable(),
+          findsOneWidget,
+        );
+        await selectAgentShellDestination(t, 'agent');
         await t.pumpAndSettle();
         expect(find.byType(AgentPage), findsOneWidget);
         expect(key('workspace-assistant-preview-entry'), findsNothing);
