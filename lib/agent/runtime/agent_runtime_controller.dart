@@ -1772,7 +1772,8 @@ class AgentRuntimeController implements AgentUiDelegate {
               ? ConversationAttemptOutcome.completed
               : !invoked
               ? ConversationAttemptOutcome.notStarted
-              : _providerRejected(error)
+              : _providerRejected(error) ||
+                    (error is ProviderException && error.responseTerminated)
               ? ConversationAttemptOutcome.failed
               : ConversationAttemptOutcome.unknown,
           usage: usage,

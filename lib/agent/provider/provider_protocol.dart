@@ -200,6 +200,11 @@ class ProviderResponseDecoder {
   List<Map<String, Object?>> _responseItems = const [];
   bool get isComplete => _complete;
   bool _complete = false;
+  bool _hasTerminalResponse = false;
+  bool get hasTerminalResponse => _hasTerminalResponse;
+
+  /// Validated snapshots survive a later failure in the same protocol frame.
+  ProviderUsage? get reportedUsage => _usage;
 
   List<ProviderEvent> add(ProviderSseFrame frame) {
     if (_complete) {
@@ -327,6 +332,7 @@ class ProviderResponseDecoder {
         if (response['status'] != 'completed') {
           throw const ProviderException(ProviderError.incompleteResponse);
         }
+        _hasTerminalResponse = true;
         _readUsage(response['usage'], events);
         _reconcileOutput(_list(response['output']), events);
         _finishReason = _tools.isEmpty ? 'stop' : 'tool_calls';
@@ -335,6 +341,13 @@ class ProviderResponseDecoder {
       case 'error':
         throw const ProviderException(ProviderError.httpFailure);
       case 'response.incomplete':
+        final response = _map(json['response']);
+        if (response['status'] != 'incomplete') {
+          throw const ProviderException(ProviderError.invalidResponse);
+        }
+        _hasTerminalResponse = true;
+        _readUsage(response['usage'], events);
+        throw const ProviderException(ProviderError.incompleteResponse);
       case 'response.cancelled':
         throw const ProviderException(ProviderError.incompleteResponse);
       default:
@@ -441,18 +454,23 @@ class ProviderResponseDecoder {
         usage[responses
             ? 'output_tokens_details'
             : 'completion_tokens_details'];
+    final cached = inputDetails is Map && inputDetails['cached_tokens'] != null
+        ? _count(inputDetails['cached_tokens'])
+        : null;
+    final reasoning =
+        outputDetails is Map && outputDetails['reasoning_tokens'] != null
+        ? _count(outputDetails['reasoning_tokens'])
+        : null;
+    if ((cached != null && cached > input) ||
+        (reasoning != null && reasoning > output)) {
+      throw const ProviderException(ProviderError.invalidResponse);
+    }
     _usage = ProviderUsage(
       inputTokens: input,
       outputTokens: output,
       totalTokens: total,
-      cachedInputTokens:
-          inputDetails is Map && inputDetails['cached_tokens'] != null
-          ? _count(inputDetails['cached_tokens'])
-          : null,
-      reasoningTokens:
-          outputDetails is Map && outputDetails['reasoning_tokens'] != null
-          ? _count(outputDetails['reasoning_tokens'])
-          : null,
+      cachedInputTokens: cached,
+      reasoningTokens: reasoning,
     );
     if (total > request.limits.maxTotalTokens) {
       throw const ProviderException(ProviderError.tokenBudgetExceeded);

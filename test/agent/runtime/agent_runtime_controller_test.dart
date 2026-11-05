@@ -62,6 +62,116 @@ void main() {
   registerReplyRegenerationTests();
   registerQueueOwnershipTests();
 
+  for (final scenario in [
+    'incomplete',
+    'missingUsage',
+    'overBudget',
+    'completedOverBudget',
+    'completedWithoutUsage',
+    'disconnected',
+  ]) {
+    test(
+      'real Responses SSE persists $scenario usage and request outcome',
+      () async {
+        final incomplete =
+            scenario != 'completedOverBudget' &&
+            scenario != 'completedWithoutUsage';
+        final missingUsage =
+            scenario == 'missingUsage' || scenario == 'completedWithoutUsage';
+        final overBudget =
+            scenario == 'overBudget' || scenario == 'completedOverBudget';
+        var executions = 0;
+        final event = scenario == 'disconnected'
+            ? {'type': 'response.output_text.delta', 'delta': 'Partial text'}
+            : {
+                'type': incomplete
+                    ? 'response.incomplete'
+                    : 'response.completed',
+                'response': {
+                  'status': incomplete ? 'incomplete' : 'completed',
+                  'output': scenario == 'completedOverBudget'
+                      ? [
+                          {
+                            'type': 'function_call',
+                            'id': 'item-write',
+                            'call_id': 'call-write',
+                            'name': 'events__list',
+                            'arguments': '{}',
+                          },
+                        ]
+                      : [],
+                  if (incomplete)
+                    'incomplete_details': {'reason': 'max_output_tokens'},
+                  if (!missingUsage)
+                    'usage': {
+                      'input_tokens': 100,
+                      'output_tokens': 4096,
+                      'total_tokens': 4196,
+                    },
+                },
+              };
+        final actual = ProviderClient(
+          client: MockClient(
+            (_) async => http.Response(
+              'data: ${jsonEncode(event)}\n\n',
+              200,
+              headers: {'content-type': 'text/event-stream'},
+            ),
+          ),
+        );
+        final h = await _Harness.create(
+          protocol: AgentModelProtocol.responses,
+          limits: AgentRuntimeLimits(
+            providerLimits: ProviderLimits(
+              maxTotalTokens: overBudget ? 4195 : 4196,
+            ),
+          ),
+          handler: (request, cancellation) =>
+              actual.stream(request, apiKey: _key, cancellation: cancellation),
+          execute: (_, _, _) async {
+            executions++;
+            return {'status': 'read'};
+          },
+        );
+        addTearDown(() {
+          h.dispose();
+          actual.close();
+        });
+        await h.runtime.send(h.id, 'Review my schedule');
+        // Verify the durable archive, not only an in-memory UI counter.
+        final saved = ConversationArchive.decode(h.storage.source!)
+            .conversations
+            .single;
+        final attempt = saved.runs.single.requests.single;
+        expect(
+          attempt.outcome,
+          scenario == 'disconnected'
+              ? ConversationAttemptOutcome.unknown
+              : scenario == 'completedWithoutUsage'
+              ? ConversationAttemptOutcome.completed
+              : ConversationAttemptOutcome.failed,
+        );
+        expect(
+          attempt.usage?.totalTokens,
+          missingUsage || scenario == 'disconnected' ? null : 4196,
+        );
+        expect(
+          attempt.errorCode,
+          scenario == 'completedWithoutUsage'
+              ? null
+              : overBudget
+              ? 'provider.tokenBudgetExceeded'
+              : 'provider.incompleteResponse',
+        );
+        expect(executions, 0);
+        expect(
+          saved.messages.any((message) => message.toolCalls.isNotEmpty),
+          isFalse,
+        );
+      },
+    );
+  }
+
   for (final budget in ['tool', 'total']) {
     testWidgets(
       '$budget deadline preserves execution time across a long approval',

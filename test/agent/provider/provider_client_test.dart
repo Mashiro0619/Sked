@@ -44,6 +44,150 @@ void main() {
     ),
   ).collect(input ?? request(), apiKey: 'secret-runtime-key');
 
+  for (final overBudget in [false, true]) {
+    test(
+      'incomplete response emits validated usage before ${overBudget ? 'budget' : 'terminal'} error',
+      () async {
+        final client = ProviderClient(
+          client: _Client(
+            (_) async => _sse(
+              _frame({
+                'type': 'response.incomplete',
+                'response': {
+                  'status': 'incomplete',
+                  'incomplete_details': {'reason': 'max_output_tokens'},
+                  'usage': {
+                    'input_tokens': 100,
+                    'output_tokens': 4096,
+                    'total_tokens': 4196,
+                    'input_tokens_details': {'cached_tokens': 40},
+                    'output_tokens_details': {'reasoning_tokens': 4000},
+                  },
+                },
+              }),
+            ),
+          ),
+        );
+        final events = <ProviderEvent>[];
+        ProviderException? failure;
+        try {
+          await for (final event in client.stream(
+            request(
+              protocol: ProviderProtocol.responses,
+              limits: ProviderLimits(maxTotalTokens: overBudget ? 4195 : 4196),
+            ),
+            apiKey: '',
+          )) {
+            events.add(event);
+          }
+        } on ProviderException catch (error) {
+          failure = error;
+        }
+        final usage = events.whereType<ProviderUsageEvent>().single.usage;
+        expect(usage.totalTokens, 4196);
+        expect(usage.cachedInputTokens, 40);
+        expect(usage.reasoningTokens, 4000);
+        expect(events.whereType<ProviderCompleted>(), isEmpty);
+        expect(
+          failure?.code,
+          overBudget
+              ? ProviderError.tokenBudgetExceeded
+              : ProviderError.incompleteResponse,
+        );
+        expect(failure?.responseTerminated, isTrue);
+        client.close();
+      },
+    );
+  }
+
+  for (final usage in <Object?>[
+    null,
+    {'input_tokens': -1, 'output_tokens': 1, 'total_tokens': 0},
+    {'input_tokens': 2, 'output_tokens': 1, 'total_tokens': 2},
+    {
+      'input_tokens': 2,
+      'output_tokens': 1,
+      'total_tokens': 3,
+      'input_tokens_details': {'cached_tokens': 3},
+    },
+    {
+      'input_tokens': 2,
+      'output_tokens': 1,
+      'total_tokens': 3,
+      'output_tokens_details': {'reasoning_tokens': 2},
+    },
+  ]) {
+    test(
+      'incomplete response never invents or publishes invalid usage: $usage',
+      () async {
+        final client = ProviderClient(
+          client: _Client(
+            (_) async => _sse(
+              _frame({
+                'type': 'response.incomplete',
+                'response': {'status': 'incomplete', 'usage': usage},
+              }),
+            ),
+          ),
+        );
+        final events = <ProviderEvent>[];
+        ProviderException? failure;
+        try {
+          await for (final event in client.stream(
+            request(protocol: ProviderProtocol.responses),
+            apiKey: '',
+          )) {
+            events.add(event);
+          }
+        } on ProviderException catch (error) {
+          failure = error;
+        }
+        expect(events.whereType<ProviderUsageEvent>(), isEmpty);
+        expect(failure?.responseTerminated, isTrue);
+        expect(
+          failure?.code,
+          usage == null
+              ? ProviderError.incompleteResponse
+              : ProviderError.invalidResponse,
+        );
+        client.close();
+      },
+    );
+  }
+
+  test('incomplete event with inconsistent response status is not a known terminal', () async {
+    final client = ProviderClient(
+      client: _Client(
+        (_) async => _sse(
+          _frame({
+            'type': 'response.incomplete',
+            'response': {
+              'status': 'in_progress',
+              'usage': {
+                'input_tokens': 1,
+                'output_tokens': 1,
+                'total_tokens': 2,
+              },
+            },
+          }),
+        ),
+      ),
+    );
+    await expectLater(
+      client.collect(request(protocol: ProviderProtocol.responses), apiKey: ''),
+      throwsA(
+        isA<ProviderException>()
+            .having(
+              (error) => error.code,
+              'code',
+              ProviderError.invalidResponse,
+            )
+            .having((error) => error.responseTerminated, 'terminal', isFalse),
+      ),
+    );
+    client.close();
+  });
+
   test('tool names round-trip without dot / underscore collisions', () {
     final logical = ['events.list', 'events__list', 'events_u.list', 'a.b_c.d'];
     final encoded = logical.map(ToolNameCodec.encode).toList();

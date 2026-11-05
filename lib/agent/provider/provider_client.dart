@@ -69,6 +69,14 @@ class ProviderClient {
         Future.any([work, stopped.future.then<T>((error) => throw error)]);
 
     Future<void> pump() async {
+      ProviderResponseDecoder? decoder;
+      ProviderUsage? emittedUsage;
+      void emit(ProviderEvent event) {
+        if (subscriptionCancelled) return;
+        if (event is ProviderUsageEvent) emittedUsage = event.usage;
+        controller.add(event);
+      }
+
       try {
         _validate(request, apiKey);
         if (cancellation?.isCancelled ?? false) {
@@ -181,7 +189,7 @@ class ProviderClient {
         if (!isJson && contentType != 'text/event-stream') {
           throw const ProviderException(ProviderError.invalidResponse);
         }
-        final decoder = ProviderResponseDecoder(request);
+        decoder = ProviderResponseDecoder(request);
         final sse = ProviderSseDecoder(
           maxEventBytes: request.limits.maxEventBytes,
         );
@@ -200,7 +208,7 @@ class ProviderClient {
           } else {
             for (final frame in sse.add(chunk)) {
               for (final event in decoder.add(frame)) {
-                if (!subscriptionCancelled) controller.add(event);
+                emit(event);
               }
               if (decoder.isComplete) break;
             }
@@ -213,7 +221,7 @@ class ProviderClient {
             throw const ProviderException(ProviderError.invalidResponse);
           }
           for (final event in decoder.addJson(value)) {
-            if (!subscriptionCancelled) controller.add(event);
+            emit(event);
           }
         }
         if (!decoder.isComplete) {
@@ -228,9 +236,25 @@ class ProviderClient {
               : error is FormatException
               ? const ProviderException(ProviderError.invalidResponse)
               : const ProviderException(ProviderError.transportFailure);
+          final usage = decoder?.reportedUsage;
+          if (usage != null && !identical(usage, emittedUsage)) {
+            // add()/addJson() may fail after reading usage but before returning
+            // their event list. Deliver that evidence before the error event.
+            emit(ProviderUsageEvent(usage));
+          }
+          final terminal = decoder?.hasTerminalResponse == true;
           // Do not attach the original stack: clients may put request secrets
           // or URLs into exception messages and async stack annotations.
-          controller.addError(safe, StackTrace.empty);
+          controller.addError(
+            terminal
+                ? ProviderException(
+                    safe.code,
+                    statusCode: safe.statusCode,
+                    responseTerminated: true,
+                  )
+                : safe,
+            StackTrace.empty,
+          );
         }
       } finally {
         finished = true;

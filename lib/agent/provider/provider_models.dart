@@ -256,9 +256,17 @@ enum ProviderError {
 /// Stable, non-sensitive diagnostics. Raw provider bodies, URLs, headers and
 /// transport exceptions must never be added to this exception or its message.
 class ProviderException implements Exception {
-  const ProviderException(this.code, {this.statusCode});
+  const ProviderException(
+    this.code, {
+    this.statusCode,
+    this.responseTerminated = false,
+  });
   final ProviderError code;
   final int? statusCode;
+
+  /// A validated terminal response was received, even though its content could
+  /// not complete this request. A disconnected or truncated stream is unknown.
+  final bool responseTerminated;
 
   @override
   String toString() =>
