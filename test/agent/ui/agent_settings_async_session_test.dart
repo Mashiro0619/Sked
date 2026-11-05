@@ -106,7 +106,7 @@ void main() {
           expect(find.byType(AgentKnowledgeEditor), findsNothing);
           expect(find.text(l.agentKnowledgeStorageFailed), findsNothing);
           expect(
-            tester.widget<FilledButton>(key('knowledge-add-memory')).onPressed,
+            tester.widget<IconButton>(key('knowledge-add-memory')).onPressed,
             isNull,
             reason: 'the newer read still owns opening',
           );
@@ -139,7 +139,7 @@ void main() {
           );
           expect(find.text(l.agentKnowledgeSaved), findsOneWidget);
           expect(
-            tester.widget<FilledButton>(key('knowledge-add-memory')).onPressed,
+            tester.widget<IconButton>(key('knowledge-add-memory')).onPressed,
             isNotNull,
             reason: 'its own editor return finishes normally',
           );

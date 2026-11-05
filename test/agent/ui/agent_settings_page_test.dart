@@ -808,7 +808,7 @@ void main() {
       expect(list.hitTestable(), findsOneWidget);
       expect(find.text('Synthetic memory'), findsOneWidget);
       expect(
-        tester.widget<FilledButton>(key('knowledge-add-memory')).onPressed,
+        tester.widget<IconButton>(key('knowledge-add-memory')).onPressed,
         isNotNull,
         reason: 'the saved editor return retired its opening latch',
       );

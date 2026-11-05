@@ -2848,5 +2848,15 @@
   "agentActivityFreeSlots": "空闲时段",
   "@agentActivityFreeSlots": {},
   "agentActivityConflicts": "冲突检查",
-  "@agentActivityConflicts": {}
+  "@agentActivityConflicts": {},
+  "agentKnowledgeAllTypes": "全部类型",
+  "@agentKnowledgeAllTypes": {},
+  "agentKnowledgeAllStates": "全部状态",
+  "@agentKnowledgeAllStates": {},
+  "agentKnowledgeDisabled": "已停用",
+  "@agentKnowledgeDisabled": {},
+  "agentKnowledgeMissingTools": "缺少所需工具",
+  "@agentKnowledgeMissingTools": {},
+  "agentKnowledgeNoMatches": "没有匹配的内容",
+  "@agentKnowledgeNoMatches": {}
 }

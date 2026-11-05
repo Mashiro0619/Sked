@@ -32,6 +32,11 @@ const offeredLocaleCodes = <String>{
 /// Explicit untranslated messages use the current English template at build
 /// time. Removing a locale entry prevents a copied English sentence going stale.
 const commonEnglishFallbacks = <String>{
+  'agentKnowledgeNoMatches',
+  'agentKnowledgeMissingTools',
+  'agentKnowledgeDisabled',
+  'agentKnowledgeAllStates',
+  'agentKnowledgeAllTypes',
   'agentActivityConflicts',
   'agentActivityFreeSlots',
   'agentActivityCourses',

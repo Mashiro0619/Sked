@@ -4368,4 +4368,19 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get agentActivityConflicts => 'Conflict check';
+
+  @override
+  String get agentKnowledgeAllTypes => 'All types';
+
+  @override
+  String get agentKnowledgeAllStates => 'All states';
+
+  @override
+  String get agentKnowledgeDisabled => 'Disabled';
+
+  @override
+  String get agentKnowledgeMissingTools => 'Required tools unavailable';
+
+  @override
+  String get agentKnowledgeNoMatches => 'No matching items';
 }

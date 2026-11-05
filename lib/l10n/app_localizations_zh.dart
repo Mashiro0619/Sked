@@ -4052,6 +4052,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentActivityConflicts => '冲突检查';
+
+  @override
+  String get agentKnowledgeAllTypes => '全部类型';
+
+  @override
+  String get agentKnowledgeAllStates => '全部状态';
+
+  @override
+  String get agentKnowledgeDisabled => '已停用';
+
+  @override
+  String get agentKnowledgeMissingTools => '缺少所需工具';
+
+  @override
+  String get agentKnowledgeNoMatches => '没有匹配的内容';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -8104,4 +8119,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentActivityConflicts => '衝突檢查';
+
+  @override
+  String get agentKnowledgeAllTypes => '全部類型';
+
+  @override
+  String get agentKnowledgeAllStates => '全部狀態';
+
+  @override
+  String get agentKnowledgeDisabled => '已停用';
+
+  @override
+  String get agentKnowledgeMissingTools => '缺少所需工具';
+
+  @override
+  String get agentKnowledgeNoMatches => '沒有相符的內容';
 }

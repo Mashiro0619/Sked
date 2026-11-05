@@ -2918,5 +2918,15 @@
   "agentActivityFreeSlots": "Free slots",
   "@agentActivityFreeSlots": {},
   "agentActivityConflicts": "Conflict check",
-  "@agentActivityConflicts": {}
+  "@agentActivityConflicts": {},
+  "agentKnowledgeAllTypes": "All types",
+  "@agentKnowledgeAllTypes": {},
+  "agentKnowledgeAllStates": "All states",
+  "@agentKnowledgeAllStates": {},
+  "agentKnowledgeDisabled": "Disabled",
+  "@agentKnowledgeDisabled": {},
+  "agentKnowledgeMissingTools": "Required tools unavailable",
+  "@agentKnowledgeMissingTools": {},
+  "agentKnowledgeNoMatches": "No matching items",
+  "@agentKnowledgeNoMatches": {}
 }

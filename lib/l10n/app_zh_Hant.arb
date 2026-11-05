@@ -2850,5 +2850,15 @@
   "agentActivityFreeSlots": "空閒時段",
   "@agentActivityFreeSlots": {},
   "agentActivityConflicts": "衝突檢查",
-  "@agentActivityConflicts": {}
+  "@agentActivityConflicts": {},
+  "agentKnowledgeAllTypes": "全部類型",
+  "@agentKnowledgeAllTypes": {},
+  "agentKnowledgeAllStates": "全部狀態",
+  "@agentKnowledgeAllStates": {},
+  "agentKnowledgeDisabled": "已停用",
+  "@agentKnowledgeDisabled": {},
+  "agentKnowledgeMissingTools": "缺少所需工具",
+  "@agentKnowledgeMissingTools": {},
+  "agentKnowledgeNoMatches": "沒有相符的內容",
+  "@agentKnowledgeNoMatches": {}
 }

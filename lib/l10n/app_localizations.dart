@@ -7691,6 +7691,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Conflict check'**
   String get agentActivityConflicts;
+
+  /// No description provided for @agentKnowledgeAllTypes.
+  ///
+  /// In en, this message translates to:
+  /// **'All types'**
+  String get agentKnowledgeAllTypes;
+
+  /// No description provided for @agentKnowledgeAllStates.
+  ///
+  /// In en, this message translates to:
+  /// **'All states'**
+  String get agentKnowledgeAllStates;
+
+  /// No description provided for @agentKnowledgeDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled'**
+  String get agentKnowledgeDisabled;
+
+  /// No description provided for @agentKnowledgeMissingTools.
+  ///
+  /// In en, this message translates to:
+  /// **'Required tools unavailable'**
+  String get agentKnowledgeMissingTools;
+
+  /// No description provided for @agentKnowledgeNoMatches.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching items'**
+  String get agentKnowledgeNoMatches;
 }
 
 class _AppLocalizationsDelegate

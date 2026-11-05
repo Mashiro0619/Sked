@@ -11,8 +11,13 @@ import '../../widgets/sked_expressive_loading_indicator.dart';
 import '../../widgets/settings_list.dart';
 import '../../widgets/settings_page_header.dart';
 import '../../widgets/sked_task_session.dart';
+import '../../widgets/sked_dropdown_menu.dart';
 import '../knowledge/knowledge_service.dart';
 import 'agent_settings_exit_guard.dart';
+
+enum _KnowledgeOrigin { all, builtIn, custom, modified }
+
+enum _KnowledgeState { all, enabled, disabled, missingTools }
 
 class AgentKnowledgeView extends StatefulWidget {
   const AgentKnowledgeView({
@@ -39,6 +44,8 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
   Object? _loadRequest;
   Object? _openRequest;
   SkedTaskSession? _readSession;
+  _KnowledgeOrigin _origin = _KnowledgeOrigin.all;
+  _KnowledgeState _state = _KnowledgeState.all;
 
   bool get _opening => _openRequest != null;
   @override
@@ -64,6 +71,10 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
         oldWidget.pageEditor != widget.pageEditor) {
       _interactionGeneration++;
       _checkUiSessions();
+      if (oldWidget.kind != widget.kind) {
+        _origin = _KnowledgeOrigin.all;
+        _state = _KnowledgeState.all;
+      }
       if (oldWidget.service != widget.service) unawaited(_load());
     }
   }
@@ -266,6 +277,129 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
     );
   }
 
+  bool _matchesFilters(KnowledgeRecord item) {
+    final originMatches =
+        item.kind == KnowledgeKind.memory ||
+        switch (_origin) {
+          _KnowledgeOrigin.all => true,
+          _KnowledgeOrigin.builtIn => item.builtIn && item.usesOriginal,
+          _KnowledgeOrigin.custom => !item.builtIn,
+          _KnowledgeOrigin.modified => item.builtIn && !item.usesOriginal,
+        };
+    return originMatches &&
+        switch (_state) {
+          _KnowledgeState.all => true,
+          _KnowledgeState.enabled => item.enabled,
+          _KnowledgeState.disabled => !item.enabled,
+          _KnowledgeState.missingTools =>
+            widget.service.missingTools(item).isNotEmpty,
+        };
+  }
+
+  String _originLabel(AppLocalizations l, _KnowledgeOrigin origin) =>
+      switch (origin) {
+        _KnowledgeOrigin.all => l.agentKnowledgeAllTypes,
+        _KnowledgeOrigin.builtIn => l.agentKnowledgeBuiltin,
+        _KnowledgeOrigin.custom => l.agentKnowledgeCustom,
+        _KnowledgeOrigin.modified => l.agentKnowledgeModified,
+      };
+
+  String _stateLabel(AppLocalizations l, _KnowledgeState state) =>
+      switch (state) {
+        _KnowledgeState.all => l.agentKnowledgeAllStates,
+        _KnowledgeState.enabled => l.agentKnowledgeEnabled,
+        _KnowledgeState.disabled => l.agentKnowledgeDisabled,
+        _KnowledgeState.missingTools => l.agentKnowledgeMissingTools,
+      };
+
+  Widget _filters(AppLocalizations l, bool skill) {
+    final state = SkedDropdownMenu<_KnowledgeState>(
+      key: ValueKey('knowledge-state-${widget.kind.name}'),
+      initialSelection: _state,
+      sessionKey: (widget.service, widget.kind),
+      dropdownMenuEntries: [
+        for (final value in _KnowledgeState.values)
+          if (skill || value != _KnowledgeState.missingTools)
+            DropdownMenuEntry(value: value, label: _stateLabel(l, value)),
+      ],
+      onSelected: (value) {
+        if (value != null) setState(() => _state = value);
+      },
+    );
+    if (!skill) return state;
+    final origin = SkedDropdownMenu<_KnowledgeOrigin>(
+      key: const ValueKey('knowledge-origin'),
+      initialSelection: _origin,
+      sessionKey: (widget.service, widget.kind),
+      dropdownMenuEntries: [
+        for (final value in _KnowledgeOrigin.values)
+          DropdownMenuEntry(value: value, label: _originLabel(l, value)),
+      ],
+      onSelected: (value) {
+        if (value != null) setState(() => _origin = value);
+      },
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 340 ||
+            MediaQuery.textScalerOf(context).scale(14) > 21) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [origin, const SizedBox(height: 8), state],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(child: origin),
+            const SizedBox(width: 8),
+            Expanded(child: state),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showHelp(AppLocalizations l, bool skill) {
+    unawaited(
+      showExpressiveDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(skill ? l.agentSkills : l.agentMemories),
+          content: Text(
+            skill ? l.agentKnowledgeHelp : l.agentKnowledgeMemoryHelp,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(MaterialLocalizations.of(context).closeButtonTooltip),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _preview(KnowledgeRecord item) {
+    final source = item.summary.trim().isNotEmpty
+        ? item.summary
+        : item.kind == KnowledgeKind.memory
+        ? item.body
+        : '';
+    final text = source.replaceAll(RegExp(r'\s+'), ' ').trim();
+    final preview = StringBuffer();
+    var count = 0;
+    for (final character in text.characters) {
+      // Keep whole graphemes, but also bound pathological combining sequences.
+      // The Text/semantics node must never receive an entire long note.
+      if (count == 160 || preview.length + character.length > 1024) {
+        return '$preview…';
+      }
+      preview.write(character);
+      count++;
+    }
+    return preview.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -294,7 +428,14 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
             ),
           );
         }
-        final items = widget.service.list(widget.kind, query: _search.text);
+        final items = widget.service
+            .list(widget.kind, query: _search.text)
+            .where(_matchesFilters)
+            .toList();
+        final filtered =
+            _search.text.trim().isNotEmpty ||
+            _state != _KnowledgeState.all ||
+            (skill && _origin != _KnowledgeOrigin.all);
         return Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 760),
@@ -307,30 +448,24 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text(
-                          skill
-                              ? l.agentKnowledgeHelp
-                              : l.agentKnowledgeMemoryHelp,
-                        ),
-                        const SizedBox(height: 16),
-                        LayoutBuilder(
-                          builder: (context, constraints) {
-                            final compact =
-                                constraints.maxWidth < 420 ||
-                                MediaQuery.textScalerOf(context).scale(14) > 21;
-                            final search = TextField(
-                              key: ValueKey(
-                                'knowledge-search-${widget.kind.name}',
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                key: ValueKey(
+                                  'knowledge-search-${widget.kind.name}',
+                                ),
+                                controller: _search,
+                                decoration: InputDecoration(
+                                  filled: true,
+                                  prefixIcon: const Icon(Icons.search),
+                                  labelText: l.agentKnowledgeSearch,
+                                ),
+                                onChanged: (_) => setState(() {}),
                               ),
-                              controller: _search,
-                              decoration: InputDecoration(
-                                filled: true,
-                                prefixIcon: const Icon(Icons.search),
-                                labelText: l.agentKnowledgeSearch,
-                              ),
-                              onChanged: (_) => setState(() {}),
-                            );
-                            final add = FilledButton.tonalIcon(
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton.filledTonal(
                               key: ValueKey(
                                 'knowledge-add-${widget.kind.name}',
                               ),
@@ -340,30 +475,20 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
                                       _open(generation: generation),
                                     ),
                               icon: const Icon(Icons.add),
-                              label: Text(l.agentKnowledgeAdd),
-                            );
-                            if (compact) {
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  search,
-                                  const SizedBox(height: 12),
-                                  Align(
-                                    alignment: AlignmentDirectional.centerEnd,
-                                    child: add,
-                                  ),
-                                ],
-                              );
-                            }
-                            return Row(
-                              children: [
-                                Expanded(child: search),
-                                const SizedBox(width: 12),
-                                add,
-                              ],
-                            );
-                          },
+                              tooltip: l.agentKnowledgeAdd,
+                            ),
+                            IconButton(
+                              key: const ValueKey('knowledge-help'),
+                              tooltip: skill
+                                  ? l.agentKnowledgeHelp
+                                  : l.agentKnowledgeMemoryHelp,
+                              onPressed: () => _showHelp(l, skill),
+                              icon: const Icon(Icons.info_outline),
+                            ),
+                          ],
                         ),
+                        const SizedBox(height: 12),
+                        _filters(l, skill),
                       ],
                     ),
                   ),
@@ -375,7 +500,9 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
                           icon: skill
                               ? Icons.auto_awesome_outlined
                               : Icons.psychology_outlined,
-                          title: l.agentKnowledgeEmpty,
+                          title: filtered
+                              ? l.agentKnowledgeNoMatches
+                              : l.agentKnowledgeEmpty,
                         ),
                       )
                     : SliverPadding(
@@ -385,6 +512,7 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
                           separatorBuilder: (_, _) => const SizedBox(height: 4),
                           itemBuilder: (context, index) {
                             final item = items[index];
+                            final preview = _preview(item);
                             final details = <String>[
                               if (skill)
                                 item.builtIn
@@ -392,12 +520,12 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
                                           ? l.agentKnowledgeBuiltin
                                           : l.agentKnowledgeModified)
                                     : l.agentKnowledgeCustom,
-                              if (!item.enabled ||
-                                  skill &&
-                                      widget.service
-                                          .missingTools(item)
-                                          .isNotEmpty)
-                                l.agentKnowledgeUnavailable,
+                              item.enabled
+                                  ? l.agentKnowledgeEnabled
+                                  : l.agentKnowledgeDisabled,
+                              if (skill &&
+                                  widget.service.missingTools(item).isNotEmpty)
+                                l.agentKnowledgeMissingTools,
                               if (!skill && widget.service.needsRecheck(item))
                                 l.agentKnowledgeStaleReference,
                             ];
@@ -413,21 +541,37 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
                                 key: ValueKey('knowledge-item-${item.key}'),
                                 contentPadding: const EdgeInsets.symmetric(
                                   horizontal: 16,
-                                  vertical: 8,
+                                  vertical: 4,
                                 ),
-                                leading: Icon(
-                                  skill
-                                      ? Icons.auto_awesome_outlined
-                                      : Icons.psychology_outlined,
-                                ),
-                                title: Text(item.title),
-                                subtitle: Text(
-                                  [
-                                    if (item.summary.isNotEmpty) item.summary,
-                                    ...details,
-                                  ].join(' · '),
-                                  maxLines: 3,
+                                title: Text(
+                                  item.title,
+                                  maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (preview.isNotEmpty)
+                                      Text(
+                                        preview,
+                                        key: ValueKey(
+                                          'knowledge-preview-${item.key}',
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      details.join(' · '),
+                                      key: ValueKey(
+                                        'knowledge-status-${item.key}',
+                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall,
+                                    ),
+                                  ],
                                 ),
                                 trailing: const Icon(Icons.chevron_right),
                                 onTap: _opening
