@@ -1706,7 +1706,10 @@ void main() {
       destination: SettingsDestination.student,
     );
 
-    final importExportTile = find.text('Import timetable from JSON text');
+    final l = AppLocalizations.of(
+      tester.element(find.byType(SettingsPage).last),
+    );
+    final importExportTile = find.text(l.importTimetableText);
     expect(importExportTile, findsOneWidget);
 
     await tester.ensureVisible(importExportTile);
@@ -1728,7 +1731,10 @@ void main() {
     await tester.tap(find.text('Open settings host'));
     await _pumpRouteTransition(tester);
 
-    final importTextAction = find.text('Import timetable from JSON text');
+    final l = AppLocalizations.of(
+      tester.element(find.byType(SettingsPage).last),
+    );
+    final importTextAction = find.text(l.importTimetableText);
     expect(importTextAction, findsOneWidget);
 
     await tester.tap(importTextAction);

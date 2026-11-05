@@ -1048,13 +1048,19 @@ class _SettingsPageState extends State<SettingsPage>
     }
   }
 
-  Future<void> _performStudentTransfer(SettingsStudentDataAction action) =>
-      _guardFlow(_SettingsFlow.studentDataActions, () async {
+  Future<void> _performStudentTransfer(SettingsStudentDataAction action) async {
+    final owner = _captureWorkspaceTask(AppMode.student);
+    SchoolWebHandoffRouteResult? handoff;
+    try {
+      await _guardFlow(_SettingsFlow.studentDataActions, () async {
         switch (action) {
           case SettingsStudentDataAction.importTimetables:
             await TimetableImportFlow.importTimetables(context);
           case SettingsStudentDataAction.importTimetablesText:
-            await _importTimetablesFromText();
+            handoff = await TimetableImportFlow.openTextImportPage(
+              context,
+              activateConversation: false,
+            );
           case SettingsStudentDataAction.exportTimetablesShare:
             await _exportTimetables(share: true);
           case SettingsStudentDataAction.exportTimetablesSave:
@@ -1063,6 +1069,18 @@ class _SettingsPageState extends State<SettingsPage>
             await _exportTimetablesAsText();
         }
       });
+      if (handoff == null) return;
+      // The transfer page's PopScope must observe the released flow before
+      // the accepted handoff asks it to retire. Keep the original data owner
+      // through this frame so a restore cannot revive an old navigation.
+      await WidgetsBinding.instance.endOfFrame;
+      if (mounted && owner.isCurrent) {
+        await _completeImportAgentHandoff(handoff!);
+      }
+    } finally {
+      owner.dispose();
+    }
+  }
 
   Future<void> _showAppDataActions() async {
     final lifecycle = context.read<AppLifecycle>();
@@ -1557,16 +1575,22 @@ class _SettingsPageState extends State<SettingsPage>
         );
       });
       if (result == null || !mounted || !owner.isCurrent) return;
-      var settingsRoot = this;
-      var parent = context.findAncestorStateOfType<_SettingsPageState>();
-      while (parent != null) {
-        settingsRoot = parent;
-        parent = parent.context.findAncestorStateOfType<_SettingsPageState>();
-      }
-      await settingsRoot._completeSchoolAgentHandoff(context, result!);
+      await _completeImportAgentHandoff(result!);
     } finally {
       owner.dispose();
     }
+  }
+
+  Future<void> _completeImportAgentHandoff(
+    SchoolWebHandoffRouteResult result,
+  ) async {
+    var settingsRoot = this;
+    var parent = context.findAncestorStateOfType<_SettingsPageState>();
+    while (parent != null) {
+      settingsRoot = parent;
+      parent = parent.context.findAncestorStateOfType<_SettingsPageState>();
+    }
+    await settingsRoot._completeSchoolAgentHandoff(context, result);
   }
 
   Future<void> _completeSchoolAgentHandoff(
@@ -1670,36 +1694,6 @@ class _SettingsPageState extends State<SettingsPage>
       ownerRoute: ModalRoute.of(context),
       isOwnerActive: () => mounted,
     );
-  }
-
-  Future<void> _importTimetablesFromText() async {
-    final task = _captureWorkspaceTask(AppMode.student);
-    final l10n = AppLocalizations.of(context);
-    final appScope = AppScope.capture(context)!;
-    try {
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => appScope.wrap(
-            SkedTaskRouteGuard(
-              parent: task,
-              workspace: AppMode.student,
-              child: TextImportPage(
-                title: l10n.importTimetableText,
-                onSubmit: (context, content) {
-                  if (!task.isCurrent) return Future<bool>.value(false);
-                  return TimetableImportFlow.importTimetablesFromSource(
-                    context,
-                    content,
-                  );
-                },
-              ),
-            ),
-          ),
-        ),
-      );
-    } finally {
-      task.dispose();
-    }
   }
 
   Future<void> _exportTimetablesAsText() async {

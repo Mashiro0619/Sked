@@ -553,11 +553,11 @@ class AppLocalizationsVi extends AppLocalizations {
       'Hỗ trợ một hoặc nhiều tệp lịch trình.';
 
   @override
-  String get importTimetableText => 'Nhập lịch trình từ văn bản';
+  String get importTimetableText => 'Import timetable from text';
 
   @override
   String get importTimetableTextDesc =>
-      'Dán nội dung JSON lịch trình và nhập nó.';
+      'Import timetable JSON directly, or continue with Agent to organize other text.';
 
   @override
   String get shareTimetableFiles => 'Chia sẻ các tập tin lịch trình';
@@ -3487,11 +3487,11 @@ class AppLocalizationsVi extends AppLocalizations {
   String get agentSaving => 'Saving…';
 
   @override
-  String get schoolWebAgentReviewTitle => 'Review school page';
+  String get schoolWebAgentReviewTitle => 'Review import content';
 
   @override
   String get schoolWebAgentReviewHint =>
-      'Review the prepared page content. Agent will use it as source material in a new conversation.';
+      'Review the prepared content. Agent will use it as import source material in a new conversation.';
 
   @override
   String get schoolWebAgentHandoff => 'Continue with Agent';
@@ -4346,7 +4346,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get schoolWebAgentImportTask =>
-      'Organize and import a timetable from the reviewed school page. Ask me about missing details.';
+      'Organize and import a timetable from the reviewed content. Ask me about missing details.';
 
   @override
   String get schoolWebAgentSourceTitle => 'School page';
@@ -4374,4 +4374,13 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get agentApprovalReviseHint =>
       'Describe the changes in the message box, then choose “Update current request”. The pending changes have not been approved.';
+
+  @override
+  String get timetableImportContinueWithAgent => 'Continue with Agent';
+
+  @override
+  String get timetableImportTextContent => 'Timetable content';
+
+  @override
+  String get timetableImportJsonAction => 'Import JSON';
 }

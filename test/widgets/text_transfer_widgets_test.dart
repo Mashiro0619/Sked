@@ -154,6 +154,10 @@ void main() {
       submitted = true;
       return false;
     });
+    expect(
+      find.byKey(const ValueKey('text-import-secondary-action')),
+      findsNothing,
+    );
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(find.byType(TextImportPage), findsNothing);

@@ -18,38 +18,8 @@ extension _HomeScreenImports on _HomeScreenState {
       return;
     }
     _setTextImportPageOpen(true);
-    final l10n = AppLocalizations.of(context);
-    final appScope = AppScope.capture(context);
-    final maintenance = context.read<AppDataMaintenance>();
-    final workspaceView = context.read<WorkspaceViewState>();
-    final workspaces = context.read<WorkspaceCommands>();
     try {
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) {
-            final page = TextImportPage(
-              title: l10n.importTimetableText,
-              onSubmit: (context, content) {
-                if (!SkedTaskSessionScope.isCurrent(context)) {
-                  return Future.value(false);
-                }
-                return TimetableImportFlow.importTimetablesFromSource(
-                  context,
-                  content,
-                );
-              },
-            );
-            final guarded = SkedTaskRouteGuard(
-              maintenance: maintenance,
-              workspaceView: workspaceView,
-              workspaces: workspaces,
-              workspace: AppMode.student,
-              child: page,
-            );
-            return appScope?.wrap(guarded) ?? guarded;
-          },
-        ),
-      );
+      await TimetableImportFlow.openTextImportPage(context);
     } finally {
       _setTextImportPageOpen(false);
     }

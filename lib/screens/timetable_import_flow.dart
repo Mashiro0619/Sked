@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
 import '../l10n/app_localizations.dart';
+import '../agent/agent_application.dart';
 import '../agent/imports/school_web_handoff.dart';
 import '../controllers/app_data_maintenance.dart';
 import '../controllers/data_transfer_controller.dart';
@@ -21,7 +22,10 @@ import '../widgets/period_time_set_picker_dialog.dart';
 import '../widgets/sked_floating_anchor.dart';
 import '../widgets/imported_start_dates_dialog.dart';
 import '../widgets/sked_task_session.dart';
+import '../widgets/sked_task_route.dart';
+import '../widgets/text_transfer_widgets.dart';
 import 'agent_page.dart';
+import 'school_html_import_page.dart';
 import 'school_sites_page.dart';
 
 class _TimetableImportChoice {
@@ -38,6 +42,101 @@ class TimetableImportFlow {
   const TimetableImportFlow._();
 
   static var _importTimetablesInProgress = false;
+
+  /// Keeps deterministic JSON import and reviewed Agent continuation together
+  /// at both timetable text entry points. Only a completed handoff retires the
+  /// text draft; entering or cancelling its review never sends a request.
+  static Future<SchoolWebHandoffRouteResult?> openTextImportPage(
+    BuildContext context, {
+    bool activateConversation = true,
+  }) async {
+    final scope = AppScope.capture(context)!;
+    final caller = ModalRoute.of(context);
+    final owner = SkedTaskSession(
+      maintenance: context.read<AppDataMaintenance>(),
+      workspaceView: context.read<WorkspaceViewState>(),
+      workspaces: context.read<WorkspaceCommands>(),
+      workspace: AppMode.student,
+      parent: SkedTaskSessionScope.maybeOf(context)?.session,
+      ownerRoute: caller,
+      isOwnerActive: () => context.mounted,
+    );
+    final l10n = AppLocalizations.of(context);
+    final hasAgent = context.read<AgentApplication?>() != null;
+    try {
+      final result = await Navigator.of(context)
+          .push<SchoolWebHandoffRouteResult>(
+            MaterialPageRoute<SchoolWebHandoffRouteResult>(
+              builder: (_) => scope.wrap(
+                SkedTaskRouteGuard(
+                  parent: owner,
+                  workspace: AppMode.student,
+                  child: TextImportPage(
+                    title: l10n.importTimetableText,
+                    labelText: l10n.timetableImportTextContent,
+                    hintText: l10n.importTimetableTextDesc,
+                    submitText: l10n.timetableImportJsonAction,
+                    onSubmit: (textContext, content) {
+                      if (!SkedTaskSessionScope.isCurrent(textContext)) {
+                        return Future.value(false);
+                      }
+                      return importTimetablesFromSource(textContext, content);
+                    },
+                    secondaryActionText: l10n.timetableImportContinueWithAgent,
+                    onSecondaryAction: !hasAgent
+                        ? null
+                        : (textContext, content) async {
+                            final textOwner = SkedTaskSessionScope.maybeOf(
+                              textContext,
+                            )!.session;
+                            if (!textOwner.isCurrent) return;
+                            final handoff = await Navigator.of(textContext)
+                                .push<SchoolWebHandoffRouteResult>(
+                                  MaterialPageRoute<
+                                    SchoolWebHandoffRouteResult
+                                  >(
+                                    builder: (_) => scope.wrap(
+                                      SkedTaskRouteGuard(
+                                        parent: textOwner,
+                                        workspace: AppMode.student,
+                                        child: SchoolHtmlImportPage(
+                                          initialContent: content,
+                                          initialTitle:
+                                              l10n.importTimetableText,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                            if (handoff == null ||
+                                !textContext.mounted ||
+                                !textOwner.isCurrent) {
+                              return;
+                            }
+                            completeSkedTaskRoute(textContext, handoff);
+                          },
+                  ),
+                ),
+              ),
+            ),
+          );
+      if (result == null ||
+          !context.mounted ||
+          !owner.isCurrent ||
+          caller?.isCurrent == false) {
+        return null;
+      }
+      if (activateConversation) {
+        await AgentPage.openConversation(
+          context,
+          conversationId: result.conversationId,
+        );
+      }
+      return result;
+    } finally {
+      owner.dispose();
+    }
+  }
 
   static Future<void> importTimetables(BuildContext context) async {
     if (_importTimetablesInProgress) {

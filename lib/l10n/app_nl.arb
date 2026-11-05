@@ -348,8 +348,6 @@
   "@importTimetableFiles": {},
   "importTimetableFilesDesc": "Ondersteunt één of meerdere roosterbestanden.",
   "@importTimetableFilesDesc": {},
-  "importTimetableTextDesc": "Plak de JSON-inhoud van het rooster en importeer deze.",
-  "@importTimetableTextDesc": {},
   "shareTimetableFiles": "Roosterbestanden delen",
   "@shareTimetableFiles": {},
   "shareTimetableFilesDesc": "Kies eerst één of meer roosters.",

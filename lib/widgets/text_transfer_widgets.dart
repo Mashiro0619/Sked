@@ -24,7 +24,9 @@ class TextImportPage extends StatefulWidget {
     this.hintText,
     this.initialContent = '',
     this.submitText,
-  });
+    this.secondaryActionText,
+    this.onSecondaryAction,
+  }) : assert(onSecondaryAction == null || secondaryActionText != null);
 
   final String title;
   final String? labelText;
@@ -32,6 +34,9 @@ class TextImportPage extends StatefulWidget {
   final String initialContent;
   final String? submitText;
   final TextImportSubmit onSubmit;
+  final String? secondaryActionText;
+  final Future<void> Function(BuildContext context, String content)?
+  onSecondaryAction;
 
   @override
   State<TextImportPage> createState() => _TextImportPageState();
@@ -40,6 +45,8 @@ class TextImportPage extends StatefulWidget {
 class _TextImportPageState extends State<TextImportPage> {
   late final TextEditingController _controller;
   var _isSubmitting = false;
+  var _isContinuing = false;
+  bool get _busy => _isSubmitting || _isContinuing;
 
   @override
   void initState() {
@@ -57,7 +64,7 @@ class _TextImportPageState extends State<TextImportPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return PopScope(
-      canPop: !_isSubmitting,
+      canPop: !_busy,
       child: Scaffold(
         appBar: WorkbenchAppBar(
           automaticallyImplyLeading: !AdaptiveNavigationScope.isWide(context),
@@ -75,7 +82,7 @@ class _TextImportPageState extends State<TextImportPage> {
                 children: [
                   TextField(
                     controller: _controller,
-                    enabled: !_isSubmitting,
+                    enabled: !_busy,
                     minLines: 12,
                     maxLines: 20,
                     decoration: InputDecoration(
@@ -86,7 +93,7 @@ class _TextImportPageState extends State<TextImportPage> {
                   ),
                   const SizedBox(height: 16),
                   FilledButton.icon(
-                    onPressed: _isSubmitting ? null : _submit,
+                    onPressed: _busy ? null : _submit,
                     icon: _isSubmitting
                         ? const SizedBox(
                             width: 16,
@@ -96,6 +103,21 @@ class _TextImportPageState extends State<TextImportPage> {
                         : const Icon(Icons.file_download_outlined),
                     label: Text(widget.submitText ?? l10n.importAction),
                   ),
+                  if (widget.onSecondaryAction != null) ...[
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      key: const ValueKey('text-import-secondary-action'),
+                      onPressed: _busy ? null : _continue,
+                      icon: _isContinuing
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.chat_bubble_outline),
+                      label: Text(widget.secondaryActionText!),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -106,7 +128,7 @@ class _TextImportPageState extends State<TextImportPage> {
   }
 
   Future<void> _submit() async {
-    if (_isSubmitting) {
+    if (_busy) {
       return;
     }
     final l10n = AppLocalizations.of(context);
@@ -128,6 +150,19 @@ class _TextImportPageState extends State<TextImportPage> {
       if (shouldResetSubmitting && mounted) {
         setState(() => _isSubmitting = false);
       }
+    }
+  }
+
+  Future<void> _continue() async {
+    final action = widget.onSecondaryAction;
+    if (_busy || action == null) return;
+    setState(() => _isContinuing = true);
+    try {
+      // The destination owns its review and validation. Keep the exact input
+      // here so cancellation or a failed handoff returns to the same draft.
+      await action(context, _controller.text);
+    } finally {
+      if (mounted) setState(() => _isContinuing = false);
     }
   }
 

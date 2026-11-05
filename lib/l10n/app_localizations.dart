@@ -1144,13 +1144,13 @@ abstract class AppLocalizations {
   /// No description provided for @importTimetableText.
   ///
   /// In en, this message translates to:
-  /// **'Import timetable from JSON text'**
+  /// **'Import timetable from text'**
   String get importTimetableText;
 
   /// No description provided for @importTimetableTextDesc.
   ///
   /// In en, this message translates to:
-  /// **'Paste timetable JSON content and import it.'**
+  /// **'Import timetable JSON directly, or continue with Agent to organize other text.'**
   String get importTimetableTextDesc;
 
   /// No description provided for @shareTimetableFiles.
@@ -6207,13 +6207,13 @@ abstract class AppLocalizations {
   /// No description provided for @schoolWebAgentReviewTitle.
   ///
   /// In en, this message translates to:
-  /// **'Review school page'**
+  /// **'Review import content'**
   String get schoolWebAgentReviewTitle;
 
   /// No description provided for @schoolWebAgentReviewHint.
   ///
   /// In en, this message translates to:
-  /// **'Review the prepared page content. Agent will use it as source material in a new conversation.'**
+  /// **'Review the prepared content. Agent will use it as import source material in a new conversation.'**
   String get schoolWebAgentReviewHint;
 
   /// No description provided for @schoolWebAgentHandoff.
@@ -7725,7 +7725,7 @@ abstract class AppLocalizations {
   /// No description provided for @schoolWebAgentImportTask.
   ///
   /// In en, this message translates to:
-  /// **'Organize and import a timetable from the reviewed school page. Ask me about missing details.'**
+  /// **'Organize and import a timetable from the reviewed content. Ask me about missing details.'**
   String get schoolWebAgentImportTask;
 
   /// No description provided for @schoolWebAgentSourceTitle.
@@ -7775,6 +7775,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Describe the changes in the message box, then choose “Update current request”. The pending changes have not been approved.'**
   String get agentApprovalReviseHint;
+
+  /// No description provided for @timetableImportContinueWithAgent.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Agent'**
+  String get timetableImportContinueWithAgent;
+
+  /// No description provided for @timetableImportTextContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Timetable content'**
+  String get timetableImportTextContent;
+
+  /// No description provided for @timetableImportJsonAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Import JSON'**
+  String get timetableImportJsonAction;
 }
 
 class _AppLocalizationsDelegate

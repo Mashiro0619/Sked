@@ -556,11 +556,11 @@ class AppLocalizationsRo extends AppLocalizations {
       'Suporta unul sau mai multe fișiere de orar.';
 
   @override
-  String get importTimetableText => 'Importarea orarului din text';
+  String get importTimetableText => 'Import timetable from text';
 
   @override
   String get importTimetableTextDesc =>
-      'Lipiți conținutul JSON al programului și importați-l.';
+      'Import timetable JSON directly, or continue with Agent to organize other text.';
 
   @override
   String get shareTimetableFiles => 'Partajați fișiere de orar';
@@ -3530,11 +3530,11 @@ class AppLocalizationsRo extends AppLocalizations {
   String get agentSaving => 'Saving…';
 
   @override
-  String get schoolWebAgentReviewTitle => 'Review school page';
+  String get schoolWebAgentReviewTitle => 'Review import content';
 
   @override
   String get schoolWebAgentReviewHint =>
-      'Review the prepared page content. Agent will use it as source material in a new conversation.';
+      'Review the prepared content. Agent will use it as import source material in a new conversation.';
 
   @override
   String get schoolWebAgentHandoff => 'Continue with Agent';
@@ -4389,7 +4389,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get schoolWebAgentImportTask =>
-      'Organize and import a timetable from the reviewed school page. Ask me about missing details.';
+      'Organize and import a timetable from the reviewed content. Ask me about missing details.';
 
   @override
   String get schoolWebAgentSourceTitle => 'School page';
@@ -4417,4 +4417,13 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get agentApprovalReviseHint =>
       'Describe the changes in the message box, then choose “Update current request”. The pending changes have not been approved.';
+
+  @override
+  String get timetableImportContinueWithAgent => 'Continue with Agent';
+
+  @override
+  String get timetableImportTextContent => 'Timetable content';
+
+  @override
+  String get timetableImportJsonAction => 'Import JSON';
 }

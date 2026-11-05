@@ -526,10 +526,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get importTimetableFilesDesc => '支持单个或多个课表文件';
 
   @override
-  String get importTimetableText => '从 JSON 文本导入课表';
+  String get importTimetableText => '从文本导入课表';
 
   @override
-  String get importTimetableTextDesc => '粘贴课表 JSON 内容后导入';
+  String get importTimetableTextDesc => '直接导入课表 JSON，或交给 Agent 整理其他文本。';
 
   @override
   String get shareTimetableFiles => '分享课表文件';
@@ -3263,11 +3263,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get agentSaving => '正在保存…';
 
   @override
-  String get schoolWebAgentReviewTitle => '校对学校网页';
+  String get schoolWebAgentReviewTitle => '校对导入内容';
 
   @override
-  String get schoolWebAgentReviewHint =>
-      '请校对整理后的网页内容。Agent 将在新会话中使用这些内容作为导入材料。';
+  String get schoolWebAgentReviewHint => '请校对整理后的内容。Agent 将在新会话中使用这些内容作为导入材料。';
 
   @override
   String get schoolWebAgentHandoff => '交给 Agent 继续';
@@ -4069,7 +4068,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get agentKnowledgeNoMatches => '没有匹配的内容';
 
   @override
-  String get schoolWebAgentImportTask => '请根据已校对的学校网页整理并导入课表，缺少的信息请向我确认。';
+  String get schoolWebAgentImportTask => '请根据已校对的导入内容整理并导入课表，缺少的信息请向我确认。';
 
   @override
   String get schoolWebAgentSourceTitle => '学校网页';
@@ -4094,6 +4093,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentApprovalReviseHint => '在输入框中写明要调整的内容，再选择“补充当前要求”。当前修改尚未获准执行。';
+
+  @override
+  String get timetableImportContinueWithAgent => '交给 Agent 继续';
+
+  @override
+  String get timetableImportTextContent => '课表内容';
+
+  @override
+  String get timetableImportJsonAction => '导入 JSON';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -4617,10 +4625,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get importTimetableFilesDesc => '支援單個或多個課表檔案';
 
   @override
-  String get importTimetableText => '從 JSON 文字匯入課表';
+  String get importTimetableText => '從文字匯入課表';
 
   @override
-  String get importTimetableTextDesc => '貼上課表 JSON 內容後匯入';
+  String get importTimetableTextDesc => '直接匯入課表 JSON，或交給 Agent 整理其他文字。';
 
   @override
   String get shareTimetableFiles => '分享課表檔案';
@@ -7356,11 +7364,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get agentSaving => '正在儲存…';
 
   @override
-  String get schoolWebAgentReviewTitle => '校對學校網頁';
+  String get schoolWebAgentReviewTitle => '校對匯入內容';
 
   @override
-  String get schoolWebAgentReviewHint =>
-      '請校對整理後的網頁內容。Agent 將在新對話中使用這些內容作為匯入素材。';
+  String get schoolWebAgentReviewHint => '請校對整理後的內容。Agent 將在新對話中使用這些內容作為匯入素材。';
 
   @override
   String get schoolWebAgentHandoff => '交給 Agent 繼續';
@@ -8163,7 +8170,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get agentKnowledgeNoMatches => '沒有相符的內容';
 
   @override
-  String get schoolWebAgentImportTask => '請根據已校對的學校網頁整理並匯入課表，缺少的資訊請向我確認。';
+  String get schoolWebAgentImportTask => '請根據已校對的匯入內容整理並匯入課表，缺少的資訊請向我確認。';
 
   @override
   String get schoolWebAgentSourceTitle => '學校網頁';
@@ -8188,4 +8195,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentApprovalReviseHint => '在輸入框中寫明要調整的內容，再選擇「補充目前要求」。目前修改尚未獲准執行。';
+
+  @override
+  String get timetableImportContinueWithAgent => '交給 Agent 繼續';
+
+  @override
+  String get timetableImportTextContent => '課表內容';
+
+  @override
+  String get timetableImportJsonAction => '匯入 JSON';
 }
