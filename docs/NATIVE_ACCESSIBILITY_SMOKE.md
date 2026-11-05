@@ -107,6 +107,16 @@ to Windows accessibility settings or complete screen-reader acceptance.
 
 ## Running
 
+The report assessor has a separate deterministic CLI regression:
+
+```powershell
+python -B test/tool/assess_native_accessibility_test.py
+```
+
+It verifies the hierarchy, destination pages and native push-button roles from
+synthetic reports, and rejects the retired tab protocol. Flutter VM tests do not
+run this Python entry; this check does not replace the native run below.
+
 Run from the root of a fresh, isolated test checkout or source export in system
 Temp, outside any performance sampling window. Follow the build-time namespace
 requirement in [Windows native acceptance](WINDOWS_NATIVE_ACCEPTANCE.md):

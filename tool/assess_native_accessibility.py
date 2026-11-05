@@ -44,7 +44,7 @@ workspace_required_phases = {
     "native-tree-unmount",
 }
 agent_suffixes = [
-    "mount", "entry", "composer-value", "settings-open", "settings-model",
+    "mount", "entry", "composer-value", "settings-open", "settings-connection",
     "settings-preferences", "settings-skills", "settings-memory", "settings-return",
     "ask-prepare", "ask-approve-control", "ask-reject-control", "preview-pagination",
     "preview-first-detail", "preview-last-detail",
@@ -206,7 +206,7 @@ def digest(value):
     return isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value) is not None
 
 
-def native_matches(item, purpose):
+def native_matches(item, purpose, *, exact_role=None):
     matches = [
         match
         for root in as_objects(item.get("roots"))
@@ -217,7 +217,7 @@ def native_matches(item, purpose):
             match.get("role") == 42 and match.get("valueMatched") is True
             and match.get("value") == item.get("expectedText") for match in matches
         )
-    roles = {37, 43} if purpose == "tab" else {43, 56, 57, 58, 62} if purpose == "button" else {41, 42}
+    roles = {exact_role} if exact_role is not None else {43, 56, 57, 58, 62} if purpose == "button" else {41, 42}
     return any(
         match.get("role") in roles
         and (match.get("nameMatched") is True or match.get("valueMatched") is True)
@@ -246,6 +246,7 @@ scenarios = as_objects(report.get("agentScenarios"))
 if [as_object(item.get("configuration")).get("name") for item in scenarios] != ["baseline", "accessible"]:
     reasons.append("Separate baseline and accessible Agent scenario reports are required.")
 agent_input_checks = 0
+agent_settings_page_checks = 0
 for scenario in scenarios:
     configuration = as_object(scenario.get("configuration"))
     name = configuration.get("name")
@@ -284,21 +285,34 @@ for scenario in scenarios:
         ):
             reasons.append(prefix + "composer input, rendering and published editable value disagree.")
 
-    tabs = as_objects(scenario.get("settingsTabs"))
-    titles = ["Agent model settings", "Run preferences", "Skills", "Memory"]
-    types = ["AgentModelSettingsForm", "AgentPreferencesForm", "AgentKnowledgeView", "AgentKnowledgeView"]
-    if len(tabs) != 4 or len({item.get("id") for item in tabs}) != 4:
-        reasons.append(prefix + "four distinct settings-tab semantics nodes are required.")
-    for index, item in enumerate(tabs):
+    pages = as_objects(scenario.get("settingsPages"))
+    agent_settings_page_checks += len(pages)
+    titles = ["Connection and models", "Run preferences", "Skills", "Memory"]
+    types = ["AgentConnectionSettingsPage", "AgentPreferencesSettingsPage", "AgentKnowledgeView", "AgentKnowledgeView"]
+    destinations = ["agent-settings-connection", "agent-settings-preferences", "agent-settings-skills", "agent-settings-memories"]
+    if "settingsTabs" in scenario:
+        reasons.append(prefix + "the legacy settings-tab report is not hierarchical page evidence.")
+    if scenario.get("settingsHierarchy") != "overview / category / item":
+        reasons.append(prefix + "the settings overview/category/item hierarchy is not recorded.")
+    page_ids = [item.get("id") for item in pages]
+    if len(pages) != 4 or len({value for value in page_ids if type(value) is int and value >= 0}) != 4:
+        reasons.append(prefix + "four distinct hierarchical settings-page entrances are required.")
+    for index, item in enumerate(pages):
+        label = item.get("label")
         if (
-            index >= 4 or item.get("index") != index or item.get("title") != titles[index]
-            or item.get("contentType") != types[index] or item.get("role") != "tab"
-            or item.get("hasTap") is not True or item.get("selected") is not True
+            index >= 4 or type(item.get("index")) is not int or item.get("index") != index
+            or item.get("destination") != destinations[index] or item.get("title") != titles[index]
+            or item.get("contentType") != types[index] or item.get("currentChildRoute") is not True
+            # Semantics(button: true) can retain SemanticsRole.none. Its explicit
+            # button flag and the same-PID MSAA push-button match remain required.
+            or item.get("role") not in ("none", "button") or item.get("isButton") is not True
+            or not isinstance(label, str) or titles[index] not in label
+            or item.get("hasTap") is not True or item.get("selected") is not False
             or item.get("mergedIntoParent") is not False or type(item.get("id")) is not int
             or item.get("id", -1) < 0
             or (index >= 2 and item.get("knowledgeKind") != ("skill" if index == 2 else "memory"))
         ):
-            reasons.append(prefix + "a settings tab lost its independent action, selection or corresponding form.")
+            reasons.append(prefix + "a settings-page entrance lost its independent button or corresponding current child page.")
     returned = as_object(scenario.get("settingsReturn"))
     if (returned.get("draftPreserved") is not True or returned.get("mainSnapshotUnchanged") is not True
             or returned.get("providerRequests") != 0):
@@ -360,10 +374,10 @@ for scenario in scenarios:
 
     expected_probes = {
         "composer-value": (expected_draft, "editable-value"),
-        "settings-model": (titles[0], "tab"),
-        "settings-preferences": (titles[1], "tab"),
-        "settings-skills": (titles[2], "tab"),
-        "settings-memory": (titles[3], "tab"),
+        "settings-connection": (titles[0], "button"),
+        "settings-preferences": (titles[1], "button"),
+        "settings-skills": (titles[2], "button"),
+        "settings-memory": (titles[3], "button"),
         "ask-approve-control": ("Approve these changes", "button"),
         "ask-reject-control": ("Reject", "button"),
         "preview-pagination": ("Show more changes", "button"),
@@ -375,7 +389,8 @@ for scenario in scenarios:
         if len(matching) != 1 or any(
             item.get("expectedText") != expected or not expected or item.get("purpose") != purpose
             or item.get("configuration") != name or item.get("matchedExpectedText", 0) <= 0
-            or not native_matches(item, purpose) for item in matching
+            or not native_matches(item, purpose, exact_role=43 if suffix.startswith("settings-") else None)
+            for item in matching
         ):
             reasons.append(prefix + f"same-process MSAA {purpose} evidence is missing for {suffix}.")
 
@@ -474,6 +489,7 @@ assessment = {
     "requiredAgentPhases": len(agent_phase_order),
     "agentScenarioCount": len(scenarios),
     "agentTextSemanticsChecks": agent_input_checks,
+    "agentSettingsPageChecks": agent_settings_page_checks,
     "agentNativeProbeCount": sum(item.get("configuration") in ("baseline", "accessible") for item in probes),
     "nativeProbeCount": len(probes),
     "nativeControlProbeCount": len(control_probes),
