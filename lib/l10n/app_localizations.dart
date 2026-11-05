@@ -6828,6 +6828,102 @@ abstract class AppLocalizations {
   /// **'Activity details'**
   String get agentActivityDetails;
 
+  /// No description provided for @agentActivitySummary.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 activity} other{{count} activities}}'**
+  String agentActivitySummary(int count);
+
+  /// No description provided for @agentActivityCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get agentActivityCompleted;
+
+  /// No description provided for @agentActivityFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get agentActivityFailed;
+
+  /// No description provided for @agentActivityUncertain.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs review'**
+  String get agentActivityUncertain;
+
+  /// No description provided for @agentActivityNotStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Not started'**
+  String get agentActivityNotStarted;
+
+  /// No description provided for @agentActivityEmptyOutput.
+  ///
+  /// In en, this message translates to:
+  /// **'No content'**
+  String get agentActivityEmptyOutput;
+
+  /// No description provided for @agentCopyActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy activity details'**
+  String get agentCopyActivity;
+
+  /// No description provided for @agentActivityRead.
+  ///
+  /// In en, this message translates to:
+  /// **'Read information'**
+  String get agentActivityRead;
+
+  /// No description provided for @agentActivityCapabilities.
+  ///
+  /// In en, this message translates to:
+  /// **'Check available features'**
+  String get agentActivityCapabilities;
+
+  /// No description provided for @agentActivityPrepare.
+  ///
+  /// In en, this message translates to:
+  /// **'Prepare changes'**
+  String get agentActivityPrepare;
+
+  /// No description provided for @agentActivityCommit.
+  ///
+  /// In en, this message translates to:
+  /// **'Save changes'**
+  String get agentActivityCommit;
+
+  /// No description provided for @agentActivityNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Check reminders'**
+  String get agentActivityNotifications;
+
+  /// No description provided for @agentActivityKnowledge.
+  ///
+  /// In en, this message translates to:
+  /// **'Work with knowledge'**
+  String get agentActivityKnowledge;
+
+  /// No description provided for @agentActivitySettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Work with settings'**
+  String get agentActivitySettings;
+
+  /// No description provided for @agentActivitySystem.
+  ///
+  /// In en, this message translates to:
+  /// **'Use system features'**
+  String get agentActivitySystem;
+
+  /// No description provided for @agentActivityTool.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a tool'**
+  String get agentActivityTool;
+
   /// No description provided for @agentConversationSearchEmpty.
   ///
   /// In en, this message translates to:

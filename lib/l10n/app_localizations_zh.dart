@@ -3598,6 +3598,56 @@ class AppLocalizationsZh extends AppLocalizations {
   String get agentActivityDetails => '执行详情';
 
   @override
+  String agentActivitySummary(int count) {
+    return '$count 项活动';
+  }
+
+  @override
+  String get agentActivityCompleted => '已完成';
+
+  @override
+  String get agentActivityFailed => '失败';
+
+  @override
+  String get agentActivityUncertain => '待核对';
+
+  @override
+  String get agentActivityNotStarted => '未开始';
+
+  @override
+  String get agentActivityEmptyOutput => '没有内容';
+
+  @override
+  String get agentCopyActivity => '复制活动详情';
+
+  @override
+  String get agentActivityRead => '读取信息';
+
+  @override
+  String get agentActivityCapabilities => '检查可用功能';
+
+  @override
+  String get agentActivityPrepare => '准备更改';
+
+  @override
+  String get agentActivityCommit => '保存更改';
+
+  @override
+  String get agentActivityNotifications => '检查提醒';
+
+  @override
+  String get agentActivityKnowledge => '处理知识';
+
+  @override
+  String get agentActivitySettings => '处理设置';
+
+  @override
+  String get agentActivitySystem => '调用系统功能';
+
+  @override
+  String get agentActivityTool => '调用工具';
+
+  @override
   String get agentConversationSearchEmpty => '没有匹配的会话';
 
   @override
@@ -7584,6 +7634,56 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentActivityDetails => '執行詳情';
+
+  @override
+  String agentActivitySummary(int count) {
+    return '$count 項活動';
+  }
+
+  @override
+  String get agentActivityCompleted => '已完成';
+
+  @override
+  String get agentActivityFailed => '失敗';
+
+  @override
+  String get agentActivityUncertain => '待核對';
+
+  @override
+  String get agentActivityNotStarted => '尚未開始';
+
+  @override
+  String get agentActivityEmptyOutput => '沒有內容';
+
+  @override
+  String get agentCopyActivity => '複製活動詳情';
+
+  @override
+  String get agentActivityRead => '讀取資訊';
+
+  @override
+  String get agentActivityCapabilities => '檢查可用功能';
+
+  @override
+  String get agentActivityPrepare => '準備變更';
+
+  @override
+  String get agentActivityCommit => '儲存變更';
+
+  @override
+  String get agentActivityNotifications => '檢查提醒';
+
+  @override
+  String get agentActivityKnowledge => '處理知識';
+
+  @override
+  String get agentActivitySettings => '處理設定';
+
+  @override
+  String get agentActivitySystem => '呼叫系統功能';
+
+  @override
+  String get agentActivityTool => '呼叫工具';
 
   @override
   String get agentConversationSearchEmpty => '沒有符合的對話';

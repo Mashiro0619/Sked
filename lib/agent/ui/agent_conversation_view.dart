@@ -20,12 +20,14 @@ import '../../widgets/sked_spring_builder.dart';
 import '../../widgets/workspace_frame.dart';
 import '../../widgets/workspace_navigation.dart';
 import 'agent_conversation_list.dart';
+import 'agent_conversation_timeline.dart';
 import 'agent_message_content.dart';
 import 'agent_message_actions.dart';
 import 'agent_model_picker.dart';
 import 'agent_model_labels.dart';
 import 'agent_selectable_text.dart';
 import 'agent_transcript.dart';
+import 'agent_turn_activity.dart';
 import 'agent_attachment_view.dart';
 import '../attachments/conversation_attachments.dart';
 import '../conversations/conversation_repository.dart';
@@ -1638,14 +1640,11 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     AgentConversation conversation,
     AppLocalizations l,
   ) {
-    final toolCalls = {
-      for (final message in conversation.messages)
-        for (final call in message.toolCalls) call.id: call,
-    };
-    final completedCalls = {
-      for (final message in conversation.messages)
-        if (message.role == ConversationRole.tool) message.toolCallId,
-    };
+    final state = _runtime.runFor(conversation.id);
+    final timeline = projectAgentConversationTimeline(
+      conversation,
+      activeRunId: state.isActive ? state.runId : null,
+    );
     final latestMessageId = conversation.messages
         .where(
           (message) =>
@@ -1686,88 +1685,79 @@ class _AgentConversationViewState extends State<AgentConversationView> {
             AgentSelectableText(source.text),
           ],
         ),
-      for (final message in conversation.messages.where(
-        (message) => !_isInternalHostOperation(message),
-      ))
-        if (_queuedInput(message) case final String text)
-          Column(
-            key: ValueKey('agent-message-group-${message.id}'),
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _messageText(
-                l.agentQueuedMessages(1),
-                text,
-                key: ValueKey('agent-message-${message.id}'),
-              ),
-              if (message.attachmentIds.isNotEmpty &&
-                  widget.binaryAttachments != null)
-                _messageAttachments(conversation, message),
-            ],
+      for (final entry in timeline)
+        if (entry case AgentTimelineActivity activity)
+          AgentTurnActivity(
+            key: ValueKey(('agent-activity', conversation.id, activity.id)),
+            activity: activity,
+            active: widget.active,
+            interactive: _uiActive,
+            interactionRevision: _uiGeneration,
           )
-        else if (message.role == ConversationRole.tool &&
-            AgentOperationCard.parse(message.text) != null)
-          _ObservedOperationReceipt(
-            key: ValueKey('agent-receipt-${message.id}'),
-            receipt: AgentOperationCard.parse(message.text)!,
-            changes: widget.operationChanges,
-            describe: widget.describeOperation,
-            builder: (receipt) => AgentOperationCard(
-              key: ValueKey('agent-message-${message.id}'),
-              receipt: receipt,
-              onUndo:
-                  widget.onUndoOperation != null &&
-                      !_runtime.runFor(conversation.id).isActive &&
-                      !_runtime.runFor(conversation.id).recoveryRequired &&
-                      !_busy.contains('undo-${message.id}') &&
+        else if (entry case AgentTimelineMessage(:final message))
+          if (!_isInternalHostOperation(message))
+            if (_queuedInput(message) case final String text)
+              Column(
+                key: ValueKey('agent-message-group-${message.id}'),
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _messageText(
+                    l.agentQueuedMessages(1),
+                    text,
+                    key: ValueKey('agent-message-${message.id}'),
+                  ),
+                  if (message.attachmentIds.isNotEmpty &&
+                      widget.binaryAttachments != null)
+                    _messageAttachments(conversation, message),
+                ],
+              )
+            else if (message.role == ConversationRole.tool &&
+                AgentOperationCard.parse(message.text) != null)
+              _ObservedOperationReceipt(
+                key: ValueKey('agent-receipt-${message.id}'),
+                receipt: AgentOperationCard.parse(message.text)!,
+                changes: widget.operationChanges,
+                describe: widget.describeOperation,
+                builder: (receipt) => AgentOperationCard(
+                  key: ValueKey('agent-message-${message.id}'),
+                  receipt: receipt,
+                  onUndo:
+                      widget.onUndoOperation != null &&
+                          !_runtime.runFor(conversation.id).isActive &&
+                          !_runtime.runFor(conversation.id).recoveryRequired &&
+                          !_busy.contains('undo-${message.id}') &&
+                          _repository.canWrite &&
+                          _runtime.enabled &&
+                          !conversation.archived &&
+                          !_runtime.maintenance
+                      ? () => _perform(
+                          'undo-${message.id}',
+                          () => widget.onUndoOperation!(
+                            conversation.id,
+                            receipt['operationId'] as String,
+                          ),
+                        )
+                      : null,
+                  canOpenConversation: (id) =>
                       _repository.canWrite &&
-                      _runtime.enabled &&
-                      !conversation.archived &&
-                      !_runtime.maintenance
-                  ? () => _perform(
-                      'undo-${message.id}',
-                      () => widget.onUndoOperation!(
-                        conversation.id,
-                        receipt['operationId'] as String,
-                      ),
-                    )
-                  : null,
-              canOpenConversation: (id) =>
-                  _repository.canWrite &&
-                  !_runtime.maintenance &&
-                  _repository.find(id) != null,
-              onOpenConversation: (id) => unawaited(_select(id)),
-              onOpenResource: widget.onOpenResource == null
-                  ? null
-                  : (ref) => _perform(
-                      'view-${message.id}',
-                      () => widget.onOpenResource!(ref),
-                    ),
-            ),
-          )
-        else if (message.role == ConversationRole.tool)
-          ExpansionTile(
-            key: ValueKey('agent-message-${message.id}'),
-            title: Text(l.agentActivityDetails),
-            leading: const Icon(Icons.check_circle_outline, size: 20),
-            childrenPadding: const EdgeInsets.all(16),
-            children: [
-              if (toolCalls[message.toolCallId] case final call?) ...[
-                AgentSelectableText(call.name),
-                const SizedBox(height: 8),
-                AgentSelectableText(_prettyJson(call.arguments)),
-                const SizedBox(height: 12),
-              ],
-              AgentSelectableText(_prettyJson(message.text)),
-            ],
-          )
-        else
-          _conversationMessage(
-            conversation,
-            message,
-            l,
-            completedCalls: completedCalls,
-            latest: message.id == latestMessageId,
-          ),
+                      !_runtime.maintenance &&
+                      _repository.find(id) != null,
+                  onOpenConversation: (id) => unawaited(_select(id)),
+                  onOpenResource: widget.onOpenResource == null
+                      ? null
+                      : (ref) => _perform(
+                          'view-${message.id}',
+                          () => widget.onOpenResource!(ref),
+                        ),
+                ),
+              )
+            else
+              _conversationMessage(
+                conversation,
+                message,
+                l,
+                latest: message.id == latestMessageId,
+              ),
     ];
   }
 
@@ -1832,7 +1822,6 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     AgentConversation conversation,
     ConversationMessage message,
     AppLocalizations l, {
-    required Set<String?> completedCalls,
     required bool latest,
   }) {
     final state = _runtime.runFor(conversation.id);
@@ -1940,20 +1929,6 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                   _runtime.enabled &&
                   !_runtime.maintenance,
               l,
-            ),
-          for (final call in message.toolCalls.where(
-            (call) => !completedCalls.contains(call.id),
-          ))
-            ExpansionTile(
-              key: ValueKey('agent-tool-${call.id}'),
-              title: Text(l.agentActivityDetails),
-              leading: const Icon(Icons.bolt_outlined, size: 20),
-              childrenPadding: const EdgeInsets.all(16),
-              children: [
-                AgentSelectableText(call.name),
-                const SizedBox(height: 8),
-                AgentSelectableText(_prettyJson(call.arguments)),
-              ],
             ),
         ],
       ),
@@ -2792,14 +2767,6 @@ class _ObservedOperationReceiptState extends State<_ObservedOperationReceipt> {
 
   @override
   Widget build(BuildContext context) => widget.builder(_receipt);
-}
-
-String _prettyJson(String text) {
-  try {
-    return const JsonEncoder.withIndent('  ').convert(jsonDecode(text));
-  } on FormatException {
-    return text;
-  }
 }
 
 String? _queuedInput(ConversationMessage message) {

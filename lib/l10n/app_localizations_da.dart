@@ -3838,6 +3838,62 @@ class AppLocalizationsDa extends AppLocalizations {
   String get agentActivityDetails => 'Activity details';
 
   @override
+  String agentActivitySummary(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count activities',
+      one: '1 activity',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get agentActivityCompleted => 'Completed';
+
+  @override
+  String get agentActivityFailed => 'Failed';
+
+  @override
+  String get agentActivityUncertain => 'Needs review';
+
+  @override
+  String get agentActivityNotStarted => 'Not started';
+
+  @override
+  String get agentActivityEmptyOutput => 'No content';
+
+  @override
+  String get agentCopyActivity => 'Copy activity details';
+
+  @override
+  String get agentActivityRead => 'Read information';
+
+  @override
+  String get agentActivityCapabilities => 'Check available features';
+
+  @override
+  String get agentActivityPrepare => 'Prepare changes';
+
+  @override
+  String get agentActivityCommit => 'Save changes';
+
+  @override
+  String get agentActivityNotifications => 'Check reminders';
+
+  @override
+  String get agentActivityKnowledge => 'Work with knowledge';
+
+  @override
+  String get agentActivitySettings => 'Work with settings';
+
+  @override
+  String get agentActivitySystem => 'Use system features';
+
+  @override
+  String get agentActivityTool => 'Use a tool';
+
+  @override
   String get agentConversationSearchEmpty => 'No matching conversations';
 
   @override

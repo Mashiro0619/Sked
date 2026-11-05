@@ -1385,10 +1385,17 @@ void main() {
       await tester.pumpAndSettle();
       expect(delegate.calls.last, 'reject:${conversation.id}:plan-17');
       await tester.ensureVisible(
-        find.byKey(const ValueKey('agent-message-result-message')),
+        find.byKey(const ValueKey('agent-activity-toggle-legacy-call-message')),
       );
       await tester.tap(
-        find.byKey(const ValueKey('agent-message-result-message')),
+        find.byKey(const ValueKey('agent-activity-toggle-legacy-call-message')),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('agent-activity-tool-call-1')),
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('agent-activity-tool-call-1')),
       );
       await tester.pumpAndSettle();
       expect(find.textContaining('"status": "read"'), findsOneWidget);
