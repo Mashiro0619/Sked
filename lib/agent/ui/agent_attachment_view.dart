@@ -196,24 +196,35 @@ class _AgentAttachmentListState extends State<AgentAttachmentList> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  byId[id]?.name ?? l.agentFileMissing,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.titleSmall,
-                                ),
-                                if (byId[id] case final attachment?)
-                                  Text(
-                                    '${_size(attachment.byteLength)} · ${attachment.mediaType}',
-                                    maxLines: 2,
+                                Tooltip(
+                                  message: byId[id]?.name ?? l.agentFileMissing,
+                                  excludeFromSemantics: true,
+                                  child: Text(
+                                    byId[id]?.name ?? l.agentFileMissing,
+                                    maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: Theme.of(context)
                                         .textTheme
-                                        .bodySmall,
+                                        .titleSmall,
                                   ),
-                                Text(
-                                  agentAttachmentStatus(l, widget.delivery),
-                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                Wrap(
+                                  spacing: 8,
+                                  children: [
+                                    if (byId[id] case final attachment?)
+                                      Text(
+                                        _size(attachment.byteLength),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall,
+                                      ),
+                                    Text(
+                                      agentAttachmentStatus(l, widget.delivery),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall,
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
