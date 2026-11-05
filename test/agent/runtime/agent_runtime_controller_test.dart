@@ -981,6 +981,67 @@ void main() {
     );
   });
 
+  test('steering a school handoff replaces its import task in the next model request', () async {
+    final entered = Completer<void>();
+    var requests = 0;
+    var executions = 0;
+    final h = await _Harness.create(
+      handler: (request, cancellation) async* {
+        if (requests++ == 0) {
+          expect(
+            request.messages.first.text,
+            contains(
+              'follow later user corrections instead of continuing the original import request',
+            ),
+          );
+          entered.complete();
+          await cancellation!.whenCancelled;
+          throw const ProviderException(ProviderError.cancelled);
+        }
+        yield ProviderCompleted(_response('Summary only'));
+      },
+      execute: (_, _, _) async {
+        executions++;
+        return {'status': 'read'};
+      },
+    );
+    addTearDown(h.dispose);
+    final controller = SchoolWebHandoffController(
+      repository: h.repository,
+      readSettings: () => h.settings,
+      initialize: () async {},
+      startHandoff: h.runtime.startHandoff,
+      readGeneration: () => 'handoff-generation',
+    );
+    final accepted = await controller.handoff(
+      SchoolWebReviewedDraft(
+        content: 'A reviewed school page',
+        datasetGeneration: 'handoff-generation',
+        capturedAt: DateTime.utc(2026, 11, 5),
+        localeCode: 'en',
+      ),
+      isCurrent: () => true,
+    );
+    await entered.future;
+    const correction =
+        'Do not import or save anything. Only summarize the missing information.';
+    await h.runtime.steer(accepted.conversationId, correction);
+    await h.runtime.waitForIdle();
+    expect(h.provider.requests, hasLength(2));
+    final revised = h.provider.requests.last;
+    expect(revised.messages.last.role, ProviderRole.user);
+    expect(revised.messages.last.text, correction);
+    expect(
+      revised.messages.first.text,
+      isNot(contains('Host-owned school-page import task')),
+    );
+    expect(executions, 0);
+    expect(
+      h.repository.find(accepted.conversationId)!.sources.single.text,
+      'A reviewed school page',
+    );
+  });
+
   test(
     'restart never automatically replays interrupted runs or handoffs',
     () async {
