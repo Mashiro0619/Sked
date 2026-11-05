@@ -4317,4 +4317,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String selectiveBackupUnsupportedGroups(int count) {
     return '$count unsupported device settings groups will be skipped';
   }
+
+  @override
+  String get agentClearDataWarning =>
+      'This permanently deletes timetables, events, settings, school sites, chats and their files, skills, memories, local backups and recovery copies, API keys, and the local school sign-in session, then exits Sked. Exported files in other locations are kept. This cannot be undone.';
 }

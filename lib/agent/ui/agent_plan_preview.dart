@@ -6,6 +6,15 @@ import '../../l10n/app_localizations.dart';
 import 'agent_setting_labels.dart';
 import 'agent_selectable_text.dart';
 
+/// Only the host's concrete clear change enables destructive presentation.
+bool agentPlanClearsLocalData(Map<String, Object?> details) =>
+    (details['changes'] as List? ?? const []).whereType<Map>().any(
+      (change) =>
+          change['key'] == 'application.localData' &&
+          change['before'] is Map &&
+          change['after'] == null,
+    );
+
 /// Every affected object can be inspected before approval, without eagerly
 /// laying out a thousand expanded JSON records on a phone.
 class AgentPlanPreview extends StatefulWidget {
@@ -47,6 +56,16 @@ class _AgentPlanPreviewState extends State<AgentPlanPreview> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (agentPlanClearsLocalData(widget.details)) ...[
+          Text(
+            l.agentClearDataWarning,
+            key: const ValueKey('agent-clear-data-warning'),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onErrorContainer,
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         Text(
           l.agentChangeCount(
             widget.details['changeCount'] as int? ?? changes.length,

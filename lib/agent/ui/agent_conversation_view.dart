@@ -2195,61 +2195,92 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final generation = _uiGeneration;
     final delegate = widget.delegate;
     final runId = _runtime.runFor(id).runId;
+    final clearsLocalData = agentPlanClearsLocalData(plan.details);
+    final colors = Theme.of(context).colorScheme;
     bool isCurrent() =>
         _uiSessionCurrent(generation, id) &&
         identical(delegate, widget.delegate) &&
         _runtime.runFor(id).runId == runId &&
         identical(_runtime.runFor(id).pendingApproval, plan);
     return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            plan.details['kind'] == 'httpTransport'
-                ? l.agentHttpTransportApproval
-                : l.agentApprovalRequired,
-            style: Theme.of(context).textTheme.titleMedium,
+      key: ValueKey('agent-approval-card-${plan.id}'),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Material(
+        color: clearsLocalData
+            ? colors.errorContainer
+            : colors.surfaceContainerLow,
+        shape: skedShapeSchemeOf(context).card.copyWith(
+          side: BorderSide(
+            color: clearsLocalData ? colors.error : colors.outlineVariant,
           ),
-          const SizedBox(height: 8),
-          AgentPlanPreview(details: plan.details),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              FilledButton(
-                key: const ValueKey('agent-approve'),
-                onPressed: writable && !_busy.contains('approval-$id')
-                    ? () => _perform(
-                        'approval-$id',
-                        () => delegate.approve(id, plan.id),
-                        isCurrent: isCurrent,
-                      )
-                    : null,
-                child: Text(
-                  plan.details['kind'] == 'httpTransport'
-                      ? l.confirm
-                      : l.agentApprove,
+              Text(
+                clearsLocalData
+                    ? l.clearAppDataConfirmTitle
+                    : plan.details['kind'] == 'httpTransport'
+                    ? l.agentHttpTransportApproval
+                    : l.agentApprovalRequired,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: clearsLocalData
+                      ? colors.onErrorContainer
+                      : colors.onSurface,
                 ),
               ),
-              OutlinedButton(
-                key: const ValueKey('agent-reject'),
-                onPressed: writable && !_busy.contains('approval-$id')
-                    ? () => _perform(
-                        'approval-$id',
-                        () => delegate.reject(id, plan.id),
-                        isCurrent: isCurrent,
-                      )
-                    : null,
-                child: Text(
-                  plan.details['kind'] == 'httpTransport'
-                      ? l.cancel
-                      : l.agentReject,
-                ),
+              const SizedBox(height: 8),
+              AgentPlanPreview(details: plan.details),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FilledButton(
+                    key: const ValueKey('agent-approve'),
+                    style: clearsLocalData
+                        ? FilledButton.styleFrom(
+                            backgroundColor: colors.error,
+                            foregroundColor: colors.onError,
+                          )
+                        : null,
+                    onPressed: writable && !_busy.contains('approval-$id')
+                        ? () => _perform(
+                            'approval-$id',
+                            () => delegate.approve(id, plan.id),
+                            isCurrent: isCurrent,
+                          )
+                        : null,
+                    child: Text(
+                      clearsLocalData
+                          ? l.clearAppDataAction
+                          : plan.details['kind'] == 'httpTransport'
+                          ? l.confirm
+                          : l.agentApprove,
+                    ),
+                  ),
+                  OutlinedButton(
+                    key: const ValueKey('agent-reject'),
+                    onPressed: writable && !_busy.contains('approval-$id')
+                        ? () => _perform(
+                            'approval-$id',
+                            () => delegate.reject(id, plan.id),
+                            isCurrent: isCurrent,
+                          )
+                        : null,
+                    child: Text(
+                      plan.details['kind'] == 'httpTransport'
+                          ? l.cancel
+                          : l.agentReject,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
