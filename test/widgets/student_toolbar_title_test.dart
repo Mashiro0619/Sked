@@ -30,6 +30,8 @@ Future<AppRuntime> _mount(
   double scale = 2,
   bool desktop = false,
   bool interactive = true,
+  bool shell = false,
+  String name = _longName,
 }) async {
   tester.view.devicePixelRatio = 1;
   tester.view.physicalSize = Size(width, 900);
@@ -43,7 +45,7 @@ Future<AppRuntime> _mount(
   final table = TimetableData(
     id: 'title-table',
     config: TimetableConfig(
-      name: _longName,
+      name: name,
       startDate: DateTime(2026, 10, 19),
       totalWeeks: 100,
       periodTimeSetId: initial.studentMode.periodTimeSets.first.id,
@@ -74,7 +76,7 @@ Future<AppRuntime> _mount(
       locale: locale,
       brightness: brightness,
       textScale: scale,
-      home: HomeScreen(interactive: interactive),
+      home: shell ? null : HomeScreen(interactive: interactive),
     ),
   );
   await tester.pumpAndSettle();
@@ -131,6 +133,38 @@ void _expectFullWeekSemantics(WidgetTester tester) {
 }
 
 void main() {
+  testWidgets(
+    'the main navigation leaves a visible timetable name prefix at 2x',
+    (tester) async {
+      await _mount(
+        tester,
+        width: 320,
+        locale: const Locale('zh'),
+        brightness: Brightness.light,
+        shell: true,
+        name: '示例课表',
+      );
+      expect(_key('workspace-main-navigation').hitTestable(), findsOneWidget);
+      final paragraph = tester.renderObject<RenderParagraph>(
+        find.descendant(of: _text(_name), matching: find.byType(RichText)),
+      );
+      final firstGlyph = paragraph.getBoxesForSelection(
+        const TextSelection(baseOffset: 0, extentOffset: 1),
+      );
+      expect(
+        firstGlyph,
+        isNotEmpty,
+        reason: 'The title must show its first character, not only ellipsis.',
+      );
+      for (final box in firstGlyph) {
+        expect(box.right, lessThanOrEqualTo(paragraph.size.width));
+      }
+      expect(_name.hitTestable(), findsOneWidget);
+      _expectCompleteText(tester, _text(_week));
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
   for (final locale in [
     const Locale('en'),
     const Locale('zh'),

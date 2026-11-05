@@ -226,6 +226,24 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
     )..layout();
     final measuredWeekWidth = weekTextPainter.width;
     weekTextPainter.dispose();
+    // A tappable selector must still show part of its name. At large text
+    // scales the old 48dp target could fit only the ellipsis (or no ink).
+    final namePrefixPainter = TextPainter(
+      text: TextSpan(
+        text: '${timetable.config.name.characters.take(1)}\u2026',
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final readableSelectorMinimum = math.max(
+      48.0,
+      (namePrefixPainter.width + 12).ceilToDouble(),
+    );
+    namePrefixPainter.dispose();
     final iconButtonStyle = IconButton.styleFrom(
       minimumSize: const Size.square(48),
       padding: const EdgeInsets.all(8),
@@ -508,7 +526,7 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
               ? constraints.maxWidth
               : screenWidth - (phoneWidth ? 16 : 32);
           const gap = 4.0;
-          const selectorMinimum = 48.0;
+          final selectorMinimum = readableSelectorMinimum;
           // Fixed-width navigation actions. Both the width budget below and the
           // final `contentWidth` check read from this one map, so adding an
           // action of a different width cannot make the two disagree.
@@ -534,6 +552,12 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
             weekMinimum,
             measuredWeekWidth + 12,
           );
+          final reflow =
+              hasTimetable &&
+              hasWeek &&
+              selectorMinimum + 48 + gap <= availableWidth &&
+              selectorMinimum + weekMinimum + nonFlexibleWidth + gapWidth >
+                  availableWidth;
           // Reserve the selector and fixed actions before the localized week
           // label. The week can wrap; scroll only if minimum targets cannot fit.
           final maximumWeekWidth = math.max(
@@ -544,11 +568,19 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
                 (hasTimetable ? selectorMinimum : 0),
           );
           final weekWidth = hasWeek
-              ? math.min(desiredWeekWidth, maximumWeekWidth)
+              ? math.min(
+                  desiredWeekWidth,
+                  reflow
+                      ? availableWidth - selectorMinimum - gap
+                      : maximumWeekWidth,
+                )
               : 0.0;
           final flexibleWidth = math.max(
             selectorMinimum,
-            availableWidth - nonFlexibleWidth - gapWidth - weekWidth,
+            availableWidth -
+                (reflow ? 0 : nonFlexibleWidth) -
+                (reflow ? gap : gapWidth) -
+                weekWidth,
           );
           // The first timetable selector is the toolbar's content anchor.
           // Let it use the whole remaining row on phones instead of leaving a
@@ -577,7 +609,18 @@ class _StudentWorkspaceToolbar extends StatelessWidget {
               ),
             ],
           ];
-          if (contentWidth > availableWidth + 0.5) {
+          if (reflow) {
+            return Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                for (final id in orderedIds)
+                  SizedBox(width: widths[id], child: actionById[id]),
+              ],
+            );
+          }
+          if (contentWidth > availableWidth) {
             return SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               physics: const ClampingScrollPhysics(),
