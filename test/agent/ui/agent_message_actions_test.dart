@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/ui/agent_message_actions.dart';
@@ -67,41 +68,210 @@ void main() {
       await mouse.removePointer();
       expect(tester.takeException(), isNull);
     },
+    semanticsEnabled: false,
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
   );
 
-  testWidgets('keyboard traversal reveals otherwise hidden desktop actions', (
-    tester,
-  ) async {
-    addTearDown(tester.view.reset);
-    final before = FocusNode();
-    addTearDown(before.dispose);
-    await mountAgentUi(
-      tester,
-      Column(
-        children: [
-          TextButton(
-            focusNode: before,
-            autofocus: true,
-            onPressed: () {},
-            child: const Text('Before'),
+  testWidgets(
+    'keyboard traversal reveals otherwise hidden desktop actions',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      final before = FocusNode();
+      addTearDown(before.dispose);
+      await mountAgentUi(
+        tester,
+        Column(
+          children: [
+            TextButton(
+              focusNode: before,
+              autofocus: true,
+              onPressed: () {},
+              child: const Text('Before'),
+            ),
+            AgentMessageActions(
+              messageId: 'reply',
+              copyText: 'Answer',
+              onRegenerate: () {},
+              child: body('reply'),
+            ),
+          ],
+        ),
+      );
+      expect(key('agent-copy-reply').hitTestable(), findsNothing);
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+      expect(key('agent-copy-reply').hitTestable(), findsOneWidget);
+      expect(
+        Focus.of(tester.element(key('agent-copy-reply'))).hasFocus,
+        isTrue,
+      );
+      expect(tester.takeException(), isNull);
+    },
+    semanticsEnabled: false,
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets(
+    'screen reader activation reveals and operates historical message buttons',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      final calls = <String>[];
+      final copied = <String>[];
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        if (call.method == 'Clipboard.setData') {
+          copied.add((call.arguments as Map)['text'] as String);
+        }
+        return null;
+      });
+      addTearDown(
+        () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
+      );
+      await mountAgentUi(
+        tester,
+        Column(
+          children: [
+            AgentMessageActions(
+              messageId: 'user',
+              copyText: 'Saved question',
+              isUser: true,
+              onEditAndRedo: () => calls.add('edit'),
+              child: body('user'),
+            ),
+            AgentMessageActions(
+              messageId: 'reply',
+              copyText: 'Saved answer',
+              onRegenerate: () => calls.add('regenerate'),
+              child: body('reply'),
+            ),
+          ],
+        ),
+      );
+      expect(key('agent-copy-user').hitTestable(), findsNothing);
+      expect(key('agent-regenerate-reply').hitTestable(), findsNothing);
+      final semantics = tester.ensureSemantics();
+      try {
+        await tester.pumpAndSettle();
+        for (final control in [
+          'agent-copy-user',
+          'agent-edit-redo-user',
+          'agent-regenerate-reply',
+        ]) {
+          final target = key(control);
+          expect(target.hitTestable(), findsOneWidget);
+          final node = tester.getSemantics(target);
+          final data = node.getSemanticsData();
+          expect(data.tooltip, isNotEmpty);
+          expect(data.hasAction(SemanticsAction.tap), isTrue);
+          node.owner!.performAction(node.id, SemanticsAction.tap);
+          await tester.pumpAndSettle();
+        }
+        expect(copied, ['Saved question']);
+        expect(calls, ['edit', 'regenerate']);
+      } finally {
+        semantics.dispose();
+      }
+      await tester.pumpAndSettle();
+      expect(key('agent-copy-user').hitTestable(), findsNothing);
+      expect(key('agent-regenerate-reply').hitTestable(), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+    semanticsEnabled: false,
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  for (final hideActivity in [true, false]) {
+    testWidgets(
+      'screen reader actions retire when host ${hideActivity ? 'activity' : 'interaction'} ends',
+      (tester) async {
+        addTearDown(tester.view.reset);
+        final calls = <String>[];
+        var available = true;
+        late StateSetter change;
+        await mountAgentUi(
+          tester,
+          StatefulBuilder(
+            builder: (context, setState) {
+              change = setState;
+              return AgentMessageActions(
+                messageId: 'reply',
+                copyText: 'Saved answer',
+                active: !hideActivity || available,
+                interactive: hideActivity || available,
+                onRegenerate: () => calls.add('regenerate'),
+                child: body('reply'),
+              );
+            },
           ),
-          AgentMessageActions(
-            messageId: 'reply',
-            copyText: 'Answer',
-            onRegenerate: () {},
-            child: body('reply'),
-          ),
-        ],
-      ),
+        );
+        final target = key('agent-regenerate-reply');
+        expect(target.hitTestable(), findsOneWidget);
+        final oldCallback = tester.widget<IconButton>(target).onPressed!;
+        final node = tester.getSemantics(target);
+        final owner = node.owner!;
+        expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+        change(() => available = false);
+        await tester.pumpAndSettle();
+        expect(target.hitTestable(), findsNothing);
+        final tree = owner.rootSemanticsNode!.toStringDeep();
+        expect(tree, isNot(contains('Regenerate reply')));
+        expect(Focus.of(tester.element(target)).canRequestFocus, isFalse);
+        oldCallback();
+        owner.performAction(node.id, SemanticsAction.tap);
+        await tester.pumpAndSettle();
+        expect(calls, isEmpty);
+        change(() => available = true);
+        await tester.pumpAndSettle();
+        oldCallback();
+        await tester.pump();
+        expect(calls, isEmpty);
+        final current = tester.getSemantics(target);
+        current.owner!.performAction(current.id, SemanticsAction.tap);
+        await tester.pumpAndSettle();
+        expect(calls, ['regenerate']);
+        await tester.pumpWidget(const SizedBox());
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.windows),
     );
-    expect(key('agent-copy-reply').hitTestable(), findsNothing);
-    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-    await tester.pumpAndSettle();
-    expect(key('agent-copy-reply').hitTestable(), findsOneWidget);
-    expect(Focus.of(tester.element(key('agent-copy-reply'))).hasFocus, isTrue);
-    expect(tester.takeException(), isNull);
-  }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+  }
+
+  testWidgets(
+    'accessible navigation keeps historical controls visibly discoverable',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      var accessible = false;
+      late StateSetter change;
+      await mountAgentUi(
+        tester,
+        StatefulBuilder(
+          builder: (context, setState) {
+            change = setState;
+            return MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(accessibleNavigation: accessible),
+              child: AgentMessageActions(
+                messageId: 'reply',
+                copyText: 'Saved answer',
+                onRegenerate: () {},
+                child: body('reply'),
+              ),
+            );
+          },
+        ),
+      );
+      expect(key('agent-regenerate-reply').hitTestable(), findsNothing);
+      change(() => accessible = true);
+      await tester.pumpAndSettle();
+      expect(key('agent-regenerate-reply').hitTestable(), findsOneWidget);
+      change(() => accessible = false);
+      await tester.pumpAndSettle();
+      expect(key('agent-regenerate-reply').hitTestable(), findsNothing);
+    },
+    semanticsEnabled: false,
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
 
   testWidgets(
     'reused message host rejects callbacks captured before its identity changes',

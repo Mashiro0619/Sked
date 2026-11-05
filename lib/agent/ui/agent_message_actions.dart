@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:flutter/semantics.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -6,6 +7,7 @@ import '../../theme/sked_menu_style.dart';
 
 /// Keeps message operations beside their owner. Hidden desktop controls retain
 /// keyboard traversal, reveal on focus, and cannot receive invisible clicks.
+/// A requested semantics tree reveals the same real buttons for screen readers.
 /// Touch controls stay visible with their full 48dp effective target.
 class AgentMessageActions extends StatefulWidget {
   const AgentMessageActions({
@@ -57,6 +59,22 @@ class _AgentMessageActionsState extends State<AgentMessageActions> {
   int _generation = 0;
 
   bool get _enabled => widget.active && widget.interactive;
+
+  @override
+  void initState() {
+    super.initState();
+    SemanticsBinding.instance.addSemanticsEnabledListener(_semanticsChanged);
+  }
+
+  void _semanticsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    SemanticsBinding.instance.removeSemanticsEnabledListener(_semanticsChanged);
+    super.dispose();
+  }
 
   @override
   void didUpdateWidget(AgentMessageActions oldWidget) {
@@ -118,7 +136,13 @@ class _AgentMessageActionsState extends State<AgentMessageActions> {
     final extent = desktop ? 32.0 : 48.0;
     final generation = _generation;
     final visible =
-        _enabled && (!desktop || widget.alwaysVisible || _hovered || _focused);
+        _enabled &&
+        (!desktop ||
+            widget.alwaysVisible ||
+            MediaQuery.accessibleNavigationOf(context) ||
+            SemanticsBinding.instance.semanticsEnabled ||
+            _hovered ||
+            _focused);
     Widget action({
       required String id,
       required String label,
