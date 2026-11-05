@@ -4420,4 +4420,8 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get agentHistoryRetentionTitle => 'Chat history retention';
+
+  @override
+  String get agentApprovalReviseHint =>
+      'Describe the changes in the message box, then choose “Update current request”. The pending changes have not been approved.';
 }

@@ -7769,6 +7769,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Chat history retention'**
   String get agentHistoryRetentionTitle;
+
+  /// No description provided for @agentApprovalReviseHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe the changes in the message box, then choose “Update current request”. The pending changes have not been approved.'**
+  String get agentApprovalReviseHint;
 }
 
 class _AppLocalizationsDelegate

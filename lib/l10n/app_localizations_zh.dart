@@ -4091,6 +4091,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentHistoryRetentionTitle => '聊天记录保留';
+
+  @override
+  String get agentApprovalReviseHint => '在输入框中写明要调整的内容，再选择“补充当前要求”。当前修改尚未获准执行。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -8182,4 +8185,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentHistoryRetentionTitle => '聊天記錄保留';
+
+  @override
+  String get agentApprovalReviseHint => '在輸入框中寫明要調整的內容，再選擇「補充目前要求」。目前修改尚未獲准執行。';
 }

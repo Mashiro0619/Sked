@@ -1634,6 +1634,11 @@ void main() {
       keyboard: 280,
     );
     await tester.ensureVisible(find.byKey(const ValueKey('agent-approve')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('agent-approve')).hitTestable(),
+      findsOneWidget,
+    );
     await tester.tap(find.byKey(const ValueKey('agent-approve')));
     await settle(tester);
     expect(delegate.calls, ['approve:${conversation.id}:rtl-plan']);

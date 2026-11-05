@@ -2876,5 +2876,7 @@
   "agentRunLimitsHint": "限制一次任務的模型請求、工具呼叫與 token 用量。",
   "@agentRunLimitsHint": {},
   "agentHistoryRetentionTitle": "聊天記錄保留",
-  "@agentHistoryRetentionTitle": {}
+  "@agentHistoryRetentionTitle": {},
+  "agentApprovalReviseHint": "在輸入框中寫明要調整的內容，再選擇「補充目前要求」。目前修改尚未獲准執行。",
+  "@agentApprovalReviseHint": {}
 }

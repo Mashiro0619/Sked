@@ -139,6 +139,8 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       ModalRoute.of(context)?.isCurrent != false;
   int _uiGeneration = 0;
   int _configurationGeneration = 0;
+  int _approvalActionGeneration = 0;
+  bool Function()? _approvalRevisionCurrent;
   TransitionRoute<dynamic>? _ownedHistoryRoute;
 
   void _invalidateUiSource() {
@@ -506,6 +508,10 @@ class _AgentConversationViewState extends State<AgentConversationView> {
 
   void _changed() {
     if (!mounted) return;
+    _approvalActionGeneration++;
+    if (_approvalRevisionCurrent?.call() == false) {
+      _approvalRevisionCurrent = null;
+    }
     final conversation = _repository.selected;
     final id = conversation?.id;
     final switched = id != _shownId;
@@ -2261,6 +2267,9 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     AppLocalizations l,
   ) {
     final generation = _uiGeneration;
+    final actionGeneration = _approvalActionGeneration;
+    final routeGeneration = _configurationGeneration;
+    final mode = _repository.find(id)?.mode;
     final delegate = widget.delegate;
     final runId = _runtime.runFor(id).runId;
     final clearsLocalData = agentPlanClearsLocalData(plan.details);
@@ -2270,6 +2279,15 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         identical(delegate, widget.delegate) &&
         _runtime.runFor(id).runId == runId &&
         identical(_runtime.runFor(id).pendingApproval, plan);
+    bool canRevise() =>
+        isCurrent() &&
+        routeGeneration == _configurationGeneration &&
+        _repository.canWrite &&
+        _runtime.enabled &&
+        _runtime.configured &&
+        !_runtime.maintenance &&
+        _repository.find(id)?.archived == false &&
+        _repository.find(id)?.mode == mode;
     return Padding(
       key: ValueKey('agent-approval-card-${plan.id}'),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -2302,6 +2320,28 @@ class _AgentConversationViewState extends State<AgentConversationView> {
               ),
               const SizedBox(height: 8),
               AgentPlanPreview(details: plan.details),
+              if (plan.details['kind'] != 'httpTransport') ...[
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: TextButton.icon(
+                    key: const ValueKey('agent-revise-approval'),
+                    onPressed:
+                        writable &&
+                            canRevise() &&
+                            !_busy.contains('approval-$id')
+                        ? () {
+                            if (actionGeneration != _approvalActionGeneration) {
+                              return;
+                            }
+                            _focusApprovalRevision(canRevise);
+                          }
+                        : null,
+                    icon: const Icon(Icons.edit_outlined),
+                    label: Text(l.agentSteer),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -2351,6 +2391,29 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         ),
       ),
     );
+  }
+
+  void _focusApprovalRevision(bool Function() isCurrent) {
+    if (!isCurrent()) return;
+    setState(() => _approvalRevisionCurrent = isCurrent);
+    _composerFocus.requestFocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          !identical(_approvalRevisionCurrent, isCurrent) ||
+          !isCurrent()) {
+        return;
+      }
+      final editor = _composerField.currentContext;
+      if (editor != null) {
+        unawaited(
+          Scrollable.ensureVisible(
+            editor,
+            alignment: 1,
+            alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+          ),
+        );
+      }
+    });
   }
 
   ({double minimumComposer, double minimumTranscript}) _composerBudget(
@@ -2605,6 +2668,18 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                               : null,
                           icon: const Icon(Icons.play_arrow_rounded),
                           label: Text(l.agentContinue),
+                        ),
+                      ),
+                    if (_approvalRevisionCurrent?.call() == true)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
+                        child: Semantics(
+                          liveRegion: true,
+                          child: Text(
+                            l.agentApprovalReviseHint,
+                            key: const ValueKey('agent-approval-revise-hint'),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
                         ),
                       ),
                     KeyedSubtree(

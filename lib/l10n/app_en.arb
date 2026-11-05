@@ -2944,5 +2944,7 @@
   "agentRunLimitsHint": "Limit model requests, tool calls and token usage for each run.",
   "@agentRunLimitsHint": {},
   "agentHistoryRetentionTitle": "Chat history retention",
-  "@agentHistoryRetentionTitle": {}
+  "@agentHistoryRetentionTitle": {},
+  "agentApprovalReviseHint": "Describe the changes in the message box, then choose “Update current request”. The pending changes have not been approved.",
+  "@agentApprovalReviseHint": {}
 }
