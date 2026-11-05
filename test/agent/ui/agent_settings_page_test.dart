@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/rendering.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/knowledge/knowledge_service.dart';
 import 'package:sked/agent/ui/agent_knowledge_view.dart';
@@ -90,6 +91,7 @@ void main() {
     double scale = 1,
     _SettingsStorage? storage,
     bool configured = true,
+    Locale locale = const Locale('en'),
   }) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = Size(width, height);
@@ -113,6 +115,7 @@ void main() {
         provider: app,
         home: const AgentSettingsPage(),
         textScale: scale,
+        locale: locale,
       ),
     );
     await tester.pumpAndSettle();
@@ -220,7 +223,10 @@ void main() {
       await tester.enterText(key('agent-api-key'), 'synthetic-new-key');
       await tap(tester, key('agent-configured-model-model-a'));
       expect(find.byType(AgentModelSettingsPage), findsOneWidget);
-      expect(find.byType(FilterChip), findsNothing);
+      expect(
+        find.byType(FilterChip),
+        findsNWidgets(AgentReasoningEffort.values.length),
+      );
       final dropdown = tester.widget<SkedDropdownMenu<AgentReasoningEffort>>(
         find.byType(SkedDropdownMenu<AgentReasoningEffort>),
       );
@@ -639,6 +645,99 @@ void main() {
       expect(find.text(l.agentSettingsChanged), findsOneWidget);
       expect(app.agent.settings.modelConfig(model.id), latestModel);
       expect(find.byType(AgentModelSettingsPage), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final scene in [
+    (size: const Size(390, 844), scale: 1.0),
+    (size: const Size(320, 740), scale: 2.0),
+    (size: const Size(1200, 900), scale: 1.0),
+  ]) {
+    testWidgets(
+      'effort choices use stable compact rows and full touch targets at $scene',
+      (tester) async {
+        await mount(
+          tester,
+          width: scene.size.width,
+          height: scene.size.height,
+          scale: scene.scale,
+          locale: const Locale('zh'),
+        );
+        await tap(tester, key('agent-settings-connection'));
+        await tap(tester, key('agent-configured-model-model-a'));
+        final choices = key('agent-model-effort-choices');
+        expect(tester.getSize(choices).height, lessThan(7 * 48));
+        Map<AgentReasoningEffort, Offset> positions() {
+          final origin = tester.getTopLeft(choices);
+          return {
+            for (final effort in AgentReasoningEffort.values)
+              effort:
+                  tester.getTopLeft(key('agent-model-effort-${effort.name}')) -
+                  origin,
+          };
+        }
+
+        final before = positions();
+        for (final effort in AgentReasoningEffort.values) {
+          final chip = key('agent-model-effort-${effort.name}');
+          await reveal(tester, chip);
+          final rect = tester.getRect(chip);
+          expect(rect.width, greaterThanOrEqualTo(48));
+          expect(rect.height, greaterThanOrEqualTo(48));
+          final selected = tester.widget<FilterChip>(chip).selected;
+          // The padded bottom edge belongs to the action, not only its semantics.
+          await tester.tapAt(rect.bottomCenter - const Offset(0, 1));
+          await settleUi(tester);
+          expect(tester.widget<FilterChip>(chip).selected, !selected);
+          expect(positions(), before);
+        }
+        final dropdown = find.byType(SkedDropdownMenu<AgentReasoningEffort>);
+        final field = tester.widget<SkedDropdownMenu<AgentReasoningEffort>>(
+          dropdown,
+        );
+        expect(field.initialSelection, isNull);
+        expect(
+          field.dropdownMenuEntries.map((entry) => entry.value),
+          AgentReasoningEffort.values.where(
+            (effort) => !model.reasoningEfforts.contains(effort),
+          ),
+        );
+        expect(
+          tester.getTopLeft(dropdown).dy - tester.getBottomLeft(choices).dy,
+          closeTo(12, 0.1),
+        );
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant({
+        TargetPlatform.windows,
+        TargetPlatform.android,
+      }),
+    );
+  }
+
+  testWidgets(
+    'the only saved model has readable status without an unavailable switch',
+    (tester) async {
+      await mount(tester);
+      await tap(tester, key('agent-settings-connection'));
+      await tap(tester, key('agent-configured-model-model-a'));
+      final status = key('agent-model-default-status');
+      await reveal(tester, status);
+      expect(key('agent-model-make-default'), findsNothing);
+      final data = tester.getSemantics(status).getSemanticsData();
+      expect(data.hasAction(ui.SemanticsAction.tap), isFalse);
+      expect(data.flagsCollection.isEnabled, ui.Tristate.none);
+      final l = AppLocalizations.of(tester.element(status));
+      final title = find.descendant(
+        of: status,
+        matching: find.text(l.agentDefaultModel),
+      );
+      final paragraph = tester.renderObject<RenderParagraph>(title);
+      expect(
+        paragraph.text.style!.color,
+        Theme.of(tester.element(status)).colorScheme.onSurface,
+      );
       expect(tester.takeException(), isNull);
     },
   );

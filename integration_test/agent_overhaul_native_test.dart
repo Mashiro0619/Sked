@@ -484,7 +484,7 @@ Future<void> _settingsJourney(
   expect(find.byType(TabBar), findsNothing);
   await _tap(tester, _key('agent-model-effort-high'));
   expect(
-    tester.widget<CheckboxListTile>(_key('agent-model-effort-high')).value,
+    tester.widget<FilterChip>(_key('agent-model-effort-high')).selected,
     isFalse,
   );
   await _back(tester);

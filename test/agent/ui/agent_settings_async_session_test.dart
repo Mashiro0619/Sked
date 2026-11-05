@@ -257,10 +257,8 @@ void main() {
                 : AgentReasoningEffort.medium;
             expect(
               tester
-                  .widget<CheckboxListTile>(
-                    key('agent-model-effort-${effort.name}'),
-                  )
-                  .value,
+                  .widget<FilterChip>(key('agent-model-effort-${effort.name}'))
+                  .selected,
               isTrue,
             );
           }

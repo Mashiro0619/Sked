@@ -195,30 +195,20 @@ class _AgentModelSettingsPageState extends State<AgentModelSettingsPage>
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 12),
-              SettingsConnectedGroup(
-                tonal: true,
-                children: [
-                  for (final effort in AgentReasoningEffort.values)
-                    CheckboxListTile(
-                      key: ValueKey('agent-model-effort-${effort.name}'),
-                      title: Text(agentReasoningEffortLabel(l, effort)),
-                      value: _efforts.contains(effort),
-                      onChanged: _saving
-                          ? null
-                          : (selected) => setState(() {
-                              if (selected == true) {
-                                _efforts.add(effort);
-                              } else {
-                                _efforts.remove(effort);
-                                if (_defaultEffort == effort) {
-                                  _defaultEffort = null;
-                                }
-                              }
-                            }),
-                    ),
-                ],
+              _EffortChoices(
+                selected: _efforts,
+                onChanged: _saving
+                    ? null
+                    : (effort, selected) => setState(() {
+                        if (selected) {
+                          _efforts.add(effort);
+                        } else {
+                          _efforts.remove(effort);
+                          if (_defaultEffort == effort) _defaultEffort = null;
+                        }
+                      }),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
               SkedDropdownMenu<AgentReasoningEffort>(
                 key: ValueKey('agent-default-effort-${_defaultEffort?.name}'),
                 initialSelection: _defaultEffort,
@@ -237,17 +227,23 @@ class _AgentModelSettingsPageState extends State<AgentModelSettingsPage>
                     : (effort) => setState(() => _defaultEffort = effort),
               ),
               const SizedBox(height: 12),
-              SwitchListTile.adaptive(
-                key: const ValueKey('agent-model-make-default'),
-                contentPadding: EdgeInsets.zero,
-                title: Text(l.agentMakeDefaultModel),
-                value: _defaultModel,
-                onChanged:
-                    _saving ||
-                        (_baseline.models.length < 2 && widget.model != null)
-                    ? null
-                    : (value) => setState(() => _defaultModel = value),
-              ),
+              if (_baseline.models.length < 2 && widget.model != null)
+                SettingsConnectedTile(
+                  key: const ValueKey('agent-model-default-status'),
+                  leading: const Icon(Icons.check_circle_outline),
+                  title: l.agentDefaultModel,
+                  informational: true,
+                )
+              else
+                SwitchListTile.adaptive(
+                  key: const ValueKey('agent-model-make-default'),
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l.agentMakeDefaultModel),
+                  value: _defaultModel,
+                  onChanged: _saving
+                      ? null
+                      : (value) => setState(() => _defaultModel = value),
+                ),
               if (_incomplete) ...[
                 const SizedBox(height: 12),
                 Text(
@@ -289,6 +285,76 @@ class _AgentModelSettingsPageState extends State<AgentModelSettingsPage>
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The widest localized option fixes the column budget before selection, so
+/// checkmarks cannot move an option into another row while it is being edited.
+class _EffortChoices extends StatelessWidget {
+  const _EffortChoices({required this.selected, required this.onChanged});
+
+  final Set<AgentReasoningEffort> selected;
+  final void Function(AgentReasoningEffort effort, bool selected)? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final style = Theme.of(context).textTheme.labelLarge;
+    final labels = {
+      for (final effort in AgentReasoningEffort.values)
+        effort: agentReasoningEffortLabel(l, effort),
+    };
+    var minimumWidth = 80.0;
+    for (final label in labels.values) {
+      final painter = TextPainter(
+        text: TextSpan(text: label, style: style),
+        textScaler: MediaQuery.textScalerOf(context),
+        textDirection: Directionality.of(context),
+      )..layout();
+      final width = painter.width + 56;
+      if (width > minimumWidth) minimumWidth = width;
+      painter.dispose();
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 8.0;
+        final columns = ((constraints.maxWidth + gap) / (minimumWidth + gap))
+            .floor()
+            .clamp(1, 4);
+        final availableWidth =
+            (constraints.maxWidth - gap * (columns - 1)) / columns;
+        final width = minimumWidth < availableWidth
+            ? minimumWidth
+            : availableWidth;
+        return Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: SizedBox(
+            width: width * columns + gap * (columns - 1),
+            child: Wrap(
+              key: const ValueKey('agent-model-effort-choices'),
+              spacing: gap,
+              runSpacing: 4,
+              children: [
+                for (final entry in labels.entries)
+                  SizedBox(
+                    width: width,
+                    child: FilterChip(
+                      key: ValueKey('agent-model-effort-${entry.key.name}'),
+                      label: Text(entry.value, style: style),
+                      selected: selected.contains(entry.key),
+                      materialTapTargetSize: MaterialTapTargetSize.padded,
+                      visualDensity: VisualDensity.standard,
+                      onSelected: onChanged == null
+                          ? null
+                          : (value) => onChanged!(entry.key, value),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
