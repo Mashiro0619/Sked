@@ -6,6 +6,8 @@ import 'package:sked/agent/imports/school_web_handoff.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/models/agent_settings.dart';
 import 'package:sked/services/school_import_content_sanitizer.dart';
+import 'package:sked/l10n/app_locale.dart';
+import 'package:sked/l10n/app_localizations.dart';
 
 class _MemoryStorage extends ConversationStorage {
   _MemoryStorage() : super.base();
@@ -145,6 +147,64 @@ void main() {
       expect(repository.conversations.single.sources.length, 1);
     },
   );
+
+  for (final locale in ['en', 'zh', 'zh-Hant']) {
+    test(
+      '$locale handoff persists a readable task and localized untitled source',
+      () async {
+        final l = lookupAppLocalizations(appLocaleFromCode(locale));
+        final reviewed = SchoolWebReviewedDraft(
+          content: draft.content,
+          datasetGeneration: generation,
+          capturedAt: draft.capturedAt,
+          localeCode: locale,
+        );
+        final result = await handoff.handoff(reviewed, isCurrent: () => true);
+        final conversation = repository.find(result.conversationId)!;
+        expect(conversation.messages.single.text, l.schoolWebAgentImportTask);
+        expect(
+          conversation.messages.single.text,
+          isNot(contains('import-school-web')),
+        );
+        expect(conversation.title, l.schoolWebAgentSourceTitle);
+        expect(
+          conversation.sources.single.provenance!.title,
+          l.schoolWebAgentSourceTitle,
+        );
+        expect(conversation.sources.single.provenance!.localeCode, locale);
+        final bytes = storage.source;
+        await repository.load();
+        expect(
+          repository.find(result.conversationId)!.messages.single.text,
+          l.schoolWebAgentImportTask,
+        );
+        expect(storage.source, bytes);
+        expect(
+          (await handoff.handoff(reviewed, isCurrent: () => true)).created,
+          isFalse,
+        );
+      },
+    );
+  }
+
+  test('loading an old handoff preserves its original user prompt verbatim', () async {
+    const legacy =
+        'Use the import-school-web skill. Preserve this historical prompt verbatim.';
+    final old = await repository.handoff(
+      handoffId: 'legacy',
+      source: const ConversationSource(
+        id: 'old-source',
+        kind: 'school_web',
+        text: 'old page',
+      ),
+      title: 'Old page',
+      prompt: legacy,
+    );
+    final bytes = storage.source;
+    await repository.load();
+    expect(storage.source, bytes);
+    expect(repository.find(old.conversation.id)!.messages.single.text, legacy);
+  });
 
   test(
     'cancelled source before acceptance never creates a conversation',

@@ -2858,5 +2858,9 @@
   "agentKnowledgeMissingTools": "缺少所需工具",
   "@agentKnowledgeMissingTools": {},
   "agentKnowledgeNoMatches": "没有匹配的内容",
-  "@agentKnowledgeNoMatches": {}
+  "@agentKnowledgeNoMatches": {},
+  "schoolWebAgentImportTask": "请根据已校对的学校网页整理并导入课表，缺少的信息请向我确认。",
+  "@schoolWebAgentImportTask": {},
+  "schoolWebAgentSourceTitle": "学校网页",
+  "@schoolWebAgentSourceTitle": {}
 }

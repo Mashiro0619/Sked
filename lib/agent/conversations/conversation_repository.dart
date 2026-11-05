@@ -117,6 +117,23 @@ class ConversationRepository extends ChangeNotifier {
   AgentConversation? get draftConversation => _draftConversation;
   bool isDraft(String? id) => id != null && _draftConversation?.id == id;
   AgentConversation? get selected => find(selectedId);
+
+  /// Only local handoff records bind an original request to its source digest.
+  /// Portable history and source metadata alone cannot manufacture this link.
+  ConversationHandoff? handoffForMessage(
+    String conversationId,
+    String? messageId,
+  ) {
+    final matches = _archive.handoffs
+        .where(
+          (handoff) =>
+              handoff.conversationId == conversationId &&
+              handoff.messageId == messageId,
+        )
+        .toList();
+    return matches.length == 1 ? matches.single : null;
+  }
+
   AgentConversation? find(String? id) => isDraft(id)
       ? _draftConversation
       : conversations

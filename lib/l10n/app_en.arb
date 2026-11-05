@@ -2928,5 +2928,9 @@
   "agentKnowledgeMissingTools": "Required tools unavailable",
   "@agentKnowledgeMissingTools": {},
   "agentKnowledgeNoMatches": "No matching items",
-  "@agentKnowledgeNoMatches": {}
+  "@agentKnowledgeNoMatches": {},
+  "schoolWebAgentImportTask": "Organize and import a timetable from the reviewed school page. Ask me about missing details.",
+  "@schoolWebAgentImportTask": {},
+  "schoolWebAgentSourceTitle": "School page",
+  "@schoolWebAgentSourceTitle": {}
 }

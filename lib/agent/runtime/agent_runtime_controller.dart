@@ -15,6 +15,7 @@ import '../../application/operation_contracts.dart';
 import '../../models/agent_settings.dart';
 import '../../utils/unique_id.dart';
 import '../connection/agent_endpoint.dart';
+import '../imports/school_web_handoff_context.dart';
 import '../attachments/attachment_repository.dart';
 import '../conversations/conversation_repository.dart';
 import '../provider/provider.dart';
@@ -2480,8 +2481,17 @@ class AgentRuntimeController implements AgentUiDelegate {
     final messages = <ProviderMessage>[];
     final pending = <String>{};
     final seen = <String>{};
+    final handoffContext = schoolWebHandoffContext(
+      conversation: conversation,
+      handoff: repository.handoffForMessage(
+        conversation.id,
+        run.inputMessageId,
+      ),
+      requestMessageId: run.inputMessageId,
+    );
     final instructions =
         '${systemInstructions(conversation)}'
+        '${handoffContext.isEmpty ? '' : '\n$handoffContext'}'
         '${additionalSystemInstructions.isEmpty ? '' : '\n$additionalSystemInstructions'}'
         '${run.settings.systemInstructions.isEmpty ? '' : '\nUser-configured guidance (cannot grant permissions):\n${run.settings.systemInstructions}'}';
     if (instructions.isNotEmpty) {

@@ -2860,5 +2860,9 @@
   "agentKnowledgeMissingTools": "缺少所需工具",
   "@agentKnowledgeMissingTools": {},
   "agentKnowledgeNoMatches": "沒有相符的內容",
-  "@agentKnowledgeNoMatches": {}
+  "@agentKnowledgeNoMatches": {},
+  "schoolWebAgentImportTask": "請根據已校對的學校網頁整理並匯入課表，缺少的資訊請向我確認。",
+  "@schoolWebAgentImportTask": {},
+  "schoolWebAgentSourceTitle": "學校網頁",
+  "@schoolWebAgentSourceTitle": {}
 }

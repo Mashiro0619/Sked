@@ -7721,6 +7721,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No matching items'**
   String get agentKnowledgeNoMatches;
+
+  /// No description provided for @schoolWebAgentImportTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Organize and import a timetable from the reviewed school page. Ask me about missing details.'**
+  String get schoolWebAgentImportTask;
+
+  /// No description provided for @schoolWebAgentSourceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'School page'**
+  String get schoolWebAgentSourceTitle;
 }
 
 class _AppLocalizationsDelegate

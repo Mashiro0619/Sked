@@ -4322,4 +4322,11 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get agentKnowledgeNoMatches => 'No matching items';
+
+  @override
+  String get schoolWebAgentImportTask =>
+      'Organize and import a timetable from the reviewed school page. Ask me about missing details.';
+
+  @override
+  String get schoolWebAgentSourceTitle => 'School page';
 }

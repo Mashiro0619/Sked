@@ -4067,6 +4067,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentKnowledgeNoMatches => '没有匹配的内容';
+
+  @override
+  String get schoolWebAgentImportTask => '请根据已校对的学校网页整理并导入课表，缺少的信息请向我确认。';
+
+  @override
+  String get schoolWebAgentSourceTitle => '学校网页';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -8134,4 +8140,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentKnowledgeNoMatches => '沒有相符的內容';
+
+  @override
+  String get schoolWebAgentImportTask => '請根據已校對的學校網頁整理並匯入課表，缺少的資訊請向我確認。';
+
+  @override
+  String get schoolWebAgentSourceTitle => '學校網頁';
 }

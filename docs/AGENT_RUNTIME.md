@@ -70,6 +70,8 @@ conversation.get、conversations.get、runs.status 和会话导出提供已记�
 
 网页来源先压缩和校对，再以固定 handoffId 原子保存新会话、初始请求和不可变附件。重复交接复用已有会话，同身份但内容或目标改变会被拒绝。交接记录保留来源、截断状态、日期和数据世代；创建会话不意味着远端推理或业务保存已成功。
 
+新交接的初始用户消息使用校对时语言保存可读的导入任务，缺少网页标题时使用本地化来源名；技能路由、来源不可信、权限与缺失事实约束放在宿主系统上下文。该上下文必须同时匹配本地 handoff 记录、原始请求身份、来源摘要及校对元数据，只随原请求及其显式继续生效；后续普通提问、仅带来源的消息和导入的历史不能触发它。网页正文与标题不拼入系统指令。现有会话消息保持原文，不通过加载或升级自动清洗旧英文提示，也不为展示调整存档 schema。
+
 候选解码是有界纯计算，与模型请求和主库写入分离。imports.prepare 要求明确创建或替换目标，并校验实际开学日期、周次、时间、作息引用及来源所属会话；缺失事实不得静默填写为当前日期。准备后仍需 mutation.commit 按会话模式执行，最终回执决定是否导入成功。
 
 实现与回归：[交接](../lib/agent/imports/school_web_handoff.dart)、[候选工具](../lib/agent/imports/school_import_tool_adapter.dart)、[导入专项](../test/agent/imports/school_import_tool_adapter_test.dart)、[交接去重](../test/agent/imports/school_web_handoff_test.dart)。
