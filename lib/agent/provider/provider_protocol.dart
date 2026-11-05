@@ -224,11 +224,17 @@ class ProviderResponseDecoder {
   }
 
   List<ProviderEvent> addJson(Map<String, Object?> json) {
-    if (json.containsKey('error')) {
+    if (json['error'] != null) {
       throw const ProviderException(ProviderError.httpFailure);
     }
     if (request.protocol == ProviderProtocol.responses) {
-      return _responses({'type': 'response.completed', 'response': json}, null);
+      final type = switch (json['status']) {
+        'incomplete' => 'response.incomplete',
+        'failed' => 'response.failed',
+        'cancelled' => 'response.cancelled',
+        _ => 'response.completed',
+      };
+      return _responses({'type': type, 'response': json}, null);
     }
     final choices = _list(json['choices']);
     if (choices.length != 1) {

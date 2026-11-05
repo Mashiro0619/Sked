@@ -443,11 +443,19 @@ void main() {
     expect(result.usage?.totalTokens, 3);
   });
 
-  test('supports complete Responses JSON output', () async {
+  test('supports complete Responses JSON output with error null', () async {
     final result = await collect(
       jsonEncode({
         'status': 'completed',
+        'error': null,
         'output': [
+          {
+            'type': 'message',
+            'role': 'assistant',
+            'content': [
+              {'type': 'output_text', 'text': 'Reading your events.'},
+            ],
+          },
           {
             'type': 'function_call',
             'call_id': 'call-1',
@@ -455,12 +463,123 @@ void main() {
             'arguments': '{}',
           },
         ],
+        'usage': {'input_tokens': 10, 'output_tokens': 5, 'total_tokens': 15},
       }),
       contentType: 'application/json',
       input: request(protocol: ProviderProtocol.responses),
     );
+    expect(result.text, 'Reading your events.');
     expect(result.toolCalls.single.name, 'events.list');
+    expect(result.usage?.totalTokens, 15);
   });
+
+  test(
+    'Responses JSON with a non-null error never publishes executable output',
+    () async {
+      final client = ProviderClient(
+        client: _Client(
+          (_) async => http.StreamedResponse(
+            Stream.value(
+              utf8.encode(
+                jsonEncode({
+                  'status': 'completed',
+                  'error': {'message': 'sensitive-provider-message'},
+                  'output': [
+                    {
+                      'type': 'function_call',
+                      'call_id': 'call-1',
+                      'name': 'events__list',
+                      'arguments': '{}',
+                    },
+                  ],
+                }),
+              ),
+            ),
+            200,
+            headers: {'content-type': 'application/json'},
+          ),
+        ),
+      );
+      final events = <ProviderEvent>[];
+      ProviderException? failure;
+      try {
+        await for (final event in client.stream(
+          request(protocol: ProviderProtocol.responses),
+          apiKey: '',
+        )) {
+          events.add(event);
+        }
+      } on ProviderException catch (error) {
+        failure = error;
+      }
+      expect(failure?.code, ProviderError.httpFailure);
+      expect(failure.toString(), isNot(contains('sensitive-provider-message')));
+      expect(events.whereType<ProviderCompleted>(), isEmpty);
+      client.close();
+    },
+  );
+
+  for (final scenario in ['reported', 'missing', 'overBudget']) {
+    test(
+      'Responses JSON incomplete preserves $scenario usage and terminal outcome',
+      () async {
+        final client = ProviderClient(
+          client: _Client(
+            (_) async => http.StreamedResponse(
+              Stream.value(
+                utf8.encode(
+                  jsonEncode({
+                    'status': 'incomplete',
+                    'error': null,
+                    'incomplete_details': {'reason': 'max_output_tokens'},
+                    'output': [],
+                    'usage': scenario == 'missing'
+                        ? null
+                        : {
+                            'input_tokens': 10,
+                            'output_tokens': 5,
+                            'total_tokens': 15,
+                          },
+                  }),
+                ),
+              ),
+              200,
+              headers: {'content-type': 'application/json'},
+            ),
+          ),
+        );
+        final events = <ProviderEvent>[];
+        ProviderException? failure;
+        try {
+          await for (final event in client.stream(
+            request(
+              protocol: ProviderProtocol.responses,
+              limits: ProviderLimits(
+                maxTotalTokens: scenario == 'overBudget' ? 14 : 15,
+              ),
+            ),
+            apiKey: '',
+          )) {
+            events.add(event);
+          }
+        } on ProviderException catch (error) {
+          failure = error;
+        }
+        final usage = events.whereType<ProviderUsageEvent>().toList();
+        expect(usage, hasLength(scenario == 'missing' ? 0 : 1));
+        if (usage.isNotEmpty) expect(usage.single.usage.totalTokens, 15);
+        expect(failure?.responseTerminated, isTrue);
+        expect(
+          failure?.code,
+          scenario == 'overBudget'
+              ? ProviderError.tokenBudgetExceeded
+              : ProviderError.incompleteResponse,
+        );
+        expect(events.whereType<ProviderCompleted>(), isEmpty);
+        client.close();
+      },
+    );
+  }
 
   for (final fixture in <String, String>{
     'missing terminal': _chat({'content': 'partial'}),

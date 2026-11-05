@@ -42,6 +42,8 @@
 
 Responses 流明确返回 `response.incomplete` 时，会话将该次模型请求记录为已知失败，保留服务实际报告且通过校验的用量，不把未完成任务误记为请求结果未知。解码器在同一事件内读到合法用量后因输出或 token 预算报错，也先交付用量再交付错误，不执行未完成或超预算的工具。未报告的用量继续未知；流直接断开、没有明确终态仍为 unknown。对应[提供方协议回归](../test/agent/provider/provider_client_test.dart)及[真实协议到会话存储回归](../test/agent/runtime/agent_runtime_controller_test.dart)使用合成 SSE 验证，不代表付费服务或设备联调。
 
+服务改为返回 `application/json` 时，Responses 按实际 `status` 进入相同的完成、未完成或失败处理。正常回包的 `error: null` 不表示请求失败；非空错误仍拒绝执行且不展示原始服务错误正文。JSON 未完成响应同样保留合法用量与明确终态，缺失用量和超预算规则与 SSE 一致。
+
 选择性备份工具按明确对象和独立文件选择生成 ZIP；设备偏好按平台分组，清单、计划和结果均保留不支持项。恢复进入独立维护边界，排空侧写后固定各仓储目标和阶段；发起运行不会等待自身，其他旧运行失效。聊天只导入可阅读历史，不恢复旧执行身份。文件导出读取继承当前运行的取消信号，协议与故障验证见[选择性备份](SELECTIVE_BACKUP.md)。
 
 conversation.get、conversations.get、runs.status 和会话导出提供已记录运行的统计；历史 v1 会话没有过去的用量证据。工具尝试区分未开始、完成、失败和未知，费用没有可信单价时保持 unknown。记录沿用会话保留、删除和大小上限，不进入正常模型上下文或完整业务备份。相关恢复与迁移见[用量存储回归](../test/agent/conversations/conversation_usage_test.dart)。
