@@ -4372,4 +4372,21 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get agentKnowledgeFullSource => 'Full source text';
+
+  @override
+  String get agentConversationGuidanceTitle => 'Conversation guidance';
+
+  @override
+  String get agentConversationGuidanceHint =>
+      'Set response preferences to use in all conversations.';
+
+  @override
+  String get agentRunLimitsTitle => 'Limits per run';
+
+  @override
+  String get agentRunLimitsHint =>
+      'Limit model requests, tool calls and token usage for each run.';
+
+  @override
+  String get agentHistoryRetentionTitle => 'Chat history retention';
 }

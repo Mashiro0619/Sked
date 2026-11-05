@@ -2934,5 +2934,15 @@
   "schoolWebAgentSourceTitle": "School page",
   "@schoolWebAgentSourceTitle": {},
   "agentKnowledgeFullSource": "Full source text",
-  "@agentKnowledgeFullSource": {}
+  "@agentKnowledgeFullSource": {},
+  "agentConversationGuidanceTitle": "Conversation guidance",
+  "@agentConversationGuidanceTitle": {},
+  "agentConversationGuidanceHint": "Set response preferences to use in all conversations.",
+  "@agentConversationGuidanceHint": {},
+  "agentRunLimitsTitle": "Limits per run",
+  "@agentRunLimitsTitle": {},
+  "agentRunLimitsHint": "Limit model requests, tool calls and token usage for each run.",
+  "@agentRunLimitsHint": {},
+  "agentHistoryRetentionTitle": "Chat history retention",
+  "@agentHistoryRetentionTitle": {}
 }

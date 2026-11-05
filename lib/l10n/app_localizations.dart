@@ -7739,6 +7739,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Full source text'**
   String get agentKnowledgeFullSource;
+
+  /// No description provided for @agentConversationGuidanceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation guidance'**
+  String get agentConversationGuidanceTitle;
+
+  /// No description provided for @agentConversationGuidanceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Set response preferences to use in all conversations.'**
+  String get agentConversationGuidanceHint;
+
+  /// No description provided for @agentRunLimitsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Limits per run'**
+  String get agentRunLimitsTitle;
+
+  /// No description provided for @agentRunLimitsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Limit model requests, tool calls and token usage for each run.'**
+  String get agentRunLimitsHint;
+
+  /// No description provided for @agentHistoryRetentionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat history retention'**
+  String get agentHistoryRetentionTitle;
 }
 
 class _AppLocalizationsDelegate

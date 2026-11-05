@@ -2866,5 +2866,15 @@
   "schoolWebAgentSourceTitle": "學校網頁",
   "@schoolWebAgentSourceTitle": {},
   "agentKnowledgeFullSource": "完整來源文字",
-  "@agentKnowledgeFullSource": {}
+  "@agentKnowledgeFullSource": {},
+  "agentConversationGuidanceTitle": "對話指引",
+  "@agentConversationGuidanceTitle": {},
+  "agentConversationGuidanceHint": "指定常用的回答方式與偏好，套用至所有對話。",
+  "@agentConversationGuidanceHint": {},
+  "agentRunLimitsTitle": "單次執行限額",
+  "@agentRunLimitsTitle": {},
+  "agentRunLimitsHint": "限制一次任務的模型請求、工具呼叫與 token 用量。",
+  "@agentRunLimitsHint": {},
+  "agentHistoryRetentionTitle": "聊天記錄保留",
+  "@agentHistoryRetentionTitle": {}
 }

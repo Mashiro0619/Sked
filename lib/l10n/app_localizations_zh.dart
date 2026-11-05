@@ -4076,6 +4076,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentKnowledgeFullSource => '完整源文本';
+
+  @override
+  String get agentConversationGuidanceTitle => '对话指引';
+
+  @override
+  String get agentConversationGuidanceHint => '指定常用的回答方式和偏好，应用到所有对话。';
+
+  @override
+  String get agentRunLimitsTitle => '单次运行限额';
+
+  @override
+  String get agentRunLimitsHint => '限制一次任务的模型请求、工具调用和 token 用量。';
+
+  @override
+  String get agentHistoryRetentionTitle => '聊天记录保留';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -8152,4 +8167,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentKnowledgeFullSource => '完整來源文字';
+
+  @override
+  String get agentConversationGuidanceTitle => '對話指引';
+
+  @override
+  String get agentConversationGuidanceHint => '指定常用的回答方式與偏好，套用至所有對話。';
+
+  @override
+  String get agentRunLimitsTitle => '單次執行限額';
+
+  @override
+  String get agentRunLimitsHint => '限制一次任務的模型請求、工具呼叫與 token 用量。';
+
+  @override
+  String get agentHistoryRetentionTitle => '聊天記錄保留';
 }

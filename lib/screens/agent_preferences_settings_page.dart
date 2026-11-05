@@ -128,6 +128,16 @@ class _AgentPreferencesSettingsPageState
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    Widget labelled(String title, Widget child) => Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ExcludeSemantics(
+          child: Text(title, style: Theme.of(context).textTheme.bodyMedium),
+        ),
+        const SizedBox(height: 6),
+        Semantics(label: title, child: child),
+      ],
+    );
     Widget number(
       String key,
       String title,
@@ -135,17 +145,16 @@ class _AgentPreferencesSettingsPageState
       int min,
       int max, {
       bool retention = false,
-    }) => Padding(
-      padding: const EdgeInsets.only(top: 16),
-      child: TextFormField(
+    }) => labelled(
+      title,
+      TextFormField(
         key: ValueKey(key),
         controller: controller,
         enabled: !_saving,
         keyboardType: TextInputType.number,
         decoration: InputDecoration(
-          labelText: title,
-          helperText: retention ? l.agentPreferenceLimitHint : '$min–$max',
-          helperMaxLines: 5,
+          helperText: retention ? null : '$min–$max',
+          errorMaxLines: 3,
         ),
         onChanged: (_) => setState(() {}),
         validator: (text) {
@@ -159,6 +168,32 @@ class _AgentPreferencesSettingsPageState
         },
       ),
     );
+    Widget section(String key, String title, String hint, Widget child) =>
+        Padding(
+          key: ValueKey(key),
+          padding: const EdgeInsets.only(bottom: 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Semantics(
+                header: true,
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                hint,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 16),
+              child,
+            ],
+          ),
+        );
     return guardSettingsPage(
       SettingsPageScaffold(
         title: l.agentRunPreferences,
@@ -168,41 +203,87 @@ class _AgentPreferencesSettingsPageState
             headerSliver: header,
             scrollViewKey: const PageStorageKey('agent-preferences-scroll'),
             children: [
-              TextFormField(
-                key: const ValueKey('agent-system-instructions'),
-                controller: _instructions,
-                enabled: !_saving,
-                minLines: 3,
-                maxLines: 8,
-                maxLength: 16000,
-                decoration: InputDecoration(
-                  labelText: l.agentSystemInstructions,
-                  alignLabelWithHint: true,
+              section(
+                'agent-preferences-guidance',
+                l.agentConversationGuidanceTitle,
+                l.agentConversationGuidanceHint,
+                labelled(
+                  l.agentSystemInstructions,
+                  TextFormField(
+                    key: const ValueKey('agent-system-instructions'),
+                    controller: _instructions,
+                    enabled: !_saving,
+                    minLines: 3,
+                    maxLines: 8,
+                    maxLength: 16000,
+                    onChanged: (_) => setState(() {}),
+                  ),
                 ),
-                onChanged: (_) => setState(() {}),
               ),
-              number(
-                'agent-max-rounds',
-                l.agentMaxModelRounds,
-                _rounds,
-                1,
-                100,
+              section(
+                'agent-preferences-limits',
+                l.agentRunLimitsTitle,
+                l.agentRunLimitsHint,
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final textScale =
+                        MediaQuery.textScalerOf(context).scale(14) / 14;
+                    final columns = constraints.maxWidth >= 600 * textScale + 32
+                        ? 3
+                        : 1;
+                    final width =
+                        (constraints.maxWidth - (columns - 1) * 16) / columns;
+                    return Wrap(
+                      spacing: 16,
+                      runSpacing: 16,
+                      children: [
+                        SizedBox(
+                          width: width,
+                          child: number(
+                            'agent-max-rounds',
+                            l.agentMaxModelRounds,
+                            _rounds,
+                            1,
+                            100,
+                          ),
+                        ),
+                        SizedBox(
+                          width: width,
+                          child: number(
+                            'agent-max-calls',
+                            l.agentMaxToolCalls,
+                            _calls,
+                            1,
+                            500,
+                          ),
+                        ),
+                        SizedBox(
+                          width: width,
+                          child: number(
+                            'agent-max-tokens',
+                            l.agentMaxTotalTokens,
+                            _tokens,
+                            1024,
+                            1000000,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
-              number('agent-max-calls', l.agentMaxToolCalls, _calls, 1, 500),
-              number(
-                'agent-max-tokens',
-                l.agentMaxTotalTokens,
-                _tokens,
-                1024,
-                1000000,
-              ),
-              number(
-                'agent-history-retention',
-                l.agentHistoryRetentionDays,
-                _retention,
-                0,
-                3650,
-                retention: true,
+              section(
+                'agent-preferences-retention',
+                l.agentHistoryRetentionTitle,
+                l.agentPreferenceLimitHint,
+                number(
+                  'agent-history-retention',
+                  l.agentHistoryRetentionDays,
+                  _retention,
+                  0,
+                  3650,
+                  retention: true,
+                ),
               ),
               if (_error case final error?) ...[
                 const SizedBox(height: 16),
@@ -212,7 +293,6 @@ class _AgentPreferencesSettingsPageState
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ],
-              const SizedBox(height: 20),
               Align(
                 alignment: AlignmentDirectional.centerEnd,
                 child: FilledButton(

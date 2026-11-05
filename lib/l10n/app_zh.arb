@@ -2864,5 +2864,15 @@
   "schoolWebAgentSourceTitle": "学校网页",
   "@schoolWebAgentSourceTitle": {},
   "agentKnowledgeFullSource": "完整源文本",
-  "@agentKnowledgeFullSource": {}
+  "@agentKnowledgeFullSource": {},
+  "agentConversationGuidanceTitle": "对话指引",
+  "@agentConversationGuidanceTitle": {},
+  "agentConversationGuidanceHint": "指定常用的回答方式和偏好，应用到所有对话。",
+  "@agentConversationGuidanceHint": {},
+  "agentRunLimitsTitle": "单次运行限额",
+  "@agentRunLimitsTitle": {},
+  "agentRunLimitsHint": "限制一次任务的模型请求、工具调用和 token 用量。",
+  "@agentRunLimitsHint": {},
+  "agentHistoryRetentionTitle": "聊天记录保留",
+  "@agentHistoryRetentionTitle": {}
 }
