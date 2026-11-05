@@ -9,6 +9,7 @@ import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/runtime/agent_runtime_controller.dart';
 import 'package:sked/agent/imports/school_web_handoff.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
+import 'package:sked/application/approval_plan.dart';
 import 'package:sked/application/mutation_coordinator.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/application/mutation_draft.dart';
@@ -4599,7 +4600,7 @@ class _PlanWithDetails extends _Plan {
   Map<String, Object?> summary() => {...super.summary(), 'metadata': details};
 }
 
-class _Plan implements PreparedMutation {
+class _Plan implements ApprovalPlan {
   _Plan(this.id);
   @override
   final String id;
@@ -4609,6 +4610,4 @@ class _Plan implements PreparedMutation {
   ];
   @override
   Map<String, Object?> summary() => {'planId': id, 'changeCount': 1};
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
