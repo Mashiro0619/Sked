@@ -435,7 +435,7 @@ const retiredEnglishMessages = <String, Set<String>>{
     'A separate place to discuss and work with your schedule. This preview only demonstrates the layout; AI is not connected.',
   },
   'exportTimetableText': {'Export timetable as text'},
-  'importTimetableText': {'Import timetable from text'},
+  'importTimetableText': {'Import timetable from JSON text'},
   'privacyPolicyEntryDesc': {
     'Learn how the app handles local storage, school-site configuration, file import/export, webpage parsing, and external links.',
   },

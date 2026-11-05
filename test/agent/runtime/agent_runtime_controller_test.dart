@@ -15,6 +15,7 @@ import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/application/mutation_draft.dart';
 import 'package:sked/application/external_operation_coordinator.dart';
 import 'package:sked/models/agent_settings.dart';
+import 'package:sked/l10n/app_localizations_zh.dart';
 
 import 'package:sked/controllers/app_session.dart';
 import 'package:sked/data/app_repository.dart';
@@ -943,7 +944,7 @@ void main() {
           .where((message) => message.role == ProviderRole.user)
           .single
           .text,
-      contains('网页'),
+      AppLocalizationsZh().schoolWebAgentImportTask,
     );
     expect(
       first.messages

@@ -4180,6 +4180,7 @@ void main() {
         provider.dispose();
       });
       final normalHeights = <String, double>{};
+      final normalFontSizes = <String, double>{};
 
       for (final (scale, boldText) in [
         (1.0, false),
@@ -4272,20 +4273,18 @@ void main() {
           }
           if (scale == 1) {
             normalHeights[id] = rowRect.height;
+            normalFontSizes[id] = paragraph.text.style!.fontSize!;
             if (id == 'files') expect(rowRect.height, closeTo(32, .1));
           } else {
             expect(rowRect.height, greaterThan(normalHeights[id]!));
-            if (id == 'text') {
-              final firstCaret = paragraph.getOffsetForCaret(
-                const TextPosition(offset: 0),
-                Rect.zero,
-              );
-              final lastCaret = paragraph.getOffsetForCaret(
-                TextPosition(offset: text.length - 1),
-                Rect.zero,
-              );
-              expect(lastCaret.dy, greaterThan(firstCaret.dy));
-            }
+            // Short labels may fit on one line even at 2x. Keep the user's
+            // type size and verify actual ink/bounds above, not a line break
+            // that depended on the previous localized wording.
+            expect(paragraph.text.style!.fontSize, normalFontSizes[id]);
+            expect(
+              paragraph.textScaler.scale(normalFontSizes[id]!),
+              closeTo(normalFontSizes[id]! * scale, .01),
+            );
           }
         }
 
