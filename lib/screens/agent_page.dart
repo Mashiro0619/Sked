@@ -183,6 +183,7 @@ class _AgentConversationHostState extends State<AgentConversationHost> {
   bool _settingsOpen = false;
   bool _retrying = false;
   AgentApplication? _initializationAttempt;
+  _RoutedAgentDelegate? _routedDelegate;
 
   @override
   void didChangeDependencies() {
@@ -374,6 +375,14 @@ class _AgentConversationHostState extends State<AgentConversationHost> {
           ) ??
           content;
     }
+    final runtime = application.runtime;
+    var delegate = _routedDelegate;
+    if (delegate == null || !identical(delegate.runtime, runtime)) {
+      delegate = _routedDelegate = _RoutedAgentDelegate(
+        runtime,
+        () => unawaited(_openSettings()),
+      );
+    }
     return AgentConversationView(
       repository: application.conversations,
       showTitle: false,
@@ -394,10 +403,7 @@ class _AgentConversationHostState extends State<AgentConversationHost> {
           agentConversationModelReady(application.runtime.state.value, id),
       operationChanges: application.tools.notificationEffectChanges,
       describeOperation: application.tools.describeCommitResult,
-      delegate: _RoutedAgentDelegate(
-        application.runtime,
-        () => unawaited(_openSettings()),
-      ),
+      delegate: delegate,
       onUndoOperation: (conversationId, operationId) async {
         await application.runtime.runHostAction(conversationId, (
           scope,

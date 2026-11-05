@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -14,20 +16,26 @@ class AgentConversationList extends StatefulWidget {
     required this.onSelected,
     this.onNewConversation,
     this.onRestore,
+    this.onRecover,
     this.header,
     this.shrinkWrap = false,
     this.active = true,
     this.interactive = true,
+    this.interactionRevision = 0,
+    this.isOwnerCurrent,
   });
 
   final ConversationRepository repository;
   final ValueChanged<String> onSelected;
   final VoidCallback? onNewConversation;
-  final ValueChanged<String>? onRestore;
+  final FutureOr<void> Function(String)? onRestore;
+  final Future<void> Function()? onRecover;
   final Widget? header;
   final bool shrinkWrap;
   final bool active;
   final bool interactive;
+  final int interactionRevision;
+  final bool Function()? isOwnerCurrent;
 
   @override
   State<AgentConversationList> createState() => _AgentConversationListState();
@@ -43,12 +51,19 @@ class _AgentConversationListState extends State<AgentConversationList> {
   int _generation = 0;
   int _newActionGeneration = 0;
   int _restoreActionGeneration = 0;
+  Object? _restoreToken;
+  String? _restoringId;
+  bool _restoreFailed = false;
   (bool, double)? _pendingScrollRestore;
   bool _scrollRestoreScheduled = false;
   SkedTaskSession? _menu;
 
   String get _query => _search.text.trim().toLowerCase();
-  bool get _enabled => mounted && widget.active && widget.interactive;
+  bool get _enabled =>
+      mounted &&
+      widget.active &&
+      widget.interactive &&
+      (widget.isOwnerCurrent?.call() ?? true);
 
   @override
   void didUpdateWidget(AgentConversationList oldWidget) {
@@ -62,8 +77,11 @@ class _AgentConversationListState extends State<AgentConversationList> {
     }
     if (!identical(oldWidget.repository, widget.repository)) {
       _pendingScrollRestore = null;
+      _restoreToken = null;
+      _restoringId = null;
     }
     if (!identical(oldWidget.repository, widget.repository) ||
+        oldWidget.interactionRevision != widget.interactionRevision ||
         (oldWidget.active && !widget.active) ||
         (oldWidget.interactive && !widget.interactive)) {
       _invalidateInteraction();
@@ -73,6 +91,7 @@ class _AgentConversationListState extends State<AgentConversationList> {
 
   void _invalidateInteraction() {
     _generation++;
+    _restoreFailed = false;
     _menu?.dispose();
     _menu = null;
     _searchFocus.unfocus();
@@ -108,6 +127,60 @@ class _AgentConversationListState extends State<AgentConversationList> {
         conversation.archived == _archived &&
         conversation.title.toLowerCase().contains(_query),
   );
+
+  Future<void> _restore(
+    String id,
+    int generation,
+    int actionGeneration,
+    ConversationRepository repository,
+  ) async {
+    bool targetCurrent() =>
+        _current(generation, repository) &&
+        _archived &&
+        _visibleConversation(id);
+    if (!targetCurrent() ||
+        actionGeneration != _restoreActionGeneration ||
+        widget.onRestore == null ||
+        _restoreToken != null) {
+      return;
+    }
+    final token = Object();
+    setState(() {
+      _restoreToken = token;
+      _restoringId = id;
+      _restoreFailed = false;
+    });
+    try {
+      if (!repository.canWrite) {
+        final recover = widget.onRecover;
+        if (!repository.blocked || recover == null) {
+          throw const ConversationStorageException('History is unavailable.');
+        }
+        await recover();
+        if (!targetCurrent()) return;
+        // Recovery temporarily disables runtime requests. Let its restored
+        // availability reach the current list before reading the callback.
+        await WidgetsBinding.instance.endOfFrame;
+      }
+      if (!targetCurrent()) return;
+      final restore = widget.onRestore;
+      if (!repository.canWrite || restore == null) {
+        throw const ConversationStorageException('History is unavailable.');
+      }
+      // Once accepted, this persistent operation belongs to its delegate.
+      // Hiding history only retires feedback, and never cancels the save.
+      await restore(id);
+    } catch (_) {
+      if (targetCurrent()) setState(() => _restoreFailed = true);
+    } finally {
+      if (mounted && identical(_restoreToken, token)) {
+        setState(() {
+          _restoreToken = null;
+          _restoringId = null;
+        });
+      }
+    }
+  }
 
   void _toggleSearch(int generation, ConversationRepository repository) {
     if (!_current(generation, repository)) return;
@@ -443,6 +516,26 @@ class _AgentConversationListState extends State<AgentConversationList> {
                             ),
                           ),
                         ),
+                      if (_restoreFailed)
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+                            child: Material(
+                              key: const ValueKey('agent-history-error'),
+                              color: colors.errorContainer,
+                              shape: skedShapeSchemeOf(context).control,
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Text(
+                                  l.agentOperationFailed,
+                                  style: TextStyle(
+                                    color: colors.onErrorContainer,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                       if (entries.isEmpty)
                         if (widget.shrinkWrap)
                           SliverToBoxAdapter(
@@ -525,32 +618,41 @@ class _AgentConversationListState extends State<AgentConversationList> {
                                           ),
                                           tooltip: l.agentRestoreConversation,
                                           onPressed:
-                                              !_enabled || onRestore == null
+                                              !_enabled ||
+                                                  onRestore == null ||
+                                                  (!repository.canWrite &&
+                                                      (!repository.blocked ||
+                                                          widget.onRecover ==
+                                                              null)) ||
+                                                  _restoreToken != null
                                               ? null
-                                              : () {
-                                                  if (_current(
-                                                        generation,
-                                                        repository,
-                                                      ) &&
-                                                      widget.onRestore !=
-                                                          null &&
-                                                      _archived &&
-                                                      restoreGeneration ==
-                                                          _restoreActionGeneration &&
-                                                      _visibleConversation(
-                                                        conversation.id,
-                                                      )) {
-                                                    onRestore?.call(
-                                                      conversation.id,
-                                                    );
-                                                  }
-                                                },
+                                              : () => unawaited(
+                                                  _restore(
+                                                    conversation.id,
+                                                    generation,
+                                                    restoreGeneration,
+                                                    repository,
+                                                  ),
+                                                ),
                                           style: IconButton.styleFrom(
                                             minimumSize: const Size.square(48),
                                           ),
-                                          icon: const Icon(
-                                            Icons.unarchive_outlined,
-                                          ),
+                                          icon: _restoringId == conversation.id
+                                              ? SizedBox.square(
+                                                  dimension: 20,
+                                                  child: CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                    semanticsLabel: l
+                                                        .agentRestoreConversation,
+                                                    semanticsValue:
+                                                        l.agentSaving,
+                                                  ),
+                                                )
+                                              : Icon(
+                                                  Icons.unarchive_outlined,
+                                                  semanticLabel: l
+                                                      .agentRestoreConversation,
+                                                ),
                                         )
                                       : null,
                                 ),

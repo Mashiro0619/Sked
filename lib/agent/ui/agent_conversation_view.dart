@@ -61,6 +61,13 @@ typedef AgentWorkspaceLayoutBuilder = Widget Function(
   Widget Function(bool shrinkWrap) historyBuilder,
 );
 
+typedef _AgentHistorySource = ({
+  ConversationRepository repository,
+  AgentUiDelegate delegate,
+  int generation,
+  String? selectedId,
+});
+
 class AgentConversationView extends StatefulWidget {
   const AgentConversationView({
     super.key,
@@ -129,6 +136,27 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       widget.interactive &&
       ModalRoute.of(context)?.isCurrent != false;
   int _uiGeneration = 0;
+  TransitionRoute<dynamic>? _ownedHistoryRoute;
+
+  void _invalidateUiSource() {
+    _uiGeneration++;
+    _retireHistory();
+  }
+
+  void _retireHistory() {
+    final route = _ownedHistoryRoute;
+    if (route == null) return;
+    _ownedHistoryRoute = null;
+    // Owner changes can arrive while its parent is building. Remove only the
+    // owned drawer after that frame, leaving any newer route above it intact.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final navigator = route.navigator;
+      if (navigator != null && navigator.mounted && route.isActive) {
+        navigator.removeRoute(route);
+      }
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
 
   bool _uiSessionCurrent(int generation, String? conversationId) =>
       _uiActive &&
@@ -388,8 +416,10 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   void didUpdateWidget(AgentConversationView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if ((oldWidget.active && !widget.active) ||
-        (oldWidget.interactive && !widget.interactive)) {
-      _uiGeneration++;
+        (oldWidget.interactive && !widget.interactive) ||
+        !identical(oldWidget.repository, widget.repository) ||
+        !identical(oldWidget.delegate, widget.delegate)) {
+      _invalidateUiSource();
     }
     if (!widget.active) {
       _hostActive = false;
@@ -421,6 +451,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
 
   @override
   void dispose() {
+    _invalidateUiSource();
     _repository.removeListener(_changed);
     widget.delegate.state.removeListener(_changed);
     widget.binaryAttachments?.removeListener(_changed);
@@ -448,7 +479,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     }
     final selected = _repository.selected;
     if (_shownId != selected?.id) {
-      _uiGeneration++;
+      _invalidateUiSource();
       _attachmentTooLarge = false;
       _attachmentFailed = false;
       _binaryAttachmentError = null;
@@ -952,38 +983,64 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     Widget? header,
     bool shrinkWrap = false,
     bool active = true,
-    bool Function()? isCurrent,
-  }) => AgentConversationList(
+    _AgentHistorySource? source,
+  }) {
+    final owner = source ?? _historySource;
+    final repository = owner.repository;
+    final delegate = owner.delegate;
+    final state = delegate.state.value;
+    return AgentConversationList(
+      repository: repository,
+      onSelected: onSelected,
+      active: widget.active && active,
+      interactive: widget.interactive && !state.maintenance,
+      interactionRevision: owner.generation,
+      // A standalone drawer lives on another route and may outlive a rebuild of
+      // its parent. Bind it to the source without requiring that parent route to
+      // be current while the drawer or its own menu is open.
+      isOwnerCurrent: () => _historySourceCurrent(owner),
+      onRecover: widget.recoverConversations,
+      onNewConversation:
+          widget.active &&
+              active &&
+              widget.interactive &&
+              repository.canWrite &&
+              state.enabled &&
+              !state.maintenance &&
+              !_busy.contains('new')
+          ? (onNewConversation ?? () => unawaited(_newConversation()))
+          : null,
+      header: header,
+      shrinkWrap: shrinkWrap,
+      onRestore:
+          widget.active &&
+              active &&
+              widget.interactive &&
+              (repository.canWrite ||
+                  (repository.blocked &&
+                      widget.recoverConversations != null)) &&
+              state.enabled &&
+              !state.maintenance
+          ? (id) => delegate.setArchived(id, false)
+          : null,
+    );
+  }
+
+  _AgentHistorySource get _historySource => (
     repository: _repository,
-    onSelected: onSelected,
-    active: widget.active && active,
-    interactive: widget.interactive && !_runtime.maintenance,
-    onNewConversation:
-        widget.active &&
-            active &&
-            widget.interactive &&
-            _repository.canWrite &&
-            _runtime.enabled &&
-            !_runtime.maintenance &&
-            !_busy.contains('new')
-        ? (onNewConversation ?? () => unawaited(_newConversation()))
-        : null,
-    header: header,
-    shrinkWrap: shrinkWrap,
-    onRestore:
-        widget.active &&
-            active &&
-            widget.interactive &&
-            _repository.canWrite &&
-            _runtime.enabled &&
-            !_runtime.maintenance
-        ? (id) => _perform(
-            'archive-$id',
-            () => widget.delegate.setArchived(id, false),
-            isCurrent: isCurrent,
-          )
-        : null,
+    delegate: widget.delegate,
+    generation: _uiGeneration,
+    selectedId: _repository.selectedId,
   );
+
+  bool _historySourceCurrent(_AgentHistorySource source) =>
+      mounted &&
+      widget.active &&
+      widget.interactive &&
+      source.generation == _uiGeneration &&
+      identical(source.repository, _repository) &&
+      identical(source.delegate, widget.delegate) &&
+      source.repository.selectedId == source.selectedId;
 
   Future<void> _newFromResources(WorkspaceResourceScope? resources) async {
     final repository = _repository;
@@ -1011,6 +1068,11 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final conversationId = _repository.selectedId;
     final l = AppLocalizations.of(context);
     final repository = _repository;
+    final historySource = _historySource;
+    final historyChanges = Listenable.merge([
+      repository,
+      historySource.delegate.state,
+    ]);
     final motion = SkedMotionPolicy.of(context);
     final direction = Directionality.of(context);
     var createDraft = false;
@@ -1039,6 +1101,8 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       },
       pageBuilder: (sheetContext, _, _) {
         historyRoute = ModalRoute.of(sheetContext);
+        _ownedHistoryRoute = historyRoute;
+        if (!_historySourceCurrent(historySource)) _retireHistory();
         bool historyCurrent() =>
             mounted &&
             widget.active &&
@@ -1063,44 +1127,48 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                   420.0,
                 ),
                 child: SafeArea(
-                  child: _historyList(
-                    (id) => Navigator.of(sheetContext).pop(id),
-                    onNewConversation: () {
-                      if (!historyCurrent()) return;
-                      createDraft = true;
-                      Navigator.of(sheetContext).pop();
-                    },
-                    isCurrent: historyCurrent,
-                    header: Padding(
-                      padding: const EdgeInsetsDirectional.fromSTEB(
-                        20,
-                        12,
-                        8,
-                        4,
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              l.agentConversations,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(sheetContext)
-                                  .textTheme
-                                  .titleLarge,
+                  child: ListenableBuilder(
+                    listenable: historyChanges,
+                    builder: (_, _) => _historyList(
+                      (id) => Navigator.of(sheetContext).pop(id),
+                      source: historySource,
+                      active: _historySourceCurrent(historySource),
+                      onNewConversation: () {
+                        if (!historyCurrent()) return;
+                        createDraft = true;
+                        Navigator.of(sheetContext).pop();
+                      },
+                      header: Padding(
+                        padding: const EdgeInsetsDirectional.fromSTEB(
+                          20,
+                          12,
+                          8,
+                          4,
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                l.agentConversations,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(sheetContext)
+                                    .textTheme
+                                    .titleLarge,
+                              ),
                             ),
-                          ),
-                          IconButton(
-                            key: const ValueKey('agent-history-close'),
-                            tooltip: l.cancel,
-                            onPressed: () {
-                              if (historyCurrent()) {
-                                Navigator.of(sheetContext).pop();
-                              }
-                            },
-                            icon: const Icon(Icons.close_rounded),
-                          ),
-                        ],
+                            IconButton(
+                              key: const ValueKey('agent-history-close'),
+                              tooltip: l.cancel,
+                              onPressed: () {
+                                if (historyCurrent()) {
+                                  Navigator.of(sheetContext).pop();
+                                }
+                              },
+                              icon: const Icon(Icons.close_rounded),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -1112,6 +1180,9 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       },
     );
     await historyRoute?.completed;
+    if (identical(_ownedHistoryRoute, historyRoute)) {
+      _ownedHistoryRoute = null;
+    }
     if (_uiSessionCurrent(uiGeneration, conversationId) &&
         identical(repository, _repository)) {
       if (createDraft &&
