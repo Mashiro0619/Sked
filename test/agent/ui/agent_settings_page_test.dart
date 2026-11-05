@@ -667,7 +667,17 @@ void main() {
         await tap(tester, key('agent-settings-connection'));
         await tap(tester, key('agent-configured-model-model-a'));
         final choices = key('agent-model-effort-choices');
-        expect(tester.getSize(choices).height, lessThan(7 * 48));
+        const effortNames = [
+          'None',
+          'Minimal',
+          'Low',
+          'Medium',
+          'High',
+          'XHigh',
+          'Max',
+        ];
+        final l = AppLocalizations.of(tester.element(choices));
+        expect(find.text(l.agentAllowedEfforts), findsOneWidget);
         Map<AgentReasoningEffort, Offset> positions() {
           final origin = tester.getTopLeft(choices);
           return {
@@ -679,8 +689,24 @@ void main() {
         }
 
         final before = positions();
+        if (scene.size.width == 320 && scene.scale == 2) {
+          // Full English tier names require one column at this width/scale.
+          expect(
+            before.values.map((offset) => offset.dx).toSet(),
+            hasLength(1),
+          );
+        } else {
+          expect(tester.getSize(choices).height, lessThan(7 * 48));
+        }
         for (final effort in AgentReasoningEffort.values) {
           final chip = key('agent-model-effort-${effort.name}');
+          expect(
+            find.descendant(
+              of: chip,
+              matching: find.text(effortNames[effort.index]),
+            ),
+            findsOneWidget,
+          );
           await reveal(tester, chip);
           final rect = tester.getRect(chip);
           expect(rect.width, greaterThanOrEqualTo(48));
@@ -697,6 +723,13 @@ void main() {
           dropdown,
         );
         expect(field.initialSelection, isNull);
+        expect((field.label as Text).data, l.agentDefaultEffort);
+        expect(
+          field.dropdownMenuEntries.map((entry) => entry.label),
+          AgentReasoningEffort.values
+              .where((effort) => !model.reasoningEfforts.contains(effort))
+              .map((effort) => effortNames[effort.index]),
+        );
         expect(
           field.dropdownMenuEntries.map((entry) => entry.value),
           AgentReasoningEffort.values.where(

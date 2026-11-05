@@ -1,15 +1,16 @@
 import '../../l10n/app_localizations.dart';
 import '../../models/agent_settings.dart';
 
+/// Tier names stay consistent across settings, menus and interface languages.
 String agentReasoningEffortLabel(
-  AppLocalizations l,
+  AppLocalizations _,
   AgentReasoningEffort effort,
 ) => switch (effort) {
-  AgentReasoningEffort.none => l.agentEffortNone,
-  AgentReasoningEffort.minimal => l.agentEffortMinimal,
-  AgentReasoningEffort.low => l.agentEffortLow,
-  AgentReasoningEffort.medium => l.agentEffortMedium,
-  AgentReasoningEffort.high => l.agentEffortHigh,
-  AgentReasoningEffort.xhigh => l.agentEffortXhigh,
-  AgentReasoningEffort.max => l.agentEffortMax,
+  AgentReasoningEffort.none => 'None',
+  AgentReasoningEffort.minimal => 'Minimal',
+  AgentReasoningEffort.low => 'Low',
+  AgentReasoningEffort.medium => 'Medium',
+  AgentReasoningEffort.high => 'High',
+  AgentReasoningEffort.xhigh => 'XHigh',
+  AgentReasoningEffort.max => 'Max',
 };
