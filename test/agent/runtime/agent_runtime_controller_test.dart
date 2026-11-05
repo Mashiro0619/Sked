@@ -61,6 +61,196 @@ void main() {
   registerUsageTests();
   registerReplyRegenerationTests();
   registerQueueOwnershipTests();
+
+  for (final budget in ['tool', 'total']) {
+    testWidgets(
+      '$budget deadline preserves execution time across a long approval',
+      (tester) async {
+        final beforeApproval = Completer<void>();
+        var entered = false;
+        var resumed = false;
+        final h = await _Harness.create(
+          stopwatchFactory: tester.binding.clock.stopwatch,
+          limits: AgentRuntimeLimits(
+            toolTimeout: Duration(minutes: budget == 'tool' ? 1 : 5),
+            totalTimeout: Duration(minutes: budget == 'total' ? 1 : 5),
+          ),
+          handler: (_, _) => _events(_response('', calls: [_call('approval')])),
+          execute: (_, scope, requestApproval) async {
+            entered = true;
+            await beforeApproval.future;
+            final approval = await requestApproval(_Plan('long-review'));
+            scope.checkMutation(
+              planId: 'long-review',
+              approval: approval,
+              consumeApproval: true,
+            );
+            resumed = true;
+            await scope.whenCancelled;
+            return {'status': 'not_executed'};
+          },
+        );
+        addTearDown(h.dispose);
+        final send = h.runtime.send(h.id, 'Review these dates');
+        await tester.pump();
+        expect(
+          entered,
+          isTrue,
+          reason: h.runtime.state.value.runFor(h.id).errorMessage,
+        );
+        await tester.pump(const Duration(seconds: 40));
+        beforeApproval.complete();
+        await tester.pump();
+        expect(
+          h.runtime.state.value.runFor(h.id).phase,
+          AgentUiPhase.waitingApproval,
+        );
+        await tester.pump(const Duration(minutes: 20));
+        expect(
+          h.runtime.state.value.runFor(h.id).pendingApproval?.id,
+          'long-review',
+        );
+        await h.runtime.approve(h.id, 'long-review');
+        await tester.pump();
+        expect(resumed, isTrue);
+        await tester.pump(const Duration(seconds: 19));
+        expect(h.runtime.isRunning(h.id), isTrue);
+        expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
+        await tester.pump(const Duration(seconds: 1));
+        await send;
+        expect(
+          h.runtime.state.value.runFor(h.id).errorMessage,
+          budget == 'tool' ? 'toolTimeout' : 'timeout',
+        );
+        expect(h.runtime.isRunning(h.id), isFalse);
+      },
+    );
+  }
+
+  for (final decision in ['approve', 'reject', 'stop']) {
+    testWidgets('long business approval still supports $decision', (
+      tester,
+    ) async {
+      var round = 0;
+      var commits = 0;
+      final h = await _Harness.create(
+        stopwatchFactory: tester.binding.clock.stopwatch,
+        handler: (_, _) => _events(
+          round++ == 0
+              ? _response('', calls: [_call('approval')])
+              : _response('done'),
+        ),
+        execute: (_, scope, requestApproval) async {
+          final approval = await requestApproval(_Plan('long-review'));
+          scope.checkMutation(
+            planId: 'long-review',
+            approval: approval,
+            consumeApproval: true,
+          );
+          commits++;
+          return {'status': 'committed'};
+        },
+      );
+      addTearDown(h.dispose);
+      final send = h.runtime.send(h.id, 'Review every changed date');
+      await tester.pump();
+      expect(
+        h.runtime.state.value.runFor(h.id).phase,
+        AgentUiPhase.waitingApproval,
+        reason: h.runtime.state.value.runFor(h.id).errorMessage,
+      );
+      await tester.pump(const Duration(minutes: 20));
+      expect(
+        h.runtime.state.value.runFor(h.id).pendingApproval?.id,
+        'long-review',
+      );
+      switch (decision) {
+        case 'approve':
+          await h.runtime.approve(h.id, 'long-review');
+        case 'reject':
+          await h.runtime.reject(h.id, 'long-review');
+        case 'stop':
+          await h.runtime.stop(h.id);
+      }
+      await tester.pump();
+      await send;
+      await h.runtime.waitForIdle();
+      expect(commits, decision == 'approve' ? 1 : 0);
+      expect(h.runtime.isRunning(h.id), isFalse);
+      expect(
+        h.runtime.state.value.runFor(h.id).errorMessage,
+        isNot(anyOf('timeout', 'toolTimeout')),
+      );
+    });
+  }
+
+  for (final stopped in [false, true]) {
+    testWidgets(
+      'HTTP approval pauses total budget and ${stopped ? 'can stop' : 'can send'}',
+      (tester) async {
+        final h = await _Harness.create(
+          stopwatchFactory: tester.binding.clock.stopwatch,
+        );
+        addTearDown(h.dispose);
+        h.settings = h.settings.copyWith(endpoint: 'http://model.example/v1');
+        final send = h.runtime.send(h.id, 'Review HTTP transport');
+        await tester.pump();
+        final approval = h.runtime.state.value.runFor(h.id).pendingApproval!;
+        expect(approval.details['kind'], 'httpTransport');
+        await tester.pump(const Duration(minutes: 20));
+        expect(h.provider.requests, isEmpty);
+        expect(
+          h.runtime.state.value.runFor(h.id).pendingApproval?.id,
+          approval.id,
+        );
+        if (stopped) {
+          await h.runtime.stop(h.id);
+        } else {
+          await h.runtime.approve(h.id, approval.id);
+        }
+        await tester.pump();
+        await send;
+        expect(h.provider.requests, hasLength(stopped ? 0 : 1));
+        expect(h.runtime.isRunning(h.id), isFalse);
+        expect(
+          h.runtime.state.value.runFor(h.id).errorMessage,
+          isNot(anyOf('timeout', 'toolTimeout')),
+        );
+      },
+    );
+  }
+
+  testWidgets('host action approval pauses its execution deadline', (
+    tester,
+  ) async {
+    final h = await _Harness.create(
+      stopwatchFactory: tester.binding.clock.stopwatch,
+    );
+    addTearDown(h.dispose);
+    final action = h.runtime.runHostAction(h.id, (
+      scope,
+      requestApproval,
+    ) async {
+      final approval = await requestApproval(_Plan('host-review'));
+      scope.checkMutation(
+        planId: 'host-review',
+        approval: approval,
+        consumeApproval: true,
+      );
+      return {'status': 'committed'};
+    });
+    await tester.pump();
+    await tester.pump(const Duration(minutes: 20));
+    expect(
+      h.runtime.state.value.runFor(h.id).pendingApproval?.id,
+      'host-review',
+    );
+    await h.runtime.approve(h.id, 'host-review');
+    await tester.pump();
+    expect((await action)['status'], 'committed');
+    expect(h.provider.requests, isEmpty);
+    expect(h.runtime.state.value.runFor(h.id).phase, AgentUiPhase.idle);
+  });
   test('unsent input and request preferences remain volatile until runtime acceptance', () async {
     final entered = Completer<void>();
     final stream = StreamController<ProviderEvent>();
@@ -3895,7 +4085,7 @@ class _FakeProvider extends ProviderClient {
     required String apiKey,
     ProviderCancellationToken? cancellation,
   }) {
-    expect(apiKey, expectedApiKey);
+    expectSync(apiKey, expectedApiKey);
     requests.add(request);
     return handler(request, cancellation);
   }
@@ -3941,6 +4131,7 @@ class _Harness {
     _Handler? handler,
     AgentToolExecutor? execute,
     AgentRuntimeLimits limits = const AgentRuntimeLimits(),
+    Stopwatch Function()? stopwatchFactory,
     Future<String> Function(AgentSettings)? readKey,
     List<ToolDefinition> Function(OperationScope)? readTools,
     void Function(OperationScope)? onRunSettled,
@@ -4005,6 +4196,7 @@ class _Harness {
       onRunSettled: onRunSettled,
       readOperationReceipt: readOperationReceipt,
       limits: limits,
+      stopwatchFactory: stopwatchFactory,
       idGenerator: () => 'run-or-message-${id++}',
     );
     return harness;

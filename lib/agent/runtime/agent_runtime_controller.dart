@@ -115,8 +115,10 @@ class AgentRuntimeController implements AgentUiDelegate {
     this.approvalSummary = _defaultApprovalSummary,
     this.limits = const AgentRuntimeLimits(),
     DateTime Function()? clock,
+    Stopwatch Function()? stopwatchFactory,
     String Function()? idGenerator,
   }) : _clock = clock ?? DateTime.now,
+       _newStopwatch = stopwatchFactory ?? Stopwatch.new,
        _id = idGenerator ?? generateUuidV4 {
     if ([
           limits.maxModelRounds,
@@ -155,6 +157,7 @@ class AgentRuntimeController implements AgentUiDelegate {
   final String Function(ApprovalPlan plan) approvalSummary;
   final AgentRuntimeLimits limits;
   final DateTime Function() _clock;
+  final Stopwatch Function() _newStopwatch;
   final String Function() _id;
   final _state = ValueNotifier(AgentUiState());
   final _runs = <String, _Run>{};
@@ -560,9 +563,10 @@ class AgentRuntimeController implements AgentUiDelegate {
       ConversationToolUsage(id: callId, name: 'host.action'),
     );
     _runs[conversationId] = run;
-    run.deadline = Timer(
+    run.deadline = _ExecutionDeadline(
       limits.toolTimeout,
       () => _cancel(run, AgentRuntimeError.toolTimeout),
+      _newStopwatch(),
     );
     _setDisplay(run, const AgentUiRunState(phase: AgentUiPhase.running));
     try {
@@ -982,9 +986,10 @@ class AgentRuntimeController implements AgentUiDelegate {
     }
     _runs[conversationId] = run;
     onRunCreated?.call(run);
-    run.deadline = Timer(
+    run.deadline = _ExecutionDeadline(
       limits.totalTimeout,
       () => _cancel(run, AgentRuntimeError.timeout),
+      _newStopwatch(),
     );
     _setDisplay(run, const AgentUiRunState(phase: AgentUiPhase.running));
     try {
@@ -1206,10 +1211,12 @@ class AgentRuntimeController implements AgentUiDelegate {
           Map<String, Object?> result;
           Object? toolFailure;
           var invoked = false;
-          final toolDeadline = Timer(
+          final toolDeadline = _ExecutionDeadline(
             limits.toolTimeout,
             () => _cancel(run, AgentRuntimeError.toolTimeout),
+            _newStopwatch(),
           );
+          run.toolDeadline = toolDeadline;
           try {
             _checkRun(run);
             if (run.recoveryRequired && !isAgentRecoveryRead(call.name)) {
@@ -1243,6 +1250,7 @@ class AgentRuntimeController implements AgentUiDelegate {
             result = _toolFailureResult(error, run.apiKey);
           } finally {
             toolDeadline.cancel();
+            run.toolDeadline = null;
           }
           // An already accepted write is awaited and its real result saved
           // even if Stop was pressed while the host was committing it.
@@ -1908,18 +1916,15 @@ class AgentRuntimeController implements AgentUiDelegate {
       });
       _rejectSecretValues(details, run.apiKey);
       pending.presented = true;
-      _setDisplay(
+      return await _waitForApproval(
         run,
-        AgentUiRunState(
-          phase: AgentUiPhase.waitingApproval,
-          pendingApproval: AgentUiApproval(
-            id: plan.id,
-            summary: approvalSummary(plan),
-            details: details,
-          ),
+        AgentUiApproval(
+          id: plan.id,
+          summary: approvalSummary(plan),
+          details: details,
         ),
+        pending.result.future,
       );
-      return await pending.result.future;
     } finally {
       if (identical(run.approval, pending)) run.approval = null;
       if (repository.find(run.conversationId) != null && repository.canWrite) {
@@ -1962,19 +1967,16 @@ class AgentRuntimeController implements AgentUiDelegate {
         path: run.endpoint.path,
       ).toString();
       pending.presented = true;
-      _setDisplay(
+      final approved = await _waitForApproval(
         run,
-        AgentUiRunState(
-          phase: AgentUiPhase.waitingApproval,
-          pendingApproval: AgentUiApproval(
-            id: pending.id,
-            summary:
-                'Allow sending this conversation and API credential over HTTP?',
-            details: {'kind': 'httpTransport', 'endpoint': endpoint},
-          ),
+        AgentUiApproval(
+          id: pending.id,
+          summary:
+              'Allow sending this conversation and API credential over HTTP?',
+          details: {'kind': 'httpTransport', 'endpoint': endpoint},
         ),
+        pending.result.future,
       );
-      final approved = await pending.result.future;
       _checkRun(run);
       if (run.scope.policy.mode == AgentPermissionMode.full) return true;
       if (!approved) {
@@ -2014,6 +2016,32 @@ class AgentRuntimeController implements AgentUiDelegate {
       _httpTransportGrants.contains(
         _transportConnection(run.settings, run.endpoint),
       );
+
+  Future<T> _waitForApproval<T>(
+    _Run run,
+    AgentUiApproval approval,
+    Future<T> decision,
+  ) async {
+    // Only the displayed user's decision is outside execution budgets. Loading,
+    // saving and applying the plan keep consuming their original remaining time.
+    run.deadline?.pause();
+    run.toolDeadline?.pause();
+    try {
+      _setDisplay(
+        run,
+        AgentUiRunState(
+          phase: AgentUiPhase.waitingApproval,
+          pendingApproval: approval,
+        ),
+      );
+      return await decision;
+    } finally {
+      if (!run.scope.isCancelled && run.stopReason == null) {
+        run.deadline?.resume();
+        run.toolDeadline?.resume();
+      }
+    }
+  }
 
   @override
   Future<void> approve(String conversationId, String planId) async {
@@ -2330,6 +2358,8 @@ class AgentRuntimeController implements AgentUiDelegate {
 
   void _cancel(_Run run, AgentRuntimeError reason) {
     run.stopReason ??= reason;
+    run.deadline?.cancel();
+    run.toolDeadline?.cancel();
     run.scope.cancel();
     run.cancellation.cancel();
     _finishApproval(run);
@@ -2644,13 +2674,49 @@ class _Run {
   bool outcomeUnknown = false;
   bool recoveryRequired = false;
   String? hostToolCallId;
-  Timer? deadline;
+  _ExecutionDeadline? deadline;
+  _ExecutionDeadline? toolDeadline;
   String apiKey = '';
   int totalTokens = 0;
   int toolCalls = 0;
   AgentRuntimeError? stopReason;
   _PendingApproval? approval;
   _PendingHttpTransport? httpApproval;
+}
+
+/// Counts only active execution with a monotonic clock. Pausing never renews
+/// the budget, and cancellation permanently prevents a late approval rearming it.
+class _ExecutionDeadline {
+  _ExecutionDeadline(this.limit, this.onTimeout, this.elapsed) {
+    resume();
+  }
+
+  final Duration limit;
+  final void Function() onTimeout;
+  final Stopwatch elapsed;
+  Timer? _timer;
+  bool _cancelled = false;
+
+  void pause() {
+    _timer?.cancel();
+    _timer = null;
+    elapsed.stop();
+  }
+
+  void resume() {
+    if (_cancelled || _timer != null) return;
+    final remaining = limit - elapsed.elapsed;
+    elapsed.start();
+    _timer = Timer(remaining > Duration.zero ? remaining : Duration.zero, () {
+      cancel();
+      onTimeout();
+    });
+  }
+
+  void cancel() {
+    _cancelled = true;
+    pause();
+  }
 }
 
 ConversationTokenUsage? _reportedUsage(ProviderUsage? value) => value == null
