@@ -78,6 +78,8 @@ Windows 中，Agent 自有的纯文本选择区域在同一个只读语义节点
 
 ## 验证入口
 
+- [Windows 主界面、活动详情与分层设置原生验证](AGENT_NATIVE_UI.md)
+
 界面回归包括 Markdown 与代码复制、禁止自动加载远程图片、向上阅读时收到流式内容、输入焦点和选择保持、输入法组合期间阻止快捷发送、历史抽屉搜索、模型选择以及不同宽度／字号下从侧边导航进入完整页面与返回工作区：
 
 - [对话界面回归](../test/agent/ui/agent_conversation_view_test.dart)
