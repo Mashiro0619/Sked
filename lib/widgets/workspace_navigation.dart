@@ -13,6 +13,7 @@ import '../controllers/settings_commands.dart';
 import '../controllers/settings_view_state.dart';
 import '../controllers/workspace_commands.dart';
 import '../controllers/workspace_view_state.dart';
+import '../services/desktop_window_bridge.dart';
 import '../models/timetable_models.dart';
 import '../providers/app_scope.dart';
 import '../l10n/app_localizations.dart';
@@ -306,6 +307,21 @@ class WorkspaceResourcePanel extends StatelessWidget {
           if (constraints.maxWidth < compactWidth) {
             return const SizedBox.shrink();
           }
+          final reserveCaption =
+              m.desktop &&
+              DesktopWindowBridge.instance.available &&
+              !drawer &&
+              Directionality.of(context) == TextDirection.rtl;
+          final captionInHeader =
+              reserveCaption &&
+              constraints.maxWidth >= m.captionWidth + compactWidth;
+          final topInset = reserveCaption && !captionInHeader
+              ? m.toolbarHeight
+              : 0.0;
+          final contentHeight = (constraints.maxHeight - topInset).clamp(
+            0.0,
+            double.infinity,
+          );
           // Read the *animated* width, not just the target layout. All icons
           // keep one slot and one row height throughout the transition.
           final progress =
@@ -334,6 +350,7 @@ class WorkspaceResourcePanel extends StatelessWidget {
               child: DesktopDragRegion(
                 child: Row(
                   children: [
+                    if (captionInHeader) const DesktopCaptionSpacer(),
                     SizedBox(
                       width: compactWidth,
                       child: Center(
@@ -371,8 +388,13 @@ class WorkspaceResourcePanel extends StatelessWidget {
                       ),
                     ),
                     Expanded(
-                      child: label(
-                        Align(
+                      child: _ResourcePaneReveal(
+                        width:
+                            expandedWidth -
+                            compactWidth -
+                            (captionInHeader ? m.captionWidth : 0),
+                        opacity: labelOpacity,
+                        child: Align(
                           alignment: AlignmentDirectional.centerStart,
                           child: Text(
                             l.appTitle,
@@ -673,29 +695,36 @@ class WorkspaceResourcePanel extends StatelessWidget {
                   if (includeSettings) settings,
                 ],
               );
-          if (constraints.maxHeight < settingsExtent + m.resourceRowHeight) {
+          final Widget content;
+          if (contentHeight < settingsExtent + m.resourceRowHeight) {
             // At extreme heights the complete column must scroll so neither
             // Settings nor the navigation above it loses its touch viewport.
-            return scrollingNavigation(includeSettings: true);
-          }
-          if (constraints.maxHeight < fixedExtent + m.resourceRowHeight) {
+            content = scrollingNavigation(includeSettings: true);
+          } else if (contentHeight < fixedExtent + m.resourceRowHeight) {
             // Budget every visible mode, Agent and resource heading before
             // reserving a resource row. Settings remains anchored when it fits.
-            return Column(
+            content = Column(
               children: [
                 Expanded(child: scrollingNavigation()),
                 settings,
               ],
             );
+          } else {
+            content = Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                header,
+                ...navigation,
+                Expanded(child: resources()),
+                settings,
+              ],
+            );
           }
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              header,
-              ...navigation,
-              Expanded(child: resources()),
-              settings,
-            ],
+          // Keep narrow-pane clearance outside every scroll viewport so a
+          // scrolled header cannot move back beneath native window controls.
+          return Padding(
+            padding: EdgeInsets.only(top: topInset),
+            child: content,
           );
         },
       ),

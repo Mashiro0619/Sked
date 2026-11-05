@@ -71,6 +71,10 @@ Future<void> _openShellResources(WidgetTester tester) async {
   await tester.pump();
 }
 
+/// Opens the actual navigation entry, including a narrow desktop More menu.
+Future<void> openWorkspaceShellResources(WidgetTester tester) =>
+    _openShellResources(tester);
+
 /// Operates the product's bottom bar, rail or main resource drawer.
 Future<void> selectAgentShellDestination(
   WidgetTester tester,
