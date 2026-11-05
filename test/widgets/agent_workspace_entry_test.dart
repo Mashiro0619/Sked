@@ -652,12 +652,8 @@ void main() {
         expect(find.byType(AgentAssistantPane), findsNothing);
         final entry = _key('workspace-agent-entry');
         if (!desktop) expect(entry, findsNothing);
-        if (entry.evaluate().isEmpty) {
-          await tester.tap(_key('workspace-main-navigation'));
-          await tester.pumpAndSettle();
-        }
-        expect(entry, findsOneWidget);
-        await tester.tap(entry);
+        if (desktop) expect(entry, findsOneWidget);
+        await selectAgentShellDestination(tester, 'agent');
         await tester.pumpAndSettle();
         expect(find.byType(AssistantPreviewPane), findsNothing);
         expect(find.byType(AgentPage), findsOneWidget);

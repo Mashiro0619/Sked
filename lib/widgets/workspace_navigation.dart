@@ -284,10 +284,13 @@ class WorkspaceResourcePanel extends StatelessWidget {
       );
     }
 
+    // A visible bar/rail already owns top-level navigation. Its resource drawer
+    // focuses on the current workspace; a hidden bar still needs the fallback.
+    final showDestinations = (scope?.integrated ?? true) || preferences.hidden;
     final showModes =
         workspace.enabledWorkspaces.length + (agentEnabled ? 1 : 0) > 1 &&
         (drawer || !preferences.hidden) &&
-        (drawer || (scope?.integrated ?? true));
+        showDestinations;
     final factor = WorkbenchLayoutPolicy.textFactor(m.textScale);
     final compactWidth =
         (m.desktop
@@ -497,7 +500,7 @@ class WorkspaceResourcePanel extends StatelessWidget {
                   onTap: enabled ? () => selectWorkspace(context, mode) : null,
                 ),
             ],
-            if (agentEnabled)
+            if (agentEnabled && showDestinations)
               navigationAction(
                 id: 'workspace-agent-entry',
                 title: l.agentTitle,
