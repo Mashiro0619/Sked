@@ -130,6 +130,54 @@ void main() {
     configureHost();
   });
 
+  for (final reused in [true, false]) {
+    test(
+      'approval references freeze the exact ${reused ? 'reused' : 'created'} period set',
+      () async {
+        final existing = session.data.studentMode.periodTimeSets.first;
+        final summary = await call('imports.prepare', {
+          'action': 'create',
+          'candidate': _candidate(),
+          if (reused) 'periodTimeSetId': existing.id,
+        });
+        final plan = host.mutations.plan(summary['planId'] as String)!;
+        final preview = plan.referencePreview();
+        final sets = preview['periodTimeSets'] as Map;
+        expect(sets, hasLength(1));
+        final reference = sets.values.single as Map;
+        final value = reference['value'] as Map;
+        expect(reference['status'], reused ? 'reused' : 'created');
+        expect(value['name'], reused ? existing.name : 'School periods');
+        expect(
+          value['periodTimes'],
+          reused
+              ? existing.toJson()['periodTimes']
+              : (_candidate()['periodTimeSet'] as Map)['periodTimes'],
+        );
+        if (reused) expect(sets.keys.single, existing.id);
+        expect(
+          summary.containsKey('references'),
+          isFalse,
+          reason: 'Review context is not appended to the model reply.',
+        );
+        expect(() => value['name'] = 'Mutated preview', throwsUnsupportedError);
+        final frozen = jsonEncode(preview);
+        session.replaceData(
+          session.data.copyWith(
+            studentMode: session.data.studentMode.copyWith(
+              periodTimeSets: [
+                for (final set in session.data.studentMode.periodTimeSets)
+                  set.copyWith(name: 'Changed after preparation'),
+              ],
+            ),
+          ),
+        );
+        expect(jsonEncode(plan.referencePreview()), frozen);
+        expect(storage.saves, 0);
+      },
+    );
+  }
+
   test('a complete parent and children save once and undo together', () async {
     final before = storage.data.toJson();
     final originalActive = storage.data.studentMode.activeTimetableId;

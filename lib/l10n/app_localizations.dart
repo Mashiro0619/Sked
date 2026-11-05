@@ -7793,6 +7793,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Import JSON'**
   String get timetableImportJsonAction;
+
+  /// No description provided for @agentReusePeriodTimeSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Reuse existing period times'**
+  String get agentReusePeriodTimeSet;
 }
 
 class _AppLocalizationsDelegate

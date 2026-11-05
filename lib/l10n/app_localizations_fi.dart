@@ -4396,4 +4396,7 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get timetableImportJsonAction => 'Import JSON';
+
+  @override
+  String get agentReusePeriodTimeSet => 'Reuse existing period times';
 }

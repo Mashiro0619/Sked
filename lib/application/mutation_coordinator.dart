@@ -16,7 +16,7 @@ import 'resource_mutations.dart';
 import 'mutation_read_set.dart';
 import 'setting_registry.dart';
 
-class PreparedMutation implements ApprovalPlan {
+class PreparedMutation implements ApprovalPlan, ApprovalReferencePreview {
   PreparedMutation._({
     required this.id,
     required this.operationId,
@@ -60,6 +60,41 @@ class PreparedMutation implements ApprovalPlan {
   List<String> get readSet => _rebase?.reads.keys ?? const ['snapshot'];
   List<String> get writeSet =>
       List.unmodifiable(changes.map((item) => item.key));
+
+  @override
+  Map<String, Object?> referencePreview() {
+    final ids = <String>{};
+    for (final change in changes) {
+      if (change.ref?.kind != ResourceKind.timetable) continue;
+      final after = change.after;
+      if (after is! Map) continue;
+      final config = after['config'];
+      if (config is Map && config['periodTimeSetId'] is String) {
+        ids.add(config['periodTimeSetId'] as String);
+      }
+    }
+    if (ids.isEmpty) return const {};
+    final setChanges = {
+      for (final change in changes)
+        if (change.ref?.kind == ResourceKind.periodTimeSet)
+          change.ref!.id: change,
+    };
+    // Read the prepared candidate, never a later app snapshot or active set.
+    return immutableMutationJson({
+      'periodTimeSets': {
+        for (final set in _candidate.studentMode.periodTimeSets)
+          if (ids.contains(set.id))
+            set.id: {
+              'status': !setChanges.containsKey(set.id)
+                  ? 'reused'
+                  : setChanges[set.id]!.before == null
+                  ? 'created'
+                  : 'updated',
+              'value': set.toJson(),
+            },
+      },
+    }) as Map<String, Object?>;
+  }
 
   @override
   Map<String, Object?> summary() => {

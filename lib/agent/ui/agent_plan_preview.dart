@@ -81,7 +81,14 @@ class _AgentPlanPreviewState extends State<AgentPlanPreview> {
                   ? l.delete
                   : l.agentKnowledgeEdit,
             ),
-            children: [AgentChangeFields(change: change)],
+            children: [
+              AgentChangeFields(
+                change: change,
+                references: widget.details['references'] is Map
+                    ? widget.details['references'] as Map
+                    : const {},
+              ),
+            ],
           ),
         if (_shown < changes.length)
           TextButton(

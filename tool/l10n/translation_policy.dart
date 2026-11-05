@@ -33,6 +33,7 @@ const offeredLocaleCodes = <String>{
 /// time. Removing a locale entry prevents a copied English sentence going stale.
 const commonEnglishFallbacks = <String>{
   'importTimetableText',
+  'agentReusePeriodTimeSet',
   'timetableImportJsonAction',
   'timetableImportTextContent',
   'importTimetableTextDesc',

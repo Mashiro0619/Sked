@@ -4102,6 +4102,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get timetableImportJsonAction => '导入 JSON';
+
+  @override
+  String get agentReusePeriodTimeSet => '复用已有作息';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -8204,4 +8207,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get timetableImportJsonAction => '匯入 JSON';
+
+  @override
+  String get agentReusePeriodTimeSet => '複用既有作息';
 }

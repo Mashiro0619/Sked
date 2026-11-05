@@ -1915,6 +1915,8 @@ class AgentRuntimeController implements AgentUiDelegate {
       final details = freezeProviderMap({
         ...plan.summary(),
         'changes': [for (final change in plan.changes) change.toJson()],
+        if (plan case final ApprovalReferencePreview preview)
+          'references': preview.referencePreview(),
       });
       _rejectSecretValues(details, run.apiKey);
       pending.presented = true;

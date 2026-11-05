@@ -129,9 +129,15 @@ Map<String, String> agentReadableFields(BuildContext context, Map value) {
 
 /// The human-readable difference is primary; full native JSON stays inspectable.
 class AgentChangeFields extends StatefulWidget {
-  const AgentChangeFields({super.key, required this.change, this.depth = 0});
+  const AgentChangeFields({
+    super.key,
+    required this.change,
+    this.depth = 0,
+    this.references = const {},
+  });
   final Map change;
   final int depth;
+  final Map references;
 
   @override
   State<AgentChangeFields> createState() => _AgentChangeFieldsState();
@@ -197,7 +203,11 @@ class _AgentChangeFieldsState extends State<AgentChangeFields> {
         }
       }
     }
-    if (labels.isEmpty && nested.isEmpty) return raw;
+    final config = after is Map ? after['config'] : null;
+    final periodId = config is Map ? config['periodTimeSetId'] : null;
+    final sets = widget.references['periodTimeSets'];
+    final reference = sets is Map && periodId is String ? sets[periodId] : null;
+    if (labels.isEmpty && nested.isEmpty && periodId == null) return raw;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -225,6 +235,16 @@ class _AgentChangeFieldsState extends State<AgentChangeFields> {
               ],
             ),
           ),
+        if (periodId is String)
+          if (reference is Map &&
+              reference['value'] is Map &&
+              (reference['value'] as Map)['id'] == periodId)
+            _PeriodTimeReference(key: ValueKey(periodId), reference: reference)
+          else
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: AgentSelectableText('${l.periodTimeSets}: $periodId'),
+            ),
         for (final item in nested.take(_shown))
           ExpansionTile(
             tilePadding: EdgeInsets.zero,
@@ -261,5 +281,61 @@ class _AgentChangeFieldsState extends State<AgentChangeFields> {
         : value['index'] is int
         ? l.periodNumberLabel(value['index'] as int)
         : l.agentPlanDetails;
+  }
+}
+
+class _PeriodTimeReference extends StatefulWidget {
+  const _PeriodTimeReference({super.key, required this.reference});
+  final Map reference;
+  @override
+  State<_PeriodTimeReference> createState() => _PeriodTimeReferenceState();
+}
+
+class _PeriodTimeReferenceState extends State<_PeriodTimeReference> {
+  var _shown = 20;
+  @override
+  void didUpdateWidget(_PeriodTimeReference oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.reference, widget.reference)) _shown = 20;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final value = widget.reference['value'] as Map;
+    final periods = (value['periodTimes'] as List? ?? const [])
+        .whereType<Map>()
+        .toList();
+    return ExpansionTile(
+      tilePadding: EdgeInsets.zero,
+      title: Text('${l.periodTimeSets}: ${value['name'] ?? value['id']}'),
+      subtitle: Text(switch (widget.reference['status']) {
+        'created' => l.agentKnowledgeAdd,
+        'updated' => l.agentKnowledgeEdit,
+        _ => l.agentReusePeriodTimeSet,
+      }),
+      children: [
+        for (final period in periods.take(_shown))
+          if (period['index'] is int &&
+              period['startMinutes'] is int &&
+              period['endMinutes'] is int)
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: AgentSelectableText(
+                  '${l.periodNumberLabel(period['index'] as int)} · '
+                  '${formatMinutes(period['startMinutes'] as int)}–'
+                  '${formatMinutes(period['endMinutes'] as int)}',
+                ),
+              ),
+            ),
+        if (periods.length > _shown)
+          TextButton(
+            onPressed: () => setState(() => _shown += 20),
+            child: Text(l.more),
+          ),
+      ],
+    );
   }
 }

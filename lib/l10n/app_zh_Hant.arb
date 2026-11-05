@@ -2884,5 +2884,7 @@
   "timetableImportTextContent": "課表內容",
   "@timetableImportTextContent": {},
   "timetableImportJsonAction": "匯入 JSON",
-  "@timetableImportJsonAction": {}
+  "@timetableImportJsonAction": {},
+  "agentReusePeriodTimeSet": "複用既有作息",
+  "@agentReusePeriodTimeSet": {}
 }

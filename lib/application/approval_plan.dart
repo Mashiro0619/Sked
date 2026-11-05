@@ -6,3 +6,9 @@ abstract interface class ApprovalPlan {
   List<ResourceChange> get changes;
   Map<String, Object?> summary();
 }
+
+/// Optional immutable context for human review. This is separate from the
+/// model-facing summary, mutation payload, persisted receipt and approval ID.
+abstract interface class ApprovalReferencePreview {
+  Map<String, Object?> referencePreview();
+}

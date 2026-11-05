@@ -2952,5 +2952,7 @@
   "timetableImportTextContent": "Timetable content",
   "@timetableImportTextContent": {},
   "timetableImportJsonAction": "Import JSON",
-  "@timetableImportJsonAction": {}
+  "@timetableImportJsonAction": {},
+  "agentReusePeriodTimeSet": "Reuse existing period times",
+  "@agentReusePeriodTimeSet": {}
 }
