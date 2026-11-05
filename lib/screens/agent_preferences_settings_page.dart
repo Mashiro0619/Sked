@@ -67,8 +67,9 @@ class _AgentPreferencesSettingsPageState
   Future<void> _save() async {
     if (_saving ||
         ModalRoute.of(context)?.isCurrent != true ||
-        !_form.currentState!.validate())
+        !_form.currentState!.validate()) {
       return;
+    }
     final application = context.read<AgentApplication>();
     final current = application.settings;
     final l = AppLocalizations.of(context);

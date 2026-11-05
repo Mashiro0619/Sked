@@ -28,17 +28,17 @@ void main() {
           children: [
             AgentMessageActions(
               messageId: 'user',
-              child: body('user'),
               copyText: 'Question',
               isUser: true,
               onEditAndRedo: () => calls.add('edit'),
+              child: body('user'),
             ),
             AgentMessageActions(
               messageId: 'reply',
-              child: body('reply'),
               copyText: 'Answer',
               alwaysVisible: true,
               onRegenerate: () => calls.add('regenerate'),
+              child: body('reply'),
             ),
           ],
         ),
@@ -88,9 +88,9 @@ void main() {
           ),
           AgentMessageActions(
             messageId: 'reply',
-            child: body('reply'),
             copyText: 'Answer',
             onRegenerate: () {},
+            child: body('reply'),
           ),
         ],
       ),
@@ -117,9 +117,9 @@ void main() {
             change = setState;
             return AgentMessageActions(
               messageId: id,
-              child: body(id),
               copyText: 'Reply $id',
               onRegenerate: () => calls.add(id),
+              child: body(id),
             );
           },
         ),
@@ -164,9 +164,9 @@ void main() {
           change = setState;
           return AgentMessageActions(
             messageId: 'reply',
-            child: body('reply'),
             copyText: 'Answer',
             active: active,
+            child: body('reply'),
           );
         },
       ),
@@ -199,12 +199,12 @@ void main() {
             textDirection: direction,
             child: AgentMessageActions(
               messageId: 'reply',
-              child: body('reply'),
               copyText: 'Saved version',
               versionIndex: 1,
               versionCount: 3,
               onVersionSelected: selected.add,
               onRegenerate: () {},
+              child: body('reply'),
             ),
           ),
           size: const Size(320, 740),

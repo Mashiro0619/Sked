@@ -580,8 +580,9 @@ void main() {
               'agent-history-more',
             ]) {
               final finder = _key(id);
-              if (finder.hitTestable().evaluate().isEmpty)
+              if (finder.hitTestable().evaluate().isEmpty) {
                 await tester.ensureVisible(finder);
+              }
               await tester.pumpAndSettle();
               final rect = tester.getRect(finder);
               expect(rect.width, greaterThanOrEqualTo(48));

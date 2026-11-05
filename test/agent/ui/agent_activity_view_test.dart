@@ -62,11 +62,12 @@ void main() {
           ),
           isTrue,
         );
-        if (turns == 1)
+        if (turns == 1) {
           expect(
             find.text('Include tomorrow in the same request.'),
             findsOneWidget,
           );
+        }
         await _tap(tester, _key('agent-activity-toggle-turn-0'));
         expect(_key('agent-activity-list-turn-0'), findsOneWidget);
         expect(
@@ -441,8 +442,9 @@ void main() {
         messenger.setMockMethodCallHandler(SystemChannels.platform, (
           call,
         ) async {
-          if (call.method == 'Clipboard.setData')
+          if (call.method == 'Clipboard.setData') {
             copied.add((call.arguments as Map)['text'] as String);
+          }
           return null;
         });
         addTearDown(

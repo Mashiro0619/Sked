@@ -274,7 +274,7 @@ void main() {
         addTearDown(tester.view.reset);
         await seed(versions: true);
         final operation = Completer<void>();
-        Future<void> regenerate(String _, String __) => operation.future;
+        Future<void> regenerate(String _, String _) => operation.future;
         await mountAgentUi(tester, view(regenerate: regenerate));
         await tester.tap(
           find.byKey(const ValueKey('agent-regenerate-reply-one')),

@@ -405,7 +405,7 @@ class _BlobStorage extends MemoryAttachmentStorage {
 }
 
 class _HeldLengthFile extends XFile {
-  _HeldLengthFile(String name) : super(name, name: name);
+  _HeldLengthFile(super.name) : super(name: name);
   final entered = Completer<void>();
   final release = Completer<void>();
   final bytes = Uint8List.fromList([1, 2, 3]);

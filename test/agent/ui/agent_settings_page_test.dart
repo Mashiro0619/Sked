@@ -101,8 +101,9 @@ void main() {
       if (configured) await app.agent.configure(settings);
     });
     addTearDown(() async {
-      if (storage != null && !storage.resume.isCompleted)
+      if (storage != null && !storage.resume.isCompleted) {
         storage.resume.complete();
+      }
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.runAsync(app.agent.quiesce);
       app.dispose();

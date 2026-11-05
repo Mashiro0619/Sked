@@ -164,8 +164,9 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
   Future<void> _open({KnowledgeRecord? item, required int generation}) async {
     if (_opening ||
         generation != _interactionGeneration ||
-        ModalRoute.of(context)?.isCurrent != true)
+        ModalRoute.of(context)?.isCurrent != true) {
       return;
+    }
     final service = widget.service;
     final kind = widget.kind;
     final pageEditor = widget.pageEditor;
@@ -187,7 +188,7 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
       final record = item == null
           ? null
           : await service.read(item.kind, item.id);
-      if (!current() || !readSession.isCurrent) return;
+      if (!mounted || !current() || !readSession.isCurrent) return;
       _readSession = null;
       _retireUiSession(readSession);
       editorOpened = true;
@@ -206,14 +207,14 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
               barrierDismissible: false,
               builder: (_) => editor,
             );
-      if (!current() || receipt == null) return;
+      if (!mounted || !current() || receipt == null) return;
       final l = AppLocalizations.of(context);
       _showFeedback(
         l.agentKnowledgeSaved,
         undoOperationId: receipt.operationId,
       );
     } catch (_) {
-      if (current() && (editorOpened || readSession.isCurrent)) {
+      if (mounted && current() && (editorOpened || readSession.isCurrent)) {
         _showFeedback(AppLocalizations.of(context).agentKnowledgeStorageFailed);
       }
     } finally {
@@ -232,7 +233,7 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
     try {
       await service.undoFromUi(operationId);
     } catch (_) {
-      if (session.isCurrent) {
+      if (mounted && session.isCurrent) {
         _showFeedback(AppLocalizations.of(context).agentKnowledgeConflict);
       }
     } finally {

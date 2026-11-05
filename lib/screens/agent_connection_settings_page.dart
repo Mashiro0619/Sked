@@ -82,8 +82,9 @@ class _AgentConnectionSettingsPageState
     if (_saving ||
         _diagnosing ||
         ModalRoute.of(context)?.isCurrent != true ||
-        !_form.currentState!.validate())
+        !_form.currentState!.validate()) {
       return;
+    }
     final application = context.read<AgentApplication>();
     final snapshot = application.settings;
     final l = AppLocalizations.of(context);
@@ -141,8 +142,9 @@ class _AgentConnectionSettingsPageState
         generation != _interactionGeneration ||
         ModalRoute.of(context)?.isCurrent != true ||
         !identical(_scopeApplication, application) ||
-        application.settings != expectedSettings)
+        application.settings != expectedSettings) {
       return;
+    }
     if (_diagnosticRequest case final request?) {
       _retireDiagnostic(request, cancel: true);
     }
@@ -186,8 +188,9 @@ class _AgentConnectionSettingsPageState
         _saving ||
         _diagnosing ||
         generation != _interactionGeneration ||
-        ModalRoute.of(context)?.isCurrent != true)
+        ModalRoute.of(context)?.isCurrent != true) {
       return;
+    }
     final application = context.read<AgentApplication>();
     final snapshot = application.settings;
     final route = ModalRoute.of(context);

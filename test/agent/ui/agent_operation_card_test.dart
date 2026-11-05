@@ -244,7 +244,7 @@ void main() {
       (tester) async {
         addTearDown(tester.view.reset);
         final receipt = <String, Object?>{
-          if (status != null) 'status': status,
+          'status': ?status,
           'error': {
             'code': status == 'not_executed' ? 'cancelled' : 'toolFailed',
           },

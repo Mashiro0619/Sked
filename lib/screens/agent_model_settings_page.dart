@@ -72,8 +72,9 @@ class _AgentModelSettingsPageState extends State<AgentModelSettingsPage>
   Future<void> _save({bool remove = false}) async {
     if (_saving ||
         ModalRoute.of(context)?.isCurrent != true ||
-        (!remove && !_form.currentState!.validate()))
+        (!remove && !_form.currentState!.validate())) {
       return;
+    }
     final application = context.read<AgentApplication>();
     final current = application.settings;
     final l = AppLocalizations.of(context);
@@ -209,8 +210,9 @@ class _AgentModelSettingsPageState extends State<AgentModelSettingsPage>
                                 _efforts.add(effort);
                               } else {
                                 _efforts.remove(effort);
-                                if (_defaultEffort == effort)
+                                if (_defaultEffort == effort) {
                                   _defaultEffort = null;
+                                }
                               }
                             }),
                     ),

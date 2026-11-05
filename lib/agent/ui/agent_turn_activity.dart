@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
@@ -226,8 +227,9 @@ class _AgentTurnActivityState extends State<AgentTurnActivity> {
                       borderRadius: BorderRadius.circular(12),
                       onTap: _enabled
                           ? () {
-                              if (!_enabled || generation != _generation)
+                              if (!_enabled || generation != _generation) {
                                 return;
+                              }
                               setState(() {
                                 _generation++;
                                 _expanded = !_expanded;
@@ -401,7 +403,9 @@ class _AgentTurnActivityState extends State<AgentTurnActivity> {
                   : l.agentCopyActivity,
               onPressed: _enabled && !_copying
                   ? () {
-                      if (_enabled && generation == _generation) _copy(tool);
+                      if (_enabled && generation == _generation) {
+                        unawaited(_copy(tool));
+                      }
                     }
                   : null,
               constraints: BoxConstraints.tightFor(

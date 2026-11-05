@@ -707,19 +707,21 @@ class _DiagnosticApplication extends ChangeNotifier
     if (models) {
       final result = catalogs[index].result;
       if (result.isCompleted) return;
-      if (fail)
+      if (fail) {
         result.completeError(StateError('private obsolete diagnostic failure'));
-      else
+      } else {
         result.complete(AgentModelCatalog(models: [model], complete: true));
+      }
     } else {
       final result = probes[index].result;
       if (result.isCompleted) return;
-      if (fail)
+      if (fail) {
         result.completeError(StateError('private obsolete diagnostic failure'));
-      else
+      } else {
         result.complete(
           const AgentConnectionProbeResult(toolCallingObserved: true),
         );
+      }
     }
   }
 

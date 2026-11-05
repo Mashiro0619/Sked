@@ -1269,7 +1269,7 @@ class AgentRuntimeController implements AgentUiDelegate {
             encoded = jsonEncode({
               'status': 'outcome_unknown',
               'error': {'code': 'result_budget_exceeded'},
-              if (safeOperationId != null) 'operationId': safeOperationId,
+              'operationId': ?safeOperationId,
             });
             toolFailure = const AgentRuntimeException(
               AgentRuntimeError.resultBudgetExceeded,

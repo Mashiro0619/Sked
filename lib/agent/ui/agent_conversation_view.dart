@@ -575,8 +575,9 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final generation = _uiGeneration;
     _reading(conversationId).followLatest = false;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_uiSessionCurrent(generation, conversationId) || !_hostActive)
+      if (!_uiSessionCurrent(generation, conversationId) || !_hostActive) {
         return;
+      }
       _transcripts[conversationId]?.currentState?.reveal(
         ValueKey('agent-message-group-$messageId'),
       );
@@ -2038,8 +2039,9 @@ class _AgentConversationViewState extends State<AgentConversationView> {
           ? (next) {
               if (!_uiSessionCurrent(generation, conversation.id) ||
                   next < 0 ||
-                  next >= choices.length)
+                  next >= choices.length) {
                 return;
+              }
               setState(() {
                 _draftBuffer.replyVersions[(conversation.id, message.id)] =
                     choices[next].$1;

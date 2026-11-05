@@ -245,8 +245,9 @@ class _AgentConversationListState extends State<AgentConversationList> {
     final pending = _pendingScrollRestore;
     if (pending == null ||
         _scrollRestoreScheduled ||
-        !_current(_generation, widget.repository))
+        !_current(_generation, widget.repository)) {
       return;
+    }
     final generation = _generation;
     final repository = widget.repository;
     _scrollRestoreScheduled = true;
@@ -510,8 +511,9 @@ class _AgentConversationListState extends State<AgentConversationList> {
                                       ),
                               ),
                               onChanged: (_) {
-                                if (_current(generation, repository))
+                                if (_current(generation, repository)) {
                                   setState(() {});
+                                }
                               },
                             ),
                           ),

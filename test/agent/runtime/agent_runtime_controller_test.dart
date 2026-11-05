@@ -1939,8 +1939,9 @@ void registerQueueOwnershipTests() {
       final validSettings = h.settings;
       void retryOnPreflightFailure() {
         if (retryStarted ||
-            h.runtime.state.value.runFor(h.id).errorMessage != 'unconfigured')
+            h.runtime.state.value.runFor(h.id).errorMessage != 'unconfigured') {
           return;
+        }
         retryStarted = true;
         h.settings = validSettings;
         h.runtime.refreshSettings();
@@ -3867,8 +3868,9 @@ Future<void> _waitStreamingText(_Harness harness, String text) {
   }
   final ready = Completer<void>();
   void changed() {
-    if (harness.runtime.state.value.runFor(harness.id).streamingText != text)
+    if (harness.runtime.state.value.runFor(harness.id).streamingText != text) {
       return;
+    }
     harness.runtime.state.removeListener(changed);
     ready.complete();
   }
@@ -4091,8 +4093,9 @@ class _QueueOwnershipHarness {
         queue._settles++;
         if (queue._closing ||
             queue._reentered ||
-            queue._settles != reenterAfter)
+            queue._settles != reenterAfter) {
           return;
+        }
         queue._reentered = true;
         queue.foreignRun = queue.h.runtime.send(queue.h.id, 'foreign');
       },
