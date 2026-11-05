@@ -21,6 +21,7 @@ import '../widgets/workspace_frame.dart';
 import '../widgets/workspace_navigation.dart';
 import '../widgets/workbench_chrome_metrics.dart';
 import 'agent_settings_page.dart';
+import 'agent_connection_settings_page.dart';
 
 typedef AgentWorkspaceActivator = Future<bool> Function({
   String? conversationId,
@@ -233,11 +234,29 @@ class _AgentConversationHostState extends State<AgentConversationHost> {
     }
   }
 
-  Future<void> _openSettings() async {
-    if (_settingsOpen || !widget.active || !widget.interactive) return;
+  Future<void> _openSettings({bool connectionOnly = false}) async {
+    if (!mounted ||
+        _settingsOpen ||
+        !widget.active ||
+        !widget.interactive ||
+        ModalRoute.of(context)?.isCurrent == false) {
+      return;
+    }
     setState(() => _settingsOpen = true);
     try {
-      await AgentSettingsPage.open(context);
+      if (connectionOnly) {
+        final application = context.read<AgentApplication>();
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute<void>(
+            builder: (_) => ChangeNotifierProvider<AgentApplication>.value(
+              value: application,
+              child: const AgentConnectionSettingsPage(),
+            ),
+          ),
+        );
+      } else {
+        await AgentSettingsPage.open(context);
+      }
     } finally {
       if (mounted) setState(() => _settingsOpen = false);
     }
@@ -426,6 +445,12 @@ class _AgentConversationHostState extends State<AgentConversationHost> {
       operationChanges: application.tools.notificationEffectChanges,
       describeOperation: application.tools.describeCommitResult,
       delegate: delegate,
+      onConfigureConnection: () {
+        if (mounted &&
+            identical(context.read<AgentApplication>(), application)) {
+          unawaited(_openSettings(connectionOnly: true));
+        }
+      },
       onUndoOperation: (conversationId, operationId) async {
         await application.runtime.runHostAction(conversationId, (
           scope,

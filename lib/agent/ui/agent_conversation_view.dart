@@ -81,6 +81,7 @@ class AgentConversationView extends StatefulWidget {
     this.workspaceLayoutBuilder,
     this.modelPickerBuilder,
     this.canSendToModel,
+    this.onConfigureConnection,
     this.operationChanges,
     this.describeOperation,
     this.onUndoOperation,
@@ -109,6 +110,7 @@ class AgentConversationView extends StatefulWidget {
   )?
   modelPickerBuilder;
   final bool Function(String conversationId)? canSendToModel;
+  final VoidCallback? onConfigureConnection;
   final Listenable? operationChanges;
   final Map<String, Object?> Function(Map<String, Object?> receipt)?
   describeOperation;
@@ -136,6 +138,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       widget.interactive &&
       ModalRoute.of(context)?.isCurrent != false;
   int _uiGeneration = 0;
+  int _configurationGeneration = 0;
   TransitionRoute<dynamic>? _ownedHistoryRoute;
 
   void _invalidateUiSource() {
@@ -407,6 +410,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         TickerMode.valuesOf(context).enabled &&
         FocusScope.of(context).canRequestFocus &&
         (ModalRoute.of(context)?.isCurrent ?? true);
+    if (_hostActive && !active) _configurationGeneration++;
     final becameActive = active && !_hostActive;
     _hostActive = active;
     if (becameActive) _restoreReading(_repository.selectedId);
@@ -1333,8 +1337,9 @@ class _AgentConversationViewState extends State<AgentConversationView> {
               if (_exportedId == conversation?.id && _exportedId != null)
                 _notice(l.agentActionApplied),
               if (runtime.enabled && !runtime.configured)
-                _notice(l.agentConfigureFirst),
-              if (conversation == null || conversation.messages.isEmpty)
+                _configurationNotice(l),
+              if ((conversation == null || conversation.messages.isEmpty) &&
+                  !(runtime.enabled && !runtime.configured))
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 24),
                   child: Column(
@@ -1572,6 +1577,46 @@ class _AgentConversationViewState extends State<AgentConversationView> {
           ),
         ) ??
         canvas;
+  }
+
+  Widget _configurationNotice(AppLocalizations l) {
+    final generation = _uiGeneration;
+    final configurationGeneration = _configurationGeneration;
+    final id = _repository.selectedId;
+    final runtime = _runtime;
+    final configure = widget.onConfigureConnection;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: SizedBox(
+        width: double.infinity,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l.agentConfigureFirst),
+            const SizedBox(height: 8),
+            FilledButton.tonalIcon(
+              key: const ValueKey('agent-configure-connection'),
+              onPressed: !_uiActive || runtime.maintenance
+                  ? null
+                  : () {
+                      if (!_uiSessionCurrent(generation, id) ||
+                          configurationGeneration != _configurationGeneration ||
+                          !identical(runtime, _runtime) ||
+                          !identical(configure, widget.onConfigureConnection) ||
+                          !_runtime.enabled ||
+                          _runtime.configured ||
+                          _runtime.maintenance) {
+                        return;
+                      }
+                      (configure ?? widget.delegate.openSettings)();
+                    },
+              icon: const Icon(Icons.hub_outlined),
+              label: Text(l.agentConnectionAndModels),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _notice(String text, {bool error = false}) => Padding(
