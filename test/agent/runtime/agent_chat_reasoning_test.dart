@@ -242,7 +242,7 @@ http.Response _reply({
 }) {
   final message = {
     'content': content,
-    if (reasoning != null) 'reasoning_content': reasoning,
+    'reasoning_content': ?reasoning,
     if (tool)
       'tool_calls': [
         {

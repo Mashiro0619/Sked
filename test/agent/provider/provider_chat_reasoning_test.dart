@@ -42,42 +42,36 @@ void main() {
         };
         final client = ProviderClient(
           client: MockClient((_) async {
+            final frames = [
+              {
+                'choices': [
+                  {
+                    'index': 0,
+                    'delta': {'reasoning_content': 'Synthetic thinking. '},
+                  },
+                ],
+              },
+              {
+                'choices': [
+                  {
+                    'index': 0,
+                    'delta': {
+                      ...message,
+                      'reasoning_content': '检查工具。',
+                      'tool_calls': [
+                        {
+                          ...((message['tool_calls'] as List).single as Map),
+                          'index': 0,
+                        },
+                      ],
+                    },
+                    'finish_reason': 'tool_calls',
+                  },
+                ],
+              },
+            ].map((value) => 'data: ${jsonEncode(value)}\n\n').join();
             final body = streaming
-                ? [
-                            {
-                              'choices': [
-                                {
-                                  'index': 0,
-                                  'delta': {
-                                    'reasoning_content': 'Synthetic thinking. ',
-                                  },
-                                },
-                              ],
-                            },
-                            {
-                              'choices': [
-                                {
-                                  'index': 0,
-                                  'delta': {
-                                    ...message,
-                                    'reasoning_content': '检查工具。',
-                                    'tool_calls': [
-                                      {
-                                        ...((message['tool_calls'] as List)
-                                                .single
-                                            as Map),
-                                        'index': 0,
-                                      },
-                                    ],
-                                  },
-                                  'finish_reason': 'tool_calls',
-                                },
-                              ],
-                            },
-                          ]
-                          .map((value) => 'data: ${jsonEncode(value)}\n\n')
-                          .join() +
-                      'data: [DONE]\n\n'
+                ? '${frames}data: [DONE]\n\n'
                 : jsonEncode({
                     'choices': [
                       {'message': message, 'finish_reason': 'tool_calls'},
@@ -135,7 +129,7 @@ void main() {
                   {
                     'message': {
                       'content': 'Done',
-                      if (reasoning != null) 'reasoning_content': reasoning,
+                      'reasoning_content': ?reasoning,
                     },
                     'finish_reason': 'stop',
                   },
