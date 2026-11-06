@@ -572,7 +572,11 @@ class ApplicationToolHost {
         'Read one ${family.key} by stable ID. Child resources require their parent ID.',
         getProperties,
         (args, _, _) async {
-          _keys(args, getProperties.keys.toSet());
+          _keys(
+            args,
+            getProperties.keys.toSet(),
+            legacyNullableKeys: {'parentId', 'start', 'end'},
+          );
           return _queries
               .get(
                 ResourceRef(
@@ -1257,7 +1261,11 @@ final _settingEditsSchema = {
 };
 
 ResourceQuery _query(Map<String, Object?> args, ResourceKind kind) {
-  _keys(args, _resourceQueryProperties(kind).keys.toSet());
+  _keys(
+    args,
+    _resourceQueryProperties(kind).keys.toSet(),
+    legacyNullableKeys: _queryProperties.keys.toSet(),
+  );
   return ResourceQuery(
     kind: kind,
     view: _view(args['view']),
@@ -1425,8 +1433,16 @@ Map<String, Object?> _sourceSummary(ConversationSource source) => {
     'url': Uri.parse(source.url!).replace(query: '', fragment: '').toString(),
   if (source.targetId != null) 'targetId': source.targetId,
 };
-void _keys(Map<String, Object?> args, Set<String> allowed) {
-  if (args.keys.any((key) => !allowed.contains(key))) {
+void _keys(
+  Map<String, Object?> args,
+  Set<String> allowed, {
+  Set<String> legacyNullableKeys = const {},
+}) {
+  if (args.entries.any(
+    (entry) =>
+        !allowed.contains(entry.key) &&
+        !(entry.value == null && legacyNullableKeys.contains(entry.key)),
+  )) {
     _invalid('Unknown tool argument.');
   }
 }

@@ -95,10 +95,12 @@ void main() {
           expect(properties.containsKey('sourceIds'), occurrence, reason: name);
           expect(properties.containsKey('source'), occurrence, reason: name);
         }
-        if (occurrence)
+        if (occurrence) {
           expect(parameters['required'], containsAll(['start', 'end']));
-        if (isGet && child)
+        }
+        if (isGet && child) {
           expect(parameters['required'], contains('parentId'));
+        }
         final fields = properties['fields'] as Map;
         expect(fields['description'], contains('Omit'));
         expect(fields['description'], contains('ref'));
@@ -210,6 +212,137 @@ void main() {
     }
     final result = await call('agenda.query', occurrenceRange);
     expect(result['items'], isA<List>());
+  });
+
+  test(
+    'legacy null query arguments keep list get and selection behavior',
+    () async {
+      const nullQuery = <String, Object?>{
+        'ids': null,
+        'parentIds': null,
+        'sourceIds': null,
+        'source': null,
+        'query': null,
+        'view': null,
+        'fields': null,
+        'start': null,
+        'end': null,
+        'limit': null,
+        'cursor': null,
+        'includeHidden': null,
+        'includeDisabled': null,
+      };
+      for (final family in families.entries) {
+        final args = <String, Object?>{
+          if (family.value == ResourceKind.occurrence) ...occurrenceRange,
+        };
+        final expected = await call('${family.key}.list', args);
+        final page = await call('${family.key}.list', {...nullQuery, ...args});
+        expect(page, expected, reason: family.key);
+        final selection = await call('selection.create', {
+          ...nullQuery,
+          ...args,
+          'kind': family.value.name,
+        });
+        expect(
+          selection['items'],
+          (page['items'] as List).map((item) => item['ref']).toList(),
+          reason: family.key,
+        );
+      }
+      for (final family in ['calendars', 'timetables', 'period_sets']) {
+        final page = await call('$family.list', {});
+        for (final item in page['items'] as List) {
+          final id = item['ref']['id'];
+          final expected = await call('$family.get', {'id': id});
+          expect(
+            await call('$family.get', {
+              'id': id,
+              'parentId': null,
+              'view': null,
+              'fields': null,
+              'start': null,
+              'end': null,
+            }),
+            expected,
+          );
+        }
+      }
+    },
+  );
+
+  test(
+    'legacy null compatibility still rejects unknown and inapplicable values',
+    () async {
+      final invalid = throwsA(
+        isA<OperationProblem>().having(
+          (error) => error.code,
+          'code',
+          OperationErrorCode.invalidArgument,
+        ),
+      );
+      for (final extra in <Map<String, Object?>>[
+        {'unknown': null},
+        {'parentIds': <String>[]},
+        {'start': occurrenceRange['start']},
+        {'source': 'event'},
+        {'sourceIds': <String>[]},
+      ]) {
+        await expectLater(call('calendars.list', extra), invalid);
+        await expectLater(
+          call('selection.create', {'kind': 'calendar', ...extra}),
+          invalid,
+        );
+      }
+      for (final extra in <Map<String, Object?>>[
+        {'unknown': null},
+        {'parentId': 'fixture'},
+        {'start': occurrenceRange['start']},
+        {'end': occurrenceRange['end']},
+      ]) {
+        await expectLater(
+          call('calendars.get', {'id': 'fixture', ...extra}),
+          invalid,
+        );
+      }
+    },
+  );
+
+  test('null required resource arguments remain invalid', () async {
+    final invalid = throwsA(
+      isA<OperationProblem>().having(
+        (error) => error.code,
+        'code',
+        OperationErrorCode.invalidArgument,
+      ),
+    );
+    for (final family in families.keys) {
+      await expectLater(call('$family.get', {'id': null}), invalid);
+    }
+    for (final family in ['courses', 'events', 'occurrences']) {
+      await expectLater(
+        call('$family.get', {'id': 'fixture', 'parentId': null}),
+        invalid,
+      );
+    }
+    for (final key in ['start', 'end']) {
+      final range = <String, Object?>{...occurrenceRange, key: null};
+      await expectLater(call('occurrences.list', range), invalid);
+      await expectLater(call('agenda.query', range), invalid);
+      await expectLater(
+        call('selection.create', {'kind': 'occurrence', ...range}),
+        invalid,
+      );
+      await expectLater(
+        call('occurrences.get', {
+          'id': 'course|fixture-parent|fixture|2026-11-07',
+          'parentId': 'fixture-parent',
+          ...range,
+        }),
+        invalid,
+      );
+    }
+    await expectLater(call('selection.create', {'kind': null}), invalid);
   });
 
   test(
