@@ -31,6 +31,7 @@ import 'package:sked/services/secret_store.dart';
 import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/widgets/course_details_sheet.dart';
 import 'package:sked/widgets/sked_expressive_components.dart';
+import 'package:sked/widgets/sked_menu_surface.dart';
 import 'package:sked/widgets/text_transfer_widgets.dart';
 import 'package:sked/widgets/timetable_grid.dart';
 
@@ -4120,7 +4121,8 @@ void main() {
   testWidgets('empty timetable import menu follows its anchor and viewport', (
     tester,
   ) async {
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     final storage = _BlockingTimetableStorage(null);
     final provider = await _createEmptyProvider(storage);
     addTearDown(provider.dispose);
@@ -4129,12 +4131,13 @@ void main() {
       (size: Size(430, 900), opensBelow: true),
       (size: Size(430, 568), opensBelow: false),
     ]) {
-      await tester.binding.setSurfaceSize(scenario.size);
+      tester.view.physicalSize = scenario.size;
       await _pumpHomeScreenWithProvider(tester, provider);
 
       final anchor = find.byKey(
         const ValueKey('empty-timetable-import-button'),
       );
+      expect(MediaQuery.sizeOf(tester.element(anchor)), scenario.size);
       final anchorRect = tester.getRect(anchor);
       await tester.tap(anchor);
       await tester.tap(anchor, warnIfMissed: false);
@@ -4301,7 +4304,7 @@ void main() {
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
   );
 
-  testWidgets('reduced motion shows the empty import menu immediately', (
+  testWidgets('reduced motion fades the empty import menu without scaling', (
     tester,
   ) async {
     tester.binding.platformDispatcher.accessibilityFeaturesTestValue =
@@ -4309,8 +4312,9 @@ void main() {
     addTearDown(
       tester.binding.platformDispatcher.clearAccessibilityFeaturesTestValue,
     );
-    await tester.binding.setSurfaceSize(const Size(430, 900));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(430, 900);
+    addTearDown(tester.view.reset);
     final storage = _BlockingTimetableStorage(null);
     final provider = await _createEmptyProvider(storage);
     addTearDown(provider.dispose);
@@ -4327,7 +4331,21 @@ void main() {
     expect(firstItem, findsOneWidget);
     final menuRoute = ModalRoute.of(tester.element(firstItem));
     expect(menuRoute, isNotNull);
-    expect(menuRoute!.animation!.value, 1);
+    expect(menuRoute!.transitionDuration, const Duration(milliseconds: 120));
+    expect(menuRoute.animation!.value, 0);
+    await tester.pump(const Duration(milliseconds: 60));
+    expect(menuRoute.animation!.value, closeTo(.5, .001));
+    final transform = tester.widget<Transform>(
+      find
+          .descendant(
+            of: find.byType(SkedMenuSurface),
+            matching: find.byType(Transform),
+          )
+          .first,
+    );
+    expect(transform.transform.entry(0, 0), 1);
+    await tester.pump(const Duration(milliseconds: 60));
+    expect(menuRoute.animation!.value, closeTo(1, .001));
     expect(firstItem.hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
