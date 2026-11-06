@@ -287,7 +287,7 @@ class ApplicationToolHost {
   void _registerCore() {
     _add(
       'resources.describe',
-      'Read exact value fields and semantic constraints before preparing resource mutations.',
+      'Read allowed query fields, default query views, mutation value fields and semantic constraints for a resource kind.',
       {
         'kind': {
           'type': 'string',
@@ -301,6 +301,7 @@ class ApplicationToolHost {
         );
         return {
           ...ResourceMutationSchema.describe(kind),
+          'queryFields': ResourceQueries.allowedFieldsFor(kind).toList(),
           'queryViews': {
             for (final view in ResourceView.values)
               view.name: ResourceQueries.fieldsFor(kind, view).toList(),
@@ -314,6 +315,10 @@ class ApplicationToolHost {
       'Freeze the complete filtered set of at most 1000 resources for a common batch change. No writes; hidden and disabled data are included by default.',
       {
         ..._queryProperties,
+        'fields': {
+          ..._stringListSchema,
+          'description': 'Omit this compatibility parameter. Selections ignore projection fields and return resource references only, with kind, id and an optional parentId directly in each item.',
+        },
         'kind': {
           'type': 'string',
           'enum': ResourceKind.values.map((kind) => kind.name).toList(),
@@ -465,7 +470,7 @@ class ApplicationToolHost {
       _add(
         '${family.key}.list',
         'Query all ${family.key}, including noncurrent, hidden and disabled owners. Use bounded pages and explicit fields.',
-        _queryProperties,
+        {..._queryProperties, 'fields': _projectionFieldsSchema(family.value)},
         (args, _, _) async =>
             _queries.query(_query(args, family.value)).toJson(),
       );
@@ -476,7 +481,7 @@ class ApplicationToolHost {
           'id': _stringSchema,
           'parentId': _stringSchema,
           'view': _viewSchema,
-          'fields': _stringListSchema,
+          'fields': _projectionFieldsSchema(family.value),
           'start': _stringSchema,
           'end': _stringSchema,
         },
@@ -502,7 +507,10 @@ class ApplicationToolHost {
     _add(
       'agenda.query',
       'Read overlapping course and event occurrences in a bounded time window.',
-      _queryProperties,
+      {
+        ..._queryProperties,
+        'fields': _projectionFieldsSchema(ResourceKind.occurrence),
+      },
       (args, _, _) async =>
           _queries.query(_query(args, ResourceKind.occurrence)).toJson(),
       required: ['start', 'end'],
@@ -1084,6 +1092,20 @@ const _viewSchema = {
   'type': 'string',
   'enum': ['summary', 'detail', 'edit'],
 };
+const _queryFieldsSchema = {
+  ..._stringListSchema,
+  'description':
+      'Optional resource data fields. Omit to use the selected view defaults. '
+      'Resource IDs are always returned in ref. '
+      'resources.describe lists queryFields and queryViews for each kind.',
+};
+Map<String, Object?> _projectionFieldsSchema(ResourceKind kind) => {
+  ..._queryFieldsSchema,
+  'items': {
+    'type': 'string',
+    'enum': ResourceQueries.allowedFieldsFor(kind).toList(),
+  },
+};
 const _queryProperties = <String, Object?>{
   'ids': _stringListSchema,
   'parentIds': _stringListSchema,
@@ -1094,7 +1116,7 @@ const _queryProperties = <String, Object?>{
   },
   'query': _stringSchema,
   'view': _viewSchema,
-  'fields': _stringListSchema,
+  'fields': _queryFieldsSchema,
   'start': _stringSchema,
   'end': _stringSchema,
   'limit': _limitSchema,

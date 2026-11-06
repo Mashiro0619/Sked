@@ -60,6 +60,49 @@ class _OperationHarness {
 }
 
 void main() {
+  for (final field in ['fields', 'operationId', 'field-$_key', null]) {
+    test('tool failures preserve safe field guidance for $field', () async {
+      var round = 0;
+      final h = await _Harness.create(
+        handler: (_, _) => _events(
+          round++ == 0
+              ? _response('', calls: [_call('invalid')])
+              : _response('Use the returned field guidance.'),
+        ),
+        execute: (_, _, _) async => throw OperationProblem(
+          OperationErrorCode.invalidArgument,
+          'Use the advertised schema.',
+          field: field,
+        ),
+      );
+      addTearDown(h.dispose);
+      await h.runtime.send(h.id, 'Read resources');
+      final saved = h.repository
+          .find(h.id)!
+          .messages
+          .singleWhere((message) => message.role == ConversationRole.tool);
+      final result = jsonDecode(saved.text) as Map;
+      expect(result['status'], 'failed');
+      expect(result['error']['code'], 'invalidArgument');
+      expect(result['error']['message'], 'Use the advertised schema.');
+      if (field == null) {
+        expect((result['error'] as Map).containsKey('field'), false);
+      } else if (field.contains(_key)) {
+        expect(result['error']['field'], isNot(contains(_key)));
+      } else {
+        expect(result['error']['field'], field);
+      }
+      expect(h.provider.requests, hasLength(2));
+      expect(
+        h.provider.requests.last.messages
+            .singleWhere((message) => message.role == ProviderRole.tool)
+            .text,
+        saved.text,
+      );
+      expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
+    });
+  }
+
   for (final nextTool in ['events.list', 'undisclosed.action']) {
     test(
       'real multi-round discovery handles $nextTool against current advertised tools',

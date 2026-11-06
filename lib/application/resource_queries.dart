@@ -651,9 +651,13 @@ class ResourceQueries {
     }
     if (query.fields != null &&
         !allowedFieldsFor(query.kind).containsAll(query.fields!)) {
-      throw const ResourceQueryException(
+      final allowed = allowedFieldsFor(query.kind).toList()..sort();
+      throw ResourceQueryException(
         ResourceQueryErrorCode.invalidField,
-        'The projection contains an unknown field.',
+        'The projection contains an unknown field for ${query.kind.name}. '
+        'Allowed fields are ${allowed.join(', ')}. '
+        'Omit fields to use the selected view defaults. '
+        'Resource IDs are returned in ref.',
         field: 'fields',
       );
     }
