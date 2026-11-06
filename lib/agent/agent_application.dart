@@ -115,8 +115,7 @@ class AgentApplication extends ChangeNotifier {
       mutations: mutations,
       conversationForScope: (scope) => runtime.conversationForScope(scope),
       environmentForScope: (scope) => runtime.environmentForScope(scope),
-      requestUserInput: (arguments, scope) =>
-          runtime.requestUserInput(arguments, scope),
+      requestUserInput: _requestUserInput,
       readSkillSnapshot: () async {
         await knowledge.initialize();
         return knowledge.captureSkillSnapshot();
@@ -328,6 +327,42 @@ class AgentApplication extends ChangeNotifier {
       _initializationFailure;
   Future<void> recoverHistoryBeforeWrites() => history.recoverBeforeWrites();
   int get navigationRevision => _navigationRevision;
+
+  Future<Map<String, Object?>> _requestUserInput(
+    Map<String, Object?> arguments,
+    OperationScope scope,
+  ) async {
+    scope.checkActive();
+    final owner = runtime.conversationForScope(scope);
+    final generation = runtime.environmentForScope(scope)?['datasetGeneration'];
+    final revision = _maintenance.writeSessionRevision;
+    if (owner == null || generation is! String || generation.isEmpty) {
+      throw const OperationProblem(
+        OperationErrorCode.unsupported,
+        'A user question requires an active conversation run.',
+      );
+    }
+    void validateOwner() {
+      scope.checkActive();
+      final current = runtime.conversationForScope(scope);
+      if (!_knowledgeAvailable() ||
+          _maintenance.writeSessionRevision != revision ||
+          current?.id != owner.id ||
+          current?.runId != scope.id) {
+        throw const OperationProblem(
+          OperationErrorCode.expired,
+          'The user question owner changed.',
+        );
+      }
+    }
+
+    await mutations.ensurePersistentGeneration(
+      expectedGeneration: generation,
+      validateOwner: validateOwner,
+    );
+    validateOwner();
+    return runtime.requestUserInput(arguments, scope);
+  }
 
   bool _knowledgeAvailable() =>
       !_disposed &&

@@ -166,8 +166,8 @@ class MutationCoordinator {
   PreparedMutation? plan(String id) => _plans[id];
   Future<void> waitForPendingWrites() => _tail;
 
-  /// Persists the namespace before another store publishes durable resource
-  /// references. An empty ledger reserves no operation identity or receipt.
+  /// Persists the namespace before another store publishes durable references
+  /// or interactions. An empty ledger reserves no operation identity or receipt.
   Future<void> ensurePersistentGeneration({
     required String expectedGeneration,
     required void Function() validateOwner,
@@ -205,7 +205,7 @@ class MutationCoordinator {
       } on AppMutationConflictException {
         throw const OperationProblem(
           OperationErrorCode.conflict,
-          'Finish or save the current editor before selecting references.',
+          'Finish or save the current editor before saving this interaction.',
         );
       } on AppMutationBusyException {
         throw const OperationProblem(
