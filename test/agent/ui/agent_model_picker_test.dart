@@ -66,19 +66,28 @@ void main() {
   Future<void> initialize(
     WidgetTester tester, {
     List<AgentModelConfig> models = const [modelA, modelB],
-    AgentModelSelection? selection = low,
+    AgentModelSelection? currentSelection = low,
+    AgentModelSelection? defaultSelection,
     bool running = false,
   }) async {
     addTearDown(tester.view.reset);
     repository = ConversationRepository(storage: UiMemoryStorage());
     await repository.load();
     id = (await repository.create(title: 'Model choice')).id;
+    if (currentSelection != null) {
+      await repository.update(
+        id,
+        (value) => value.copyWith(modelSelection: currentSelection),
+      );
+    }
     delegate = _ModelDelegate(repository);
     delegate.state.value = AgentUiState(
       enabled: true,
       configured: true,
       availableModels: models,
-      defaultModelSelection: selection,
+      defaultModelSelection:
+          defaultSelection ?? models.firstOrNull?.defaultSelection,
+      modelSelections: {id: ?currentSelection},
       runs: {
         if (running)
           id: const AgentUiRunState(
@@ -305,7 +314,7 @@ void main() {
       await initialize(
         tester,
         models: const [modelB],
-        selection: modelB.defaultSelection,
+        currentSelection: modelB.defaultSelection,
       );
       await mountAgentUi(tester, view(), size: const Size(320, 740), scale: 2);
       await open(tester);
@@ -632,38 +641,225 @@ void main() {
     );
   }
 
-  testWidgets('reset uses this model default and old reset callbacks expire', (
+  testWidgets(
+    'reset restores configured defaults and old reset callbacks expire',
+    (tester) async {
+      await initialize(
+        tester,
+        currentSelection: const AgentModelSelection(
+          modelId: 'model-a',
+          reasoningEffort: AgentReasoningEffort.high,
+        ),
+      );
+      await mountAgentUi(tester, view());
+      await open(tester);
+      final reset = find.byKey(const ValueKey('agent-effort-reset'));
+      final previous = tester.widget<IconButton>(reset).onPressed!;
+      await tester.tap(reset);
+      await tester.pumpAndSettle();
+      expect(delegate.choices, [modelA.defaultSelection]);
+      expect(repository.selected!.modelSelection, modelA.defaultSelection);
+      expect(tester.widget<IconButton>(reset).onPressed, isNull);
+      final slider = tester.widget<Slider>(find.byType(Slider));
+      slider.onChanged!(1);
+      await tester.pump();
+      await tester.tap(reset);
+      await tester.pumpAndSettle();
+      expect(tester.widget<Slider>(find.byType(Slider)).value, 0);
+      expect(delegate.choices, hasLength(1));
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      previous();
+      await tester.pumpAndSettle();
+      expect(delegate.choices, hasLength(1));
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'reset restores configured model even when the current effort is its default',
+    (tester) async {
+      await initialize(tester, defaultSelection: modelB.defaultSelection);
+      await mountAgentUi(tester, view());
+      await open(tester);
+      final reset = find.byKey(const ValueKey('agent-effort-reset'));
+      expect(tester.widget<IconButton>(reset).onPressed, isNotNull);
+      expect(tester.widget<IconButton>(reset).tooltip, contains('model-b'));
+      expect(tester.widget<IconButton>(reset).tooltip, contains('Medium'));
+      await tester.tap(reset);
+      await tester.pumpAndSettle();
+      expect(delegate.choices, [modelB.defaultSelection]);
+      expect(repository.selected!.modelSelection, modelB.defaultSelection);
+      expect(find.byKey(const ValueKey('agent-model-panel')), findsOneWidget);
+      expect(tester.widget<IconButton>(reset).onPressed, isNull);
+      expect(delegate.calls, isEmpty);
+    },
+  );
+
+  testWidgets('reset changes models when both default efforts are equal', (
     tester,
   ) async {
+    const alternate = AgentModelConfig(
+      id: 'model-b',
+      reasoningEfforts: [AgentReasoningEffort.low],
+      defaultReasoningEffort: AgentReasoningEffort.low,
+    );
     await initialize(
       tester,
-      selection: const AgentModelSelection(
+      models: const [modelA, alternate],
+      currentSelection: alternate.defaultSelection,
+    );
+    await mountAgentUi(tester, view());
+    await open(tester);
+    final reset = find.byKey(const ValueKey('agent-effort-reset'));
+    expect(tester.widget<IconButton>(reset).onPressed, isNotNull);
+    await tester.tap(reset);
+    await tester.pumpAndSettle();
+    expect(delegate.choices, [low]);
+    expect(repository.selected!.modelSelection, low);
+  });
+
+  testWidgets(
+    'changing only the configured default expires old reset callbacks',
+    (tester) async {
+      const high = AgentModelSelection(
         modelId: 'model-a',
         reasoningEffort: AgentReasoningEffort.high,
-      ),
+      );
+      await initialize(tester, currentSelection: high);
+      await mountAgentUi(tester, view());
+      await open(tester);
+      final reset = find.byKey(const ValueKey('agent-effort-reset'));
+      final previous = tester.widget<IconButton>(reset).onPressed!;
+      delegate.state.value = AgentUiState(
+        enabled: true,
+        configured: true,
+        availableModels: const [modelA, modelB],
+        defaultModelSelection: modelB.defaultSelection,
+        modelSelections: {id: high},
+      );
+      await tester.pumpAndSettle();
+      previous();
+      await tester.pumpAndSettle();
+      expect(delegate.choices, isEmpty);
+      expect(repository.selected!.modelSelection, high);
+      expect(find.byKey(const ValueKey('agent-model-panel')), findsOneWidget);
+      await tester.tap(reset);
+      await tester.pumpAndSettle();
+      expect(delegate.choices, [modelB.defaultSelection]);
+    },
+  );
+
+  testWidgets('a changed current effort expires its previous reset callback', (
+    tester,
+  ) async {
+    const high = AgentModelSelection(
+      modelId: 'model-a',
+      reasoningEffort: AgentReasoningEffort.high,
+    );
+    await initialize(
+      tester,
+      currentSelection: high,
+      defaultSelection: modelB.defaultSelection,
     );
     await mountAgentUi(tester, view());
     await open(tester);
     final reset = find.byKey(const ValueKey('agent-effort-reset'));
     final previous = tester.widget<IconButton>(reset).onPressed!;
-    await tester.tap(reset);
-    await tester.pumpAndSettle();
-    expect(delegate.choices, [modelA.defaultSelection]);
-    expect(repository.selected!.modelSelection, modelA.defaultSelection);
-    expect(tester.widget<IconButton>(reset).onPressed, isNull);
-    final slider = tester.widget<Slider>(find.byType(Slider));
-    slider.onChanged!(1);
-    await tester.pump();
-    await tester.tap(reset);
-    await tester.pumpAndSettle();
-    expect(tester.widget<Slider>(find.byType(Slider)).value, 0);
-    expect(delegate.choices, hasLength(1));
-    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await repository.update(id, (value) => value.copyWith(modelSelection: low));
+    delegate.state.value = AgentUiState(
+      enabled: true,
+      configured: true,
+      availableModels: const [modelA, modelB],
+      defaultModelSelection: modelB.defaultSelection,
+      modelSelections: {id: low},
+    );
     await tester.pumpAndSettle();
     previous();
     await tester.pumpAndSettle();
-    expect(delegate.choices, hasLength(1));
-    expect(tester.takeException(), isNull);
+    expect(delegate.choices, isEmpty);
+    expect(repository.selected!.modelSelection, low);
+  });
+
+  testWidgets(
+    'pending and failed reset retain the saved model and allow retry',
+    (tester) async {
+      await initialize(tester, currentSelection: modelB.defaultSelection);
+      delegate.gate = Completer<void>();
+      delegate.fail = true;
+      addTearDown(() {
+        if (!delegate.gate!.isCompleted) delegate.gate!.complete();
+      });
+      await mountAgentUi(tester, view());
+      await open(tester);
+      final reset = find.byKey(const ValueKey('agent-effort-reset'));
+      final previous = tester.widget<IconButton>(reset).onPressed!;
+      await tester.tap(reset);
+      await tester.pumpAndSettle();
+      expect(tester.widget<IconButton>(reset).onPressed, isNull);
+      expect(delegate.state.value.selectionFor(id), modelB.defaultSelection);
+      expect(repository.selected!.modelSelection, modelB.defaultSelection);
+      previous();
+      expect(delegate.choices, [low]);
+      delegate.gate!.complete();
+      await tester.pumpAndSettle();
+      expect(delegate.state.value.selectionFor(id), modelB.defaultSelection);
+      expect(repository.selected!.modelSelection, modelB.defaultSelection);
+      expect(find.textContaining('Could not save or complete'), findsWidgets);
+      expect(find.textContaining('private error'), findsNothing);
+      expect(tester.widget<IconButton>(reset).onPressed, isNotNull);
+      delegate.fail = false;
+      await tester.tap(reset);
+      await tester.pumpAndSettle();
+      expect(delegate.choices, [low, low]);
+      expect(repository.selected!.modelSelection, low);
+      expect(find.textContaining('Could not save or complete'), findsNothing);
+      expect(delegate.calls, isEmpty);
+    },
+  );
+
+  testWidgets('reset is unavailable without a configured default selection', (
+    tester,
+  ) async {
+    await initialize(tester, currentSelection: modelB.defaultSelection);
+    delegate.state.value = AgentUiState(
+      enabled: true,
+      configured: true,
+      availableModels: const [modelA, modelB],
+      modelSelections: {id: modelB.defaultSelection},
+    );
+    await mountAgentUi(tester, view());
+    await open(tester);
+    expect(
+      tester
+          .widget<IconButton>(find.byKey(const ValueKey('agent-effort-reset')))
+          .onPressed,
+      isNull,
+    );
+    expect(delegate.choices, isEmpty);
+  });
+
+  testWidgets('reset can repair queued selection while already at defaults', (
+    tester,
+  ) async {
+    await initialize(tester);
+    delegate.state.value = AgentUiState(
+      enabled: true,
+      configured: true,
+      availableModels: const [modelA, modelB],
+      defaultModelSelection: low,
+      modelSelections: {id: low},
+      runs: {id: const AgentUiRunState(requiresModelSelection: true)},
+    );
+    await mountAgentUi(tester, view());
+    await open(tester);
+    final reset = find.byKey(const ValueKey('agent-effort-reset'));
+    expect(tester.widget<IconButton>(reset).onPressed, isNotNull);
+    await tester.tap(reset);
+    await tester.pumpAndSettle();
+    expect(delegate.choices, [low]);
+    expect(repository.selected!.modelSelection, low);
+    expect(delegate.calls, isEmpty);
   });
 
   testWidgets('a previous model reset cannot change a newly selected model', (
@@ -671,7 +867,7 @@ void main() {
   ) async {
     await initialize(
       tester,
-      selection: const AgentModelSelection(
+      currentSelection: const AgentModelSelection(
         modelId: 'model-a',
         reasoningEffort: AgentReasoningEffort.high,
       ),
@@ -765,7 +961,7 @@ void main() {
       await initialize(
         tester,
         models: const [modelA],
-        selection: const AgentModelSelection(
+        currentSelection: const AgentModelSelection(
           modelId: 'removed-model',
           reasoningEffort: AgentReasoningEffort.medium,
         ),
@@ -1345,7 +1541,7 @@ void main() {
       await initialize(
         tester,
         models: const [modelB],
-        selection: modelB.defaultSelection,
+        currentSelection: modelB.defaultSelection,
       );
       delegate.state.value = AgentUiState(
         enabled: true,

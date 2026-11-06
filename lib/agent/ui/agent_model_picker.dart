@@ -302,6 +302,7 @@ class _AgentModelPickerState extends State<AgentModelPicker>
     builder: (context, state, _) {
       final l = AppLocalizations.of(context);
       final selection = state.selectionFor(widget.conversationId);
+      final defaultSelection = state.defaultModelSelection;
       final model = state.availableModels
           .where((m) => m.id == selection?.modelId)
           .firstOrNull;
@@ -531,9 +532,9 @@ class _AgentModelPickerState extends State<AgentModelPicker>
                                   ),
                                   IconButton(
                                     key: const ValueKey('agent-effort-reset'),
-                                    tooltip: model == null
-                                        ? l.agentDefaultEffort
-                                        : '${l.agentDefaultEffort}: ${agentReasoningEffortLabel(l, model.defaultReasoningEffort)}',
+                                    tooltip: defaultSelection == null
+                                        ? l.agentDefaultModel
+                                        : '${l.agentDefaultModel} · ${defaultSelection.modelId} · ${agentReasoningEffortLabel(l, defaultSelection.reasoningEffort)}',
                                     constraints: BoxConstraints.tightFor(
                                       width: menuStyle.desktop ? 32 : 48,
                                       height: menuStyle.desktop ? 32 : 48,
@@ -545,24 +546,29 @@ class _AgentModelPickerState extends State<AgentModelPicker>
                                         .onSurfaceVariant,
                                     onPressed:
                                         enabled &&
-                                            model != null &&
-                                            (effort !=
-                                                    model
-                                                        .defaultReasoningEffort ||
+                                            defaultSelection != null &&
+                                            (selection != defaultSelection ||
                                                 _preview != null ||
-                                                !ready)
-                                        ? () {
-                                            if (widget.delegate.state.value
-                                                    .selectionFor(
+                                                state
+                                                    .runFor(
                                                       widget.conversationId,
                                                     )
-                                                    ?.modelId !=
-                                                model.id) {
+                                                    .requiresModelSelection)
+                                        ? () {
+                                            final currentState =
+                                                widget.delegate.state.value;
+                                            if (currentState
+                                                        .defaultModelSelection !=
+                                                    defaultSelection ||
+                                                currentState.selectionFor(
+                                                      widget.conversationId,
+                                                    ) !=
+                                                    selection) {
                                               return;
                                             }
                                             unawaited(
                                               _select(
-                                                model.defaultSelection,
+                                                defaultSelection,
                                                 openToken: menuToken,
                                                 panelGeneration:
                                                     panelGeneration,
