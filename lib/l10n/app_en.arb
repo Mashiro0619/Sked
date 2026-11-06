@@ -3024,5 +3024,55 @@
         "type": "int"
       }
     }
+  },
+  "agentBudgetSummaryTitle": "Run summary",
+  "@agentBudgetSummaryTitle": {},
+  "agentBudgetSummaryTokenLimit": "The token budget has been reached.",
+  "@agentBudgetSummaryTokenLimit": {},
+  "agentBudgetSummaryRoundLimit": "The model request limit has been reached.",
+  "@agentBudgetSummaryRoundLimit": {},
+  "agentBudgetSummaryToolLimit": "The tool call limit has been reached.",
+  "@agentBudgetSummaryToolLimit": {},
+  "agentBudgetSummaryTools": "Tool results — {completed} completed, {failed} failed, {notStarted} not started, {unknown} awaiting verification",
+  "@agentBudgetSummaryTools": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      },
+      "notStarted": {
+        "type": "int"
+      },
+      "unknown": {
+        "type": "int"
+      }
+    }
+  },
+  "agentBudgetSummaryUsage": "{requests}/{requestLimit} model requests · {tokens}/{tokenLimit} reported tokens",
+  "@agentBudgetSummaryUsage": {
+    "placeholders": {
+      "requests": {
+        "type": "int"
+      },
+      "requestLimit": {
+        "type": "int"
+      },
+      "tokens": {
+        "type": "int"
+      },
+      "tokenLimit": {
+        "type": "int"
+      }
+    }
+  },
+  "agentBudgetSummaryMissingUsage": "Usage is unreported for {count} requests.",
+  "@agentBudgetSummaryMissingUsage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

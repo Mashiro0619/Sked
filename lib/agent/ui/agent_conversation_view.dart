@@ -40,6 +40,7 @@ import 'agent_ui_delegate.dart';
 import 'agent_operation_card.dart';
 import 'agent_plan_preview.dart';
 import 'agent_question_view.dart';
+import 'agent_budget_summary.dart';
 
 // Failed saves remain available when a panel is closed and reopened. The
 // buffer follows the repository lifetime and is never shared across archives.
@@ -2054,6 +2055,11 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                       widget.binaryAttachments != null)
                     _messageAttachments(conversation, message),
                 ],
+              )
+            else if (AgentBudgetSummary.parse(message) case final summary?)
+              AgentBudgetSummaryView(
+                key: ValueKey('agent-budget-summary-${message.id}'),
+                summary: summary,
               )
             else if (message.role == ConversationRole.tool &&
                 AgentOperationCard.parse(message.text) != null)

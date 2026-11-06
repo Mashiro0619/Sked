@@ -540,30 +540,32 @@ void main() {
                   : 100000,
             ),
           );
-          provider.respond = (_) => ProviderResponse(
-            text: '',
-            finishReason: 'tool_calls',
-            toolCalls: [
-              ProviderToolCall(
-                id: 'redo-discover',
-                name: 'capabilities.describe',
-                arguments: '{"names":["events.list"]}',
-              ),
-              if (budget == AgentRuntimeError.toolBudgetExceeded)
-                ProviderToolCall(
-                  id: 'redo-skill',
-                  name: 'skills.search',
-                  arguments: '{}',
-                ),
-            ],
-            usage: budget == AgentRuntimeError.tokenBudgetExceeded
-                ? const ProviderUsage(
-                    inputTokens: 1024,
-                    outputTokens: 1,
-                    totalTokens: 1025,
-                  )
-                : null,
-          );
+          provider.respond = (request) => request.tools.isEmpty
+              ? _done('The recorded discovery completed. Further work remains.')
+              : ProviderResponse(
+                  text: '',
+                  finishReason: 'tool_calls',
+                  toolCalls: [
+                    ProviderToolCall(
+                      id: 'redo-discover',
+                      name: 'capabilities.describe',
+                      arguments: '{"names":["events.list"]}',
+                    ),
+                    if (budget == AgentRuntimeError.toolBudgetExceeded)
+                      ProviderToolCall(
+                        id: 'redo-skill',
+                        name: 'skills.search',
+                        arguments: '{}',
+                      ),
+                  ],
+                  usage: budget == AgentRuntimeError.tokenBudgetExceeded
+                      ? const ProviderUsage(
+                          inputTokens: 1024,
+                          outputTokens: 1,
+                          totalTokens: 1025,
+                        )
+                      : null,
+                );
           await app.agent.history.editAndRedo(
             conversation.id,
             original.messages.first.id,
@@ -578,7 +580,28 @@ void main() {
             interrupted.runs.single.status,
             ConversationRunStatus.interrupted,
           );
-          expect(interrupted.runs.single.requests, hasLength(1));
+          expect(
+            interrupted.runs.single.requests,
+            hasLength(budget == AgentRuntimeError.toolBudgetExceeded ? 2 : 1),
+          );
+          if (budget == AgentRuntimeError.toolBudgetExceeded) {
+            expect(provider.requests.last.tools, isEmpty);
+            expect(interrupted.runs.single.tools.single.id, 'redo-discover');
+            final skipped = interrupted.messages.singleWhere(
+              (message) =>
+                  message.role == ConversationRole.tool &&
+                  message.toolCallId == 'redo-skill',
+            );
+            expect(jsonDecode(skipped.text)['status'], 'not_executed');
+            expect(
+              interrupted.messages.any(
+                (message) =>
+                    message.text ==
+                    'The recorded discovery completed. Further work remains.',
+              ),
+              true,
+            );
+          }
 
           if (restart) {
             final mainStorage = WorkspaceMemoryStorage(
@@ -855,20 +878,22 @@ void main() {
         app.agent.settings.copyWith(maxToolCalls: 1),
       );
       expect(app.agent.settings.maxToolCalls, 1);
-      provider.respond = (_) => ProviderResponse(
-        text: '',
-        toolCalls: [
-          for (var index = 0; index < 2; index++)
-            ProviderToolCall(
-              id: 'budget-call-$index',
-              name: 'capabilities.describe',
-              arguments: jsonEncode({
-                'names': ['mutation.prepare'],
-              }),
-            ),
-        ],
-        finishReason: 'tool_calls',
-      );
+      provider.respond = (request) => request.tools.isEmpty
+          ? _done('One discovery completed and one call was skipped.')
+          : ProviderResponse(
+              text: '',
+              toolCalls: [
+                for (var index = 0; index < 2; index++)
+                  ProviderToolCall(
+                    id: 'budget-call-$index',
+                    name: 'capabilities.describe',
+                    arguments: jsonEncode({
+                      'names': ['mutation.prepare'],
+                    }),
+                  ),
+              ],
+              finishReason: 'tool_calls',
+            );
       await app.agent.runtime.send(conversation.id, 'Describe twice');
       final stopped = app.agent.conversations.find(conversation.id)!;
       expect(stopped.status, ConversationStatus.interrupted);
@@ -876,7 +901,25 @@ void main() {
         stopped.turns.single.messageIds,
         stopped.messages.map((message) => message.id).toList(),
       );
-      expect(jsonDecode(stopped.messages.last.text)['status'], 'not_executed');
+      final skipped = stopped.messages.singleWhere(
+        (message) =>
+            message.role == ConversationRole.tool &&
+            message.toolCallId == 'budget-call-1',
+      );
+      expect(jsonDecode(skipped.text)['status'], 'not_executed');
+      final summary = jsonDecode(stopped.messages.last.text) as Map;
+      expect(summary['kind'], 'agent_budget_summary');
+      expect(summary['reason'], 'tools');
+      expect(summary['counts'], {
+        'completed': 1,
+        'failed': 0,
+        'notStarted': 1,
+        'unknown': 0,
+      });
+      expect(
+        app.agent.runtime.state.value.runFor(conversation.id).errorMessage,
+        'toolBudgetExceeded',
+      );
       provider.respond = (_) => _done('Edited');
       await app.agent.history.editAndRedo(
         conversation.id,

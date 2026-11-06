@@ -4501,4 +4501,44 @@ class AppLocalizationsEl extends AppLocalizations {
   String agentQuestionAnswerTooLong(int limit) {
     return 'Keep your answer within $limit characters.';
   }
+
+  @override
+  String get agentBudgetSummaryTitle => 'Run summary';
+
+  @override
+  String get agentBudgetSummaryTokenLimit =>
+      'The token budget has been reached.';
+
+  @override
+  String get agentBudgetSummaryRoundLimit =>
+      'The model request limit has been reached.';
+
+  @override
+  String get agentBudgetSummaryToolLimit =>
+      'The tool call limit has been reached.';
+
+  @override
+  String agentBudgetSummaryTools(
+    int completed,
+    int failed,
+    int notStarted,
+    int unknown,
+  ) {
+    return 'Tool results — $completed completed, $failed failed, $notStarted not started, $unknown awaiting verification';
+  }
+
+  @override
+  String agentBudgetSummaryUsage(
+    int requests,
+    int requestLimit,
+    int tokens,
+    int tokenLimit,
+  ) {
+    return '$requests/$requestLimit model requests · $tokens/$tokenLimit reported tokens';
+  }
+
+  @override
+  String agentBudgetSummaryMissingUsage(int count) {
+    return 'Usage is unreported for $count requests.';
+  }
 }

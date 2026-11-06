@@ -1383,8 +1383,9 @@ void main() {
     var executions = 0;
     final h = await _Harness.create(
       limits: const AgentRuntimeLimits(maxToolCalls: 1),
-      handler: (_, _) =>
-          _events(_response('', calls: [_call('one'), _call('two')])),
+      handler: (request, _) => request.tools.isEmpty
+          ? _events(_response('One read completed and the second was skipped.'))
+          : _events(_response('', calls: [_call('one'), _call('two')])),
       execute: (_, _, _) async {
         executions++;
         return {'status': 'read'};
@@ -1393,12 +1394,43 @@ void main() {
     addTearDown(h.dispose);
     await h.runtime.send(h.id, 'query');
     expect(executions, 1);
+    expect(h.provider.requests, hasLength(2));
+    expect(h.provider.requests.last.tools, isEmpty);
     expect(
       h.repository
           .find(h.id)!
           .messages
           .where((m) => m.role == ConversationRole.tool),
       hasLength(2),
+    );
+    final toolResults = h.repository
+        .find(h.id)!
+        .messages
+        .where((message) => message.role == ConversationRole.tool)
+        .toList();
+    expect(toolResults.map((message) => message.toolCallId), ['one', 'two']);
+    expect(jsonDecode(toolResults[0].text)['status'], 'read');
+    expect(jsonDecode(toolResults[1].text)['status'], 'not_executed');
+    final toolSummary =
+        jsonDecode(h.repository.find(h.id)!.messages.last.text) as Map;
+    expect(toolSummary['kind'], 'agent_budget_summary');
+    expect(toolSummary['reason'], 'tools');
+    expect(toolSummary['counts'], {
+      'completed': 1,
+      'failed': 0,
+      'notStarted': 1,
+      'unknown': 0,
+    });
+    expect(
+      h.repository
+          .find(h.id)!
+          .messages
+          .any(
+            (message) =>
+                message.text ==
+                'One read completed and the second was skipped.',
+          ),
+      true,
     );
     expect(
       h.runtime.state.value.runFor(h.id).errorMessage,
@@ -1411,6 +1443,16 @@ void main() {
     addTearDown(rounds.dispose);
     await rounds.runtime.send(rounds.id, 'query');
     expect(rounds.provider.requests, hasLength(1));
+    expect(rounds.provider.requests.single.tools, isNotEmpty);
+    expect(
+      rounds.repository.find(rounds.id)!.runs.single.tools.single.outcome,
+      ConversationAttemptOutcome.completed,
+    );
+    final roundSummary = jsonDecode(
+      rounds.repository.find(rounds.id)!.messages.last.text,
+    ) as Map;
+    expect(roundSummary['reason'], 'rounds');
+    expect((roundSummary['counts'] as Map)['completed'], 1);
     expect(
       rounds.runtime.state.value.runFor(rounds.id).errorMessage,
       'roundBudgetExceeded',
@@ -1443,10 +1485,34 @@ void main() {
       addTearDown(h.dispose);
       await h.runtime.send(h.id, 'query');
       expect(executions, 0);
+      expect(h.provider.requests, hasLength(1));
+      final saved = ConversationArchive.decode(h.storage.source!)
+          .conversations
+          .single;
+      expect(saved.runs.single.requests.single.usage!.totalTokens, 5);
       expect(
-        h.repository.find(h.id)!.messages.last.text,
-        contains('token_budget_exceeded'),
+        saved.runs.single.requests.single.errorCode,
+        'tokenBudgetExceeded',
       );
+      expect(saved.runs.single.tools, isEmpty);
+      expect(
+        saved.messages.where(
+          (message) => message.role == ConversationRole.tool,
+        ),
+        isEmpty,
+      );
+      final summary = jsonDecode(saved.messages.last.text) as Map;
+      expect(summary['kind'], 'agent_budget_summary');
+      expect(summary['reason'], 'tokens');
+      expect(summary['counts'], {
+        'completed': 0,
+        'failed': 0,
+        'notStarted': 0,
+        'unknown': 0,
+      });
+      expect((summary['tokens'] as Map)['reported'], 5);
+      expect((summary['tokens'] as Map)['unreportedRequests'], 0);
+      expect(saved.status, ConversationStatus.interrupted);
       expect(
         h.runtime.state.value.runFor(h.id).errorMessage,
         'tokenBudgetExceeded',
@@ -4435,10 +4501,22 @@ void registerRecoveryTests() {
         h.runtime.state.value.runFor(h.id).errorMessage,
         'roundBudgetExceeded',
       );
+      final saved = h.repository.find(h.id)!;
+      final tool = saved.messages
+          .where((message) => message.role == ConversationRole.tool)
+          .single;
+      expect(tool.toolCallId, 'budget-call');
+      expect(jsonDecode(tool.text)['status'], 'read');
       expect(
-        h.repository.find(h.id)!.messages.last.role,
-        ConversationRole.tool,
+        saved.runs.single.tools.single.outcome,
+        ConversationAttemptOutcome.completed,
       );
+      expect(saved.messages.last.role, ConversationRole.notice);
+      final summary = jsonDecode(saved.messages.last.text) as Map;
+      expect(summary['kind'], 'agent_budget_summary');
+      expect(summary['reason'], 'rounds');
+      expect((summary['requests'] as Map)['limit'], 1);
+      expect((summary['counts'] as Map)['completed'], 1);
     },
   );
 }

@@ -7883,6 +7883,58 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Keep your answer within {limit} characters.'**
   String agentQuestionAnswerTooLong(int limit);
+
+  /// No description provided for @agentBudgetSummaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Run summary'**
+  String get agentBudgetSummaryTitle;
+
+  /// No description provided for @agentBudgetSummaryTokenLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'The token budget has been reached.'**
+  String get agentBudgetSummaryTokenLimit;
+
+  /// No description provided for @agentBudgetSummaryRoundLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'The model request limit has been reached.'**
+  String get agentBudgetSummaryRoundLimit;
+
+  /// No description provided for @agentBudgetSummaryToolLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'The tool call limit has been reached.'**
+  String get agentBudgetSummaryToolLimit;
+
+  /// No description provided for @agentBudgetSummaryTools.
+  ///
+  /// In en, this message translates to:
+  /// **'Tool results — {completed} completed, {failed} failed, {notStarted} not started, {unknown} awaiting verification'**
+  String agentBudgetSummaryTools(
+    int completed,
+    int failed,
+    int notStarted,
+    int unknown,
+  );
+
+  /// No description provided for @agentBudgetSummaryUsage.
+  ///
+  /// In en, this message translates to:
+  /// **'{requests}/{requestLimit} model requests · {tokens}/{tokenLimit} reported tokens'**
+  String agentBudgetSummaryUsage(
+    int requests,
+    int requestLimit,
+    int tokens,
+    int tokenLimit,
+  );
+
+  /// No description provided for @agentBudgetSummaryMissingUsage.
+  ///
+  /// In en, this message translates to:
+  /// **'Usage is unreported for {count} requests.'**
+  String agentBudgetSummaryMissingUsage(int count);
 }
 
 class _AppLocalizationsDelegate

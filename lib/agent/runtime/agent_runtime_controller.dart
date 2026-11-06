@@ -22,6 +22,7 @@ import '../provider/provider.dart';
 import '../provider/provider_request_encoder.dart';
 import '../interactions/agent_question.dart';
 import '../ui/agent_ui_delegate.dart';
+import 'agent_request_budget.dart';
 import 'conversation_context.dart';
 import 'conversation_task_checkpoint.dart';
 import 'operation_outcome.dart';
@@ -29,6 +30,7 @@ import 'operation_recovery.dart';
 import 'repeated_tool_failure.dart';
 
 part 'agent_user_questions.dart';
+part 'agent_budget_settlement.dart';
 
 typedef AgentApprovalRequester = Future<MutationApproval?> Function(
   ApprovalPlan plan,
@@ -1211,6 +1213,7 @@ class AgentRuntimeController implements AgentUiDelegate {
       for (var round = run.usage.requests.length; round < maxRounds; round++) {
         _checkRun(run);
         if (run.recoveryRequired) await _recoverHistory(run);
+        final budget = _freezeRequestBudget(run);
         final conversation = _current(run);
         run.tools = List.unmodifiable(readTools(run.scope));
         final messages = _context(conversation, run);
@@ -1240,6 +1243,7 @@ class AgentRuntimeController implements AgentUiDelegate {
             ),
           ),
         );
+        run.issuedToolCallIds.addAll(response.toolCalls.map((call) => call.id));
         _setDisplay(run, const AgentUiRunState(phase: AgentUiPhase.running));
         if (run.totalTokens > maxTokens) {
           await _recordUnexecuted(
@@ -1250,6 +1254,9 @@ class AgentRuntimeController implements AgentUiDelegate {
           throw const AgentRuntimeException(
             AgentRuntimeError.tokenBudgetExceeded,
           );
+        }
+        if (budget.finalStep) {
+          throw _budgetFailure(budget.reason!);
         }
         if (response.toolCalls.isEmpty) return;
         for (var index = 0; index < response.toolCalls.length; index++) {
@@ -1268,9 +1275,7 @@ class AgentRuntimeController implements AgentUiDelegate {
               response.toolCalls.skip(index),
               'tool_budget_exceeded',
             );
-            throw const AgentRuntimeException(
-              AgentRuntimeError.toolBudgetExceeded,
-            );
+            break;
           }
           _checkRun(run);
           run.toolCalls++;
@@ -1443,10 +1448,29 @@ class AgentRuntimeController implements AgentUiDelegate {
           }
         }
       }
-      throw const AgentRuntimeException(AgentRuntimeError.roundBudgetExceeded);
+      throw _budgetFailure(
+        run.totalTokens >= maxTokens
+            ? AgentRequestBudgetReason.tokens
+            : run.toolCalls >= maxCalls
+            ? AgentRequestBudgetReason.tools
+            : AgentRequestBudgetReason.rounds,
+      );
     } catch (error) {
       failure = error;
-      run.failureCode = _safeError(error);
+      final reason =
+          _budgetReason(error) ??
+          (run.requestBudget?.finalStep == true
+              ? run.requestBudget?.reason
+              : null);
+      if (reason != null && !run.scope.isCancelled) {
+        try {
+          await _recordBudgetSummary(run, reason);
+        } catch (summaryError) {
+          failure = summaryError;
+        }
+      }
+      final terminalError = failure;
+      run.failureCode = _safeError(terminalError);
       if (repository.find(run.conversationId) != null) {
         _setDisplay(
           run,
@@ -1456,12 +1480,12 @@ class AgentRuntimeController implements AgentUiDelegate {
                     run.stopReason == AgentRuntimeError.disabled
                 ? AgentUiPhase.stopped
                 : AgentUiPhase.failed,
-            errorMessage: _safeError(error),
-            providerErrorDetails: _providerErrorDetails(error, run),
-            providerErrorResponseBody: _providerErrorBody(error, run),
-            providerErrorMetadata: _providerErrorMetadata(error, run),
+            errorMessage: _safeError(terminalError),
+            providerErrorDetails: _providerErrorDetails(terminalError, run),
+            providerErrorResponseBody: _providerErrorBody(terminalError, run),
+            providerErrorMetadata: _providerErrorMetadata(terminalError, run),
             streamingText:
-                error is ProviderException && run.replyMessageId == null
+                terminalError is ProviderException && run.replyMessageId == null
                 ? _display[run.conversationId]?.streamingText ?? ''
                 : '',
           ),
@@ -1703,6 +1727,7 @@ class AgentRuntimeController implements AgentUiDelegate {
     final original = conversation.messages.firstWhere(
       (m) => m.id == run.replyMessageId,
     );
+    _freezeRequestBudget(run);
     run.tools = const [];
     final response = await _modelResponse(
       run,
@@ -1782,6 +1807,7 @@ class AgentRuntimeController implements AgentUiDelegate {
     _Run run,
     List<ProviderMessage> messages,
   ) async {
+    final budget = run.requestBudget ?? _freezeRequestBudget(run);
     final selection = run.modelSelection;
     if (selection == null) {
       throw const AgentRuntimeException(
@@ -1867,6 +1893,12 @@ class AgentRuntimeController implements AgentUiDelegate {
           usage: usage,
         ),
       );
+      if (usage != null &&
+          usage.totalTokens > budget.requestLimits!.maxTotalTokens) {
+        throw const AgentRuntimeException(
+          AgentRuntimeError.tokenBudgetExceeded,
+        );
+      }
       return response;
     } catch (error) {
       if (hasAttachments &&
@@ -2646,9 +2678,16 @@ class AgentRuntimeController implements AgentUiDelegate {
       endpoint: run.endpoint,
       model: run.settings.model,
       protocol: _protocol(run.settings.protocol),
-      messages: messages,
-      tools: run.tools,
-      limits: limits.providerLimits,
+      messages: [
+        if (run.requestBudget?.finalStep == true)
+          ProviderMessage(
+            role: ProviderRole.system,
+            text: _budgetFinalInstructions,
+          ),
+        ...messages,
+      ],
+      tools: run.requestBudget?.finalStep == true ? const [] : run.tools,
+      limits: run.requestBudget?.requestLimits ?? limits.providerLimits,
       allowInsecureHttp: allowInsecureHttp,
       reasoningEffort: run.modelSelection?.wireReasoningEffort,
     ),
@@ -2862,6 +2901,13 @@ class AgentRuntimeController implements AgentUiDelegate {
   ) {
     _rejectSecret(response.text, run.apiKey);
     _rejectSecretValues(response.responseItems, run.apiKey);
+    if (run.requestBudget?.finalStep == true) {
+      try {
+        validateConversationReplyResponse(response);
+      } on ConversationHistoryException {
+        throw const AgentRuntimeException(AgentRuntimeError.invalidToolCall);
+      }
+    }
     if (response.toolCalls.isEmpty && response.text.trim().isEmpty) {
       throw const ProviderException(ProviderError.incompleteResponse);
     }
@@ -2926,6 +2972,9 @@ class _Run {
   final String? replyMessageId;
   String? turnId;
   ConversationRunUsage usage;
+  AgentRequestBudget? requestBudget;
+  final issuedToolCallIds = <String>{};
+  bool budgetSummaryRecorded = false;
   List<ToolDefinition> tools = const [];
   String? inputMessageId;
   final OperationScope scope;

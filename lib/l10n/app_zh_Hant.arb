@@ -2956,5 +2956,55 @@
         "type": "int"
       }
     }
+  },
+  "agentBudgetSummaryTitle": "本輪執行結果",
+  "@agentBudgetSummaryTitle": {},
+  "agentBudgetSummaryTokenLimit": "已達到 Token 預算上限。",
+  "@agentBudgetSummaryTokenLimit": {},
+  "agentBudgetSummaryRoundLimit": "已達到模型請求輪次上限。",
+  "@agentBudgetSummaryRoundLimit": {},
+  "agentBudgetSummaryToolLimit": "已達到工具呼叫次數上限。",
+  "@agentBudgetSummaryToolLimit": {},
+  "agentBudgetSummaryTools": "工具結果 · 完成 {completed} 項，失敗 {failed} 項，未開始 {notStarted} 項，待核對 {unknown} 項",
+  "@agentBudgetSummaryTools": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      },
+      "notStarted": {
+        "type": "int"
+      },
+      "unknown": {
+        "type": "int"
+      }
+    }
+  },
+  "agentBudgetSummaryUsage": "模型請求 {requests}/{requestLimit} 輪 · 已回報用量 {tokens}/{tokenLimit} Token",
+  "@agentBudgetSummaryUsage": {
+    "placeholders": {
+      "requests": {
+        "type": "int"
+      },
+      "requestLimit": {
+        "type": "int"
+      },
+      "tokens": {
+        "type": "int"
+      },
+      "tokenLimit": {
+        "type": "int"
+      }
+    }
+  },
+  "agentBudgetSummaryMissingUsage": "另有 {count} 次請求的用量未知。",
+  "@agentBudgetSummaryMissingUsage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

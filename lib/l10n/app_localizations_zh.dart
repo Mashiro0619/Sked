@@ -4161,6 +4161,43 @@ class AppLocalizationsZh extends AppLocalizations {
   String agentQuestionAnswerTooLong(int limit) {
     return '请将回答控制在 $limit 个字符以内。';
   }
+
+  @override
+  String get agentBudgetSummaryTitle => '本轮执行结果';
+
+  @override
+  String get agentBudgetSummaryTokenLimit => '已达到 Token 预算上限。';
+
+  @override
+  String get agentBudgetSummaryRoundLimit => '已达到模型请求轮次上限。';
+
+  @override
+  String get agentBudgetSummaryToolLimit => '已达到工具调用次数上限。';
+
+  @override
+  String agentBudgetSummaryTools(
+    int completed,
+    int failed,
+    int notStarted,
+    int unknown,
+  ) {
+    return '工具结果 · 完成 $completed 项，失败 $failed 项，未开始 $notStarted 项，待核对 $unknown 项';
+  }
+
+  @override
+  String agentBudgetSummaryUsage(
+    int requests,
+    int requestLimit,
+    int tokens,
+    int tokenLimit,
+  ) {
+    return '模型请求 $requests/$requestLimit 轮 · 已报告用量 $tokens/$tokenLimit Token';
+  }
+
+  @override
+  String agentBudgetSummaryMissingUsage(int count) {
+    return '另有 $count 次请求的用量未知。';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -8321,5 +8358,42 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String agentQuestionAnswerTooLong(int limit) {
     return '請將回答控制在 $limit 個字元以內。';
+  }
+
+  @override
+  String get agentBudgetSummaryTitle => '本輪執行結果';
+
+  @override
+  String get agentBudgetSummaryTokenLimit => '已達到 Token 預算上限。';
+
+  @override
+  String get agentBudgetSummaryRoundLimit => '已達到模型請求輪次上限。';
+
+  @override
+  String get agentBudgetSummaryToolLimit => '已達到工具呼叫次數上限。';
+
+  @override
+  String agentBudgetSummaryTools(
+    int completed,
+    int failed,
+    int notStarted,
+    int unknown,
+  ) {
+    return '工具結果 · 完成 $completed 項，失敗 $failed 項，未開始 $notStarted 項，待核對 $unknown 項';
+  }
+
+  @override
+  String agentBudgetSummaryUsage(
+    int requests,
+    int requestLimit,
+    int tokens,
+    int tokenLimit,
+  ) {
+    return '模型請求 $requests/$requestLimit 輪 · 已回報用量 $tokens/$tokenLimit Token';
+  }
+
+  @override
+  String agentBudgetSummaryMissingUsage(int count) {
+    return '另有 $count 次請求的用量未知。';
   }
 }
