@@ -10,11 +10,13 @@ List<ProviderMessage>? boundConversationContext(
   List<ProviderMessage> messages, {
   required int maxMessages,
   required int maxCharacters,
+  bool Function(List<ProviderMessage> messages)? fitsRequest,
 }) {
   bool fits(List<ProviderMessage> value) =>
       value.length <= maxMessages &&
       value.fold<int>(0, (sum, message) => sum + _size(message)) <=
-          maxCharacters;
+          maxCharacters &&
+      (fitsRequest?.call(value) ?? true);
   if (fits(messages)) return messages;
 
   final prefix = <ProviderMessage>[];

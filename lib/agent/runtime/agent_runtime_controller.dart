@@ -19,6 +19,7 @@ import '../imports/school_web_handoff_context.dart';
 import '../attachments/attachment_repository.dart';
 import '../conversations/conversation_repository.dart';
 import '../provider/provider.dart';
+import '../provider/provider_request_encoder.dart';
 import '../ui/agent_ui_delegate.dart';
 import 'conversation_context.dart';
 import 'operation_outcome.dart';
@@ -1741,19 +1742,7 @@ class AgentRuntimeController implements AgentUiDelegate {
       if (hasAttachments) await _setAttachmentDelivery(run, delivery);
       invoked = true;
       await for (final event in provider.stream(
-        _replyRequest(
-          run,
-          ProviderRequest(
-            endpoint: run.endpoint,
-            model: run.settings.model,
-            protocol: _protocol(run.settings.protocol),
-            messages: messages,
-            tools: run.tools,
-            limits: limits.providerLimits,
-            allowInsecureHttp: allowInsecureHttp,
-            reasoningEffort: selection.wireReasoningEffort,
-          ),
-        ),
+        _providerRequest(run, messages, allowInsecureHttp: allowInsecureHttp),
         apiKey: run.apiKey,
         cancellation: run.cancellation,
       )) {
@@ -2550,6 +2539,24 @@ class AgentRuntimeController implements AgentUiDelegate {
               .toList(),
         );
 
+  ProviderRequest _providerRequest(
+    _Run run,
+    List<ProviderMessage> messages, {
+    bool allowInsecureHttp = false,
+  }) => _replyRequest(
+    run,
+    ProviderRequest(
+      endpoint: run.endpoint,
+      model: run.settings.model,
+      protocol: _protocol(run.settings.protocol),
+      messages: messages,
+      tools: run.tools,
+      limits: limits.providerLimits,
+      allowInsecureHttp: allowInsecureHttp,
+      reasoningEffort: run.modelSelection?.wireReasoningEffort,
+    ),
+  );
+
   List<ProviderMessage> _context(
     AgentConversation conversation,
     _Run run, {
@@ -2663,12 +2670,30 @@ class AgentRuntimeController implements AgentUiDelegate {
     if (pending.isNotEmpty) {
       throw const AgentRuntimeException(AgentRuntimeError.unpairedToolHistory);
     }
+    bool fitsRequest(List<ProviderMessage> candidate) {
+      try {
+        final size = measureProviderRequestSize(
+          _providerRequest(run, candidate),
+        );
+        return size.textBytes <= limits.providerLimits.maxRequestBytes &&
+            size.attachmentBytes <= limits.providerLimits.maxAttachmentBytes;
+      } on ProviderException {
+        // Keep protocol/media validation and its delivery status at the normal
+        // provider entry point. This preflight coordinates only size limits.
+        return true;
+      }
+    }
+
     final bounded = boundConversationContext(
       messages,
       maxMessages: limits.maxContextMessages,
       maxCharacters: limits.maxContextCharacters,
+      fitsRequest: fitsRequest,
     );
     if (bounded == null) {
+      if (!fitsRequest(messages)) {
+        throw const ProviderException(ProviderError.requestBudgetExceeded);
+      }
       throw const AgentRuntimeException(
         AgentRuntimeError.contextBudgetExceeded,
       );

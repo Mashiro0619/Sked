@@ -7,16 +7,14 @@ import 'package:crypto/crypto.dart';
 import 'provider_models.dart';
 import 'provider_protocol.dart';
 
-/// Encodes cooperatively, keeping text and binary budgets separate. No bytes
-/// reach HTTP until every attachment's actual length and digest are verified.
-Future<Uint8List> encodeProviderRequestBody(
-  ProviderRequest request, {
-  required Future<void> abortSignal,
-  required void Function() checkCancelled,
-  void Function(int completed, int total)? onProgress,
-}) async {
-  checkCancelled();
-  final value = encodeProviderRequest(request);
+/// Exact JSON text and declared binary sizes without opening attachment data.
+({int textBytes, int attachmentBytes, int encodedBytes})
+measureProviderRequestSize(ProviderRequest request) =>
+    _measureRequestValue(encodeProviderRequest(request));
+
+({int textBytes, int attachmentBytes, int encodedBytes}) _measureRequestValue(
+  Object? value,
+) {
   var rawBytes = 0;
   var encodedBytes = 0;
   int measure(Object? value) {
@@ -56,11 +54,29 @@ Future<Uint8List> encodeProviderRequestBody(
   }
 
   final textBytes = measure(value);
-  if (textBytes > request.limits.maxRequestBytes ||
-      rawBytes > request.limits.maxAttachmentBytes) {
+  return (
+    textBytes: textBytes,
+    attachmentBytes: rawBytes,
+    encodedBytes: encodedBytes,
+  );
+}
+
+/// Encodes cooperatively, keeping text and binary budgets separate. No bytes
+/// reach HTTP until every attachment's actual length and digest are verified.
+Future<Uint8List> encodeProviderRequestBody(
+  ProviderRequest request, {
+  required Future<void> abortSignal,
+  required void Function() checkCancelled,
+  void Function(int completed, int total)? onProgress,
+}) async {
+  checkCancelled();
+  final value = encodeProviderRequest(request);
+  final size = _measureRequestValue(value);
+  if (size.textBytes > request.limits.maxRequestBytes ||
+      size.attachmentBytes > request.limits.maxAttachmentBytes) {
     throw const ProviderException(ProviderError.requestBudgetExceeded);
   }
-  final expectedBytes = textBytes + encodedBytes;
+  final expectedBytes = size.textBytes + size.encodedBytes;
   final output = BytesBuilder(copy: false);
   var completedBytes = 0;
   void append(String text) {
@@ -103,7 +119,7 @@ Future<Uint8List> encodeProviderRequestBody(
               : chunk.length;
           encoder.add(chunk.sublist(offset, end));
           completedBytes += end - offset;
-          onProgress?.call(completedBytes, rawBytes);
+          onProgress?.call(completedBytes, size.attachmentBytes);
           await Future<void>.delayed(Duration.zero);
           checkCancelled();
         }
