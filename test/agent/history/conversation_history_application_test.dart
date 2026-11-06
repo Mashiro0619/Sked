@@ -9,6 +9,7 @@ import 'package:sked/agent/history/conversation_history.dart';
 import 'package:sked/agent/history/conversation_history_preflight.dart';
 import 'package:sked/agent/knowledge/knowledge_repository.dart';
 import 'package:sked/agent/provider/provider.dart';
+import 'package:sked/agent/runtime/agent_runtime_controller.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/models/agent_settings.dart';
@@ -466,7 +467,7 @@ void main() {
     expect(app.agent.conversations.find(conversation.id)!.pendingRedo, isNull);
   });
 
-  test('an interrupted replay keeps its run identity and never repeats the old suffix', () async {
+  test('an interrupted replay links a fresh attempt without repeating the old suffix', () async {
     final conversation = await ready();
     createCalendarScript();
     await app.agent.runtime.send(conversation.id, 'Create one calendar');
@@ -497,8 +498,14 @@ void main() {
           .map((m) => m.text),
       ['Only explain'],
     );
-    expect(after.runs.single.id, replayRunId);
-    expect(after.runs.single.requests, hasLength(2));
+    expect(after.runs, hasLength(2));
+    expect(after.runs.first.id, replayRunId);
+    expect(after.runs.first.status, ConversationRunStatus.interrupted);
+    expect(after.runs.first.requests, hasLength(1));
+    expect(after.runs.last.id, isNot(replayRunId));
+    expect(after.runs.last.continuedFromRunId, replayRunId);
+    expect(after.runs.last.requests, hasLength(1));
+    expect(after.turns.single.runIds, after.runs.map((run) => run.id));
     expect(
       app.session.committedData.applicationLedger!.receipts.where(
         (receipt) => receipt.result['undoBatchId'] != null,
@@ -506,6 +513,153 @@ void main() {
       hasLength(1),
     );
   });
+
+  for (final budget in [
+    AgentRuntimeError.roundBudgetExceeded,
+    AgentRuntimeError.toolBudgetExceeded,
+    AgentRuntimeError.tokenBudgetExceeded,
+  ]) {
+    for (final restart in [false, true]) {
+      test(
+        'redo ${budget.name} continues with a fresh budget after restart=$restart',
+        () async {
+          final conversation = await ready();
+          createCalendarScript();
+          await app.agent.runtime.send(conversation.id, 'Create a calendar');
+          final original = app.agent.conversations.find(conversation.id)!;
+          await app.agent.configurePreferences(
+            app.agent.settings.copyWith(
+              maxModelRounds: budget == AgentRuntimeError.roundBudgetExceeded
+                  ? 1
+                  : 24,
+              maxToolCalls: budget == AgentRuntimeError.toolBudgetExceeded
+                  ? 1
+                  : 128,
+              maxTotalTokens: budget == AgentRuntimeError.tokenBudgetExceeded
+                  ? 1024
+                  : 100000,
+            ),
+          );
+          provider.respond = (_) => ProviderResponse(
+            text: '',
+            finishReason: 'tool_calls',
+            toolCalls: [
+              ProviderToolCall(
+                id: 'redo-discover',
+                name: 'capabilities.describe',
+                arguments: '{"names":["events.list"]}',
+              ),
+              if (budget == AgentRuntimeError.toolBudgetExceeded)
+                ProviderToolCall(
+                  id: 'redo-skill',
+                  name: 'skills.search',
+                  arguments: '{}',
+                ),
+            ],
+            usage: budget == AgentRuntimeError.tokenBudgetExceeded
+                ? const ProviderUsage(
+                    inputTokens: 1024,
+                    outputTokens: 1,
+                    totalTokens: 1025,
+                  )
+                : null,
+          );
+          await app.agent.history.editAndRedo(
+            conversation.id,
+            original.messages.first.id,
+            'Explain instead',
+          );
+          final interrupted = app.agent.conversations.find(conversation.id)!;
+          final batch = interrupted.pendingRedo!;
+          expect(batch.phase, ConversationRedoPhase.running);
+          expect(batch.lastError, budget.name);
+          expect(interrupted.runs.single.id, batch.replayRunId);
+          expect(
+            interrupted.runs.single.status,
+            ConversationRunStatus.interrupted,
+          );
+          expect(interrupted.runs.single.requests, hasLength(1));
+
+          if (restart) {
+            final mainStorage = WorkspaceMemoryStorage(
+              app.session.committedData,
+            );
+            await app.agent.quiesce();
+            app.dispose();
+            provider = _Provider()..respond = (_) => _done();
+            app = await workspaceProvider(
+              storage: mainStorage,
+              agentConversationStorage: chats,
+              agentKnowledgeStorage: knowledge,
+              agentCredentialStore: MemoryAgentCredentialStore(),
+              agentProvider: provider,
+            );
+            await app.agent.recoverHistoryBeforeWrites();
+            await app.agent.initialize();
+            expect(provider.requests, isEmpty);
+            expect(
+              app.agent.conversations.find(conversation.id)!.pendingRedo!.id,
+              batch.id,
+            );
+          }
+
+          final requestsBefore = provider.requests.length;
+          final entered = Completer<void>();
+          final response = Completer<ProviderResponse>();
+          provider.respond = (_) {
+            entered.complete();
+            return response.future;
+          };
+          final firstContinue = app.agent.runtime.continueConversation(
+            conversation.id,
+          );
+          await entered.future;
+          final repeatedContinue = app.agent.runtime.continueConversation(
+            conversation.id,
+          );
+          response.complete(_done('The edited request is now complete.'));
+          await Future.wait([firstContinue, repeatedContinue]);
+
+          final completed = app.agent.conversations.find(conversation.id)!;
+          expect(provider.requests.length, requestsBefore + 1);
+          expect(completed.pendingRedo, isNull);
+          expect(completed.historyVersions, hasLength(1));
+          expect(completed.runs, hasLength(2));
+          expect(completed.runs.first.id, batch.replayRunId);
+          expect(
+            completed.runs.first.status,
+            ConversationRunStatus.interrupted,
+          );
+          expect(completed.runs.last.continuedFromRunId, batch.replayRunId);
+          expect(completed.runs.last.status, ConversationRunStatus.completed);
+          expect(completed.runs.last.requests, hasLength(1));
+          expect(completed.runs.last.tools, isEmpty);
+          expect(
+            completed.turns.single.runIds,
+            completed.runs.map((run) => run.id),
+          );
+          expect(
+            completed.messages
+                .where((message) => message.role == ConversationRole.user)
+                .map((message) => message.text),
+            ['Explain instead'],
+          );
+          expect(
+            app.session.committedData.applicationLedger!.receipts.where(
+              (receipt) => receipt.result['undoBatchId'] != null,
+            ),
+            hasLength(1),
+          );
+          provider.respond = (_) => _done('A new request can start.');
+          await app.agent.runtime.send(conversation.id, 'A fresh request');
+          expect(
+            app.agent.conversations.find(conversation.id)!.turns,
+            hasLength(2),
+          );
+        },
+      );
+    }
+  }
 
   test(
     'cancelling a prepared chat batch releases its unused knowledge ticket',

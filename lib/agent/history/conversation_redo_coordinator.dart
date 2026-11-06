@@ -47,7 +47,16 @@ abstract interface class ConversationRedoStore {
   Future<ConversationRedoBatch> publishRequest(ConversationRedoBatch batch);
 }
 
-enum ConversationReplayOutcome { completed, interrupted }
+class ConversationReplayOutcome {
+  const ConversationReplayOutcome._(this.isComplete, this.errorCode);
+  const ConversationReplayOutcome.failure(this.errorCode) : isComplete = false;
+
+  static const completed = ConversationReplayOutcome._(true, null);
+  static const interrupted = ConversationReplayOutcome._(false, null);
+
+  final bool isComplete;
+  final String? errorCode;
+}
 
 abstract interface class ConversationRedoHost {
   /// Stops only the selected chat and awaits its accepted effects. Other chats
@@ -293,7 +302,8 @@ class ConversationRedoCoordinator {
         batch = await host.withUndoBarrier(batch.id, () => _undo(batch.id));
       }
       // Business undo has completed before the runtime is allowed to start.
-      // A repeated call in running resumes the same reserved run identity.
+      // A repeated call in running continues the published request and keeps
+      // the same undo batch. The runtime owns individual execution attempts.
       if (batch.phase == ConversationRedoPhase.ready) {
         batch = await _save(
           batch,
@@ -301,7 +311,7 @@ class ConversationRedoCoordinator {
         );
       }
       final result = await host.replay(batch);
-      if (result == ConversationReplayOutcome.completed) {
+      if (result.isComplete) {
         batch = await _save(
           batch,
           batch.copyWith(phase: ConversationRedoPhase.completed),
@@ -309,7 +319,10 @@ class ConversationRedoCoordinator {
       } else {
         batch = await _save(
           batch,
-          batch.copyWith(lastError: ConversationHistoryError.cancelled.name),
+          batch.copyWith(
+            lastError:
+                result.errorCode ?? ConversationHistoryError.cancelled.name,
+          ),
         );
       }
       return batch;

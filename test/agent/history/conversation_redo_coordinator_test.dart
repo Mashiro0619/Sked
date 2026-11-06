@@ -170,6 +170,22 @@ void main() {
       expect(fixture.store.published, 0);
     },
   );
+
+  test('replay interruptions retain their actual stable error code', () async {
+    final fixture = _Fixture();
+    fixture.host.outcome = const ConversationReplayOutcome.failure(
+      'roundBudgetExceeded',
+    );
+    final interrupted = await fixture.coordinator.resume('redo');
+    expect(interrupted.lastError, 'roundBudgetExceeded');
+    expect(interrupted.phase, ConversationRedoPhase.running);
+    fixture.host.outcome = ConversationReplayOutcome.completed;
+    final completed = await fixture.coordinator.resume('redo');
+    expect(completed.lastError, isNull);
+    expect(completed.phase, ConversationRedoPhase.completed);
+    expect(fixture.main.commitCount, 1);
+    expect(fixture.knowledge.commitCount, 1);
+  });
 }
 
 class _Fixture {

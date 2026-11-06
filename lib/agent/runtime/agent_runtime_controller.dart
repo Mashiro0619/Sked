@@ -242,27 +242,47 @@ class AgentRuntimeController implements AgentUiDelegate {
         ConversationHistoryError.invalidSelection,
       );
     }
-    final previous = conversation!.runs
-        .where((run) => run.id == batch.replayRunId)
-        .firstOrNull;
+    final previous = _latestReplayRun(conversation!, batch.replayRunId);
     if (previous?.status == ConversationRunStatus.completed) {
       return ConversationReplayOutcome.completed;
     }
-    await _start(
-      batch.conversationId,
-      reservedRunId: batch.replayRunId,
-      replayBatchId: batch.id,
-      reuseReservedRun: previous != null,
+    _Run? attempt;
+    try {
+      await _start(
+        batch.conversationId,
+        reservedRunId: previous == null ? batch.replayRunId : null,
+        replayBatchId: batch.id,
+        continuedReplayRunId: previous?.id,
+        onRunCreated: (run) => attempt = run,
+      );
+    } catch (error) {
+      return ConversationReplayOutcome.failure(_safeError(error));
+    }
+    final latest = repository.find(batch.conversationId);
+    if (latest != null &&
+        _latestReplayRun(latest, batch.replayRunId)?.status ==
+            ConversationRunStatus.completed) {
+      return ConversationReplayOutcome.completed;
+    }
+    return ConversationReplayOutcome.failure(
+      attempt?.failureCode ?? 'interruptedRunNeedsReview',
     );
-    return repository
-                .find(batch.conversationId)
-                ?.runs
-                .where((run) => run.id == batch.replayRunId)
-                .firstOrNull
-                ?.status ==
-            ConversationRunStatus.completed
-        ? ConversationReplayOutcome.completed
-        : ConversationReplayOutcome.interrupted;
+  }
+
+  ConversationRunUsage? _latestReplayRun(
+    AgentConversation conversation,
+    String initialRunId,
+  ) {
+    final attemptIds = {initialRunId};
+    ConversationRunUsage? latest;
+    for (final run in conversation.runs) {
+      if (attemptIds.contains(run.id) ||
+          attemptIds.contains(run.continuedFromRunId)) {
+        attemptIds.add(run.id);
+        latest = run;
+      }
+    }
+    return latest;
   }
 
   Future<void> stopForHistoryRedo(String conversationId) async {
@@ -853,7 +873,7 @@ class AgentRuntimeController implements AgentUiDelegate {
     bool consumeQueued = false,
     String? reservedRunId,
     String? replayBatchId,
-    bool reuseReservedRun = false,
+    String? continuedReplayRunId,
     String? replyMessageId,
     void Function(_Run run)? onRunCreated,
   }) async {
@@ -902,9 +922,9 @@ class AgentRuntimeController implements AgentUiDelegate {
         : null;
     late AgentModelSelection selection;
     try {
-      final previous = reuseReservedRun
+      final previous = continuedReplayRunId != null
           ? conversation.runs
-                .where((item) => item.id == reservedRunId)
+                .where((item) => item.id == continuedReplayRunId)
                 .firstOrNull
           : null;
       if (previous?.model != null && previous?.reasoningEffort == null) {
@@ -990,29 +1010,11 @@ class AgentRuntimeController implements AgentUiDelegate {
       fingerprint: fingerprint,
       mode: conversation.mode,
       startedAt: _clock().toUtc(),
-      continuedFromRunId: resume || consumeQueued ? conversation.runId : null,
+      continuedFromRunId:
+          continuedReplayRunId ??
+          (resume || consumeQueued ? conversation.runId : null),
       replyMessageId: replyMessageId,
     );
-    if (reuseReservedRun) {
-      final previous = conversation.runs
-          .where((item) => item.id == run.id)
-          .firstOrNull;
-      if (previous == null) {
-        throw const AgentRuntimeException(AgentRuntimeError.busy);
-      }
-      run.usage = ConversationRunUsage(
-        id: previous.id,
-        startedAt: previous.startedAt,
-        kind: previous.kind,
-        protocol: previous.protocol,
-        model: previous.model,
-        reasoningEffort: previous.reasoningEffort,
-        continuedFromRunId: previous.continuedFromRunId,
-        requests: previous.requests,
-        tools: previous.tools,
-      );
-      run.toolCalls = previous.tools.length;
-    }
     _runs[conversationId] = run;
     onRunCreated?.call(run);
     run.deadline = _ExecutionDeadline(
@@ -1042,8 +1044,7 @@ class AgentRuntimeController implements AgentUiDelegate {
         if (handoff && current.runId != null) {
           throw const AgentRuntimeException(AgentRuntimeError.busy);
         }
-        if (!reuseReservedRun &&
-            current.runs.any((item) => item.id == run.id)) {
+        if (current.runs.any((item) => item.id == run.id)) {
           throw const AgentRuntimeException(AgentRuntimeError.busy);
         }
         var messages = recovered;
@@ -1099,7 +1100,7 @@ class AgentRuntimeController implements AgentUiDelegate {
           newRequest:
               userText != null ||
               handoff ||
-              (replayBatchId != null && !reuseReservedRun) ||
+              (replayBatchId != null && continuedReplayRunId == null) ||
               (pending != null && !_isSteering(pending)),
         );
         return current.copyWith(
@@ -1362,6 +1363,7 @@ class AgentRuntimeController implements AgentUiDelegate {
       throw const AgentRuntimeException(AgentRuntimeError.roundBudgetExceeded);
     } catch (error) {
       failure = error;
+      run.failureCode = _safeError(error);
       if (repository.find(run.conversationId) != null) {
         _setDisplay(
           run,
@@ -1417,6 +1419,7 @@ class AgentRuntimeController implements AgentUiDelegate {
         run.succeeded = !run.recoveryRequired;
         _setDisplay(run, const AgentUiRunState());
       }
+      if (failure != null) run.failureCode = _safeError(failure);
     }
   }
 
@@ -2745,6 +2748,7 @@ class _Run {
   bool accepted = false;
   bool succeeded = false;
   bool outcomeUnknown = false;
+  String? failureCode;
   bool recoveryRequired = false;
   String? hostToolCallId;
   _ExecutionDeadline? deadline;
