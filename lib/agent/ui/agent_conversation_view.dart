@@ -718,6 +718,8 @@ class _AgentConversationViewState extends State<AgentConversationView> {
 
   void _draftChanged(String id, String text) {
     final repository = _repository;
+    final delegate = widget.delegate;
+    final generation = _uiGeneration;
     setState(() => _drafts[id] = text);
     // Enqueue immediately: removing a panel or route cannot discard a timer's
     // unsaved text. Repository serialization keeps these writes in order.
@@ -729,7 +731,11 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     _draftWrites[id] = write;
     unawaited(
       write.catchError((Object _) {
-        if (mounted) setState(() => _failed = true);
+        if (_uiSessionCurrent(generation, id) &&
+            identical(repository, _repository) &&
+            identical(delegate, widget.delegate)) {
+          setState(() => _failed = true);
+        }
       }),
     );
   }
