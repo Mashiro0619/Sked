@@ -81,6 +81,44 @@ void main() {
     expect(values.last, closeTo(0, 0.0001));
   });
 
+  testWidgets('reversing before the first movement cancels the old target', (
+    tester,
+  ) async {
+    var target = 0.0;
+    final values = <double>[];
+    final settledTargets = <double>[];
+    late void Function(void Function()) update;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            update = setState;
+            final currentTarget = target;
+            return SkedSpringBuilder(
+              value: currentTarget,
+              onEnd: () => settledTargets.add(currentTarget),
+              builder: (context, value, child) {
+                values.add(value);
+                return const SizedBox();
+              },
+            );
+          },
+        ),
+      ),
+    );
+    update(() => target = 1);
+    await tester.pump();
+    expect(values.last, 0);
+    expect(settledTargets, isEmpty);
+
+    update(() => target = 0);
+    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(values, everyElement(0));
+    expect(settledTargets, [0]);
+  });
+
   testWidgets('disabled animations snap and still notify onEnd', (
     tester,
   ) async {

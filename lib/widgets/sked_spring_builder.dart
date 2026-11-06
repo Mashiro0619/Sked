@@ -84,7 +84,7 @@ class _SkedSpringBuilderState extends State<SkedSpringBuilder>
       _snapTo(target);
       return;
     }
-    if (_controller.value == target) return;
+    if (_controller.value == target && !_controller.isAnimating) return;
 
     final generation = ++_motionGeneration;
     // Read velocity before starting the new simulation. `stop` is not needed:
