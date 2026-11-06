@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:sked/widgets/sked_menu_anchor.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/services/desktop_window_bridge.dart';
 
@@ -199,10 +200,10 @@ void registerCaptureScenarios() {
               // The prior desktop trigger does not retain keyboard focus; the
               // visual baseline driver closes its menu without changing data.
               t
-                  .widget<MenuAnchor>(
+                  .widget<SkedMenuAnchor>(
                     find.descendant(
                       of: k(id),
-                      matching: find.byType(MenuAnchor),
+                      matching: find.byType(SkedMenuAnchor),
                     ),
                   )
                   .controller!

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:sked/widgets/sked_menu_anchor.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/l10n/app_locale.dart';
@@ -531,7 +532,7 @@ void main() {
       final dropdown = find.byKey(const ValueKey('general-default-view'));
       final dropdownRect = tester.getRect(dropdown);
       final anchorRect = tester.getRect(
-        find.descendant(of: dropdown, matching: find.byType(MenuAnchor)),
+        find.descendant(of: dropdown, matching: find.byType(SkedMenuAnchor)),
       );
 
       await tester.tap(dropdown);

@@ -2,6 +2,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:sked/widgets/sked_menu_anchor.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
@@ -12,7 +13,7 @@ import '../support/workspace_harness.dart';
 
 Finder k(String id) => find.byKey(ValueKey(id));
 Finder anchorOf(Finder row) =>
-    find.descendant(of: row, matching: find.byType(MenuAnchor));
+    find.descendant(of: row, matching: find.byType(SkedMenuAnchor));
 Finder menuItem(String label) => find
     .ancestor(of: find.text(label).last, matching: find.byType(MenuItemButton))
     .first;
@@ -489,7 +490,7 @@ void main() {
         t.view.physicalSize = Size(width, 900);
         await t.pumpAndSettle();
         expect(selected, isEmpty);
-        final menu = t.widget<MenuAnchor>(anchorOf(k('mode')));
+        final menu = t.widget<SkedMenuAnchor>(anchorOf(k('mode')));
         if (!menu.controller!.isOpen) await open(t, k('mode'));
         expect(find.byType(MenuItemButton), findsNWidgets(3));
         expect(t.takeException(), isNull);

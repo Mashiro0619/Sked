@@ -11,6 +11,7 @@ import '../controllers/workspace_view_state.dart';
 import '../theme/sked_expressive_theme.dart';
 import '../theme/sked_menu_style.dart';
 import 'sked_menu_item_content.dart';
+import 'sked_menu_anchor.dart';
 
 /// Builds row content around a current-value anchor. The dropdown owns pointer
 /// activation and a single keyboard/semantics trigger for the whole row.
@@ -59,13 +60,14 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>>
   late T? _selectedValue = widget.initialSelection;
   final _menu = MenuController();
   final _triggerFocus = FocusNode(debugLabel: 'Dropdown trigger');
-  final _selectedItem = GlobalKey();
+  GlobalKey _selectedItem = GlobalKey();
   AppDataMaintenance? _maintenance;
   WorkspaceViewState? _workspaceView;
   Listenable? _sessionChanges;
   Object? _dataSession;
   String? _workspaces;
   bool _ownerCurrent = true, _acceptSelection = false;
+  bool _menuClosing = false;
   int _generation = 0;
   bool _restoreTriggerFocus = true;
 
@@ -124,12 +126,17 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>>
   }
 
   void _opened() {
+    _menuClosing = false;
+    // Scroll the current selection into view without moving an old item State
+    // (and its pending post-frame activation) into the new menu session.
+    _selectedItem = GlobalKey();
     _dataSession = _maintenance?.dataSessionToken;
     _workspaces = _workspaceView?.enabledWorkspaces
         .map((mode) => mode.value)
         .join(',');
     _acceptSelection = true;
     final generation = ++_generation;
+    setState(() {});
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final itemContext = _selectedItem.currentContext;
       if (mounted &&
@@ -142,6 +149,7 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>>
   }
 
   void _closed() {
+    _menuClosing = false;
     _acceptSelection = false;
     final generation = ++_generation;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -242,8 +250,9 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>>
     return LayoutBuilder(
       builder: (context, _) {
         final menuStyle = _menuStyleForAnchor(baseMenuStyle);
+        final generation = _generation;
         void toggleMenu() {
-          if (_menu.isOpen) {
+          if (_menu.isOpen && !_menuClosing) {
             _menu.close();
           } else {
             _triggerFocus.requestFocus();
@@ -261,16 +270,20 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>>
             child: content,
           ),
         );
-        Widget anchor({Widget? child}) => MenuAnchor(
+        Widget anchor({Widget? child}) => SkedMenuAnchor(
           controller: _menu,
           childFocusNode: _triggerFocus,
           onOpen: _opened,
           onClose: _closed,
-          animated: motion.spatialAnimationsEnabled,
+          onAnimationStatusChanged: (status) {
+            if (status == AnimationStatus.reverse) {
+              _menuClosing = true;
+              _acceptSelection = false;
+              _generation++;
+            }
+          },
           style: menuStyle,
           clipBehavior: Clip.antiAlias,
-          // MenuAnchor checks the upper bound before subtracting a flip offset.
-          // Keep the checked position when the menu opens above its anchor.
           alignmentOffset: Offset.zero,
           crossAxisUnconstrained: false,
           menuChildren: [
@@ -283,6 +296,7 @@ class _SkedDropdownMenuState<T> extends State<SkedDropdownMenu<T>>
                   onSelected: widget.enabled && entry.enabled
                       ? (value) {
                           if (!_acceptSelection ||
+                              generation != _generation ||
                               !_menu.isOpen ||
                               !_sessionCurrent) {
                             return;
@@ -408,6 +422,7 @@ class _SkedDropdownMenuItem<T> extends StatelessWidget {
       child: Semantics(
         checked: selected,
         child: MenuItemButton(
+          overflowAxis: Axis.vertical,
           requestFocusOnHover: false,
           closeOnActivate: false,
           onPressed: enabled ? () => onSelected?.call(entry.value) : null,

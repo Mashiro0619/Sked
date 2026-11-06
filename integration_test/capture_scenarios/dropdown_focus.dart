@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:sked/widgets/sked_menu_anchor.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/screens/settings_page.dart';
 import 'package:sked/services/desktop_window_bridge.dart';
@@ -87,9 +88,9 @@ void registerCaptureScenarios() {
           await t.pumpAndSettle();
           final anchor = find.descendant(
             of: row,
-            matching: find.byType(MenuAnchor),
+            matching: find.byType(SkedMenuAnchor),
           );
-          final trigger = t.widget<MenuAnchor>(anchor).childFocusNode!;
+          final trigger = t.widget<SkedMenuAnchor>(anchor).childFocusNode!;
           final title = find.descendant(of: row, matching: find.text('外观配置目标'));
           final dropdown = t.widget<SkedDropdownMenu<String>>(
             find.descendant(

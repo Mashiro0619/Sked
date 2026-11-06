@@ -2,13 +2,14 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:sked/widgets/sked_menu_anchor.dart';
 import 'package:sked/widgets/settings_list.dart';
 
 import '../support/workspace_harness.dart';
 
 Finder k(String id) => find.byKey(ValueKey(id));
 Finder get menuAnchor =>
-    find.descendant(of: k('choice'), matching: find.byType(MenuAnchor));
+    find.descendant(of: k('choice'), matching: find.byType(SkedMenuAnchor));
 
 Future<(FocusNode, TestGesture, List<int?>)> start(WidgetTester t) async {
   t.view.devicePixelRatio = 1;
@@ -94,7 +95,7 @@ void main() {
         'pointer-opened $opening menu releases focus after $dismissal dismissal',
         (t) async {
           final (_, mouse, selected) = await start(t);
-          final trigger = t.widget<MenuAnchor>(menuAnchor).childFocusNode!;
+          final trigger = t.widget<SkedMenuAnchor>(menuAnchor).childFocusNode!;
           await click(
             t,
             mouse,
@@ -139,7 +140,7 @@ void main() {
       'outside click keeps the next field focused after menu closure, keyboard open: $keyboardOpen',
       (t) async {
         final (nextFocus, mouse, _) = await start(t);
-        final trigger = t.widget<MenuAnchor>(menuAnchor).childFocusNode!;
+        final trigger = t.widget<SkedMenuAnchor>(menuAnchor).childFocusNode!;
         if (keyboardOpen) {
           trigger.requestFocus();
           await t.pump();
@@ -163,7 +164,7 @@ void main() {
     t,
   ) async {
     final (_, mouse, selected) = await start(t);
-    final trigger = t.widget<MenuAnchor>(menuAnchor).childFocusNode!;
+    final trigger = t.widget<SkedMenuAnchor>(menuAnchor).childFocusNode!;
     trigger.requestFocus();
     await t.pump();
     await t.sendKeyEvent(LogicalKeyboardKey.enter);
@@ -180,7 +181,7 @@ void main() {
     'switching from mouse to keyboard navigation restores trigger focus',
     (t) async {
       final (_, mouse, selected) = await start(t);
-      final trigger = t.widget<MenuAnchor>(menuAnchor).childFocusNode!;
+      final trigger = t.widget<SkedMenuAnchor>(menuAnchor).childFocusNode!;
       await click(t, mouse, menuAnchor);
       await leaveRow(t, mouse);
       await t.sendKeyEvent(LogicalKeyboardKey.arrowDown);

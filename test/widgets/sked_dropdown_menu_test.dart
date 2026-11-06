@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/widgets/sked_dropdown_menu.dart';
+import 'package:sked/widgets/sked_menu_anchor.dart';
 
 class _DropdownHarness extends StatefulWidget {
   const _DropdownHarness();
@@ -38,6 +39,93 @@ class _DropdownHarnessState extends State<_DropdownHarness> {
 }
 
 void main() {
+  for (final label in ['First', 'Second']) {
+    testWidgets('a pending tap on $label cannot select a reopened dropdown', (
+      tester,
+    ) async {
+      final selected = <String?>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SkedDropdownMenu<String>(
+                initialSelection: 'first',
+                dropdownMenuEntries: const [
+                  DropdownMenuEntry(value: 'first', label: 'First'),
+                  DropdownMenuEntry(value: 'second', label: 'Second'),
+                ],
+                onSelected: selected.add,
+              ),
+            ),
+          ),
+        ),
+      );
+      final menu = tester
+          .widget<SkedMenuAnchor>(find.byType(SkedMenuAnchor))
+          .controller!;
+      menu.open();
+      await tester.pumpAndSettle();
+      final item = find.widgetWithText(MenuItemButton, label);
+      final previousState = tester.state(item);
+      await tester.tap(item);
+      // MenuItemButton dispatches its selection in a post-frame callback.
+      // Reopen before that callback and before rebuilding the old item State.
+      menu.close();
+      menu.open();
+      await tester.pumpAndSettle();
+      expect(selected, isEmpty);
+      expect(menu.isOpen, isTrue);
+      expect(tester.state(item), isNot(same(previousState)));
+      await tester.tap(find.widgetWithText(MenuItemButton, 'Second'));
+      await tester.pumpAndSettle();
+      expect(selected, ['second']);
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+  }
+
+  testWidgets(
+    'callbacks from a closed dropdown cannot select after reopening',
+    (tester) async {
+      final selected = <String?>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SkedDropdownMenu<String>(
+                initialSelection: 'first',
+                dropdownMenuEntries: const [
+                  DropdownMenuEntry(value: 'first', label: 'First'),
+                  DropdownMenuEntry(value: 'second', label: 'Second'),
+                ],
+                onSelected: selected.add,
+              ),
+            ),
+          ),
+        ),
+      );
+      final menu = tester
+          .widget<SkedMenuAnchor>(find.byType(SkedMenuAnchor))
+          .controller!;
+      menu.open();
+      await tester.pumpAndSettle();
+      final oldSelect = tester
+          .widget<MenuItemButton>(find.widgetWithText(MenuItemButton, 'Second'))
+          .onPressed!;
+      menu.close();
+      oldSelect();
+      expect(selected, isEmpty);
+      await tester.pumpAndSettle();
+      menu.open();
+      await tester.pumpAndSettle();
+      oldSelect();
+      expect(selected, isEmpty);
+      await tester.tap(find.widgetWithText(MenuItemButton, 'Second'));
+      await tester.pumpAndSettle();
+      expect(selected, ['second']);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
   testWidgets('resynchronizes the selection after a failed save', (
     tester,
   ) async {
