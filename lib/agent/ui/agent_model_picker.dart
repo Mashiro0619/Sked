@@ -445,19 +445,7 @@ class _AgentModelPickerState extends State<AgentModelPicker>
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                SizedBox(
-                                  width: menuStyle.desktop ? 32 : 48,
-                                  height: menuStyle.desktop ? 32 : 48,
-                                  child: ExcludeSemantics(
-                                    child: Icon(
-                                      Icons.bolt_outlined,
-                                      size: 20,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurfaceVariant,
-                                    ),
-                                  ),
-                                ),
+                                SizedBox(width: menuStyle.desktop ? 32 : 48),
                                 Expanded(
                                   child: Tooltip(
                                     message: '${l.agentModel}: $modelLabel',
