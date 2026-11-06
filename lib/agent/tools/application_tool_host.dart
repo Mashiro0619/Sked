@@ -513,26 +513,29 @@ class ApplicationToolHost {
       'occurrences': ResourceKind.occurrence,
     };
     for (final family in families.entries) {
+      final occurrence = family.value == ResourceKind.occurrence;
+      final getProperties = {
+        'id': _stringSchema,
+        if (_isChildResource(family.value)) 'parentId': _stringSchema,
+        'view': _viewSchema,
+        'fields': _projectionFieldsSchema(family.value),
+        if (occurrence) 'start': _stringSchema,
+        if (occurrence) 'end': _stringSchema,
+      };
       _add(
         '${family.key}.list',
-        'Query all ${family.key}, including noncurrent, hidden and disabled owners. Use bounded pages and explicit fields.',
-        {..._queryProperties, 'fields': _projectionFieldsSchema(family.value)},
+        'Query all ${family.key}, including noncurrent, hidden and disabled owners. Use bounded pages and explicit fields. For date-filtered course or event instances use agenda.query or occurrences.list.',
+        _resourceQueryProperties(family.value),
         (args, _, _) async =>
             _queries.query(_query(args, family.value)).toJson(),
+        required: occurrence ? ['start', 'end'] : [],
       );
       _add(
         '${family.key}.get',
         'Read one ${family.key} by stable ID. Child resources require their parent ID.',
-        {
-          'id': _stringSchema,
-          'parentId': _stringSchema,
-          'view': _viewSchema,
-          'fields': _projectionFieldsSchema(family.value),
-          'start': _stringSchema,
-          'end': _stringSchema,
-        },
+        getProperties,
         (args, _, _) async {
-          _keys(args, {'id', 'parentId', 'view', 'fields', 'start', 'end'});
+          _keys(args, getProperties.keys.toSet());
           return _queries
               .get(
                 ResourceRef(
@@ -547,16 +550,17 @@ class ApplicationToolHost {
               )
               .toJson();
         },
-        required: ['id'],
+        required: [
+          'id',
+          if (_isChildResource(family.value)) 'parentId',
+          if (occurrence) ...['start', 'end'],
+        ],
       );
     }
     _add(
       'agenda.query',
       'Read overlapping course and event occurrences in a bounded time window.',
-      {
-        ..._queryProperties,
-        'fields': _projectionFieldsSchema(ResourceKind.occurrence),
-      },
+      _resourceQueryProperties(ResourceKind.occurrence),
       (args, _, _) async =>
           _queries.query(_query(args, ResourceKind.occurrence)).toJson(),
       required: ['start', 'end'],
@@ -1152,23 +1156,42 @@ Map<String, Object?> _projectionFieldsSchema(ResourceKind kind) => {
     'enum': ResourceQueries.allowedFieldsFor(kind).toList(),
   },
 };
-const _queryProperties = <String, Object?>{
+bool _isChildResource(ResourceKind kind) => const {
+  ResourceKind.course,
+  ResourceKind.event,
+  ResourceKind.occurrence,
+}.contains(kind);
+
+Map<String, Object?> _resourceQueryProperties(ResourceKind kind) => {
+  ..._baseQueryProperties,
+  if (_isChildResource(kind)) 'parentIds': _stringListSchema,
+  if (kind == ResourceKind.occurrence) ..._occurrenceQueryProperties,
+  'fields': _projectionFieldsSchema(kind),
+};
+
+const _baseQueryProperties = <String, Object?>{
   'ids': _stringListSchema,
-  'parentIds': _stringListSchema,
+  'query': _stringSchema,
+  'view': _viewSchema,
+  'fields': _queryFieldsSchema,
+  'limit': _limitSchema,
+  'cursor': _stringSchema,
+  'includeHidden': {'type': 'boolean'},
+  'includeDisabled': {'type': 'boolean'},
+};
+const _occurrenceQueryProperties = <String, Object?>{
   'sourceIds': _stringListSchema,
   'source': {
     'type': 'string',
     'enum': ['course', 'event'],
   },
-  'query': _stringSchema,
-  'view': _viewSchema,
-  'fields': _queryFieldsSchema,
   'start': _stringSchema,
   'end': _stringSchema,
-  'limit': _limitSchema,
-  'cursor': _stringSchema,
-  'includeHidden': {'type': 'boolean'},
-  'includeDisabled': {'type': 'boolean'},
+};
+const _queryProperties = <String, Object?>{
+  ..._baseQueryProperties,
+  'parentIds': _stringListSchema,
+  ..._occurrenceQueryProperties,
 };
 const _aggregateProperties = <String, Object?>{
   'start': _stringSchema,
@@ -1197,7 +1220,7 @@ final _settingEditsSchema = {
 };
 
 ResourceQuery _query(Map<String, Object?> args, ResourceKind kind) {
-  _keys(args, _queryProperties.keys.toSet());
+  _keys(args, _resourceQueryProperties(kind).keys.toSet());
   return ResourceQuery(
     kind: kind,
     view: _view(args['view']),

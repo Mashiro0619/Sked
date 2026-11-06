@@ -77,6 +77,28 @@ void main() {
         final kind = kindsByTool[name];
         if (kind == null) continue;
         final properties = parameters['properties'] as Map;
+        final isGet = name.endsWith('.get');
+        final occurrence = kind == ResourceKind.occurrence;
+        final child = const {
+          ResourceKind.course,
+          ResourceKind.event,
+          ResourceKind.occurrence,
+        }.contains(kind);
+        expect(properties.containsKey('start'), occurrence, reason: name);
+        expect(properties.containsKey('end'), occurrence, reason: name);
+        expect(
+          properties.containsKey(isGet ? 'parentId' : 'parentIds'),
+          child,
+          reason: name,
+        );
+        if (!isGet) {
+          expect(properties.containsKey('sourceIds'), occurrence, reason: name);
+          expect(properties.containsKey('source'), occurrence, reason: name);
+        }
+        if (occurrence)
+          expect(parameters['required'], containsAll(['start', 'end']));
+        if (isGet && child)
+          expect(parameters['required'], contains('parentId'));
         final fields = properties['fields'] as Map;
         expect(fields['description'], contains('Omit'));
         expect(fields['description'], contains('ref'));
@@ -166,6 +188,29 @@ void main() {
       }
     },
   );
+
+  test('resource filters are validated against the advertised kind-specific properties', () async {
+    for (final name in [
+      'events.list',
+      'courses.list',
+      'calendars.list',
+      'timetables.list',
+      'period_sets.list',
+    ]) {
+      await call(name, {});
+      for (final args in [
+        occurrenceRange,
+        {'source': 'event'},
+        {
+          'sourceIds': ['fixture'],
+        },
+      ]) {
+        await expectLater(call(name, args), throwsA(isA<OperationProblem>()));
+      }
+    }
+    final result = await call('agenda.query', occurrenceRange);
+    expect(result['items'], isA<List>());
+  });
 
   test(
     'default, explicit and reference-only projections preserve their meaning',
