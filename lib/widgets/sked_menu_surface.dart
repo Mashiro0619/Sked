@@ -9,7 +9,7 @@ abstract final class SkedMenuMotion {
   static Duration duration(SkedMotionPolicy motion, {bool reverse = false}) {
     if (!motion.animationsEnabled) return Duration.zero;
     if (motion.reduceMotion) return const Duration(milliseconds: 120);
-    return Duration(milliseconds: reverse ? 140 : 240);
+    return Duration(milliseconds: reverse ? 160 : 280);
   }
 }
 
@@ -72,7 +72,7 @@ class SkedMenuSurface extends StatelessWidget {
                 opacity: progress,
                 child: Transform.scale(
                   scale: motion.spatialAnimationsEnabled
-                      ? .96 + .04 * progress
+                      ? .90 + .10 * progress
                       : 1,
                   alignment: alignment,
                   child: child,

@@ -65,29 +65,29 @@ void main() {
       .entry(0, 0);
 
   for (final count in [2, 5, 12]) {
-    testWidgets('$count popup items share the complete 240ms entrance', (
+    testWidgets('$count popup items share the complete 280ms entrance', (
       tester,
     ) async {
       await mount(tester, count: count);
       expect(opacity(tester), 0);
-      expect(scale(tester), closeTo(.96, .0001));
+      expect(scale(tester), closeTo(.90, .0001));
       await tester.pump(const Duration(milliseconds: 40));
-      final at40 = Curves.easeOutCubic.transform(40 / 240);
+      final at40 = Curves.easeOutCubic.transform(40 / 280);
       expect(opacity(tester), closeTo(at40, .0001));
-      expect(scale(tester), closeTo(.96 + .04 * at40, .0001));
+      expect(scale(tester), closeTo(.90 + .10 * at40, .0001));
       await tester.pump(const Duration(milliseconds: 80));
       expect(
         opacity(tester),
-        closeTo(Curves.easeOutCubic.transform(.5), .0001),
+        closeTo(Curves.easeOutCubic.transform(120 / 280), .0001),
       );
-      await tester.pump(const Duration(milliseconds: 120));
+      await tester.pump(const Duration(milliseconds: 160));
       expect(opacity(tester), 1);
       expect(scale(tester), 1);
       expect(tester.takeException(), isNull);
     });
   }
 
-  testWidgets('popup closes in 140ms and immediately disables its contents', (
+  testWidgets('popup closes in 160ms and immediately disables its contents', (
     tester,
   ) async {
     await mount(tester, count: 5);
@@ -96,10 +96,10 @@ void main() {
     Navigator.of(menuContext).pop();
     await tester.pump();
     expect(find.text('Option 0').hitTestable(), findsNothing);
-    await tester.pump(const Duration(milliseconds: 70));
+    await tester.pump(const Duration(milliseconds: 80));
     expect(opacity(tester), greaterThan(0));
     expect(opacity(tester), lessThan(1));
-    await tester.pump(const Duration(milliseconds: 70));
+    await tester.pump(const Duration(milliseconds: 80));
     expect(opacity(tester), closeTo(0, .0001));
     await tester.pump(const Duration(milliseconds: 1));
     await tester.pump();
