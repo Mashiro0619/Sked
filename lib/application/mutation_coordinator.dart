@@ -871,7 +871,8 @@ int? _resourceIndex(AppData data, ResourceRef ref) {
   if (match == null || sequence == null || sequence >= 9007199254740991) {
     throw const OperationProblem(
       OperationErrorCode.invalidArgument,
-      'Invalid operation identity.',
+      'Invalid operation identity. Omit operationId when preparing a new operation so the host generates it. For retries, status or undo, copy the exact operationId returned by the host.',
+      field: 'operationId',
     );
   }
   return (generation: match.group(1)!, sequence: sequence);

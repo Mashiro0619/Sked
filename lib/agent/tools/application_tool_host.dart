@@ -138,6 +138,33 @@ class ApplicationToolHost {
       throw StateError('Duplicate application tool: ${definition.name}');
     }
     ToolNameCodec.encode(definition.name);
+    if (definition.parameters['properties']
+        case final Map<String, Object?> properties
+        when properties['operationId'] is Map<String, Object?>) {
+      final operationId = properties['operationId'] as Map<String, Object?>;
+      final required = definition.parameters['required'] as List? ?? const [];
+      definition = ToolDefinition(
+        name: definition.name,
+        description: definition.description,
+        strict: definition.strict,
+        parameters: {
+          ...definition.parameters,
+          'properties': {
+            ...properties,
+            'operationId': {
+              ...operationId,
+              'description': [
+                if (operationId['description'] case final String description)
+                  description,
+                required.contains('operationId')
+                    ? 'Use the exact operationId returned by the host for the target operation.'
+                    : 'Omit for a new operation so the host generates its identity. For a retry, copy the exact operationId previously returned by the host and keep the original arguments.',
+              ].join(' '),
+            },
+          },
+        },
+      );
+    }
     _tools[definition.name] = (definition, action);
   }
 

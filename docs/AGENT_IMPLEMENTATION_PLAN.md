@@ -79,6 +79,7 @@ Agent 改为主外壳的中央目的地，复用工作台导航、窗口外壳�
 ### 2026-11-07 工具参数纠错
 
 - [x] 查询 schema 公开实际投影字段，资源描述同时提供查询与变更契约，未知字段反馈包含允许字段及参数位置。见[投影契约回归](../test/agent/tools/resource_projection_contract_test.dart)。
+- [x] 操作身份参数说明区分宿主分配的新操作与原样复用的重试，主库和外部操作的无效身份反馈提供纠正方式。见[操作身份契约回归](../test/agent/tools/operation_identity_contract_test.dart)。
 
 ### 产品行为与实现约束
 
