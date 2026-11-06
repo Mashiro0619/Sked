@@ -39,6 +39,281 @@ void main() {
     runId: runId,
   );
 
+  for (final recorded in [false, true]) {
+    test('tool activity follows message order with recorded=$recorded', () {
+      ConversationMessage call(String id, {String text = ''}) => message(
+        id,
+        ConversationRole.assistant,
+        text: text,
+        calls: [
+          ConversationToolCall(id: id, name: 'agenda.query', arguments: '{}'),
+        ],
+      );
+      final messages = [
+        message('user', ConversationRole.user, text: 'Check the schedule'),
+        call('first', text: 'Checking today.'),
+        message(
+          'first-result',
+          ConversationRole.tool,
+          toolId: 'first',
+          text: '[]',
+        ),
+        call('adjacent'),
+        message(
+          'adjacent-result',
+          ConversationRole.tool,
+          toolId: 'adjacent',
+          text: '[]',
+        ),
+        call('second', text: 'Now checking tomorrow.'),
+        message(
+          'second-result',
+          ConversationRole.tool,
+          toolId: 'second',
+          text: '[]',
+        ),
+        message(
+          'reply',
+          ConversationRole.assistant,
+          text: 'Here is the summary.',
+        ),
+      ];
+      final stored = conversation(
+        messages,
+        runs: recorded
+            ? [
+                ConversationRunUsage(
+                  id: 'run',
+                  startedAt: time,
+                  kind: ConversationRunKind.model,
+                  status: ConversationRunStatus.completed,
+                ),
+              ]
+            : [],
+        turns: recorded
+            ? [
+                ConversationTurn(
+                  id: 'turn',
+                  requestMessageId: 'user',
+                  ownershipComplete: true,
+                  messageIds: messages.map((m) => m.id),
+                  runIds: const ['run'],
+                ),
+              ]
+            : [],
+      );
+      final before = jsonEncode(stored.toJson());
+      final timeline = projectAgentConversationTimeline(stored);
+      expect(
+        timeline.map(
+          (entry) => switch (entry) {
+            AgentTimelineMessage(:final message) => message.id,
+            AgentTimelineActivity(:final anchorMessageId) =>
+              'activity-$anchorMessageId',
+          },
+        ),
+        [
+          'user',
+          'first',
+          'activity-first',
+          'second',
+          'activity-second',
+          'reply',
+        ],
+      );
+      final activities = timeline.whereType<AgentTimelineActivity>().toList();
+      expect(activities.map((entry) => entry.tools.length), [2, 1]);
+      expect(
+        activities.expand((entry) => entry.tools).map((tool) => tool.result),
+        ['[]', '[]', '[]'],
+      );
+      expect(
+        timeline
+            .whereType<AgentTimelineMessage>()
+            .where((entry) => entry.isFinalResponse)
+            .map((entry) => entry.message.id),
+        ['reply'],
+      );
+      final partial = projectAgentConversationTimeline(
+        stored.copyWith(
+          messages: messages.take(6),
+          turns: [
+            if (recorded)
+              stored.turns.single.copyWith(
+                messageIds: messages.take(6).map((message) => message.id),
+              ),
+          ],
+          status: ConversationStatus.running,
+          runId: 'run',
+        ),
+        currentRunActive: true,
+      );
+      expect(
+        partial.whereType<AgentTimelineActivity>().map(
+          (entry) => (entry.id, entry.anchorMessageId),
+        ),
+        activities.map((entry) => (entry.id, entry.anchorMessageId)),
+      );
+      expect(jsonEncode(stored.toJson()), before);
+    });
+  }
+
+  for (final runStatus in ConversationRunStatus.values) {
+    test('only the completed recorded response is final for $runStatus', () {
+      final messages = [
+        message('request', ConversationRole.user, text: 'Check today'),
+        message('progress', ConversationRole.assistant, text: 'Checking.'),
+        message('steer', ConversationRole.user, text: 'Include tomorrow'),
+        message('reply', ConversationRole.assistant, text: 'Finished summary'),
+      ];
+      final stored = conversation(
+        messages,
+        runs: [
+          ConversationRunUsage(
+            id: 'run',
+            startedAt: time,
+            kind: ConversationRunKind.model,
+            status: runStatus,
+          ),
+        ],
+        turns: [
+          ConversationTurn(
+            id: 'turn',
+            requestMessageId: 'request',
+            ownershipComplete: true,
+            messageIds: messages.map((m) => m.id),
+            runIds: const ['run'],
+          ),
+        ],
+      );
+      final finals = projectAgentConversationTimeline(stored)
+          .whereType<AgentTimelineMessage>()
+          .where((entry) => entry.isFinalResponse)
+          .map((entry) => entry.message.id);
+      expect(
+        finals,
+        runStatus == ConversationRunStatus.completed ? ['reply'] : isEmpty,
+      );
+    });
+  }
+
+  test('legacy finals respect current work, orphan tools and regeneration', () {
+    final messages = [
+      message('first-user', ConversationRole.user, text: 'First request'),
+      message('first-reply', ConversationRole.assistant, text: 'First reply'),
+      message('second-user', ConversationRole.user, text: 'Second request'),
+      message('second-reply', ConversationRole.assistant, text: 'Second reply'),
+    ];
+    List<String> finals(List<AgentTimelineEntry> timeline) => timeline
+        .whereType<AgentTimelineMessage>()
+        .where((entry) => entry.isFinalResponse)
+        .map((entry) => entry.message.id)
+        .toList();
+    final stored = conversation(messages);
+    expect(finals(projectAgentConversationTimeline(stored)), [
+      'first-reply',
+      'second-reply',
+    ]);
+    expect(
+      finals(projectAgentConversationTimeline(stored, currentRunActive: true)),
+      ['first-reply'],
+    );
+    expect(
+      finals(
+        projectAgentConversationTimeline(
+          stored.copyWith(status: ConversationStatus.interrupted),
+        ),
+      ),
+      ['first-reply'],
+    );
+    expect(
+      finals(
+        projectAgentConversationTimeline(
+          stored.copyWith(
+            messages: [
+              ...messages,
+              message(
+                'orphan',
+                ConversationRole.tool,
+                toolId: 'missing',
+                text: '{}',
+              ),
+            ],
+          ),
+        ),
+      ),
+      ['first-reply'],
+    );
+    expect(
+      finals(
+        projectAgentConversationTimeline(
+          stored.copyWith(
+            status: ConversationStatus.running,
+            runId: 'regenerate',
+          ),
+          activeRunId: 'regenerate',
+          replyTargetMessageId: 'first-reply',
+        ),
+      ),
+      ['first-reply', 'second-reply'],
+    );
+  });
+
+  test('activity segment IDs cannot collide with imported turn IDs', () {
+    ConversationMessage call(String id, {String text = ''}) => message(
+      id,
+      ConversationRole.assistant,
+      text: text,
+      calls: [
+        ConversationToolCall(id: id, name: 'agenda.query', arguments: '{}'),
+      ],
+    );
+    final messages = [
+      message('user', ConversationRole.user, text: 'First request'),
+      call('first'),
+      call('second', text: 'Next check'),
+      message('user2', ConversationRole.user, text: 'Second request'),
+      call('third'),
+    ];
+    final activities = projectAgentConversationTimeline(
+      conversation(
+        messages,
+        runs: [
+          ConversationRunUsage(
+            id: 'run-first',
+            kind: ConversationRunKind.model,
+            startedAt: time,
+          ),
+          ConversationRunUsage(
+            id: 'run-second',
+            kind: ConversationRunKind.model,
+            startedAt: time,
+          ),
+        ],
+        turns: [
+          ConversationTurn(
+            id: 'turn',
+            requestMessageId: 'user',
+            ownershipComplete: false,
+            messageIds: const ['user', 'first', 'second'],
+            runIds: const ['run-first'],
+          ),
+          ConversationTurn(
+            id: 'turn-activity-second',
+            requestMessageId: 'user2',
+            ownershipComplete: false,
+            messageIds: const ['user2', 'third'],
+            runIds: const ['run-second'],
+          ),
+        ],
+      ),
+    ).whereType<AgentTimelineActivity>().toList();
+    expect(activities, hasLength(3));
+    expect(activities.map((entry) => entry.id).toSet(), hasLength(3));
+    expect(activities.first.id, 'turn');
+    expect(activities.last.id, 'turn-activity-second');
+  });
+
   test(
     'eight read calls become one activity without changing stored messages',
     () {
@@ -493,7 +768,7 @@ void main() {
             .where((activity) => !activity.id.startsWith('legacy-run-'))
             .toList();
         final tools = ordinary.expand((activity) => activity.tools).toList();
-        expect(ordinary, hasLength(sharedTurn ? 1 : 2));
+        expect(ordinary, hasLength(2));
         expect(tools, hasLength(2));
         expect(tools.map((tool) => tool.id).toSet(), hasLength(2));
         expect(tools.first.name, 'agenda.list');

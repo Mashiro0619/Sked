@@ -10,9 +10,10 @@ sealed class AgentTimelineEntry {
 }
 
 class AgentTimelineMessage extends AgentTimelineEntry {
-  const AgentTimelineMessage(this.message);
+  const AgentTimelineMessage(this.message, {this.isFinalResponse = false});
 
   final ConversationMessage message;
+  final bool isFinalResponse;
 }
 
 enum AgentToolActivityStatus {
@@ -144,12 +145,13 @@ typedef _RecordedUsage = ({
   String anchor,
 });
 
-/// Groups ordinary tool traffic once per recorded turn. Legacy conversations
-/// fall back to user-message boundaries for display, without inventing durable
-/// turn ownership or enabling redo for those historical records.
+/// Groups adjacent tool traffic in message order while retaining recorded turn
+/// ownership for result matching. Legacy conversations use user boundaries.
 List<AgentTimelineEntry> projectAgentConversationTimeline(
   AgentConversation conversation, {
   String? activeRunId,
+  bool currentRunActive = false,
+  String? replyTargetMessageId,
 }) {
   final messages = conversation.messages;
   if (messages.isEmpty) return const [];
@@ -174,10 +176,12 @@ List<AgentTimelineEntry> projectAgentConversationTimeline(
   }
   final lastGroup = groupByMessage[messages.last.id]!;
   final recordedActive =
-      conversation.status == ConversationStatus.running ||
-      conversation.status == ConversationStatus.waitingApproval;
-  final effectiveRunId =
-      activeRunId ?? (recordedActive ? conversation.runId : null);
+      replyTargetMessageId == null &&
+      (conversation.status == ConversationStatus.running ||
+          conversation.status == ConversationStatus.waitingApproval);
+  final effectiveRunId = replyTargetMessageId == null
+      ? activeRunId ?? (recordedActive ? conversation.runId : null)
+      : null;
   final activeGroups = <String>{};
   if (effectiveRunId != null) {
     if (turnsByRun[effectiveRunId] case final owned?) {
@@ -185,11 +189,9 @@ List<AgentTimelineEntry> projectAgentConversationTimeline(
     } else if (effectiveRunId == conversation.runId) {
       activeGroups.addAll([lastGroup, 'legacy-run-$effectiveRunId']);
     }
-  } else if (recordedActive) {
+  } else if (recordedActive || currentRunActive) {
     activeGroups.add(lastGroup);
   }
-  final anchors = <String, String>{};
-  final ordered = <String, List<_ActivitySource>>{};
   final sources = <_ActivitySource>[];
   final displayIds = <String>{};
   final callCounts = <String, int>{};
@@ -210,8 +212,6 @@ List<AgentTimelineEntry> projectAgentConversationTimeline(
 
   void add(_ActivitySource source) {
     sources.add(source);
-    ordered.putIfAbsent(source.group, () => []).add(source);
-    anchors.putIfAbsent(source.group, () => source.anchor);
   }
 
   final pending = <String, List<_ActivitySource>>{};
@@ -343,75 +343,139 @@ List<AgentTimelineEntry> projectAgentConversationTimeline(
       ),
     );
   }
-  final activities = <String, AgentTimelineActivity>{};
-  for (final group in ordered.entries) {
-    activities[group.key] = AgentTimelineActivity(
-      id: group.key,
-      anchorMessageId: anchors[group.key]!,
-      tools: group.value.map((source) {
-        final call = source.call;
-        final result = source.result;
-        final usage = source.usage;
-        final active = source.runId == null
-            ? activeGroups.contains(group.key)
-            : source.runId == effectiveRunId;
-        final accountedStatus = switch (usage?.outcome) {
-          ConversationAttemptOutcome.completed =>
-            AgentToolActivityStatus.completed,
-          ConversationAttemptOutcome.failed => AgentToolActivityStatus.failed,
-          ConversationAttemptOutcome.unknown =>
-            AgentToolActivityStatus.uncertain,
-          ConversationAttemptOutcome.notStarted =>
-            AgentToolActivityStatus.notStarted,
-          ConversationAttemptOutcome.pending =>
-            active
-                ? AgentToolActivityStatus.running
-                : AgentToolActivityStatus.uncertain,
-          null =>
-            result != null
-                ? AgentToolActivityStatus.completed
-                : active
-                ? AgentToolActivityStatus.running
-                : AgentToolActivityStatus.uncertain,
-        };
-        final resultStatus = _resultStatus(result);
-        return AgentToolActivity(
-          id: source.id,
-          name: call?.name ?? usage?.name ?? '',
-          arguments: call?.arguments ?? '',
-          status:
-              accountedStatus == AgentToolActivityStatus.uncertain ||
-                  resultStatus == AgentToolActivityStatus.uncertain
-              ? AgentToolActivityStatus.uncertain
-              : accountedStatus == AgentToolActivityStatus.notStarted
-              ? accountedStatus
-              : resultStatus ?? accountedStatus,
-          result: result?.text,
-          resultMessageId: result?.id,
-          receipt: result != null && isAgentVisibleToolResult(result),
-        );
-      }),
-    );
+  final lastResponseByGroup = <String, ConversationMessage>{};
+  for (final message in messages) {
+    if (message.role == ConversationRole.assistant ||
+        message.role == ConversationRole.tool) {
+      lastResponseByGroup[groupByMessage[message.id]!] = message;
+    }
   }
-  final before = <String, List<AgentTimelineActivity>>{};
-  final after = <String, List<AgentTimelineActivity>>{};
-  for (final activity in activities.values) {
-    final anchor = messages.firstWhere(
-      (message) => message.id == activity.anchorMessageId,
-    );
-    final target = anchor.role == ConversationRole.user ? after : before;
-    target.putIfAbsent(anchor.id, () => []).add(activity);
+  final runsById = {for (final run in conversation.runs) run.id: run};
+  final completedTurns = {
+    for (final turn in conversation.turns)
+      if (runsById[turn.runIds.lastOrNull]?.status ==
+          ConversationRunStatus.completed)
+        turn.id,
+  };
+  final finalResponseIds = <String>{};
+  for (final entry in lastResponseByGroup.entries) {
+    final group = entry.key;
+    final message = entry.value;
+    if (message.role != ConversationRole.assistant ||
+        message.text.trim().isEmpty ||
+        message.toolCalls.isNotEmpty ||
+        activeGroups.contains(group) ||
+        (group == lastGroup &&
+            replyTargetMessageId == null &&
+            (currentRunActive ||
+                conversation.status != ConversationStatus.idle))) {
+      continue;
+    }
+    if (!ownedGroups.contains(group) || completedTurns.contains(group)) {
+      finalResponseIds.add(message.id);
+    }
   }
-  return List.unmodifiable([
-    for (final message in messages) ...[
-      ...?before[message.id],
-      if (message.role != ConversationRole.tool ||
-          isAgentVisibleToolResult(message))
-        if (message.role != ConversationRole.assistant ||
-            message.text.isNotEmpty ||
-            message.toolCalls.isEmpty)
-          AgentTimelineMessage(message),
-      ...?after[message.id],
-    ],
-  ]);
+  final sourcesByAnchor = <String, List<_ActivitySource>>{};
+  for (final source in sources) {
+    sourcesByAnchor.putIfAbsent(source.anchor, () => []).add(source);
+  }
+  final timeline = <AgentTimelineEntry>[];
+  final emittedGroups = <String>{};
+  final activityIds = {for (final source in sources) source.group};
+  final segment = <_ActivitySource>[];
+  void flushActivity() {
+    if (segment.isEmpty) return;
+    final first = segment.first;
+    var id = first.group;
+    if (!emittedGroups.add(first.group)) {
+      final base = '${first.group}-activity-${first.anchor}';
+      id = base;
+      var suffix = 0;
+      while (!activityIds.add(id)) {
+        id = '$base-${++suffix}';
+      }
+    }
+    timeline.add(
+      AgentTimelineActivity(
+        id: id,
+        anchorMessageId: first.anchor,
+        tools: segment.map((source) {
+          final call = source.call;
+          final result = source.result;
+          final usage = source.usage;
+          final active = source.runId == null
+              ? activeGroups.contains(source.group)
+              : source.runId == effectiveRunId;
+          final accountedStatus = switch (usage?.outcome) {
+            ConversationAttemptOutcome.completed =>
+              AgentToolActivityStatus.completed,
+            ConversationAttemptOutcome.failed => AgentToolActivityStatus.failed,
+            ConversationAttemptOutcome.unknown =>
+              AgentToolActivityStatus.uncertain,
+            ConversationAttemptOutcome.notStarted =>
+              AgentToolActivityStatus.notStarted,
+            ConversationAttemptOutcome.pending =>
+              active
+                  ? AgentToolActivityStatus.running
+                  : AgentToolActivityStatus.uncertain,
+            null =>
+              result != null
+                  ? AgentToolActivityStatus.completed
+                  : active
+                  ? AgentToolActivityStatus.running
+                  : AgentToolActivityStatus.uncertain,
+          };
+          final resultStatus = _resultStatus(result);
+          return AgentToolActivity(
+            id: source.id,
+            name: call?.name ?? usage?.name ?? '',
+            arguments: call?.arguments ?? '',
+            status:
+                accountedStatus == AgentToolActivityStatus.uncertain ||
+                    resultStatus == AgentToolActivityStatus.uncertain
+                ? AgentToolActivityStatus.uncertain
+                : accountedStatus == AgentToolActivityStatus.notStarted
+                ? accountedStatus
+                : resultStatus ?? accountedStatus,
+            result: result?.text,
+            resultMessageId: result?.id,
+            receipt: result != null && isAgentVisibleToolResult(result),
+          );
+        }),
+      ),
+    );
+    segment.clear();
+  }
+
+  void appendSources(String anchor) {
+    for (final source in sourcesByAnchor[anchor] ?? const <_ActivitySource>[]) {
+      if (segment.isNotEmpty && segment.first.group != source.group) {
+        flushActivity();
+      }
+      segment.add(source);
+    }
+  }
+
+  for (final message in messages) {
+    // Orphan results precede their independently visible receipt. Calls in an
+    // assistant message follow that message's explanatory text.
+    if (message.role == ConversationRole.tool) appendSources(message.id);
+    final visible = message.role == ConversationRole.tool
+        ? isAgentVisibleToolResult(message)
+        : message.role != ConversationRole.assistant ||
+              message.text.isNotEmpty ||
+              message.toolCalls.isEmpty;
+    if (visible) {
+      flushActivity();
+      timeline.add(
+        AgentTimelineMessage(
+          message,
+          isFinalResponse: finalResponseIds.contains(message.id),
+        ),
+      );
+    }
+    if (message.role != ConversationRole.tool) appendSources(message.id);
+  }
+  flushActivity();
+  return List.unmodifiable(timeline);
 }

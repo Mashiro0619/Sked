@@ -25,6 +25,72 @@ final _time = DateTime.utc(2026, 11, 5);
 Finder _key(String value) => find.byKey(ValueKey(value));
 
 void main() {
+  testWidgets(
+    'tool batches stay between their assistant messages in the real transcript',
+    (tester) async {
+      final fixture = await _mountFixture(tester, tools: 1);
+      await tester.runAsync(
+        () => fixture.repository.update(fixture.id, (current) {
+          final messages = [
+            current.messages[0],
+            current.messages[1].copyWith(text: 'Checking reminders.'),
+            current.messages[2],
+            _message(
+              'progress',
+              ConversationRole.assistant,
+              text: 'Now checking settings.',
+              calls: const [
+                ConversationToolCall(
+                  id: 'settings',
+                  name: 'settings.get',
+                  arguments: '{}',
+                ),
+              ],
+            ),
+            _message(
+              'settings-result',
+              ConversationRole.tool,
+              toolId: 'settings',
+              text: '{"theme":"light"}',
+            ),
+            current.messages.last,
+          ];
+          return current.copyWith(
+            messages: messages,
+            turns: [
+              current.turns.single.copyWith(
+                messageIds: messages.map((message) => message.id),
+              ),
+            ],
+          );
+        }),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(AgentTurnActivity), findsNWidgets(2));
+      final sequence = [
+        _key('agent-message-calls-0'),
+        _key('agent-activity-toggle-turn-0'),
+        _key('agent-message-progress'),
+        _key('agent-activity-toggle-turn-0-activity-progress'),
+        _key('agent-message-reply-0'),
+      ];
+      for (var index = 1; index < sequence.length; index++) {
+        expect(
+          tester.getRect(sequence[index]).top,
+          greaterThanOrEqualTo(tester.getRect(sequence[index - 1]).bottom),
+        );
+      }
+      final before = fixture.storage.source;
+      await _tap(tester, sequence[3]);
+      await _tap(tester, _key('agent-activity-tool-settings'));
+      expect(find.textContaining('"theme": "light"'), findsOneWidget);
+      expect(fixture.storage.source, before);
+      expect(fixture.delegate.calls, isEmpty);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
   for (final turns in [1, 2]) {
     testWidgets(
       'the real transcript groups eight ordinary tools per recorded turn with $turns ${turns == 1 ? 'turn including steering' : 'separate turns'}',

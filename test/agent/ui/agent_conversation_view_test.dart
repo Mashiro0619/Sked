@@ -109,6 +109,115 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('only completed final replies expose copy across tool steps', (
+    tester,
+  ) async {
+    await initialize();
+    final conversation = await repository.create(title: 'Ordered activity');
+    ConversationMessage message(
+      String id,
+      ConversationRole role,
+      String text, {
+      bool calls = false,
+      String? resultOf,
+    }) => ConversationMessage(
+      id: id,
+      role: role,
+      text: text,
+      createdAt: DateTime.utc(2026, 11, 6),
+      toolCallId: resultOf,
+      toolCalls: calls
+          ? [
+              ConversationToolCall(
+                id: 'call-$id',
+                name: 'events.list',
+                arguments: '{}',
+              ),
+            ]
+          : [],
+    );
+    final messages = [
+      message('u1', ConversationRole.user, 'First request'),
+      message('a1', ConversationRole.assistant, 'Checking first', calls: true),
+      message('t1', ConversationRole.tool, '{}', resultOf: 'call-a1'),
+      message('a2', ConversationRole.assistant, 'First final answer'),
+      message('u2', ConversationRole.user, 'Second request'),
+      message('a3', ConversationRole.assistant, 'Checking second', calls: true),
+      message('t2', ConversationRole.tool, '{}', resultOf: 'call-a3'),
+    ];
+    await repository.update(
+      conversation.id,
+      (value) => value.copyWith(
+        messages: messages,
+        status: ConversationStatus.running,
+        runId: 'active-run',
+      ),
+    );
+    delegate.state.value = AgentUiState(
+      enabled: true,
+      configured: true,
+      runs: {
+        conversation.id: const AgentUiRunState(
+          phase: AgentUiPhase.running,
+          runId: 'active-run',
+          streamingText: 'Still working',
+        ),
+      },
+    );
+    await mountAgentUi(tester, view(), size: const Size(1000, 1000));
+    await settle(tester);
+    expect(find.byKey(const ValueKey('agent-copy-a1')), findsNothing);
+    expect(find.byKey(const ValueKey('agent-copy-a2')), findsOneWidget);
+    expect(find.byKey(const ValueKey('agent-copy-a3')), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('agent-streaming-text')),
+        matching: find.byType(IconButton),
+      ),
+      findsNothing,
+    );
+    delegate.state.value = AgentUiState(
+      enabled: true,
+      configured: true,
+      runs: {
+        conversation.id: const AgentUiRunState(
+          phase: AgentUiPhase.failed,
+          runId: 'active-run',
+          streamingText: 'Failed partial reply',
+          errorMessage: 'provider.invalidResponse',
+        ),
+      },
+    );
+    await repository.update(
+      conversation.id,
+      (value) => value.copyWith(status: ConversationStatus.interrupted),
+    );
+    await settle(tester);
+    expect(find.byKey(const ValueKey('agent-copy-a3')), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('agent-streaming-text')),
+        matching: find.byType(IconButton),
+      ),
+      findsNothing,
+    );
+    await repository.update(
+      conversation.id,
+      (value) => value.copyWith(
+        messages: [
+          ...messages,
+          message('a4', ConversationRole.assistant, 'Second final answer'),
+        ],
+        status: ConversationStatus.idle,
+      ),
+    );
+    delegate.state.value = AgentUiState(enabled: true, configured: true);
+    await settle(tester);
+    expect(find.byKey(const ValueKey('agent-copy-a4')), findsOneWidget);
+    expect(find.byKey(const ValueKey('agent-copy-a3')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'API failure displays selectable left-aligned response details with partial output',
     (tester) async {

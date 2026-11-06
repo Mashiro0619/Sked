@@ -1399,6 +1399,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                   state.streamingText,
                   streaming: state.isActive,
                   key: const ValueKey('agent-streaming-text'),
+                  showCopy: false,
                 ),
               if (state.replyTargetMessageId == null)
                 ..._runStatusWidgets(state, conversation, l),
@@ -1905,6 +1906,8 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final timeline = projectAgentConversationTimeline(
       conversation,
       activeRunId: state.isActive ? state.runId : null,
+      currentRunActive: state.isActive && state.replyTargetMessageId == null,
+      replyTargetMessageId: state.replyTargetMessageId,
     );
     final latestMessageId = conversation.messages
         .where(
@@ -2018,6 +2021,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                 message,
                 l,
                 latest: message.id == latestMessageId,
+                finalResponse: entry.isFinalResponse,
               ),
     ];
   }
@@ -2084,6 +2088,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     ConversationMessage message,
     AppLocalizations l, {
     required bool latest,
+    required bool finalResponse,
   }) {
     final state = _runtime.runFor(conversation.id);
     final target = state.replyTargetMessageId == message.id;
@@ -2107,7 +2112,10 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     return AgentMessageActions(
       key: ValueKey('agent-message-group-${message.id}'),
       messageId: message.id,
-      copyText: replacing ? '' : text,
+      copyText:
+          !replacing && (message.role == ConversationRole.user || finalResponse)
+          ? text
+          : '',
       isUser: message.role == ConversationRole.user,
       active: widget.active,
       interactive: _uiActive,
