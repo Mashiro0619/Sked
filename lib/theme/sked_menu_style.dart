@@ -216,6 +216,13 @@ class SkedMenuStyle {
     visualDensity: VisualDensity.standard,
   );
 
+  MenuStyle get compactPanelStyle => menuStyle.copyWith(
+    backgroundColor: WidgetStatePropertyAll(colors.surfaceContainerHigh),
+    shape: WidgetStatePropertyAll(
+      shapes.card.copyWith(side: BorderSide(color: outline)),
+    ),
+  );
+
   PopupMenuThemeData get popupTheme => PopupMenuThemeData(
     color: surface,
     surfaceTintColor: Colors.transparent,

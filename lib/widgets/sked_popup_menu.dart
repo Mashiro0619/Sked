@@ -6,9 +6,9 @@ import 'package:material_ui/material_ui.dart';
 
 import 'sked_tooltip.dart';
 import 'sked_menu_item_content.dart';
+import 'sked_popup_menu_route.dart';
 import 'desktop_window_drag_guard.dart';
 
-import '../theme/app_motion.dart';
 import '../theme/sked_expressive_theme.dart';
 import '../theme/sked_menu_style.dart';
 
@@ -75,7 +75,7 @@ Future<T?> _showSkedMenu<T>({
     context,
     requested: constraints,
   );
-  return showMenu<T>(
+  return showSkedPopupRoute<T>(
     context: context,
     items: [
       if (items.isNotEmpty)
@@ -119,15 +119,7 @@ Future<T?> _showSkedMenu<T>({
     routeSettings: menu.desktop
         ? DesktopMenuRouteSettings(context, original: routeSettings)
         : routeSettings,
-    color: menu.surface,
-    shape: menu.shape,
-    elevation: menu.elevation,
-    shadowColor: menu.shadow,
-    surfaceTintColor: Colors.transparent,
-    menuPadding: menu.padding,
-    clipBehavior: Clip.antiAlias,
-    popUpAnimationStyle: SkedMotionPolicy.of(context)
-        .routeStyle(AppMotion.menuAnimationStyle),
+    style: menu.menuStyle,
   ).then((value) => session.valid ? value : null);
 }
 
@@ -171,8 +163,6 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final motion = SkedMotionPolicy.of(context);
-    final menu = SkedMenuStyle.of(context);
     return _SkedPopupMenuButton<T>(
       focusNode: focusNode,
       initialValue: initialValue,
@@ -190,22 +180,14 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
       constraints: constraints,
       style: style,
       iconSize: iconSize,
-      color: menu.surface,
-      shape: menu.shape,
-      elevation: menu.elevation,
-      shadowColor: menu.shadow,
-      surfaceTintColor: Colors.transparent,
-      menuPadding: menu.padding,
-      clipBehavior: Clip.antiAlias,
-      popUpAnimationStyle: motion.routeStyle(AppMotion.menuAnimationStyle),
       itemBuilder: itemBuilder,
       child: child,
     );
   }
 }
 
-// Keep Material's popup route and selection behavior, while all triggers share
-// explicit focus support and the viewport-aware showSkedMenu entry point.
+// Keep the programmatic button interface while routing every trigger through
+// the shared, viewport-aware menu surface.
 class _SkedPopupMenuButton<T> extends PopupMenuButton<T> {
   const _SkedPopupMenuButton({
     this.focusNode,
@@ -223,14 +205,6 @@ class _SkedPopupMenuButton<T> extends PopupMenuButton<T> {
     super.constraints,
     super.style,
     super.iconSize,
-    super.color,
-    super.shape,
-    super.elevation,
-    super.shadowColor,
-    super.surfaceTintColor,
-    super.menuPadding,
-    super.clipBehavior,
-    super.popUpAnimationStyle,
     super.routeSettings,
     super.child,
   });
@@ -572,6 +546,17 @@ class _SkedPopupMenuItemState<T>
     extends PopupMenuItemState<T, SkedPopupMenuItem<T>> {
   final _states = WidgetStatesController();
   bool get selected => widget.selected;
+
+  @override
+  void handleTap() {
+    final route = ModalRoute.of<T>(context);
+    if (route?.isCurrent != true ||
+        route?.animation?.status == AnimationStatus.reverse ||
+        route?.animation?.status == AnimationStatus.dismissed) {
+      return;
+    }
+    super.handleTap();
+  }
 
   @override
   void dispose() {
