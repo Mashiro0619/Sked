@@ -206,9 +206,11 @@ class SharedSkillLoader {
   Future<List<SkillAvailability>> search({
     required String userRequest,
     Set<String> sourceKinds = const {},
-    int limit = 5,
+    int? limit = 5,
   }) async {
-    if (limit < 1 || limit > 24) return const [];
+    // The host requests all matching metadata to paginate against one frozen
+    // catalog. Ordinary callers keep the existing bounded result.
+    if (limit != null && (limit < 1 || limit > 24)) return const [];
     final request = userRequest.trim().toLowerCase();
     if (request.isEmpty) return const [];
     final candidates = <({SkillAvailability entry, int score})>[];
@@ -234,9 +236,8 @@ class SharedSkillLoader {
       final score = b.score.compareTo(a.score);
       return score != 0 ? score : a.entry.skill.id.compareTo(b.entry.skill.id);
     });
-    return List.unmodifiable(
-      candidates.take(limit).map((value) => value.entry),
-    );
+    final ranked = candidates.map((value) => value.entry);
+    return List.unmodifiable(limit == null ? ranked : ranked.take(limit));
   }
 
   Future<SkillLoadResult> load(

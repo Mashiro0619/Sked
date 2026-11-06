@@ -436,23 +436,36 @@ class ApplicationToolHost {
     );
     _add(
       'skills.search',
-      'Find shared task Skills from the user request. An empty query lists the shared catalog.',
-      {'query': _stringSchema, 'limit': _pageLimitSchema(_skillPageLimit)},
+      'Find shared task Skills by keywords or exact ID. An empty query lists the compact catalog. When keywords have no match, catalogFallback returns the catalog so you can choose by purpose. Follow nextOffset to inspect remaining entries.',
+      {
+        'query': _stringSchema,
+        'offset': _integerSchema,
+        'limit': _pageLimitSchema(_skillPageLimit),
+      },
       (args, scope, _) async {
-        _keys(args, {'query', 'limit'});
-        final query = args['query'] as String? ?? '';
+        _keys(args, {'query', 'offset', 'limit'});
+        final query = (args['query'] as String? ?? '').trim();
         final loader = await _loader(scope);
-        final entries = query.isEmpty
+        final matches = query.isEmpty
             ? await loader.catalog()
-            : await loader.search(
-                userRequest: query,
-                limit: _limit(args, maximum: _skillPageLimit),
-              );
+            : await loader.search(userRequest: query, limit: null);
+        final fallback = query.isNotEmpty && matches.isEmpty;
+        final entries = fallback ? await loader.catalog() : matches;
+        final offset = _offset(args);
+        final page = entries
+            .skip(offset)
+            .take(
+              _limit(args, fallback: _skillPageLimit, maximum: _skillPageLimit),
+            )
+            .toList();
         return {
+          'matchType': query.isEmpty
+              ? 'catalog'
+              : fallback
+              ? 'catalogFallback'
+              : 'keyword',
           'skills': [
-            for (final entry in entries.take(
-              _limit(args, maximum: _skillPageLimit),
-            ))
+            for (final entry in page)
               {
                 ...entry.skill.toSummary(),
                 'status': entry.status.name,
@@ -460,6 +473,12 @@ class ApplicationToolHost {
                   'missingTools': entry.missingTools,
               },
           ],
+          'totalMatches': entries.length,
+          'offset': offset,
+          'hasMore': offset + page.length < entries.length,
+          'nextOffset': offset + page.length < entries.length
+              ? offset + page.length
+              : null,
         };
       },
     );
