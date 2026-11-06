@@ -253,16 +253,54 @@ enum ProviderError {
   invalidToolArguments,
 }
 
-/// Stable, non-sensitive diagnostics. Raw provider bodies, URLs, headers and
-/// transport exceptions must never be added to this exception or its message.
+/// Stable failure classification with bounded API response diagnostics.
+/// Only explicit response messages/codes enter the display fields. Request
+/// credentials are redacted, and transport exceptions remain classification-only.
 class ProviderException implements Exception {
   const ProviderException(
     this.code, {
     this.statusCode,
     this.responseTerminated = false,
+    this.responseMessage,
+    this.responseCode,
   });
+
+  factory ProviderException.fromResponse(
+    ProviderError code,
+    Object? body, {
+    int? statusCode,
+    String apiKey = '',
+    bool responseTerminated = false,
+  }) {
+    final error = body is Map ? body['error'] ?? body : body;
+    final message = error is Map ? error['message'] : error;
+    final responseCode = error is Map ? error['code'] ?? error['type'] : null;
+    return ProviderException(
+      code,
+      statusCode: statusCode,
+      responseTerminated: responseTerminated,
+      responseMessage: _providerDiagnostic(message, apiKey, 8192),
+      responseCode: _providerDiagnostic(responseCode, apiKey, 256),
+    );
+  }
+
   final ProviderError code;
   final int? statusCode;
+  final String? responseMessage;
+  final String? responseCode;
+
+  /// Display-only plain text. The stable [toString] remains safe for logs.
+  String? get displayDetails {
+    final metadata = [
+      if (statusCode != null) 'HTTP $statusCode',
+      if (responseCode != null) responseCode!,
+    ];
+    final parts = [
+      if (responseMessage != null) responseMessage!,
+      if (metadata.isNotEmpty) metadata.join(' · '),
+    ];
+    return parts.isEmpty ? null : parts.join('\n');
+  }
 
   /// A validated terminal response was received, even though its content could
   /// not complete this request. A disconnected or truncated stream is unknown.
@@ -272,6 +310,31 @@ class ProviderException implements Exception {
   String toString() =>
       'ProviderException(${code.name}'
       '${statusCode == null ? '' : ', HTTP $statusCode'})';
+}
+
+String? _providerDiagnostic(Object? value, String apiKey, int limit) {
+  if (value is! String && value is! num) return null;
+  var text = value.toString();
+  if (apiKey.isNotEmpty) text = text.replaceAll(apiKey, '[redacted]');
+  text = text.replaceAll(
+    RegExp(r'(Bearer|Basic)\s+[^\s,;"<>]+', caseSensitive: false),
+    '[redacted authorization]',
+  );
+  text = text.replaceAllMapped(
+    RegExp(
+      r'(api[_-]?key|access[_-]?token|cookie)\s*[:=]\s*([^\s,;"<>]+)',
+      caseSensitive: false,
+    ),
+    (match) => '${match[1]}=[redacted]',
+  );
+  text = text
+      .replaceAll(RegExp(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]'), '')
+      .trim();
+  if (text.isEmpty) return null;
+  final runes = text.runes;
+  return runes.length <= limit
+      ? text
+      : '${String.fromCharCodes(runes.take(limit))}…';
 }
 
 class ProviderCancellationToken {

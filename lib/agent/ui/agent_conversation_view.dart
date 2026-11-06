@@ -580,6 +580,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     state.streamingText,
     state.phase,
     state.errorMessage,
+    state.providerErrorDetails,
   );
 
   void _revealReply(String conversationId, String messageId) {
@@ -1394,7 +1395,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                 _messageText(
                   l.agentAssistant,
                   state.streamingText,
-                  streaming: true,
+                  streaming: state.isActive,
                   key: const ValueKey('agent-streaming-text'),
                 ),
               if (state.replyTargetMessageId == null)
@@ -2046,7 +2047,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
             conversation?.status == ConversationStatus.interrupted))
       _notice(l.agentStopped),
     if (state.phase == AgentUiPhase.failed || state.errorMessage != null)
-      _notice(_errorMessage(state.errorMessage, l), error: true),
+      _requestFailure(state, l),
   ];
 
   Future<void> _regenerateReply(
@@ -2225,6 +2226,27 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       active: widget.active,
       interactive: _uiActive,
       interactionRevision: _uiGeneration,
+    );
+  }
+
+  Widget _requestFailure(AgentUiRunState state, AppLocalizations l) {
+    final details = state.providerErrorDetails;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: Semantics(
+          liveRegion: true,
+          child: AgentSelectableText(
+            details?.isNotEmpty == true
+                ? details!
+                : _errorMessage(state.errorMessage, l),
+            key: const ValueKey('agent-request-error'),
+            style: Theme.of(context).textTheme.bodyMedium
+                ?.copyWith(color: Theme.of(context).colorScheme.error),
+          ),
+        ),
+      ),
     );
   }
 

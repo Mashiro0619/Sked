@@ -326,7 +326,12 @@ class AgentRuntimeController implements AgentUiDelegate {
     );
     unawaited(
       completion.catchError((Object error) {
-        _failDisplay(conversationId, _safeError(error), run: run);
+        _failDisplay(
+          conversationId,
+          _safeError(error),
+          run: run,
+          providerErrorDetails: _providerErrorDetails(error, run),
+        );
       }),
     );
     final ownedRun = run;
@@ -518,7 +523,12 @@ class AgentRuntimeController implements AgentUiDelegate {
         }
       }
     } catch (error) {
-      _failDisplay(conversationId, _safeError(error), run: attemptedRun);
+      _failDisplay(
+        conversationId,
+        _safeError(error),
+        run: attemptedRun,
+        providerErrorDetails: _providerErrorDetails(error, attemptedRun),
+      );
     }
   }
 
@@ -670,7 +680,12 @@ class AgentRuntimeController implements AgentUiDelegate {
         );
       }
       if (failure != null) {
-        _failDisplay(conversationId, _safeError(failure), run: run);
+        _failDisplay(
+          conversationId,
+          _safeError(failure),
+          run: run,
+          providerErrorDetails: _providerErrorDetails(failure, run),
+        );
       } else if (run.outcomeUnknown) {
         _failDisplay(
           conversationId,
@@ -682,7 +697,12 @@ class AgentRuntimeController implements AgentUiDelegate {
       }
       return result;
     } catch (error) {
-      _failDisplay(conversationId, _safeError(error), run: run);
+      _failDisplay(
+        conversationId,
+        _safeError(error),
+        run: run,
+        providerErrorDetails: _providerErrorDetails(error, run),
+      );
       rethrow;
     } finally {
       _finishApproval(run);
@@ -1102,7 +1122,12 @@ class AgentRuntimeController implements AgentUiDelegate {
           ),
         );
       } else {
-        _failDisplay(conversationId, _safeError(error), run: run);
+        _failDisplay(
+          conversationId,
+          _safeError(error),
+          run: run,
+          providerErrorDetails: _providerErrorDetails(error, run),
+        );
       }
       rethrow;
     } finally {
@@ -1337,6 +1362,11 @@ class AgentRuntimeController implements AgentUiDelegate {
                 ? AgentUiPhase.stopped
                 : AgentUiPhase.failed,
             errorMessage: _safeError(error),
+            providerErrorDetails: _providerErrorDetails(error, run),
+            streamingText:
+                error is ProviderException && run.replyMessageId == null
+                ? _display[run.conversationId]?.streamingText ?? ''
+                : '',
           ),
         );
       }
@@ -2197,6 +2227,7 @@ class AgentRuntimeController implements AgentUiDelegate {
       replyTargetMessageId: previous.replyTargetMessageId,
       streamingText: previous.streamingText,
       errorMessage: previous.errorMessage,
+      providerErrorDetails: previous.providerErrorDetails,
       pendingApproval: previous.pendingApproval,
       recoveryRequired: previous.recoveryRequired,
       modelSelection: previous.modelSelection,
@@ -2396,6 +2427,7 @@ class AgentRuntimeController implements AgentUiDelegate {
         replyTargetMessageId: run.replyMessageId,
         streamingText: value.streamingText,
         errorMessage: value.errorMessage,
+        providerErrorDetails: value.providerErrorDetails,
         pendingApproval: value.pendingApproval,
         recoveryRequired: run.recoveryRequired,
         modelSelection: run.modelSelection,
@@ -2410,6 +2442,7 @@ class AgentRuntimeController implements AgentUiDelegate {
     String error, {
     _Run? run,
     String? replyTargetMessageId,
+    String? providerErrorDetails,
   }) {
     if (!_disposed && repository.find(id) != null) {
       final occupyingRun = _runs[id];
@@ -2425,6 +2458,13 @@ class AgentRuntimeController implements AgentUiDelegate {
             ? replyTargetMessageId
             : run.replyMessageId,
         errorMessage: error,
+        providerErrorDetails: providerErrorDetails,
+        streamingText:
+            run != null &&
+                run.replyMessageId == null &&
+                error.startsWith('provider.')
+            ? previous?.streamingText ?? ''
+            : '',
         recoveryRequired:
             run?.recoveryRequired ?? previous?.recoveryRequired ?? false,
         modelSelection: run?.modelSelection ?? previous?.modelSelection,
@@ -2942,6 +2982,12 @@ Map<String, Object?> _toolFailureResult(Object error, String key) => {
     if (error is OperationProblem) 'message': _redact(error.message, key),
   },
 };
+
+String? _providerErrorDetails(Object error, _Run? run) {
+  if (error is! ProviderException) return null;
+  final details = error.displayDetails;
+  return details == null ? null : _redact(details, run?.apiKey ?? '');
+}
 
 String _safeError(Object error) => switch (error) {
   AttachmentException value => 'attachment.${value.code.name}',

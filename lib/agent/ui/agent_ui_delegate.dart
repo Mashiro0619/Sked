@@ -25,6 +25,7 @@ class AgentUiRunState {
     this.replyTargetMessageId,
     this.streamingText = '',
     this.errorMessage,
+    this.providerErrorDetails,
     this.pendingApproval,
     this.recoveryRequired = false,
     this.modelSelection,
@@ -45,6 +46,10 @@ class AgentUiRunState {
 
   /// The host must redact secrets before supplying a user-facing error.
   final String? errorMessage;
+
+  /// Bounded, credential-redacted API response details for the current run.
+  /// Kept separate from stable error codes and never treated as Markdown.
+  final String? providerErrorDetails;
   final AgentUiApproval? pendingApproval;
   final bool recoveryRequired;
   final AgentModelSelection? modelSelection;

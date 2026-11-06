@@ -32,17 +32,249 @@ void main() {
   Future<ProviderResponse> collect(
     String payload, {
     ProviderRequest? input,
-    String contentType = 'text/event-stream',
+    String? contentType = 'text/event-stream',
     int status = 200,
   }) => ProviderClient(
     client: _Client(
       (_) async => http.StreamedResponse(
         Stream.fromIterable(utf8.encode(payload).map((byte) => [byte])),
         status,
-        headers: {'content-type': contentType},
+        headers: {if (contentType != null) 'content-type': contentType},
       ),
     ),
   ).collect(input ?? request(), apiKey: 'secret-runtime-key');
+
+  test(
+    'HTTP errors expose API message and code with credentials redacted',
+    () async {
+      await expectLater(
+        collect(
+          jsonEncode({
+            'error': {
+              'message': 'Model fixture is unavailable for secret-runtime-key. Authorization: Bearer another-secret',
+              'code': 'model_unavailable',
+            },
+          }),
+          status: 400,
+          contentType: 'application/json',
+        ),
+        throwsA(
+          isA<ProviderException>()
+              .having((e) => e.statusCode, 'HTTP status', 400)
+              .having((e) => e.responseCode, 'API code', 'model_unavailable')
+              .having(
+                (e) => e.responseMessage,
+                'message',
+                contains('Model fixture is unavailable'),
+              )
+              .having(
+                (e) => e.displayDetails,
+                'credential',
+                isNot(contains('secret-runtime-key')),
+              )
+              .having(
+                (e) => e.displayDetails,
+                'bearer',
+                isNot(contains('another-secret')),
+              )
+              .having(
+                (e) => e.toString(),
+                'stable log text',
+                isNot(contains('Model fixture')),
+              ),
+        ),
+      );
+    },
+  );
+
+  for (final protocol in ProviderProtocol.values) {
+    test(
+      '$protocol stream error retains preceding text and API diagnostics',
+      () async {
+        final first = protocol == ProviderProtocol.chatCompletions
+            ? {
+                'choices': [
+                  {
+                    'index': 0,
+                    'delta': {'content': 'Earlier reply'},
+                    'finish_reason': null,
+                  },
+                ],
+              }
+            : {'type': 'response.output_text.delta', 'delta': 'Earlier reply'};
+        final failure = protocol == ProviderProtocol.chatCompletions
+            ? {
+                'error': {
+                  'message': 'Tool result requires a matching call id',
+                  'code': 'invalid_tool_result',
+                },
+              }
+            : {
+                'type': 'response.failed',
+                'response': {
+                  'error': {
+                    'message': 'Tool result requires a matching call id',
+                    'code': 'invalid_tool_result',
+                  },
+                },
+              };
+        final client = ProviderClient(
+          client: _Client((_) async => _sse(_frame(first) + _frame(failure))),
+        );
+        addTearDown(client.close);
+        final events = <ProviderEvent>[];
+        ProviderException? error;
+        try {
+          await for (final event in client.stream(
+            request(protocol: protocol),
+            apiKey: 'secret-runtime-key',
+          )) {
+            events.add(event);
+          }
+        } on ProviderException catch (failure) {
+          error = failure;
+        }
+        expect(
+          events.whereType<ProviderTextDelta>().single.text,
+          'Earlier reply',
+        );
+        expect(events.whereType<ProviderCompleted>(), isEmpty);
+        expect(
+          error?.responseMessage,
+          'Tool result requires a matching call id',
+        );
+        expect(error?.responseCode, 'invalid_tool_result');
+      },
+    );
+  }
+
+  test(
+    'Responses JSON and top-level SSE errors expose returned messages',
+    () async {
+      for (final payload in [
+        jsonEncode({
+          'status': 'failed',
+          'error': {
+            'message': 'Context is too long',
+            'code': 'context_length_exceeded',
+          },
+        }),
+        _frame({
+          'type': 'error',
+          'message': 'Context is too long',
+          'code': 'context_length_exceeded',
+        }),
+      ]) {
+        await expectLater(
+          collect(
+            payload,
+            input: request(protocol: ProviderProtocol.responses),
+            contentType: payload.startsWith('{')
+                ? 'application/json'
+                : 'text/event-stream',
+          ),
+          throwsA(
+            isA<ProviderException>().having(
+              (e) => e.responseMessage,
+              'API message',
+              'Context is too long',
+            ),
+          ),
+        );
+      }
+    },
+  );
+
+  test(
+    'plain text errors are readable and HTML or absent messages retain status',
+    () async {
+      for (final contentType in ['text/plain', '', null]) {
+        await expectLater(
+          collect(
+            'Upstream temporarily unavailable',
+            status: 503,
+            contentType: contentType,
+          ),
+          throwsA(
+            isA<ProviderException>().having(
+              (e) => e.displayDetails,
+              'details',
+              'Upstream temporarily unavailable\nHTTP 503',
+            ),
+          ),
+        );
+      }
+      for (final payload in ['', '<html>proxy error</html>', '{invalid']) {
+        await expectLater(
+          collect(payload, status: 502, contentType: null),
+          throwsA(
+            isA<ProviderException>().having(
+              (e) => e.displayDetails,
+              'status fallback',
+              'HTTP 502',
+            ),
+          ),
+        );
+      }
+    },
+  );
+
+  test('truncated JSON error bodies expose only their HTTP status', () async {
+    await expectLater(
+      collect(
+        jsonEncode({
+          'error': {'message': 'x' * 40000},
+          'internal': 'private server data',
+        }),
+        status: 502,
+        contentType: null,
+      ),
+      throwsA(
+        isA<ProviderException>().having(
+          (e) => e.displayDetails,
+          'bounded JSON fallback',
+          'HTTP 502',
+        ),
+      ),
+    );
+  });
+
+  test(
+    'API diagnostic reads are bounded and cancel an endless response body',
+    () async {
+      var cancelled = false;
+      final body = StreamController<List<int>>(
+        onCancel: () {
+          cancelled = true;
+        },
+      );
+      final client = ProviderClient(
+        client: _Client(
+          (_) async => http.StreamedResponse(
+            body.stream,
+            500,
+            headers: {'content-type': 'text/plain'},
+          ),
+        ),
+      );
+      addTearDown(client.close);
+      final result = client.collect(request(), apiKey: '');
+      body.add(List.filled(40000, 120));
+      await expectLater(
+        result,
+        throwsA(
+          isA<ProviderException>().having(
+            (e) => e.responseMessage!.runes.length,
+            'bounded message',
+            8193,
+          ),
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(cancelled, isTrue);
+      await body.close();
+    },
+  );
 
   for (final overBudget in [false, true]) {
     test(

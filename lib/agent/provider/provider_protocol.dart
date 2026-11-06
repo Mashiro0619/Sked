@@ -186,12 +186,14 @@ Map<String, Object?> _attachmentContent(
 }
 
 class ProviderResponseDecoder {
-  ProviderResponseDecoder(this.request)
-    : _knownNames = {
+  ProviderResponseDecoder(this.request, {String apiKey = ''})
+    : _apiKey = apiKey,
+      _knownNames = {
         for (final t in request.tools) ToolNameCodec.encode(t.name): t.name,
       };
 
   final ProviderRequest request;
+  final String _apiKey;
   final Map<String, String> _knownNames;
   final StringBuffer _text = StringBuffer();
   final Map<int, _ToolBuffer> _tools = {};
@@ -215,8 +217,12 @@ class ProviderResponseDecoder {
       return [_finish()];
     }
     final json = _map(jsonDecode(frame.data));
-    if (json.containsKey('error')) {
-      throw const ProviderException(ProviderError.httpFailure);
+    if (json['error'] != null) {
+      throw ProviderException.fromResponse(
+        ProviderError.httpFailure,
+        json,
+        apiKey: _apiKey,
+      );
     }
     return request.protocol == ProviderProtocol.chatCompletions
         ? _chat(json)
@@ -225,7 +231,11 @@ class ProviderResponseDecoder {
 
   List<ProviderEvent> addJson(Map<String, Object?> json) {
     if (json['error'] != null) {
-      throw const ProviderException(ProviderError.httpFailure);
+      throw ProviderException.fromResponse(
+        ProviderError.httpFailure,
+        json,
+        apiKey: _apiKey,
+      );
     }
     if (request.protocol == ProviderProtocol.responses) {
       final type = switch (json['status']) {
@@ -344,8 +354,17 @@ class ProviderResponseDecoder {
         _finishReason = _tools.isEmpty ? 'stop' : 'tool_calls';
         events.add(_finish());
       case 'response.failed':
+        throw ProviderException.fromResponse(
+          ProviderError.httpFailure,
+          json['response'],
+          apiKey: _apiKey,
+        );
       case 'error':
-        throw const ProviderException(ProviderError.httpFailure);
+        throw ProviderException.fromResponse(
+          ProviderError.httpFailure,
+          json,
+          apiKey: _apiKey,
+        );
       case 'response.incomplete':
         final response = _map(json['response']);
         if (response['status'] != 'incomplete') {

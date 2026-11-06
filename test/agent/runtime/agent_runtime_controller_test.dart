@@ -60,6 +60,62 @@ class _OperationHarness {
 }
 
 void main() {
+  test('API failure keeps safe partial text and details until the next request', () async {
+    var requests = 0;
+    final next = StreamController<ProviderEvent>();
+    final actual = ProviderClient(
+      client: MockClient(
+        (_) async => http.Response(
+          'data: ${jsonEncode({
+            'choices': [
+              {
+                'index': 0,
+                'delta': {'content': 'Partial answer'},
+                'finish_reason': null,
+              },
+            ],
+          })}\n\n'
+          'data: ${jsonEncode({
+            'error': {'message': 'Unsupported tool result for $_key', 'code': 'invalid_tool_result'},
+          })}\n\n',
+          200,
+          headers: {'content-type': 'text/event-stream'},
+        ),
+      ),
+    );
+    final h = await _Harness.create(
+      handler: (request, token) {
+        requests++;
+        return requests == 1
+            ? actual.stream(request, apiKey: _key)
+            : next.stream;
+      },
+    );
+    addTearDown(() {
+      actual.close();
+      h.dispose();
+    });
+    await h.runtime.send(h.id, 'Try the model');
+    final failed = h.runtime.state.value.runFor(h.id);
+    expect(failed.phase, AgentUiPhase.failed);
+    expect(failed.errorMessage, 'provider.httpFailure');
+    expect(failed.streamingText, 'Partial answer');
+    expect(failed.providerErrorDetails, contains('Unsupported tool result'));
+    expect(failed.providerErrorDetails, contains('invalid_tool_result'));
+    expect(failed.providerErrorDetails, isNot(contains(_key)));
+    expect(h.storage.source, isNot(contains('Unsupported tool result')));
+    final retry = h.runtime.continueConversation(h.id);
+    for (var turn = 0; turn < 100 && requests < 2; turn++) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    expect(requests, 2);
+    expect(h.runtime.state.value.runFor(h.id).providerErrorDetails, isNull);
+    await h.runtime.stop(h.id);
+    expect(h.runtime.state.value.runFor(h.id).providerErrorDetails, isNull);
+    await next.close();
+    await retry;
+  });
+
   registerRecoveryTests();
   registerUsageTests();
   registerReplyRegenerationTests();

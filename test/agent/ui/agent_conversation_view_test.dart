@@ -109,6 +109,65 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets(
+    'API failure displays selectable left-aligned response details with partial output',
+    (tester) async {
+      await initialize();
+      final conversation = await repository.create(title: 'API response');
+      delegate.state.value = AgentUiState(
+        enabled: true,
+        configured: true,
+        runs: {
+          conversation.id: const AgentUiRunState(
+            phase: AgentUiPhase.failed,
+            streamingText: 'Partial output before the API error',
+            errorMessage: 'provider.httpFailure',
+            providerErrorDetails: 'Tool result requires a matching call id\nHTTP 400 · invalid_tool_result',
+          ),
+        },
+      );
+      await mountAgentUi(tester, view(), size: const Size(460, 820));
+      await settle(tester);
+      final error = find.byKey(const ValueKey('agent-request-error'));
+      expect(error, findsOneWidget);
+      expect(
+        find.descendant(of: error, matching: find.byType(SelectableText)),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('Tool result requires a matching call id'),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('agent-streaming-text')),
+        findsOneWidget,
+      );
+      final alignment = tester.widget<Align>(
+        find.ancestor(of: error, matching: find.byType(Align)).first,
+      );
+      expect(alignment.alignment, AlignmentDirectional.centerStart);
+      final l = AppLocalizations.of(tester.element(error));
+      expect(find.text(l.agentRequestFailed), findsNothing);
+      delegate.state.value = AgentUiState(
+        enabled: true,
+        configured: true,
+        runs: {
+          conversation.id: const AgentUiRunState(
+            phase: AgentUiPhase.failed,
+            errorMessage: 'provider.transportFailure',
+          ),
+        },
+      );
+      await settle(tester);
+      expect(find.text(l.agentRequestFailed), findsOneWidget);
+      expect(
+        find.textContaining('Tool result requires a matching call id'),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   for (final changesActivity in [true, false]) {
     testWidgets(
       'rename confirmation expires after ${changesActivity ? 'activity' : 'interaction'} is hidden and restored',

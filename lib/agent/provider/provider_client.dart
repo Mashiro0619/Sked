@@ -162,11 +162,49 @@ class ProviderClient {
           );
         }
         if (response.statusCode < 200 || response.statusCode >= 300) {
-          throw ProviderException(switch (response.statusCode) {
-            401 || 403 => ProviderError.authentication,
-            429 => ProviderError.rateLimited,
-            _ => ProviderError.httpFailure,
-          }, statusCode: response.statusCode);
+          final errorBytes = <int>[];
+          final limit = request.limits.maxResponseBytes.clamp(1, 32768);
+          try {
+            while (errorBytes.length < limit &&
+                await guarded(iterator!.moveNext())) {
+              resetIdle();
+              errorBytes.addAll(
+                iterator!.current.take(limit - errorBytes.length),
+              );
+            }
+          } catch (_) {
+            if (stopped.isCompleted) throw await stopped.future;
+            // A failed response body read still retains its known HTTP status.
+          }
+          Object? errorBody;
+          final text = utf8.decode(errorBytes, allowMalformed: true).trim();
+          try {
+            errorBody = jsonDecode(text);
+          } on FormatException {
+            final contentType = response.headers['content-type']
+                ?.split(';')
+                .first
+                .trim()
+                .toLowerCase();
+            if ((contentType == null ||
+                    contentType.isEmpty ||
+                    contentType == 'text/plain') &&
+                !text.startsWith('<') &&
+                !text.startsWith('{') &&
+                !text.startsWith('[')) {
+              errorBody = text;
+            }
+          }
+          throw ProviderException.fromResponse(
+            switch (response.statusCode) {
+              401 || 403 => ProviderError.authentication,
+              429 => ProviderError.rateLimited,
+              _ => ProviderError.httpFailure,
+            },
+            errorBody,
+            statusCode: response.statusCode,
+            apiKey: apiKey,
+          );
         }
         if (hasAttachments && !subscriptionCancelled) {
           controller.add(
@@ -189,7 +227,7 @@ class ProviderClient {
         if (!isJson && contentType != 'text/event-stream') {
           throw const ProviderException(ProviderError.invalidResponse);
         }
-        decoder = ProviderResponseDecoder(request);
+        decoder = ProviderResponseDecoder(request, apiKey: apiKey);
         final sse = ProviderSseDecoder(
           maxEventBytes: request.limits.maxEventBytes,
         );
@@ -251,6 +289,8 @@ class ProviderClient {
                     safe.code,
                     statusCode: safe.statusCode,
                     responseTerminated: true,
+                    responseMessage: safe.responseMessage,
+                    responseCode: safe.responseCode,
                   )
                 : safe,
             StackTrace.empty,
