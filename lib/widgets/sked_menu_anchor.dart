@@ -304,29 +304,32 @@ class _SkedMenuAnchorState extends State<SkedMenuAnchor>
           onTapOutside: (_) => _menu.close(),
           child: FocusTraversalGroup(
             policy: ReadingOrderTraversalPolicy(),
-            child: FocusScope(
-              node: _focus,
-              skipTraversal: true,
-              child: Shortcuts(
-                shortcuts: const {
-                  SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
-                  SingleActivator(LogicalKeyboardKey.tab): NextFocusIntent(),
-                  SingleActivator(LogicalKeyboardKey.tab, shift: true):
-                      PreviousFocusIntent(),
-                  SingleActivator(LogicalKeyboardKey.arrowDown):
-                      NextFocusIntent(),
-                  SingleActivator(LogicalKeyboardKey.arrowUp):
-                      PreviousFocusIntent(),
+            // Keep shortcuts above the scope itself. Removing a focused page
+            // control returns focus to this scope, which must still handle keys
+            // before a surrounding workspace's shortcuts can consume them.
+            child: Shortcuts(
+              shortcuts: const {
+                SingleActivator(LogicalKeyboardKey.escape): DismissIntent(),
+                SingleActivator(LogicalKeyboardKey.tab): NextFocusIntent(),
+                SingleActivator(LogicalKeyboardKey.tab, shift: true):
+                    PreviousFocusIntent(),
+                SingleActivator(LogicalKeyboardKey.arrowDown):
+                    NextFocusIntent(),
+                SingleActivator(LogicalKeyboardKey.arrowUp):
+                    PreviousFocusIntent(),
+              },
+              child: Actions(
+                actions: {
+                  DismissIntent: CallbackAction<DismissIntent>(
+                    onInvoke: (_) {
+                      _menu.close();
+                      return null;
+                    },
+                  ),
                 },
-                child: Actions(
-                  actions: {
-                    DismissIntent: CallbackAction<DismissIntent>(
-                      onInvoke: (_) {
-                        _menu.close();
-                        return null;
-                      },
-                    ),
-                  },
+                child: FocusScope(
+                  node: _focus,
+                  skipTraversal: true,
                   child: SkedMenuSurface(
                     animation: _animation,
                     motion: _motion!,

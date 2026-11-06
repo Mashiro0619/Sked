@@ -9,6 +9,7 @@ import 'package:sked/agent/ui/agent_model_picker.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
 import 'package:sked/models/agent_settings.dart';
 import 'package:sked/theme/sked_expressive_theme.dart';
+import 'package:sked/widgets/workspace_frame.dart';
 
 import 'agent_ui_test_support.dart';
 
@@ -442,6 +443,73 @@ void main() {
       expect(delegate.choices, isEmpty);
       expect(tester.widget<Slider>(find.byType(Slider)).value, 0);
     },
+  );
+
+  testWidgets(
+    'Escape closes the menu after model selection and list back navigation',
+    (tester) async {
+      const alternate = AgentModelConfig(
+        id: 'model-b',
+        reasoningEfforts: [
+          AgentReasoningEffort.low,
+          AgentReasoningEffort.high,
+          AgentReasoningEffort.max,
+        ],
+        defaultReasoningEffort: AgentReasoningEffort.low,
+      );
+      await initialize(tester, models: const [modelA, alternate]);
+      var workspaceDismissals = 0;
+      await mountAgentUi(
+        tester,
+        Shortcuts(
+          // The workspace shell owns Escape outside its transient menus.
+          shortcuts: const {
+            SingleActivator(LogicalKeyboardKey.escape):
+                WorkspaceTaskDismissIntent(),
+          },
+          child: Actions(
+            actions: {
+              WorkspaceTaskDismissIntent:
+                  CallbackAction<WorkspaceTaskDismissIntent>(
+                    onInvoke: (_) {
+                      workspaceDismissals++;
+                      return null;
+                    },
+                  ),
+            },
+            child: view(),
+          ),
+        ),
+      );
+      await open(tester);
+      await chooseB(tester);
+      await delegate.selectionWrite;
+      expect(repository.selected!.modelSelection, alternate.defaultSelection);
+      expect(find.byKey(const ValueKey('agent-model-panel')), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('agent-model-switch')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('agent-model-list-back')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('agent-model-list')), findsNothing);
+      expect(find.byKey(const ValueKey('agent-model-panel')), findsOneWidget);
+      expect(
+        [
+          FocusManager.instance.primaryFocus,
+          ...?FocusManager.instance.primaryFocus?.ancestors,
+        ].any((node) => node?.debugLabel == 'Sked menu'),
+        isTrue,
+        reason: 'Page changes must retain keyboard ownership in the menu.',
+      );
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(workspaceDismissals, 0);
+      expect(find.byKey(const ValueKey('agent-model-panel')), findsNothing);
+      expect(delegate.choices, [alternate.defaultSelection]);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
   );
 
   testWidgets(
