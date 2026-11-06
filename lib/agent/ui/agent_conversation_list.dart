@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../../theme/sked_expressive_theme.dart';
 import '../../widgets/sked_popup_menu.dart';
 import '../../widgets/sked_task_session.dart';
+import '../../widgets/workbench_chrome_metrics.dart';
 import '../conversations/conversation_repository.dart';
 
 /// The same local history is used by the full workspace and compact picker.
@@ -299,14 +300,15 @@ class _AgentConversationListState extends State<AgentConversationList> {
   Widget _actions(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
+    final metrics = WorkbenchChromeMetrics.of(context);
     final generation = _generation;
     final repository = widget.repository;
     final onNew = widget.onNewConversation;
     final newGeneration = _newActionGeneration;
-    final iconStyle = IconButton.styleFrom(
-      minimumSize: const Size.square(48),
-      fixedSize: const Size.square(48),
-      padding: EdgeInsets.zero,
+    final extent = metrics.iconTarget;
+    final iconSize = metrics.desktop ? 18.0 : 20.0;
+    final iconStyle = metrics.iconStyle.copyWith(
+      padding: const WidgetStatePropertyAll(EdgeInsets.zero),
     );
     void newConversation() {
       if (_current(generation, repository) &&
@@ -323,10 +325,10 @@ class _AgentConversationListState extends State<AgentConversationList> {
               key: const ValueKey('agent-history-new'),
               onPressed: _enabled ? newConversation : null,
               style: TextButton.styleFrom(
-                minimumSize: const Size(48, 48),
+                minimumSize: Size(extent, extent),
                 padding: const EdgeInsets.symmetric(horizontal: 10),
               ),
-              icon: const Icon(Icons.add_comment_outlined, size: 20),
+              icon: Icon(Icons.add_comment_outlined, size: iconSize),
               label: Text(l.agentNewConversation, maxLines: 1),
             ),
           )
@@ -336,7 +338,7 @@ class _AgentConversationListState extends State<AgentConversationList> {
             style: iconStyle,
             icon: Icon(
               Icons.add_comment_outlined,
-              size: 20,
+              size: iconSize,
               semanticLabel: l.agentNewConversation,
             ),
             onPressed: _enabled ? newConversation : null,
@@ -350,12 +352,12 @@ class _AgentConversationListState extends State<AgentConversationList> {
           ? l.agentSearchConversations
           : '${l.agentSearchConversations}: ${_search.text}',
       isSelected: _searchOpen || _query.isNotEmpty,
-      icon: Icon(_searchOpen ? Icons.close : Icons.search, size: 20),
+      icon: Icon(_searchOpen ? Icons.close : Icons.search, size: iconSize),
       onPressed: _enabled ? () => _toggleSearch(generation, repository) : null,
     );
     final more = SizedBox.square(
       key: const ValueKey('agent-history-more'),
-      dimension: 48,
+      dimension: extent,
       child: SkedPopupMenuButton<_HistoryArchiveChoice>(
         // Retiring the source also retires its popup route. Results still carry
         // their original session when a callback arrives after replacement.
@@ -372,7 +374,7 @@ class _AgentConversationListState extends State<AgentConversationList> {
             _archived ? colors.onSecondaryContainer : null,
           ),
         ),
-        icon: const Icon(Icons.more_horiz, size: 20),
+        icon: Icon(Icons.more_horiz, size: iconSize),
         itemBuilder: _archiveItems,
         onSelected: _chooseArchive,
         onCanceled: () => _cancelMenu(generation),
@@ -380,8 +382,10 @@ class _AgentConversationListState extends State<AgentConversationList> {
     );
     return LayoutBuilder(
       builder: (context, constraints) {
-        final newWidth = constraints.maxWidth - 104;
-        if (constraints.maxWidth < (onNew == null ? 104 : 152)) {
+        final trailingWidth = extent * 2 + 8;
+        final newWidth = constraints.maxWidth - trailingWidth;
+        if (constraints.maxWidth <
+            (onNew == null ? trailingWidth : extent * 3 + 8)) {
           return Wrap(
             spacing: 4,
             runSpacing: 4,
@@ -396,11 +400,12 @@ class _AgentConversationListState extends State<AgentConversationList> {
                   : Align(
                       alignment: AlignmentDirectional.centerStart,
                       child: newAction(
-                        _newLabelFits(
-                          context,
-                          l.agentNewConversation,
-                          newWidth,
-                        ),
+                        !metrics.desktop &&
+                            _newLabelFits(
+                              context,
+                              l.agentNewConversation,
+                              newWidth,
+                            ),
                       ),
                     ),
             ),
@@ -418,6 +423,7 @@ class _AgentConversationListState extends State<AgentConversationList> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
+    final metrics = WorkbenchChromeMetrics.of(context);
     return FocusScope(
       canRequestFocus: _enabled,
       descendantsAreFocusable: _enabled,
@@ -447,14 +453,17 @@ class _AgentConversationListState extends State<AgentConversationList> {
               return LayoutBuilder(
                 builder: (context, constraints) {
                   final controls = widget.onNewConversation == null ? 2 : 3;
-                  final columns = ((constraints.maxWidth - 20) / 52).floor();
+                  final columns =
+                      ((constraints.maxWidth - 20) / (metrics.iconTarget + 4))
+                          .floor();
                   final safeColumns = columns < 1
                       ? 1
                       : columns > controls
                       ? controls
                       : columns;
                   final rows = (controls / safeColumns).ceil();
-                  final actionsHeight = rows * 48.0 + (rows - 1) * 4 + 8;
+                  final actionsHeight =
+                      rows * metrics.iconTarget + (rows - 1) * 4 + 8;
                   return CustomScrollView(
                     key: const PageStorageKey('agent-conversation-list'),
                     controller: _scroll,
@@ -470,7 +479,8 @@ class _AgentConversationListState extends State<AgentConversationList> {
                         pinned:
                             !widget.shrinkWrap &&
                             constraints.hasBoundedHeight &&
-                            constraints.maxHeight >= actionsHeight + 48,
+                            constraints.maxHeight >=
+                                actionsHeight + metrics.resourceRowHeight,
                         delegate: _HistoryActionsHeader(
                           height: actionsHeight,
                           child: Padding(
@@ -577,16 +587,23 @@ class _AgentConversationListState extends State<AgentConversationList> {
                                   conversation.id ==
                                   widget.repository.selectedId;
                               return Padding(
-                                padding: const EdgeInsets.only(bottom: 4),
+                                padding: EdgeInsets.only(
+                                  bottom: metrics.desktop ? 2 : 4,
+                                ),
                                 child: ListTile(
                                   key: ValueKey(
                                     'agent-history-${conversation.id}',
                                   ),
                                   selected: selected,
-                                  shape: skedShapeSchemeOf(context).control,
+                                  shape: metrics.desktop
+                                      ? skedShapeSchemeOf(context).compact
+                                      : skedShapeSchemeOf(context).control,
                                   selectedTileColor: colors.secondaryContainer,
                                   selectedColor: colors.onSecondaryContainer,
-                                  minTileHeight: 48,
+                                  minTileHeight: metrics.resourceRowHeight,
+                                  minVerticalPadding: metrics.desktop
+                                      ? 4
+                                      : null,
                                   title: Text(
                                     conversation.title,
                                     maxLines: 2,
@@ -636,9 +653,7 @@ class _AgentConversationListState extends State<AgentConversationList> {
                                                     repository,
                                                   ),
                                                 ),
-                                          style: IconButton.styleFrom(
-                                            minimumSize: const Size.square(48),
-                                          ),
+                                          style: metrics.iconStyle,
                                           icon: _restoringId == conversation.id
                                               ? SizedBox.square(
                                                   dimension: 20,

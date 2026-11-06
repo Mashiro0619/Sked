@@ -1405,6 +1405,15 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                   state.pendingApproval != null)
                 _approval(conversation.id, state.pendingApproval!, writable, l),
             ];
+            final continued =
+                conversation != null &&
+                !_repository.isDraft(conversation.id) &&
+                !state.isActive &&
+                conversation.status != ConversationStatus.running &&
+                conversation.status != ConversationStatus.waitingApproval &&
+                (state.phase == AgentUiPhase.stopped ||
+                    conversation.status == ConversationStatus.interrupted ||
+                    widget.delegate.pendingInputCount(conversation.id) > 0);
             Widget composer({required bool scrollWithTranscript}) =>
                 conversation == null
                 ? const SizedBox.shrink()
@@ -1424,6 +1433,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                         (widget.canSendToModel?.call(conversation.id) ?? true),
                     l,
                     scrollWithTranscript: scrollWithTranscript,
+                    continued: continued,
                   );
             final id = conversation?.id ?? '';
             Widget transcript(List<Widget> children, {Widget? footer}) =>
@@ -1447,6 +1457,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                 final budget = _composerBudget(
                   context,
                   contentConstraints.maxWidth,
+                  continued: continued,
                 );
                 if (contentConstraints.maxHeight <
                     budget.minimumComposer + budget.minimumTranscript) {
@@ -1817,6 +1828,8 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     bool compact = false,
   }) {
     final uiGeneration = _uiGeneration;
+    final desktop = SkedMenuStyle.of(context).desktop;
+    final target = desktop ? 32.0 : 48.0;
     return KeyedSubtree(
       key: ValueKey(('agent-mode-session', uiGeneration)),
       child: SkedPopupMenuButton<AgentPermissionMode>(
@@ -1851,11 +1864,11 @@ class _AgentConversationViewState extends State<AgentConversationView> {
             ),
         ],
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+          constraints: BoxConstraints(minWidth: target, minHeight: target),
           child: Padding(
             padding: EdgeInsets.symmetric(
-              horizontal: compact ? 12 : 10,
-              vertical: 12,
+              horizontal: desktop ? (compact ? 7 : 8) : (compact ? 12 : 10),
+              vertical: desktop ? 6 : 12,
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -2440,18 +2453,19 @@ class _AgentConversationViewState extends State<AgentConversationView> {
 
   ({double minimumComposer, double minimumTranscript}) _composerBudget(
     BuildContext context,
-    double width,
-  ) {
+    double width, {
+    required bool continued,
+  }) {
     final theme = Theme.of(context);
-    double lineHeight(TextStyle? style) {
+    Size measureText(String text, TextStyle? style) {
       final painter = TextPainter(
-        text: TextSpan(text: 'M', style: style),
+        text: TextSpan(text: text, style: style),
         textScaler: MediaQuery.textScalerOf(context),
         textDirection: Directionality.of(context),
       )..layout();
-      final height = painter.height;
+      final size = painter.size;
       painter.dispose();
-      return height;
+      return size;
     }
 
     final desktop = SkedMenuStyle.of(context).desktop;
@@ -2459,19 +2473,32 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final hasAttachment =
         widget.binaryAttachments != null ||
         widget.readDatasetGeneration != null;
+    final continuationWidth = desktop && continued
+        ? measureText(
+                AppLocalizations.of(context).agentContinue,
+                theme.textTheme.labelLarge,
+              ).width +
+              46
+        : 0.0;
     final minimumWidth =
-        48 +
-        button +
+        button * 2 +
+        continuationWidth +
         (hasAttachment ? button + 4 : 0) +
         4 +
         (widget.modelPickerBuilder == null ? 0 : button + 4);
-    final wraps = math.min(width, 812.0) - 52 < minimumWidth;
-    final controlsHeight =
-        math.max(48.0, lineHeight(theme.textTheme.labelLarge) + 24) +
-        (wraps ? button + 4 : 0);
-    final inputLine = lineHeight(theme.textTheme.bodyLarge);
+    final wraps = math.min(width, 812.0) - (desktop ? 48 : 52) < minimumWidth;
+    final controlHeight = math.max(
+      button,
+      measureText('M', theme.textTheme.labelLarge).height + (desktop ? 12 : 24),
+    );
+    final controlsHeight = controlHeight * (wraps ? 2 : 1) + (wraps ? 4 : 0);
+    final inputLine = measureText('M', theme.textTheme.bodyLarge).height;
     return (
-      minimumComposer: 44 + controlsHeight + inputLine + (desktop ? 16 : 44),
+      minimumComposer:
+          (desktop ? 40 : 44) +
+          controlsHeight +
+          inputLine +
+          (desktop ? 16 : 44),
       minimumTranscript: math.max(48.0, inputLine * 2),
     );
   }
@@ -2482,6 +2509,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     bool canSend,
     AppLocalizations l, {
     required bool scrollWithTranscript,
+    required bool continued,
   }) {
     final active =
         state.isActive ||
@@ -2518,12 +2546,6 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         ),
       );
     }
-    final continued =
-        !_repository.isDraft(conversation.id) &&
-        !active &&
-        (state.phase == AgentUiPhase.stopped ||
-            conversation.status == ConversationStatus.interrupted ||
-            widget.delegate.pendingInputCount(conversation.id) > 0);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: Shortcuts(
@@ -2551,7 +2573,12 @@ class _AgentConversationViewState extends State<AgentConversationView> {
           },
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final availableWidth = math.max(0.0, constraints.maxWidth - 20);
+              final desktop = SkedMenuStyle.of(context).desktop;
+              final padding = desktop ? 8.0 : 10.0;
+              final availableWidth = math.max(
+                0.0,
+                constraints.maxWidth - padding * 2,
+              );
               final style = Theme.of(context).textTheme.labelLarge;
               double labelWidth(String label) {
                 final measure = TextPainter(
@@ -2565,11 +2592,13 @@ class _AgentConversationViewState extends State<AgentConversationView> {
               }
 
               final permissionWidth =
-                  labelWidth(_modeLabel(l, conversation.mode)) + 62;
+                  labelWidth(_modeLabel(l, conversation.mode)) +
+                  (desktop ? 58 : 62);
               final selection = _runtime.selectionFor(conversation.id);
-              final buttonWidth = SkedMenuStyle.of(context).desktop
-                  ? 32.0
-                  : 48.0;
+              final buttonWidth = desktop ? 32.0 : 48.0;
+              final continuationWidth = desktop && continued
+                  ? labelWidth(l.agentContinue) + 46
+                  : 0.0;
               final pickerWidth = widget.modelPickerBuilder == null
                   ? 0.0
                   : math.min(
@@ -2598,17 +2627,47 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                   (widget.modelPickerBuilder == null ? 0 : 4);
               final otherWidth =
                   buttonWidth +
+                  continuationWidth +
                   (hasAttachment ? buttonWidth : 0) +
                   spacingWidth;
               final compactPermission =
                   availableWidth < permissionWidth + pickerWidth + otherWidth;
               final wrapActions =
                   availableWidth <
-                  48 +
+                  buttonWidth +
                       otherWidth +
                       (widget.modelPickerBuilder == null ? 0 : buttonWidth);
 
               Widget layout(Widget? picker, Widget status) {
+                final continuation = continued
+                    ? TextButton.icon(
+                        key: const ValueKey('agent-continue'),
+                        style: desktop
+                            ? TextButton.styleFrom(
+                                minimumSize: const Size(32, 32),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                iconSize: 18,
+                              )
+                            : null,
+                        onPressed:
+                            canSend &&
+                                !sending &&
+                                !_busy.contains('continue-${conversation.id}')
+                            ? () => _perform(
+                                'continue-${conversation.id}',
+                                () => widget.delegate.continueConversation(
+                                  conversation.id,
+                                ),
+                              )
+                            : null,
+                        icon: const Icon(Icons.play_arrow_rounded),
+                        label: Text(l.agentContinue),
+                      )
+                    : null;
                 final body = Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2672,25 +2731,10 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                           ),
                         ),
                       ),
-                    if (continued)
+                    if (!desktop && continuation != null)
                       Align(
                         alignment: AlignmentDirectional.centerEnd,
-                        child: TextButton.icon(
-                          key: const ValueKey('agent-continue'),
-                          onPressed:
-                              canSend &&
-                                  !sending &&
-                                  !_busy.contains('continue-${conversation.id}')
-                              ? () => _perform(
-                                  'continue-${conversation.id}',
-                                  () => widget.delegate.continueConversation(
-                                    conversation.id,
-                                  ),
-                                )
-                              : null,
-                          icon: const Icon(Icons.play_arrow_rounded),
-                          label: Text(l.agentContinue),
-                        ),
+                        child: continuation,
                       ),
                     if (_approvalRevisionCurrent?.call() == true)
                       Padding(
@@ -2717,6 +2761,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                         textInputAction: TextInputAction.newline,
                         style: Theme.of(context).textTheme.bodyLarge,
                         decoration: InputDecoration(
+                          isDense: desktop,
                           filled: false,
                           hintText: l.agentMessageHint,
                           counterText: '',
@@ -2730,7 +2775,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                             8,
                             8,
                             8,
-                            SkedMenuStyle.of(context).desktop ? 8 : 36,
+                            desktop ? 8 : 36,
                           ),
                         ),
                         onChanged: (value) =>
@@ -2780,7 +2825,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                     child: child,
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(10),
+                    padding: EdgeInsets.all(padding),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -2800,6 +2845,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                           key: const ValueKey('agent-composer-actions'),
                           wrap: wrapActions,
                           picker: picker,
+                          continuation: desktop ? continuation : null,
                           permission: _permissionPicker(
                             conversation,
                             l,
@@ -2920,9 +2966,11 @@ class _AgentComposerActions extends StatelessWidget {
     required this.wrap,
     this.attachment,
     this.picker,
+    this.continuation,
   });
 
   final Widget? attachment;
+  final Widget? continuation;
   final Widget permission;
   final Widget? picker;
   final Widget send;
@@ -2930,7 +2978,7 @@ class _AgentComposerActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final leading = [?attachment, permission];
+    final leading = [?attachment, permission, ?continuation];
     final trailing = [
       if (picker case final picker?) ...[
         Expanded(
@@ -2968,6 +3016,10 @@ class _AgentComposerActions extends StatelessWidget {
               const SizedBox(width: 4),
             ],
             permission,
+            if (continuation case final continuation?) ...[
+              const SizedBox(width: 4),
+              continuation,
+            ],
           ],
         ),
         const SizedBox(width: 4),

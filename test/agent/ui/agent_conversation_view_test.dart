@@ -557,6 +557,152 @@ void main() {
     },
   );
 
+  for (final phase in [
+    AgentUiPhase.idle,
+    AgentUiPhase.running,
+    AgentUiPhase.stopped,
+  ]) {
+    testWidgets('desktop empty composer stays compact while ${phase.name}', (
+      tester,
+    ) async {
+      addTearDown(tester.view.reset);
+      await initialize();
+      const model = AgentModelConfig(
+        id: 'model-a',
+        reasoningEfforts: [AgentReasoningEffort.low],
+        defaultReasoningEffort: AgentReasoningEffort.low,
+      );
+      final conversation = await repository.create(title: 'Compact desktop');
+      delegate.state.value = AgentUiState(
+        enabled: true,
+        configured: true,
+        availableModels: const [model],
+        defaultModelSelection: model.defaultSelection,
+        runs: {
+          conversation.id: AgentUiRunState(
+            phase: phase,
+            modelSelection: model.defaultSelection,
+          ),
+        },
+      );
+      await mountAgentUi(tester, composerView(), size: const Size(1000, 900));
+      final composer = find.byKey(const ValueKey('agent-composer'));
+      final card = find
+          .ancestor(of: composer, matching: find.byType(Material))
+          .first;
+      expect(tester.getSize(card).height, lessThanOrEqualTo(104));
+      expect(tester.widget<TextField>(composer).decoration!.isDense, isTrue);
+      final actions = find.byKey(const ValueKey('agent-composer-actions'));
+      final actionRect = tester.getRect(actions);
+      expect(actionRect.height, closeTo(32, 1));
+      final keys = [
+        'agent-attach-file',
+        'agent-mode-picker',
+        'agent-model-picker',
+        phase == AgentUiPhase.running ? 'agent-stop' : 'agent-send',
+      ];
+      for (final key in keys) {
+        final control = find.byKey(ValueKey(key));
+        final rect = tester.getRect(control);
+        expect(rect.height, inInclusiveRange(24, 32), reason: key);
+        if (key == 'agent-mode-picker' || key == 'agent-model-picker') {
+          expect(rect.height, closeTo(32, 1), reason: key);
+        }
+        expect(rect.center.dy, closeTo(actionRect.center.dy, 1), reason: key);
+        expect(control.hitTestable(), findsOneWidget, reason: key);
+      }
+      expect(delegate.calls, isEmpty);
+      final continuation = find.byKey(const ValueKey('agent-continue'));
+      if (phase == AgentUiPhase.stopped) {
+        expect(
+          find.descendant(of: actions, matching: continuation),
+          findsOneWidget,
+        );
+        final permission = tester.getRect(
+          find.byKey(const ValueKey('agent-mode-picker')),
+        );
+        final continuationRect = tester.getRect(continuation);
+        expect(continuationRect.left, closeTo(permission.right + 4, 1));
+        expect(continuationRect.center.dy, closeTo(actionRect.center.dy, 1));
+        expect(continuation.hitTestable(), findsOneWidget);
+        await tester.tap(continuation);
+        await settle(tester);
+        expect(delegate.calls, ['continue:${conversation.id}']);
+      } else {
+        expect(continuation, findsNothing);
+      }
+      expect(tester.takeException(), isNull);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+  }
+
+  testWidgets(
+    'stopped desktop composer wraps reachable actions at 320 with 2x text',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      await initialize();
+      const model = AgentModelConfig(
+        id: 'a-very-long-model-name-with-extra-context',
+        reasoningEfforts: [AgentReasoningEffort.low],
+        defaultReasoningEffort: AgentReasoningEffort.low,
+      );
+      final conversation = await repository.create(title: 'Stopped desktop');
+      delegate.state.value = AgentUiState(
+        enabled: true,
+        configured: true,
+        availableModels: const [model],
+        defaultModelSelection: model.defaultSelection,
+        runs: {
+          conversation.id: AgentUiRunState(
+            phase: AgentUiPhase.stopped,
+            modelSelection: model.defaultSelection,
+          ),
+        },
+      );
+      await mountAgentUi(
+        tester,
+        composerView(),
+        size: const Size(320, 900),
+        scale: 2,
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('agent-composer')),
+        'Draft',
+      );
+      await settle(tester);
+      expect(tester.takeException(), isNull);
+      final actions = tester.getRect(
+        find.byKey(const ValueKey('agent-composer-actions')),
+      );
+      final continuation = find.byKey(const ValueKey('agent-continue'));
+      final picker = find.byKey(const ValueKey('agent-model-picker'));
+      final send = find.byKey(const ValueKey('agent-send'));
+      for (final control in [continuation, picker, send]) {
+        final rect = tester.getRect(control);
+        expect(rect.left, greaterThanOrEqualTo(actions.left));
+        expect(rect.right, lessThanOrEqualTo(actions.right));
+        expect(rect.top, greaterThanOrEqualTo(0));
+        expect(rect.bottom, lessThanOrEqualTo(900));
+        expect(control.hitTestable(), findsOneWidget);
+      }
+      expect(
+        tester.getRect(picker).top,
+        greaterThanOrEqualTo(tester.getRect(continuation).bottom + 4),
+      );
+      expect(
+        tester.getRect(send).center.dy,
+        closeTo(tester.getRect(picker).center.dy, 1),
+      );
+      expect(tester.widget<IconButton>(send).onPressed, isNotNull);
+      expect(delegate.calls, isEmpty);
+      await tester.tap(continuation);
+      await settle(tester);
+      expect(delegate.calls, ['continue:${conversation.id}']);
+      expect(repository.selected!.draft, 'Draft');
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
   for (final platform in [
     TargetPlatform.android,
     TargetPlatform.iOS,

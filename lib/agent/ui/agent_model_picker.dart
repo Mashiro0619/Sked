@@ -826,11 +826,14 @@ class _AgentModelPickerState extends State<AgentModelPicker>
           ),
         ),
       );
+      final run = state.runFor(widget.conversationId);
       final status = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (state.runFor(widget.conversationId).isActive)
+          if (run.isActive &&
+              run.modelSelection != null &&
+              selection != run.modelSelection)
             Text(
               l.agentModelNextRunHint,
               style: Theme.of(context).textTheme.bodySmall,

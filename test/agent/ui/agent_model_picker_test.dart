@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/ui/agent_model_picker.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
+import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/agent_settings.dart';
 import 'package:sked/theme/sked_expressive_theme.dart';
 import 'package:sked/widgets/workspace_frame.dart';
@@ -1070,22 +1071,54 @@ void main() {
   );
 
   testWidgets(
-    'one combined entry switches model for next run without sending',
+    'next-run hint follows differences from the active model snapshot',
     (tester) async {
       await initialize(tester, running: true);
       await mountAgentUi(tester, view());
+      final hint = AppLocalizations.of(
+        tester.element(find.byType(AgentModelPicker)),
+      ).agentModelNextRunHint;
       expect(find.byKey(const ValueKey('agent-effort-picker')), findsNothing);
+      expect(find.text(hint), findsNothing);
       await open(tester);
       await chooseB(tester);
       await delegate.selectionWrite;
+      await tester.pumpAndSettle();
       expect(delegate.choices.single, modelB.defaultSelection);
       expect(repository.selected!.modelSelection, modelB.defaultSelection);
       expect(delegate.state.value.runFor(id).modelSelection, low);
-      expect(delegate.calls, isEmpty);
+      expect(find.text(hint), findsOneWidget);
       expect(find.byType(Slider), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('agent-effort-reset')));
+      await tester.pumpAndSettle();
+      await delegate.selectionWrite;
+      expect(delegate.choices, [modelB.defaultSelection, low]);
+      expect(repository.selected!.modelSelection, low);
+      expect(delegate.state.value.runFor(id).modelSelection, low);
+      expect(find.text(hint), findsNothing);
+      expect(delegate.calls, isEmpty);
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('active runs without a model snapshot keep the hint hidden', (
+    tester,
+  ) async {
+    await initialize(tester);
+    delegate.state.value = AgentUiState(
+      enabled: true,
+      configured: true,
+      availableModels: const [modelA, modelB],
+      defaultModelSelection: low,
+      runs: {id: const AgentUiRunState(phase: AgentUiPhase.running)},
+    );
+    await mountAgentUi(tester, view());
+    final hint = AppLocalizations.of(
+      tester.element(find.byType(AgentModelPicker)),
+    ).agentModelNextRunHint;
+    expect(find.text(hint), findsNothing);
+    expect(delegate.calls, isEmpty);
+  });
 
   testWidgets(
     'removed model requires an explicit enabled model choice on narrow 2x screen',

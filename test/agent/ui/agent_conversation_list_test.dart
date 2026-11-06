@@ -196,6 +196,47 @@ ScrollController _scroll(WidgetTester tester) => tester
     .controller!;
 
 void main() {
+  testWidgets('desktop history uses compact targets and rows', (tester) async {
+    final host = _HistoryHost(await _repository(tester, count: 3));
+    await _mount(tester, host, size: const Size(224, 420));
+    for (final name in [
+      'agent-history-new',
+      'agent-history-search-toggle',
+      'agent-history-more',
+    ]) {
+      expect(tester.getSize(_key(name)), const Size.square(32));
+    }
+    final header = tester.widget<SliverPersistentHeader>(
+      find.byType(SliverPersistentHeader),
+    );
+    expect(header.delegate.maxExtent, 40);
+    final first = tester.getRect(_key('agent-history-chat-2'));
+    final second = tester.getRect(_key('agent-history-chat-1'));
+    expect(first.height, 36);
+    expect(second.top - first.bottom, 2);
+    await _tap(tester, _key('agent-history-new'));
+    await _tap(tester, _key('agent-history-chat-2'));
+    expect(host.newCalls, 1);
+    expect(host.selected, ['chat-2']);
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+
+  testWidgets('desktop history grows its targets with 2x text', (tester) async {
+    final host = _HistoryHost(await _repository(tester, count: 2));
+    await _mount(tester, host, size: const Size(224, 420), scale: 2);
+    for (final name in [
+      'agent-history-new',
+      'agent-history-search-toggle',
+      'agent-history-more',
+    ]) {
+      expect(tester.getSize(_key(name)), const Size.square(48));
+    }
+    expect(
+      tester.getSize(_key('agent-history-chat-1')).height,
+      greaterThanOrEqualTo(52),
+    );
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
   testWidgets(
     'history starts with one action row and excludes the volatile draft',
     (tester) async {
