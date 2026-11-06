@@ -23,6 +23,7 @@ import '../provider/provider_request_encoder.dart';
 import '../interactions/agent_question.dart';
 import '../ui/agent_ui_delegate.dart';
 import 'conversation_context.dart';
+import 'conversation_task_checkpoint.dart';
 import 'operation_outcome.dart';
 import 'operation_recovery.dart';
 import 'repeated_tool_failure.dart';
@@ -2659,6 +2660,12 @@ class AgentRuntimeController implements AgentUiDelegate {
     String? throughMessageId,
   }) {
     final messages = <ProviderMessage>[];
+    final sourceIds = Map<ProviderMessage, String>.identity();
+    void addSource(ProviderMessage message, String sourceId) {
+      messages.add(message);
+      sourceIds[message] = sourceId;
+    }
+
     final pending = <String>{};
     final seen = <String>{};
     final handoffContext = schoolWebHandoffContext(
@@ -2695,7 +2702,7 @@ class AgentRuntimeController implements AgentUiDelegate {
       final message = conversation.messages[index];
       if (index < conversation.executionHistoryStart) {
         if (message.role != ConversationRole.notice) {
-          messages.add(
+          addSource(
             ProviderMessage(
               role: message.role == ConversationRole.user
                   ? ProviderRole.user
@@ -2703,6 +2710,7 @@ class AgentRuntimeController implements AgentUiDelegate {
               text:
                   '[Imported history; no current operation or permission]\n${message.text}',
             ),
+            message.id,
           );
         }
         continue;
@@ -2729,7 +2737,7 @@ class AgentRuntimeController implements AgentUiDelegate {
           pending.add(call.id);
         }
       }
-      messages.add(
+      addSource(
         ProviderMessage(
           role: switch (message.role) {
             ConversationRole.user => ProviderRole.user,
@@ -2761,6 +2769,7 @@ class AgentRuntimeController implements AgentUiDelegate {
               )
               .toList(),
         ),
+        message.id,
       );
     }
     if (pending.isNotEmpty) {
@@ -2785,6 +2794,26 @@ class AgentRuntimeController implements AgentUiDelegate {
       maxMessages: limits.maxContextMessages,
       maxCharacters: limits.maxContextCharacters,
       fitsRequest: fitsRequest,
+      taskCheckpoint: (omittedMessages) {
+        final omittedIds = <String>{};
+        for (final message in omittedMessages) {
+          final sourceId = sourceIds[message];
+          if (sourceId == null) {
+            return const <String, Object?>{};
+          }
+          omittedIds.add(sourceId);
+        }
+        final checkpoint = buildConversationTaskCheckpoint(
+          conversation.messages.take(through).toList(),
+          omittedMessageIds: omittedIds,
+          turns: conversation.turns,
+          executionHistoryStart: conversation.executionHistoryStart > through
+              ? through
+              : conversation.executionHistoryStart,
+        );
+        _rejectSecretValues(checkpoint, run.apiKey);
+        return checkpoint;
+      },
     );
     if (bounded == null) {
       if (!fitsRequest(messages)) {
