@@ -26,6 +26,8 @@ class AgentUiRunState {
     this.streamingText = '',
     this.errorMessage,
     this.providerErrorDetails,
+    this.providerErrorResponseBody,
+    this.providerErrorMetadata,
     this.pendingApproval,
     this.recoveryRequired = false,
     this.modelSelection,
@@ -50,6 +52,8 @@ class AgentUiRunState {
   /// Bounded, credential-redacted API response details for the current run.
   /// Kept separate from stable error codes and never treated as Markdown.
   final String? providerErrorDetails;
+  final String? providerErrorResponseBody;
+  final String? providerErrorMetadata;
   final AgentUiApproval? pendingApproval;
   final bool recoveryRequired;
   final AgentModelSelection? modelSelection;

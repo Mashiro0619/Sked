@@ -4105,6 +4105,36 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentReusePeriodTimeSet => '复用已有作息';
+
+  @override
+  String agentProviderTransportFailure(String code) {
+    return '模型连接传输失败（$code）。';
+  }
+
+  @override
+  String agentProviderResponseFailure(String code) {
+    return '无法处理模型服务的响应（$code）。';
+  }
+
+  @override
+  String agentProviderServiceFailure(String code) {
+    return '模型服务返回错误（$code）。';
+  }
+
+  @override
+  String agentProviderConfigurationFailure(String code) {
+    return '模型请求配置无效（$code）。';
+  }
+
+  @override
+  String agentProviderLimitFailure(String code) {
+    return '模型请求超过运行限制（$code）。';
+  }
+
+  @override
+  String agentProviderTimeoutFailure(String code) {
+    return '等待模型服务响应超时（$code）。';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -8210,4 +8240,34 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentReusePeriodTimeSet => '複用既有作息';
+
+  @override
+  String agentProviderTransportFailure(String code) {
+    return '模型連線傳輸失敗（$code）。';
+  }
+
+  @override
+  String agentProviderResponseFailure(String code) {
+    return '無法處理模型服務的回應（$code）。';
+  }
+
+  @override
+  String agentProviderServiceFailure(String code) {
+    return '模型服務傳回錯誤（$code）。';
+  }
+
+  @override
+  String agentProviderConfigurationFailure(String code) {
+    return '模型請求設定無效（$code）。';
+  }
+
+  @override
+  String agentProviderLimitFailure(String code) {
+    return '模型請求超過執行限制（$code）。';
+  }
+
+  @override
+  String agentProviderTimeoutFailure(String code) {
+    return '等待模型服務回應逾時（$code）。';
+  }
 }

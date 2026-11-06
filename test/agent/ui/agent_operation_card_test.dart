@@ -153,6 +153,8 @@ void main() {
       ),
     );
     expect(find.text('Changes prepared'), findsOneWidget);
+    expect(find.text('Change details'), findsOneWidget);
+    expect(find.text('Activity details'), findsOneWidget);
     expect(find.text('Action not completed'), findsOneWidget);
     expect(find.text('Changes saved'), findsNothing);
   });
@@ -318,6 +320,14 @@ void main() {
         );
         expect(find.text(l.agentActionFailed), findsOneWidget);
         expect(find.byIcon(Icons.error_outline), findsOneWidget);
+        expect(find.text(l.agentActivityDetails), findsOneWidget);
+        expect(find.text(l.agentPlanDetails), findsNothing);
+        await tester.tap(find.text(l.agentActivityDetails));
+        await tester.pumpAndSettle();
+        expect(
+          find.text(const JsonEncoder.withIndent('  ').convert(receipt)),
+          findsOneWidget,
+        );
         expect(find.text(l.agentActionUncertain), findsNothing);
         expect(find.text(l.agentActionApplied), findsNothing);
         expect(find.text(l.agentChangesSaved), findsNothing);

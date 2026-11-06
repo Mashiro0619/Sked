@@ -17,6 +17,7 @@ void main() {
     ProviderProtocol protocol = ProviderProtocol.chatCompletions,
     ProviderLimits limits = const ProviderLimits(),
     List<ProviderMessage>? messages,
+    List<ToolDefinition>? tools,
     Uri? endpoint,
     bool allowInsecureHttp = false,
   }) => ProviderRequest(
@@ -24,7 +25,7 @@ void main() {
     model: 'user-chosen-model',
     protocol: protocol,
     limits: limits,
-    tools: [tool],
+    tools: tools ?? [tool],
     allowInsecureHttp: allowInsecureHttp,
     messages:
         messages ?? [ProviderMessage(role: ProviderRole.user, text: '今天的安排')],
@@ -44,6 +45,362 @@ void main() {
       ),
     ),
   ).collect(input ?? request(), apiKey: apiKey);
+
+  for (final fixture in [
+    (502, 'text/html', '<html>Upstream denied the tool call</html>'),
+    (
+      400,
+      'application/json',
+      '  {"detail":{"reason":"Tool name is not supported"}}\n',
+    ),
+    (200, 'application/json', '{"unexpected":"truncated JSON'),
+    (200, 'text/event-stream', 'data: {"unexpected":"broken JSON\n\n'),
+    (200, 'text/html', '<html>Gateway error returned with status 200</html>'),
+  ]) {
+    test(
+      'raw response remains available for ${fixture.$1} ${fixture.$2}',
+      () async {
+        await expectLater(
+          collect(fixture.$3, status: fixture.$1, contentType: fixture.$2),
+          throwsA(
+            isA<ProviderException>().having(
+              (error) => error.responseBody,
+              'raw body',
+              fixture.$2 == 'text/event-stream'
+                  ? '{"unexpected":"broken JSON'
+                  : fixture.$3,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  test('raw JSON redaction retains its structure and whitespace', () async {
+    const payload =
+        ' \n{"error":{"message":"Denied secret-runtime-key","api_key":"other-token","cookie":"session=secret"}}\n ';
+    await expectLater(
+      collect(payload, status: 401, contentType: 'application/json'),
+      throwsA(
+        isA<ProviderException>()
+            .having(
+              (error) => error.responseBody,
+              'body',
+              ' \n{"error":{"message":"Denied [redacted]","api_key":"[redacted]","cookie":"[redacted]"}}\n ',
+            )
+            .having((error) => error.displayMetadata, 'status', 'HTTP 401')
+            .having(
+              (error) => error.toString(),
+              'safe log',
+              isNot(contains('Denied')),
+            ),
+      ),
+    );
+  });
+
+  test('large HTTP error keeps its bounded prefix even in one chunk', () async {
+    final client = ProviderClient(
+      client: _Client(
+        (_) async => http.StreamedResponse(
+          Stream.value(
+            utf8.encode(
+              'Upstream unavailable\n${'x' * 40000}\ntrailing detail',
+            ),
+          ),
+          503,
+          headers: {'content-type': 'text/plain'},
+        ),
+      ),
+    );
+    addTearDown(client.close);
+    await expectLater(
+      client.collect(request(), apiKey: ''),
+      throwsA(
+        isA<ProviderException>()
+            .having(
+              (error) => error.responseBody,
+              'prefix',
+              startsWith('Upstream unavailable\n'),
+            )
+            .having((error) => error.responseBody, 'limit', hasLength(32769))
+            .having((error) => error.responseBody, 'truncation', endsWith('…')),
+      ),
+    );
+  });
+
+  test(
+    'cancelling after streamed text clears raw response diagnostics',
+    () async {
+      final body = StreamController<List<int>>();
+      final client = ProviderClient(
+        client: _Client(
+          (_) async => http.StreamedResponse(
+            body.stream,
+            200,
+            headers: {'content-type': 'text/event-stream'},
+          ),
+        ),
+      );
+      final token = ProviderCancellationToken();
+      addTearDown(client.close);
+      final failure = Completer<Object>();
+      final subscription = client
+          .stream(request(), apiKey: '', cancellation: token)
+          .listen(
+            (event) {
+              if (event is ProviderTextDelta) token.cancel();
+            },
+            onError: (Object error) {
+              failure.complete(error);
+            },
+          );
+      body.add(
+        utf8.encode(_chat({'content': 'A partial reply before stopping'})),
+      );
+      final error = await failure.future;
+      expect(
+        error,
+        isA<ProviderException>()
+            .having((error) => error.code, 'cancelled', ProviderError.cancelled)
+            .having((error) => error.responseBody, 'no stale body', isNull),
+      );
+      await subscription.cancel();
+      await body.close();
+    },
+  );
+
+  test(
+    'truncated HTTP diagnostic redacts a known key prefix at the cutoff',
+    () async {
+      const key = 'secret-runtime-key';
+      final prefix = key.substring(0, key.length - 1);
+      final padding = 'x' * (32768 - prefix.length);
+      await expectLater(
+        collect(
+          '$padding$key more response data',
+          status: 502,
+          contentType: 'text/plain',
+        ),
+        throwsA(
+          isA<ProviderException>()
+              .having(
+                (error) => error.responseBody,
+                'cut credential',
+                isNot(contains(prefix)),
+              )
+              .having(
+                (error) => error.responseBody,
+                'truncated',
+                endsWith('…'),
+              ),
+        ),
+      );
+    },
+  );
+
+  test('only long known fragments at clipped boundaries are redacted', () {
+    const key = 'fixture-api-secret';
+    const failure = ProviderException(ProviderError.invalidResponse);
+    expect(
+      failure
+          .withResponseBody(
+            'api-secret trailing data',
+            apiKey: key,
+            truncated: true,
+          )
+          .responseBody,
+      '…\n[redacted] trailing data',
+    );
+    expect(
+      failure
+          .withResponseBody('api-secret trailing data', apiKey: key)
+          .responseBody,
+      'api-secret trailing data',
+    );
+    expect(
+      failure
+          .withResponseBody(
+            'secret trailing data',
+            apiKey: key,
+            truncated: true,
+          )
+          .responseBody,
+      '…\nsecret trailing data',
+    );
+    const escapedKey = 'fixture-"quoted"-secret';
+    final encoded = jsonEncode(escapedKey);
+    final escaped = encoded.substring(1, encoded.length - 1);
+    final fragment = escaped.substring(0, escaped.length - 2);
+    expect(
+      failure
+          .withResponseBody(
+            'prefix $fragment',
+            apiKey: escapedKey,
+            truncatedEnd: true,
+          )
+          .responseBody,
+      'prefix [redacted]…',
+    );
+  });
+
+  test('plain SSE error events preserve the service message', () async {
+    await expectLater(
+      collect('event: error\ndata: Upstream rejected this model\n\n'),
+      throwsA(
+        isA<ProviderException>()
+            .having(
+              (error) => error.code,
+              'service error',
+              ProviderError.httpFailure,
+            )
+            .having(
+              (error) => error.responseBody,
+              'event data',
+              'Upstream rejected this model',
+            ),
+      ),
+    );
+  });
+
+  test('late unknown tool keeps its name and stream tail after long output', () async {
+    final payload =
+        '${_chat({'content': 'x' * 40000})}${_chat({
+          'tool_calls': [
+            {
+              'index': 0,
+              'id': 'late-call',
+              'function': {'name': 'undisclosed__operation', 'arguments': '{}'},
+            },
+          ],
+        }, finish: 'tool_calls')}data: [DONE]\n\n';
+    await expectLater(
+      collect(payload),
+      throwsA(
+        isA<ProviderException>()
+            .having(
+              (error) => error.code,
+              'local error',
+              ProviderError.unknownTool,
+            )
+            .having(
+              (error) => error.responseMessage,
+              'returned name',
+              contains('undisclosed__operation'),
+            )
+            .having(
+              (error) => error.responseBody,
+              'actual tool frame',
+              contains('undisclosed__operation'),
+            )
+            .having(
+              (error) => error.responseBody,
+              'bounded tail',
+              startsWith('…\n'),
+            ),
+      ),
+    );
+  });
+
+  for (final protocol in ProviderProtocol.values) {
+    test(
+      '$protocol accepts an advertised logical tool alias and canonicalizes continuation',
+      () async {
+        final payload = protocol == ProviderProtocol.chatCompletions
+            ? '${_chat({
+                'tool_calls': [
+                  {
+                    'index': 0,
+                    'id': 'call',
+                    'function': {'name': 'events.list', 'arguments': '{}'},
+                  },
+                ],
+              }, finish: 'tool_calls')}data: [DONE]\n\n'
+            : jsonEncode({
+                'status': 'completed',
+                'output': [
+                  {
+                    'type': 'function_call',
+                    'id': 'item',
+                    'call_id': 'call',
+                    'name': 'events.list',
+                    'arguments': '{}',
+                  },
+                ],
+              });
+        final response = await collect(
+          payload,
+          input: request(protocol: protocol),
+          contentType: protocol == ProviderProtocol.chatCompletions
+              ? 'text/event-stream'
+              : 'application/json',
+        );
+        expect(response.toolCalls.single.name, 'events.list');
+        if (protocol == ProviderProtocol.responses) {
+          expect(response.responseItems.single['name'], 'events__list');
+        }
+      },
+    );
+  }
+
+  test(
+    'wire name takes precedence over an overlapping logical alias',
+    () async {
+      final response = await collect(
+        '${_chat({
+          'tool_calls': [
+            {
+              'index': 0,
+              'id': 'call',
+              'function': {'name': 'events__list', 'arguments': '{}'},
+            },
+          ],
+        }, finish: 'tool_calls')}data: [DONE]\n\n',
+        input: request(
+          tools: [
+            tool,
+            ToolDefinition(
+              name: 'events__list',
+              description: 'Different tool',
+              parameters: {'type': 'object'},
+            ),
+          ],
+        ),
+      );
+      expect(response.toolCalls.single.name, 'events.list');
+    },
+  );
+
+  test(
+    'logical aliases cannot invoke an unadvertised registered-looking tool',
+    () async {
+      await expectLater(
+        collect(
+          '${_chat({
+            'tool_calls': [
+              {
+                'index': 0,
+                'id': 'call',
+                'function': {'name': 'resources.delete', 'arguments': '{}'},
+              },
+            ],
+          }, finish: 'tool_calls')}data: [DONE]\n\n',
+        ),
+        throwsA(
+          isA<ProviderException>()
+              .having(
+                (error) => error.code,
+                'rejected',
+                ProviderError.unknownTool,
+              )
+              .having(
+                (error) => error.responseMessage,
+                'actual name',
+                contains('resources.delete'),
+              ),
+        ),
+      );
+    },
+  );
 
   test(
     'HTTP errors expose API message and code with credentials redacted',

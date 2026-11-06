@@ -581,6 +581,8 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     state.phase,
     state.errorMessage,
     state.providerErrorDetails,
+    state.providerErrorResponseBody,
+    state.providerErrorMetadata,
   );
 
   void _revealReply(String conversationId, String messageId) {
@@ -2243,20 +2245,44 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   }
 
   Widget _requestFailure(AgentUiRunState state, AppLocalizations l) {
+    final body = state.providerErrorResponseBody;
     final details = state.providerErrorDetails;
+    final hasBody = body != null && body.isNotEmpty;
+    final serviceFailure = const {
+      'provider.authentication',
+      'provider.rateLimited',
+      'provider.httpFailure',
+      'provider.redirectRejected',
+    }.contains(state.errorMessage);
+    final errorStyle = Theme.of(context).textTheme.bodyMedium
+        ?.copyWith(color: Theme.of(context).colorScheme.error);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Align(
         alignment: AlignmentDirectional.centerStart,
         child: Semantics(
           liveRegion: true,
-          child: AgentSelectableText(
-            details?.isNotEmpty == true
-                ? details!
-                : _errorMessage(state.errorMessage, l),
-            key: const ValueKey('agent-request-error'),
-            style: Theme.of(context).textTheme.bodyMedium
-                ?.copyWith(color: Theme.of(context).colorScheme.error),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (hasBody && !serviceFailure) ...[
+                Text(_errorMessage(state.errorMessage, l), style: errorStyle),
+                if (details?.isNotEmpty == true)
+                  Text(details!, style: errorStyle),
+              ],
+              AgentSelectableText(
+                hasBody
+                    ? body
+                    : details?.isNotEmpty == true
+                    ? details!
+                    : _errorMessage(state.errorMessage, l),
+                key: const ValueKey('agent-request-error'),
+                style: errorStyle,
+              ),
+              if (hasBody)
+                if (state.providerErrorMetadata case final metadata?)
+                  Text(metadata, style: errorStyle),
+            ],
           ),
         ),
       ),
@@ -2291,7 +2317,26 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       return l.agentLimitsReached;
     }
     if (code == 'sensitiveContent') return l.agentSensitiveContent;
-    if (code?.startsWith('provider.') ?? false) return l.agentRequestFailed;
+    if (code?.startsWith('provider.') ?? false) {
+      final reason = code!.substring('provider.'.length);
+      return switch (reason) {
+        'transportFailure' => l.agentProviderTransportFailure(reason),
+        'timeout' => l.agentProviderTimeoutFailure(reason),
+        'cancelled' => l.agentStopped,
+        'authentication' ||
+        'rateLimited' ||
+        'httpFailure' ||
+        'redirectRejected' => l.agentProviderServiceFailure(reason),
+        'invalidRequest' ||
+        'insecureEndpoint' => l.agentProviderConfigurationFailure(reason),
+        'requestBudgetExceeded' ||
+        'responseBudgetExceeded' ||
+        'eventBudgetExceeded' ||
+        'toolBudgetExceeded' ||
+        'tokenBudgetExceeded' => l.agentProviderLimitFailure(reason),
+        _ => l.agentProviderResponseFailure(reason),
+      };
+    }
     return l.agentRunFailed;
   }
 

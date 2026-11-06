@@ -226,7 +226,12 @@ class _AgentOperationCardState extends State<AgentOperationCard> {
                         icon: Icon(
                           _showDetails ? Icons.expand_less : Icons.expand_more,
                         ),
-                        label: Text(l.agentPlanDetails),
+                        label: Text(
+                          receipt.containsKey('operationId') ||
+                                  receipt.containsKey('planId')
+                              ? l.agentPlanDetails
+                              : l.agentActivityDetails,
+                        ),
                       ),
                     ),
                 ],

@@ -60,6 +60,101 @@ class _OperationHarness {
 }
 
 void main() {
+  for (final nextTool in ['events.list', 'undisclosed.action']) {
+    test(
+      'real multi-round discovery handles $nextTool against current advertised tools',
+      () async {
+        var exposed = false;
+        var requests = 0;
+        final executed = <String>[];
+        final wires = <Map<String, dynamic>>[];
+        ToolDefinition definition(String name) => ToolDefinition(
+          name: name,
+          description: name,
+          parameters: {'type': 'object', 'properties': <String, Object?>{}},
+        );
+        final actual = ProviderClient(
+          client: MockClient((wire) async {
+            wires.add(jsonDecode(wire.body) as Map<String, dynamic>);
+            requests++;
+            final name = requests == 1 ? 'capabilities__describe' : nextTool;
+            final delta = requests <= 2
+                ? {
+                    'tool_calls': [
+                      {
+                        'index': 0,
+                        'id': 'call-$requests',
+                        'function': {'name': name, 'arguments': '{}'},
+                      },
+                    ],
+                  }
+                : {'content': 'Finished the requested check'};
+            return http.Response(
+              'data: ${jsonEncode({
+                'choices': [
+                  {'index': 0, 'delta': delta, 'finish_reason': requests <= 2 ? 'tool_calls' : 'stop'},
+                ],
+              })}\n\ndata: [DONE]\n\n',
+              200,
+              headers: {'content-type': 'text/event-stream'},
+            );
+          }),
+        );
+        final h = await _Harness.create(
+          handler: (request, token) =>
+              actual.stream(request, apiKey: _key, cancellation: token),
+          readTools: (_) => [
+            definition('capabilities.describe'),
+            if (exposed) definition('events.list'),
+          ],
+          execute: (call, _, _) async {
+            executed.add(call.name);
+            if (call.name == 'capabilities.describe') {
+              exposed = true;
+              return {
+                'tools': [
+                  {'name': 'events.list'},
+                ],
+              };
+            }
+            return {'events': <Object?>[]};
+          },
+        );
+        addTearDown(() {
+          actual.close();
+          h.dispose();
+        });
+        await h.runtime.send(h.id, 'Read my events');
+        expect(
+          (wires[1]['tools'] as List).map((tool) => tool['function']['name']),
+          ['capabilities__describe', 'events__list'],
+        );
+        if (nextTool == 'events.list') {
+          expect(executed, ['capabilities.describe', 'events.list']);
+          expect(requests, 3);
+          expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
+          final toolMessage = (wires[2]['messages'] as List)
+              .where((message) => message['tool_calls'] != null)
+              .last;
+          expect(
+            toolMessage['tool_calls'][0]['function']['name'],
+            'events__list',
+          );
+        } else {
+          expect(executed, ['capabilities.describe']);
+          expect(requests, 2);
+          final failure = h.runtime.state.value.runFor(h.id);
+          expect(failure.errorMessage, 'provider.unknownTool');
+          expect(failure.providerErrorDetails, contains('undisclosed.action'));
+          expect(
+            failure.providerErrorResponseBody,
+            contains('undisclosed.action'),
+          );
+        }
+      },
+    );
+  }
+
   test('API failure keeps safe partial text and details until the next request', () async {
     var requests = 0;
     final next = StreamController<ProviderEvent>();
@@ -103,6 +198,12 @@ void main() {
     expect(failed.providerErrorDetails, contains('Unsupported tool result'));
     expect(failed.providerErrorDetails, contains('invalid_tool_result'));
     expect(failed.providerErrorDetails, isNot(contains(_key)));
+    expect(
+      failed.providerErrorResponseBody,
+      contains('Unsupported tool result'),
+    );
+    expect(failed.providerErrorResponseBody, isNot(contains(_key)));
+    expect(failed.providerErrorMetadata, 'invalid_tool_result');
     expect(h.storage.source, isNot(contains('Unsupported tool result')));
     final retry = h.runtime.continueConversation(h.id);
     for (var turn = 0; turn < 100 && requests < 2; turn++) {
@@ -110,8 +211,18 @@ void main() {
     }
     expect(requests, 2);
     expect(h.runtime.state.value.runFor(h.id).providerErrorDetails, isNull);
+    expect(
+      h.runtime.state.value.runFor(h.id).providerErrorResponseBody,
+      isNull,
+    );
+    expect(h.runtime.state.value.runFor(h.id).providerErrorMetadata, isNull);
     await h.runtime.stop(h.id);
     expect(h.runtime.state.value.runFor(h.id).providerErrorDetails, isNull);
+    expect(
+      h.runtime.state.value.runFor(h.id).providerErrorResponseBody,
+      isNull,
+    );
+    expect(h.runtime.state.value.runFor(h.id).providerErrorMetadata, isNull);
     await next.close();
     await retry;
   });

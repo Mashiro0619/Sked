@@ -71,6 +71,7 @@ class ProviderClient {
     Future<void> pump() async {
       ProviderResponseDecoder? decoder;
       ProviderUsage? emittedUsage;
+      final diagnostic = _ResponseDiagnostic();
       void emit(ProviderEvent event) {
         if (subscriptionCancelled) return;
         if (event is ProviderUsageEvent) emittedUsage = event.usage;
@@ -155,13 +156,15 @@ class ProviderClient {
           }),
         );
         iterator = StreamIterator(response.stream);
-        if (response.statusCode >= 300 && response.statusCode < 400) {
-          throw ProviderException(
-            ProviderError.redirectRejected,
-            statusCode: response.statusCode,
-          );
-        }
-        if (response.statusCode < 200 || response.statusCode >= 300) {
+        final contentType = response.headers['content-type']
+            ?.split(';')
+            .first
+            .trim()
+            .toLowerCase();
+        final isJson = contentType == 'application/json';
+        final rejected =
+            response.statusCode < 200 || response.statusCode >= 300;
+        if (rejected || (!isJson && contentType != 'text/event-stream')) {
           final errorBytes = <int>[];
           final limit = request.limits.maxResponseBytes.clamp(1, 32768);
           try {
@@ -184,7 +187,8 @@ class ProviderClient {
             // Retain its status and any complete message already received.
           }
           Object? errorBody;
-          final text = utf8.decode(errorBytes, allowMalformed: true).trim();
+          final rawBody = utf8.decode(errorBytes, allowMalformed: true);
+          final text = rawBody.trim();
           try {
             errorBody = jsonDecode(text);
           } on FormatException {
@@ -203,14 +207,21 @@ class ProviderClient {
             }
           }
           throw ProviderException.fromResponse(
-            switch (response.statusCode) {
-              401 || 403 => ProviderError.authentication,
-              429 => ProviderError.rateLimited,
-              _ => ProviderError.httpFailure,
-            },
+            !rejected
+                ? ProviderError.invalidResponse
+                : switch (response.statusCode) {
+                    >= 300 && < 400 => ProviderError.redirectRejected,
+                    401 || 403 => ProviderError.authentication,
+                    429 => ProviderError.rateLimited,
+                    _ => ProviderError.httpFailure,
+                  },
             errorBody,
-            statusCode: response.statusCode,
+            statusCode: rejected ? response.statusCode : null,
             apiKey: apiKey,
+          ).withResponseBody(
+            rawBody,
+            apiKey: apiKey,
+            truncatedEnd: errorBytes.length >= limit,
           );
         }
         if (hasAttachments && !subscriptionCancelled) {
@@ -225,15 +236,6 @@ class ProviderClient {
         if ((response.contentLength ?? 0) > request.limits.maxResponseBytes) {
           throw const ProviderException(ProviderError.responseBudgetExceeded);
         }
-        final contentType = response.headers['content-type']
-            ?.split(';')
-            .first
-            .trim()
-            .toLowerCase();
-        final isJson = contentType == 'application/json';
-        if (!isJson && contentType != 'text/event-stream') {
-          throw const ProviderException(ProviderError.invalidResponse);
-        }
         decoder = ProviderResponseDecoder(request, apiKey: apiKey);
         final sse = ProviderSseDecoder(
           maxEventBytes: request.limits.maxEventBytes,
@@ -244,6 +246,7 @@ class ProviderClient {
         while (await guarded(iterator!.moveNext())) {
           resetIdle();
           final chunk = iterator!.current;
+          diagnostic.add(chunk);
           bytes += chunk.length;
           if (bytes > request.limits.maxResponseBytes) {
             throw const ProviderException(ProviderError.responseBudgetExceeded);
@@ -291,15 +294,14 @@ class ProviderClient {
           // Do not attach the original stack: clients may put request secrets
           // or URLs into exception messages and async stack annotations.
           controller.addError(
-            terminal
-                ? ProviderException(
-                    safe.code,
-                    statusCode: safe.statusCode,
-                    responseTerminated: true,
-                    responseMessage: safe.responseMessage,
-                    responseCode: safe.responseCode,
-                  )
-                : safe,
+            safe.code == ProviderError.cancelled
+                ? safe
+                : safe.withResponseBody(
+                    diagnostic.text,
+                    apiKey: apiKey,
+                    truncated: diagnostic.truncated,
+                    responseTerminated: terminal,
+                  ),
             StackTrace.empty,
           );
         }
@@ -327,6 +329,24 @@ class ProviderClient {
   void close() {
     if (_ownsClient) _client.close();
   }
+}
+
+/// Keep the failing end of a stream even after a long successful prefix.
+class _ResponseDiagnostic {
+  static const limit = 32768;
+  final _bytes = <int>[];
+  bool truncated = false;
+
+  void add(List<int> chunk) {
+    final overflow = _bytes.length + chunk.length - limit;
+    if (overflow > 0) {
+      truncated = true;
+      _bytes.removeRange(0, overflow.clamp(0, _bytes.length));
+    }
+    _bytes.addAll(chunk.skip((chunk.length - limit).clamp(0, chunk.length)));
+  }
+
+  String get text => utf8.decode(_bytes, allowMalformed: true);
 }
 
 void _validate(ProviderRequest request, String apiKey) {

@@ -2954,5 +2954,53 @@
   "timetableImportJsonAction": "Import JSON",
   "@timetableImportJsonAction": {},
   "agentReusePeriodTimeSet": "Reuse existing period times",
-  "@agentReusePeriodTimeSet": {}
+  "@agentReusePeriodTimeSet": {},
+  "agentProviderTransportFailure": "The model connection failed ({code}).",
+  "@agentProviderTransportFailure": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "agentProviderResponseFailure": "Could not process the model response ({code}).",
+  "@agentProviderResponseFailure": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "agentProviderServiceFailure": "The model service returned an error ({code}).",
+  "@agentProviderServiceFailure": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "agentProviderConfigurationFailure": "The model request configuration is invalid ({code}).",
+  "@agentProviderConfigurationFailure": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "agentProviderLimitFailure": "The model request exceeded a limit ({code}).",
+  "@agentProviderLimitFailure": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "agentProviderTimeoutFailure": "The model response timed out ({code}).",
+  "@agentProviderTimeoutFailure": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  }
 }

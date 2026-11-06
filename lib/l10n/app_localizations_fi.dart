@@ -4399,4 +4399,34 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get agentReusePeriodTimeSet => 'Reuse existing period times';
+
+  @override
+  String agentProviderTransportFailure(String code) {
+    return 'The model connection failed ($code).';
+  }
+
+  @override
+  String agentProviderResponseFailure(String code) {
+    return 'Could not process the model response ($code).';
+  }
+
+  @override
+  String agentProviderServiceFailure(String code) {
+    return 'The model service returned an error ($code).';
+  }
+
+  @override
+  String agentProviderConfigurationFailure(String code) {
+    return 'The model request configuration is invalid ($code).';
+  }
+
+  @override
+  String agentProviderLimitFailure(String code) {
+    return 'The model request exceeded a limit ($code).';
+  }
+
+  @override
+  String agentProviderTimeoutFailure(String code) {
+    return 'The model response timed out ($code).';
+  }
 }

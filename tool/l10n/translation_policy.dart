@@ -32,6 +32,13 @@ const offeredLocaleCodes = <String>{
 /// Explicit untranslated messages use the current English template at build
 /// time. Removing a locale entry prevents a copied English sentence going stale.
 const commonEnglishFallbacks = <String>{
+  'agentProviderTransportFailure',
+  'agentProviderResponseFailure',
+  'agentProviderServiceFailure',
+  'agentProviderConfigurationFailure',
+  'agentProviderLimitFailure',
+  'agentProviderTimeoutFailure',
+
   'importTimetableText',
   'agentReusePeriodTimeSet',
   'timetableImportJsonAction',

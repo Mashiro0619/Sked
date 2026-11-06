@@ -7799,6 +7799,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reuse existing period times'**
   String get agentReusePeriodTimeSet;
+
+  /// No description provided for @agentProviderTransportFailure.
+  ///
+  /// In en, this message translates to:
+  /// **'The model connection failed ({code}).'**
+  String agentProviderTransportFailure(String code);
+
+  /// No description provided for @agentProviderResponseFailure.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not process the model response ({code}).'**
+  String agentProviderResponseFailure(String code);
+
+  /// No description provided for @agentProviderServiceFailure.
+  ///
+  /// In en, this message translates to:
+  /// **'The model service returned an error ({code}).'**
+  String agentProviderServiceFailure(String code);
+
+  /// No description provided for @agentProviderConfigurationFailure.
+  ///
+  /// In en, this message translates to:
+  /// **'The model request configuration is invalid ({code}).'**
+  String agentProviderConfigurationFailure(String code);
+
+  /// No description provided for @agentProviderLimitFailure.
+  ///
+  /// In en, this message translates to:
+  /// **'The model request exceeded a limit ({code}).'**
+  String agentProviderLimitFailure(String code);
+
+  /// No description provided for @agentProviderTimeoutFailure.
+  ///
+  /// In en, this message translates to:
+  /// **'The model response timed out ({code}).'**
+  String agentProviderTimeoutFailure(String code);
 }
 
 class _AppLocalizationsDelegate

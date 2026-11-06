@@ -148,6 +148,41 @@ void main() {
       expect(alignment.alignment, AlignmentDirectional.centerStart);
       final l = AppLocalizations.of(tester.element(error));
       expect(find.text(l.agentRequestFailed), findsNothing);
+      const rawBody =
+          '{"error":{"message":"Tool result requires a matching call id","type":"invalid_request_error","param":"messages[3]"},"request_id":"fixture-request"}';
+      delegate.state.value = AgentUiState(
+        enabled: true,
+        configured: true,
+        runs: {
+          conversation.id: const AgentUiRunState(
+            phase: AgentUiPhase.failed,
+            errorMessage: 'provider.httpFailure',
+            providerErrorResponseBody: rawBody,
+            providerErrorMetadata: 'HTTP 400',
+          ),
+        },
+      );
+      await settle(tester);
+      expect(find.text(rawBody), findsOneWidget);
+      expect(find.text('HTTP 400'), findsOneWidget);
+      expect(find.text(l.agentRequestFailed), findsNothing);
+      delegate.state.value = AgentUiState(
+        enabled: true,
+        configured: true,
+        runs: {
+          conversation.id: const AgentUiRunState(
+            phase: AgentUiPhase.failed,
+            errorMessage: 'provider.invalidResponse',
+            providerErrorResponseBody: '<html>Upstream unavailable</html>',
+          ),
+        },
+      );
+      await settle(tester);
+      expect(
+        find.text(l.agentProviderResponseFailure('invalidResponse')),
+        findsOneWidget,
+      );
+      expect(find.text('<html>Upstream unavailable</html>'), findsOneWidget);
       delegate.state.value = AgentUiState(
         enabled: true,
         configured: true,
@@ -159,7 +194,10 @@ void main() {
         },
       );
       await settle(tester);
-      expect(find.text(l.agentRequestFailed), findsOneWidget);
+      expect(
+        find.text(l.agentProviderTransportFailure('transportFailure')),
+        findsOneWidget,
+      );
       expect(
         find.textContaining('Tool result requires a matching call id'),
         findsNothing,

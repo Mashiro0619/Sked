@@ -254,8 +254,8 @@ enum ProviderError {
 }
 
 /// Stable failure classification with bounded API response diagnostics.
-/// Only explicit response messages/codes enter the display fields. Request
-/// credentials are redacted, and transport exceptions remain classification-only.
+/// Display fields contain redacted service responses. Transport exceptions
+/// remain classification-only because their messages may contain request data.
 class ProviderException implements Exception {
   const ProviderException(
     this.code, {
@@ -263,6 +263,7 @@ class ProviderException implements Exception {
     this.responseTerminated = false,
     this.responseMessage,
     this.responseCode,
+    this.responseBody,
   });
 
   factory ProviderException.fromResponse(
@@ -289,16 +290,70 @@ class ProviderException implements Exception {
   final String? responseMessage;
   final String? responseCode;
 
+  /// Bounded response body or failing SSE data, with credentials redacted.
+  /// A leading or trailing ellipsis marks an incomplete excerpt.
+  final String? responseBody;
+
+  ProviderException withResponseBody(
+    String body, {
+    required String apiKey,
+    bool truncated = false,
+    bool truncatedEnd = false,
+    bool responseTerminated = false,
+  }) {
+    var responseText = body;
+    if (apiKey.isNotEmpty && (truncated || truncatedEnd)) {
+      final encoded = jsonEncode(apiKey);
+      for (final secret in {apiKey, encoded.substring(1, encoded.length - 1)}) {
+        // Only long known credential fragments at a discarded boundary are
+        // sensitive. Short matches in ordinary content remain readable.
+        for (
+          var length = (secret.length - 1).clamp(0, responseText.length);
+          length >= 8;
+          length--
+        ) {
+          if (truncated &&
+              responseText.startsWith(
+                secret.substring(secret.length - length),
+              )) {
+            responseText = '[redacted]${responseText.substring(length)}';
+          }
+          if (truncatedEnd &&
+              responseText.endsWith(secret.substring(0, length))) {
+            responseText =
+                '${responseText.substring(0, responseText.length - length)}[redacted]';
+          }
+        }
+      }
+    }
+    final diagnostic = _providerDiagnostic(
+      responseText,
+      apiKey,
+      32768,
+      preserveStructure: true,
+    );
+    return ProviderException(
+      code,
+      statusCode: statusCode,
+      responseTerminated: this.responseTerminated || responseTerminated,
+      responseMessage: responseMessage,
+      responseCode: responseCode,
+      responseBody:
+          responseBody ??
+          (diagnostic == null
+              ? null
+              : '${truncated ? '…\n' : ''}$diagnostic${truncatedEnd && !diagnostic.endsWith('…') ? '…' : ''}'),
+    );
+  }
+
+  String? get displayMetadata {
+    final parts = [if (statusCode != null) 'HTTP $statusCode', ?responseCode];
+    return parts.isEmpty ? null : parts.join(' · ');
+  }
+
   /// Display-only plain text. The stable [toString] remains safe for logs.
   String? get displayDetails {
-    final metadata = [
-      if (statusCode != null) 'HTTP $statusCode',
-      ?responseCode,
-    ];
-    final parts = [
-      ?responseMessage,
-      if (metadata.isNotEmpty) metadata.join(' · '),
-    ];
+    final parts = [?responseMessage, ?displayMetadata];
     return parts.isEmpty ? null : parts.join('\n');
   }
 
@@ -312,7 +367,12 @@ class ProviderException implements Exception {
       '${statusCode == null ? '' : ', HTTP $statusCode'})';
 }
 
-String? _providerDiagnostic(Object? value, String apiKey, int limit) {
+String? _providerDiagnostic(
+  Object? value,
+  String apiKey,
+  int limit, {
+  bool preserveStructure = false,
+}) {
   if (value is! String && value is! num) return null;
   var text = value.toString();
   if (apiKey.isNotEmpty) {
@@ -330,14 +390,21 @@ String? _providerDiagnostic(Object? value, String apiKey, int limit) {
   );
   text = text.replaceAllMapped(
     RegExp(
-      r'''["']?(api[_-]?key|access[_-]?token|cookie)["']?\s*[:=]\s*(?:"(?:\\.|[^"\\])*(?:"|$)|'(?:\\.|[^'\\])*(?:'|$)|[^\s,;"'<>]+)''',
+      r'''(["']?(api[_-]?key|access[_-]?token|cookie)["']?\s*[:=]\s*)("(?:\\.|[^"\\])*(?:"|$)|'(?:\\.|[^'\\])*(?:'|$)|[^\s,;"'<>]+)''',
       caseSensitive: false,
     ),
-    (match) => '${match[1]}=[redacted]',
+    (match) {
+      if (!preserveStructure) return '${match[2]}=[redacted]';
+      final quote = match[3]!.startsWith('"')
+          ? '"'
+          : match[3]!.startsWith("'")
+          ? "'"
+          : '';
+      return '${match[1]}$quote[redacted]$quote';
+    },
   );
-  text = text
-      .replaceAll(RegExp(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]'), '')
-      .trim();
+  text = text.replaceAll(RegExp(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]'), '');
+  if (!preserveStructure) text = text.trim();
   if (text.isEmpty) return null;
   final runes = text.runes;
   return runes.length <= limit

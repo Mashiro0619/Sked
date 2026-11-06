@@ -201,14 +201,16 @@ void main() {
     await mountAgentUi(tester, view());
     run(AgentUiPhase.running, text: 'Uncommitted replacement');
     await tester.pumpAndSettle();
-    run(AgentUiPhase.failed, error: 'provider.network');
+    run(AgentUiPhase.failed, error: 'provider.transportFailure');
     await tester.pumpAndSettle();
     expect(content(tester, 'reply-one').text, 'Current reply');
     final l = AppLocalizations.of(tester.element(group('reply-one')));
     expect(
       find.descendant(
         of: group('reply-one'),
-        matching: find.text(l.agentRequestFailed),
+        matching: find.text(
+          l.agentProviderTransportFailure('transportFailure'),
+        ),
       ),
       findsOneWidget,
     );

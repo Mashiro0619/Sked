@@ -2884,5 +2884,53 @@
   "timetableImportJsonAction": "导入 JSON",
   "@timetableImportJsonAction": {},
   "agentReusePeriodTimeSet": "复用已有作息",
-  "@agentReusePeriodTimeSet": {}
+  "@agentReusePeriodTimeSet": {},
+  "agentProviderTransportFailure": "模型连接传输失败（{code}）。",
+  "@agentProviderTransportFailure": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "agentProviderResponseFailure": "无法处理模型服务的响应（{code}）。",
+  "@agentProviderResponseFailure": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "agentProviderServiceFailure": "模型服务返回错误（{code}）。",
+  "@agentProviderServiceFailure": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "agentProviderConfigurationFailure": "模型请求配置无效（{code}）。",
+  "@agentProviderConfigurationFailure": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "agentProviderLimitFailure": "模型请求超过运行限制（{code}）。",
+  "@agentProviderLimitFailure": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "agentProviderTimeoutFailure": "等待模型服务响应超时（{code}）。",
+  "@agentProviderTimeoutFailure": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  }
 }

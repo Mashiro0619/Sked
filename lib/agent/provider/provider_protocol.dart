@@ -208,6 +208,33 @@ class ProviderResponseDecoder {
   ProviderUsage? get reportedUsage => _usage;
 
   List<ProviderEvent> add(ProviderSseFrame frame) {
+    try {
+      return _addFrame(frame);
+    } on ProviderException catch (error) {
+      // [DONE] validates the accumulated tool calls. The client retains the
+      // stream tail so its diagnostic includes the calls that failed validation.
+      if (frame.data.trim() == '[DONE]') rethrow;
+      throw error.withResponseBody(frame.data, apiKey: _apiKey);
+    } on FormatException {
+      throw const ProviderException(ProviderError.invalidResponse)
+          .withResponseBody(frame.data, apiKey: _apiKey);
+    }
+  }
+
+  List<ProviderEvent> _addFrame(ProviderSseFrame frame) {
+    if (frame.event == 'error') {
+      Object? error = frame.data;
+      try {
+        error = jsonDecode(frame.data);
+      } on FormatException {
+        /* Plain SSE error. */
+      }
+      throw ProviderException.fromResponse(
+        ProviderError.httpFailure,
+        error,
+        apiKey: _apiKey,
+      );
+    }
     if (_complete) {
       throw const ProviderException(ProviderError.invalidResponse);
     }
@@ -523,9 +550,20 @@ class ProviderResponseDecoder {
       if (!ids.add(id)) {
         throw const ProviderException(ProviderError.duplicateToolCall);
       }
-      final name = _knownNames[tool.name.toString()];
+      final returnedName = tool.name.toString();
+      // Discovery returns logical names while the wire schema uses encoded
+      // names. Accept an exact advertised logical alias, with wire precedence.
+      final name =
+          _knownNames[returnedName] ??
+          request.tools
+              .where((definition) => definition.name == returnedName)
+              .firstOrNull
+              ?.name;
       if (name == null) {
-        throw const ProviderException(ProviderError.unknownTool);
+        throw ProviderException.fromResponse(ProviderError.unknownTool, {
+          'message':
+              'Tool function "$returnedName" was not advertised in this request.',
+        }, apiKey: _apiKey);
       }
       final arguments = tool.arguments.toString();
       if (utf8.encode(arguments).length > request.limits.maxToolArgumentBytes) {
@@ -547,7 +585,18 @@ class ProviderResponseDecoder {
         toolCalls: calls,
         finishReason: _finishReason!,
         usage: _usage,
-        responseItems: _responseItems,
+        responseItems: [
+          for (final item in _responseItems)
+            if (item['type'] == 'function_call')
+              {
+                ...item,
+                'name': ToolNameCodec.encode(
+                  calls.firstWhere((call) => call.id == item['call_id']).name,
+                ),
+              }
+            else
+              item,
+        ],
       ),
     );
   }
