@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show mapEquals;
+import 'package:flutter/foundation.dart' show listEquals, mapEquals;
 import 'package:flutter/services.dart';
 import 'package:file_selector/file_selector.dart' show XFile;
 import 'package:material_ui/material_ui.dart';
@@ -17,6 +17,7 @@ import '../../widgets/expressive_dialog.dart';
 import '../../widgets/sked_expressive_loading_indicator.dart';
 import '../../widgets/sked_popup_menu.dart';
 import '../../widgets/sked_spring_builder.dart';
+import '../../widgets/sked_task_session.dart';
 import '../../widgets/workbench_chrome_metrics.dart';
 import '../../widgets/workspace_frame.dart';
 import '../../widgets/workspace_navigation.dart';
@@ -142,10 +143,12 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   int _approvalActionGeneration = 0;
   bool Function()? _approvalRevisionCurrent;
   TransitionRoute<dynamic>? _ownedHistoryRoute;
+  SkedTaskSession? _messageHistorySession;
 
   void _invalidateUiSource() {
     _uiGeneration++;
     _retireHistory();
+    _messageHistorySession?.invalidate();
   }
 
   void _retireHistory() {
@@ -456,6 +459,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       oldWidget.binaryAttachments?.removeListener(_changed);
       widget.binaryAttachments?.addListener(_changed);
     }
+    _messageHistorySession?.check();
     _scheduleInitialDraft();
   }
 
@@ -962,9 +966,33 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     });
   }
 
-  Future<void> _showMessageHistory(AgentConversation conversation) =>
-      showExpressiveDialog<void>(
+  Future<void> _showMessageHistory(AgentConversation conversation) async {
+    if (!_uiActive) return;
+    final repository = _repository;
+    final attachments = widget.binaryAttachments;
+    final dataGeneration = widget.readDatasetGeneration?.call();
+    final generation = _uiGeneration;
+    final session = SkedTaskSession(
+      ownerRoute: ModalRoute.of(context),
+      targetChanges: Listenable.merge([repository, attachments]),
+      isOwnerActive: () => mounted && widget.active && widget.interactive,
+      isTargetCurrent: () {
+        final current = repository.find(conversation.id);
+        return generation == _uiGeneration &&
+            identical(repository, _repository) &&
+            identical(attachments, widget.binaryAttachments) &&
+            dataGeneration == widget.readDatasetGeneration?.call() &&
+            repository.selectedId == conversation.id &&
+            current != null &&
+            listEquals(current.historyVersions, conversation.historyVersions) &&
+            listEquals(current.replyRevisions, conversation.replyRevisions);
+      },
+    );
+    _messageHistorySession = session;
+    try {
+      await showExpressiveDialog<void>(
         context: context,
+        session: session,
         builder: (context) {
           final l = AppLocalizations.of(context);
           return AlertDialog(
@@ -981,10 +1009,40 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                         title: Text(version.createdAt.toLocal().toString()),
                         children: [
                           for (final message in version.messages)
-                            if (message.text.isNotEmpty)
+                            if (message.text.isNotEmpty ||
+                                message.attachmentIds.isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.all(12),
-                                child: AgentSelectableText(message.text),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    if (message.text.isNotEmpty)
+                                      AgentSelectableText(message.text),
+                                    if (message.attachmentIds.isNotEmpty)
+                                      if (attachments != null)
+                                        AgentAttachmentList(
+                                          conversationId: conversation.id,
+                                          attachments: conversation.attachments,
+                                          ids: message.attachmentIds,
+                                          repository: attachments.repository,
+                                          delivery: message.attachmentDelivery,
+                                        )
+                                      else ...[
+                                        for (final id in message.attachmentIds)
+                                          AgentSelectableText(
+                                            conversation.attachments
+                                                    .where(
+                                                      (item) => item.id == id,
+                                                    )
+                                                    .firstOrNull
+                                                    ?.name ??
+                                                l.agentFileMissing,
+                                          ),
+                                        Text(l.agentFileUnavailable),
+                                      ],
+                                  ],
+                                ),
                               ),
                         ],
                       ),
@@ -1011,6 +1069,13 @@ class _AgentConversationViewState extends State<AgentConversationView> {
           );
         },
       );
+    } finally {
+      if (identical(_messageHistorySession, session)) {
+        _messageHistorySession = null;
+      }
+      session.dispose();
+    }
+  }
 
   AgentConversationList _historyList(
     ValueChanged<String> onSelected, {

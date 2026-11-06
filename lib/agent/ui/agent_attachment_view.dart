@@ -111,6 +111,7 @@ class _AgentAttachmentListState extends State<AgentAttachmentList> {
     final attachment = _attachment(id);
     _menus[id] = SkedTaskSession(
       ownerRoute: ModalRoute.of(context),
+      parent: SkedTaskSessionScope.maybeOf(context)?.session,
       isOwnerActive: () => _enabled,
       isTargetCurrent: () =>
           conversationId == widget.conversationId &&
