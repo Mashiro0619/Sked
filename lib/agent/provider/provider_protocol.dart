@@ -186,9 +186,8 @@ Map<String, Object?> _attachmentContent(
 }
 
 class ProviderResponseDecoder {
-  ProviderResponseDecoder(this.request, {String apiKey = ''})
-    : _apiKey = apiKey,
-      _knownNames = {
+  ProviderResponseDecoder(this.request, {this._apiKey = ''})
+    : _knownNames = {
         for (final t in request.tools) ToolNameCodec.encode(t.name): t.name,
       };
 

@@ -293,10 +293,10 @@ class ProviderException implements Exception {
   String? get displayDetails {
     final metadata = [
       if (statusCode != null) 'HTTP $statusCode',
-      if (responseCode != null) responseCode!,
+      ?responseCode,
     ];
     final parts = [
-      if (responseMessage != null) responseMessage!,
+      ?responseMessage,
       if (metadata.isNotEmpty) metadata.join(' · '),
     ];
     return parts.isEmpty ? null : parts.join('\n');
@@ -315,14 +315,22 @@ class ProviderException implements Exception {
 String? _providerDiagnostic(Object? value, String apiKey, int limit) {
   if (value is! String && value is! num) return null;
   var text = value.toString();
-  if (apiKey.isNotEmpty) text = text.replaceAll(apiKey, '[redacted]');
+  if (apiKey.isNotEmpty) {
+    final encodedKey = jsonEncode(apiKey);
+    text = text
+        .replaceAll(
+          encodedKey.substring(1, encodedKey.length - 1),
+          '[redacted]',
+        )
+        .replaceAll(apiKey, '[redacted]');
+  }
   text = text.replaceAll(
     RegExp(r'(Bearer|Basic)\s+[^\s,;"<>]+', caseSensitive: false),
     '[redacted authorization]',
   );
   text = text.replaceAllMapped(
     RegExp(
-      r'(api[_-]?key|access[_-]?token|cookie)\s*[:=]\s*([^\s,;"<>]+)',
+      r'''["']?(api[_-]?key|access[_-]?token|cookie)["']?\s*[:=]\s*(?:"(?:\\.|[^"\\])*(?:"|$)|'(?:\\.|[^'\\])*(?:'|$)|[^\s,;"'<>]+)''',
       caseSensitive: false,
     ),
     (match) => '${match[1]}=[redacted]',

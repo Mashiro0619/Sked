@@ -34,15 +34,16 @@ void main() {
     ProviderRequest? input,
     String? contentType = 'text/event-stream',
     int status = 200,
+    String apiKey = 'secret-runtime-key',
   }) => ProviderClient(
     client: _Client(
       (_) async => http.StreamedResponse(
         Stream.fromIterable(utf8.encode(payload).map((byte) => [byte])),
         status,
-        headers: {if (contentType != null) 'content-type': contentType},
+        headers: {'content-type': ?contentType},
       ),
     ),
-  ).collect(input ?? request(), apiKey: 'secret-runtime-key');
+  ).collect(input ?? request(), apiKey: apiKey);
 
   test(
     'HTTP errors expose API message and code with credentials redacted',
@@ -86,6 +87,97 @@ void main() {
       );
     },
   );
+
+  test('HTTP diagnostics redact JSON-escaped current credentials', () async {
+    const apiKey = r'fixture-"quoted\key';
+    final encodedKey = jsonEncode(apiKey);
+    final echoedCredentials = jsonEncode({'api_key': apiKey});
+    await expectLater(
+      collect(
+        jsonEncode({
+          'error': {
+            'message':
+                'Rejected credentials $echoedCredentials. '
+                'Returned key $encodedKey. Model remains unavailable.',
+            'code': 'model_unavailable',
+          },
+        }),
+        status: 400,
+        contentType: 'application/json',
+        apiKey: apiKey,
+      ),
+      throwsA(
+        isA<ProviderException>()
+            .having((e) => e.statusCode, 'HTTP status', 400)
+            .having((e) => e.responseCode, 'API code', 'model_unavailable')
+            .having(
+              (e) => e.responseMessage,
+              'readable explanation',
+              contains('Model remains unavailable.'),
+            )
+            .having(
+              (e) => e.displayDetails,
+              'literal credential',
+              isNot(contains(apiKey)),
+            )
+            .having(
+              (e) => e.displayDetails,
+              'JSON-escaped credential',
+              isNot(contains(encodedKey.substring(1, encodedKey.length - 1))),
+            ),
+      ),
+    );
+  });
+
+  test('HTTP diagnostics redact quoted credential names and values', () async {
+    final credentialFields = jsonEncode({
+      'api_key': 'other-key',
+      'access_token': r'other-"token\value',
+      'cookie': 'session=other-cookie',
+    });
+    await expectLater(
+      collect(
+        jsonEncode({
+          'error': {
+            'message':
+                'Credentials rejected $credentialFields. '
+                "'api-key'='single-quoted-key'; "
+                'access_token=bare-token. Retry with a valid model.',
+          },
+        }),
+        status: 401,
+        contentType: 'application/json',
+      ),
+      throwsA(
+        isA<ProviderException>()
+            .having(
+              (e) => e.responseMessage,
+              'readable explanation',
+              contains('Retry with a valid model.'),
+            )
+            .having(
+              (e) => e.displayDetails,
+              'quoted API key',
+              isNot(contains('other-key')),
+            )
+            .having(
+              (e) => e.displayDetails,
+              'quoted token with escaped delimiters',
+              isNot(contains('other-')),
+            )
+            .having(
+              (e) => e.displayDetails,
+              'single-quoted key',
+              isNot(contains('single-quoted-key')),
+            )
+            .having(
+              (e) => e.displayDetails,
+              'unquoted token',
+              isNot(contains('bare-token')),
+            ),
+      ),
+    );
+  });
 
   for (final protocol in ProviderProtocol.values) {
     test(
@@ -239,6 +331,160 @@ void main() {
     );
   });
 
+  for (final timeout in ['idle', 'total']) {
+    for (final completeBody in [true, false]) {
+      test(
+        '$timeout timeout reading ${completeBody ? 'complete' : 'partial'} HTTP error retains rejection',
+        () async {
+          var bodyCancelled = false;
+          var requestAborted = false;
+          final body = StreamController<List<int>>(
+            onCancel: () {
+              bodyCancelled = true;
+            },
+          );
+          final client = ProviderClient(
+            client: _Client((wire) async {
+              unawaited(
+                (wire as http.AbortableRequest).abortTrigger!.then((_) {
+                  requestAborted = true;
+                }),
+              );
+              return http.StreamedResponse(
+                body.stream,
+                completeBody ? 401 : 429,
+                headers: {'content-type': 'application/json'},
+              );
+            }),
+          );
+          body.add(
+            utf8.encode(
+              completeBody
+                  ? jsonEncode({
+                      'error': {
+                        'message': 'Invalid secret-runtime-key',
+                        'code': 'invalid_api_key',
+                      },
+                    })
+                  : '{"error":{"message":"Too many requests',
+            ),
+          );
+          try {
+            await expectLater(
+              client.collect(
+                request(
+                  limits: ProviderLimits(
+                    idleTimeout: Duration(
+                      milliseconds: timeout == 'idle' ? 50 : 1000,
+                    ),
+                    totalTimeout: Duration(
+                      milliseconds: timeout == 'total' ? 50 : 1000,
+                    ),
+                  ),
+                ),
+                apiKey: 'secret-runtime-key',
+              ),
+              throwsA(
+                isA<ProviderException>()
+                    .having(
+                      (error) => error.code,
+                      'HTTP classification',
+                      completeBody
+                          ? ProviderError.authentication
+                          : ProviderError.rateLimited,
+                    )
+                    .having(
+                      (error) => error.displayDetails,
+                      'bounded response details',
+                      completeBody
+                          ? 'Invalid [redacted]\nHTTP 401 · invalid_api_key'
+                          : 'HTTP 429',
+                    ),
+              ),
+            );
+            expect(bodyCancelled, isTrue);
+            expect(requestAborted, isTrue);
+          } finally {
+            await body.close();
+            client.close();
+          }
+        },
+      );
+    }
+  }
+  for (final cancelSubscription in [false, true]) {
+    test(
+      '${cancelSubscription ? 'subscription' : 'token'} cancellation still stops HTTP diagnostic reads',
+      () async {
+        final token = ProviderCancellationToken();
+        final bodyListening = Completer<void>();
+        final requestAborted = Completer<void>();
+        final finished = Completer<void>();
+        var bodyCancelled = false;
+        final body = StreamController<List<int>>(
+          onListen: bodyListening.complete,
+          onCancel: () {
+            bodyCancelled = true;
+          },
+        );
+        final client = ProviderClient(
+          client: _Client((wire) async {
+            unawaited(
+              (wire as http.AbortableRequest).abortTrigger!.then((_) {
+                requestAborted.complete();
+              }),
+            );
+            return http.StreamedResponse(
+              body.stream,
+              401,
+              headers: {'content-type': 'application/json'},
+            );
+          }),
+        );
+        final errors = <Object>[];
+        final events = <ProviderEvent>[];
+        final subscription = client
+            .stream(request(), apiKey: '', cancellation: token)
+            .listen(events.add, onError: errors.add, onDone: finished.complete);
+        try {
+          body.add(utf8.encode('{"error":{"message":"Invalid credentials"}}'));
+          await bodyListening.future;
+          expect(errors, isEmpty);
+          if (cancelSubscription) {
+            await subscription.cancel();
+          } else {
+            token.cancel();
+            await finished.future;
+          }
+          await requestAborted.future;
+          expect(
+            errors,
+            cancelSubscription
+                ? isEmpty
+                : [
+                    isA<ProviderException>()
+                        .having(
+                          (error) => error.code,
+                          'cancelled request',
+                          ProviderError.cancelled,
+                        )
+                        .having(
+                          (error) => error.displayDetails,
+                          'no HTTP failure after cancellation',
+                          isNull,
+                        ),
+                  ],
+          );
+          expect(events.whereType<ProviderCompleted>(), isEmpty);
+          expect(bodyCancelled, isTrue);
+        } finally {
+          await subscription.cancel();
+          await body.close();
+          client.close();
+        }
+      },
+    );
+  }
   test(
     'API diagnostic reads are bounded and cancel an endless response body',
     () async {

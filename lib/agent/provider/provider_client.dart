@@ -173,8 +173,15 @@ class ProviderClient {
               );
             }
           } catch (_) {
-            if (stopped.isCompleted) throw await stopped.future;
-            // A failed response body read still retains its known HTTP status.
+            if (stopped.isCompleted) {
+              final reason = await stopped.future;
+              if (reason.code != ProviderError.timeout) throw reason;
+            }
+            if (cancellation?.isCancelled ?? false) {
+              throw const ProviderException(ProviderError.cancelled);
+            }
+            // Diagnostic reads can time out after a known HTTP rejection.
+            // Retain its status and any complete message already received.
           }
           Object? errorBody;
           final text = utf8.decode(errorBytes, allowMalformed: true).trim();
