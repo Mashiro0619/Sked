@@ -108,6 +108,7 @@ class AgentApplication extends ChangeNotifier {
       session: session,
       mutations: mutations,
       conversationForScope: (scope) => runtime.conversationForScope(scope),
+      environmentForScope: (scope) => runtime.environmentForScope(scope),
       readSkillSnapshot: () async {
         await knowledge.initialize();
         return knowledge.captureSkillSnapshot();
@@ -147,6 +148,7 @@ class AgentApplication extends ChangeNotifier {
       attachments: attachmentStore,
       onAttachmentProgress: binaryAttachments.transferProgress,
       readSettings: _effectiveSettings,
+      readEnvironment: _readEnvironment,
       readApiKey: (snapshot) async {
         // Side-store loading is initiated by an actual run. Opening the
         // default-on entry or editing its connection need not read knowledge.
@@ -285,6 +287,27 @@ class AgentApplication extends ChangeNotifier {
   }
 
   AgentSettings get settings => _session.committedData.agentSettings;
+
+  Map<String, Object?> _readEnvironment() {
+    final data = _session.committedData;
+    final timetable = data.studentMode.timetables
+        .where((item) => item.id == data.studentMode.activeTimetableId)
+        .firstOrNull;
+    final calendar = data.generalMode.schedules
+        .where((item) => item.id == data.generalMode.activeScheduleId)
+        .firstOrNull;
+    return {
+      'workspace': data.activeMode.name,
+      'localeCode': data.localeCode,
+      'datasetGeneration': mutations.generation,
+      'selectedTimetable': timetable == null
+          ? null
+          : {'kind': 'timetable', 'id': timetable.id},
+      'selectedCalendar': calendar == null
+          ? null
+          : {'kind': 'calendar', 'id': calendar.id},
+    };
+  }
 
   /// The retired parser's model name is a candidate, never an enabled model.
   String get suggestedModelId =>

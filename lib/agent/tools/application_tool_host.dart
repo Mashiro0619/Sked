@@ -34,6 +34,7 @@ class ApplicationToolHost {
     required this.session,
     required this.mutations,
     required this.conversationForScope,
+    this.environmentForScope,
     SettingRegistry? settings,
     SkillAssetLoader? loadSkillAsset,
     this.readSkillSnapshot,
@@ -45,6 +46,7 @@ class ApplicationToolHost {
   final AppSession session;
   final MutationCoordinator mutations;
   final AgentConversation? Function(OperationScope) conversationForScope;
+  final Map<String, Object?>? Function(OperationScope)? environmentForScope;
   final SettingRegistry settings;
   final SkillAssetLoader _loadAsset;
   final FutureOr<SkillOverlaySnapshot> Function()? readSkillSnapshot;
@@ -413,11 +415,15 @@ class ApplicationToolHost {
             )
             .toList();
         _expose(scope, page.map((tool) => tool.$1.name));
+        final environment = environmentForScope?.call(scope);
         return {
           'toolApiVersion': '1.0.0',
           'permissionMode': scope.policy.mode.name,
-          'now': DateTime.now().toIso8601String(),
-          'workspace': session.committedData.activeMode.name,
+          'now':
+              environment?['localDateTime'] ?? DateTime.now().toIso8601String(),
+          'workspace':
+              environment?['workspace'] ??
+              session.committedData.activeMode.name,
           'tools': [
             for (final tool in page)
               {

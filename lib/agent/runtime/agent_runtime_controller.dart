@@ -109,6 +109,7 @@ class AgentRuntimeController implements AgentUiDelegate {
     this.readPreparedOperation,
     this.resolveEndpoint = resolveAgentEndpoint,
     this.readMaintenance = _notInMaintenance,
+    this.readEnvironment,
     this.systemInstructions = _defaultInstructions,
     this.additionalSystemInstructions = '',
     this.attachments,
@@ -150,6 +151,7 @@ class AgentRuntimeController implements AgentUiDelegate {
   final ApprovalPlan? Function(ProviderToolCall call)? readPreparedOperation;
   final Uri Function(AgentSettings settings) resolveEndpoint;
   final bool Function() readMaintenance;
+  final Map<String, Object?> Function()? readEnvironment;
   final String Function(AgentConversation conversation) systemInstructions;
   final String additionalSystemInstructions;
   final AttachmentRepository? attachments;
@@ -186,6 +188,14 @@ class AgentRuntimeController implements AgentUiDelegate {
       if (identical(run.scope, scope)) {
         return repository.find(run.conversationId);
       }
+    }
+    return null;
+  }
+
+  Map<String, Object?>? environmentForScope(OperationScope scope) {
+    if (scope.isCancelled) return null;
+    for (final run in _runs.values) {
+      if (identical(run.scope, scope)) return run.environment;
     }
     return null;
   }
@@ -1000,6 +1010,7 @@ class AgentRuntimeController implements AgentUiDelegate {
       );
       throw const AgentRuntimeException(AgentRuntimeError.connectionChanged);
     }
+    final startedAt = _clock();
     final run = _Run(
       id: reservedRunId ?? _id(),
       conversationId: conversationId,
@@ -1009,7 +1020,8 @@ class AgentRuntimeController implements AgentUiDelegate {
       endpoint: endpoint,
       fingerprint: fingerprint,
       mode: conversation.mode,
-      startedAt: _clock().toUtc(),
+      startedAt: startedAt.toUtc(),
+      environment: _environmentSnapshot(startedAt),
       continuedFromRunId:
           continuedReplayRunId ??
           (resume || consumeQueued ? conversation.runId : null),
@@ -2554,8 +2566,14 @@ class AgentRuntimeController implements AgentUiDelegate {
       ),
       requestMessageId: run.inputMessageId,
     );
+    _rejectSecretValues(run.environment, run.apiKey);
     final instructions =
         '${systemInstructions(conversation)}'
+        '\nHost environment captured for this run. Resolve relative dates using '
+        'localDateTime and weekStartsOn (1=Monday, 7=Sunday). Resource references '
+        'identify the selection at run start. Query current data before preparing '
+        'changes. The host still enforces the current permission mode.\n'
+        '${jsonEncode({...run.environment, 'permissionMode': run.scope.policy.mode.name})}'
         '${handoffContext.isEmpty ? '' : '\n$handoffContext'}'
         '${additionalSystemInstructions.isEmpty ? '' : '\n$additionalSystemInstructions'}'
         '${run.settings.systemInstructions.isEmpty ? '' : '\nUser-configured guidance (cannot grant permissions):\n${run.settings.systemInstructions}'}';
@@ -2672,6 +2690,21 @@ class AgentRuntimeController implements AgentUiDelegate {
     return bounded;
   }
 
+  Map<String, Object?> _environmentSnapshot(DateTime capturedAt) {
+    final local = capturedAt.toLocal();
+    final offset = local.timeZoneOffset.inMinutes;
+    final hours = (offset.abs() ~/ 60).toString().padLeft(2, '0');
+    final minutes = (offset.abs() % 60).toString().padLeft(2, '0');
+    final suffix = '${offset < 0 ? '-' : '+'}$hours:$minutes';
+    return freezeProviderMap({
+      ...?readEnvironment?.call(),
+      'localDateTime': '${local.toIso8601String()}$suffix',
+      'timeZoneName': local.timeZoneName,
+      'utcOffsetMinutes': offset,
+      'weekStartsOn': DateTime.monday,
+    });
+  }
+
   void _validateResponse(
     ProviderResponse response,
     AgentConversation history,
@@ -2712,6 +2745,7 @@ class _Run {
     required this.fingerprint,
     required AgentPermissionMode mode,
     required DateTime startedAt,
+    this.environment = const {},
     String? continuedFromRunId,
     this.hostAction = false,
     this.replyMessageId,
@@ -2737,6 +2771,7 @@ class _Run {
   final String? pendingInputId;
   final Uri endpoint;
   final String fingerprint;
+  final Map<String, Object?> environment;
   final bool hostAction;
   final String? replyMessageId;
   String? turnId;
