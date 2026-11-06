@@ -496,12 +496,43 @@ class ApplicationToolHost {
         _keys(args, {'id'});
         final result = await (await _loader(scope))
             .load(_requiredString(args, 'id'));
-        if (result.isLoaded) {
-          _expose(scope, [
-            ...result.skill!.requiredTools,
-            ...result.skill!.optionalTools,
-          ]);
+        if (!result.isLoaded) {
+          final (code, message) = switch (result.status) {
+            SkillStatus.notFound => (
+              OperationErrorCode.notFound,
+              'This Skill was not found. Use skills.search to choose an available Skill id.',
+            ),
+            SkillStatus.disabled => (
+              OperationErrorCode.unsupported,
+              'This Skill is disabled. Choose an enabled Skill or enable it through the knowledge settings.',
+            ),
+            SkillStatus.missingDependencies => (
+              OperationErrorCode.unsupported,
+              'Required tools are unavailable (${result.missingTools.join(', ')}). Choose a Skill whose dependencies are available.',
+            ),
+            SkillStatus.incompatible => (
+              OperationErrorCode.unsupported,
+              'This Skill is incompatible with the current runtime or tool contract. Choose a compatible Skill from skills.search.',
+            ),
+            SkillStatus.budgetExceeded => (
+              OperationErrorCode.invalidArgument,
+              'This Skill exceeds the current loading budget. Use a smaller or already loaded Skill, or continue in a new run.',
+            ),
+            SkillStatus.invalidAsset => (
+              OperationErrorCode.invalidArgument,
+              'This Skill could not be read or failed content validation. Restore its valid content or choose another Skill.',
+            ),
+            _ => (
+              OperationErrorCode.invalidArgument,
+              'This Skill was not loaded. Inspect its status with skills.search before retrying.',
+            ),
+          };
+          throw OperationProblem(code, message, field: 'id');
         }
+        _expose(scope, [
+          ...result.skill!.requiredTools,
+          ...result.skill!.optionalTools,
+        ]);
         return {
           ...result.toRecord(),
           if (result.body != null) 'instructions': result.body,
