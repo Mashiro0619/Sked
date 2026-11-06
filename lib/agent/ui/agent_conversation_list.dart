@@ -614,6 +614,9 @@ class _AgentConversationListState extends State<AgentConversationList> {
                                           ConversationStatus.waitingApproval
                                       ? Text(l.agentApprovalRequired)
                                       : conversation.status ==
+                                            ConversationStatus.waitingUser
+                                      ? Text(l.agentWaitingForAnswer)
+                                      : conversation.status ==
                                             ConversationStatus.running
                                       ? Text(l.agentRunning)
                                       : null,

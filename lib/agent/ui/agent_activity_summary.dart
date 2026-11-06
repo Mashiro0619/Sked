@@ -193,6 +193,7 @@ String? _date(Object? value, AppLocalizations l) {
 }
 
 String _actionLabel(String name, AppLocalizations l) {
+  if (name == 'ask_user') return l.agentToolAskUser;
   if (name == 'capabilities.describe' || name == 'resources.describe') {
     return l.agentActivityCapabilities;
   }

@@ -3002,5 +3002,27 @@
         "type": "String"
       }
     }
+  },
+  "agentQuestionAnswer": "Your answer",
+  "@agentQuestionAnswer": {},
+  "agentQuestionSubmit": "Submit answers",
+  "@agentQuestionSubmit": {},
+  "agentQuestionSkip": "Skip",
+  "@agentQuestionSkip": {},
+  "agentQuestionMultiple": "Select all that apply",
+  "@agentQuestionMultiple": {},
+  "agentQuestionSkipped": "Skipped",
+  "@agentQuestionSkipped": {},
+  "agentWaitingForAnswer": "Waiting for your answer",
+  "@agentWaitingForAnswer": {},
+  "agentToolAskUser": "Ask a question",
+  "@agentToolAskUser": {},
+  "agentQuestionAnswerTooLong": "Keep your answer within {limit} characters.",
+  "@agentQuestionAnswerTooLong": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
   }
 }

@@ -4135,6 +4135,32 @@ class AppLocalizationsZh extends AppLocalizations {
   String agentProviderTimeoutFailure(String code) {
     return '等待模型服务响应超时（$code）。';
   }
+
+  @override
+  String get agentQuestionAnswer => '你的回答';
+
+  @override
+  String get agentQuestionSubmit => '提交回答';
+
+  @override
+  String get agentQuestionSkip => '跳过';
+
+  @override
+  String get agentQuestionMultiple => '可选择多项';
+
+  @override
+  String get agentQuestionSkipped => '已跳过';
+
+  @override
+  String get agentWaitingForAnswer => '等待你的回答';
+
+  @override
+  String get agentToolAskUser => '询问用户';
+
+  @override
+  String agentQuestionAnswerTooLong(int limit) {
+    return '请将回答控制在 $limit 个字符以内。';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -8269,5 +8295,31 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String agentProviderTimeoutFailure(String code) {
     return '等待模型服務回應逾時（$code）。';
+  }
+
+  @override
+  String get agentQuestionAnswer => '你的回答';
+
+  @override
+  String get agentQuestionSubmit => '提交回答';
+
+  @override
+  String get agentQuestionSkip => '略過';
+
+  @override
+  String get agentQuestionMultiple => '可選擇多項';
+
+  @override
+  String get agentQuestionSkipped => '已略過';
+
+  @override
+  String get agentWaitingForAnswer => '等待你的回答';
+
+  @override
+  String get agentToolAskUser => '詢問使用者';
+
+  @override
+  String agentQuestionAnswerTooLong(int limit) {
+    return '請將回答控制在 $limit 個字元以內。';
   }
 }

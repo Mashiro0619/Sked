@@ -198,7 +198,9 @@ class ConversationHistoryPreflight {
       );
     }
     if (conversation.status == ConversationStatus.running ||
-        conversation.status == ConversationStatus.waitingApproval) {
+        conversation.status == ConversationStatus.waitingApproval ||
+        conversation.status == ConversationStatus.waitingUser ||
+        conversation.pendingQuestion != null) {
       throw const ConversationHistoryException(ConversationHistoryError.busy);
     }
     try {

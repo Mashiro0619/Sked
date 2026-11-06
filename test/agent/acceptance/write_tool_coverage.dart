@@ -9,6 +9,7 @@ enum WriteBoundary {
   externalCommit,
   credentialInput,
   receiptReadback,
+  conversationInteraction,
 }
 
 class WriteToolCoverage {
@@ -22,6 +23,10 @@ class WriteToolCoverage {
 // replay and unknown outcomes. This index does not turn the existence of a
 // filename into a passing test result; the complete VM gate runs those suites.
 const sharedFailureSuites = <WriteBoundary, List<String>>{
+  WriteBoundary.conversationInteraction: [
+    'test/agent/conversations/conversation_question_test.dart',
+    'test/agent/runtime/agent_user_questions_test.dart',
+  ],
   WriteBoundary.mainCommit: [
     'test/application/mutation_coordinator_test.dart',
     'test/application/mutation_undo_test.dart',
@@ -43,6 +48,10 @@ const sharedFailureSuites = <WriteBoundary, List<String>>{
 };
 
 final writeToolCoverage = <String, WriteToolCoverage>{
+  'ask_user': const WriteToolCoverage(
+    WriteBoundary.conversationInteraction,
+    'test/agent/runtime/agent_user_questions_test.dart',
+  ),
   for (final name in ['mutation.prepare', 'mutation.commit', 'undo.prepare'])
     name: const WriteToolCoverage(
       WriteBoundary.mainCommit,

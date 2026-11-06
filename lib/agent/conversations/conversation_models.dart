@@ -8,12 +8,19 @@ import '../../application/operation_contracts.dart';
 import '../../models/agent_settings.dart';
 import '../../utils/time_utils.dart' show tryParseStrictIsoDateTime;
 import '../attachments/attachment_models.dart';
+import '../interactions/agent_question.dart';
 import 'conversation_usage.dart';
 
 export 'conversation_usage.dart';
 export '../attachments/attachment_models.dart';
 
-enum ConversationStatus { idle, running, waitingApproval, interrupted }
+enum ConversationStatus {
+  idle,
+  running,
+  waitingApproval,
+  waitingUser,
+  interrupted,
+}
 
 enum ConversationRole { user, assistant, tool, notice }
 
@@ -368,6 +375,7 @@ class AgentConversation {
     this.connectionFingerprint,
     this.runId,
     this.modelSelection,
+    this.pendingQuestion,
     this.executionHistoryStart = 0,
     Iterable<ConversationMessage> messages = const [],
     Iterable<ConversationSource> sources = const [],
@@ -392,6 +400,7 @@ class AgentConversation {
       throw const FormatException('Invalid executable history boundary.');
     }
     validateConversationTurns(this.messages, this.runs, this.turns);
+    _validatePendingQuestion();
   }
 
   final String id;
@@ -405,6 +414,7 @@ class AgentConversation {
   final String? connectionFingerprint;
   final String? runId;
   final AgentModelSelection? modelSelection;
+  final AgentQuestionRequest? pendingQuestion;
   final int executionHistoryStart;
   Iterable<ConversationMessage> get executionMessages =>
       messages.skip(executionHistoryStart);
@@ -430,9 +440,11 @@ class AgentConversation {
     String? connectionFingerprint,
     String? runId,
     AgentModelSelection? modelSelection,
+    AgentQuestionRequest? pendingQuestion,
     int? executionHistoryStart,
     bool clearRunId = false,
     bool clearConnectionFingerprint = false,
+    bool clearPendingQuestion = false,
     Iterable<ConversationMessage>? messages,
     Iterable<ConversationSource>? sources,
     Iterable<ConversationRunUsage>? runs,
@@ -456,6 +468,9 @@ class AgentConversation {
         : connectionFingerprint ?? this.connectionFingerprint,
     runId: clearRunId ? null : runId ?? this.runId,
     modelSelection: modelSelection ?? this.modelSelection,
+    pendingQuestion: clearPendingQuestion
+        ? null
+        : pendingQuestion ?? this.pendingQuestion,
     executionHistoryStart: executionHistoryStart ?? this.executionHistoryStart,
     messages: messages ?? this.messages,
     sources: sources ?? this.sources,
@@ -481,6 +496,7 @@ class AgentConversation {
       'connectionFingerprint': connectionFingerprint,
     if (runId != null) 'runId': runId,
     if (modelSelection != null) 'modelSelection': modelSelection!.toJson(),
+    if (pendingQuestion != null) 'pendingQuestion': pendingQuestion!.toJson(),
     'executionHistoryStart': executionHistoryStart,
     'messages': messages.map((message) => message.toJson()).toList(),
     'sources': sources.map((source) => source.toJson()).toList(),
@@ -599,6 +615,9 @@ class AgentConversation {
       modelSelection: json['modelSelection'] == null
           ? null
           : AgentModelSelection.fromJson(json['modelSelection']),
+      pendingQuestion: json['pendingQuestion'] == null
+          ? null
+          : AgentQuestionRequest.fromJson(_object(json['pendingQuestion'])),
       messages: messages,
       sources: sources,
       runs: runs,
@@ -610,6 +629,38 @@ class AgentConversation {
       replyRevisions: replyRevisions,
       redoBatches: redoBatches,
     );
+  }
+
+  void _validatePendingQuestion() {
+    final pending = pendingQuestion;
+    if (pending == null) return;
+    final requestMessages = executionMessages
+        .where((message) => message.id == pending.requestMessageId)
+        .toList();
+    if (requestMessages.length != 1 ||
+        requestMessages.single.role != ConversationRole.assistant ||
+        !runs.any((run) => run.id == pending.runId)) {
+      throw const FormatException('Invalid pending question owner.');
+    }
+    final calls = requestMessages.single.toolCalls
+        .where(
+          (call) => call.id == pending.toolCallId && call.name == 'ask_user',
+        )
+        .toList();
+    if (calls.length != 1) {
+      throw const FormatException('Invalid pending question tool call.');
+    }
+    final questions = parseAgentQuestionPrompts(
+      _object(jsonDecode(calls.single.arguments)),
+    );
+    if (jsonEncode(questions.map((question) => question.toJson()).toList()) !=
+        jsonEncode(
+          pending.questions.map((question) => question.toJson()).toList(),
+        )) {
+      throw const FormatException(
+        'Pending questions differ from the tool call.',
+      );
+    }
   }
 }
 
@@ -654,7 +705,7 @@ class ConversationArchive {
        terminatedIds = Set.unmodifiable(terminatedIds);
 
   static const maxBytes = 16 * 1024 * 1024;
-  static const currentVersion = 5;
+  static const currentVersion = 6;
   final int revision;
   final String? selectedId;
   final List<AgentConversation> conversations;
@@ -685,16 +736,25 @@ class ConversationArchive {
       );
     }
     final json = _object(jsonDecode(source));
-    if ((!const [1, 2, 3, 4, currentVersion].contains(json['version'])) ||
+    if ((!const [1, 2, 3, 4, 5, currentVersion].contains(json['version'])) ||
         json['revision'] is! int ||
         (json['revision'] as int) < 0) {
       throw const FormatException('Unsupported conversation archive version.');
     }
-    final conversations = _objects(
-      json,
-      'conversations',
-      max: 200,
-    ).map(AgentConversation.fromJson).toList();
+    final rawConversations = _objects(json, 'conversations', max: 200);
+    if (json['version'] != currentVersion &&
+        rawConversations.any(
+          (item) =>
+              item['pendingQuestion'] != null ||
+              item['status'] == 'waitingUser',
+        )) {
+      throw const FormatException(
+        'Question waits require conversation archive version 6.',
+      );
+    }
+    final conversations = rawConversations
+        .map(AgentConversation.fromJson)
+        .toList();
     final attachmentDefinitions = <String, String>{};
     for (final attachment in conversations.expand((c) => c.attachments)) {
       final definition = jsonEncode(attachment.toJson());

@@ -201,6 +201,7 @@ recoverAgentOperationHistory(
 /// Recovery reads may inspect history, sources and authoritative receipts.
 /// Preparation, credentials, model probes and commits remain unavailable.
 bool isAgentRecoveryRead(String name) => const {
+  'ask_user',
   'capabilities.describe',
   'skills.search',
   'skills.load',

@@ -2,8 +2,16 @@ import 'package:flutter/foundation.dart';
 
 import '../../application/operation_contracts.dart';
 import '../../models/agent_settings.dart';
+import '../interactions/agent_question.dart';
 
-enum AgentUiPhase { idle, running, waitingApproval, stopped, failed }
+enum AgentUiPhase {
+  idle,
+  running,
+  waitingApproval,
+  waitingUser,
+  stopped,
+  failed,
+}
 
 /// Display-only approval data. The host retains the executable approval proof.
 class AgentUiApproval {
@@ -60,7 +68,9 @@ class AgentUiRunState {
   final bool requiresModelSelection;
 
   bool get isActive =>
-      phase == AgentUiPhase.running || phase == AgentUiPhase.waitingApproval;
+      phase == AgentUiPhase.running ||
+      phase == AgentUiPhase.waitingApproval ||
+      phase == AgentUiPhase.waitingUser;
 }
 
 class AgentUiState {
@@ -111,6 +121,16 @@ abstract class AgentUiDelegate {
   Future<void> stop(String conversationId);
   Future<void> approve(String conversationId, String planId);
   Future<void> reject(String conversationId, String planId);
+
+  Future<void> answerQuestion(
+    String conversationId,
+    String questionId,
+    List<AgentQuestionAnswer> answers,
+  ) async {}
+  Future<void> dismissQuestion(
+    String conversationId,
+    String questionId,
+  ) async {}
 
   /// Applied immediately by the host so tightening a policy also affects an
   /// in-flight run. The host persists the conversation's selected mode.

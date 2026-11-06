@@ -7835,6 +7835,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The model response timed out ({code}).'**
   String agentProviderTimeoutFailure(String code);
+
+  /// No description provided for @agentQuestionAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'Your answer'**
+  String get agentQuestionAnswer;
+
+  /// No description provided for @agentQuestionSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit answers'**
+  String get agentQuestionSubmit;
+
+  /// No description provided for @agentQuestionSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get agentQuestionSkip;
+
+  /// No description provided for @agentQuestionMultiple.
+  ///
+  /// In en, this message translates to:
+  /// **'Select all that apply'**
+  String get agentQuestionMultiple;
+
+  /// No description provided for @agentQuestionSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped'**
+  String get agentQuestionSkipped;
+
+  /// No description provided for @agentWaitingForAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for your answer'**
+  String get agentWaitingForAnswer;
+
+  /// No description provided for @agentToolAskUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask a question'**
+  String get agentToolAskUser;
+
+  /// No description provided for @agentQuestionAnswerTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep your answer within {limit} characters.'**
+  String agentQuestionAnswerTooLong(int limit);
 }
 
 class _AppLocalizationsDelegate

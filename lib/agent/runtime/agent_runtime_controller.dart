@@ -20,11 +20,14 @@ import '../attachments/attachment_repository.dart';
 import '../conversations/conversation_repository.dart';
 import '../provider/provider.dart';
 import '../provider/provider_request_encoder.dart';
+import '../interactions/agent_question.dart';
 import '../ui/agent_ui_delegate.dart';
 import 'conversation_context.dart';
 import 'operation_outcome.dart';
 import 'operation_recovery.dart';
 import 'repeated_tool_failure.dart';
+
+part 'agent_user_questions.dart';
 
 typedef AgentApprovalRequester = Future<MutationApproval?> Function(
   ApprovalPlan plan,
@@ -312,6 +315,7 @@ class AgentRuntimeController implements AgentUiDelegate {
           (message) => !removed.contains(message.id),
         ),
         status: ConversationStatus.interrupted,
+        clearPendingQuestion: true,
       );
     });
   }
@@ -475,6 +479,7 @@ class AgentRuntimeController implements AgentUiDelegate {
       }
       return current.copyWith(
         draft: '',
+        clearPendingQuestion: steering,
         draftAttachmentIds: current.draftAttachmentIds.where(
           (id) => !attachmentIds.contains(id),
         ),
@@ -594,6 +599,9 @@ class AgentRuntimeController implements AgentUiDelegate {
     final conversation = repository.find(conversationId);
     if (conversation == null) {
       throw const AgentRuntimeException(AgentRuntimeError.conversationMissing);
+    }
+    if (conversation.pendingQuestion != null) {
+      throw const AgentRuntimeException(AgentRuntimeError.busy);
     }
     final run = _Run(
       id: _id(),
@@ -904,6 +912,10 @@ class AgentRuntimeController implements AgentUiDelegate {
     if (conversation.archived) {
       throw const AgentRuntimeException(AgentRuntimeError.conversationArchived);
     }
+    if (conversation.pendingQuestion != null &&
+        (userText != null || replyMessageId != null || handoff)) {
+      throw const AgentRuntimeException(AgentRuntimeError.busy);
+    }
     if (conversation.pendingRedo != null &&
         conversation.pendingRedo!.id != replayBatchId) {
       throw const AgentRuntimeException(AgentRuntimeError.busy);
@@ -928,7 +940,8 @@ class AgentRuntimeController implements AgentUiDelegate {
     final attachmentIds = userText == null
         ? const <String>[]
         : conversation.draftAttachmentIds;
-    final pendingAtStart = resume || consumeQueued
+    final pendingAtStart =
+        (resume || consumeQueued) && conversation.pendingQuestion == null
         ? conversation.executionMessages
               .where((m) => _queuedInput(m) != null)
               .firstOrNull
@@ -1063,7 +1076,8 @@ class AgentRuntimeController implements AgentUiDelegate {
           throw const AgentRuntimeException(AgentRuntimeError.busy);
         }
         var messages = recovered;
-        final pending = resume || consumeQueued
+        final pending =
+            (resume || consumeQueued) && current.pendingQuestion == null
             ? messages
                   .skip(current.executionHistoryStart)
                   .where((m) => _queuedInput(m) != null)
@@ -1182,6 +1196,7 @@ class AgentRuntimeController implements AgentUiDelegate {
         await _executeReplyRegeneration(run);
         return;
       }
+      await _resumeUserQuestion(run);
       final maxRounds = run.settings.maxModelRounds < limits.maxModelRounds
           ? run.settings.maxModelRounds
           : limits.maxModelRounds;
@@ -1270,6 +1285,7 @@ class AgentRuntimeController implements AgentUiDelegate {
             _newStopwatch(),
           );
           run.toolDeadline = toolDeadline;
+          run.activeToolCall = call;
           try {
             _checkRun(run);
             if (run.recoveryRequired && !isAgentRecoveryRead(call.name)) {
@@ -1302,8 +1318,27 @@ class AgentRuntimeController implements AgentUiDelegate {
             toolFailure = error;
             result = _toolFailureResult(error, run.apiKey);
           } finally {
+            run.activeToolCall = null;
             toolDeadline.cancel();
             run.toolDeadline = null;
+          }
+          final questionCancelled =
+              call.name == 'ask_user' &&
+              run.scope.isCancelled &&
+              repository
+                      .find(run.conversationId)
+                      ?.pendingQuestion
+                      ?.isResolved !=
+                  true;
+          if (questionCancelled) {
+            toolFailure = const OperationProblem(
+              OperationErrorCode.cancelled,
+              'The question remains available for explicit continuation.',
+            );
+            result = {
+              'status': 'not_executed',
+              'error': {'code': run.stopReason?.name ?? 'cancelled'},
+            };
           }
           final repeatedCount = repeatedFailures.record(call, toolFailure);
           if (repeatedCount >= 2) {
@@ -1363,7 +1398,9 @@ class AgentRuntimeController implements AgentUiDelegate {
           }
           run.usage = run.usage.withTool(
             toolUsage.settle(
-              invoked
+              questionCancelled
+                  ? ConversationAttemptOutcome.notStarted
+                  : invoked
                   ? _toolOutcome(result, toolFailure)
                   : ConversationAttemptOutcome.notStarted,
             ),
@@ -1481,6 +1518,10 @@ class AgentRuntimeController implements AgentUiDelegate {
         messages: [...item.messages, message],
         runs: _runRecords(item, run),
         turns: _appendTurnMessage(item, run, message.id),
+        clearPendingQuestion:
+            !run.scope.isCancelled &&
+            item.pendingQuestion?.isResolved == true &&
+            item.pendingQuestion?.toolCallId == message.toolCallId,
       ),
       expectedRunId: run.id,
     );
@@ -2103,19 +2144,26 @@ class AgentRuntimeController implements AgentUiDelegate {
     _Run run,
     AgentUiApproval approval,
     Future<T> decision,
+  ) => _waitForInteraction(
+    run,
+    AgentUiRunState(
+      phase: AgentUiPhase.waitingApproval,
+      pendingApproval: approval,
+    ),
+    decision,
+  );
+
+  Future<T> _waitForInteraction<T>(
+    _Run run,
+    AgentUiRunState state,
+    Future<T> decision,
   ) async {
     // Only the displayed user's decision is outside execution budgets. Loading,
     // saving and applying the plan keep consuming their original remaining time.
     run.deadline?.pause();
     run.toolDeadline?.pause();
     try {
-      _setDisplay(
-        run,
-        AgentUiRunState(
-          phase: AgentUiPhase.waitingApproval,
-          pendingApproval: approval,
-        ),
-      );
+      _setDisplay(run, state);
       return await decision;
     } finally {
       if (!run.scope.isCancelled && run.stopReason == null) {
@@ -2124,6 +2172,22 @@ class AgentRuntimeController implements AgentUiDelegate {
       }
     }
   }
+
+  Future<Map<String, Object?>> requestUserInput(
+    Map<String, Object?> arguments,
+    OperationScope scope,
+  ) => _requestUserInput(arguments, scope);
+
+  @override
+  Future<void> answerQuestion(
+    String conversationId,
+    String questionId,
+    List<AgentQuestionAnswer> answers,
+  ) => _answerUserQuestion(conversationId, questionId, answers);
+
+  @override
+  Future<void> dismissQuestion(String conversationId, String questionId) =>
+      _answerUserQuestion(conversationId, questionId, null);
 
   @override
   Future<void> approve(String conversationId, String planId) async {
@@ -2854,6 +2918,8 @@ class _Run {
   AgentRuntimeError? stopReason;
   _PendingApproval? approval;
   _PendingHttpTransport? httpApproval;
+  ProviderToolCall? activeToolCall;
+  _PendingUserQuestion? userQuestion;
 }
 
 /// Counts only active execution with a monotonic clock. Pausing never renews
@@ -2992,6 +3058,7 @@ String _defaultApprovalSummary(ApprovalPlan plan) =>
 String _defaultInstructions(AgentConversation conversation) =>
     'You are the single built-in Sked Agent. Use registered tools for actual application operations. '
     'Call only functions declared in the current request tools, using their exact function names. '
+    'Use ask_user to obtain information, preferences or decisions from the user in any task and permission mode. Business changes still follow host approvals and receipts. '
     'Discovery and Skills use logical names. Load capabilities.describe first when a capability is missing, then use its declared function on the next round. '
     'For resource queries, omit fields to use the default view or select exact advertised fields. Read resources.describe for query views and mutation values. '
     'For a new prepared operation, omit operationId so the host allocates it. Reuse a returned operationId unchanged only for the same operation. '

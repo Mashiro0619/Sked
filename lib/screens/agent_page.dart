@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
 import '../agent/agent_application.dart';
+import '../agent/interactions/agent_question.dart';
 import '../agent/ui/agent_conversation_view.dart';
 import '../agent/ui/agent_ui_delegate.dart';
 import '../agent/ui/agent_model_picker.dart';
@@ -536,6 +537,15 @@ class _RoutedAgentDelegate implements AgentUiDelegate {
   @override
   Future<void> reject(String conversationId, String planId) =>
       runtime.reject(conversationId, planId);
+  @override
+  Future<void> answerQuestion(
+    String conversationId,
+    String questionId,
+    List<AgentQuestionAnswer> answers,
+  ) => runtime.answerQuestion(conversationId, questionId, answers);
+  @override
+  Future<void> dismissQuestion(String conversationId, String questionId) =>
+      runtime.dismissQuestion(conversationId, questionId);
   @override
   Future<void> setMode(String conversationId, AgentPermissionMode mode) =>
       runtime.setMode(conversationId, mode);

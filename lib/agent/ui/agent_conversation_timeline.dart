@@ -178,7 +178,8 @@ List<AgentTimelineEntry> projectAgentConversationTimeline(
   final recordedActive =
       replyTargetMessageId == null &&
       (conversation.status == ConversationStatus.running ||
-          conversation.status == ConversationStatus.waitingApproval);
+          conversation.status == ConversationStatus.waitingApproval ||
+          conversation.status == ConversationStatus.waitingUser);
   final effectiveRunId = replyTargetMessageId == null
       ? activeRunId ?? (recordedActive ? conversation.runId : null)
       : null;

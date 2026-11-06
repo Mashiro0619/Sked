@@ -39,6 +39,7 @@ import '../imports/conversation_file_attachments.dart';
 import 'agent_ui_delegate.dart';
 import 'agent_operation_card.dart';
 import 'agent_plan_preview.dart';
+import 'agent_question_view.dart';
 
 // Failed saves remain available when a panel is closed and reopened. The
 // buffer follows the repository lifetime and is never shared across archives.
@@ -323,6 +324,8 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         !_runtime.runFor(id).isActive &&
         conversation.status != ConversationStatus.running &&
         conversation.status != ConversationStatus.waitingApproval &&
+        conversation.status != ConversationStatus.waitingUser &&
+        conversation.pendingQuestion == null &&
         widget.delegate.pendingInputCount(id) == 0;
   }
 
@@ -587,6 +590,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     state.providerErrorDetails,
     state.providerErrorResponseBody,
     state.providerErrorMetadata,
+    conversation.pendingQuestion,
   );
 
   void _revealReply(String conversationId, String messageId) {
@@ -1478,6 +1482,10 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                   conversation != null &&
                   state.pendingApproval != null)
                 _approval(conversation.id, state.pendingApproval!, writable, l),
+              if (state.replyTargetMessageId == null)
+                if (conversation?.pendingQuestion case final question?
+                    when !question.isResolved)
+                  _question(conversation!, writable),
             ];
             final continued =
                 conversation != null &&
@@ -1485,6 +1493,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                 !state.isActive &&
                 conversation.status != ConversationStatus.running &&
                 conversation.status != ConversationStatus.waitingApproval &&
+                conversation.status != ConversationStatus.waitingUser &&
                 (state.phase == AgentUiPhase.stopped ||
                     conversation.status == ConversationStatus.interrupted ||
                     widget.delegate.pendingInputCount(conversation.id) > 0);
@@ -2136,6 +2145,8 @@ class _AgentConversationViewState extends State<AgentConversationView> {
             state.phase == AgentUiPhase.idle &&
             conversation?.status == ConversationStatus.interrupted))
       _notice(l.agentStopped),
+    if (state.phase == AgentUiPhase.waitingUser)
+      _notice(l.agentWaitingForAnswer),
     if (state.phase == AgentUiPhase.failed || state.errorMessage != null)
       _requestFailure(state, l),
   ];
@@ -2428,6 +2439,34 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     return l.agentRunFailed;
   }
 
+  Widget _question(AgentConversation conversation, bool writable) {
+    final request = conversation.pendingQuestion!;
+    final repository = _repository;
+    final delegate = widget.delegate;
+    final generation = _uiGeneration;
+    bool current() =>
+        _uiSessionCurrent(generation, conversation.id) &&
+        identical(_repository, repository) &&
+        identical(widget.delegate, delegate) &&
+        repository.find(conversation.id)?.pendingQuestion?.id == request.id &&
+        _runtime.runFor(conversation.id).phase == AgentUiPhase.waitingUser;
+    return AgentQuestionView(
+      key: ValueKey((repository, delegate, conversation.id, request.id)),
+      request: request,
+      enabled: writable && !conversation.archived && current(),
+      onAnswer: (answers) async {
+        if (current()) {
+          await delegate.answerQuestion(conversation.id, request.id, answers);
+        }
+      },
+      onDismiss: () async {
+        if (current()) {
+          await delegate.dismissQuestion(conversation.id, request.id);
+        }
+      },
+    );
+  }
+
   Widget _approval(
     String id,
     AgentUiApproval plan,
@@ -2647,7 +2686,8 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final active =
         state.isActive ||
         conversation.status == ConversationStatus.running ||
-        conversation.status == ConversationStatus.waitingApproval;
+        conversation.status == ConversationStatus.waitingApproval ||
+        conversation.status == ConversationStatus.waitingUser;
     // send() may remain pending for the whole run. Once the host has published
     // an active run, that Future must not disable steering or follow-up input.
     final sending =
@@ -3042,6 +3082,8 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                                               ),
                                             )
                                     : canSend &&
+                                          conversation.pendingQuestion ==
+                                              null &&
                                           !sending &&
                                           _hasInput(conversation)
                                     ? () => _send(conversation)

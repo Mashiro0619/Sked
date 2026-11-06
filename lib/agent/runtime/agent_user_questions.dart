@@ -1,0 +1,218 @@
+part of 'agent_runtime_controller.dart';
+
+class _PendingUserQuestion {
+  _PendingUserQuestion(this.id);
+  final String id;
+  final result = Completer<AgentQuestionRequest>();
+}
+
+Map<String, Object?> _userQuestionResult(AgentQuestionRequest request) => {
+  'status': request.dismissed ? 'dismissed' : 'answered',
+  'questionId': request.id,
+  'answers': request.answers?.map((answer) => answer.toJson()).toList() ?? [],
+  if (request.dismissed) 'message': 'The user skipped these questions. Continue with the known facts or explain what still requires an answer.',
+};
+
+extension _AgentUserQuestions on AgentRuntimeController {
+  Future<Map<String, Object?>> _requestUserInput(
+    Map<String, Object?> arguments,
+    OperationScope scope,
+  ) async {
+    final run = _runs.values
+        .where((run) => identical(run.scope, scope))
+        .firstOrNull;
+    final call = run?.activeToolCall;
+    if (run == null || call?.name != 'ask_user') {
+      throw const OperationProblem(
+        OperationErrorCode.unsupported,
+        'User questions require an active model tool call.',
+      );
+    }
+    _checkRun(run);
+    final questions = parseAgentQuestionPrompts(arguments);
+    final current = _current(run);
+    if (current.pendingQuestion != null) {
+      throw const OperationProblem(
+        OperationErrorCode.conflict,
+        'Resolve the current user question first.',
+      );
+    }
+    final message = current.executionMessages.lastWhere(
+      (message) => message.toolCalls.any((item) => item.id == call!.id),
+    );
+    final request = AgentQuestionRequest(
+      id: _id(),
+      toolCallId: call!.id,
+      runId: run.id,
+      requestMessageId: message.id,
+      createdAt: _clock().toUtc(),
+      connectionFingerprint: run.fingerprint,
+      datasetGeneration: run.environment['datasetGeneration'] as String?,
+      questions: questions,
+    );
+    _rejectSecretValues(request.toJson(), run.apiKey);
+    await repository.update(run.conversationId, (current) {
+      _checkRun(run);
+      if (current.pendingQuestion != null) {
+        throw const AgentRuntimeException(AgentRuntimeError.busy);
+      }
+      return current.copyWith(
+        pendingQuestion: request,
+        status: ConversationStatus.waitingUser,
+      );
+    }, expectedRunId: run.id);
+    return _userQuestionResult(await _waitForUserQuestion(run, request));
+  }
+
+  Future<AgentQuestionRequest> _waitForUserQuestion(
+    _Run run,
+    AgentQuestionRequest request,
+  ) async {
+    _checkRun(run);
+    if (request.isResolved) return request;
+    final pending = _PendingUserQuestion(request.id);
+    run.userQuestion = pending;
+    try {
+      return await _waitForInteraction(
+        run,
+        const AgentUiRunState(phase: AgentUiPhase.waitingUser),
+        Future.any([
+          pending.result.future,
+          run.scope.whenCancelled.then<AgentQuestionRequest>(
+            (_) => throw AgentRuntimeException(
+              run.stopReason ?? AgentRuntimeError.cancelled,
+            ),
+          ),
+        ]),
+      );
+    } finally {
+      if (identical(run.userQuestion, pending)) run.userQuestion = null;
+      if (!run.scope.isCancelled) {
+        _setDisplay(run, const AgentUiRunState(phase: AgentUiPhase.running));
+      }
+    }
+  }
+
+  Future<void> _answerUserQuestion(
+    String conversationId,
+    String questionId,
+    List<AgentQuestionAnswer>? answers,
+  ) async {
+    final run = _runs[conversationId];
+    final pending = run?.userQuestion;
+    if (run == null ||
+        pending?.id != questionId ||
+        pending!.result.isCompleted) {
+      throw const OperationProblem(
+        OperationErrorCode.conflict,
+        'This question is no longer awaiting an answer.',
+      );
+    }
+    _checkRun(run);
+    AgentQuestionRequest? resolved;
+    await repository.update(conversationId, (current) {
+      _checkRun(run);
+      final request = current.pendingQuestion;
+      if (request?.id != questionId || request!.isResolved) {
+        throw const OperationProblem(
+          OperationErrorCode.conflict,
+          'This question has already changed or been answered.',
+        );
+      }
+      try {
+        resolved = answers == null
+            ? request.withDismissed()
+            : request.withAnswers(answers);
+      } on FormatException {
+        throw const OperationProblem(
+          OperationErrorCode.invalidArgument,
+          'Provide a valid answer for each question.',
+          field: 'answers',
+        );
+      }
+      _rejectSecretValues(resolved!.toJson(), run.apiKey);
+      final encoded = jsonEncode(_userQuestionResult(resolved!));
+      if (encoded.length > limits.maxToolResultCharacters ||
+          utf8.encode(encoded).length > 48 * 1024) {
+        throw const OperationProblem(
+          OperationErrorCode.invalidArgument,
+          'These answers exceed the response budget. Shorten the answers and submit again.',
+          field: 'answers',
+        );
+      }
+      return current.copyWith(
+        pendingQuestion: resolved,
+        status: ConversationStatus.running,
+      );
+    }, expectedRunId: run.id);
+    if (!pending.result.isCompleted) pending.result.complete(resolved!);
+  }
+
+  Future<void> _resumeUserQuestion(_Run run) async {
+    final request = _current(run).pendingQuestion;
+    if (request == null) return;
+    _rejectSecretValues(request.toJson(), run.apiKey);
+    final generation = run.environment['datasetGeneration'];
+    final stale =
+        request.connectionFingerprint != run.fingerprint ||
+        (request.datasetGeneration != null &&
+            request.datasetGeneration != generation);
+    final Map<String, Object?> result;
+    if (stale) {
+      result = {
+        'status': 'not_executed',
+        'error': {'code': 'question_context_changed'},
+      };
+    } else {
+      await repository.update(
+        run.conversationId,
+        (current) => current.copyWith(status: ConversationStatus.waitingUser),
+        expectedRunId: run.id,
+      );
+      result = _userQuestionResult(await _waitForUserQuestion(run, request));
+    }
+    _checkRun(run);
+    final encoded = jsonEncode(result);
+    _rejectSecret(encoded, run.apiKey);
+    await repository.update(run.conversationId, (current) {
+      _checkRun(run);
+      if (current.pendingQuestion?.id != request.id) {
+        throw const AgentRuntimeException(AgentRuntimeError.busy);
+      }
+      final existing = current.messages
+          .where(
+            (message) =>
+                message.role == ConversationRole.tool &&
+                message.toolCallId == request.toolCallId,
+          )
+          .lastOrNull;
+      if (existing == null) {
+        throw const AgentRuntimeException(
+          AgentRuntimeError.unpairedToolHistory,
+        );
+      }
+      return current.copyWith(
+        messages: current.messages.map(
+          (message) => message.id == existing.id
+              ? message.copyWith(text: encoded)
+              : message,
+        ),
+        runs: current.runs.map(
+          (record) => record.id == request.runId
+              ? record.withTool(
+                  ConversationToolUsage(
+                    id: request.toolCallId,
+                    name: 'ask_user',
+                    outcome: stale
+                        ? ConversationAttemptOutcome.notStarted
+                        : ConversationAttemptOutcome.completed,
+                  ),
+                )
+              : record,
+        ),
+        clearPendingQuestion: true,
+        status: ConversationStatus.running,
+      );
+    }, expectedRunId: run.id);
+  }
+}

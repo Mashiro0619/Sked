@@ -2934,5 +2934,27 @@
         "type": "String"
       }
     }
+  },
+  "agentQuestionAnswer": "你的回答",
+  "@agentQuestionAnswer": {},
+  "agentQuestionSubmit": "提交回答",
+  "@agentQuestionSubmit": {},
+  "agentQuestionSkip": "略過",
+  "@agentQuestionSkip": {},
+  "agentQuestionMultiple": "可選擇多項",
+  "@agentQuestionMultiple": {},
+  "agentQuestionSkipped": "已略過",
+  "@agentQuestionSkipped": {},
+  "agentWaitingForAnswer": "等待你的回答",
+  "@agentWaitingForAnswer": {},
+  "agentToolAskUser": "詢問使用者",
+  "@agentToolAskUser": {},
+  "agentQuestionAnswerTooLong": "請將回答控制在 {limit} 個字元以內。",
+  "@agentQuestionAnswerTooLong": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
   }
 }

@@ -165,6 +165,7 @@ class ConversationRepository extends ChangeNotifier {
         );
         return item.status == ConversationStatus.running ||
                 item.status == ConversationStatus.waitingApproval ||
+                item.status == ConversationStatus.waitingUser ||
                 interruptedRun ||
                 interruptedAttachment
             ? item.copyWith(
@@ -285,6 +286,7 @@ class ConversationRepository extends ChangeNotifier {
           (item) =>
               item.status == ConversationStatus.idle &&
               item.pendingRedo == null &&
+              item.pendingQuestion == null &&
               item.draft.isEmpty &&
               item.draftAttachmentIds.isEmpty &&
               item.updatedAt.isBefore(cutoff) &&
@@ -679,6 +681,7 @@ class ConversationRepository extends ChangeNotifier {
         draft.historyVersions.isNotEmpty ||
         draft.replyRevisions.isNotEmpty ||
         draft.redoBatches.isNotEmpty ||
+        draft.pendingQuestion != null ||
         draft.archived ||
         draft.status != ConversationStatus.idle ||
         draft.runId != null ||

@@ -4456,4 +4456,30 @@ class AppLocalizationsIt extends AppLocalizations {
   String agentProviderTimeoutFailure(String code) {
     return 'The model response timed out ($code).';
   }
+
+  @override
+  String get agentQuestionAnswer => 'Your answer';
+
+  @override
+  String get agentQuestionSubmit => 'Submit answers';
+
+  @override
+  String get agentQuestionSkip => 'Skip';
+
+  @override
+  String get agentQuestionMultiple => 'Select all that apply';
+
+  @override
+  String get agentQuestionSkipped => 'Skipped';
+
+  @override
+  String get agentWaitingForAnswer => 'Waiting for your answer';
+
+  @override
+  String get agentToolAskUser => 'Ask a question';
+
+  @override
+  String agentQuestionAnswerTooLong(int limit) {
+    return 'Keep your answer within $limit characters.';
+  }
 }

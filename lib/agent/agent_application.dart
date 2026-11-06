@@ -109,6 +109,8 @@ class AgentApplication extends ChangeNotifier {
       mutations: mutations,
       conversationForScope: (scope) => runtime.conversationForScope(scope),
       environmentForScope: (scope) => runtime.environmentForScope(scope),
+      requestUserInput: (arguments, scope) =>
+          runtime.requestUserInput(arguments, scope),
       readSkillSnapshot: () async {
         await knowledge.initialize();
         return knowledge.captureSkillSnapshot();

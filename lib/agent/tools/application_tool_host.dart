@@ -17,6 +17,7 @@ import '../../models/app_data.dart';
 import '../../models/general_event_edit_scope.dart';
 import '../../utils/time_utils.dart';
 import '../conversations/conversation_models.dart';
+import '../interactions/agent_question.dart';
 import '../provider/provider.dart';
 import '../runtime/agent_runtime_controller.dart';
 import '../skills/shared_skill_loader.dart';
@@ -35,6 +36,7 @@ class ApplicationToolHost {
     required this.mutations,
     required this.conversationForScope,
     this.environmentForScope,
+    this.requestUserInput,
     SettingRegistry? settings,
     SkillAssetLoader? loadSkillAsset,
     this.readSkillSnapshot,
@@ -47,6 +49,11 @@ class ApplicationToolHost {
   final MutationCoordinator mutations;
   final AgentConversation? Function(OperationScope) conversationForScope;
   final Map<String, Object?>? Function(OperationScope)? environmentForScope;
+  final Future<Map<String, Object?>> Function(
+    Map<String, Object?> arguments,
+    OperationScope scope,
+  )?
+  requestUserInput;
   final SettingRegistry settings;
   final SkillAssetLoader _loadAsset;
   final FutureOr<SkillOverlaySnapshot> Function()? readSkillSnapshot;
@@ -125,6 +132,7 @@ class ApplicationToolHost {
 
   static const maxResultBytes = 64 * 1024;
   static const _bootstrap = {
+    'ask_user',
     'capabilities.describe',
     'skills.search',
     'skills.load',
@@ -314,6 +322,17 @@ class ApplicationToolHost {
   );
 
   void _registerCore() {
+    register(agentAskUserTool, (args, scope, _) async {
+      parseAgentQuestionPrompts(args);
+      final request = requestUserInput;
+      if (request == null) {
+        throw const OperationProblem(
+          OperationErrorCode.unsupported,
+          'This host has no interactive user-question service.',
+        );
+      }
+      return request(args, scope);
+    });
     _add(
       'resources.describe',
       'Read allowed query fields, default query views, mutation value fields and semantic constraints for a resource kind.',
