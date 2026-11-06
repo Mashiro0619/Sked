@@ -1,5 +1,62 @@
 # Sked agent harness 源码研究
 
+## 2026-11-07 第二轮深度排查与功能取舍
+
+Sked 基线为 `9d07f05c03e93b9ed1179be8f679be7bce6994df`。本轮沿用下节固定的四个主仓库和 OpenHands SDK 源码，扩大检查到协议续传、历史重做、普通完成判定、环境上下文和 GUI 生命周期。新增六项问题通过八个合成观察用例核对，整改尚待实施。
+
+### 新确认的问题
+
+| 优先级 | 问题 | 实际触发与影响 | 修复验收要求 |
+| --- | --- | --- | --- |
+| P1 | Chat Completions 丢失 `reasoning_content` | JSON、SSE 两种回包带有该字段，经正式运行时执行工具后，下一请求的 assistant 只剩 role/content/tool_calls。要求此字段的思考模型会拒绝后续调用 | 接收、持久化、续传、压缩及模型切换成套处理，保留敏感值检查。用协议夹具覆盖工具循环和新的用户轮次 |
+| P1 | 编辑并重做耗尽轮次后，继续无法推进 | 限制设为 1 轮，正式 `editAndRedo` 耗尽后 `continueConversation` 的模型请求数仍为 2，批次保持 running，新发送和 cancelPrepared 均被阻止。预算设置不变时重复继续仍失败 | 批次身份和续跑尝试分别计量，继续不重做已经接受的撤销。保留真实中断原因，提供可结束的恢复状态 |
+| P2 | 普通空回复被记为成功 | 对普通提问返回合法 stop、空字符串或三个空格、零工具，运行被保存为 completed，界面无错误 | 无可用回复时显示可恢复失败。若此前业务工具已提交，分别记录业务结果与回复缺失。恢复不得重放既有写入 |
+| P2 | 相对日期任务缺少固定宿主时间依据 | 合法 `skills.search → skills.load(read-agenda) → agenda.query` 路径完全不必调用 capabilities.describe，四次模型请求没有宿主提供的当前日期、时区偏移或周起点 | 首轮提供明确运行环境快照。跨日、时区变化及显式继续有可检查的刷新边界，相对日期转换为绝对范围后再执行 |
+| P2 | 旧草稿保存失败在新宿主显示错误 | 同一 Widget State 替换 repository 后，旧保存的迟到失败仍设置 `_failed`。新仓库可写，却出现操作失败提示 | 成功与失败回调都检查拥有者和 UI 会话身份。旧仓库仍保存自己的失败，新宿主的提示归属于当前操作 |
+| P2 | 历史版本无法查看其附件 | 历史弹窗只渲染非空 text，历史独有的纯附件消息被跳过，带文字消息也没有附件卡。附件引用仍在历史存档中 | 历史消息复用只读附件呈现，支持查看文件名与实际可用内容。丢失文件显示具体状态，重新附加需要明确用户动作 |
+
+**协议续传。** DeepSeek 当前官方协议要求，在思考模式下携带 tools 的后续请求回传完整 reasoning_content。这里确认的是 Sked 丢字段，具体兼容网关是否强制该规则需要按所用服务核验。OpenCode 的 Chat adapter 将推理内容纳入消息表示，并同时实现接收、发送和回归。[DeepSeek 协议](https://api-docs.deepseek.com/guides/thinking_mode/)、[OpenCode 接收](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/ai/src/protocols/openai-chat.ts#L984-L996)、[发送与消息转换](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/ai/src/protocols/openai-chat.ts#L520-L576)、[Sked 协议](../lib/agent/provider/provider_protocol.dart)
+
+**重做恢复。** Sked `replayHistoryBatch` 复用既有 run，恢复旧 requests/tools 后从累计请求数开始循环。`ConversationRedoCoordinator` 又把 interrupted 统一保存为 cancelled，掩盖预算等具体原因。OpenHands 在显式 run 时重新开始局部迭代计数，同时保留会话和既有操作状态。Sked 应将这两类身份与预算分开，沿用原条件逆变更与回执恢复。[Sked 运行时](../lib/agent/runtime/agent_runtime_controller.dart)、[重做协调器](../lib/agent/history/conversation_redo_coordinator.dart)、[OpenHands 显式运行](https://github.com/OpenHands/software-agent-sdk/blob/64dd33f4b60b15b63402c6fd5da9352aa101f729/openhands-sdk/openhands/sdk/conversation/impl/local_conversation.py#L2104-L2120)
+
+**完成与环境。** 普通 send 的空回复检查应与已有重生成路径协调，区分无正文、合法工具结果和协议未完成。运行环境也应由宿主提供，当前技能正文要求固定时间，却没有对应的必经输入。Cline 在运行循环拒绝无可用内容的终态，OpenCode 将日期和环境作为初始及变化后的指令来源。[Cline 完成守卫](https://github.com/cline/cline/blob/ea16751d6ae3ae1e443681994906bf29cbc45039/sdk/packages/agents/src/agent-runtime.ts#L878-L912)、[OpenCode 日期与环境](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/core/src/instructions/builtins.ts#L25-L52)、[Sked 日期技能](../assets/agent/skills/read-agenda/SKILL.md)
+
+**界面归属与历史。** `_draftChanged` 的成功回调检查 repository 身份，失败回调只检查 mounted。历史弹窗则按 `message.text.isNotEmpty` 过滤并直接输出文字。两项分别需要拥有者校验和完整历史消息呈现，当前主消息的附件组件与历史保留机制可以复用。[Sked 对话视图](../lib/agent/ui/agent_conversation_view.dart)、[历史版本及附件引用](../lib/agent/conversations/conversation_models.dart)
+
+### 功能与效率候选
+
+下面按对 Sked 的直接价值排序。功能入口应优先放入现有菜单、资源选择器或折叠区，紧凑布局继续保留输入操作空间。业务成功始终关联宿主回执。
+
+| 建议 | 在 Sked 中的用途 | 可复用基础与必要条件 | 验收重点 |
+| --- | --- | --- | --- |
+| 结构化澄清问题 | 同名课表选择、重复日程范围、缺开学日期时提供单选、多选或自填 | 增加运行中的 question/answer 状态，问题绑定会话和目标版本，与修改审批分别处理 | 回答消费一次，取消可退出，等待期间停止有效，目标变化后旧答案失效 |
+| 可编辑的待处理队列 | 查看、编辑、移除、重排或将下一条请求转为当前调整 | 复用已有 follow-up/steer 持久队列，增加按 ID 操作及原子认领 | 编辑时队列项已被消费、附件保留、保存失败、切换会话和停止后的恢复 |
+| 可检查的重做影响预览 | 编辑较早请求前列出将撤销的后续轮次、课表/日程/知识对象与冲突 | 复用 ConversationHistorySelection 和实际预检结果，在现有对话框内展示 | 预览与执行绑定相同目标及版本，取消预览无业务写入，冲突清楚定位 |
+| 任务步骤与紧凑进度 | 长导入、批量修改显示正在处理哪一步、阻塞原因和下一步 | 保存结构化步骤并关联工具活动与回执，模型计划状态和实际业务结果分别表达 | 中断恢复、步骤改写、部分完成、模型误报完成、窄屏和大字号 |
+| 本轮上下文检查入口 | 查看实际加载的 Skill 版本、读过的记忆及来源、当前时间快照和预算 | 复用 version/hash、记忆 revision/sourceConversationId/sourceMessageId/needsRecheck 及用量记录 | 明确区分已读取、仅可用与后来更新的数据，显示实际来源和脱敏范围 |
+| 显式绑定资源或技能 | 输入时选中某课表、日历、课程、文件或 Skill，减少同名猜测和无效发现 | 借鉴 mention/命令面板，用已有稳定资源 ID 和技能 ID 生成明确引用 | 改名保持身份、删除或数据恢复后引用失效、来源不可提权、跨会话不串引用 |
+| 结果摘要加可读取的完整输出 | 大查询、导入诊断和工具日志保留完整结果，同时控制模型上下文大小 | 复用附件/来源与分页能力，设计作用域内的 resultRef，记录截断和失效状态 | 大字段、Unicode 字节、引用过期、删除会话清理、未读部分不能被当作空结果 |
+| 多轮连接诊断与有限首内容前恢复 | 检查实际工具往返、思考续传及终态，降低偶发空响应对任务的影响 | 现有连接测试仅观察一次合成工具请求，应增加结果回送及后继请求。每次恢复单独计量并受取消和总预算约束 | 首次输出前断连、空响应、重试上限、停止中断退避、业务写入后禁止整轮盲重放 |
+
+结构化问答和步骤进度可以参考 OpenCode 的 typed question/todo 工具及 Cline 的问答组件，保留实际宿主回答链路。[问题工具](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/core/src/tool/plugin/question.ts#L23-L108)、[Cline 问答组件](https://github.com/cline/cline/blob/ea16751d6ae3ae1e443681994906bf29cbc45039/sdk/packages/ui/components/agent-ask-question.tsx)、[步骤工具](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/core/src/tool/plugin/todo.ts#L17-L31)
+
+队列控制可参考 Cherry Studio 的完整 draft/payload 配对、编辑恢复、移除、重排和暂停自动消费，复用 Sked 自己的持久化与认领规则。输入资源绑定同样需要保留编辑器中稳定的对象身份。[队列控制](https://github.com/CherryHQ/cherry-studio/blob/87d4851181ed801cde36cceb7aea4f7b5cc4ee3b/src/renderer/components/composer/useFollowupQueue.ts#L44-L85)、[队列界面回归](https://github.com/CherryHQ/cherry-studio/blob/87d4851181ed801cde36cceb7aea4f7b5cc4ee3b/src/renderer/components/composer/__tests__/QueuedFollowupsDock.test.tsx#L90-L170)、[资源引用选择器](https://github.com/CherryHQ/cherry-studio/blob/87d4851181ed801cde36cceb7aea4f7b5cc4ee3b/src/renderer/components/composer/variants/agent/useAgentResourceMentionSource.tsx)
+
+重做预览和知识可追溯分别参考 OpenCode 的 staged/clear/commit 撤销表示，以及 OpenHands 的技能激活事件与显式调用状态。Sked 的事务、权限和知识快照已经有对应基础，先补检查界面及版本关联。[撤销阶段](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/core/src/session/revert.ts#L25-L87)、[技能激活事件](https://github.com/OpenHands/software-agent-sdk/blob/64dd33f4b60b15b63402c6fd5da9352aa101f729/openhands-sdk/openhands/sdk/event/llm_convertible/message.py#L45-L49)
+
+大输出可参考 OpenCode 的有界模型内容、完整输出保存及过期清理，移植到 Flutter 时使用应用管理的结果引用。有限重试可参考 Cline 的首内容前策略，并把所有尝试记录到已有请求用量模型。[输出保留](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/core/src/tool-output.ts#L72-L130)、[首内容前恢复](https://github.com/cline/cline/blob/ea16751d6ae3ae1e443681994906bf29cbc45039/sdk/packages/llms/src/providers/middleware/retry-empty-response.ts#L82-L100)、[Sked 连接诊断](../lib/agent/connection/agent_connection_diagnostics.dart)
+
+### 落地顺序与证据
+
+优先修复协议续传与重做恢复，再把普通完成判定、运行环境快照和两项界面问题纳入正式入口回归。随后与首轮发现的工具契约、有限纠错、统一预算和 checkpoint 合并排期。功能层优先考虑结构化问答、队列编辑和重做影响预览，其他候选按前置机制完成情况安排。
+
+本轮诊断在 Windows 使用 Mock HTTP、内存存储和 Flutter Widget 环境。临时用例通过正式 send、editAndRedo、continueConversation 和对话视图入口，断言当前问题可复现。协议探针包含 JSON/SSE 两种续传、空/空白回复和技能直达路径，恢复探针包含耗尽后零新增请求与新发送门禁，界面探针包含仓库替换及历史独有附件。原生设备交互和具体付费服务兼容性仍按对应平台与模型任务核验。
+
+```powershell
+flutter test --no-pub <临时目录>/deep_recovery_probe_test.dart --plain-name 'deep audit redo round exhaustion blocks continuation and fresh sends'
+flutter test --no-pub <临时目录>/deep_ui_probe_test.dart <临时目录>/deep_protocol_probe_test.dart --name 'audit|deep protocol'
+```
+
 ## 2026-11-07 图形化 Agent 源码复核
 
 本轮研究基线为 Sked `a8426dd2c0b6ae4955f5fcb945ad4ee2149e9ca6`。在本地浅克隆四个带图形界面的项目，并沿 OpenHands 的实际依赖补充克隆其官方 SDK。阅读范围包括模型请求准备、工具校验、失败恢复、上下文压缩、界面状态投影及对应测试。下面的 Sked 缺口仍待实施，工具参数与预算提示修复之后需要继续完成这些运行链路。
