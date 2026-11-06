@@ -124,6 +124,8 @@ class _AppBootstrapState extends State<AppBootstrap> {
   Future<void>? _acquireOperation;
   var _attemptInProgress = false;
   var _leaseOwned = false;
+  var _firstFrameDeferred = true;
+  var _animateThemeChanges = false;
 
   @override
   void initState() {
@@ -131,7 +133,30 @@ class _AppBootstrapState extends State<AppBootstrap> {
     _lease = widget.lease;
     _runtimeFactory = widget.runtimeFactory;
     _startupDependencies = widget.startupDependencies;
+    // The runtime begins with system defaults. Keep those warm-up frames off
+    // screen until storage has resolved the active workspace's appearance.
+    WidgetsBinding.instance.deferFirstFrame();
     _startLeaseAcquisition();
+  }
+
+  void _releaseFirstFrame() {
+    if (!_firstFrameDeferred) return;
+    _firstFrameDeferred = false;
+    WidgetsBinding.instance.allowFirstFrame();
+  }
+
+  void _showInitialAppearance() {
+    if (!mounted) return;
+    final app = _app;
+    final status = _status;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !identical(app, _app) || status != _status) return;
+      // This frame has built the loaded theme with its initial transition
+      // disabled. Subsequent user theme changes can animate as usual.
+      _releaseFirstFrame();
+      setState(() => _animateThemeChanges = true);
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
   }
 
   void _startLeaseAcquisition() {
@@ -164,6 +189,7 @@ class _AppBootstrapState extends State<AppBootstrap> {
       try {
         final app = _runtimeFactory();
         _app = app;
+        _animateThemeChanges = false;
         try {
           _desktopLayout = _startupDependencies.desktopLayoutFactory();
           _developerUi = _startupDependencies.developerUiFactory();
@@ -188,11 +214,12 @@ class _AppBootstrapState extends State<AppBootstrap> {
         _appLoad = load;
         unawaited(
           load.then<void>(
-            (_) {},
+            (_) => _showInitialAppearance(),
             onError: (Object error, StackTrace stackTrace) {
               debugPrint(
                 'Provider load failed unexpectedly: $error\n$stackTrace',
               );
+              _showInitialAppearance();
             },
           ),
         );
@@ -213,6 +240,7 @@ class _AppBootstrapState extends State<AppBootstrap> {
       _attemptInProgress = false;
       if (mounted && _status != _AppBootstrapStatus.ready) {
         setState(() {});
+        _showInitialAppearance();
       }
     }
   }
@@ -225,6 +253,7 @@ class _AppBootstrapState extends State<AppBootstrap> {
 
   @override
   void dispose() {
+    _releaseFirstFrame();
     final shutdown = _shutdownResources();
     unawaited(shutdown);
     super.dispose();
@@ -304,6 +333,7 @@ class _AppBootstrapState extends State<AppBootstrap> {
       return MyApp(
         app: app,
         dataReady: _appLoad,
+        animateThemeChanges: _animateThemeChanges,
         desktopLayoutPreferences: _desktopLayout,
         developerUiPreferences: _developerUi,
         startupDependencies: _startupDependencies,
@@ -440,6 +470,7 @@ class MyApp extends StatefulWidget {
     super.key,
     required this.app,
     this.dataReady,
+    this.animateThemeChanges = true,
     this.desktopLayoutPreferences,
     this.developerUiPreferences,
     this.startupDependencies = const AppStartupDependencies(),
@@ -447,6 +478,7 @@ class MyApp extends StatefulWidget {
 
   final AppRuntime app;
   final Future<void>? dataReady;
+  final bool animateThemeChanges;
   final DesktopLayoutPreferences? desktopLayoutPreferences;
   final DeveloperUiPreferences? developerUiPreferences;
   final AppStartupDependencies startupDependencies;
@@ -692,7 +724,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   ),
                 ),
                 themeMode: themeModeFromValue(snapshot.themeMode),
-                themeAnimationStyle: appThemeAnimationStyle,
+                themeAnimationStyle: widget.animateThemeChanges
+                    ? appThemeAnimationStyle
+                    : AnimationStyle.noAnimation,
                 theme: buildAppTheme(
                   seedColor: Color(snapshot.themeSeedColorValue),
                   brightness: Brightness.light,

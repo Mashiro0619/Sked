@@ -29,6 +29,7 @@ import 'package:sked/services/secret_store.dart';
 import 'package:sked/services/update_distribution.dart';
 import 'package:sked/services/update_service.dart';
 import 'package:sked/widgets/app_update_dialog.dart';
+import 'package:sked/widgets/desktop_window_host.dart';
 import 'package:sked/widgets/update_prompt_scope.dart';
 
 import '../support/data_transfer_codec.dart';
@@ -49,6 +50,18 @@ class _MemoryStorage implements TimetableStorage {
   @override
   Future<void> save(AppData data) async {
     this.data = data;
+  }
+}
+
+class _GatedStorage extends _MemoryStorage {
+  _GatedStorage(this.gate, AppData data) : super(data);
+
+  final Completer<void> gate;
+
+  @override
+  Future<StorageLoadResult> load() async {
+    await gate.future;
+    return super.load();
   }
 }
 
@@ -254,7 +267,238 @@ class _RejectNetwork extends HttpOverrides {
   }
 }
 
+Future<void> _pumpCompletion(WidgetTester tester, Future<void> work) async {
+  var complete = false;
+  final result = work.whenComplete(() => complete = true);
+  final waiting = Stopwatch()..start();
+  while (!complete && waiting.elapsed < const Duration(seconds: 5)) {
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    await tester.pump();
+  }
+  expect(complete, isTrue, reason: 'Pending native broker work must settle.');
+  await result;
+}
+
 void main() {
+  for (final (mode, system, workspace, failInitialization) in [
+    ('light', Brightness.dark, AppMode.general, false),
+    ('dark', Brightness.light, AppMode.student, false),
+    ('system', Brightness.dark, AppMode.general, false),
+    ('light', Brightness.dark, AppMode.general, true),
+  ]) {
+    testWidgets(
+      'first visible loading frame uses saved $mode appearance with initialization failure=$failInitialization',
+      (tester) async {
+        tester.binding.resetFirstFrameSent();
+        tester.platformDispatcher.platformBrightnessTestValue = system;
+        addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+        final storageGate = Completer<void>();
+        final layoutGate = Completer<Object?>();
+        final initial = buildInitialAppData(buildDefaultPeriodTimes());
+        final data = initial.copyWith(
+          activeMode: workspace,
+          studentMode: initial.studentMode.copyWith(themeMode: mode),
+          generalMode: initial.generalMode.copyWith(themeMode: mode),
+        );
+        final app = _isolatedProvider(
+          storage: _GatedStorage(storageGate, data),
+        );
+        if (failInitialization) {
+          app.lifecycle.beforeOpeningWrites = () async {
+            throw StateError('Fixture failure after appearance hydration.');
+          };
+        }
+        AgendaCoordinator? coordinator;
+        final layout = DesktopLayoutPreferences(
+          read: () => layoutGate.future,
+          write: (_) async => true,
+          remove: () async => true,
+        );
+        final expected = mode == 'system'
+            ? system
+            : mode == 'light'
+            ? Brightness.light
+            : Brightness.dark;
+        try {
+          await tester.pumpWidget(
+            AppBootstrap(
+              lease: _FakeLease([true]),
+              runtimeFactory: () => app,
+              startupDependencies: AppStartupDependencies(
+                desktopLayoutFactory: () => layout,
+                developerUiFactory: () => _ObservedDeveloperUi([]),
+                notificationServiceFactory: _memoryNotifications,
+                updateService: _Updates(),
+              ),
+            ),
+          );
+          await tester.pump();
+          expect(app.lifecycle.isLoaded, isFalse);
+          expect(
+            tester.binding.sendFramesToEngine,
+            isFalse,
+            reason: 'The default system theme must not reach the first frame.',
+          );
+
+          storageGate.complete();
+          for (
+            var frame = 0;
+            frame < 100 && !tester.binding.sendFramesToEngine;
+            frame++
+          ) {
+            await tester.pump(const Duration(milliseconds: 1));
+          }
+          expect(app.lifecycle.isLoaded, isTrue);
+          expect(tester.binding.sendFramesToEngine, isTrue);
+          expect(layout.ready, isFalse);
+          final loading = find.byType(CircularProgressIndicator);
+          expect(loading, findsOneWidget);
+          final theme = Theme.of(tester.element(loading));
+          expect(theme.brightness, expected);
+          expect(
+            Theme.of(tester.element(find.byType(DesktopWindowHost))).brightness,
+            expected,
+          );
+          expect(
+            tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
+            isNull,
+          );
+          expect(
+            theme.scaffoldBackgroundColor.computeLuminance(),
+            expected == Brightness.light ? greaterThan(.5) : lessThan(.1),
+          );
+
+          coordinator = tester.element(loading).read<AgendaCoordinator>();
+          expect(app.lifecycle.canWrite, !failInitialization);
+          if (!failInitialization) {
+            await _pumpCompletion(tester, coordinator.start());
+          }
+          await tester.pump();
+          expect(
+            tester.widget<MyApp>(find.byType(MyApp)).animateThemeChanges,
+            isTrue,
+          );
+          expect(
+            tester
+                .widget<MaterialApp>(find.byType(MaterialApp))
+                .themeAnimationStyle!
+                .duration!
+                .inMilliseconds,
+            greaterThan(0),
+          );
+          layoutGate.complete(null);
+          await tester.pumpAndSettle();
+          expect(find.byType(AppHomeScreen), findsOneWidget);
+          expect(
+            Theme.of(tester.element(find.byType(AppHomeScreen))).brightness,
+            expected,
+          );
+        } finally {
+          if (!storageGate.isCompleted) storageGate.complete();
+          if (!layoutGate.isCompleted) layoutGate.complete(null);
+          await tester.pumpWidget(const SizedBox.shrink());
+          if (coordinator != null) {
+            await _pumpCompletion(
+              tester,
+              coordinator.waitForPendingProjections(),
+            );
+          }
+          await tester.pumpAndSettle();
+        }
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.windows),
+    );
+  }
+
+  testWidgets('a queued gate frame cannot release a retry still loading', (
+    tester,
+  ) async {
+    tester.binding.resetFirstFrameSent();
+    final leaseGate = Completer<bool>();
+    final storageGate = Completer<void>();
+    final app = _isolatedProvider(
+      storage: _GatedStorage(
+        storageGate,
+        buildInitialAppData(buildDefaultPeriodTimes()),
+      ),
+    );
+    try {
+      await tester.pumpWidget(
+        AppBootstrap(
+          lease: _FakeLease([leaseGate.future, true]),
+          runtimeFactory: () => app,
+          startupDependencies: AppStartupDependencies(
+            desktopLayoutFactory: () => _ObservedLayout([]),
+            developerUiFactory: () => _ObservedDeveloperUi([]),
+            notificationServiceFactory: _memoryNotifications,
+            updateService: _Updates(),
+          ),
+        ),
+      );
+      // Retry in the first blocked frame, before its queued release callback.
+      tester.binding.addPostFrameCallback((_) {
+        tester
+            .widget<FilledButton>(find.widgetWithText(FilledButton, 'Retry'))
+            .onPressed!();
+      });
+      leaseGate.complete(false);
+      await tester.pump();
+      await tester.pump();
+      expect(app.lifecycle.isLoaded, isFalse);
+      expect(tester.binding.sendFramesToEngine, isFalse);
+      expect(
+        tester.widget<MyApp>(find.byType(MyApp)).animateThemeChanges,
+        isFalse,
+      );
+    } finally {
+      await tester.pumpWidget(const SizedBox.shrink());
+      if (!leaseGate.isCompleted) leaseGate.complete(false);
+      if (!storageGate.isCompleted) storageGate.complete();
+      await tester.pumpAndSettle();
+    }
+    expect(tester.binding.sendFramesToEngine, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final outcome in [false, StateError('lease unavailable')]) {
+    testWidgets('bootstrap gate releases the deferred frame for $outcome', (
+      tester,
+    ) async {
+      tester.binding.resetFirstFrameSent();
+      await tester.pumpWidget(
+        AppBootstrap(lease: _FakeLease([outcome]), runtimeFactory: _provider),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('app-instance-gate-title')),
+        findsOneWidget,
+      );
+      expect(tester.binding.sendFramesToEngine, isTrue);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    });
+  }
+
+  testWidgets(
+    'disposing startup releases its frame before a late lease result',
+    (tester) async {
+      tester.binding.resetFirstFrameSent();
+      final gate = Completer<bool>();
+      final lease = _FakeLease([gate.future]);
+      await tester.pumpWidget(
+        AppBootstrap(lease: lease, runtimeFactory: _provider),
+      );
+      expect(tester.binding.sendFramesToEngine, isFalse);
+      await tester.pumpWidget(const SizedBox.shrink());
+      expect(tester.binding.sendFramesToEngine, isTrue);
+      gate.complete(true);
+      await tester.pump();
+      expect(lease.releaseCount, 1);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets(
     'shared launcher initializes the platform before constructing bootstrap',
     (tester) async {
@@ -630,11 +874,23 @@ void main() {
   testWidgets('application theme shell ignores timetable and schedule edits', (
     tester,
   ) async {
-    final app = _provider();
+    final app = _isolatedProvider();
     addTearDown(app.dispose);
     await app.lifecycle.load();
-    await tester.pumpWidget(MyApp(app: app));
+    await tester.pumpWidget(
+      MyApp(
+        app: app,
+        startupDependencies: AppStartupDependencies(
+          notificationServiceFactory: _memoryNotifications,
+          updateService: _Updates(),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
+    final coordinator = tester
+        .element(find.byType(AppHomeScreen))
+        .read<AgendaCoordinator>();
+    await _pumpCompletion(tester, coordinator.start());
     final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
 
     await app.generalCommands.addSchedule(name: 'Another calendar');
@@ -660,6 +916,7 @@ void main() {
       ThemeMode.dark,
     );
     await tester.pumpWidget(const SizedBox.shrink());
+    await _pumpCompletion(tester, coordinator.waitForPendingProjections());
     await tester.pump();
   });
 

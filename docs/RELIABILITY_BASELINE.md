@@ -8,7 +8,7 @@
 
 ## 需要保持的行为
 
-`AppRuntime` 组装领域对象和共享生命周期，界面通过 `AppScope` 订阅对应领域视图。业务命令共用 `AppSession` 与仓储，不另持一份可写快照。启动取得实例租约后创建运行时与偏好；退出等待加载、业务写入静止及偏好刷新，再释放租约。入口见 [运行时](../lib/app_runtime.dart)、[启动流程](../lib/main.dart) 和 [启动回归](../test/widgets/app_bootstrap_test.dart)。
+`AppRuntime` 组装领域对象和共享生命周期，界面通过 `AppScope` 订阅对应领域视图。业务命令共用 `AppSession` 与仓储，不另持一份可写快照。启动取得实例租约后创建运行时与偏好。首个 Flutter 可见帧等待初始存储判定和当前工作区外观确定，首次应用主题直接呈现，后续主题切换沿用正常动效。Windows 窗口随该首帧显示，仍在加载布局偏好时使用已读取的主题呈现加载界面。实例租约阻塞、初始化失败与提前退出都会释放首帧等待，恢复与重试界面可以正常显示。退出等待加载、业务写入静止及偏好刷新，再释放租约。入口见 [运行时](../lib/app_runtime.dart)、[启动流程](../lib/main.dart) 和 [启动回归](../test/widgets/app_bootstrap_test.dart)。
 
 通知锁的显式作用域使用规范化绝对文件路径确定 broker 身份，调用方使用同一路径，不依赖符号链接或硬链接别名。新 isolate 接收路径和 namespace 并安装自己的作用域，重入令牌只在所属锁及有效期间复用。见 [通知运行时锁](../lib/services/agenda_runtime_mutation_lock.dart) 与 [锁作用域回归](../test/services/agenda_runtime_mutation_lock_test.dart)。
 
