@@ -8,8 +8,8 @@ import '../../l10n/app_localizations.dart';
 import '../../models/agent_settings.dart';
 import '../../theme/sked_expressive_theme.dart';
 import '../../theme/sked_menu_style.dart';
-import '../../theme/sked_surface.dart';
 import '../../widgets/sked_menu_item_content.dart';
+import 'agent_effort_slider.dart';
 import 'agent_model_labels.dart';
 import 'agent_ui_delegate.dart';
 
@@ -531,12 +531,12 @@ class _AgentModelPickerState extends State<AgentModelPicker>
                               ],
                             ),
                             if (efforts.length > 1)
-                              SliderTheme(
-                                data: _compactEffortSliderTheme(context),
-                                child: MergeSemantics(
-                                  child: Semantics(
-                                    label: l.agentThinkingEffort,
-                                    child: Slider(
+                              MergeSemantics(
+                                child: Semantics(
+                                  label: l.agentThinkingEffort,
+                                  child: AgentEffortSlider(
+                                    key: ValueKey(model?.id),
+                                    slider: Slider(
                                       key: const ValueKey(
                                         'agent-effort-slider',
                                       ),
@@ -776,29 +776,5 @@ class _AgentModelPickerState extends State<AgentModelPicker>
             ],
           );
     },
-  );
-}
-
-SliderThemeData _compactEffortSliderTheme(BuildContext context) {
-  final colors = Theme.of(context).colorScheme;
-  final track = skedReadableAccent(colors, surface: Colors.white);
-  return SliderTheme.of(context).copyWith(
-    trackHeight: 26,
-    trackShape: const RoundedRectSliderTrackShape(),
-    trackGap: 0,
-    thumbShape: const RoundSliderThumbShape(
-      enabledThumbRadius: 14,
-      elevation: 1,
-      pressedElevation: 2,
-    ),
-    thumbColor: Colors.white,
-    activeTrackColor: track,
-    inactiveTrackColor: colors.onSurface.withValues(alpha: .12),
-    tickMarkShape: const RoundSliderTickMarkShape(tickMarkRadius: 2),
-    activeTickMarkColor: Colors.white.withValues(alpha: .45),
-    inactiveTickMarkColor: colors.onSurface.withValues(alpha: .35),
-    overlayShape: const RoundSliderOverlayShape(overlayRadius: 20),
-    padding: const EdgeInsets.symmetric(vertical: 10),
-    showValueIndicator: ShowValueIndicator.never,
   );
 }

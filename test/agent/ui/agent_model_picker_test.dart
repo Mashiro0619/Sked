@@ -855,6 +855,38 @@ void main() {
     },
   );
 
+  testWidgets('pending save keeps its preview and rejects a second release', (
+    tester,
+  ) async {
+    await initialize(tester);
+    delegate.gate = Completer<void>();
+    addTearDown(() {
+      if (!delegate.gate!.isCompleted) delegate.gate!.complete();
+    });
+    await mountAgentUi(tester, view());
+    await open(tester);
+    final slider = tester.widget<Slider>(find.byType(Slider));
+    slider.onChanged!(1);
+    slider.onChangeEnd!(1);
+    await tester.pumpAndSettle();
+    final pending = tester.widget<Slider>(find.byType(Slider));
+    expect(pending.value, 1);
+    expect(pending.onChanged, isNull);
+    expect(pending.onChangeEnd, isNull);
+    slider.onChangeEnd!(0);
+    expect(delegate.choices, hasLength(1));
+    delegate.gate!.complete();
+    await tester.pumpAndSettle();
+    final saved = tester.widget<Slider>(find.byType(Slider));
+    expect(saved.value, 1);
+    expect(saved.onChanged, isNotNull);
+    expect(
+      repository.selected!.modelSelection!.reasoningEffort,
+      AgentReasoningEffort.high,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('failed save returns slider to saved value and reports failure', (
     tester,
   ) async {
