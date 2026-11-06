@@ -592,27 +592,32 @@ class WorkspaceResourcePanel extends StatelessWidget {
                           excluding: !detailsInteractive,
                           child: ExcludeSemantics(
                             excluding: !detailsInteractive,
-                            child: label(
-                              Padding(
-                                padding: const EdgeInsetsDirectional.only(
-                                  end: 8,
-                                ),
-                                child: IconButtonTheme(
-                                  data: IconButtonThemeData(style: m.iconStyle),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          title,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleSmall,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
+                            child: TooltipVisibility(
+                              visible: detailsInteractive,
+                              child: label(
+                                Padding(
+                                  padding: const EdgeInsetsDirectional.only(
+                                    end: 8,
+                                  ),
+                                  child: IconButtonTheme(
+                                    data: IconButtonThemeData(
+                                      style: m.iconStyle,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            title,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleSmall,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         ),
-                                      ),
-                                      ...headerActions,
-                                    ],
+                                        ...headerActions,
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
@@ -651,21 +656,24 @@ class WorkspaceResourcePanel extends StatelessWidget {
               excluding: !detailsInteractive,
               child: ExcludeSemantics(
                 excluding: !detailsInteractive,
-                child: _ResourcePaneReveal(
-                  width: expandedWidth,
-                  opacity: labelOpacity,
-                  child:
-                      contentBuilder?.call(shrinkWrap) ??
-                      ListView(
-                        key: const PageStorageKey('workspace-resource-list'),
-                        primary: false,
-                        shrinkWrap: shrinkWrap,
-                        physics: shrinkWrap
-                            ? const NeverScrollableScrollPhysics()
-                            : null,
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        children: [...children, ...actions],
-                      ),
+                child: TooltipVisibility(
+                  visible: detailsInteractive,
+                  child: _ResourcePaneReveal(
+                    width: expandedWidth,
+                    opacity: labelOpacity,
+                    child:
+                        contentBuilder?.call(shrinkWrap) ??
+                        ListView(
+                          key: const PageStorageKey('workspace-resource-list'),
+                          primary: false,
+                          shrinkWrap: shrinkWrap,
+                          physics: shrinkWrap
+                              ? const NeverScrollableScrollPhysics()
+                              : null,
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          children: [...children, ...actions],
+                        ),
+                  ),
                 ),
               ),
             ),

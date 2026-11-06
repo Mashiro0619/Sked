@@ -81,6 +81,9 @@ ThemeData buildAppTheme({
     materialTapTargetSize: desktop
         ? MaterialTapTargetSize.shrinkWrap
         : MaterialTapTargetSize.padded,
+    tooltipTheme: const TooltipThemeData(
+      waitDuration: Duration(milliseconds: 600),
+    ),
     extensions: [
       GeneralCalendarColorTheme.fromValues(colorfulExtensionValues),
       shapes,

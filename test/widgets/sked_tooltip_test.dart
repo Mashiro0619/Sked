@@ -37,7 +37,10 @@ Future<void> _hoverTooltips(
     final point = tester.getCenter(finder);
     if (!viewport.contains(point)) continue;
     await mouse.moveTo(point);
-    await tester.pump(const Duration(milliseconds: 400));
+    // Hover can reveal an initially non-hit-testable row action. Build that
+    // state before advancing the tooltip's own hover timer.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 800));
     hovered++;
     expect(
       binding.audit.errors,
@@ -236,6 +239,7 @@ void main() {
                 ),
               );
               await tester.pumpAndSettle();
+              expect(binding.audit.errors, isEmpty);
               await _hoverTooltips(tester, binding, mouse);
             }
           } finally {
@@ -256,6 +260,51 @@ void main() {
       TargetPlatform.android,
     }),
   );
+
+  testWidgets('collapsing resource navigation removes visible tooltips', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1;
+    final semantics = tester.ensureSemantics();
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    final provider = await workspaceProvider(mode: AppMode.general);
+    try {
+      await mouse.addPointer(location: const Offset(1500, 950));
+      await tester.pumpWidget(WorkspaceHarness(provider: provider));
+      await tester.pumpAndSettle();
+      for (final label in ['Activities', 'New category']) {
+        final source = find.byWidgetPredicate(
+          (widget) => widget is Tooltip && widget.message == label,
+        );
+        final textCount = find.text(label).evaluate().length;
+        await mouse.moveTo(tester.getCenter(source));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 600));
+        await tester.pump(const Duration(milliseconds: 200));
+        expect(find.text(label), findsNWidgets(textCount + 1));
+        expect(binding.audit.errors, isEmpty);
+
+        tester.view.physicalSize = const Size(520, 1000);
+        await tester.pump();
+        expect(binding.audit.errors, isEmpty, reason: 'hidden $label');
+        expect(find.text(label), findsNWidgets(textCount));
+        await tester.pumpAndSettle();
+        expect(binding.audit.errors, isEmpty);
+
+        await mouse.moveTo(const Offset(1500, 950));
+        tester.view.physicalSize = const Size(1600, 1000);
+        await tester.pumpAndSettle();
+      }
+    } finally {
+      await mouse.removePointer();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+      provider.dispose();
+      semantics.dispose();
+      tester.view.reset();
+    }
+  }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
 
   testWidgets(
     'pickers and a hiding resource action keep tooltip anchors',
