@@ -496,6 +496,9 @@ class _AgentConversationHostState extends State<AgentConversationHost> {
         return result.saved;
       },
       readDatasetGeneration: () => application.mutations.generation,
+      createReferenceSearch: application.createReferenceSearch,
+      validateReference: application.validateComposerReference,
+      updateComposerReferences: application.updateComposerReferences,
       recoverConversations: application.recoverConversations,
       binaryAttachments: application.binaryAttachments,
       history: application.history,

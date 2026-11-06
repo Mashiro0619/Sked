@@ -129,6 +129,113 @@ void main() {
     );
   });
 
+  test(
+    'resource namespace survives reopen without allocating receipts',
+    () async {
+      final generation = coordinator.generation;
+      expect(session.committedData.applicationLedger, isNull);
+      await coordinator.ensurePersistentGeneration(
+        expectedGeneration: generation,
+        validateOwner: () {},
+      );
+      expect(storage.data.applicationLedger!.generation, generation);
+      expect(storage.data.applicationLedger!.receipts, isEmpty);
+      expect(storage.data.applicationLedger!.nextSequence, 1);
+      coordinator.invalidate();
+      expect(coordinator.generation, generation);
+      expect(newCoordinator(await newSession()).generation, generation);
+      await coordinator.ensurePersistentGeneration(
+        expectedGeneration: generation,
+        validateOwner: () {},
+      );
+      expect(storage.saves, 1);
+    },
+  );
+
+  test('namespace initialization shares the pending write queue', () async {
+    final entered = Completer<void>();
+    final release = Completer<void>();
+    storage.gate = () {
+      if (!entered.isCompleted) entered.complete();
+      return release.future;
+    };
+    final generation = coordinator.generation;
+    final first = coordinator.ensurePersistentGeneration(
+      expectedGeneration: generation,
+      validateOwner: () {},
+    );
+    await entered.future;
+    final second = coordinator.ensurePersistentGeneration(
+      expectedGeneration: generation,
+      validateOwner: () {},
+    );
+    var drained = false;
+    final draining = coordinator.waitForPendingWrites().then(
+      (_) => drained = true,
+    );
+    expect(drained, isFalse);
+    release.complete();
+    await Future.wait([first, second, draining]);
+    expect(storage.saves, 1);
+  });
+
+  test(
+    'namespace rejects data boundary changes while settling editors',
+    () async {
+      final generation = coordinator.generation;
+      settle = () async {
+        sessionRevision++;
+        coordinator.invalidate();
+      };
+      await expectLater(
+        coordinator.ensurePersistentGeneration(
+          expectedGeneration: generation,
+          validateOwner: () {},
+        ),
+        throwsA(problem(OperationErrorCode.expired)),
+      );
+      expect(storage.saves, 0);
+      expect(session.committedData.applicationLedger, isNull);
+    },
+  );
+
+  test(
+    'namespace publication checks its owner after asynchronous settling',
+    () async {
+      var available = true;
+      settle = () async => available = false;
+      await expectLater(
+        coordinator.ensurePersistentGeneration(
+          expectedGeneration: coordinator.generation,
+          validateOwner: () {
+            if (!available) {
+              throw const OperationProblem(
+                OperationErrorCode.expired,
+                'Owner changed.',
+              );
+            }
+          },
+        ),
+        throwsA(problem(OperationErrorCode.expired)),
+      );
+      expect(storage.saves, 0);
+    },
+  );
+
+  test('namespace save failure leaves its durable generation absent', () async {
+    storage.error = StateError('Synthetic write failure');
+    await expectLater(
+      coordinator.ensurePersistentGeneration(
+        expectedGeneration: coordinator.generation,
+        validateOwner: () {},
+      ),
+      throwsA(problem(OperationErrorCode.storageFailure)),
+    );
+    expect(storage.data.applicationLedger, isNull);
+    expect(session.committedData.applicationLedger, isNull);
+    await coordinator.waitForPendingWrites();
+  });
+
   test('a retry cannot change the recurring instance scope', () async {
     final command = createEvent();
     final plan = coordinator.prepare(scope: scope, resources: [command]);

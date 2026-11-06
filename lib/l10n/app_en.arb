@@ -3074,5 +3074,21 @@
         "type": "int"
       }
     }
-  }
+  },
+  "agentReferenceSearch": "Search references",
+  "@agentReferenceSearch": {},
+  "agentReferenceEmpty": "No matching references",
+  "@agentReferenceEmpty": {},
+  "agentReferenceLoading": "Loading references…",
+  "@agentReferenceLoading": {},
+  "agentReferenceRemove": "Remove reference",
+  "@agentReferenceRemove": {},
+  "agentReferenceFailed": "Could not complete this reference action. Try again.",
+  "@agentReferenceFailed": {},
+  "agentReferenceEvents": "Events",
+  "@agentReferenceEvents": {},
+  "agentReferenceFiles": "Attached files",
+  "@agentReferenceFiles": {},
+  "agentReferenceInvalid": "The selected references have changed or are unavailable. Remove or select them again, then retry.",
+  "@agentReferenceInvalid": {}
 }

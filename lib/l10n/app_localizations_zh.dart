@@ -4198,6 +4198,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String agentBudgetSummaryMissingUsage(int count) {
     return '另有 $count 次请求的用量未知。';
   }
+
+  @override
+  String get agentReferenceSearch => '搜索引用';
+
+  @override
+  String get agentReferenceEmpty => '没有匹配的引用';
+
+  @override
+  String get agentReferenceLoading => '正在加载引用…';
+
+  @override
+  String get agentReferenceRemove => '移除引用';
+
+  @override
+  String get agentReferenceFailed => '引用操作未完成，请重试。';
+
+  @override
+  String get agentReferenceEvents => '日程';
+
+  @override
+  String get agentReferenceFiles => '已附文件';
+
+  @override
+  String get agentReferenceInvalid => '所选引用已变更或不可用，请移除或重新选择后重试。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -8396,4 +8420,28 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String agentBudgetSummaryMissingUsage(int count) {
     return '另有 $count 次請求的用量未知。';
   }
+
+  @override
+  String get agentReferenceSearch => '搜尋參照';
+
+  @override
+  String get agentReferenceEmpty => '沒有符合的參照';
+
+  @override
+  String get agentReferenceLoading => '正在載入參照…';
+
+  @override
+  String get agentReferenceRemove => '移除參照';
+
+  @override
+  String get agentReferenceFailed => '參照操作未完成，請重試。';
+
+  @override
+  String get agentReferenceEvents => '行程';
+
+  @override
+  String get agentReferenceFiles => '已附檔案';
+
+  @override
+  String get agentReferenceInvalid => '所選參照已變更或無法使用，請移除或重新選取後重試。';
 }

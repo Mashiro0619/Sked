@@ -146,6 +146,10 @@ Map<String, Object?> buildConversationTaskCheckpoint(
         users.add({
           ...source(message, index),
           'text': message.text,
+          if (message.contextReferences.isNotEmpty)
+            'contextReferences': message.contextReferences
+                .map((reference) => reference.toJson())
+                .toList(),
           if (message.attachmentIds.isNotEmpty) ...{
             'attachmentIds': message.attachmentIds,
             'attachmentsRequireReattachment': true,
@@ -249,6 +253,8 @@ Map<String, Object?> buildConversationTaskCheckpoint(
           'source',
           'questionId',
           'status',
+          'contextChanged',
+          'contextNote',
         ])
           if (value.containsKey(key)) key: value[key],
         'truncated': true,
@@ -373,6 +379,10 @@ Map<String, Object?>? _clarification(
       'status': result['status'],
       'questions': originalQuestions,
       'answers': answers.map((answer) => answer.toJson()).toList(),
+      if (result['contextChanged'] == true) ...{
+        'contextChanged': true,
+        'contextNote': 'These recorded answers belong to earlier references. Ask a new question when the current references require clarification.',
+      },
     };
   } on FormatException {
     return null;

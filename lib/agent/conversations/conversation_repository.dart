@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../application/operation_contracts.dart';
 import '../../models/agent_settings.dart';
+import '../references/agent_composer_reference.dart';
 import 'conversation_models.dart';
 import 'conversation_storage.dart';
 
@@ -289,6 +290,7 @@ class ConversationRepository extends ChangeNotifier {
               item.pendingQuestion == null &&
               item.draft.isEmpty &&
               item.draftAttachmentIds.isEmpty &&
+              item.draftReferences.isEmpty &&
               item.updatedAt.isBefore(cutoff) &&
               canRemove(item.id),
         )
@@ -366,6 +368,27 @@ class ConversationRepository extends ChangeNotifier {
     );
     return next;
   });
+
+  Future<AgentConversation> updateDraftReferences(
+    String id,
+    Iterable<AgentComposerReference> references, {
+    void Function(AgentConversation current)? validate,
+  }) async {
+    final frozen = AgentComposerReference.validatedList(references);
+    return update(id, (current) {
+      validate?.call(current);
+      final attachmentIds = <String>{
+        ...current.draftAttachmentIds,
+        for (final reference in frozen)
+          if (reference.kind == AgentComposerReferenceKind.attachment)
+            reference.attachmentId!,
+      };
+      return current.copyWith(
+        draftReferences: frozen,
+        draftAttachmentIds: attachmentIds,
+      );
+    });
+  }
 
   /// Callers cancel network/operation scopes as soon as deletion is requested.
   /// The tombstone and removal of all owned content are one persisted update.

@@ -3006,5 +3006,21 @@
         "type": "int"
       }
     }
-  }
+  },
+  "agentReferenceSearch": "搜尋參照",
+  "@agentReferenceSearch": {},
+  "agentReferenceEmpty": "沒有符合的參照",
+  "@agentReferenceEmpty": {},
+  "agentReferenceLoading": "正在載入參照…",
+  "@agentReferenceLoading": {},
+  "agentReferenceRemove": "移除參照",
+  "@agentReferenceRemove": {},
+  "agentReferenceFailed": "參照操作未完成，請重試。",
+  "@agentReferenceFailed": {},
+  "agentReferenceEvents": "行程",
+  "@agentReferenceEvents": {},
+  "agentReferenceFiles": "已附檔案",
+  "@agentReferenceFiles": {},
+  "agentReferenceInvalid": "所選參照已變更或無法使用，請移除或重新選取後重試。",
+  "@agentReferenceInvalid": {}
 }

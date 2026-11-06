@@ -1,17 +1,26 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
+import 'package:file_selector/file_selector.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:sked/agent/agent_application.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/history/conversation_history.dart';
 import 'package:sked/agent/history/conversation_history_preflight.dart';
+import 'package:sked/agent/interactions/agent_question.dart';
 import 'package:sked/agent/knowledge/knowledge_repository.dart';
 import 'package:sked/agent/provider/provider.dart';
+import 'package:sked/agent/references/agent_composer_reference.dart';
+import 'package:sked/agent/skills/shared_skill_loader.dart';
+import 'package:sked/agent/ui/agent_ui_delegate.dart';
 import 'package:sked/agent/runtime/agent_runtime_controller.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/application/operation_contracts.dart';
+import 'package:sked/application/resource_contracts.dart';
 import 'package:sked/models/agent_settings.dart';
 import 'package:sked/screens/agent_page.dart';
 
@@ -253,6 +262,388 @@ void main() {
     expect(await chats.pendingHistoryBatch(), isNull);
     expect(app.agent.conversations.canWrite, isTrue);
   });
+
+  test('redo inherits resource, skill and file references and clears unrelated draft bindings', () async {
+    final conversation = await ready();
+    final bytes = Uint8List.fromList([137, 80, 78, 71]);
+    await app.agent.binaryAttachments.attach(
+      conversation.id,
+      XFile.fromData(bytes, path: 'source.png', name: 'source.png'),
+      canModify: () => true,
+    );
+    final attachment = app.agent.conversations
+        .find(conversation.id)!
+        .attachments
+        .single;
+    final table = app.session.committedData.studentMode.timetables.first;
+    final skills = await SharedSkillLoader(
+      loadString: rootBundle.loadString,
+      registeredTools: app.agent.tools.registeredNames,
+    ).catalog();
+    final references = [
+      AgentComposerReference.resource(
+        ref: ResourceRef(kind: ResourceKind.timetable, id: table.id),
+        datasetGeneration: app.agent.mutations.generation,
+        label: table.config.name,
+      ),
+      AgentComposerReference.skill(
+        skill: skills
+            .firstWhere((entry) => entry.status == SkillStatus.available)
+            .skill,
+      ),
+      AgentComposerReference.attachment(
+        attachment: attachment,
+        conversationId: conversation.id,
+      ),
+    ];
+    await app.agent.updateComposerReferences(conversation.id, references);
+    await app.agent.runtime.send(
+      conversation.id,
+      'Original request with a file',
+    );
+    final before = app.agent.conversations.find(conversation.id)!;
+    final request = before.messages.first;
+    expect(before.runs.single.tools, isEmpty);
+    expect(app.session.committedData.applicationLedger!.receipts, isEmpty);
+    await app.agent.conversations.update(
+      conversation.id,
+      (current) => current.copyWith(
+        draftReferences: [
+          AgentComposerReference.resource(
+            ref: const ResourceRef(
+              kind: ResourceKind.timetable,
+              id: 'unsent-target',
+            ),
+            datasetGeneration: 'unsent-draft-generation',
+            label: 'Unsent draft target',
+          ),
+        ],
+      ),
+    );
+
+    provider.respond = (_) => _done('Edited request completed');
+    await app.agent.history.editAndRedo(
+      conversation.id,
+      request.id,
+      'Edited request with the same inputs',
+    );
+    final after = app.agent.conversations.find(conversation.id)!;
+    expect(
+      app.agent.mutations.generation,
+      references.first.datasetGeneration,
+      reason: 'A history barrier without a data replacement must preserve the dataset identity.',
+    );
+    expect(after.pendingRedo, isNull, reason: after.pendingRedo?.lastError);
+    expect(after.draftReferences, isEmpty);
+    expect(
+      after.messages.first.contextReferences
+          .map((reference) => reference.toJson())
+          .toList(),
+      references.map((reference) => reference.toJson()).toList(),
+    );
+    expect(after.messages.first.attachmentIds, [attachment.id]);
+    expect(
+      after.historyVersions.single.messages.first.contextReferences
+          .map((reference) => reference.toJson())
+          .toList(),
+      references.map((reference) => reference.toJson()).toList(),
+    );
+    expect(
+      provider.requests.last.messages
+          .singleWhere((message) => message.role == ProviderRole.user)
+          .attachments
+          .single
+          .id,
+      attachment.id,
+    );
+    expect(await app.agent.attachmentStore.readBytes(attachment), bytes);
+  });
+
+  test('pending redo references can be replaced and removed before continuing without a second inverse', () async {
+    final conversation = await ready();
+    final table = app.session.committedData.studentMode.timetables.first;
+    await app.agent.updateComposerReferences(conversation.id, [
+      AgentComposerReference.resource(
+        ref: ResourceRef(kind: ResourceKind.timetable, id: table.id),
+        datasetGeneration: app.agent.mutations.generation,
+        label: table.config.name,
+      ),
+    ]);
+    createCalendarScript();
+    await app.agent.runtime.send(conversation.id, 'Create a calendar');
+    final originalRequest = app.agent.conversations
+        .find(conversation.id)!
+        .messages
+        .first;
+    await app.agent.binaryAttachments.attach(
+      conversation.id,
+      XFile.fromData(
+        Uint8List.fromList([137, 80, 78, 71]),
+        path: 'later.png',
+        name: 'later.png',
+      ),
+      canModify: () => true,
+    );
+    provider.respond = (_) => _done('The later file is recorded');
+    await app.agent.runtime.send(conversation.id, 'Keep this later file');
+    final original = app.agent.conversations.find(conversation.id)!;
+    final attachment = original.attachments.single;
+    provider.respond = (_) =>
+        throw const ProviderException(ProviderError.incompleteResponse);
+    await app.agent.history.editAndRedo(
+      conversation.id,
+      originalRequest.id,
+      'Explain instead',
+    );
+    final interrupted = app.agent.conversations.find(conversation.id)!;
+    final batch = interrupted.pendingRedo!;
+    final published = app.agent.history.pendingRedoRequest(conversation.id)!;
+    final requestsBeforeRepair = provider.requests.length;
+    final expectedBatch = jsonEncode(batch.toJson());
+    expect(batch.phase, ConversationRedoPhase.running);
+    expect(
+      app.session.committedData.applicationLedger!.receipts.where(
+        (receipt) => receipt.result['undoBatchId'] != null,
+      ),
+      hasLength(1),
+    );
+
+    await expectLater(
+      app.agent.history.replacePendingReferences(
+        conversation.id,
+        const [],
+        validate: (_) => throw StateError('The picker owner changed'),
+      ),
+      throwsStateError,
+    );
+    expect(
+      app.agent.history.pendingRedoRequest(conversation.id)!.toJson(),
+      published.toJson(),
+    );
+
+    final attached = await app.agent.history.replacePendingReferences(
+      conversation.id,
+      [
+        AgentComposerReference.attachment(
+          attachment: attachment,
+          conversationId: conversation.id,
+        ),
+      ],
+      validate: (current) {
+        expect(current.pendingRedo!.id, batch.id);
+        expect(
+          app.agent.history.pendingRedoRequest(conversation.id)!.id,
+          published.id,
+        );
+      },
+    );
+    expect(jsonEncode(attached.pendingRedo!.toJson()), expectedBatch);
+    final rebound = app.agent.history.pendingRedoRequest(conversation.id)!;
+    expect(rebound.id, published.id);
+    expect(rebound.text, 'Explain instead');
+    expect(rebound.attachmentIds, [attachment.id]);
+    expect(rebound.attachmentDelivery, AttachmentDelivery.local);
+    expect(rebound.contextReferences.single.attachmentId, attachment.id);
+    await app.agent.history.replacePendingReferences(conversation.id, const []);
+    expect(
+      app.agent.history.pendingRedoRequest(conversation.id)!.contextReferences,
+      isEmpty,
+    );
+    expect(
+      app.agent.history.pendingRedoRequest(conversation.id)!.attachmentIds,
+      [attachment.id],
+    );
+    expect(provider.requests.length, requestsBeforeRepair);
+
+    final entered = Completer<void>();
+    final response = Completer<ProviderResponse>();
+    provider.respond = (_) {
+      entered.complete();
+      return response.future;
+    };
+    final continuation = app.agent.history.continueRedo(conversation.id);
+    await entered.future.timeout(const Duration(seconds: 5));
+    await expectLater(
+      app.agent.history.replacePendingReferences(conversation.id, const []),
+      throwsA(
+        isA<ConversationHistoryException>().having(
+          (error) => error.code,
+          'code',
+          ConversationHistoryError.busy,
+        ),
+      ),
+    );
+    response.complete(_done('Recovered without repeating undo'));
+    await continuation;
+    final completed = app.agent.conversations.find(conversation.id)!;
+    expect(completed.pendingRedo, isNull);
+    expect(completed.historyVersions, hasLength(1));
+    expect(
+      completed.messages.where(
+        (message) => message.role == ConversationRole.user,
+      ),
+      hasLength(1),
+    );
+    expect(completed.messages.first.id, published.id);
+    expect(completed.messages.first.attachmentIds, [attachment.id]);
+    expect(
+      app.session.committedData.applicationLedger!.receipts.where(
+        (receipt) => receipt.result['undoBatchId'] != null,
+      ),
+      hasLength(1),
+    );
+    expect(provider.requests.length, requestsBeforeRepair + 1);
+    expect(app.agent.history.pendingRedoRequest(conversation.id), isNull);
+  });
+
+  for (final answerSaved in [false, true]) {
+    test(
+      'rebinding a redo ${answerSaved ? 'preserves the old answer' : 'invalidates the old unanswered question'} without displaying it again',
+      () async {
+        final conversation = await ready();
+        final table = app.session.committedData.studentMode.timetables.first;
+        await app.agent.updateComposerReferences(conversation.id, [
+          AgentComposerReference.resource(
+            ref: ResourceRef(kind: ResourceKind.timetable, id: table.id),
+            datasetGeneration: app.agent.mutations.generation,
+            label: table.config.name,
+          ),
+        ]);
+        await app.agent.runtime.send(conversation.id, 'Original request');
+        final initial = app.agent.conversations.find(conversation.id)!;
+        final original = initial.messages.first;
+        expect(initial.runs.single.tools, isEmpty);
+        expect(app.session.committedData.applicationLedger!.receipts, isEmpty);
+        provider.respond = (_) => _call('ask_user', {
+          'questions': [
+            {
+              'id': 'confirm',
+              'question': 'Which date applies to this timetable?',
+            },
+          ],
+        });
+        final shown = Completer<void>();
+        void observeQuestion() {
+          if (shown.isCompleted) return;
+          final state = app.agent.runtime.state.value.runFor(conversation.id);
+          if (state.phase == AgentUiPhase.waitingUser) {
+            shown.complete();
+          } else if (state.phase == AgentUiPhase.failed) {
+            shown.completeError(
+              StateError(
+                'Redo failed before the question with ${state.errorMessage}',
+              ),
+            );
+          }
+        }
+
+        app.agent.runtime.state.addListener(observeQuestion);
+        final editing = app.agent.history.editAndRedo(
+          conversation.id,
+          original.id,
+          'Ask before choosing a date',
+        );
+        try {
+          await shown.future.timeout(const Duration(seconds: 5));
+        } finally {
+          app.agent.runtime.state.removeListener(observeQuestion);
+        }
+        final pending = app.agent.conversations
+            .find(conversation.id)!
+            .pendingQuestion!;
+        expect(
+          pending.contextReferenceDigest,
+          matches(RegExp(r'^[a-f0-9]{64}$')),
+        );
+        final answers = [
+          AgentQuestionAnswer(questionId: 'confirm', text: '2026-11-09'),
+        ];
+        if (answerSaved) {
+          var stopped = false;
+          chats.didSave = (archive) {
+            final saved = archive.conversations
+                .singleWhere((item) => item.id == conversation.id)
+                .pendingQuestion;
+            if (!stopped && saved?.answers != null) {
+              stopped = true;
+              unawaited(app.agent.runtime.stop(conversation.id));
+            }
+          };
+          await app.agent.runtime.answerQuestion(
+            conversation.id,
+            pending.id,
+            answers,
+          );
+          chats.didSave = null;
+          expect(stopped, isTrue);
+        } else {
+          await app.agent.runtime.stop(conversation.id);
+        }
+        await editing;
+        final interrupted = app.agent.conversations.find(conversation.id)!;
+        final batchId = interrupted.pendingRedo!.id;
+        expect(interrupted.pendingQuestion!.isResolved, answerSaved);
+        await app.agent.history.replacePendingReferences(
+          conversation.id,
+          const [],
+        );
+        expect(
+          app.agent.conversations.find(conversation.id)!.pendingRedo!.id,
+          batchId,
+        );
+
+        var redisplayed = 0;
+        void observeResume() {
+          if (app.agent.runtime.state.value.runFor(conversation.id).phase ==
+              AgentUiPhase.waitingUser) {
+            redisplayed++;
+          }
+        }
+
+        app.agent.runtime.state.addListener(observeResume);
+        provider.respond = (_) =>
+            _done('Continue with the updated reference selection');
+        try {
+          await app.agent.history
+              .continueRedo(conversation.id)
+              .timeout(const Duration(seconds: 5));
+        } finally {
+          app.agent.runtime.state.removeListener(observeResume);
+        }
+        expect(redisplayed, 0);
+        final result = jsonDecode(
+          provider.requests.last.messages
+              .singleWhere(
+                (message) =>
+                    message.role == ProviderRole.tool &&
+                    message.toolCallId == pending.toolCallId,
+              )
+              .text,
+        ) as Map<String, dynamic>;
+        if (answerSaved) {
+          expect(result['status'], 'answered');
+          expect(result['contextChanged'], isTrue);
+          expect(
+            result['answers'],
+            answers.map((answer) => answer.toJson()).toList(),
+          );
+        } else {
+          expect(result['status'], 'not_executed');
+          expect(result['error'], {'code': 'question_context_changed'});
+        }
+        final completed = app.agent.conversations.find(conversation.id)!;
+        expect(completed.pendingQuestion, isNull);
+        expect(completed.pendingRedo, isNull);
+        expect(completed.historyVersions, hasLength(1));
+        expect(
+          completed.messages.where(
+            (message) => message.role == ConversationRole.user,
+          ),
+          hasLength(1),
+        );
+      },
+    );
+  }
 
   test(
     'a lost main progress write holds gates; continuing reconciles once',

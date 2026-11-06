@@ -4495,4 +4495,30 @@ class AppLocalizationsFi extends AppLocalizations {
   String agentBudgetSummaryMissingUsage(int count) {
     return 'Usage is unreported for $count requests.';
   }
+
+  @override
+  String get agentReferenceSearch => 'Search references';
+
+  @override
+  String get agentReferenceEmpty => 'No matching references';
+
+  @override
+  String get agentReferenceLoading => 'Loading references…';
+
+  @override
+  String get agentReferenceRemove => 'Remove reference';
+
+  @override
+  String get agentReferenceFailed =>
+      'Could not complete this reference action. Try again.';
+
+  @override
+  String get agentReferenceEvents => 'Events';
+
+  @override
+  String get agentReferenceFiles => 'Attached files';
+
+  @override
+  String get agentReferenceInvalid =>
+      'The selected references have changed or are unavailable. Remove or select them again, then retry.';
 }

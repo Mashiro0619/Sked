@@ -59,6 +59,44 @@ void main() {
   });
 
   test(
+    'optional reference digests survive resolution and reject malformed values',
+    () {
+      final pending = AgentQuestionRequest.fromJson({
+        ...request().toJson(),
+        'contextReferenceDigest': 'a' * 64,
+      });
+      final answered = pending.withAnswers([
+        AgentQuestionAnswer(
+          questionId: 'target',
+          text: 'Use another timetable',
+        ),
+      ]);
+      final dismissed = pending.withDismissed();
+      for (final value in [pending, answered, dismissed]) {
+        expect(value.contextReferenceDigest, 'a' * 64);
+        expect(
+          AgentQuestionRequest.fromJson(value.toJson()).contextReferenceDigest,
+          'a' * 64,
+        );
+      }
+      expect(
+        AgentQuestionRequest.fromJson(request().toJson())
+            .contextReferenceDigest,
+        isNull,
+      );
+      for (final invalid in ['', 'a' * 63, 'a' * 65, 'A' * 64, 'z' * 64, 1]) {
+        expect(
+          () => AgentQuestionRequest.fromJson({
+            ...request().toJson(),
+            'contextReferenceDigest': invalid,
+          }),
+          throwsFormatException,
+        );
+      }
+    },
+  );
+
+  test(
     'requests and resolved answers round trip with immutable collections',
     () {
       final options = [AgentQuestionOption(id: 'one', label: 'First')];

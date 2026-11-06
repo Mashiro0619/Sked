@@ -141,6 +141,7 @@ class AgentQuestionRequest {
     required this.createdAt,
     required this.connectionFingerprint,
     this.datasetGeneration,
+    this.contextReferenceDigest,
     required Iterable<AgentQuestionPrompt> questions,
     Iterable<AgentQuestionAnswer>? answers,
     this.dismissed = false,
@@ -153,6 +154,10 @@ class AgentQuestionRequest {
     _text(connectionFingerprint, 'request.connectionFingerprint', 256);
     if (datasetGeneration != null) {
       _text(datasetGeneration, 'request.datasetGeneration', 256);
+    }
+    if (contextReferenceDigest != null &&
+        !RegExp(r'^[a-f0-9]{64}$').hasMatch(contextReferenceDigest!)) {
+      throw const FormatException('Invalid question context reference digest.');
     }
     _validateQuestions(this.questions);
     if (dismissed && this.answers != null) {
@@ -170,6 +175,7 @@ class AgentQuestionRequest {
   final DateTime createdAt;
   final String connectionFingerprint;
   final String? datasetGeneration;
+  final String? contextReferenceDigest;
   final List<AgentQuestionPrompt> questions;
   final List<AgentQuestionAnswer>? answers;
   final bool dismissed;
@@ -186,6 +192,7 @@ class AgentQuestionRequest {
       createdAt: createdAt,
       connectionFingerprint: connectionFingerprint,
       datasetGeneration: datasetGeneration,
+      contextReferenceDigest: contextReferenceDigest,
       questions: questions,
       answers: answers,
     );
@@ -201,6 +208,7 @@ class AgentQuestionRequest {
       createdAt: createdAt,
       connectionFingerprint: connectionFingerprint,
       datasetGeneration: datasetGeneration,
+      contextReferenceDigest: contextReferenceDigest,
       questions: questions,
       dismissed: true,
     );
@@ -220,6 +228,8 @@ class AgentQuestionRequest {
     'createdAt': createdAt.toUtc().toIso8601String(),
     'connectionFingerprint': connectionFingerprint,
     if (datasetGeneration != null) 'datasetGeneration': datasetGeneration,
+    if (contextReferenceDigest != null)
+      'contextReferenceDigest': contextReferenceDigest,
     'questions': questions.map((question) => question.toJson()).toList(),
     if (answers != null)
       'answers': answers!.map((answer) => answer.toJson()).toList(),
@@ -235,6 +245,7 @@ class AgentQuestionRequest {
       'createdAt',
       'connectionFingerprint',
       'datasetGeneration',
+      'contextReferenceDigest',
       'questions',
       'answers',
       'dismissed',
@@ -263,6 +274,13 @@ class AgentQuestionRequest {
       datasetGeneration: json['datasetGeneration'] == null
           ? null
           : _text(json['datasetGeneration'], 'request.datasetGeneration', 256),
+      contextReferenceDigest: json['contextReferenceDigest'] == null
+          ? null
+          : _text(
+              json['contextReferenceDigest'],
+              'request.contextReferenceDigest',
+              64,
+            ),
       questions: _list(
         json['questions'],
         'questions',

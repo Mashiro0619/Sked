@@ -36,11 +36,16 @@ import '../conversations/conversation_repository.dart';
 import '../history/conversation_history.dart';
 import '../history/conversation_history_service.dart';
 import '../imports/conversation_file_attachments.dart';
+import '../references/agent_composer_reference.dart';
+import '../references/agent_composer_reference_search.dart';
 import 'agent_ui_delegate.dart';
 import 'agent_operation_card.dart';
 import 'agent_plan_preview.dart';
 import 'agent_question_view.dart';
 import 'agent_budget_summary.dart';
+import 'agent_reference_picker.dart';
+
+part 'agent_composer_references.dart';
 
 // Failed saves remain available when a panel is closed and reopened. The
 // buffer follows the repository lifetime and is never shared across archives.
@@ -97,6 +102,9 @@ class AgentConversationView extends StatefulWidget {
     this.pickBinaryAttachment = ConversationAttachments.pickFile,
     this.history,
     this.onRegenerateReply,
+    this.createReferenceSearch,
+    this.validateReference,
+    this.updateComposerReferences,
   });
   final ConversationRepository repository;
   final AgentUiDelegate delegate;
@@ -129,12 +137,27 @@ class AgentConversationView extends StatefulWidget {
   final ConversationHistoryService? history;
   final Future<void> Function(String conversationId, String messageId)?
   onRegenerateReply;
+  final Future<AgentComposerReferenceSearch> Function(String conversationId)?
+  createReferenceSearch;
+  final Future<AgentComposerReference> Function(
+    String conversationId,
+    AgentComposerReference reference,
+  )?
+  validateReference;
+  final Future<void> Function(
+    String conversationId,
+    List<AgentComposerReference> references, {
+    void Function(AgentConversation current)? validate,
+  })?
+  updateComposerReferences;
 
   @override
   State<AgentConversationView> createState() => _AgentConversationViewState();
 }
 
 class _AgentConversationViewState extends State<AgentConversationView> {
+  void _updateReferenceState(VoidCallback update) => setState(update);
+
   bool get _uiActive =>
       mounted &&
       widget.active &&
@@ -149,6 +172,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
 
   void _invalidateUiSource() {
     _uiGeneration++;
+    _invalidateReferences();
     _retireHistory();
     _messageHistorySession?.invalidate();
   }
@@ -176,6 +200,9 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   // Reparent the editor without replacing its platform text-input client.
   final _composerField = GlobalKey();
   final _composerFocus = FocusNode();
+  _AgentReferenceSession? _referenceSession;
+  TextEditingValue? _dismissedReferenceValue;
+  bool _referenceRefreshScheduled = false;
   late _AgentDraftBuffer _draftBuffer = _draftBuffers[_repository] ??=
       _AgentDraftBuffer();
   Map<String, String> get _drafts => _draftBuffer.drafts;
@@ -311,6 +338,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
 
   bool _hasInput(AgentConversation conversation) =>
       _composer.text.trim().isNotEmpty ||
+      conversation.draftReferences.isNotEmpty ||
       conversation.draftAttachmentIds.isNotEmpty;
 
   bool _canModifyAttachments(String id) {
@@ -406,6 +434,8 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   @override
   void initState() {
     super.initState();
+    _composer.addListener(_referenceInputChanged);
+    _composerFocus.addListener(_referenceInputChanged);
     _repository.addListener(_changed);
     widget.delegate.state.addListener(_changed);
     widget.binaryAttachments?.addListener(_changed);
@@ -421,11 +451,15 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         TickerMode.valuesOf(context).enabled &&
         FocusScope.of(context).canRequestFocus &&
         (ModalRoute.of(context)?.isCurrent ?? true);
-    if (_hostActive && !active) _configurationGeneration++;
+    if (_hostActive && !active) {
+      _configurationGeneration++;
+      _invalidateReferences();
+    }
     final becameActive = active && !_hostActive;
     _hostActive = active;
     if (becameActive) _restoreReading(_repository.selectedId);
     _scheduleInitialDraft();
+    _scheduleReferenceRefresh();
   }
 
   @override
@@ -465,6 +499,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     }
     _messageHistorySession?.check();
     _scheduleInitialDraft();
+    _scheduleReferenceRefresh();
   }
 
   @override
@@ -473,6 +508,8 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     _repository.removeListener(_changed);
     widget.delegate.state.removeListener(_changed);
     widget.binaryAttachments?.removeListener(_changed);
+    _composer.removeListener(_referenceInputChanged);
+    _composerFocus.removeListener(_referenceInputChanged);
     _composer.dispose();
     _composerFocus.dispose();
     super.dispose();
@@ -550,6 +587,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     }
     setState(_synchronizeDraft);
     _scheduleInitialDraft();
+    _scheduleReferenceRefresh();
     if (id != null && revealReply != null) {
       _revealReply(id, revealReply);
     } else if (switched) {
@@ -803,7 +841,11 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final uiGeneration = _uiGeneration;
     final delegate = widget.delegate;
     final text = _composer.text;
-    if (text.trim().isEmpty && conversation.draftAttachmentIds.isEmpty) return;
+    if (text.trim().isEmpty &&
+        conversation.draftAttachmentIds.isEmpty &&
+        conversation.draftReferences.isEmpty) {
+      return;
+    }
     _jumpToLatest(conversation.id);
     await _perform('send-${conversation.id}', () async {
       await _flushDraft(conversation.id);
@@ -823,7 +865,11 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final uiGeneration = _uiGeneration;
     final delegate = widget.delegate;
     final text = _composer.text;
-    if (text.trim().isEmpty && conversation.draftAttachmentIds.isEmpty) return;
+    if (text.trim().isEmpty &&
+        conversation.draftAttachmentIds.isEmpty &&
+        conversation.draftReferences.isEmpty) {
+      return;
+    }
     await _perform('queue-${conversation.id}', () async {
       await _flushDraft(conversation.id);
       if (!_uiSessionCurrent(uiGeneration, conversation.id) ||
@@ -1015,7 +1061,8 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                         children: [
                           for (final message in version.messages)
                             if (message.text.isNotEmpty ||
-                                message.attachmentIds.isNotEmpty)
+                                message.attachmentIds.isNotEmpty ||
+                                message.contextReferences.isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.all(12),
                                 child: Column(
@@ -1024,6 +1071,16 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                                   children: [
                                     if (message.text.isNotEmpty)
                                       AgentSelectableText(message.text),
+                                    if (message.contextReferences.isNotEmpty)
+                                      _readonlyReferences(
+                                        message.contextReferences,
+                                        key: ValueKey((
+                                          'history-references',
+                                          conversation.id,
+                                          version.id,
+                                          message.id,
+                                        )),
+                                      ),
                                     if (message.attachmentIds.isNotEmpty)
                                       if (attachments != null)
                                         AgentAttachmentList(
@@ -2262,6 +2319,15 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (message.contextReferences.isNotEmpty)
+            _readonlyReferences(
+              message.contextReferences,
+              key: ValueKey((
+                'message-references',
+                conversation.id,
+                message.id,
+              )),
+            ),
           if (message.attachmentIds.isNotEmpty &&
               widget.binaryAttachments != null)
             _messageAttachments(conversation, message),
@@ -2396,6 +2462,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     if (code == 'provider.attachmentMissing') return l.agentFileMissing;
     if (code == 'provider.attachmentChanged') return l.agentFileChanged;
     if (code == 'connectionChanged') return l.agentConnectionChanged;
+    if (code == 'invalidReference') return l.agentReferenceInvalid;
     if (code == 'disabled' || code == 'operation.disabled') {
       return l.agentDisabled;
     }
@@ -2927,6 +2994,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                           ),
                         ),
                       ),
+                    ..._referenceWidgets(conversation),
                     KeyedSubtree(
                       key: _composerField,
                       child: TextField(

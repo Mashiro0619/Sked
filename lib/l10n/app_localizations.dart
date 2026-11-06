@@ -7935,6 +7935,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Usage is unreported for {count} requests.'**
   String agentBudgetSummaryMissingUsage(int count);
+
+  /// No description provided for @agentReferenceSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search references'**
+  String get agentReferenceSearch;
+
+  /// No description provided for @agentReferenceEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No matching references'**
+  String get agentReferenceEmpty;
+
+  /// No description provided for @agentReferenceLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading references…'**
+  String get agentReferenceLoading;
+
+  /// No description provided for @agentReferenceRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove reference'**
+  String get agentReferenceRemove;
+
+  /// No description provided for @agentReferenceFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not complete this reference action. Try again.'**
+  String get agentReferenceFailed;
+
+  /// No description provided for @agentReferenceEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Events'**
+  String get agentReferenceEvents;
+
+  /// No description provided for @agentReferenceFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Attached files'**
+  String get agentReferenceFiles;
+
+  /// No description provided for @agentReferenceInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'The selected references have changed or are unavailable. Remove or select them again, then retry.'**
+  String get agentReferenceInvalid;
 }
 
 class _AppLocalizationsDelegate

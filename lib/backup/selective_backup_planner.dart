@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../agent/references/agent_composer_reference.dart';
 import '../utils/unique_id.dart';
 import 'selective_backup_models.dart';
 
@@ -271,6 +272,37 @@ BackupRecord rebindBackupRecord(
     return (mapping[source] ?? source).id;
   }
 
+  void rebindMessageAttachments(Object? raw) {
+    if (raw is! Map<String, dynamic>) {
+      backupInvalid('Invalid conversation message.');
+    }
+    if (raw['attachmentIds'] case final List ids) {
+      raw['attachmentIds'] = ids
+          .map((id) => mapped(BackupObjectKind.attachment, id))
+          .toList();
+    }
+    if (raw.containsKey('contextReferences')) {
+      final references = AgentComposerReference.decodeList(
+        raw['contextReferences'],
+      );
+      raw['contextReferences'] = references.map((reference) {
+        if (reference.kind != AgentComposerReferenceKind.attachment) {
+          return reference.toJson();
+        }
+        if (reference.conversationId != record.key.id) {
+          backupInvalid(
+            'A conversation reference belongs to another conversation.',
+          );
+        }
+        return AgentComposerReference.fromJson({
+          ...reference.toJson(),
+          'id': mapped(BackupObjectKind.attachment, reference.attachmentId),
+          'conversationId': key.id,
+        }).toJson();
+      }).toList();
+    }
+  }
+
   switch (record.key.kind) {
     case BackupObjectKind.timetable:
       final entity = data['entity'];
@@ -311,28 +343,14 @@ BackupRecord rebindBackupRecord(
         );
       }
       for (final message in backupList(data['messages'])) {
-        if (message is! Map<String, dynamic>) {
-          backupInvalid('Invalid conversation message.');
-        }
-        if (message['attachmentIds'] case final List ids) {
-          message['attachmentIds'] = ids
-              .map((id) => mapped(BackupObjectKind.attachment, id))
-              .toList();
-        }
+        rebindMessageAttachments(message);
       }
       for (final version in backupList(data['historyVersions'] ?? const [])) {
         if (version is! Map<String, dynamic>) {
           backupInvalid('Invalid conversation history version.');
         }
         for (final message in backupList(version['messages'])) {
-          if (message is! Map<String, dynamic>) {
-            backupInvalid('Invalid historical conversation message.');
-          }
-          if (message['attachmentIds'] case final List ids) {
-            message['attachmentIds'] = ids
-                .map((id) => mapped(BackupObjectKind.attachment, id))
-                .toList();
-          }
+          rebindMessageAttachments(message);
         }
       }
       if (data['draftAttachmentIds'] case final List ids) {

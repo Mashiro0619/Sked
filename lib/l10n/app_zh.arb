@@ -3004,5 +3004,21 @@
         "type": "int"
       }
     }
-  }
+  },
+  "agentReferenceSearch": "搜索引用",
+  "@agentReferenceSearch": {},
+  "agentReferenceEmpty": "没有匹配的引用",
+  "@agentReferenceEmpty": {},
+  "agentReferenceLoading": "正在加载引用…",
+  "@agentReferenceLoading": {},
+  "agentReferenceRemove": "移除引用",
+  "@agentReferenceRemove": {},
+  "agentReferenceFailed": "引用操作未完成，请重试。",
+  "@agentReferenceFailed": {},
+  "agentReferenceEvents": "日程",
+  "@agentReferenceEvents": {},
+  "agentReferenceFiles": "已附文件",
+  "@agentReferenceFiles": {},
+  "agentReferenceInvalid": "所选引用已变更或不可用，请移除或重新选择后重试。",
+  "@agentReferenceInvalid": {}
 }

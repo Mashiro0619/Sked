@@ -18,6 +18,7 @@ import '../../models/general_event_edit_scope.dart';
 import '../../utils/time_utils.dart';
 import '../conversations/conversation_models.dart';
 import '../interactions/agent_question.dart';
+import '../references/agent_composer_reference.dart';
 import '../provider/provider.dart';
 import '../runtime/agent_runtime_controller.dart';
 import '../skills/shared_skill_loader.dart';
@@ -301,6 +302,41 @@ class ApplicationToolHost {
           overlays: await readSkillSnapshot?.call(),
         ),
       );
+
+  Future<List<Map<String, Object?>>> loadSelectedSkills(
+    OperationScope scope,
+    Iterable<AgentComposerReference> references,
+  ) async {
+    final selected = references.where(
+      (reference) => reference.kind == AgentComposerReferenceKind.skill,
+    );
+    if (selected.isEmpty) return const [];
+    final loader = await _loader(scope);
+    final result = <Map<String, Object?>>[];
+    for (final reference in selected) {
+      scope.checkActive();
+      final loaded = await loader.load(
+        reference.skillId!,
+        expectedVersion: reference.skillVersion,
+        expectedSha256: reference.skillSha256,
+      );
+      scope.checkActive();
+      if (!loaded.isLoaded) {
+        throw const OperationProblem(
+          OperationErrorCode.expired,
+          'A selected Skill is unavailable or exceeds the loading budget. Select an available Skill.',
+          field: 'references',
+        );
+      }
+      _expose(scope, [
+        ...loaded.skill!.requiredTools,
+        ...loaded.skill!.optionalTools,
+      ]);
+      result.add({...loaded.toRecord(), 'instructions': loaded.body});
+    }
+    return List.unmodifiable(result);
+  }
+
   void _expose(OperationScope scope, Iterable<String> names) =>
       (_exposed[scope.id] ??= {
         ..._bootstrap,

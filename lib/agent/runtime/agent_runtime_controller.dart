@@ -21,6 +21,7 @@ import '../conversations/conversation_repository.dart';
 import '../provider/provider.dart';
 import '../provider/provider_request_encoder.dart';
 import '../interactions/agent_question.dart';
+import '../references/agent_composer_reference.dart';
 import '../ui/agent_ui_delegate.dart';
 import 'agent_request_budget.dart';
 import 'conversation_context.dart';
@@ -30,6 +31,7 @@ import 'operation_recovery.dart';
 import 'repeated_tool_failure.dart';
 
 part 'agent_user_questions.dart';
+part 'agent_reference_context.dart';
 part 'agent_budget_settlement.dart';
 
 typedef AgentApprovalRequester = Future<MutationApproval?> Function(
@@ -61,6 +63,7 @@ enum AgentRuntimeError {
   tokenBudgetExceeded,
   resultBudgetExceeded,
   repeatedToolFailure,
+  invalidReference,
   sensitiveContent,
   interruptedRunNeedsReview,
   timeout,
@@ -119,6 +122,8 @@ class AgentRuntimeController implements AgentUiDelegate {
     this.resolveEndpoint = resolveAgentEndpoint,
     this.readMaintenance = _notInMaintenance,
     this.readEnvironment,
+    this.validateReferences,
+    this.prepareReferenceContext,
     this.systemInstructions = _defaultInstructions,
     this.additionalSystemInstructions = '',
     this.attachments,
@@ -161,6 +166,16 @@ class AgentRuntimeController implements AgentUiDelegate {
   final Uri Function(AgentSettings settings) resolveEndpoint;
   final bool Function() readMaintenance;
   final Map<String, Object?> Function()? readEnvironment;
+  final Future<List<AgentComposerReference>> Function(
+    String conversationId,
+    List<AgentComposerReference> references,
+  )?
+  validateReferences;
+  final Future<Map<String, Object?>> Function(
+    OperationScope scope,
+    List<AgentComposerReference> references,
+  )?
+  prepareReferenceContext;
   final String Function(AgentConversation conversation) systemInstructions;
   final String additionalSystemInstructions;
   final AttachmentRepository? attachments;
@@ -221,6 +236,8 @@ class AgentRuntimeController implements AgentUiDelegate {
     }
     if ((text.trim().isEmpty &&
             (repository.find(conversationId)?.draftAttachmentIds.isEmpty ??
+                true) &&
+            (repository.find(conversationId)?.draftReferences.isEmpty ??
                 true)) ||
         text.length > limits.maxUserMessageCharacters) {
       return Future.error(
@@ -448,6 +465,8 @@ class AgentRuntimeController implements AgentUiDelegate {
   }) async {
     if ((text.trim().isEmpty &&
             (repository.find(conversationId)?.draftAttachmentIds.isEmpty ??
+                true) &&
+            (repository.find(conversationId)?.draftReferences.isEmpty ??
                 true)) ||
         text.length > limits.maxUserMessageCharacters) {
       throw const AgentRuntimeException(AgentRuntimeError.invalidMessage);
@@ -468,10 +487,15 @@ class AgentRuntimeController implements AgentUiDelegate {
       readSettings(),
     );
     final attachmentIds = repository.find(conversationId)!.draftAttachmentIds;
+    final originalReferences = repository.find(conversationId)!.draftReferences;
+    final references = await _validateInputReferences(run, originalReferences);
     final queueEpoch = _queueEpochs[conversationId] ?? 0;
     await repository.update(conversationId, (current) {
       _checkRun(run);
       if (attachmentIds.any((id) => !current.draftAttachmentIds.contains(id))) {
+        throw const AgentRuntimeException(AgentRuntimeError.busy);
+      }
+      if (!_sameReferences(current.draftReferences, originalReferences)) {
         throw const AgentRuntimeException(AgentRuntimeError.busy);
       }
       if (current.executionMessages
@@ -482,6 +506,7 @@ class AgentRuntimeController implements AgentUiDelegate {
       }
       return current.copyWith(
         draft: '',
+        draftReferences: const [],
         clearPendingQuestion: steering,
         draftAttachmentIds: current.draftAttachmentIds.where(
           (id) => !attachmentIds.contains(id),
@@ -500,6 +525,7 @@ class AgentRuntimeController implements AgentUiDelegate {
             createdAt: _clock().toUtc(),
             modelSelection: selection,
             attachmentIds: attachmentIds,
+            contextReferences: references,
           ),
         ],
       );
@@ -1046,6 +1072,17 @@ class AgentRuntimeController implements AgentUiDelegate {
           (resume || consumeQueued ? conversation.runId : null),
       replyMessageId: replyMessageId,
     );
+    run.inputReferences = replyMessageId != null
+        ? const []
+        : userText != null
+        ? conversation.draftReferences
+        : pendingAtStart?.contextReferences ??
+              conversation.executionMessages
+                  .where((message) => message.role == ConversationRole.user)
+                  .lastOrNull
+                  ?.contextReferences ??
+              const [];
+    final originalReferences = run.inputReferences;
     _runs[conversationId] = run;
     onRunCreated?.call(run);
     run.deadline = _ExecutionDeadline(
@@ -1065,11 +1102,22 @@ class AgentRuntimeController implements AgentUiDelegate {
       ]);
       _checkRun(run);
       if (userText != null) _rejectSecret(userText, run.apiKey);
+      if (conversation.pendingQuestion == null) {
+        run.inputReferences = await _validateInputReferences(
+          run,
+          originalReferences,
+        );
+        run.referencesValidated = true;
+      }
       final recovered = await _recoverHistory(run);
       await repository.update(conversationId, (current) {
         if (attachmentIds.any(
           (id) => !current.draftAttachmentIds.contains(id),
         )) {
+          throw const AgentRuntimeException(AgentRuntimeError.busy);
+        }
+        if (userText != null &&
+            !_sameReferences(current.draftReferences, originalReferences)) {
           throw const AgentRuntimeException(AgentRuntimeError.busy);
         }
         if (handoff && current.runId != null) {
@@ -1102,6 +1150,7 @@ class AgentRuntimeController implements AgentUiDelegate {
               createdAt: pending.createdAt,
               modelSelection: selection,
               attachmentIds: pending.attachmentIds,
+              contextReferences: run.inputReferences,
             ),
           ];
         }
@@ -1115,6 +1164,7 @@ class AgentRuntimeController implements AgentUiDelegate {
               createdAt: _clock().toUtc(),
               modelSelection: selection,
               attachmentIds: attachmentIds,
+              contextReferences: run.inputReferences,
             ),
           ];
         }
@@ -1138,6 +1188,9 @@ class AgentRuntimeController implements AgentUiDelegate {
         return current.copyWith(
           messages: messages,
           draft: userText == null ? current.draft : '',
+          draftReferences: userText == null
+              ? current.draftReferences
+              : const [],
           draftAttachmentIds: current.draftAttachmentIds.where(
             (id) => !attachmentIds.contains(id),
           ),
@@ -1200,6 +1253,7 @@ class AgentRuntimeController implements AgentUiDelegate {
         return;
       }
       await _resumeUserQuestion(run);
+      await _prepareInputReferenceContext(run);
       final maxRounds = run.settings.maxModelRounds < limits.maxModelRounds
           ? run.settings.maxModelRounds
           : limits.maxModelRounds;
@@ -2787,8 +2841,8 @@ class AgentRuntimeController implements AgentUiDelegate {
           text:
               message.id != run.inputMessageId &&
                   message.attachmentIds.isNotEmpty
-              ? '${message.text}\n[Earlier attachments are not included in this request. Ask the user to attach them again if needed.]'
-              : message.text,
+              ? '${_referenceMessageText(message, run)}\n[Earlier attachments are not included in this request. Ask the user to attach them again if needed.]'
+              : _referenceMessageText(message, run),
           attachments: message.id == run.inputMessageId
               ? _providerAttachments(conversation, message, run)
               : const [],
@@ -2850,6 +2904,14 @@ class AgentRuntimeController implements AgentUiDelegate {
               ? through
               : conversation.executionHistoryStart,
         );
+        if (omittedIds.contains(run.inputMessageId) &&
+            run.referenceContext.containsKey('selectedSkillInstructions')) {
+          checkpoint['selectedSkillContext'] = {
+            'messageId': run.inputMessageId,
+            'source': 'userSelectedSkill',
+            'instructions': run.referenceContext['selectedSkillInstructions'],
+          };
+        }
         _rejectSecretValues(checkpoint, run.apiKey);
         return checkpoint;
       },
@@ -2977,6 +3039,9 @@ class _Run {
   bool budgetSummaryRecorded = false;
   List<ToolDefinition> tools = const [];
   String? inputMessageId;
+  List<AgentComposerReference> inputReferences = const [];
+  Map<String, Object?> referenceContext = const {};
+  bool referencesValidated = false;
   final OperationScope scope;
   final cancellation = ProviderCancellationToken();
   final settled = Completer<void>();

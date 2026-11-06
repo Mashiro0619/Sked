@@ -9,6 +9,7 @@ import '../../models/agent_settings.dart';
 import '../../utils/time_utils.dart' show tryParseStrictIsoDateTime;
 import '../attachments/attachment_models.dart';
 import '../interactions/agent_question.dart';
+import '../references/agent_composer_reference.dart';
 import 'conversation_usage.dart';
 
 export 'conversation_usage.dart';
@@ -59,10 +60,14 @@ class ConversationMessage {
     this.modelSelection,
     this.providerProtocol,
     Iterable<String> attachmentIds = const [],
+    Iterable<AgentComposerReference> contextReferences = const [],
     this.attachmentDelivery = AttachmentDelivery.local,
     Iterable<Map<String, Object?>> responseItems = const [],
   }) : toolCalls = List.unmodifiable(toolCalls),
        attachmentIds = List.unmodifiable(attachmentIds),
+       contextReferences = AgentComposerReference.validatedList(
+         contextReferences,
+       ),
        responseItems = _freezeResponseItems(responseItems) {
     if (this.responseItems.isNotEmpty && role != ConversationRole.assistant) {
       throw const FormatException(
@@ -77,6 +82,22 @@ class ConversationMessage {
             role != ConversationRole.notice)) {
       throw const FormatException('Invalid message attachment references.');
     }
+    if (this.contextReferences.isNotEmpty &&
+        role != ConversationRole.user &&
+        role != ConversationRole.notice) {
+      throw const FormatException(
+        'Only user input can carry composer references.',
+      );
+    }
+    if (this.contextReferences.any(
+      (reference) =>
+          reference.kind == AgentComposerReferenceKind.attachment &&
+          !this.attachmentIds.contains(reference.attachmentId),
+    )) {
+      throw const FormatException(
+        'Referenced files must be attached to the message.',
+      );
+    }
   }
 
   final String id;
@@ -88,6 +109,7 @@ class ConversationMessage {
   final AgentModelSelection? modelSelection;
   final AgentModelProtocol? providerProtocol;
   final List<String> attachmentIds;
+  final List<AgentComposerReference> contextReferences;
   final AttachmentDelivery attachmentDelivery;
 
   ConversationMessage copyWith({
@@ -97,6 +119,7 @@ class ConversationMessage {
     AgentModelProtocol? providerProtocol,
     Iterable<Map<String, Object?>>? responseItems,
     Iterable<String>? attachmentIds,
+    Iterable<AgentComposerReference>? contextReferences,
     AttachmentDelivery? attachmentDelivery,
   }) => ConversationMessage(
     id: id,
@@ -109,6 +132,9 @@ class ConversationMessage {
     modelSelection: modelSelection ?? this.modelSelection,
     providerProtocol: providerProtocol ?? this.providerProtocol,
     attachmentIds: attachmentIds ?? this.attachmentIds,
+    contextReferences:
+        contextReferences ??
+        _referencesForAttachments(this.contextReferences, attachmentIds),
     attachmentDelivery: attachmentDelivery ?? this.attachmentDelivery,
   );
 
@@ -128,6 +154,10 @@ class ConversationMessage {
     if (modelSelection != null) 'modelSelection': modelSelection!.toJson(),
     if (providerProtocol != null) 'providerProtocol': providerProtocol!.name,
     if (attachmentIds.isNotEmpty) 'attachmentIds': attachmentIds,
+    if (contextReferences.isNotEmpty)
+      'contextReferences': contextReferences
+          .map((reference) => reference.toJson())
+          .toList(),
     if (attachmentIds.isNotEmpty) 'attachmentDelivery': attachmentDelivery.name,
   };
 
@@ -159,6 +189,9 @@ class ConversationMessage {
           ? null
           : _enumValue(AgentModelProtocol.values, json['providerProtocol']),
       attachmentIds: _attachmentIds(json['attachmentIds']),
+      contextReferences: AgentComposerReference.decodeList(
+        json['contextReferences'],
+      ),
       attachmentDelivery: json['attachmentDelivery'] == null
           ? AttachmentDelivery.local
           : _enumValue(AttachmentDelivery.values, json['attachmentDelivery']),
@@ -382,6 +415,7 @@ class AgentConversation {
     Iterable<ConversationRunUsage> runs = const [],
     Iterable<ConversationAttachment> attachments = const [],
     Iterable<String> draftAttachmentIds = const [],
+    Iterable<AgentComposerReference> draftReferences = const [],
     Iterable<ConversationTurn> turns = const [],
     Iterable<ConversationHistoryVersion> historyVersions = const [],
     Iterable<ConversationReplyRevision> replyRevisions = const [],
@@ -391,6 +425,7 @@ class AgentConversation {
        runs = List.unmodifiable(runs),
        attachments = List.unmodifiable(attachments),
        draftAttachmentIds = List.unmodifiable(draftAttachmentIds),
+       draftReferences = AgentComposerReference.validatedList(draftReferences),
        turns = List.unmodifiable(turns),
        historyVersions = List.unmodifiable(historyVersions),
        replyRevisions = List.unmodifiable(replyRevisions),
@@ -401,6 +436,7 @@ class AgentConversation {
     }
     validateConversationTurns(this.messages, this.runs, this.turns);
     _validatePendingQuestion();
+    _validateReferenceAttachments();
   }
 
   final String id;
@@ -423,6 +459,7 @@ class AgentConversation {
   final List<ConversationRunUsage> runs;
   final List<ConversationAttachment> attachments;
   final List<String> draftAttachmentIds;
+  final List<AgentComposerReference> draftReferences;
   final List<ConversationTurn> turns;
   final List<ConversationHistoryVersion> historyVersions;
   final List<ConversationReplyRevision> replyRevisions;
@@ -450,6 +487,7 @@ class AgentConversation {
     Iterable<ConversationRunUsage>? runs,
     Iterable<ConversationAttachment>? attachments,
     Iterable<String>? draftAttachmentIds,
+    Iterable<AgentComposerReference>? draftReferences,
     Iterable<ConversationTurn>? turns,
     Iterable<ConversationHistoryVersion>? historyVersions,
     Iterable<ConversationReplyRevision>? replyRevisions,
@@ -477,6 +515,9 @@ class AgentConversation {
     runs: runs ?? this.runs,
     attachments: attachments ?? this.attachments,
     draftAttachmentIds: draftAttachmentIds ?? this.draftAttachmentIds,
+    draftReferences:
+        draftReferences ??
+        _referencesForAttachments(this.draftReferences, draftAttachmentIds),
     turns: turns ?? this.turns,
     historyVersions: historyVersions ?? this.historyVersions,
     replyRevisions: replyRevisions ?? this.replyRevisions,
@@ -506,6 +547,10 @@ class AgentConversation {
           .map((attachment) => attachment.toJson())
           .toList(),
     if (draftAttachmentIds.isNotEmpty) 'draftAttachmentIds': draftAttachmentIds,
+    if (draftReferences.isNotEmpty)
+      'draftReferences': draftReferences
+          .map((reference) => reference.toJson())
+          .toList(),
     'turns': turns.map((item) => item.toJson()).toList(),
     'historyVersions': historyVersions.map((item) => item.toJson()).toList(),
     'replyRevisions': replyRevisions.map((item) => item.toJson()).toList(),
@@ -623,6 +668,9 @@ class AgentConversation {
       runs: runs,
       attachments: attachments,
       draftAttachmentIds: draftAttachmentIds,
+      draftReferences: AgentComposerReference.decodeList(
+        json['draftReferences'],
+      ),
       executionHistoryStart: executionHistoryStart,
       turns: turns,
       historyVersions: historyVersions,
@@ -660,6 +708,41 @@ class AgentConversation {
       throw const FormatException(
         'Pending questions differ from the tool call.',
       );
+    }
+  }
+
+  void _validateReferenceAttachments() {
+    final metadata = <String, ConversationAttachment>{};
+    final duplicates = <String>{};
+    for (final attachment in attachments) {
+      if (metadata.containsKey(attachment.id)) duplicates.add(attachment.id);
+      metadata[attachment.id] = attachment;
+    }
+    void validate(
+      Iterable<AgentComposerReference> references,
+      Iterable<String> attachedIds,
+    ) {
+      for (final reference in references) {
+        if (reference.kind != AgentComposerReferenceKind.attachment) continue;
+        final attachment = metadata[reference.attachmentId];
+        if (reference.conversationId != id ||
+            attachment == null ||
+            duplicates.contains(reference.attachmentId) ||
+            attachment.digest != reference.attachmentDigest ||
+            !attachedIds.contains(reference.attachmentId)) {
+          throw const FormatException(
+            'Invalid composer attachment ownership or digest.',
+          );
+        }
+      }
+    }
+
+    validate(draftReferences, draftAttachmentIds);
+    for (final message in [
+      ...messages,
+      ...historyVersions.expand((version) => version.messages),
+    ]) {
+      validate(message.contextReferences, message.attachmentIds);
     }
   }
 }
@@ -705,7 +788,7 @@ class ConversationArchive {
        terminatedIds = Set.unmodifiable(terminatedIds);
 
   static const maxBytes = 16 * 1024 * 1024;
-  static const currentVersion = 6;
+  static const currentVersion = 7;
   final int revision;
   final String? selectedId;
   final List<AgentConversation> conversations;
@@ -736,13 +819,13 @@ class ConversationArchive {
       );
     }
     final json = _object(jsonDecode(source));
-    if ((!const [1, 2, 3, 4, 5, currentVersion].contains(json['version'])) ||
+    if ((!const [1, 2, 3, 4, 5, 6, currentVersion].contains(json['version'])) ||
         json['revision'] is! int ||
         (json['revision'] as int) < 0) {
       throw const FormatException('Unsupported conversation archive version.');
     }
     final rawConversations = _objects(json, 'conversations', max: 200);
-    if (json['version'] != currentVersion &&
+    if ((json['version'] as int) < 6 &&
         rawConversations.any(
           (item) =>
               item['pendingQuestion'] != null ||
@@ -750,6 +833,12 @@ class ConversationArchive {
         )) {
       throw const FormatException(
         'Question waits require conversation archive version 6.',
+      );
+    }
+    if ((json['version'] as int) < 7 &&
+        rawConversations.any(_hasComposerReferenceFields)) {
+      throw const FormatException(
+        'Composer references require conversation archive version 7.',
       );
     }
     final conversations = rawConversations
@@ -837,6 +926,29 @@ Set<String> conversationAttachmentIds(AgentConversation conversation) => {
       .expand((message) => message.attachmentIds),
   ...conversation.redoBatches.expand((batch) => batch.attachmentIds),
 };
+
+Iterable<AgentComposerReference> _referencesForAttachments(
+  Iterable<AgentComposerReference> references,
+  Iterable<String>? attachmentIds,
+) {
+  if (attachmentIds == null) return references;
+  final remaining = attachmentIds.toSet();
+  return references.where(
+    (reference) =>
+        reference.kind != AgentComposerReferenceKind.attachment ||
+        remaining.contains(reference.attachmentId),
+  );
+}
+
+bool _hasComposerReferenceFields(Map<String, dynamic> conversation) {
+  if (conversation.containsKey('draftReferences')) return true;
+  final messages = [
+    ..._objects(conversation, 'messages', max: 1000),
+    for (final version in _objects(conversation, 'historyVersions', max: 32))
+      ..._objects(version, 'messages', max: 1000),
+  ];
+  return messages.any((message) => message.containsKey('contextReferences'));
+}
 
 Map<String, dynamic> _object(Object? value) {
   if (value is! Map<String, dynamic>) {

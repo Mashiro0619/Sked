@@ -10,6 +10,7 @@ import '../../controllers/app_session.dart';
 import '../../utils/unique_id.dart';
 import '../conversations/conversation_repository.dart';
 import '../knowledge/knowledge_repository.dart';
+import '../references/agent_composer_reference.dart';
 import '../runtime/agent_runtime_controller.dart';
 import 'conversation_history.dart';
 import 'conversation_history_preflight.dart';
@@ -144,11 +145,101 @@ class ConversationHistoryService implements ConversationRedoHost {
   }
 
   Future<void> _continueRedo(String conversationId) async {
-    if (_recovering) _busy();
+    if (_recovering || _editing.contains(conversationId)) _busy();
     final pending = conversations.find(conversationId)?.pendingRedo;
     if (pending == null) _busy();
     if (_owner != null && !_activeBarrier && !_entering) await _reloadOwners();
     await coordinator.resume(pending.id);
+  }
+
+  /// The published request remains the reference target for every retry after
+  /// undo. Reading it does not grant permission to change an active run.
+  ConversationMessage? pendingRedoRequest(String conversationId) {
+    final conversation = conversations.find(conversationId);
+    final pending = conversation?.pendingRedo;
+    if (pending == null ||
+        (pending.phase != ConversationRedoPhase.ready &&
+            pending.phase != ConversationRedoPhase.running)) {
+      return null;
+    }
+    return conversation!.messages
+        .where(
+          (message) =>
+              message.id == 'redo:${pending.id}' &&
+              message.role == ConversationRole.user,
+        )
+        .firstOrNull;
+  }
+
+  /// Rebinds only the published input after undo has finished. The batch and
+  /// owner receipts keep their identities, and continuing remains explicit.
+  Future<AgentConversation> replacePendingReferences(
+    String conversationId,
+    Iterable<AgentComposerReference> references, {
+    void Function(AgentConversation current)? validate,
+  }) async {
+    final frozen = AgentComposerReference.validatedList(references);
+    if (!_editing.add(conversationId)) _busy();
+    try {
+      _checkReferenceEdit(conversationId);
+      final original = conversations.find(conversationId);
+      final batch = original?.pendingRedo;
+      final request = pendingRedoRequest(conversationId);
+      if (original == null ||
+          original.archived ||
+          batch == null ||
+          request == null) {
+        _busy();
+      }
+      final expectedBatch = jsonEncode(batch.toJson());
+      final expectedRequest = jsonEncode(request.toJson());
+      return await conversations.update(conversationId, (current) {
+        _checkReferenceEdit(conversationId);
+        final published = current.messages
+            .where((message) => message.id == request.id)
+            .firstOrNull;
+        if (current.archived ||
+            jsonEncode(current.pendingRedo?.toJson()) != expectedBatch ||
+            published == null ||
+            jsonEncode(published.toJson()) != expectedRequest) {
+          _conflict();
+        }
+        validate?.call(current);
+        final attachmentIds = <String>{
+          ...published.attachmentIds,
+          for (final reference in frozen)
+            if (reference.kind == AgentComposerReferenceKind.attachment)
+              reference.attachmentId!,
+        };
+        final replacement = published.copyWith(
+          contextReferences: frozen,
+          attachmentIds: attachmentIds,
+          attachmentDelivery:
+              attachmentIds.length > published.attachmentIds.length
+              ? AttachmentDelivery.local
+              : published.attachmentDelivery,
+        );
+        return current.copyWith(
+          messages: [
+            for (final message in current.messages)
+              if (message.id == published.id) replacement else message,
+          ],
+        );
+      });
+    } finally {
+      _editing.remove(conversationId);
+    }
+  }
+
+  void _checkReferenceEdit(String conversationId) {
+    if (_recovering ||
+        _entering ||
+        _activeBarrier ||
+        _owner != null ||
+        _continuing.containsKey(conversationId) ||
+        runtime.isRunning(conversationId)) {
+      _busy();
+    }
   }
 
   Future<void> cancelPrepared(String conversationId) async {
@@ -460,6 +551,7 @@ class ConversationRepositoryRedoStore implements ConversationRedoStore {
           text: batch.text,
           createdAt: batch.createdAt,
           attachmentIds: batch.attachmentIds,
+          contextReferences: current.messages[start].contextReferences,
           modelSelection: batch.modelSelection,
         ),
       ],
@@ -482,6 +574,7 @@ class ConversationRepositoryRedoStore implements ConversationRedoStore {
         if (!current.redoBatches.any((item) => item.id == batch.id)) ready,
       ],
       status: ConversationStatus.interrupted,
+      draftReferences: const [],
       clearRunId: true,
       modelSelection: batch.modelSelection,
     );

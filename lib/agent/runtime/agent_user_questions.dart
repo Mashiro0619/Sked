@@ -48,6 +48,7 @@ extension _AgentUserQuestions on AgentRuntimeController {
       createdAt: _clock().toUtc(),
       connectionFingerprint: run.fingerprint,
       datasetGeneration: run.environment['datasetGeneration'] as String?,
+      contextReferenceDigest: _referenceBindingDigest(run.inputReferences),
       questions: questions,
     );
     _rejectSecretValues(request.toJson(), run.apiKey);
@@ -156,13 +157,21 @@ extension _AgentUserQuestions on AgentRuntimeController {
     final stale =
         request.connectionFingerprint != run.fingerprint ||
         (request.datasetGeneration != null &&
-            request.datasetGeneration != generation);
+            request.datasetGeneration != generation) ||
+        (request.contextReferenceDigest ?? _referenceBindingDigest(const [])) !=
+            _referenceBindingDigest(run.inputReferences);
     final Map<String, Object?> result;
     if (stale) {
-      result = {
-        'status': 'not_executed',
-        'error': {'code': 'question_context_changed'},
-      };
+      result = request.isResolved
+          ? {
+              ..._userQuestionResult(request),
+              'contextChanged': true,
+              'message': 'These answers belong to earlier references. Ask a new question when the current task requires clarification.',
+            }
+          : {
+              'status': 'not_executed',
+              'error': {'code': 'question_context_changed'},
+            };
     } else {
       await repository.update(
         run.conversationId,
@@ -203,7 +212,7 @@ extension _AgentUserQuestions on AgentRuntimeController {
                   ConversationToolUsage(
                     id: request.toolCallId,
                     name: 'ask_user',
-                    outcome: stale
+                    outcome: stale && !request.isResolved
                         ? ConversationAttemptOutcome.notStarted
                         : ConversationAttemptOutcome.completed,
                   ),

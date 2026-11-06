@@ -42,6 +42,7 @@ ConversationMessage _historyMessage(ConversationMessage message) =>
       toolCallId: message.toolCallId,
       modelSelection: message.modelSelection,
       attachmentIds: message.attachmentIds,
+      contextReferences: message.contextReferences,
       attachmentDelivery:
           message.attachmentDelivery == AttachmentDelivery.preparing ||
               message.attachmentDelivery == AttachmentDelivery.sending

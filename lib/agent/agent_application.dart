@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
 
 import '../application/mutation_coordinator.dart';
 import '../application/external_operation_coordinator.dart';
@@ -26,6 +27,9 @@ import 'knowledge/knowledge_service.dart';
 import 'provider/provider.dart';
 import 'imports/school_import_tool_adapter.dart';
 import 'runtime/agent_runtime_controller.dart';
+import 'references/agent_composer_reference.dart';
+import 'references/agent_composer_reference_search.dart';
+import 'skills/shared_skill_loader.dart';
 import 'tools/application_tool_host.dart';
 import 'tools/platform_tool_adapters.dart';
 import 'tools/workflow_tool_adapters.dart';
@@ -34,6 +38,8 @@ import 'tools/agent_control_tool_adapters.dart';
 import 'tools/knowledge_tool_adapters.dart';
 
 export 'connection/agent_credential_action.dart';
+
+part 'agent_composer_references.dart';
 
 /// Safe failure categories for product feedback; never exposes stored content.
 enum AgentInitializationFailure {
@@ -151,6 +157,8 @@ class AgentApplication extends ChangeNotifier {
       onAttachmentProgress: binaryAttachments.transferProgress,
       readSettings: _effectiveSettings,
       readEnvironment: _readEnvironment,
+      validateReferences: validateComposerReferences,
+      prepareReferenceContext: _prepareComposerReferenceContext,
       readApiKey: (snapshot) async {
         // Side-store loading is initiated by an actual run. Opening the
         // default-on entry or editing its connection need not read knowledge.

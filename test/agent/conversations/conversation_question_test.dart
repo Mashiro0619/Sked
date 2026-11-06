@@ -74,32 +74,43 @@ void main() {
     );
   }
 
-  test('archive v6 persists pending answers and supports explicit removal', () {
-    final pending = question().withAnswers([
-      AgentQuestionAnswer(questionId: 'date', text: '2026-09-01'),
-    ]);
-    final source = ConversationArchive(
-      conversations: [conversation(pending: pending)],
-    ).encode();
-    expect((jsonDecode(source) as Map)['version'], 6);
-    final restored = ConversationArchive.decode(source).conversations.single;
-    expect(restored.pendingQuestion!.toJson(), pending.toJson());
-    expect(
-      restored.copyWith(title: 'Renamed').pendingQuestion,
-      same(restored.pendingQuestion),
-    );
-    expect(
-      restored.copyWith(clearPendingQuestion: true).pendingQuestion,
-      isNull,
-    );
-    final dismissed = conversation(pending: question().withDismissed());
-    expect(
-      AgentConversation.fromJson(Map<String, dynamic>.from(dismissed.toJson()))
-          .pendingQuestion!
-          .dismissed,
-      isTrue,
-    );
-  });
+  test(
+    'current archive persists pending answers and supports explicit removal',
+    () {
+      final pending =
+          AgentQuestionRequest.fromJson({
+            ...question().toJson(),
+            'contextReferenceDigest': 'a' * 64,
+          }).withAnswers([
+            AgentQuestionAnswer(questionId: 'date', text: '2026-09-01'),
+          ]);
+      final source = ConversationArchive(
+        conversations: [conversation(pending: pending)],
+      ).encode();
+      expect(
+        (jsonDecode(source) as Map)['version'],
+        ConversationArchive.currentVersion,
+      );
+      final restored = ConversationArchive.decode(source).conversations.single;
+      expect(restored.pendingQuestion!.toJson(), pending.toJson());
+      expect(restored.pendingQuestion!.contextReferenceDigest, 'a' * 64);
+      expect(
+        restored.copyWith(title: 'Renamed').pendingQuestion,
+        same(restored.pendingQuestion),
+      );
+      expect(
+        restored.copyWith(clearPendingQuestion: true).pendingQuestion,
+        isNull,
+      );
+      final dismissed = conversation(pending: question().withDismissed());
+      expect(
+        AgentConversation.fromJson(
+          Map<String, dynamic>.from(dismissed.toJson()),
+        ).pendingQuestion!.dismissed,
+        isTrue,
+      );
+    },
+  );
 
   test(
     'versions one through five decode without manufacturing a question wait',

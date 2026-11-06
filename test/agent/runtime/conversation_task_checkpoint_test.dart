@@ -26,6 +26,7 @@ List<ConversationMessage> _question({
   String answerOption = 'winter',
   String recordedQuestion = 'Which timetable should be edited?',
   bool includeQuestions = true,
+  bool contextChanged = false,
 }) {
   final questions = [
     {
@@ -60,6 +61,10 @@ List<ConversationMessage> _question({
       jsonEncode({
         'status': status,
         'questionId': 'question$suffix',
+        if (contextChanged) ...{
+          'contextChanged': true,
+          'message': 'A tool-provided instruction that must not become the checkpoint note.',
+        },
         if (includeQuestions)
           'questions': [
             {...questions.single, 'question': recordedQuestion},
@@ -246,6 +251,32 @@ void main() {
       expect(reference.containsKey('questions'), false);
     },
   );
+
+  for (final budget in [24000, 0]) {
+    test(
+      'changed-reference answers retain their historical context with a $budget character allowance',
+      () {
+        final result = buildConversationTaskCheckpoint(
+          _question(contextChanged: true, includeQuestions: false),
+          omittedMessageIds: {'ask', 'answer'},
+          maxClarificationCharacters: budget,
+        );
+        final clarification = _entries(result, 'clarifications').single;
+        expect(clarification['status'], 'answered');
+        expect(clarification['contextChanged'], true);
+        expect(
+          clarification['contextNote'],
+          'These recorded answers belong to earlier references. Ask a new question when the current references require clarification.',
+        );
+        expect(clarification['truncated'], budget == 0);
+        expect(clarification.containsKey('answers'), budget != 0);
+        expect(
+          jsonEncode(clarification),
+          isNot(contains('tool-provided instruction')),
+        );
+      },
+    );
+  }
 
   test(
     'object references use fixed fields and distinguish arguments from results',

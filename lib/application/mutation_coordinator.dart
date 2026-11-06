@@ -166,6 +166,66 @@ class MutationCoordinator {
   PreparedMutation? plan(String id) => _plans[id];
   Future<void> waitForPendingWrites() => _tail;
 
+  /// Persists the namespace before another store publishes durable resource
+  /// references. An empty ledger reserves no operation identity or receipt.
+  Future<void> ensurePersistentGeneration({
+    required String expectedGeneration,
+    required void Function() validateOwner,
+  }) {
+    final revision = _dataSessionRevision();
+    void checkCurrent() {
+      _requireKnownStorage();
+      validateOwner();
+      if (generation != expectedGeneration ||
+          _dataSessionRevision() != revision) {
+        _expired();
+      }
+    }
+
+    final result = _tail.then((_) async {
+      checkCurrent();
+      if (_session.committedData.applicationLedger != null) return;
+      try {
+        await _session.commitMutation(
+          (current) {
+            checkCurrent();
+            return current.copyWith(
+              applicationLedger:
+                  current.applicationLedger ??
+                  ApplicationLedger(generation: expectedGeneration),
+            );
+          },
+          expectedEpoch: null,
+          settlePendingChanges: _settlePendingChanges,
+          beforeCommit: checkCurrent,
+          dataSessionRevision: revision,
+        );
+      } on OperationProblem {
+        rethrow;
+      } on AppMutationConflictException {
+        throw const OperationProblem(
+          OperationErrorCode.conflict,
+          'Finish or save the current editor before selecting references.',
+        );
+      } on AppMutationBusyException {
+        throw const OperationProblem(
+          OperationErrorCode.busy,
+          'Another application mutation is being committed.',
+        );
+      } catch (_) {
+        throw OperationProblem(
+          _session.repository.isWriteStateUnknown
+              ? OperationErrorCode.outcomeUnknown
+              : OperationErrorCode.storageFailure,
+          'The resource namespace could not be confirmed in storage.',
+        );
+      }
+      checkCurrent();
+    });
+    _tail = result.then<void>((_) {}, onError: (Object _, StackTrace _) {});
+    return result;
+  }
+
   PreparedMutation prepare({
     required OperationScope scope,
     Iterable<ResourceMutation> resources = const [],
