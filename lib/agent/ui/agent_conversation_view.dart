@@ -2319,9 +2319,17 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       return l.agentSaveFailed;
     }
     if (code == 'operation.outcomeUnknown') return l.agentActionUncertain;
-    if (code == 'contextLimit' ||
-        code == 'budgetExceeded' ||
-        code == 'timeout') {
+    if (const {
+      'contextLimit',
+      'budgetExceeded',
+      'contextBudgetExceeded',
+      'roundBudgetExceeded',
+      'toolBudgetExceeded',
+      'tokenBudgetExceeded',
+      'resultBudgetExceeded',
+      'timeout',
+      'toolTimeout',
+    }.contains(code)) {
       return l.agentLimitsReached;
     }
     if (code == 'sensitiveContent') return l.agentSensitiveContent;

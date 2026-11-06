@@ -218,6 +218,41 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  for (final code in const [
+    'contextBudgetExceeded',
+    'roundBudgetExceeded',
+    'toolBudgetExceeded',
+    'tokenBudgetExceeded',
+    'resultBudgetExceeded',
+    'timeout',
+    'toolTimeout',
+  ]) {
+    testWidgets('host limit $code displays the run limit explanation', (
+      tester,
+    ) async {
+      await initialize();
+      final conversation = await repository.create(title: 'Run limit');
+      delegate.state.value = AgentUiState(
+        enabled: true,
+        configured: true,
+        runs: {
+          conversation.id: AgentUiRunState(
+            phase: AgentUiPhase.failed,
+            errorMessage: code,
+          ),
+        },
+      );
+      await mountAgentUi(tester, view());
+      await settle(tester);
+      final l = AppLocalizations.of(
+        tester.element(find.byType(AgentConversationView)),
+      );
+      expect(find.text(l.agentLimitsReached), findsOneWidget);
+      expect(find.text(l.agentRunFailed), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets(
     'API failure displays selectable left-aligned response details with partial output',
     (tester) async {
