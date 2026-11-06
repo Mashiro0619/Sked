@@ -290,7 +290,7 @@ class _AgentModelPickerState extends State<AgentModelPicker>
       final menuStyle = SkedMenuStyle.of(context);
       final bounds = SkedMenuStyle.constraintsFor(
         context,
-        requested: const BoxConstraints(maxWidth: 320),
+        requested: const BoxConstraints(maxWidth: 280),
       );
       final width = bounds.maxWidth;
       final height = bounds.maxHeight;
@@ -306,6 +306,47 @@ class _AgentModelPickerState extends State<AgentModelPicker>
       final triggerLabel = selection == null
           ? modelLabel
           : '$modelLabel · $effortLabel';
+      final canSwitchModel = state.availableModels.length > 1 || model == null;
+      final modelHeading = Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Semantics(
+            label: l.agentThinkingEffort,
+            child: Text(
+              effortLabel,
+              key: const ValueKey('agent-effort-value'),
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: menuStyle.selectedForeground,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Row(
+            key: const ValueKey('agent-model-name'),
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  modelLabel,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              if (canSwitchModel)
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+            ],
+          ),
+        ],
+      );
       final control = MenuAnchor(
         controller: _menu,
         childFocusNode: _focus,
@@ -317,7 +358,7 @@ class _AgentModelPickerState extends State<AgentModelPicker>
           ),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(20),
               side: BorderSide(color: menuStyle.outline.withValues(alpha: .5)),
             ),
           ),
@@ -418,57 +459,23 @@ class _AgentModelPickerState extends State<AgentModelPicker>
                                   ),
                                 ),
                                 Expanded(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 6),
-                                        child: Semantics(
-                                          label: l.agentThinkingEffort,
-                                          child: Text(
-                                            effortLabel,
-                                            key: const ValueKey(
-                                              'agent-effort-value',
-                                            ),
-                                            textAlign: TextAlign.center,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .titleMedium
-                                                ?.copyWith(
-                                                  color: menuStyle
-                                                      .selectedForeground,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                          ),
-                                        ),
-                                      ),
-                                      if (state.availableModels.length > 1 ||
-                                          model == null)
-                                        Tooltip(
-                                          message:
-                                              '${l.agentModel}: $modelLabel',
-                                          child: TextButton(
+                                  child: Tooltip(
+                                    message: '${l.agentModel}: $modelLabel',
+                                    child: canSwitchModel
+                                        ? TextButton(
                                             key: const ValueKey(
                                               'agent-model-switch',
                                             ),
                                             style: TextButton.styleFrom(
-                                              minimumSize: Size(
-                                                0,
-                                                menuStyle.desktop ? 32 : 48,
-                                              ),
+                                              minimumSize: const Size(0, 48),
                                               tapTargetSize:
                                                   MaterialTapTargetSize
                                                       .shrinkWrap,
                                               padding:
                                                   const EdgeInsets.symmetric(
                                                     horizontal: 4,
+                                                    vertical: 2,
                                                   ),
-                                              foregroundColor: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurfaceVariant,
-                                              textStyle: Theme.of(context)
-                                                  .textTheme
-                                                  .bodyMedium,
                                             ),
                                             onPressed: enabled
                                                 ? () {
@@ -482,49 +489,14 @@ class _AgentModelPickerState extends State<AgentModelPicker>
                                                     }
                                                   }
                                                 : null,
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Flexible(
-                                                  child: Text(
-                                                    modelLabel,
-                                                    maxLines: 2,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    textAlign: TextAlign.center,
-                                                  ),
-                                                ),
-                                                const Icon(
-                                                  Icons.chevron_right_rounded,
-                                                  size: 16,
-                                                ),
-                                              ],
+                                            child: modelHeading,
+                                          )
+                                        : Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              vertical: 2,
                                             ),
+                                            child: modelHeading,
                                           ),
-                                        )
-                                      else
-                                        Padding(
-                                          padding: const EdgeInsets.symmetric(
-                                            vertical: 6,
-                                          ),
-                                          child: Tooltip(
-                                            message:
-                                                '${l.agentModel}: $modelLabel',
-                                            child: Text(
-                                              modelLabel,
-                                              textAlign: TextAlign.center,
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodyMedium
-                                                  ?.copyWith(
-                                                    color: Theme.of(context)
-                                                        .colorScheme
-                                                        .onSurfaceVariant,
-                                                  ),
-                                            ),
-                                          ),
-                                        ),
-                                    ],
                                   ),
                                 ),
                                 IconButton(
@@ -823,11 +795,11 @@ SliderThemeData _compactEffortSliderTheme(BuildContext context) {
   final colors = Theme.of(context).colorScheme;
   final track = skedReadableAccent(colors, surface: Colors.white);
   return SliderTheme.of(context).copyWith(
-    trackHeight: 28,
+    trackHeight: 26,
     trackShape: const RoundedRectSliderTrackShape(),
     trackGap: 0,
     thumbShape: const RoundSliderThumbShape(
-      enabledThumbRadius: 16,
+      enabledThumbRadius: 14,
       elevation: 1,
       pressedElevation: 2,
     ),
@@ -837,8 +809,8 @@ SliderThemeData _compactEffortSliderTheme(BuildContext context) {
     tickMarkShape: const RoundSliderTickMarkShape(tickMarkRadius: 2),
     activeTickMarkColor: Colors.white.withValues(alpha: .45),
     inactiveTickMarkColor: colors.onSurface.withValues(alpha: .35),
-    overlayShape: const RoundSliderOverlayShape(overlayRadius: 22),
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+    overlayShape: const RoundSliderOverlayShape(overlayRadius: 20),
+    padding: const EdgeInsets.symmetric(vertical: 10),
     showValueIndicator: ShowValueIndicator.never,
   );
 }

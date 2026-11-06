@@ -110,7 +110,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  void expectMenuSurfaceVisible(WidgetTester tester, Finder item) {
+  Rect expectMenuSurfaceVisible(WidgetTester tester, Finder item) {
     Element? surface;
     tester.element(item).visitAncestorElements((element) {
       if (element.widget is Material) {
@@ -147,6 +147,7 @@ void main() {
       }
       child = parent;
     }
+    return bounds;
   }
 
   for (final scene in [
@@ -252,10 +253,11 @@ void main() {
         );
         await open(tester);
         final modelSwitch = find.byKey(const ValueKey('agent-model-switch'));
+        final modelName = find.byKey(const ValueKey('agent-model-name'));
         final current = find.byKey(const ValueKey('agent-effort-value'));
         expect(
           tester.getRect(current).bottom,
-          lessThanOrEqualTo(tester.getRect(modelSwitch).top),
+          lessThanOrEqualTo(tester.getRect(modelName).top),
         );
         expect(
           tester.getCenter(current).dx,
@@ -269,13 +271,11 @@ void main() {
         expect(slider.semanticFormatterCallback!(0), 'Low');
         expect(slider.semanticFormatterCallback!(1), 'High');
         if (scale == 1) {
-          expect(
-            tester
-                .getSize(find.byKey(const ValueKey('agent-model-panel')))
-                .height,
-            lessThanOrEqualTo(140),
-          );
+          final surface = expectMenuSurfaceVisible(tester, current);
+          expect(surface.width, lessThanOrEqualTo(280));
+          expect(surface.height, lessThanOrEqualTo(116));
         }
+        expect(tester.getSize(modelSwitch).height, greaterThanOrEqualTo(48));
         final semantics = tester
             .getSemantics(find.byType(Slider))
             .getSemanticsData();
