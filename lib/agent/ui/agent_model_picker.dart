@@ -321,7 +321,7 @@ class _AgentModelPickerState extends State<AgentModelPicker>
       final menuStyle = SkedMenuStyle.of(context);
       final bounds = SkedMenuStyle.constraintsFor(
         context,
-        requested: const BoxConstraints(maxWidth: 280),
+        requested: const BoxConstraints(maxWidth: 244),
       );
       final width = bounds.maxWidth;
       final height = bounds.maxHeight;

@@ -273,8 +273,11 @@ void main() {
         expect(slider.semanticFormatterCallback!(0), 'Low');
         expect(slider.semanticFormatterCallback!(1), 'High');
         if (scale == 1) {
-          final surface = expectMenuSurfaceVisible(tester, current);
-          expect(surface.width, lessThanOrEqualTo(280));
+          final surface = expectMenuSurfaceVisible(
+            tester,
+            find.byKey(const ValueKey('agent-model-panel')),
+          );
+          expect(surface.width, closeTo(244, .1));
           expect(surface.height, lessThanOrEqualTo(116));
         }
         expect(tester.getSize(modelSwitch).height, greaterThanOrEqualTo(48));
@@ -583,7 +586,7 @@ void main() {
       expect(middle.height, greaterThan(start.height));
       expect(middle.height, lessThan(end.height));
       expect(end.width, closeTo(start.width, .1));
-      expect(end.width, lessThanOrEqualTo(280));
+      expect(end.width, closeTo(244, .1));
       expect(middle.bottom, closeTo(start.bottom, .5));
       expect(end.bottom, closeTo(start.bottom, .5));
       expect(tester.takeException(), isNull);
