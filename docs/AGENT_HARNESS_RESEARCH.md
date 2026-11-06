@@ -1,5 +1,81 @@
 # Sked agent harness 源码研究
 
+## 2026-11-07 图形化 Agent 源码复核
+
+本轮研究基线为 Sked `a8426dd2c0b6ae4955f5fcb945ad4ee2149e9ca6`。在本地浅克隆四个带图形界面的项目，并沿 OpenHands 的实际依赖补充克隆其官方 SDK。阅读范围包括模型请求准备、工具校验、失败恢复、上下文压缩、界面状态投影及对应测试。下面的 Sked 缺口仍待实施，工具参数与预算提示修复之后需要继续完成这些运行链路。
+
+### 来源与版本
+
+星数为 2026-11-07（Asia/Shanghai）通过 GitHub API 取得的快照。固定 SHA 用于复查本轮实际读取的源码。
+
+| 项目 | 图形界面 | 星数 | 固定 SHA |
+| --- | --- | ---: | --- |
+| [OpenCode](https://github.com/anomalyco/opencode) | 桌面应用及共享会话 GUI | 224,983 | `a7515ce7e6cb67043e335b80f140c3bb241439dc` |
+| [OpenHands](https://github.com/OpenHands/OpenHands) | Web Agent Canvas | 92,808 | `2f58406e3fbf0840cbdc9d049157c7e2a046c7f5` |
+| [Cline](https://github.com/cline/cline) | IDE 扩展及桌面示例应用 | 71,396 | `ea16751d6ae3ae1e443681994906bf29cbc45039` |
+| [Cherry Studio](https://github.com/CherryHQ/cherry-studio) | 桌面聊天与 Agent 工作区 | 53,305 | `87d4851181ed801cde36cceb7aea4f7b5cc4ee3b` |
+
+OpenHands 的 Agent、工具与会话循环由独立 SDK 提供，因此继续读取 `OpenHands/software-agent-sdk` 的 `64dd33f4b60b15b63402c6fd5da9352aa101f729`。Roo Code 已于 2026-05-15 归档，本轮主对照选择仍在维护的上述项目。[OpenHands 开发边界](https://github.com/OpenHands/OpenHands/blob/2f58406e3fbf0840cbdc9d049157c7e2a046c7f5/docs/DEVELOPMENT.md)、[Roo Code 归档说明](https://github.com/RooCodeInc/Roo-Code-Docs/blob/main/docs/sunset.md)
+
+### 已复现的 Sked 行为
+
+Windows 下使用当前源码、内存主库和合成消息执行三个临时诊断用例，入口包括 `ApplicationToolHost.execute`、`projectAgentConversationTimeline`、`boundConversationContext` 和实际请求编码器。运行命令为 `flutter test --no-pub <系统临时目录>/audit_probe_test.dart`，探针断言当前缺陷行为并通过。第三方项目的比较证据来自固定版本源码及测试阅读。
+
+| 输入与场景 | 实际结果 | 影响与定位 |
+| --- | --- | --- |
+| `skills.search {}`，内置 manifest 共 24 项 | 返回 20 项，结果只有 `skills` 键 | 默认目录静默漏掉最后四项，没有 offset、hasMore 或总数。自定义技能加入后，最大 24 项也不足以遍历目录。[工具宿主](../lib/agent/tools/application_tool_host.dart) |
+| 查询“帮我看看明天都有什么安排”“Show my schedule for tomorrow”“帮我把所有课程的地点改成第三教学楼” | 三条均返回 0 项，单独查询“日程”返回 3 项 | 按完整用户请求找技能的契约，与空白分词、完整子串和固定触发词算法存在差距。[技能搜索](../lib/agent/skills/shared_skill_loader.dart) |
+| `skills.load` 加载不存在的 ID，再投影到正式会话活动模型 | 工具结果为 `notFound`，活动状态为 `completed` | 技能加载结果缺统一错误语义，运行统计和 GUI 都可能把失败记为完成。[结果计量](../lib/agent/runtime/agent_runtime_controller.dart)、[活动投影](../lib/agent/ui/agent_conversation_timeline.dart) |
+| 相同的 12 组已完成查询，用户消息分别带附件和只含文字 | 纯文字可压缩，带附件返回无法压缩 | 遇到附件组直接退出压缩遍历，附件后的旧查询也无法处理。[上下文压缩](../lib/agent/runtime/conversation_context.dart) |
+| 40 万中文字符的旧回复与两个短用户消息 | 通过 512 Ki 字符检查，随后被 1 MiB 请求字节限制拒绝 | 仅正文已占 1,200,000 UTF-8 字节，上下文规划与最终编码使用不同度量。[请求编码](../lib/agent/provider/provider_request_encoder.dart) |
+| 依次发现三个工具 | 暴露工具数从 6 增为 7、8、9，返回的 schema 同时进入后续 `tools` | 发现结果与后续工具定义重复携带 schema，运行内暴露集合持续增长。此探针中的三个返回 schema 共 3,997 字节。[工具发现](../lib/agent/tools/application_tool_host.dart) |
+
+### 应吸收的运行机制
+
+#### 参数契约、错误反馈与停滞检测需要一起工作
+
+OpenHands SDK 使用同一个 action 类型生成公开 schema 并校验调用参数。JSON、未知工具与字段验证失败形成关联调用 ID 的错误事件，结构化保留错误类型与字段路径。停滞检测按失败模式判断是否仍在同一处出错，第三次给予纠正提醒，再次重复才结束。其跨层测试覆盖同错反复、逐字段修复、成功重置和事件持久化。[schema 与校验](https://github.com/OpenHands/software-agent-sdk/blob/64dd33f4b60b15b63402c6fd5da9352aa101f729/openhands-sdk/openhands/sdk/tool/tool.py#L539-L545)、[错误回送](https://github.com/OpenHands/software-agent-sdk/blob/64dd33f4b60b15b63402c6fd5da9352aa101f729/openhands-sdk/openhands/sdk/agent/agent.py#L1395-L1508)、[停滞回归](https://github.com/OpenHands/software-agent-sdk/blob/64dd33f4b60b15b63402c6fd5da9352aa101f729/tests/cross/test_validation_loops.py#L163-L245)
+
+Cline 把参数规范化后的重复调用和连续全失败轮次分别计数，软提示进入模型上下文，硬阈值交给宿主。桌面继续操作先成功送入 steering 指导，再释放等待中的工具与模型步骤。运行时及桌面测试覆盖阈值、等待、停止和指导只投递一次。[重复调用检测](https://github.com/cline/cline/blob/ea16751d6ae3ae1e443681994906bf29cbc45039/sdk/packages/core/src/runtime/safety/loop-detection.ts#L39-L162)、[循环集成](https://github.com/cline/cline/blob/ea16751d6ae3ae1e443681994906bf29cbc45039/sdk/packages/core/src/runtime/orchestration/session-runtime-orchestrator.ts#L1414-L1590)、[GUI 接续](https://github.com/cline/cline/blob/ea16751d6ae3ae1e443681994906bf29cbc45039/apps/examples/desktop-app/sidecar/chat-session.ts#L510-L638)
+
+Cherry Studio 将工具输入失败、工具执行失败与终止流错误分开投影。参数修复取得原工具 schema，候选再次通过校验后才能进入工具执行，修复请求单独记录用量。对应测试拒绝仍不符合 schema 的候选，并检查修复计量。[参数修复](https://github.com/CherryHQ/cherry-studio/blob/87d4851181ed801cde36cceb7aea4f7b5cc4ee3b/src/main/ai/tools/adapters/aiSdk/repair.ts#L35-L156)、[流错误分类](https://github.com/CherryHQ/cherry-studio/blob/87d4851181ed801cde36cceb7aea4f7b5cc4ee3b/src/main/ai/runtime/aiSdk/Agent.ts#L322-L358)、[修复回归](https://github.com/CherryHQ/cherry-studio/blob/87d4851181ed801cde36cceb7aea4f7b5cc4ee3b/src/main/ai/tools/adapters/aiSdk/__tests__/repair.test.ts#L188-L230)
+
+Sked 当前对可解析参数错误回送结果并继续下一轮，缺少重复失败和无进展识别，持续试错可耗尽全局预算。格式损坏则在提供方或全局响应校验时直接结束。手写 schema 与实际校验也仍存在漂移，例如 `events.list` 公布 `start/end/sourceIds`，查询层却拒绝非 occurrence 资源使用这些参数。应建立同源参数契约和统一结果分类，再接入有限纠错、进展识别及可继续的宿主状态。修复候选继续经过原有权限、版本、幂等与密钥检查。未知写入结果先核对回执。
+
+#### 技能目录应让模型完整发现，正文按需加载
+
+OpenHands 将可调用技能的紧凑名称和用途放进模型上下文，正文由 `invoke_skill` 加载。未知技能明确标记错误并返回可用名称。GUI E2E 从聊天输入出发，检查后端实际产生的技能激活事件。[目录构建](https://github.com/OpenHands/software-agent-sdk/blob/64dd33f4b60b15b63402c6fd5da9352aa101f729/openhands-sdk/openhands/sdk/context/agent_context.py#L335-L438)、[加载结果](https://github.com/OpenHands/software-agent-sdk/blob/64dd33f4b60b15b63402c6fd5da9352aa101f729/openhands-sdk/openhands/sdk/tool/builtins/invoke_skill.py#L85-L123)、[GUI 到技能激活回归](https://github.com/OpenHands/OpenHands/blob/2f58406e3fbf0840cbdc9d049157c7e2a046c7f5/tests/e2e/mock-llm/skills/mock-llm-skills.spec.ts#L205-L249)
+
+Sked 应保证目录完整可遍历、缺失或截断可见，统一技能加载的成功与失败结果。现有 24 项内置技能适合评估在初始上下文提供紧凑目录，由模型按任务选择，再按需披露正文和工具。动态工具集需要考虑发现结果重复、曝光上限及已使用工具的续传兼容。
+
+#### 在发送前规划完整请求预算，并保留收尾空间
+
+OpenCode 每轮发送前估算并按需压缩，计量结合最近实际 usage、新增消息、系统提示、工具定义和 schema，阈值关联模型上下文窗口。Cherry Studio 进一步将请求实际声明的输出预留扣除后，作为输入、附件和工具输出预算的共同基准。[OpenCode 请求循环](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/core/src/session/runner/llm.ts#L232-L313)、[完整输入计量](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/core/src/session/compaction.ts#L1129-L1243)、[Cherry 输入空间](https://github.com/CherryHQ/cherry-studio/blob/87d4851181ed801cde36cceb7aea4f7b5cc4ee3b/src/main/ai/contextBuild/resolveInputRoom.ts)
+
+Sked 当前字符检查、UTF-8 请求上限、固定单请求 32768 token 限制和累计运行预算分别处理，部分拒绝发生在远端响应之后。发送前需要统一计算消息、工具、附件、输出预留和剩余运行额度，并提供明确的未知 usage 策略。GUI 分别显示当前上下文占用和累计运行用量，压缩运行与失败具有独立状态。
+
+OpenCode 在配置的最后一步要求总结并禁用工具，其测试验证模型继续请求工具也不会执行。Sked 应在总额度内预留只读收尾轮，预算已耗尽时从已保存回执生成确定性阶段结果。[收尾控制](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/core/src/session/runner/llm.ts#L252-L273)、[最后一步回归](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/core/test/session-runner.test.ts#L5717-L5747)、[上下文 GUI](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/gui-plugins/src/context/indicator.tsx#L47-L74)
+
+#### 压缩后仍应保有可继续的任务状态
+
+OpenCode 的 checkpoint 明确保留目标、约束、决定、工作状态和下一步，并保留近期原文。Sked 现有摘要只保存用户原文、部分操作身份和 Skill ID，压缩后的模型输入缺少原方案正文，“采用第二种方案”等指代需要重新读取历史才能还原。应保留已经确认的决定、对象引用、未决回执和近期完整工具组，附件作为必须保留的独立内容参与重组。连续压缩、存储失败与中断恢复都需要回归。[摘要结构](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/core/src/session/compaction.ts#L174-L238)、[Sked 压缩实现](../lib/agent/runtime/conversation_context.dart)
+
+### 验收方式与实施顺序
+
+现有 [AcceptanceHarness](../test/agent/acceptance/acceptance_harness.dart) 以预选 Skill ID 和手写正确参数直接执行宿主工具，适合验证业务变换、存储和回执。它没有覆盖从用户自然语言进入 `runtime.send` 后的发现、参数生成和多轮纠错。新的轨迹回归必须经过正式循环，在下一次模型请求中检查真实工具定义与上一轮结果，并验证最终数据和可见状态。
+
+按以下顺序拆成原子条目，每条同时交付实现、轨迹回归和当前行为文档。
+
+1. **固定失败轨迹。** 收录技能漏项、自然语言零命中、技能失败显示完成、重复无效调用、日期筛选契约、附件压缩与请求字节超限。覆盖正确后继请求以及取消、保存失败和未知写入结果。
+2. **补齐发现和结果契约。** 完整技能目录、准确成功/失败状态、按资源类型公开参数，以及结构化字段错误。预先定义工具结果的宿主计量和 GUI 映射。
+3. **接入有限纠错和停滞检测。** 区分相同错误、真实修正进展、正常查询、成功操作和用户新输入，恢复次数独立计量，等待期间阻止后续动作。
+4. **统一预算与任务 checkpoint。** 发请求前统计全部输入，附件与历史工具组可分别保留或压缩，保存已确认决定，收尾输出纳入总预算。
+5. **补任务质量验收。** 保存自然语言任务、合成初始数据、期待终态和失败轨迹，记录完成率、无效调用数、发现轮数、token 与中断原因。真实模型执行继续遵循 R6 的独立授权与验收安排。
+
+研究时同时核对参考实现的适用边界。Cherry 的通用 `onError` 返回 retry 目前只记录日志后终止，Cline 的 smoke CI 正在迁移，参考仓库中的评测指标也需独立核算。采用上述机制时，以实际调用链和能捕获反例的测试作为依据。[Cherry 错误终态](https://github.com/CherryHQ/cherry-studio/blob/87d4851181ed801cde36cceb7aea4f7b5cc4ee3b/src/main/ai/runtime/aiSdk/Agent.ts#L414-L429)、[Cline 评测状态](https://github.com/cline/cline/blob/ea16751d6ae3ae1e443681994906bf29cbc45039/evals/README.md#L103-L109)
+
+## 2026-10-29 研究快照
+
 研究日期：2026-10-29（Asia/Shanghai）。Sked 基线：`main`，`ea784f3a16e5d4a23aedae410544492fb6fa0f6f`。本报告只做联网检索、源码下载和静态阅读，没有运行第三方安装脚本、harness、模型调用、Sked 测试或构建。当前主分支是移动目标，下面按实际下载的 SHA 固定证据；这里不宣称它们是稳定发行版。
 
 ## 结论
