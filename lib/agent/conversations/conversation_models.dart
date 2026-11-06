@@ -105,7 +105,7 @@ class ConversationMessage {
     attachmentDelivery: attachmentDelivery ?? this.attachmentDelivery,
   );
 
-  /// Bounded, immutable Responses continuation data; never request headers or
+  /// Bounded, immutable provider continuation data; never request headers or
   /// credentials. The model endpoint remains bound at conversation level.
   final List<Map<String, Object?>> responseItems;
 

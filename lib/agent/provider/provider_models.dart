@@ -78,7 +78,8 @@ class ProviderMessage {
   final String? toolCallId;
   final List<ProviderAttachment> attachments;
 
-  /// Protocol continuation items, e.g. Responses reasoning and function calls.
+  /// Protocol continuation items, including Chat reasoning_content and
+  /// Responses reasoning and function calls.
   /// Only assistant messages may contain these; they never confer authority.
   final List<Map<String, Object?>> responseItems;
 }

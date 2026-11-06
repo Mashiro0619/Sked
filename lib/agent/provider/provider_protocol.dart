@@ -5,6 +5,8 @@ import 'provider_models.dart';
 import 'sse_decoder.dart';
 import 'tool_name_codec.dart';
 
+const _chatReasoningItemType = 'chat_reasoning';
+
 Map<String, Object?> encodeProviderRequest(ProviderRequest request) {
   final names = <String>{};
   for (final tool in request.tools) {
@@ -22,6 +24,12 @@ Map<String, Object?> encodeProviderRequest(ProviderRequest request) {
     }
     if (message.role == ProviderRole.tool &&
         (message.toolCallId?.isEmpty ?? true)) {
+      throw const ProviderException(ProviderError.invalidRequest);
+    }
+    if (request.protocol == ProviderProtocol.responses &&
+        message.responseItems.any(
+          (item) => item['type'] == _chatReasoningItemType,
+        )) {
       throw const ProviderException(ProviderError.invalidRequest);
     }
   }
@@ -48,6 +56,7 @@ Map<String, Object?> encodeProviderRequest(ProviderRequest request) {
             (message) => <String, Object?>{
               'role': message.role.name,
               'content': _messageContent(message, request.protocol),
+              ..._chatContinuation(message),
               if (message.role == ProviderRole.tool)
                 'tool_call_id': message.toolCallId,
               if (message.toolCalls.isNotEmpty)
@@ -110,6 +119,19 @@ Map<String, Object?> encodeProviderRequest(ProviderRequest request) {
     if (tools.isNotEmpty)
       'tools': tools.map((tool) => {'type': 'function', ...tool}).toList(),
   };
+}
+
+Map<String, Object?> _chatContinuation(ProviderMessage message) {
+  final items = message.responseItems
+      .where((item) => item['type'] == _chatReasoningItemType)
+      .toList();
+  if (items.isEmpty) return const {};
+  if (items.length != 1 ||
+      items.single.length != 2 ||
+      items.single['reasoning_content'] is! String) {
+    throw const ProviderException(ProviderError.invalidRequest);
+  }
+  return {'reasoning_content': items.single['reasoning_content']};
 }
 
 Object _messageContent(ProviderMessage message, ProviderProtocol protocol) {
@@ -195,6 +217,8 @@ class ProviderResponseDecoder {
   final String _apiKey;
   final Map<String, String> _knownNames;
   final StringBuffer _text = StringBuffer();
+  final StringBuffer _chatReasoning = StringBuffer();
+  bool _hasChatReasoning = false;
   final Map<int, _ToolBuffer> _tools = {};
   ProviderUsage? _usage;
   String? _finishReason;
@@ -309,6 +333,10 @@ class ProviderResponseDecoder {
       }
       final delta = _map(choice['delta']);
       if (delta['content'] case final String text) _addText(text, events);
+      if (delta['reasoning_content'] != null) {
+        _hasChatReasoning = true;
+        _chatReasoning.write(_string(delta['reasoning_content']));
+      }
       if (delta['refusal'] case final String refusal when refusal.isNotEmpty) {
         throw const ProviderException(ProviderError.incompleteResponse);
       }
@@ -577,6 +605,18 @@ class ProviderResponseDecoder {
         throw const ProviderException(ProviderError.invalidToolArguments);
       }
       calls.add(ProviderToolCall(id: id, name: name, arguments: arguments));
+    }
+    if (_hasChatReasoning) {
+      _responseItems = [
+        {
+          'type': _chatReasoningItemType,
+          'reasoning_content': _chatReasoning.toString(),
+        },
+      ];
+      // Match the existing archive's continuation budget before publication.
+      if (utf8.encode(jsonEncode(_responseItems)).length > 512 * 1024) {
+        throw const ProviderException(ProviderError.responseBudgetExceeded);
+      }
     }
     _complete = true;
     return ProviderCompleted(
