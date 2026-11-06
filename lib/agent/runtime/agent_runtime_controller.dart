@@ -24,6 +24,7 @@ import '../ui/agent_ui_delegate.dart';
 import 'conversation_context.dart';
 import 'operation_outcome.dart';
 import 'operation_recovery.dart';
+import 'repeated_tool_failure.dart';
 
 typedef AgentApprovalRequester = Future<MutationApproval?> Function(
   ApprovalPlan plan,
@@ -53,6 +54,7 @@ enum AgentRuntimeError {
   toolBudgetExceeded,
   tokenBudgetExceeded,
   resultBudgetExceeded,
+  repeatedToolFailure,
   sensitiveContent,
   interruptedRunNeedsReview,
   timeout,
@@ -1189,6 +1191,7 @@ class AgentRuntimeController implements AgentUiDelegate {
       final maxCalls = run.settings.maxToolCalls < limits.maxToolCalls
           ? run.settings.maxToolCalls
           : limits.maxToolCalls;
+      final repeatedFailures = RepeatedToolFailureTracker();
       for (var round = run.usage.requests.length; round < maxRounds; round++) {
         _checkRun(run);
         if (run.recoveryRequired) await _recoverHistory(run);
@@ -1302,6 +1305,25 @@ class AgentRuntimeController implements AgentUiDelegate {
             toolDeadline.cancel();
             run.toolDeadline = null;
           }
+          final repeatedCount = repeatedFailures.record(call, toolFailure);
+          if (repeatedCount >= 2) {
+            final guided = {
+              ...result,
+              'recovery': {
+                'code': 'repeated_tool_failure',
+                'consecutiveFailures': repeatedCount,
+                'limit': 3,
+                'message': repeatedCount == 2
+                    ? 'This tool and its arguments failed twice with the same error. Inspect the schema and returned field, correct the arguments, or choose a supported tool. A third identical failure stops this run.'
+                    : 'The same tool and arguments failed three times with the same error. This run stopped. Review the schema and error before explicitly continuing.',
+              },
+            };
+            // Guidance must not turn a small, known failure into a result-size
+            // failure when a caller deliberately uses a very small budget.
+            if (jsonEncode(guided).length <= limits.maxToolResultCharacters) {
+              result = guided;
+            }
+          }
           // An already accepted write is awaited and its real result saved
           // even if Stop was pressed while the host was committing it.
           String encoded;
@@ -1370,6 +1392,16 @@ class AgentRuntimeController implements AgentUiDelegate {
                 const AgentRuntimeException(
                   AgentRuntimeError.interruptedRunNeedsReview,
                 );
+          }
+          if (repeatedCount >= 3) {
+            await _recordUnexecuted(
+              run,
+              response.toolCalls.skip(index + 1),
+              'repeated_tool_failure',
+            );
+            throw const AgentRuntimeException(
+              AgentRuntimeError.repeatedToolFailure,
+            );
           }
         }
       }

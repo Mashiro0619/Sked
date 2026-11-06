@@ -224,6 +224,7 @@ void main() {
     'toolBudgetExceeded',
     'tokenBudgetExceeded',
     'resultBudgetExceeded',
+    'repeatedToolFailure',
     'timeout',
     'toolTimeout',
   ]) {

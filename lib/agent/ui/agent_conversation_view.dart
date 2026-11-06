@@ -2398,6 +2398,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       'toolBudgetExceeded',
       'tokenBudgetExceeded',
       'resultBudgetExceeded',
+      'repeatedToolFailure',
       'timeout',
       'toolTimeout',
     }.contains(code)) {
