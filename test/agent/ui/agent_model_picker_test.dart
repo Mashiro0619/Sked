@@ -8,6 +8,7 @@ import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/ui/agent_model_picker.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
 import 'package:sked/models/agent_settings.dart';
+import 'package:sked/theme/sked_expressive_theme.dart';
 
 import 'agent_ui_test_support.dart';
 
@@ -314,11 +315,251 @@ void main() {
       expect(find.byType(Slider), findsNothing);
       expect(find.byKey(const ValueKey('agent-effort-minimum')), findsNothing);
       expect(find.byKey(const ValueKey('agent-effort-maximum')), findsNothing);
-      expect(find.byKey(const ValueKey('agent-model-switch')), findsNothing);
+      final modelSwitch = find.byKey(const ValueKey('agent-model-switch'));
+      expect(modelSwitch.hitTestable(), findsOneWidget);
+      expect(
+        find.descendant(
+          of: modelSwitch,
+          matching: find.byIcon(Icons.chevron_right_rounded),
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(modelSwitch);
+      await tester.pumpAndSettle();
+      final onlyModel = find.byKey(
+        const ValueKey('agent-model-choice-model-b'),
+      );
+      expect(onlyModel.hitTestable(), findsOneWidget);
+      await tester.tap(onlyModel);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('agent-model-panel')), findsOneWidget);
       expect(delegate.choices, isEmpty);
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'model list waits for save and keeps failures available for retry',
+    (tester) async {
+      await initialize(tester);
+      delegate.gate = Completer<void>();
+      addTearDown(() {
+        if (!delegate.gate!.isCompleted) delegate.gate!.complete();
+      });
+      await mountAgentUi(tester, view());
+      await open(tester);
+      await tester.tap(find.byKey(const ValueKey('agent-model-switch')));
+      await tester.pumpAndSettle();
+      final choice = find.byKey(const ValueKey('agent-model-choice-model-b'));
+      await tester.tap(choice);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('agent-model-list')), findsOneWidget);
+      expect(find.byKey(const ValueKey('agent-model-panel')), findsNothing);
+      expect(delegate.state.value.selectionFor(id), low);
+      expect(tester.widget<MenuItemButton>(choice).onPressed, isNull);
+      delegate.fail = true;
+      delegate.gate!.complete();
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('agent-model-list')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('agent-model-list-error')),
+        findsOneWidget,
+      );
+      expect(delegate.state.value.selectionFor(id), low);
+      delegate.fail = false;
+      await tester.tap(choice);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('agent-model-panel')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('agent-model-list-error')),
+        findsNothing,
+      );
+      expect(repository.selected!.modelSelection, modelB.defaultSelection);
+      expect(delegate.choices, [
+        modelB.defaultSelection,
+        modelB.defaultSelection,
+      ]);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('a different model keeps the existing effort when supported', (
+    tester,
+  ) async {
+    const compatible = AgentModelConfig(
+      id: 'compatible',
+      reasoningEfforts: [AgentReasoningEffort.low, AgentReasoningEffort.medium],
+      defaultReasoningEffort: AgentReasoningEffort.medium,
+    );
+    await initialize(tester, models: const [modelA, compatible]);
+    await mountAgentUi(tester, view());
+    await open(tester);
+    await tester.tap(find.byKey(const ValueKey('agent-model-switch')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('agent-model-choice-compatible')),
+    );
+    await tester.pumpAndSettle();
+    const expected = AgentModelSelection(
+      modelId: 'compatible',
+      reasoningEffort: AgentReasoningEffort.low,
+    );
+    expect(repository.selected!.modelSelection, expected);
+    expect(delegate.choices, [expected]);
+    expect(find.byKey(const ValueKey('agent-model-panel')), findsOneWidget);
+  });
+
+  testWidgets(
+    'outgoing card and list callbacks cannot act on the current page',
+    (tester) async {
+      await initialize(tester);
+      await mountAgentUi(tester, view());
+      await open(tester);
+      final oldSlider = tester.widget<Slider>(find.byType(Slider));
+      await tester.tap(find.byKey(const ValueKey('agent-model-switch')));
+      await tester.pump();
+      expect(find.byType(Slider).hitTestable(), findsNothing);
+      oldSlider.onChanged!(1);
+      oldSlider.onChangeEnd!(1);
+      await tester.pumpAndSettle();
+      expect(delegate.choices, isEmpty);
+      final oldChoice = tester
+          .widget<MenuItemButton>(
+            find.byKey(const ValueKey('agent-model-choice-model-b')),
+          )
+          .onPressed!;
+      await tester.tap(find.byKey(const ValueKey('agent-model-list-back')));
+      // MenuItemButton delivers activation after the first frame. Build the
+      // resulting page switch before checking its still-fading old controls.
+      await tester.pump();
+      await tester.pump();
+      expect(
+        find.byKey(const ValueKey('agent-model-choice-model-b')).hitTestable(),
+        findsNothing,
+      );
+      oldChoice();
+      await tester.pumpAndSettle();
+      expect(delegate.choices, isEmpty);
+      expect(tester.widget<Slider>(find.byType(Slider)).value, 0);
+    },
+  );
+
+  testWidgets(
+    'closing during page transition retires all old choices immediately',
+    (tester) async {
+      await initialize(tester);
+      await mountAgentUi(tester, view());
+      await open(tester);
+      final oldSlider = tester.widget<Slider>(find.byType(Slider));
+      await tester.tap(find.byKey(const ValueKey('agent-model-switch')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 40));
+      final oldChoice = tester
+          .widget<MenuItemButton>(
+            find.byKey(const ValueKey('agent-model-choice-model-b')),
+          )
+          .onPressed!;
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      oldChoice();
+      oldSlider.onChangeEnd!(1);
+      await tester.pumpAndSettle();
+      expect(delegate.choices, isEmpty);
+      expect(find.byKey(const ValueKey('agent-model-list')), findsNothing);
+      expect(delegate.state.value.selectionFor(id), low);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'card and list keep their width and anchor edge during height interpolation',
+    (tester) async {
+      final models = [
+        modelA,
+        modelB,
+        for (var index = 0; index < 12; index++)
+          AgentModelConfig(
+            id: 'extra-$index',
+            reasoningEfforts: const [AgentReasoningEffort.low],
+            defaultReasoningEffort: AgentReasoningEffort.low,
+          ),
+      ];
+      await initialize(tester, models: models);
+      await mountAgentUi(
+        tester,
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Align(
+            alignment: Alignment.bottomRight,
+            child: SizedBox(width: 180, child: view()),
+          ),
+        ),
+        size: const Size(390, 844),
+      );
+      await open(tester);
+      final start = expectMenuSurfaceVisible(
+        tester,
+        find.byKey(const ValueKey('agent-model-panel')),
+      );
+      await tester.tap(find.byKey(const ValueKey('agent-model-switch')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 90));
+      final middle = expectMenuSurfaceVisible(
+        tester,
+        find.byKey(const ValueKey('agent-model-list')),
+      );
+      await tester.pumpAndSettle();
+      final end = expectMenuSurfaceVisible(
+        tester,
+        find.byKey(const ValueKey('agent-model-list')),
+      );
+      expect(middle.height, greaterThan(start.height));
+      expect(middle.height, lessThan(end.height));
+      expect(end.width, closeTo(start.width, .1));
+      expect(end.width, lessThanOrEqualTo(280));
+      expect(middle.bottom, closeTo(start.bottom, .5));
+      expect(end.bottom, closeTo(start.bottom, .5));
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  for (final reduced in [true, false]) {
+    testWidgets(
+      'page height settles immediately with ${reduced ? 'reduced motion' : 'animations disabled'}',
+      (tester) async {
+        await initialize(tester);
+        await mountAgentUi(
+          tester,
+          Builder(
+            builder: (context) => MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(disableAnimations: !reduced),
+              child: SkedMotionPolicyScope(
+                disableAnimations: !reduced,
+                reduceMotion: reduced,
+                child: view(),
+              ),
+            ),
+          ),
+        );
+        await open(tester);
+        await tester.tap(find.byKey(const ValueKey('agent-model-switch')));
+        await tester.pump();
+        final immediate = tester.getSize(
+          find.byKey(const ValueKey('agent-model-content-transition')),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          tester.getSize(
+            find.byKey(const ValueKey('agent-model-content-transition')),
+          ),
+          immediate,
+        );
+        expect(find.byType(Slider).hitTestable(), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   testWidgets('reset uses this model default and old reset callbacks expire', (
     tester,
