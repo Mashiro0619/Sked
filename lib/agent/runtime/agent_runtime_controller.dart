@@ -2679,6 +2679,9 @@ class AgentRuntimeController implements AgentUiDelegate {
   ) {
     _rejectSecret(response.text, run.apiKey);
     _rejectSecretValues(response.responseItems, run.apiKey);
+    if (response.toolCalls.isEmpty && response.text.trim().isEmpty) {
+      throw const ProviderException(ProviderError.incompleteResponse);
+    }
     final names = run.tools.map((tool) => tool.name).toSet();
     final ids = {
       for (final message in history.messages)
