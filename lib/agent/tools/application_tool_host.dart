@@ -18,10 +18,13 @@ import '../../models/general_event_edit_scope.dart';
 import '../../utils/time_utils.dart';
 import '../conversations/conversation_models.dart';
 import '../interactions/agent_question.dart';
+import '../interactions/agent_task_plan.dart';
 import '../references/agent_composer_reference.dart';
 import '../provider/provider.dart';
 import '../runtime/agent_runtime_controller.dart';
 import '../skills/shared_skill_loader.dart';
+
+part 'agent_task_plan_tools.dart';
 
 typedef ApplicationToolAction = Future<Map<String, Object?>> Function(
   Map<String, Object?> arguments,
@@ -44,6 +47,7 @@ class ApplicationToolHost {
   }) : settings = settings ?? SettingRegistry(),
        _loadAsset = loadSkillAsset ?? rootBundle.loadString {
     _registerCore();
+    _registerTaskPlanTools();
   }
 
   final AppSession session;
@@ -134,6 +138,7 @@ class ApplicationToolHost {
   static const maxResultBytes = 64 * 1024;
   static const _bootstrap = {
     'ask_user',
+    'update_plan',
     'capabilities.describe',
     'skills.search',
     'skills.load',

@@ -3022,5 +3022,19 @@
   "agentReferenceFiles": "已附檔案",
   "@agentReferenceFiles": {},
   "agentReferenceInvalid": "所選參照已變更或無法使用，請移除或重新選取後重試。",
-  "@agentReferenceInvalid": {}
+  "@agentReferenceInvalid": {},
+  "agentTaskPlanTitle": "任務計畫",
+  "@agentTaskPlanTitle": {},
+  "agentTaskPlanPending": "待處理",
+  "@agentTaskPlanPending": {},
+  "agentTaskPlanInProgress": "進行中",
+  "@agentTaskPlanInProgress": {},
+  "agentTaskPlanCompleted": "已完成",
+  "@agentTaskPlanCompleted": {},
+  "agentTaskPlanBlocked": "受阻",
+  "@agentTaskPlanBlocked": {},
+  "agentTaskPlanReported": "Agent 回報的進度",
+  "@agentTaskPlanReported": {},
+  "agentToolUpdatePlan": "更新任務計畫",
+  "@agentToolUpdatePlan": {}
 }

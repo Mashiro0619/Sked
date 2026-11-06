@@ -4488,4 +4488,25 @@ class AppLocalizationsTh extends AppLocalizations {
   @override
   String get agentReferenceInvalid =>
       'The selected references have changed or are unavailable. Remove or select them again, then retry.';
+
+  @override
+  String get agentTaskPlanTitle => 'Task plan';
+
+  @override
+  String get agentTaskPlanPending => 'Pending';
+
+  @override
+  String get agentTaskPlanInProgress => 'In progress';
+
+  @override
+  String get agentTaskPlanCompleted => 'Completed';
+
+  @override
+  String get agentTaskPlanBlocked => 'Blocked';
+
+  @override
+  String get agentTaskPlanReported => 'Progress reported by Agent';
+
+  @override
+  String get agentToolUpdatePlan => 'Update task plan';
 }

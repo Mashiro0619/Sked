@@ -36,6 +36,7 @@ import '../conversations/conversation_repository.dart';
 import '../history/conversation_history.dart';
 import '../history/conversation_history_service.dart';
 import '../imports/conversation_file_attachments.dart';
+import '../interactions/agent_task_plan.dart';
 import '../references/agent_composer_reference.dart';
 import '../references/agent_composer_reference_search.dart';
 import 'agent_ui_delegate.dart';
@@ -44,8 +45,10 @@ import 'agent_plan_preview.dart';
 import 'agent_question_view.dart';
 import 'agent_budget_summary.dart';
 import 'agent_reference_picker.dart';
+import 'agent_task_plan_view.dart';
 
 part 'agent_composer_references.dart';
+part 'agent_task_plan_panel.dart';
 
 // Failed saves remain available when a panel is closed and reopened. The
 // buffer follows the repository lifetime and is never shared across archives.
@@ -1509,6 +1512,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                   ),
                 ),
               if (conversation != null) ..._messageWidgets(conversation, l),
+              if (conversation != null) ..._taskPlanWidgets(conversation, l),
               if (conversation?.pendingRedo != null) ...[
                 _notice(l.agentRedoPending),
                 TextButton.icon(

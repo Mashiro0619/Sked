@@ -7983,6 +7983,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The selected references have changed or are unavailable. Remove or select them again, then retry.'**
   String get agentReferenceInvalid;
+
+  /// No description provided for @agentTaskPlanTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Task plan'**
+  String get agentTaskPlanTitle;
+
+  /// No description provided for @agentTaskPlanPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get agentTaskPlanPending;
+
+  /// No description provided for @agentTaskPlanInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'In progress'**
+  String get agentTaskPlanInProgress;
+
+  /// No description provided for @agentTaskPlanCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed'**
+  String get agentTaskPlanCompleted;
+
+  /// No description provided for @agentTaskPlanBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked'**
+  String get agentTaskPlanBlocked;
+
+  /// No description provided for @agentTaskPlanReported.
+  ///
+  /// In en, this message translates to:
+  /// **'Progress reported by Agent'**
+  String get agentTaskPlanReported;
+
+  /// No description provided for @agentToolUpdatePlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Update task plan'**
+  String get agentToolUpdatePlan;
 }
 
 class _AppLocalizationsDelegate

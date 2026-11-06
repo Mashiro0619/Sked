@@ -3020,5 +3020,19 @@
   "agentReferenceFiles": "已附文件",
   "@agentReferenceFiles": {},
   "agentReferenceInvalid": "所选引用已变更或不可用，请移除或重新选择后重试。",
-  "@agentReferenceInvalid": {}
+  "@agentReferenceInvalid": {},
+  "agentTaskPlanTitle": "任务计划",
+  "@agentTaskPlanTitle": {},
+  "agentTaskPlanPending": "待处理",
+  "@agentTaskPlanPending": {},
+  "agentTaskPlanInProgress": "进行中",
+  "@agentTaskPlanInProgress": {},
+  "agentTaskPlanCompleted": "已完成",
+  "@agentTaskPlanCompleted": {},
+  "agentTaskPlanBlocked": "受阻",
+  "@agentTaskPlanBlocked": {},
+  "agentTaskPlanReported": "Agent 报告的进度",
+  "@agentTaskPlanReported": {},
+  "agentToolUpdatePlan": "更新任务计划",
+  "@agentToolUpdatePlan": {}
 }

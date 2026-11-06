@@ -4222,6 +4222,27 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentReferenceInvalid => '所选引用已变更或不可用，请移除或重新选择后重试。';
+
+  @override
+  String get agentTaskPlanTitle => '任务计划';
+
+  @override
+  String get agentTaskPlanPending => '待处理';
+
+  @override
+  String get agentTaskPlanInProgress => '进行中';
+
+  @override
+  String get agentTaskPlanCompleted => '已完成';
+
+  @override
+  String get agentTaskPlanBlocked => '受阻';
+
+  @override
+  String get agentTaskPlanReported => 'Agent 报告的进度';
+
+  @override
+  String get agentToolUpdatePlan => '更新任务计划';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -8444,4 +8465,25 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentReferenceInvalid => '所選參照已變更或無法使用，請移除或重新選取後重試。';
+
+  @override
+  String get agentTaskPlanTitle => '任務計畫';
+
+  @override
+  String get agentTaskPlanPending => '待處理';
+
+  @override
+  String get agentTaskPlanInProgress => '進行中';
+
+  @override
+  String get agentTaskPlanCompleted => '已完成';
+
+  @override
+  String get agentTaskPlanBlocked => '受阻';
+
+  @override
+  String get agentTaskPlanReported => 'Agent 回報的進度';
+
+  @override
+  String get agentToolUpdatePlan => '更新任務計畫';
 }

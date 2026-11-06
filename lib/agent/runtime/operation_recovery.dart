@@ -202,6 +202,7 @@ recoverAgentOperationHistory(
 /// Preparation, credentials, model probes and commits remain unavailable.
 bool isAgentRecoveryRead(String name) => const {
   'ask_user',
+  'update_plan',
   'capabilities.describe',
   'skills.search',
   'skills.load',

@@ -3090,5 +3090,19 @@
   "agentReferenceFiles": "Attached files",
   "@agentReferenceFiles": {},
   "agentReferenceInvalid": "The selected references have changed or are unavailable. Remove or select them again, then retry.",
-  "@agentReferenceInvalid": {}
+  "@agentReferenceInvalid": {},
+  "agentTaskPlanTitle": "Task plan",
+  "@agentTaskPlanTitle": {},
+  "agentTaskPlanPending": "Pending",
+  "@agentTaskPlanPending": {},
+  "agentTaskPlanInProgress": "In progress",
+  "@agentTaskPlanInProgress": {},
+  "agentTaskPlanCompleted": "Completed",
+  "@agentTaskPlanCompleted": {},
+  "agentTaskPlanBlocked": "Blocked",
+  "@agentTaskPlanBlocked": {},
+  "agentTaskPlanReported": "Progress reported by Agent",
+  "@agentTaskPlanReported": {},
+  "agentToolUpdatePlan": "Update task plan",
+  "@agentToolUpdatePlan": {}
 }

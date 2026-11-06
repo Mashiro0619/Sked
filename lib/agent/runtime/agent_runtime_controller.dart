@@ -21,6 +21,7 @@ import '../conversations/conversation_repository.dart';
 import '../provider/provider.dart';
 import '../provider/provider_request_encoder.dart';
 import '../interactions/agent_question.dart';
+import '../interactions/agent_task_plan.dart';
 import '../references/agent_composer_reference.dart';
 import '../ui/agent_ui_delegate.dart';
 import 'agent_request_budget.dart';
@@ -2910,6 +2911,15 @@ class AgentRuntimeController implements AgentUiDelegate {
             'messageId': run.inputMessageId,
             'source': 'userSelectedSkill',
             'instructions': run.referenceContext['selectedSkillInstructions'],
+          };
+        }
+        final taskPlan = throughMessageId == null
+            ? projectAgentTaskPlan(conversation)
+            : null;
+        if (taskPlan != null) {
+          checkpoint['taskPlan'] = {
+            'source': 'agentProgressReport',
+            ...taskPlan.toJson(),
           };
         }
         _rejectSecretValues(checkpoint, run.apiKey);

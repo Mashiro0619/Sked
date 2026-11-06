@@ -48,6 +48,10 @@ const sharedFailureSuites = <WriteBoundary, List<String>>{
 };
 
 final writeToolCoverage = <String, WriteToolCoverage>{
+  'update_plan': const WriteToolCoverage(
+    WriteBoundary.conversationInteraction,
+    'test/agent/runtime/agent_task_plan_runtime_test.dart',
+  ),
   'ask_user': const WriteToolCoverage(
     WriteBoundary.conversationInteraction,
     'test/agent/runtime/agent_user_questions_test.dart',
