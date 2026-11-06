@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show Tristate;
 
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
@@ -422,6 +423,138 @@ void main() {
     expect(find.byKey(const ValueKey('agent-model-panel')), findsOneWidget);
   });
 
+  for (final platform in [TargetPlatform.windows, TargetPlatform.android]) {
+    for (final direction in TextDirection.values) {
+      testWidgets(
+        'model list return header has a compact action in $direction',
+        (tester) async {
+          final semantics = tester.ensureSemantics();
+          try {
+            await initialize(tester);
+            await mountAgentUi(
+              tester,
+              Directionality(textDirection: direction, child: view()),
+              size: const Size(320, 740),
+              scale: platform == TargetPlatform.android ? 2 : 1,
+            );
+            await open(tester);
+            await tester.tap(find.byKey(const ValueKey('agent-model-switch')));
+            await tester.pumpAndSettle();
+            final back = find.byKey(const ValueKey('agent-model-list-back'));
+            final title = find.byKey(const ValueKey('agent-model-list-title'));
+            expect(tester.widget(back), isA<IconButton>());
+            final extent = platform == TargetPlatform.windows ? 32.0 : 48.0;
+            expect(tester.getSize(back), Size.square(extent));
+            expect(tester.widget<IconButton>(back).tooltip, 'Back');
+            expect(
+              tester
+                  .getSemantics(back)
+                  .getSemanticsData()
+                  .hasAction(SemanticsAction.tap),
+              isTrue,
+            );
+            expect(
+              tester
+                  .getSemantics(title)
+                  .getSemanticsData()
+                  .hasAction(SemanticsAction.tap),
+              isFalse,
+            );
+            expect(
+              tester.getCenter(back).dx < tester.getCenter(title).dx,
+              direction == TextDirection.ltr,
+            );
+            final titleRect = tester.getRect(title);
+            await tester.tapAt(
+              Offset(
+                direction == TextDirection.ltr
+                    ? titleRect.left + 8
+                    : titleRect.right - 8,
+                titleRect.center.dy,
+              ),
+            );
+            await tester.pumpAndSettle();
+            expect(
+              find.byKey(const ValueKey('agent-model-list')),
+              findsOneWidget,
+            );
+            final header = tester.getRect(
+              find.ancestor(of: back, matching: find.byType(Row)).first,
+            );
+            final emptyEdge = Offset(
+              direction == TextDirection.ltr
+                  ? header.right - 4
+                  : header.left + 4,
+              header.center.dy,
+            );
+            await tester.tapAt(emptyEdge);
+            await tester.pumpAndSettle();
+            expect(
+              find.byKey(const ValueKey('agent-model-list')),
+              findsOneWidget,
+            );
+            await tester.tap(back);
+            await tester.pumpAndSettle();
+            expect(
+              find.byKey(const ValueKey('agent-model-panel')),
+              findsOneWidget,
+            );
+            expect(delegate.choices, isEmpty);
+            expect(tester.takeException(), isNull);
+          } finally {
+            semantics.dispose();
+          }
+        },
+        variant: TargetPlatformVariant.only(platform),
+      );
+    }
+  }
+
+  testWidgets('model list return icon supports keyboard activation', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    try {
+      await initialize(tester);
+      await mountAgentUi(tester, view());
+      await open(tester);
+      await tester.tap(find.byKey(const ValueKey('agent-model-switch')));
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      final back = find.byKey(const ValueKey('agent-model-list-back'));
+      expect(
+        tester.getSemantics(back).getSemanticsData().flagsCollection.isFocused,
+        Tristate.isTrue,
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+      expect(
+        tester
+            .getSemantics(
+              find.byKey(const ValueKey('agent-model-choice-model-a')),
+            )
+            .getSemanticsData()
+            .flagsCollection
+            .isFocused,
+        Tristate.isTrue,
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+      await tester.pump();
+      expect(
+        tester.getSemantics(back).getSemanticsData().flagsCollection.isFocused,
+        Tristate.isTrue,
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('agent-model-panel')), findsOneWidget);
+      expect(find.byKey(const ValueKey('agent-model-list')), findsNothing);
+      expect(delegate.choices, isEmpty);
+    } finally {
+      semantics.dispose();
+    }
+  }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+
   testWidgets(
     'outgoing card and list callbacks cannot act on the current page',
     (tester) async {
@@ -442,8 +575,7 @@ void main() {
           )
           .onPressed!;
       await tester.tap(find.byKey(const ValueKey('agent-model-list-back')));
-      // MenuItemButton delivers activation after the first frame. Build the
-      // resulting page switch before checking its still-fading old controls.
+      // Build the page switch before checking its still-fading old controls.
       await tester.pump();
       await tester.pump();
       expect(

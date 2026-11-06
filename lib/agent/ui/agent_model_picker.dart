@@ -410,20 +410,47 @@ class _AgentModelPickerState extends State<AgentModelPicker>
                           key: const ValueKey('agent-model-list'),
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            MenuItemButton(
-                              overflowAxis: Axis.vertical,
-                              key: const ValueKey('agent-model-list-back'),
-                              style: menuStyle.itemStyle(),
-                              closeOnActivate: false,
-                              onPressed: _saving
-                                  ? null
-                                  : () {
-                                      if (panelCurrent()) {
-                                        setState(() => _showModels(false));
-                                      }
-                                    },
-                              leadingIcon: const Icon(Icons.arrow_back_rounded),
-                              child: Text(l.agentModelSelection),
+                            Row(
+                              children: [
+                                IconButton(
+                                  key: const ValueKey('agent-model-list-back'),
+                                  tooltip: MaterialLocalizations.of(context)
+                                      .backButtonTooltip,
+                                  constraints: BoxConstraints.tight(
+                                    Size.square(menuStyle.desktop ? 32 : 48),
+                                  ),
+                                  padding: EdgeInsets.zero,
+                                  iconSize: menuStyle.iconSize,
+                                  onPressed: _saving
+                                      ? null
+                                      : () {
+                                          if (panelCurrent()) {
+                                            setState(() => _showModels(false));
+                                          }
+                                        },
+                                  icon: const Icon(Icons.arrow_back_rounded),
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Semantics(
+                                    header: true,
+                                    child: Text(
+                                      l.agentModelSelection,
+                                      key: const ValueKey(
+                                        'agent-model-list-title',
+                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelMedium
+                                          ?.copyWith(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                             for (final item in state.availableModels)
                               MenuItemButton(
