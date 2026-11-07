@@ -23,6 +23,7 @@ import 'connection/agent_connection_diagnostics.dart';
 import 'attachments/attachment_repository.dart';
 import 'attachments/conversation_attachments.dart';
 import 'conversations/conversation_repository.dart';
+import 'conversations/conversation_title_service.dart';
 import 'history/conversation_history_service.dart';
 import 'interactions/agent_question.dart';
 import 'knowledge/knowledge_service.dart';
@@ -70,6 +71,7 @@ class AgentApplication extends ChangeNotifier {
     KnowledgeStorage? knowledgeStorage,
     AgentCredentialStore? credentialStore,
     ProviderClient? provider,
+    bool generateConversationTitles = true,
     SchoolSiteService? schoolSites,
     AppBackupController? backups,
     WorkspaceCommands? workspaces,
@@ -178,6 +180,12 @@ class AgentApplication extends ChangeNotifier {
     runtime = AgentRuntimeController(
       repository: conversations,
       provider: _provider,
+      titleService: generateConversationTitles
+          ? ConversationTitleService(
+              repository: conversations,
+              provider: _provider,
+            )
+          : null,
       attachments: attachmentStore,
       onAttachmentProgress: binaryAttachments.transferProgress,
       readSettings: _effectiveSettings,

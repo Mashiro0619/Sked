@@ -71,6 +71,7 @@ final class AppRuntime {
     @visibleForTesting KnowledgeStorage? agentKnowledgeStorage,
     @visibleForTesting AgentCredentialStore? agentCredentialStore,
     @visibleForTesting ProviderClient? agentProvider,
+    @visibleForTesting bool agentGenerateConversationTitles = true,
   }) {
     this.devicePreferences = devicePreferences ?? DevicePreferencesStore();
     final localeCodeResolver =
@@ -210,6 +211,7 @@ final class AppRuntime {
       knowledgeStorage: agentKnowledgeStorage,
       credentialStore: agentCredentialStore,
       provider: agentProvider,
+      generateConversationTitles: agentGenerateConversationTitles,
       schoolSites: schoolSites,
       backups: backups,
       workspaces: workspaces,

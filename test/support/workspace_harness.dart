@@ -107,6 +107,7 @@ Future<AppRuntime> workspaceProvider({
   KnowledgeStorage? agentKnowledgeStorage,
   AgentCredentialStore? agentCredentialStore,
   ProviderClient? agentProvider,
+  bool agentGenerateConversationTitles = false,
   DevicePreferencesStore? devicePreferences,
 }) async {
   final sample = DeveloperSampleDataService.append(
@@ -135,6 +136,7 @@ Future<AppRuntime> workspaceProvider({
         MemoryKnowledgeStorage(),
     agentCredentialStore: agentCredentialStore ?? MemoryAgentCredentialStore(),
     agentProvider: agentProvider,
+    agentGenerateConversationTitles: agentGenerateConversationTitles,
     devicePreferences: devicePreferences ?? DevicePreferencesStore.memory(),
     storage:
         storage ??

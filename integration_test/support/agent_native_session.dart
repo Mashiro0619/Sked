@@ -612,6 +612,7 @@ class AgentNativeSession {
       agentKnowledgeStorage: store.knowledge,
       agentCredentialStore: MemoryAgentCredentialStore(),
       agentProvider: _ownedProvider,
+      agentGenerateConversationTitles: false,
     );
   }
 

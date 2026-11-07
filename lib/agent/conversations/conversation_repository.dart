@@ -271,6 +271,21 @@ class ConversationRepository extends ChangeNotifier {
     return _requireConversation(id);
   });
 
+  /// Reads a naming source without replacing the history list's visible page.
+  Future<AgentConversation> readTitleSource(String id) => _enqueue(() async {
+    final current = _requireConversation(id);
+    if (!_unloadedIds.contains(id)) return current;
+    final complete = await (_storage as StructuredConversationStorage)
+        .readConversation(id);
+    if (complete == null) {
+      throw const OperationProblem(
+        OperationErrorCode.expired,
+        'The title source conversation no longer exists.',
+      );
+    }
+    return complete;
+  });
+
   Future<ConversationStatistics> statistics(String id) => _enqueue(() async {
     final current = _requireConversation(id);
     if (_unloadedIds.contains(id)) {
@@ -621,6 +636,26 @@ class ConversationRepository extends ChangeNotifier {
     );
     return next;
   });
+
+  Future<AgentConversation> completeTitleGeneration(
+    String id,
+    ConversationTitleGeneration generation, {
+    String? generatedTitle,
+    required bool Function(AgentConversation) isCurrent,
+  }) => _update(id, (current) {
+    if (current.titleGeneration?.request.id != generation.request.id ||
+        !isCurrent(current)) {
+      throw const OperationProblem(
+        OperationErrorCode.expired,
+        'The title request no longer belongs to this conversation.',
+      );
+    }
+    return current.copyWith(
+      title: current.titleWasEdited ? null : generatedTitle,
+      titleWasEdited: current.titleWasEdited,
+      titleGeneration: generation,
+    );
+  }, updateTimestamp: false);
 
   Future<AgentConversation> updateDraftReferences(
     String id,

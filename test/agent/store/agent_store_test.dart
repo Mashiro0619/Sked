@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as path;
 import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/conversations/conversation_portable_history.dart';
+import 'package:sked/agent/conversations/conversation_title_service.dart';
 import 'package:sked/agent/history/conversation_history.dart';
 import 'package:sked/agent/knowledge/knowledge_repository.dart';
 import 'package:sked/agent/store/agent_store.dart';
@@ -42,6 +43,76 @@ void main() {
     addTearDown(store.close);
     return store;
   }
+
+  test('title request metadata survives native reopen without changing archive version', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'sked-title-history-',
+    );
+    addTearDown(() => directory.delete(recursive: true));
+    final filename = path.join(directory.path, 'agent.sqlite');
+    var store = AgentStore.open(filePath: filename);
+    var repository = ConversationRepository(storage: store.conversations);
+    try {
+      await repository.load();
+      await repository.create(id: 'title', title: 'Temporary');
+      final message = _message('first', text: 'Plan next semester');
+      final generation = ConversationTitleGeneration(
+        sourceMessageId: message.id,
+        sourceDigest: ConversationTitleService.sourceDigest(message),
+        model: 'fixture',
+        protocol: 'chatCompletions',
+        reasoningEffort: 'medium',
+        request: ConversationRequestUsage(id: 'first-title', startedAt: _now),
+      );
+      await repository.update(
+        'title',
+        (value) =>
+            value.copyWith(messages: [message], titleGeneration: generation),
+      );
+      await repository.completeTitleGeneration(
+        'title',
+        generation.settle(
+          outcome: ConversationAttemptOutcome.completed,
+          usage: const ConversationTokenUsage(
+            inputTokens: 12,
+            outputTokens: 3,
+            totalTokens: 15,
+          ),
+        ),
+        generatedTitle: 'Semester planning',
+        isCurrent: (_) => true,
+      );
+      repository.dispose();
+      await store.close();
+      store = AgentStore.open(filePath: filename);
+      repository = ConversationRepository(storage: store.conversations);
+      await repository.load();
+      final saved = await repository.read('title');
+      expect(saved.title, 'Semester planning');
+      expect(saved.titleWasEdited, isFalse);
+      expect(
+        saved.titleGeneration!.request.outcome,
+        ConversationAttemptOutcome.completed,
+      );
+      expect(saved.titleGeneration!.request.usage!.totalTokens, 15);
+      expect(saved.runs, isEmpty);
+      final portable = ConversationArchive(
+        conversations: [conversationAsPortableHistory(saved)],
+      );
+      expect(portable.toJson()['version'], 9);
+      expect(
+        ConversationArchive.decode(portable.encode())
+            .conversations
+            .single
+            .titleGeneration!
+            .toJson(),
+        saved.titleGeneration!.toJson(),
+      );
+    } finally {
+      repository.dispose();
+      await store.close();
+    }
+  });
 
   test(
     'pin metadata survives SQLite reopen, paging, and portable history',

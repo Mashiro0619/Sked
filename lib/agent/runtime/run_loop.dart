@@ -608,6 +608,9 @@ class RunLoop {
     final allowInsecureHttp = await _host._interactions._authorizeHttpTransport(
       run,
     );
+    if (run.endpoint.scheme == 'http') {
+      _host._startTitleGeneration(run, allowInsecureHttp: allowInsecureHttp);
+    }
     messages = await _prepareModelContext(
       run,
       messages,

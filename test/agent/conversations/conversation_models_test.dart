@@ -41,6 +41,7 @@ void main() {
     expect(json['version'], 9);
     final restored = ConversationArchive.decode(jsonEncode(json));
     expect(restored.conversations.single.pinned, isFalse);
+    expect(restored.conversations.single.titleGeneration, isNull);
     final pinned = restored.conversations.single.copyWith(pinned: true);
     expect(
       pinned.withUpdatedAt(now.add(const Duration(seconds: 1))).pinned,

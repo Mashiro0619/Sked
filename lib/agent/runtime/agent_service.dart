@@ -19,6 +19,7 @@ import '../connection/agent_endpoint.dart';
 import '../imports/school_web_handoff_context.dart';
 import '../attachments/attachment_repository.dart';
 import '../conversations/conversation_repository.dart';
+import '../conversations/conversation_title_service.dart';
 import '../provider/provider.dart';
 import '../interactions/agent_question.dart';
 import '../references/agent_composer_reference.dart';
@@ -100,6 +101,7 @@ class AgentService implements AgentUiDelegate {
     this.attachments,
     this.onAttachmentProgress,
     this.contextService,
+    this.titleService,
     this.persistOperation,
     this.isReadOnlyTool = _noParallelTool,
     this.approvalSummary = _defaultApprovalSummary,
@@ -141,6 +143,7 @@ class AgentService implements AgentUiDelegate {
   onAttachmentProgress;
   final String Function(ApprovalPlan plan) approvalSummary;
   final ContextService? contextService;
+  final ConversationTitleService? titleService;
   final Future<void> Function(
     String conversationId,
     String runId,
@@ -1600,9 +1603,33 @@ class AgentService implements AgentUiDelegate {
                 run.inputReferences,
               )
             : null;
+        final firstMessage = messages
+            .where((message) => message.role == ConversationRole.user)
+            .firstOrNull;
+        final titleGeneration =
+            titleService != null &&
+                !current.titleWasEdited &&
+                firstAcceptedInput &&
+                current.titleGeneration == null &&
+                firstMessage != null
+            ? ConversationTitleGeneration(
+                sourceMessageId: firstMessage.id,
+                sourceDigest: ConversationTitleService.sourceDigest(
+                  firstMessage,
+                ),
+                model: selection.modelId,
+                protocol: _protocol(settings.protocol).name,
+                reasoningEffort: selection.wireReasoningEffort,
+                request: ConversationRequestUsage(
+                  id: '${run.id}:title',
+                  startedAt: run.usage.startedAt,
+                ),
+              )
+            : null;
         return current.copyWith(
           title: title,
           titleWasEdited: current.titleWasEdited,
+          titleGeneration: titleGeneration,
           messages: messages,
           queuedInputs: current.queuedInputs.where(
             (input) => input.id != pending?.id,
@@ -1624,6 +1651,9 @@ class AgentService implements AgentUiDelegate {
       });
       run.accepted = true;
       run.started.complete(true);
+      if (run.endpoint.scheme != 'http') {
+        _startTitleGeneration(run, allowInsecureHttp: false);
+      }
       await _loop._execute(run, command);
     } catch (error) {
       if (run.stopReason == AgentRuntimeError.cancelled ||
@@ -1675,6 +1705,34 @@ class AgentService implements AgentUiDelegate {
       if (record.id == run.id) run.usage else record,
     if (!item.runs.any((record) => record.id == run.id)) run.usage,
   ];
+
+  void _startTitleGeneration(
+    _ExecutionAttempt run, {
+    required bool allowInsecureHttp,
+  }) {
+    final titles = titleService;
+    final conversation = repository.find(run.conversationId);
+    if (titles == null ||
+        conversation == null ||
+        conversation.titleGeneration?.request.id != '${run.id}:title') {
+      return;
+    }
+    unawaited(
+      titles.generate(
+        conversation: conversation,
+        endpoint: run.endpoint,
+        apiKey: run.apiKey,
+        allowInsecureHttp: allowInsecureHttp,
+        isOwnerCurrent: () {
+          if (_disposed) return false;
+          final settings = readSettings();
+          return settings.enabled &&
+              !readMaintenance() &&
+              _sameConnection(run, settings);
+        },
+      ),
+    );
+  }
 
   List<ConversationTurn> _turnsForStartedRun(
     AgentConversation current,
@@ -1964,6 +2022,7 @@ class AgentService implements AgentUiDelegate {
 
   @override
   Future<void> stop(String conversationId) async {
+    titleService?.cancelConversation(conversationId);
     _queueEpochs.update(
       conversationId,
       (value) => value + 1,
@@ -1998,6 +2057,7 @@ class AgentService implements AgentUiDelegate {
   }
 
   void cancelAll() {
+    titleService?.cancelAll();
     for (final id in _controlDrains.keys) {
       _controlEpochs.update(id, (value) => value + 1, ifAbsent: () => 1);
     }
@@ -2021,11 +2081,13 @@ class AgentService implements AgentUiDelegate {
     );
     if (except == null) {
       await Future.wait([..._queueDrains.values, ..._controlDrains.values]);
+      await titleService?.waitForIdle();
     }
   }
 
   void refreshSettings() {
     if (_disposed) return;
+    titleService?.refresh();
     final settings = readSettings();
     _refreshSelectionRequirements(settings);
     final endpoint = _configuredEndpoint(settings);
@@ -2060,6 +2122,7 @@ class AgentService implements AgentUiDelegate {
     if (_disposed) return;
     cancelAll();
     _disposed = true;
+    titleService?.dispose();
     repository.removeListener(_repositoryChanged);
     _state.dispose();
     for (final execution in _executions.values) {

@@ -202,6 +202,7 @@ void main() {
         agentStore: store,
         agentCredentialStore: vault,
         agentProvider: provider,
+        agentGenerateConversationTitles: true,
         agentAttachmentStorage: PlatformAttachmentStorage(
           layout: AppStorageLayout(directoryProvider: () async => root),
         ),

@@ -573,6 +573,7 @@ class AgentStore {
       'title': value.title,
       'titleWasEdited': value.titleWasEdited,
       'pinned': value.pinned,
+      'titleGeneration': value.titleGeneration?.toJson(),
       'createdAt': value.createdAt.toUtc().toIso8601String(),
       'updatedAt': value.updatedAt.toUtc().toIso8601String(),
       'mode': value.mode.name,

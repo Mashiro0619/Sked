@@ -459,6 +459,7 @@ class _ApplicationFixture {
       agentKnowledgeStorage: MemoryKnowledgeStorage(),
       agentCredentialStore: MemoryAgentCredentialStore(),
       agentProvider: h.provider,
+      agentGenerateConversationTitles: false,
       systemLocaleCodeResolver: () => 'en',
       appVersionLoader: () async => '3.0.0',
       uiStateSaveDelay: Duration.zero,

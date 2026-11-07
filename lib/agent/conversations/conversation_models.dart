@@ -12,8 +12,10 @@ import '../interactions/agent_question.dart';
 import '../operations/tool_outcome.dart';
 import '../references/agent_composer_reference.dart';
 import 'conversation_usage.dart';
+import 'conversation_title.dart';
 
 export 'conversation_usage.dart';
+export 'conversation_title.dart';
 export '../attachments/attachment_models.dart';
 
 enum ConversationStatus {
@@ -560,6 +562,7 @@ class AgentConversation {
     required this.title,
     this.titleWasEdited = false,
     this.pinned = false,
+    this.titleGeneration,
     required this.createdAt,
     required this.updatedAt,
     this.mode = AgentPermissionMode.ask,
@@ -626,6 +629,7 @@ class AgentConversation {
       title = source.title,
       titleWasEdited = source.titleWasEdited,
       pinned = source.pinned,
+      titleGeneration = source.titleGeneration,
       createdAt = source.createdAt,
       mode = source.mode,
       status = source.status,
@@ -657,6 +661,7 @@ class AgentConversation {
   final String title;
   final bool titleWasEdited;
   final bool pinned;
+  final ConversationTitleGeneration? titleGeneration;
   final DateTime createdAt;
   final DateTime updatedAt;
   final AgentPermissionMode mode;
@@ -692,6 +697,7 @@ class AgentConversation {
     String? title,
     bool? titleWasEdited,
     bool? pinned,
+    ConversationTitleGeneration? titleGeneration,
     DateTime? updatedAt,
     AgentPermissionMode? mode,
     ConversationStatus? status,
@@ -723,6 +729,7 @@ class AgentConversation {
     titleWasEdited:
         titleWasEdited ?? (title != null ? true : this.titleWasEdited),
     pinned: pinned ?? this.pinned,
+    titleGeneration: titleGeneration ?? this.titleGeneration,
     createdAt: createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     mode: mode ?? this.mode,
@@ -759,6 +766,7 @@ class AgentConversation {
     'title': title,
     'titleWasEdited': titleWasEdited,
     'pinned': pinned,
+    if (titleGeneration != null) 'titleGeneration': titleGeneration!.toJson(),
     'createdAt': createdAt.toUtc().toIso8601String(),
     'updatedAt': updatedAt.toUtc().toIso8601String(),
     'mode': mode.name,
@@ -850,6 +858,11 @@ class AgentConversation {
       title: _string(json, 'title'),
       titleWasEdited: json['titleWasEdited'] as bool? ?? false,
       pinned: json['pinned'] as bool? ?? false,
+      titleGeneration: json['titleGeneration'] == null
+          ? null
+          : ConversationTitleGeneration.fromJson(
+              _object(json['titleGeneration']),
+            ),
       createdAt: _date(json, 'createdAt'),
       updatedAt: _date(json, 'updatedAt'),
       mode: _enumValue(AgentPermissionMode.values, json['mode']),

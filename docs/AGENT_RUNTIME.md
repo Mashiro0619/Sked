@@ -20,7 +20,7 @@ Agent 由应用拥有，每个会话有独立的执行对象。聊天页面读�
 
 ## 输入、队列与会话标题
 
-首条成功接纳的用户输入派生会话标题，手动改名优先；明确交接提供的标题保留。空会话草稿不进入历史。
+首条用户输入成功持久化后，应用以当次连接、模型和完整首消息发起一次独立的 AI 命名请求，异步生成简短标题。请求不携带工具，服务用量记录在会话的标题元数据中；主任务继续使用自己的请求及用量。命名期间显示临时标题，失败保留原值，手动改名和明确交接提供的标题优先。HTTP 命名在原传输许可通过后开始。分页和会话切换保留来源身份，保存时再次核对首消息和手动改名状态；删除、来源失效、配置变化和应用退出结束旧命名请求。标题保存保留原活动时间，空会话草稿不进入历史。
 
 运行中发送默认进入可见队列。“立即补充当前任务”取消尚未执行的旧步骤，已经接纳的业务写入先完成结果核对。队列项使用类型化记录，保存正文、附件、引用、模型选择和输入身份；消费队列时，在同一会话事务中删除队列项并增加真实用户消息。
 
@@ -81,4 +81,4 @@ dart compile js -O4 --no-source-maps tool/drift_worker.dart -o web/drift_worker.
 
 切换时，知识写入使用旧知识文件中的操作回执核对，聊天修改使用旧会话快照核对；空的新数据库不能证明旧副作用是否完成。核对只更新主库回执，不再次执行已接纳的写入。缺失真实证据时，在 SQLite 中保存原操作身份与未决记录并保留旧 JSON 文件，新 Agent 和无关业务继续使用。后续显式回读或重启继续核对这些原操作；全部核对后清理旧 JSON。旧附件在首次切换返回前清理，延后的退休流程保留新 Agent 已保存的附件。真实文件读取和已接纳的业务逆操作失败继续由恢复入口报告。对应回归见[旧知识保存后回包丢失](../test/agent/store/legacy_agent_recovery_test.dart)。
 
-验证入口：[运行服务](../lib/agent/runtime/agent_service.dart)、[单次业务工具](../test/agent/tools/single_action_tool_test.dart)、[SQLite 事务与分页](../test/agent/store/agent_store_test.dart)、[上下文服务](../test/agent/context/context_service_test.dart)、[摘要事务](../test/agent/context/sqlite_context_checkpoint_store_test.dart)、[队列管理](../test/agent/runtime/agent_queued_input_management_test.dart)。正式平台和真实模型验收按[实施计划](AGENT_IMPLEMENTATION_PLAN.md)记录。
+验证入口：[AI 标题与取消](../test/agent/conversations/conversation_title_service_test.dart)、[命名正式装配](../test/agent/conversations/conversation_title_application_test.dart)、[运行服务](../lib/agent/runtime/agent_service.dart)、[单次业务工具](../test/agent/tools/single_action_tool_test.dart)、[SQLite 事务与分页](../test/agent/store/agent_store_test.dart)、[上下文服务](../test/agent/context/context_service_test.dart)、[摘要事务](../test/agent/context/sqlite_context_checkpoint_store_test.dart)、[队列管理](../test/agent/runtime/agent_queued_input_management_test.dart)。正式平台和真实模型验收按[实施计划](AGENT_IMPLEMENTATION_PLAN.md)记录。
