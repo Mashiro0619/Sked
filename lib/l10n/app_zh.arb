@@ -3034,5 +3034,11 @@
   "agentTaskPlanReported": "Agent 报告的进度",
   "@agentTaskPlanReported": {},
   "agentToolUpdatePlan": "更新任务计划",
-  "@agentToolUpdatePlan": {}
+  "@agentToolUpdatePlan": {},
+  "agentQueuedRestore": "移回输入框",
+  "@agentQueuedRestore": {},
+  "agentQueuedCancel": "取消排队",
+  "@agentQueuedCancel": {},
+  "agentQueuedRestoreDraftBusy": "请先发送或清空当前草稿，再移回这条输入。",
+  "@agentQueuedRestoreDraftBusy": {}
 }

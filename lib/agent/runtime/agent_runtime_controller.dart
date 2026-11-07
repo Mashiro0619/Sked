@@ -34,6 +34,7 @@ import 'repeated_tool_failure.dart';
 part 'agent_user_questions.dart';
 part 'agent_reference_context.dart';
 part 'agent_budget_settlement.dart';
+part 'agent_queued_input_management.dart';
 
 typedef AgentApprovalRequester = Future<MutationApproval?> Function(
   ApprovalPlan plan,
@@ -194,6 +195,7 @@ class AgentRuntimeController implements AgentUiDelegate {
   final _queueDrains = <String, Future<void>>{};
   final _automaticQueues = <String, Object>{};
   final _queueEpochs = <String, int>{};
+  final _editingQueuedInputs = <String>{};
   final _httpTransportGrants = <String>{};
   String? _lastTransportConnection;
   var _disposed = false;
@@ -468,11 +470,42 @@ class AgentRuntimeController implements AgentUiDelegate {
           .length ??
       0;
 
+  @override
+  bool canManageQueuedInput(String conversationId, String inputId) =>
+      _canManageQueuedInput(conversationId, inputId);
+
+  @override
+  Future<void> restoreQueuedInput(
+    String conversationId,
+    ConversationMessage input, {
+    void Function()? validate,
+  }) => _manageQueuedInput(
+    conversationId,
+    input,
+    restore: true,
+    validate: validate,
+  );
+
+  @override
+  Future<void> cancelQueuedInput(
+    String conversationId,
+    ConversationMessage input, {
+    void Function()? validate,
+  }) => _manageQueuedInput(
+    conversationId,
+    input,
+    restore: false,
+    validate: validate,
+  );
+
   Future<void> _queueInput(
     String conversationId,
     String text, {
     required bool steering,
   }) async {
+    if (_editingQueuedInputs.contains(conversationId)) {
+      throw const AgentRuntimeException(AgentRuntimeError.busy);
+    }
     if ((text.trim().isEmpty &&
             (repository.find(conversationId)?.draftAttachmentIds.isEmpty ??
                 true) &&
@@ -496,12 +529,16 @@ class AgentRuntimeController implements AgentUiDelegate {
       repository.find(conversationId)!,
       readSettings(),
     );
+    final queueEpoch = _queueEpochs[conversationId] ?? 0;
     final attachmentIds = repository.find(conversationId)!.draftAttachmentIds;
     final originalReferences = repository.find(conversationId)!.draftReferences;
     final references = await _validateInputReferences(run, originalReferences);
-    final queueEpoch = _queueEpochs[conversationId] ?? 0;
     await repository.update(conversationId, (current) {
       _checkRun(run);
+      if (_editingQueuedInputs.contains(conversationId) ||
+          (_queueEpochs[conversationId] ?? 0) != queueEpoch) {
+        throw const AgentRuntimeException(AgentRuntimeError.busy);
+      }
       if (attachmentIds.any((id) => !current.draftAttachmentIds.contains(id))) {
         throw const AgentRuntimeException(AgentRuntimeError.busy);
       }
@@ -641,7 +678,8 @@ class AgentRuntimeController implements AgentUiDelegate {
     if (!repository.canWrite) {
       throw const AgentRuntimeException(AgentRuntimeError.storageUnavailable);
     }
-    if (_runs.containsKey(conversationId)) {
+    if (_runs.containsKey(conversationId) ||
+        _editingQueuedInputs.contains(conversationId)) {
       throw const AgentRuntimeException(AgentRuntimeError.busy);
     }
     final conversation = repository.find(conversationId);
@@ -948,6 +986,9 @@ class AgentRuntimeController implements AgentUiDelegate {
   }) async {
     if (_disposed) {
       throw const AgentRuntimeException(AgentRuntimeError.disabled);
+    }
+    if (_editingQueuedInputs.contains(conversationId)) {
+      throw const AgentRuntimeException(AgentRuntimeError.busy);
     }
     if (_runs.containsKey(conversationId)) {
       if (handoff) return;

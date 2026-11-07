@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../application/operation_contracts.dart';
 import '../../models/agent_settings.dart';
+import '../conversations/conversation_models.dart';
 import '../interactions/agent_question.dart';
 
 enum AgentUiPhase {
@@ -117,6 +118,27 @@ abstract class AgentUiDelegate {
       send(conversationId, text);
   Future<void> continueConversation(String conversationId) async {}
   int pendingInputCount(String conversationId) => 0;
+  bool canManageQueuedInput(String conversationId, String inputId) => false;
+  Future<void> restoreQueuedInput(
+    String conversationId,
+    ConversationMessage input, {
+    void Function()? validate,
+  }) => Future.error(
+    const OperationProblem(
+      OperationErrorCode.unsupported,
+      'This host cannot edit queued input.',
+    ),
+  );
+  Future<void> cancelQueuedInput(
+    String conversationId,
+    ConversationMessage input, {
+    void Function()? validate,
+  }) => Future.error(
+    const OperationProblem(
+      OperationErrorCode.unsupported,
+      'This host cannot cancel queued input.',
+    ),
+  );
   Future<void> setArchived(String conversationId, bool archived) async {}
   Future<void> stop(String conversationId);
   Future<void> approve(String conversationId, String planId);

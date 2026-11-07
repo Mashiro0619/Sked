@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 
 import '../agent/agent_application.dart';
+import '../agent/conversations/conversation_models.dart';
 import '../agent/interactions/agent_question.dart';
 import '../agent/ui/agent_conversation_view.dart';
 import '../agent/ui/agent_ui_delegate.dart';
@@ -529,6 +530,21 @@ class _RoutedAgentDelegate implements AgentUiDelegate {
   @override
   int pendingInputCount(String conversationId) =>
       runtime.pendingInputCount(conversationId);
+  @override
+  bool canManageQueuedInput(String conversationId, String inputId) =>
+      runtime.canManageQueuedInput(conversationId, inputId);
+  @override
+  Future<void> restoreQueuedInput(
+    String conversationId,
+    ConversationMessage input, {
+    void Function()? validate,
+  }) => runtime.restoreQueuedInput(conversationId, input, validate: validate);
+  @override
+  Future<void> cancelQueuedInput(
+    String conversationId,
+    ConversationMessage input, {
+    void Function()? validate,
+  }) => runtime.cancelQueuedInput(conversationId, input, validate: validate);
   @override
   Future<void> setArchived(String conversationId, bool archived) =>
       runtime.setArchived(conversationId, archived);

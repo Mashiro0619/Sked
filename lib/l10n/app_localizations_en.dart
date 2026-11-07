@@ -4531,4 +4531,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get agentToolUpdatePlan => 'Update task plan';
+
+  @override
+  String get agentQueuedRestore => 'Move to composer';
+
+  @override
+  String get agentQueuedCancel => 'Cancel queued input';
+
+  @override
+  String get agentQueuedRestoreDraftBusy =>
+      'Send or clear the current draft before moving this input back.';
 }

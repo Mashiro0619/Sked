@@ -3104,5 +3104,11 @@
   "agentTaskPlanReported": "Progress reported by Agent",
   "@agentTaskPlanReported": {},
   "agentToolUpdatePlan": "Update task plan",
-  "@agentToolUpdatePlan": {}
+  "@agentToolUpdatePlan": {},
+  "agentQueuedRestore": "Move to composer",
+  "@agentQueuedRestore": {},
+  "agentQueuedCancel": "Cancel queued input",
+  "@agentQueuedCancel": {},
+  "agentQueuedRestoreDraftBusy": "Send or clear the current draft before moving this input back.",
+  "@agentQueuedRestoreDraftBusy": {}
 }

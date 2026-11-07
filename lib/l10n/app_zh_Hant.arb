@@ -3036,5 +3036,11 @@
   "agentTaskPlanReported": "Agent 回報的進度",
   "@agentTaskPlanReported": {},
   "agentToolUpdatePlan": "更新任務計畫",
-  "@agentToolUpdatePlan": {}
+  "@agentToolUpdatePlan": {},
+  "agentQueuedRestore": "移回輸入框",
+  "@agentQueuedRestore": {},
+  "agentQueuedCancel": "取消排隊",
+  "@agentQueuedCancel": {},
+  "agentQueuedRestoreDraftBusy": "請先傳送或清空目前草稿，再移回這則輸入。",
+  "@agentQueuedRestoreDraftBusy": {}
 }

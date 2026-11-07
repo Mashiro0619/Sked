@@ -8025,6 +8025,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Update task plan'**
   String get agentToolUpdatePlan;
+
+  /// No description provided for @agentQueuedRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to composer'**
+  String get agentQueuedRestore;
+
+  /// No description provided for @agentQueuedCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel queued input'**
+  String get agentQueuedCancel;
+
+  /// No description provided for @agentQueuedRestoreDraftBusy.
+  ///
+  /// In en, this message translates to:
+  /// **'Send or clear the current draft before moving this input back.'**
+  String get agentQueuedRestoreDraftBusy;
 }
 
 class _AppLocalizationsDelegate

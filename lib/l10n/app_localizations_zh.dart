@@ -4243,6 +4243,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentToolUpdatePlan => '更新任务计划';
+
+  @override
+  String get agentQueuedRestore => '移回输入框';
+
+  @override
+  String get agentQueuedCancel => '取消排队';
+
+  @override
+  String get agentQueuedRestoreDraftBusy => '请先发送或清空当前草稿，再移回这条输入。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -8486,4 +8495,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentToolUpdatePlan => '更新任務計畫';
+
+  @override
+  String get agentQueuedRestore => '移回輸入框';
+
+  @override
+  String get agentQueuedCancel => '取消排隊';
+
+  @override
+  String get agentQueuedRestoreDraftBusy => '請先傳送或清空目前草稿，再移回這則輸入。';
 }

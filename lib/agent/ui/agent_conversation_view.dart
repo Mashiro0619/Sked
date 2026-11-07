@@ -49,6 +49,7 @@ import 'agent_task_plan_view.dart';
 
 part 'agent_composer_references.dart';
 part 'agent_task_plan_panel.dart';
+part 'agent_queued_input_actions.dart';
 
 // Failed saves remain available when a panel is closed and reopened. The
 // buffer follows the repository lifetime and is never shared across archives.
@@ -243,6 +244,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         _repository.selectedId == id &&
         _runtime.enabled &&
         !_runtime.maintenance &&
+        !_busy.contains('restore-queued-$id') &&
         conversation != null &&
         !conversation.archived;
   }
@@ -352,6 +354,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         _repository.selectedId == id &&
         _runtime.enabled &&
         !_runtime.maintenance &&
+        !_busy.contains('restore-queued-$id') &&
         conversation != null &&
         !conversation.archived &&
         !_runtime.runFor(id).isActive &&
@@ -2128,6 +2131,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                   if (message.attachmentIds.isNotEmpty &&
                       widget.binaryAttachments != null)
                     _messageAttachments(conversation, message),
+                  _queuedInputActions(conversation, message, l),
                 ],
               )
             else if (AgentBudgetSummary.parse(message) case final summary?)
@@ -2782,13 +2786,15 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     // an active run, that Future must not disable steering or follow-up input.
     final sending =
         (!active && _busy.contains('send-${conversation.id}')) ||
-        _busy.contains('queue-${conversation.id}');
+        _busy.contains('queue-${conversation.id}') ||
+        _busy.contains('restore-queued-${conversation.id}');
     final enabled =
         _uiActive &&
         _repository.canWrite &&
         _runtime.enabled &&
         !_runtime.maintenance &&
-        !conversation.archived;
+        !conversation.archived &&
+        !_busy.contains('restore-queued-${conversation.id}');
     if (conversation.archived) {
       return Padding(
         padding: const EdgeInsets.all(16),
