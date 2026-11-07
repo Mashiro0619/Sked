@@ -13,6 +13,39 @@ Map<String, Object?> _userQuestionResult(AgentQuestionRequest request) => {
   if (request.dismissed) 'message': 'The user skipped these questions. Continue with the known facts or explain what still requires an answer.',
 };
 
+Map<String, Object?>? _resolvedUserQuestionResult(
+  AgentConversation? conversation,
+  String? toolCallId,
+) {
+  if (conversation == null ||
+      toolCallId == null ||
+      !conversation.executionMessages
+          .expand((message) => message.toolCalls)
+          .any((call) => call.id == toolCallId && call.name == 'ask_user')) {
+    return null;
+  }
+  final reply = conversation.executionMessages
+      .where(
+        (message) =>
+            message.role == ConversationRole.tool &&
+            message.toolCallId == toolCallId,
+      )
+      .lastOrNull;
+  if (reply == null) return null;
+  try {
+    final result = jsonDecode(reply.text);
+    if (result is Map<String, Object?> &&
+        const {'answered', 'dismissed'}.contains(result['status']) &&
+        result['questionId'] is String &&
+        (result['questionId'] as String).isNotEmpty) {
+      return result;
+    }
+  } on FormatException {
+    return null;
+  }
+  return null;
+}
+
 extension _AgentUserQuestions on AgentRuntimeController {
   Future<Map<String, Object?>> _requestUserInput(
     Map<String, Object?> arguments,
@@ -185,43 +218,67 @@ extension _AgentUserQuestions on AgentRuntimeController {
     _rejectSecret(encoded, run.apiKey);
     await repository.update(run.conversationId, (current) {
       _checkRun(run);
-      if (current.pendingQuestion?.id != request.id) {
-        throw const AgentRuntimeException(AgentRuntimeError.busy);
-      }
-      final existing = current.messages
-          .where(
-            (message) =>
-                message.role == ConversationRole.tool &&
-                message.toolCallId == request.toolCallId,
-          )
-          .lastOrNull;
-      if (existing == null) {
-        throw const AgentRuntimeException(
-          AgentRuntimeError.unpairedToolHistory,
-        );
-      }
-      return current.copyWith(
-        messages: current.messages.map(
-          (message) => message.id == existing.id
-              ? message.copyWith(text: encoded)
-              : message,
-        ),
-        runs: current.runs.map(
-          (record) => record.id == request.runId
-              ? record.withTool(
-                  ConversationToolUsage(
-                    id: request.toolCallId,
-                    name: 'ask_user',
-                    outcome: stale && !request.isResolved
-                        ? ConversationAttemptOutcome.notStarted
-                        : ConversationAttemptOutcome.completed,
-                  ),
-                )
-              : record,
-        ),
-        clearPendingQuestion: true,
-        status: ConversationStatus.running,
-      );
+      return _materializeUserQuestion(
+        current,
+        request,
+        encoded,
+        outcome: stale && !request.isResolved
+            ? ConversationAttemptOutcome.notStarted
+            : ConversationAttemptOutcome.completed,
+      ).copyWith(status: ConversationStatus.running);
     }, expectedRunId: run.id);
+  }
+
+  /// Publish the accepted answer and consume its pending state in one save.
+  /// History retirement also uses this path before discarding the old task.
+  AgentConversation _materializeUserQuestion(
+    AgentConversation current,
+    AgentQuestionRequest request,
+    String encoded, {
+    required ConversationAttemptOutcome outcome,
+  }) {
+    if (current.pendingQuestion?.id != request.id) {
+      throw const AgentRuntimeException(AgentRuntimeError.busy);
+    }
+    final existing = current.executionMessages
+        .where(
+          (message) =>
+              message.role == ConversationRole.tool &&
+              message.toolCallId == request.toolCallId,
+        )
+        .lastOrNull;
+    final reply =
+        existing?.copyWith(text: encoded) ??
+        ConversationMessage(
+          id: _id(),
+          role: ConversationRole.tool,
+          text: encoded,
+          toolCallId: request.toolCallId,
+          createdAt: _clock().toUtc(),
+        );
+    final messages = <ConversationMessage>[
+      for (final message in current.messages) ...[
+        if (message.id == existing?.id) reply else message,
+        // A process interruption can leave a durable answer before the runtime
+        // publishes any tool reply. Keep it in its original protocol group.
+        if (existing == null && message.id == request.requestMessageId) reply,
+      ],
+    ];
+    return current.copyWith(
+      messages: messages,
+      turns: _includeRecoveredMessages(current, messages),
+      runs: current.runs.map(
+        (record) => record.id == request.runId
+            ? record.withTool(
+                ConversationToolUsage(
+                  id: request.toolCallId,
+                  name: 'ask_user',
+                  outcome: outcome,
+                ),
+              )
+            : record,
+      ),
+      clearPendingQuestion: true,
+    );
   }
 }

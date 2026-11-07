@@ -327,12 +327,21 @@ class AgentRuntimeController implements AgentUiDelegate {
     await _runs[conversationId]?.done;
     await _queueDrains[conversationId];
     await repository.update(conversationId, (current) {
-      final removed = current.executionMessages
+      final question = current.pendingQuestion;
+      final settled = question != null && question.isResolved
+          ? _materializeUserQuestion(
+              current,
+              question,
+              jsonEncode(_userQuestionResult(question)),
+              outcome: ConversationAttemptOutcome.completed,
+            )
+          : current;
+      final removed = settled.executionMessages
           .where((message) => _queuedInput(message) != null)
           .map((message) => message.id)
           .toSet();
-      return current.copyWith(
-        messages: current.messages.where(
+      return settled.copyWith(
+        messages: settled.messages.where(
           (message) => !removed.contains(message.id),
         ),
         status: ConversationStatus.interrupted,
@@ -505,7 +514,16 @@ class AgentRuntimeController implements AgentUiDelegate {
           16) {
         throw const AgentRuntimeException(AgentRuntimeError.busy);
       }
-      return current.copyWith(
+      final question = current.pendingQuestion;
+      final settled = steering && question != null && question.isResolved
+          ? _materializeUserQuestion(
+              current,
+              question,
+              jsonEncode(_userQuestionResult(question)),
+              outcome: ConversationAttemptOutcome.completed,
+            )
+          : current;
+      return settled.copyWith(
         draft: '',
         draftReferences: const [],
         clearPendingQuestion: steering,
@@ -513,7 +531,7 @@ class AgentRuntimeController implements AgentUiDelegate {
           (id) => !attachmentIds.contains(id),
         ),
         messages: [
-          ...current.messages,
+          ...settled.messages,
           ConversationMessage(
             id: _id(),
             role: ConversationRole.notice,
@@ -1383,6 +1401,16 @@ class AgentRuntimeController implements AgentUiDelegate {
             toolDeadline.cancel();
             run.toolDeadline = null;
           }
+          final savedQuestionResult = call.name == 'ask_user'
+              ? _resolvedUserQuestionResult(
+                  repository.find(run.conversationId),
+                  call.id,
+                )
+              : null;
+          if (savedQuestionResult != null) {
+            result = savedQuestionResult;
+            toolFailure = null;
+          }
           final questionCancelled =
               call.name == 'ask_user' &&
               run.scope.isCancelled &&
@@ -1390,7 +1418,8 @@ class AgentRuntimeController implements AgentUiDelegate {
                       .find(run.conversationId)
                       ?.pendingQuestion
                       ?.isResolved !=
-                  true;
+                  true &&
+              savedQuestionResult == null;
           if (questionCancelled) {
             toolFailure = const OperationProblem(
               OperationErrorCode.cancelled,
@@ -1592,9 +1621,21 @@ class AgentRuntimeController implements AgentUiDelegate {
   }) async {
     if (repository.find(run.conversationId) == null) return;
     if (!allowCancelled) _checkRun(run);
-    await repository.update(
-      run.conversationId,
-      (item) => item.copyWith(
+    await repository.update(run.conversationId, (item) {
+      if (message.role == ConversationRole.tool &&
+          _resolvedUserQuestionResult(item, message.toolCallId) != null) {
+        // Steering may already have saved the answer while this tool reply
+        // was queued. Preserve that durable result and its message identity.
+        run.usage = run.usage.withTool(
+          ConversationToolUsage(
+            id: message.toolCallId!,
+            name: 'ask_user',
+            outcome: ConversationAttemptOutcome.completed,
+          ),
+        );
+        return item.copyWith(runs: _runRecords(item, run));
+      }
+      return item.copyWith(
         messages: [...item.messages, message],
         runs: _runRecords(item, run),
         turns: _appendTurnMessage(item, run, message.id),
@@ -1602,9 +1643,8 @@ class AgentRuntimeController implements AgentUiDelegate {
             !run.scope.isCancelled &&
             item.pendingQuestion?.isResolved == true &&
             item.pendingQuestion?.toolCallId == message.toolCallId,
-      ),
-      expectedRunId: run.id,
-    );
+      );
+    }, expectedRunId: run.id);
   }
 
   List<ConversationRunUsage> _runRecords(AgentConversation item, _Run run) => [
