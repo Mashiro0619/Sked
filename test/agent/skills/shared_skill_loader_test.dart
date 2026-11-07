@@ -47,10 +47,6 @@ void main() {
       final loader = SharedSkillLoader(
         loadString: (asset) => File(asset).readAsString(),
         registeredTools: tools,
-        budgets: const SkillBudgets(
-          maxLoadedSkills: 24,
-          maxLoadedBytes: 256 * 1024,
-        ),
       );
       final catalog = await loader.catalog();
       expect(

@@ -30,16 +30,13 @@ void main() {
     'disabled',
     'missingDependencies',
     'incompatible',
-    'budgetExceeded',
     'invalidAsset',
     'unreadable',
   ]) {
     test('skills.load reports $failure and exposes no new tools', () async {
       final custom = _skill(
         'custom-fixture',
-        body: failure == 'budgetExceeded'
-            ? 'x' * (24 * 1024 + 1)
-            : 'Fixture instructions',
+        body: 'Fixture instructions',
         enabled: failure != 'disabled',
         requiredTools: [
           if (failure == 'missingDependencies') 'missing.tool',
@@ -105,52 +102,53 @@ void main() {
     });
   }
 
-  test('reaching the loaded Skill count keeps existing tools and rejects the next load', () async {
-    final skills = [
-      for (var index = 0; index < 9; index++)
-        _skill(
-          'custom-$index',
-          body: 'Fixture $index',
-          requiredTools: [index == 8 ? 'agenda.query' : 'events.list'],
-        ),
-    ];
-    final host = ApplicationToolHost(
-      session: app.session,
-      mutations: app.mutations,
-      conversationForScope: (_) => null,
-      loadSkillAsset: (path) => File(path).readAsString(),
-      readSkillSnapshot: () => SkillOverlaySnapshot(skills),
-    );
-    addTearDown(host.dispose);
-    final scope = OperationScope(
-      id: 'count-budget',
-      policy: OperationPolicy(enabled: true, mode: AgentPermissionMode.plan),
-    );
-    addTearDown(() => host.finishScope(scope));
-    for (final skill in skills.take(8)) {
+  test(
+    'loading more than eight Skills keeps all tools and complete content',
+    () async {
+      final skills = [
+        for (var index = 0; index < 9; index++)
+          _skill(
+            'custom-$index',
+            body: index == 8 ? 'x' * (96 * 1024) : 'Fixture $index',
+            requiredTools: [index == 8 ? 'agenda.query' : 'events.list'],
+          ),
+      ];
+      final host = ApplicationToolHost(
+        session: app.session,
+        mutations: app.mutations,
+        conversationForScope: (_) => null,
+        loadSkillAsset: (path) => File(path).readAsString(),
+        readSkillSnapshot: () => SkillOverlaySnapshot(skills),
+      );
+      addTearDown(host.dispose);
+      final scope = OperationScope(
+        id: 'count-budget',
+        policy: OperationPolicy(enabled: true, mode: AgentPermissionMode.plan),
+      );
+      addTearDown(() => host.finishScope(scope));
+      for (final skill in skills.take(8)) {
+        expect(
+          await _call(host, scope, 'skills.load', {'id': skill.skill.id}),
+          containsPair('status', 'loaded'),
+        );
+      }
+      final before = host.toolsFor(scope).map((tool) => tool.name).toSet();
+      final loaded = await _call(host, scope, 'skills.load', {
+        'id': skills.last.skill.id,
+      });
+      expect(loaded['status'], 'loaded');
+      expect(loaded['instructions'], 'x' * (96 * 1024));
+      expect(host.toolsFor(scope).map((tool) => tool.name).toSet(), {
+        ...before,
+        'agenda.query',
+      });
       expect(
-        await _call(host, scope, 'skills.load', {'id': skill.skill.id}),
+        await _call(host, scope, 'skills.load', {'id': skills.first.skill.id}),
         containsPair('status', 'loaded'),
       );
-    }
-    final before = host.toolsFor(scope).map((tool) => tool.name).toSet();
-    await expectLater(
-      _call(host, scope, 'skills.load', {'id': skills.last.skill.id}),
-      throwsA(
-        isA<OperationProblem>().having(
-          (error) => error.message,
-          'budget guidance',
-          contains('budget'),
-        ),
-      ),
-    );
-    expect(host.toolsFor(scope).map((tool) => tool.name).toSet(), before);
-    expect(
-      await _call(host, scope, 'skills.load', {'id': skills.first.skill.id}),
-      containsPair('status', 'loaded'),
-    );
-    expect(await _call(host, scope, 'events.list', {}), contains('items'));
-  });
+      expect(await _call(host, scope, 'events.list', {}), contains('items'));
+    },
+  );
 
   test(
     'runtime records a failed Skill load before the corrected load and query',

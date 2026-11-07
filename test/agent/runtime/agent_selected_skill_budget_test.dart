@@ -8,7 +8,6 @@ import 'package:sked/agent/knowledge/knowledge_service.dart';
 import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/references/agent_composer_reference.dart';
 import 'package:sked/agent/references/agent_composer_reference_search.dart';
-import 'package:sked/agent/runtime/agent_runtime_controller.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/models/agent_settings.dart';
 
@@ -91,17 +90,9 @@ void main() {
     app.dispose();
   });
 
-  final invalidReference = throwsA(
-    isA<AgentRuntimeException>().having(
-      (error) => error.code,
-      'code',
-      AgentRuntimeError.invalidReference,
-    ),
-  );
-
   for (final byteLimit in [false, true]) {
     test(
-      '${byteLimit ? 'cumulative bytes' : 'Skill count'} is checked before clearing the draft',
+      'selected ${byteLimit ? 'large Skill bodies' : 'Skills above eight'} are all accepted',
       () async {
         final List<AgentComposerReference> references;
         if (byteLimit) {
@@ -111,7 +102,7 @@ void main() {
             final skill = app.agent.knowledge.newRecord(
               KnowledgeKind.skill,
               title: 'Large workflow $index',
-              body: 'x' * 23000,
+              body: 'x' * 96000,
               summary: 'Synthetic large workflow',
             );
             await app.agent.knowledge.saveFromUi(
@@ -132,41 +123,51 @@ void main() {
           references = await builtins(9);
         }
         await app.agent.updateComposerReferences(id, references);
-        final before = saved().toJson();
-        await expectLater(
-          app.agent.runtime.send(id, saved().draft),
-          invalidReference,
-        );
-        expect(provider.requests, isEmpty);
-        expect(saved().toJson(), before);
-        expect(saved().messages, isEmpty);
-        expect(saved().runs, isEmpty);
-
-        final reduced = byteLimit
-            ? references.take(2).toList()
-            : references.take(8).toList();
-        await app.agent.updateComposerReferences(id, reduced);
+        if (byteLimit) {
+          provider.respond = (_) => provider.requests.length == 1
+              ? ProviderResponse(
+                  text: '',
+                  toolCalls: [
+                    ProviderToolCall(
+                      id: 'load-large',
+                      name: 'skills.load',
+                      arguments: jsonEncode({'id': references.first.skillId}),
+                    ),
+                  ],
+                  finishReason: 'tool_calls',
+                )
+              : _done();
+        }
         await app.agent.runtime.send(id, saved().draft);
-        expect(provider.requests, hasLength(1));
+        expect(provider.requests, hasLength(byteLimit ? 2 : 1));
+        if (byteLimit) {
+          final result = provider.requests.last.messages.lastWhere(
+            (message) => message.role == ProviderRole.tool,
+          );
+          expect(jsonDecode(result.text)['instructions'], 'x' * 96000);
+        }
         expect(saved().draftReferences, isEmpty);
         expect(
           saved().messages.first.contextReferences,
-          hasLength(reduced.length),
+          hasLength(references.length),
         );
         expect(app.agent.runtime.state.value.runFor(id).errorMessage, isNull);
-        final text = provider.requests.single.messages
+        final text = provider.requests.first.messages
             .lastWhere((message) => message.role == ProviderRole.user)
             .text;
         final context =
             jsonDecode(text.substring(text.lastIndexOf('\n') + 1)) as Map;
-        expect(context['selectedSkillInstructions'], hasLength(reduced.length));
+        expect(
+          context['selectedSkillInstructions'],
+          hasLength(references.length),
+        );
       },
     );
   }
 
   for (final steering in [false, true]) {
     test(
-      '${steering ? 'steering' : 'follow-up'} rejects excess Skills before queue acceptance',
+      '${steering ? 'steering' : 'follow-up'} accepts all selected Skills',
       () async {
         final entered = Completer<void>();
         final release = Completer<ProviderResponse>();
@@ -183,18 +184,16 @@ void main() {
             id,
             (current) => current.copyWith(draft: 'Queued workflows'),
           );
-          final before = saved().toJson();
-          await expectLater(
-            steering
-                ? app.agent.runtime.steer(id, 'Queued workflows')
-                : app.agent.runtime.queueFollowUp(id, 'Queued workflows'),
-            invalidReference,
-          );
-          expect(saved().toJson(), before);
-          expect(app.agent.runtime.pendingInputCount(id), 0);
-          expect(app.agent.runtime.isRunning(id), isTrue);
+          if (steering) {
+            await app.agent.runtime.steer(id, 'Queued workflows');
+          } else {
+            await app.agent.runtime.queueFollowUp(id, 'Queued workflows');
+          }
+          expect(app.agent.runtime.pendingInputCount(id), 1);
+          expect(saved().messages.last.contextReferences, hasLength(9));
           expect(provider.requests, hasLength(1));
         } finally {
+          provider.respond = (_) => _done();
           release.complete(_done());
           await initial;
         }

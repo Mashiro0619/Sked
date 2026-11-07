@@ -26,7 +26,6 @@ abstract final class KnowledgeLimits {
   static const records = 512;
   static const receipts = 128;
   static const tombstones = 4096;
-  static const skillBytes = 24 * 1024;
   static const memoryBytes = 8 * 1024;
   static const undoBatches = 32;
 }
@@ -99,15 +98,9 @@ class KnowledgeRecord {
     knowledgeText(title, max: 256);
     knowledgeText(summary, max: 2048, empty: true);
     knowledgeText(sourceNote, max: 2048, empty: true);
-    knowledgeText(
-      body,
-      max: KnowledgeLimits.skillBytes,
-      empty: builtIn && usesOriginal,
-    );
-    if (utf8.encode(body).length >
-        (kind == KnowledgeKind.skill
-            ? KnowledgeLimits.skillBytes
-            : KnowledgeLimits.memoryBytes)) {
+    knowledgeText(body, max: null, empty: builtIn && usesOriginal);
+    if (kind == KnowledgeKind.memory &&
+        utf8.encode(body).length > KnowledgeLimits.memoryBytes) {
       throw const KnowledgeException(
         KnowledgeError.limit,
         'Content is too large.',
@@ -280,11 +273,7 @@ class KnowledgeRecord {
       kind: kind,
       id: knowledgeText(json['id'], max: 128),
       title: knowledgeText(json['title'], max: 256),
-      body: knowledgeText(
-        json['body'],
-        max: KnowledgeLimits.skillBytes,
-        empty: true,
-      ),
+      body: knowledgeText(json['body'], max: null, empty: true),
       summary: knowledgeText(json['summary'], max: 2048, empty: true),
       revision: knowledgeInteger(json['revision']),
       enabled: knowledgeBoolean(json['enabled']),
@@ -807,9 +796,9 @@ Map<String, dynamic> knowledgeMap(Object? value, Set<String> keys) {
   return value;
 }
 
-String knowledgeText(Object? value, {int max = 2048, bool empty = false}) {
+String knowledgeText(Object? value, {int? max = 2048, bool empty = false}) {
   if (value is! String ||
-      value.length > max ||
+      (max != null && value.length > max) ||
       (!empty && value.trim().isEmpty)) {
     knowledgeInvalid('Invalid knowledge text.');
   }

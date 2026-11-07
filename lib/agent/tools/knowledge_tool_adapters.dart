@@ -256,7 +256,7 @@ class KnowledgeToolAdapters {
       record = service.newRecord(
         kind,
         title: knowledgeText(args['title'], max: 256),
-        body: knowledgeText(args['body'], max: KnowledgeLimits.skillBytes),
+        body: knowledgeText(args['body'], max: null),
       );
     } else {
       record = await service.read(kind, knowledgeText(args['id'], max: 128));

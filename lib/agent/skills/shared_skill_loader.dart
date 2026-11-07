@@ -28,14 +28,14 @@ class SkillPackException implements Exception {
 class SkillBudgets {
   const SkillBudgets({
     this.maxManifestBytes = 128 * 1024,
-    this.maxSkillBytes = 24 * 1024,
-    this.maxLoadedBytes = 64 * 1024,
-    this.maxLoadedSkills = 8,
+    this.maxSkillBytes,
+    this.maxLoadedBytes,
+    this.maxLoadedSkills,
   });
   final int maxManifestBytes;
-  final int maxSkillBytes;
-  final int maxLoadedBytes;
-  final int maxLoadedSkills;
+  final int? maxSkillBytes;
+  final int? maxLoadedBytes;
+  final int? maxLoadedSkills;
 }
 
 class SkillDescriptor {
@@ -170,9 +170,9 @@ class SharedSkillLoader {
     if (runtimeContractVersion <= 0 ||
         [
           budgets.maxManifestBytes,
-          budgets.maxSkillBytes,
-          budgets.maxLoadedBytes,
-          budgets.maxLoadedSkills,
+          ?budgets.maxSkillBytes,
+          ?budgets.maxLoadedBytes,
+          ?budgets.maxLoadedSkills,
         ].any((value) => value <= 0)) {
       throw const SkillPackException(SkillPackError.invalidManifest);
     }
@@ -285,7 +285,8 @@ class SharedSkillLoader {
       );
     }
     if (_loaded[id] case final cached?) return cached;
-    if (_loaded.length >= budgets.maxLoadedSkills) {
+    if (budgets.maxLoadedSkills case final limit?
+        when _loaded.length >= limit) {
       return SkillLoadResult(
         id: id,
         skill: skill,
@@ -304,8 +305,10 @@ class SharedSkillLoader {
       );
     }
     final bytes = utf8.encode(body);
-    if (bytes.length > budgets.maxSkillBytes ||
-        _loadedBytes + bytes.length > budgets.maxLoadedBytes) {
+    if ((budgets.maxSkillBytes != null &&
+            bytes.length > budgets.maxSkillBytes!) ||
+        (budgets.maxLoadedBytes != null &&
+            _loadedBytes + bytes.length > budgets.maxLoadedBytes!)) {
       return SkillLoadResult(
         id: id,
         skill: skill,

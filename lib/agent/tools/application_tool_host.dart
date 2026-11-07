@@ -230,12 +230,6 @@ class ApplicationToolHost {
         scope,
         requestApproval,
       );
-      if (utf8.encode(jsonEncode(result)).length > maxResultBytes) {
-        throw const OperationProblem(
-          OperationErrorCode.invalidArgument,
-          'The result exceeds the tool budget. Request fewer fields or a smaller page.',
-        );
-      }
       return result;
     } on ResourceQueryException catch (error) {
       throw OperationProblem(
