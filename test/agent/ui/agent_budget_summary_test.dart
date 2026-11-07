@@ -13,6 +13,59 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'agent_ui_test_support.dart';
 
 void main() {
+  testWidgets('new summaries show actual usage without a token allowance', (
+    tester,
+  ) async {
+    addTearDown(tester.view.reset);
+    final payload = _payload(reason: 'rounds')
+      ..['version'] = 2
+      ..['tokens'] = {'reported': 2400000, 'unreportedRequests': 1};
+    final summary = AgentBudgetSummary.parse(_notice(payload))!;
+    expect(summary.tokens.containsKey('limit'), isFalse);
+    expect(summary.requestTokens, isNull);
+    await mountAgentUi(
+      tester,
+      SingleChildScrollView(child: AgentBudgetSummaryView(summary: summary)),
+    );
+    final l = AppLocalizations.of(
+      tester.element(find.byType(AgentBudgetSummaryView)),
+    );
+    expect(
+      find.text(l.agentBudgetSummaryReportedUsage(3, 4, 2400000)),
+      findsOneWidget,
+    );
+    expect(find.text(l.agentBudgetSummaryMissingUsage(1)), findsOneWidget);
+    expect(find.text(l.agentBudgetSummaryTokenLimit), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  test('new summaries reject retired token stop reasons and invalid usage', () {
+    final payload = _payload(reason: 'tools')
+      ..['version'] = 2
+      ..['tokens'] = {'reported': 2400000, 'unreportedRequests': 0};
+    expect(
+      AgentBudgetSummary.parse(_notice(payload))!.tokens['reported'],
+      2400000,
+    );
+    for (final reason in ['tokens', 'requestTokens']) {
+      expect(
+        AgentBudgetSummary.parse(_notice({...payload, 'reason': reason})),
+        isNull,
+      );
+    }
+    for (final invalid in [null, -1, '1', 1.0]) {
+      expect(
+        AgentBudgetSummary.parse(
+          _notice({
+            ...payload,
+            'tokens': {'reported': invalid, 'unreportedRequests': 0},
+          }),
+        ),
+        isNull,
+      );
+    }
+  });
+
   for (final reason in ['tokens', 'requestTokens', 'rounds', 'tools']) {
     test('parser retains $reason and all reported outcome categories', () {
       final summary = AgentBudgetSummary.parse(

@@ -101,6 +101,22 @@ void main() {
   late SettingRegistry registry;
   setUp(() => registry = SettingRegistry());
 
+  test('obsolete token budgets cannot be discovered, changed or reset', () {
+    expect(
+      registry.describe(scope: SettingScope.agent).map((entry) => entry.key),
+      isNot(contains('agent.maxTotalTokens')),
+    );
+    for (final edit in const [
+      SettingEdit.set('agent.maxTotalTokens', 100000),
+      SettingEdit.reset('agent.maxTotalTokens'),
+    ]) {
+      expect(
+        () => registry.prepare(sample(), [edit]),
+        rejectsSetting(SettingValidationCode.unknownKey),
+      );
+    }
+  });
+
   test('every Agent configuration field is classified and authority stays host-owned', () {
     expect(
       registry

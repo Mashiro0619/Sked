@@ -269,7 +269,6 @@ void main() {
       systemInstructions: 'Latest instructions',
       maxModelRounds: 9,
       maxToolCalls: 27,
-      maxTotalTokens: 9000,
       historyRetentionDays: 14,
     );
     release.complete();
@@ -281,7 +280,6 @@ void main() {
     expect(current.systemInstructions, 'Latest instructions');
     expect(current.maxModelRounds, 9);
     expect(current.maxToolCalls, 27);
-    expect(current.maxTotalTokens, 9000);
     expect(current.historyRetentionDays, 14);
   });
 
@@ -294,7 +292,6 @@ void main() {
         systemInstructions: 'Keep guidance',
         maxModelRounds: 8,
         maxToolCalls: 25,
-        maxTotalTokens: 8192,
         historyRetentionDays: 30,
       );
       legacy = const AiApiSettings(
@@ -314,7 +311,6 @@ void main() {
       expect(current.systemInstructions, 'Keep guidance');
       expect(current.maxModelRounds, 8);
       expect(current.maxToolCalls, 25);
-      expect(current.maxTotalTokens, 8192);
       expect(current.historyRetentionDays, 30);
       expect(legacySecrets.key, isEmpty);
     },

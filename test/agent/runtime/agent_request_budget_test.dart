@@ -36,114 +36,77 @@ void main() {
   );
   AgentRequestBudget plan(
     ConversationRunUsage usage, {
-    int tokens = 10000,
     int rounds = 10,
     int calls = 20,
     ProviderLimits limits = const ProviderLimits(),
   }) => planAgentRequestBudget(
     usage,
-    maxTotalTokens: tokens,
     maxModelRounds: rounds,
     maxToolCalls: calls,
     providerLimits: limits,
   );
 
   test(
-    'remaining reported usage limits the next request and reserves output',
+    'reported tokens do not constrain the next request or force settlement',
     () {
-      final result = plan(run(requests: [request('first', tokens: 8000)]));
-      expect(result.reportedTokens, 8000);
-      expect(result.remainingTokens, 2000);
-      expect(result.reservedFinalOutputTokens, 512);
-      expect(result.requestLimits!.maxTotalTokens, 1488);
-      expect(result.requestLimits!.maxOutputTokens, 1488);
-      expect(result.finalStep, false);
-      expect(result.reason, isNull);
+      for (final tokens in [32769, 100001, 1000001, 10000000]) {
+        final result = plan(run(requests: [request('first', tokens: tokens)]));
+        expect(result.reportedTokens, tokens);
+        expect(result.requestLimits!.maxTotalTokens, isNull);
+        expect(result.requestLimits!.maxOutputTokens, isNull);
+        expect(result.finalStep, false);
+        expect(result.reason, isNull);
+      }
     },
   );
 
-  test('the final available round can use the remaining output allowance', () {
+  test('the final available round still uses a read-only request', () {
     final result = plan(
-      run(requests: [request('first', tokens: 8000)]),
+      run(requests: [request('first', tokens: 1000001)]),
       rounds: 2,
     );
     expect(result.remainingRounds, 1);
     expect(result.finalStep, true);
     expect(result.reason, AgentRequestBudgetReason.rounds);
-    expect(result.requestLimits!.maxTotalTokens, 2000);
-    expect(result.requestLimits!.maxOutputTokens, 2000);
+    expect(result.requestLimits!.maxOutputTokens, isNull);
   });
 
-  test(
-    'a one-round run keeps its first work request and uses host settlement',
-    () {
-      final result = plan(run(), tokens: 4, rounds: 1);
-      expect(result.finalStep, false);
-      expect(result.reason, isNull);
-      expect(result.reservedFinalOutputTokens, 0);
-      expect(result.requestLimits!.maxTotalTokens, 4);
-      expect(result.requestLimits!.maxOutputTokens, 4);
-    },
-  );
-
-  test(
-    'tool exhaustion and the final token allowance require read-only output',
-    () {
-      final toolLimited = plan(
-        run(
-          tools: [const ConversationToolUsage(id: 'call', name: 'fixture')],
-        ),
-        calls: 1,
-      );
-      expect(toolLimited.remainingToolCalls, 0);
-      expect(toolLimited.finalStep, true);
-      expect(toolLimited.reason, AgentRequestBudgetReason.tools);
-      final tokenLimited = plan(
-        run(requests: [request('first', tokens: 9700)]),
-      );
-      expect(tokenLimited.finalStep, true);
-      expect(tokenLimited.reason, AgentRequestBudgetReason.tokens);
-      expect(tokenLimited.requestLimits!.maxOutputTokens, 300);
-    },
-  );
-
-  test('small budgets retain usable work and final allowances', () {
-    final work = plan(run(), tokens: 4);
-    expect(work.finalStep, false);
-    expect(work.reservedFinalOutputTokens, 1);
-    expect(work.requestLimits!.maxTotalTokens, 3);
-    final finalOnly = plan(run(), tokens: 1);
-    expect(finalOnly.finalStep, true);
-    expect(finalOnly.requestLimits!.maxOutputTokens, 1);
-  });
-
-  test('exhausted tokens or rounds require host-only settlement', () {
-    for (final tokens in [10000, 11000]) {
-      final exhausted = plan(run(requests: [request('first', tokens: tokens)]));
-      expect(exhausted.remainingTokens, 0);
-      expect(exhausted.requestLimits, isNull);
-      expect(exhausted.reason, AgentRequestBudgetReason.tokens);
-    }
-    final exhaustedRounds = plan(
-      run(requests: [request('first', tokens: 10)]),
+  test('one round keeps its work request and then uses host settlement', () {
+    final first = plan(run(), rounds: 1);
+    expect(first.finalStep, false);
+    expect(first.reason, isNull);
+    final exhausted = plan(
+      run(requests: [request('first', tokens: 1000001)]),
       rounds: 1,
     );
-    expect(exhaustedRounds.remainingRounds, 0);
-    expect(exhaustedRounds.requestLimits, isNull);
-    expect(exhaustedRounds.reason, AgentRequestBudgetReason.rounds);
+    expect(exhausted.remainingRounds, 0);
+    expect(exhausted.requestLimits, isNull);
+    expect(exhausted.reason, AgentRequestBudgetReason.rounds);
+  });
+
+  test('tool exhaustion retains its read-only final request', () {
+    final result = plan(
+      run(
+        tools: [const ConversationToolUsage(id: 'call', name: 'fixture')],
+      ),
+      calls: 1,
+    );
+    expect(result.remainingToolCalls, 0);
+    expect(result.finalStep, true);
+    expect(result.reason, AgentRequestBudgetReason.tools);
   });
 
   test(
-    'missing usage remains unknown while reported interrupted usage counts',
+    'missing and interrupted usage remain accurate without admission limits',
     () {
       final usage = run(
         requests: [
-          request('known', tokens: 100),
+          request('known', tokens: 1000000),
           request('missing'),
           request('unknown', outcome: ConversationAttemptOutcome.unknown),
           request(
             'partial',
-            tokens: 200,
+            tokens: 200000,
             outcome: ConversationAttemptOutcome.failed,
           ),
           request(
@@ -153,22 +116,20 @@ void main() {
         ],
       );
       final result = plan(usage);
-      expect(result.reportedTokens, 300);
+      expect(result.reportedTokens, 1200000);
       expect(result.unreportedRequests, 2);
-      expect(result.remainingTokens, 9700);
+      expect(result.finalStep, false);
       expect(usage.requests[1].usage, isNull);
-      expect(usage.requests[2].outcome, ConversationAttemptOutcome.unknown);
     },
   );
 
-  test('explicit continuation budgets only its own new run', () {
-    final result = plan(run(continuedFromRunId: 'exhausted-previous-run'));
+  test('continuation retains separate run usage', () {
+    final result = plan(run(continuedFromRunId: 'previous-run'));
     expect(result.reportedTokens, 0);
-    expect(result.remainingTokens, 10000);
     expect(result.remainingRounds, 10);
   });
 
-  test('request adjustment preserves all other provider limits', () {
+  test('Agent removes inherited token caps and preserves transport limits', () {
     const original = ProviderLimits(
       totalTimeout: Duration(seconds: 31),
       idleTimeout: Duration(seconds: 13),
@@ -182,8 +143,8 @@ void main() {
       maxTotalTokens: 29,
     );
     final result = plan(run(), limits: original).requestLimits!;
-    expect(result.maxTotalTokens, 29);
-    expect(result.maxOutputTokens, 23);
+    expect(result.maxTotalTokens, isNull);
+    expect(result.maxOutputTokens, isNull);
     expect(result.totalTimeout, original.totalTimeout);
     expect(result.idleTimeout, original.idleTimeout);
     expect(result.maxRequestBytes, original.maxRequestBytes);

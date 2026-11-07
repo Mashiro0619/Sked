@@ -56,7 +56,7 @@ the original unfinished workload and its capacity boundary explicitly. The
 
 ## Fixed data and output contract
 
-The main fixture derives from performance dataset 8: five timetables with 1,000
+The main fixture derives from performance dataset 9: five timetables with 1,000
 courses each and 5,000 events. Course/event records are preserved. The Agent
 fixture explicitly sets the local feature flag, English locale, general active
 workspace, a disabled student workspace and a fixed empty ledger generation.
@@ -64,9 +64,9 @@ Both enabled and disabled complete snapshot hashes are recorded. Each mutation
 case uses sequence 1 and its own fixed UUID nonce within this generation.
 Before seeding disk, the production normalizer resolves synthetic conflict
 choices and fills deterministic course-color preferences. Complete timetable
-and calendar records must remain identical to performance dataset 8. This
+and calendar records must remain identical to performance dataset 9. This
 preparation stays outside timing and prevents a migration save during loading.
-The storage decoder also validates acknowledgement ownership: dataset 8 has
+The storage decoder also validates acknowledgement ownership: dataset 9 has
 256 synthetic reminder acknowledgements, of which 86 reference the owning
 calendar/event correctly. Only those 86 enter the stored fixture. The manifest
 records both counts and this reason; complete stored acknowledgements remain

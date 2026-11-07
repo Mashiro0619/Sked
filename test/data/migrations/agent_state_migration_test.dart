@@ -41,6 +41,7 @@ void main() {
     final legacy = migrated['agentSettings'] as Map;
     expect(legacy['enabled'], isFalse);
     expect(legacy['permissionMode'], 'ask');
+    expect(legacy['maxTotalTokens'], 100000);
     expect(legacy, isNot(contains('models')));
   });
 
@@ -107,12 +108,16 @@ void main() {
       final second = appDataMigrationRunner.run(old);
       expect(first, second);
       expect(jsonEncode(old), before);
-      expect(first['agentSettings'], const AgentSettings().toJson());
+      expect(first['agentSettings'], {
+        ...const AgentSettings().toJson(),
+        'maxTotalTokens': 100000,
+      });
       expect(first['applicationLedger'], isNull);
       expect(first['schemaVersion'], 6);
       expect(appDataMigrationRunner.run(first), first);
       final decoded = AppData.decodeStorageSnapshot(jsonEncode(old));
       expect(decoded.agentSettings, const AgentSettings());
+      expect(decoded.agentSettings.toJson(), isNot(contains('maxTotalTokens')));
       expect(decoded.studentMode.toJson(), old['studentMode']);
       expect(decoded.generalMode.toJson(), old['generalMode']);
       expect(decoded.localeCode, source.localeCode);

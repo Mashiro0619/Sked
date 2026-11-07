@@ -42,8 +42,8 @@ class ProviderLimits {
     this.maxEventBytes = 512 * 1024,
     this.maxToolArgumentBytes = 128 * 1024,
     this.maxToolCalls = 32,
-    this.maxOutputTokens = 4096,
-    this.maxTotalTokens = 32768,
+    this.maxOutputTokens,
+    this.maxTotalTokens,
   });
 
   final Duration totalTimeout;
@@ -56,8 +56,12 @@ class ProviderLimits {
   final int maxEventBytes;
   final int maxToolArgumentBytes;
   final int maxToolCalls;
-  final int maxOutputTokens;
-  final int maxTotalTokens;
+
+  /// Null leaves output length to the selected model/service.
+  final int? maxOutputTokens;
+
+  /// Optional local usage cap for explicitly bounded requests such as diagnostics.
+  final int? maxTotalTokens;
 }
 
 class ProviderMessage {

@@ -651,7 +651,6 @@ class AgentApplication extends ChangeNotifier {
         systemInstructions: value.systemInstructions,
         maxModelRounds: value.maxModelRounds,
         maxToolCalls: value.maxToolCalls,
-        maxTotalTokens: value.maxTotalTokens,
         historyRetentionDays: value.historyRetentionDays,
       ),
       expectedSettings: expectedSettings,

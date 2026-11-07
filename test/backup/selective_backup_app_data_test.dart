@@ -42,6 +42,45 @@ GeneralEvent _event(String id, String calendarId, String title) => GeneralEvent(
 );
 
 void main() {
+  test('Agent preferences drop legacy token budgets on restore and export', () {
+    const key = BackupObjectKey(BackupObjectKind.settings, 'agentPreferences');
+    final current = _base();
+    final inventory = buildSelectiveBackupInventory(appData: current);
+    final preferences = inventory.byKey[key]!;
+    expect(preferences.data, isNot(contains('maxTotalTokens')));
+    for (final legacy in <Object?>[100000, 0, -1, 1000001, null, 'obsolete']) {
+      final incoming = SelectiveBackupBundle(
+        records: [
+          BackupRecord(
+            key: key,
+            label: preferences.label,
+            data: {
+              ...preferences.data,
+              'systemInstructions': 'Restored guidance.',
+              'maxTotalTokens': legacy,
+            },
+          ),
+        ],
+        roots: const [key],
+      );
+      final plan = const SelectiveBackupPlanner().prepare(
+        source: incoming,
+        current: inventory,
+        selection: BackupSelection(objects: const [key]),
+      );
+      final restored = prepareMainBackupRestore(current, plan).target;
+      expect(restored.agentSettings.systemInstructions, 'Restored guidance.');
+      expect(
+        restored.agentSettings.toJson(),
+        isNot(contains('maxTotalTokens')),
+      );
+      expect(
+        buildSelectiveBackupInventory(appData: restored).byKey[key]!.data,
+        isNot(contains('maxTotalTokens')),
+      );
+    }
+  });
+
   test('legacy JSON enters object selection without injecting connection defaults or merging site names', () {
     final source = encodeAppBackup(_base(), const [
       SchoolSite(name: 'Same name', loginUrl: 'https://one.example.test'),

@@ -908,7 +908,6 @@ void main() {
   for (final budget in [
     AgentRuntimeError.roundBudgetExceeded,
     AgentRuntimeError.toolBudgetExceeded,
-    AgentRuntimeError.tokenBudgetExceeded,
   ]) {
     for (final restart in [false, true]) {
       test(
@@ -926,9 +925,6 @@ void main() {
               maxToolCalls: budget == AgentRuntimeError.toolBudgetExceeded
                   ? 1
                   : 128,
-              maxTotalTokens: budget == AgentRuntimeError.tokenBudgetExceeded
-                  ? 1024
-                  : 100000,
             ),
           );
           provider.respond = (request) => request.tools.isEmpty
@@ -949,13 +945,11 @@ void main() {
                         arguments: '{}',
                       ),
                   ],
-                  usage: budget == AgentRuntimeError.tokenBudgetExceeded
-                      ? const ProviderUsage(
-                          inputTokens: 1024,
-                          outputTokens: 1,
-                          totalTokens: 1025,
-                        )
-                      : null,
+                  usage: const ProviderUsage(
+                    inputTokens: 1200000,
+                    outputTokens: 10000,
+                    totalTokens: 1210000,
+                  ),
                 );
           await app.agent.history.editAndRedo(
             conversation.id,
@@ -967,6 +961,10 @@ void main() {
           expect(batch.phase, ConversationRedoPhase.running);
           expect(batch.lastError, budget.name);
           expect(interrupted.runs.single.id, batch.replayRunId);
+          expect(
+            interrupted.runs.single.requests.first.usage!.totalTokens,
+            1210000,
+          );
           expect(
             interrupted.runs.single.status,
             ConversationRunStatus.interrupted,
@@ -1074,6 +1072,72 @@ void main() {
       );
     }
   }
+
+  test(
+    'large token usage completes a redo without requiring another continuation',
+    () async {
+      final conversation = await ready();
+      createCalendarScript();
+      await app.agent.runtime.send(conversation.id, 'Create a calendar');
+      final original = app.agent.conversations.find(conversation.id)!;
+      var requests = 0;
+      provider.respond = (request) {
+        expect(request.limits.maxTotalTokens, isNull);
+        expect(request.limits.maxOutputTokens, isNull);
+        requests++;
+        return ProviderResponse(
+          text: requests == 1 ? '' : 'The edited request is complete.',
+          finishReason: requests == 1 ? 'tool_calls' : 'stop',
+          toolCalls: requests == 1
+              ? [
+                  ProviderToolCall(
+                    id: 'redo-large-usage',
+                    name: 'capabilities.describe',
+                    arguments: '{"names":["events.list"]}',
+                  ),
+                ]
+              : [],
+          usage: const ProviderUsage(
+            inputTokens: 1200000,
+            outputTokens: 10000,
+            totalTokens: 1210000,
+          ),
+        );
+      };
+      await app.agent.history.editAndRedo(
+        conversation.id,
+        original.messages.first.id,
+        'Explain instead',
+      );
+      final saved = ConversationArchive.decode(chats.source!)
+          .conversations
+          .single;
+      expect(requests, 2);
+      expect(saved.pendingRedo, isNull);
+      expect(saved.status, ConversationStatus.idle);
+      expect(saved.historyVersions, hasLength(1));
+      expect(saved.runs.single.status, ConversationRunStatus.completed);
+      expect(
+        saved.runs.single.requests.map((request) => request.usage!.totalTokens),
+        [1210000, 1210000],
+      );
+      expect(
+        saved.runs.single.tools.single.outcome,
+        ConversationAttemptOutcome.completed,
+      );
+      expect(saved.messages.last.text, 'The edited request is complete.');
+      expect(
+        app.agent.runtime.state.value.runFor(conversation.id).errorMessage,
+        isNull,
+      );
+      expect(
+        app.session.committedData.applicationLedger!.receipts.where(
+          (receipt) => receipt.result['undoBatchId'] != null,
+        ),
+        hasLength(1),
+      );
+    },
+  );
 
   test(
     'cancelling a prepared chat batch releases its unused knowledge ticket',

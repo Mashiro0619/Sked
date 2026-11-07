@@ -388,8 +388,8 @@ void _validate(ProviderRequest request, String apiKey) {
         limits.maxEventBytes,
         limits.maxToolArgumentBytes,
         limits.maxToolCalls,
-        limits.maxOutputTokens,
-        limits.maxTotalTokens,
+        ?limits.maxOutputTokens,
+        ?limits.maxTotalTokens,
       ].any((value) => value <= 0)) {
     throw const ProviderException(ProviderError.invalidRequest);
   }

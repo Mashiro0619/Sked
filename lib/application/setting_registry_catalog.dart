@@ -171,7 +171,6 @@ Map<String, _SettingBinding> _buildSettingBindings(
     'systemInstructions': (SettingValueType.string, null, null),
     'maxModelRounds': (SettingValueType.integer, 1, 100),
     'maxToolCalls': (SettingValueType.integer, 1, 500),
-    'maxTotalTokens': (SettingValueType.integer, 1024, 1000000),
     'historyRetentionDays': (SettingValueType.integer, 0, 3650),
   };
   final agentFields = {

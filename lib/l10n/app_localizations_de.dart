@@ -4406,7 +4406,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get agentRunLimitsHint =>
-      'Limit model requests, tool calls and token usage for each run.';
+      'Limit model requests and tool calls for each run.';
 
   @override
   String get agentHistoryRetentionTitle => 'Chat history retention';
@@ -4587,5 +4587,14 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String agentBudgetSummaryRequestTokenUsage(int reported, int limit) {
     return 'This request · $reported/$limit reported tokens';
+  }
+
+  @override
+  String agentBudgetSummaryReportedUsage(
+    int requests,
+    int requestLimit,
+    int tokens,
+  ) {
+    return '$requests/$requestLimit model requests · $tokens reported tokens';
   }
 }

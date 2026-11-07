@@ -1,21 +1,18 @@
-import 'dart:math' show max, min;
+import 'dart:math' show max;
 
 import '../conversations/conversation_usage.dart';
 import '../provider/provider_models.dart';
 
-enum AgentRequestBudgetReason { tokens, requestTokens, rounds, tools }
+enum AgentRequestBudgetReason { rounds, tools }
 
 /// Planning values for the next request in one runtime-owned attempt.
-/// Missing service usage remains unknown. The remaining count is based on
-/// reported usage and does not predict the next prompt's token count.
+/// Token usage is recorded independently and never limits a model request.
 class AgentRequestBudget {
   const AgentRequestBudget({
     required this.reportedTokens,
     required this.unreportedRequests,
-    required this.remainingTokens,
     required this.remainingRounds,
     required this.remainingToolCalls,
-    required this.reservedFinalOutputTokens,
     required this.finalStep,
     required this.reason,
     required this.requestLimits,
@@ -23,10 +20,8 @@ class AgentRequestBudget {
 
   final int reportedTokens;
   final int unreportedRequests;
-  final int remainingTokens;
   final int remainingRounds;
   final int remainingToolCalls;
-  final int reservedFinalOutputTokens;
   final bool finalStep;
   final AgentRequestBudgetReason? reason;
 
@@ -34,18 +29,13 @@ class AgentRequestBudget {
   final ProviderLimits? requestLimits;
 }
 
-/// Restricts the provider's output and local usage limit to this run's budget.
+/// Preserves transport limits while allowing the provider to choose output size.
 /// The last available round is reserved for a response with tools disabled.
-/// Work requests also leave a small output allowance for that final response.
-/// Providers can report more input tokens than the available allowance, so
-/// callers must still settle actual usage and enforce the returned limit.
 AgentRequestBudget planAgentRequestBudget(
   ConversationRunUsage usage, {
-  required int maxTotalTokens,
   required int maxModelRounds,
   required int maxToolCalls,
   required ProviderLimits providerLimits,
-  int finalOutputReserve = 512,
 }) {
   final reported = usage.requests.fold<int>(
     0,
@@ -58,40 +48,20 @@ AgentRequestBudget planAgentRequestBudget(
             request.outcome != ConversationAttemptOutcome.notStarted,
       )
       .length;
-  final remainingTokens = max(0, maxTotalTokens - reported);
   final remainingRounds = max(0, maxModelRounds - usage.requests.length);
   final remainingToolCalls = max(0, maxToolCalls - usage.tools.length);
-  final reserve = maxModelRounds <= 1
-      ? 0
-      : max(
-          0,
-          min(
-            min(finalOutputReserve, providerLimits.maxOutputTokens),
-            max(1, maxTotalTokens ~/ 4),
-          ),
-        );
-  final canRequest = remainingTokens > 0 && remainingRounds > 0;
+  final canRequest = remainingRounds > 0;
   final finalStep =
       canRequest &&
-      ((maxModelRounds > 1 && remainingRounds == 1) ||
-          remainingToolCalls == 0 ||
-          (reserve > 0 && remainingTokens <= reserve));
-  final reason =
-      remainingTokens <= 0 || (canRequest && remainingTokens <= reserve)
-      ? AgentRequestBudgetReason.tokens
-      : remainingRounds == 0
+      ((maxModelRounds > 1 && remainingRounds == 1) || remainingToolCalls == 0);
+  final reason = remainingRounds == 0
       ? AgentRequestBudgetReason.rounds
       : remainingToolCalls == 0
       ? AgentRequestBudgetReason.tools
       : finalStep && remainingRounds == 1
       ? AgentRequestBudgetReason.rounds
       : null;
-  final requestTotal = min(
-    providerLimits.maxTotalTokens,
-    max(0, remainingTokens - (finalStep ? 0 : reserve)),
-  );
-  final output = min(providerLimits.maxOutputTokens, requestTotal);
-  final requestLimits = !canRequest || requestTotal <= 0 || output <= 0
+  final requestLimits = !canRequest
       ? null
       : ProviderLimits(
           totalTimeout: providerLimits.totalTimeout,
@@ -102,16 +72,12 @@ AgentRequestBudget planAgentRequestBudget(
           maxEventBytes: providerLimits.maxEventBytes,
           maxToolArgumentBytes: providerLimits.maxToolArgumentBytes,
           maxToolCalls: providerLimits.maxToolCalls,
-          maxOutputTokens: output,
-          maxTotalTokens: requestTotal,
         );
   return AgentRequestBudget(
     reportedTokens: reported,
     unreportedRequests: unreported,
-    remainingTokens: remainingTokens,
     remainingRounds: remainingRounds,
     remainingToolCalls: remainingToolCalls,
-    reservedFinalOutputTokens: reserve,
     finalStep: finalStep,
     reason: reason,
     requestLimits: requestLimits,

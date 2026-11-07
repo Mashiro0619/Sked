@@ -15,7 +15,7 @@ void main() {
     final transport = streaming ? 'SSE' : 'JSON';
 
     test(
-      '$transport accepts 33999 tokens within the default Agent budget',
+      '$transport accepts the screenshot request and retains all reported usage',
       () async {
         final h = await _Harness.create(
           streaming: streaming,
@@ -44,7 +44,7 @@ void main() {
     );
 
     test(
-      '$transport completes the screenshot sequence below the 100000-token run limit',
+      '$transport completes the screenshot sequence and records 83516 tokens',
       () async {
         const totals = [6000, 9000, 13000, 21517, 33999];
         final h = await _Harness.create(
@@ -97,108 +97,88 @@ void main() {
       },
     );
 
+    for (final limits in [
+      const AgentRuntimeLimits(),
+      const AgentRuntimeLimits(
+        providerLimits: ProviderLimits(
+          maxTotalTokens: 32768,
+          maxOutputTokens: 4096,
+        ),
+      ),
+    ]) {
+      test(
+        '$transport completes multi-round work above all retired token caps with ${limits.providerLimits.maxTotalTokens}',
+        () async {
+          final h = await _Harness.create(
+            streaming: streaming,
+            limits: limits,
+            respond: (index) => _Reply(
+              totalTokens: 1200000,
+              outputTokens: 20000,
+              toolCount: index < 2 ? 1 : 0,
+            ),
+          );
+          addTearDown(h.close);
+          await h.runtime.send(
+            h.id,
+            'Complete the task and record actual usage.',
+          );
+          expect(h.requests, hasLength(3));
+          expect(h.executed, hasLength(2));
+          expect(h.saved.status, ConversationStatus.idle);
+          expect(h.saved.runs.single.status, ConversationRunStatus.completed);
+          expect(
+            h.saved.runs.single.requests.fold<int>(
+              0,
+              (total, request) => total + request.usage!.totalTokens,
+            ),
+            3600000,
+          );
+          expect(
+            h.saved.runs.single.requests.every(
+              (request) =>
+                  request.outcome == ConversationAttemptOutcome.completed,
+            ),
+            isTrue,
+          );
+          expect(
+            h.saved.runs.single.tools.every(
+              (tool) => tool.outcome == ConversationAttemptOutcome.completed,
+            ),
+            isTrue,
+          );
+          expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
+          for (final wire in h.requests) {
+            expect(wire.containsKey('max_completion_tokens'), isFalse);
+            expect(wire.containsKey('max_tokens'), isFalse);
+          }
+          expect(
+            h.saved.messages.where(
+              (message) => message.role == ConversationRole.notice,
+            ),
+            isEmpty,
+          );
+        },
+      );
+    }
+
     test(
-      '$transport explicit Continue can process more than 32768 tokens after interruption',
+      '$transport regeneration saves output above the retired limits',
       () async {
         final h = await _Harness.create(
           streaming: streaming,
-          respond: (index) => index == 0
-              ? const _Reply(totalTokens: 100001)
-              : const _Reply(totalTokens: 33999, outputTokens: 515),
-        );
-        addTearDown(h.close);
-        await h.runtime.send(h.id, 'Continue this task after its budget stop.');
-        expect(h.saved.status, ConversationStatus.interrupted);
-        expect(h.saved.runs.single.requests.single.usage!.totalTokens, 100001);
-        final interrupted = h.runtime.state.value.runFor(h.id);
-        expect(interrupted.errorMessage, 'tokenBudgetExceeded');
-        expect(interrupted.providerErrorResponseBody, isNull);
-        expect(interrupted.providerErrorDetails, isNull);
-        expect(h.summary['reason'], 'tokens');
-        expect(h.summary.containsKey('requestTokens'), isFalse);
-        final originalRun = h.saved.runs.single.id;
-
-        await h.runtime.continueConversation(h.id);
-
-        expect(h.requests, hasLength(2));
-        expect(h.saved.runs, hasLength(2));
-        final continued = h.saved.runs.last;
-        expect(continued.continuedFromRunId, originalRun);
-        expect(continued.requests.single.usage!.totalTokens, 33999);
-        expect(continued.status, ConversationRunStatus.completed);
-        expect(h.saved.status, ConversationStatus.idle);
-        expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
-        expect(h.executed, isEmpty);
-      },
-    );
-
-    test(
-      '$transport respects an explicit 32768-token request cap and retains reported usage',
-      () async {
-        final h = await _Harness.create(
-          streaming: streaming,
-          limits: const AgentRuntimeLimits(
-            providerLimits: ProviderLimits(maxTotalTokens: 32768),
-          ),
           respond: (_) =>
-              const _Reply(totalTokens: 33999, outputTokens: 515, toolCount: 1),
+              const _Reply(totalTokens: 1200000, outputTokens: 20000),
         );
         addTearDown(h.close);
-
-        await h.runtime.send(h.id, 'Read the requested state.');
-
-        expect(h.requests, hasLength(1));
-        expect(h.saved.status, ConversationStatus.interrupted);
-        expect(h.saved.runs.single.status, ConversationRunStatus.interrupted);
-        final request = h.saved.runs.single.requests.single;
-        expect(request.usage!.inputTokens, 33484);
-        expect(request.usage!.outputTokens, 515);
-        expect(request.usage!.totalTokens, 33999);
-        expect(request.errorCode, isNotNull);
-        expect(h.executed, isEmpty);
-        final state = h.runtime.state.value.runFor(h.id);
-        expect(state.errorMessage, 'requestTokenBudgetExceeded');
-        expect(state.providerErrorResponseBody, isNull);
-        expect(state.providerErrorDetails, isNull);
-        expect(h.summary['reason'], 'requestTokens');
-        expect(h.summary['runId'], h.saved.runs.single.id);
-        expect(h.summary['requestTokens'], {'reported': 33999, 'limit': 32768});
-        expect((h.summary['tokens'] as Map)['limit'], 100000);
-      },
-    );
-    test(
-      '$transport distinguishes the request cap from the screenshot cumulative total',
-      () async {
-        const totals = [6000, 9000, 13000, 21517, 33999];
-        final h = await _Harness.create(
-          streaming: streaming,
-          limits: const AgentRuntimeLimits(
-            providerLimits: ProviderLimits(maxTotalTokens: 32768),
-          ),
-          respond: (index) => _Reply(
-            totalTokens: totals[index],
-            outputTokens: index == 4 ? 515 : 100,
-            toolCount: index < 3
-                ? 4
-                : index == 3
-                ? 3
-                : 1,
-          ),
-        );
-        addTearDown(h.close);
-        await h.runtime.send(h.id, 'Inspect the state and finish the task.');
-        expect(h.requests, hasLength(5));
-        expect(h.executed, hasLength(15));
-        expect(h.saved.status, ConversationStatus.interrupted);
-        expect(h.summary['reason'], 'requestTokens');
-        expect(h.summary['requestTokens'], {'reported': 33999, 'limit': 32768});
-        expect((h.summary['tokens'] as Map)['reported'], 83516);
-        expect((h.summary['tokens'] as Map)['limit'], 100000);
-        final state = h.runtime.state.value.runFor(h.id);
-        expect(state.errorMessage, 'requestTokenBudgetExceeded');
-        expect(state.providerErrorResponseBody, isNull);
-        expect(state.providerErrorDetails, isNull);
-        expect(state.providerErrorMetadata, isNull);
+        await h.runtime.send(h.id, 'Answer this request.');
+        final reply = h.saved.messages.last;
+        await h.runtime.regenerateReply(h.id, reply.id);
+        expect(h.requests, hasLength(2));
+        expect(h.saved.status, ConversationStatus.idle);
+        expect(h.saved.replyRevisions.last.text, 'Completed.');
+        expect(h.saved.runs.last.requests.single.usage!.totalTokens, 1200000);
+        expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
       },
     );
   }
@@ -333,16 +313,6 @@ class _Harness {
 
   AgentConversation get saved =>
       ConversationArchive.decode(storage.source!).conversations.single;
-
-  Map<String, dynamic> get summary => jsonDecode(
-    saved.messages
-        .singleWhere(
-          (message) =>
-              message.role == ConversationRole.notice &&
-              message.text.contains('agent_budget_summary'),
-        )
-        .text,
-  ) as Map<String, dynamic>;
 
   void close() {
     runtime.dispose();

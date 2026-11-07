@@ -63,8 +63,6 @@ enum AgentRuntimeError {
   invalidToolCall,
   roundBudgetExceeded,
   toolBudgetExceeded,
-  tokenBudgetExceeded,
-  requestTokenBudgetExceeded,
   resultBudgetExceeded,
   repeatedToolFailure,
   invalidReference,
@@ -88,18 +86,16 @@ class AgentRuntimeLimits {
   const AgentRuntimeLimits({
     this.maxModelRounds = 100,
     this.maxToolCalls = 500,
-    this.maxTotalTokens = 1000000,
     this.maxContextMessages = 200,
     this.maxContextCharacters = 512 * 1024,
     this.maxUserMessageCharacters = 128 * 1024,
     this.maxToolResultCharacters = 512 * 1024,
     this.totalTimeout = const Duration(minutes: 10),
     this.toolTimeout = const Duration(minutes: 1),
-    this.providerLimits = const ProviderLimits(maxTotalTokens: 1000000),
+    this.providerLimits = const ProviderLimits(),
   });
   final int maxModelRounds;
   final int maxToolCalls;
-  final int maxTotalTokens;
   final int maxContextMessages;
   final int maxContextCharacters;
   final int maxUserMessageCharacters;
@@ -143,7 +139,6 @@ class AgentRuntimeController implements AgentUiDelegate {
     if ([
           limits.maxModelRounds,
           limits.maxToolCalls,
-          limits.maxTotalTokens,
           limits.maxContextMessages,
           limits.maxContextCharacters,
           limits.maxUserMessageCharacters,
@@ -1319,9 +1314,6 @@ class AgentRuntimeController implements AgentUiDelegate {
       final maxRounds = run.settings.maxModelRounds < limits.maxModelRounds
           ? run.settings.maxModelRounds
           : limits.maxModelRounds;
-      final maxTokens = run.settings.maxTotalTokens < limits.maxTotalTokens
-          ? run.settings.maxTotalTokens
-          : limits.maxTotalTokens;
       final maxCalls = run.settings.maxToolCalls < limits.maxToolCalls
           ? run.settings.maxToolCalls
           : limits.maxToolCalls;
@@ -1336,10 +1328,6 @@ class AgentRuntimeController implements AgentUiDelegate {
         final response = await _modelResponse(run, messages);
         _checkRun(run);
         _validateResponse(response, conversation, run);
-        run.totalTokens = run.usage.requests.fold(
-          0,
-          (total, request) => total + (request.usage?.totalTokens ?? 0),
-        );
         await _append(
           run,
           ConversationMessage(
@@ -1361,16 +1349,6 @@ class AgentRuntimeController implements AgentUiDelegate {
         );
         run.issuedToolCallIds.addAll(response.toolCalls.map((call) => call.id));
         _setDisplay(run, const AgentUiRunState(phase: AgentUiPhase.running));
-        if (run.totalTokens > maxTokens) {
-          await _recordUnexecuted(
-            run,
-            response.toolCalls,
-            'token_budget_exceeded',
-          );
-          throw const AgentRuntimeException(
-            AgentRuntimeError.tokenBudgetExceeded,
-          );
-        }
         if (budget.finalStep) {
           throw _budgetFailure(budget.reason!);
         }
@@ -1576,15 +1554,13 @@ class AgentRuntimeController implements AgentUiDelegate {
         }
       }
       throw _budgetFailure(
-        run.totalTokens >= maxTokens
-            ? AgentRequestBudgetReason.tokens
-            : run.toolCalls >= maxCalls
+        run.toolCalls >= maxCalls
             ? AgentRequestBudgetReason.tools
             : AgentRequestBudgetReason.rounds,
       );
     } catch (error) {
       failure = error;
-      final budgetReason = _budgetReason(error, run);
+      final budgetReason = _budgetReason(error);
       final reason =
           budgetReason ??
           (run.requestBudget?.finalStep == true
@@ -1876,14 +1852,6 @@ class AgentRuntimeController implements AgentUiDelegate {
     _checkRun(run);
     validateConversationReplyResponse(response);
     _validateResponse(response, conversation, run);
-    final totalTokens = run.usage.requests.fold<int>(
-      0,
-      (total, request) => total + (request.usage?.totalTokens ?? 0),
-    );
-    if (totalTokens > run.settings.maxTotalTokens ||
-        totalTokens > limits.maxTotalTokens) {
-      throw const AgentRuntimeException(AgentRuntimeError.tokenBudgetExceeded);
-    }
     await repository.update(run.conversationId, (current) {
       _checkRun(run);
       if (current.messages.firstWhere((m) => m.id == original.id).text !=
@@ -1947,7 +1915,7 @@ class AgentRuntimeController implements AgentUiDelegate {
     _Run run,
     List<ProviderMessage> messages,
   ) async {
-    final budget = run.requestBudget ?? _freezeRequestBudget(run);
+    if (run.requestBudget == null) _freezeRequestBudget(run);
     final selection = run.modelSelection;
     if (selection == null) {
       throw const AgentRuntimeException(
@@ -2033,12 +2001,6 @@ class AgentRuntimeController implements AgentUiDelegate {
           usage: usage,
         ),
       );
-      if (usage != null &&
-          usage.totalTokens > budget.requestLimits!.maxTotalTokens) {
-        throw const AgentRuntimeException(
-          AgentRuntimeError.tokenBudgetExceeded,
-        );
-      }
       return response;
     } catch (error) {
       if (hasAttachments &&
@@ -3165,7 +3127,6 @@ class _Run {
   _ExecutionDeadline? deadline;
   _ExecutionDeadline? toolDeadline;
   String apiKey = '';
-  int totalTokens = 0;
   int toolCalls = 0;
   AgentRuntimeError? stopReason;
   _PendingApproval? approval;

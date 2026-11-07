@@ -142,7 +142,6 @@ class AgentSettings {
     this.systemInstructions = '',
     this.maxModelRounds = 24,
     this.maxToolCalls = 128,
-    this.maxTotalTokens = 100000,
     this.historyRetentionDays = 0,
   });
 
@@ -170,7 +169,6 @@ class AgentSettings {
   final String systemInstructions;
   final int maxModelRounds;
   final int maxToolCalls;
-  final int maxTotalTokens;
 
   /// Zero retains conversations until the user deletes them explicitly.
   final int historyRetentionDays;
@@ -186,7 +184,6 @@ class AgentSettings {
     String? systemInstructions,
     int? maxModelRounds,
     int? maxToolCalls,
-    int? maxTotalTokens,
     int? historyRetentionDays,
   }) {
     if (models != null && models.isEmpty && model != null && model.isNotEmpty) {
@@ -207,7 +204,6 @@ class AgentSettings {
       systemInstructions: systemInstructions ?? this.systemInstructions,
       maxModelRounds: maxModelRounds ?? this.maxModelRounds,
       maxToolCalls: maxToolCalls ?? this.maxToolCalls,
-      maxTotalTokens: maxTotalTokens ?? this.maxTotalTokens,
       historyRetentionDays: historyRetentionDays ?? this.historyRetentionDays,
     );
     result.validate();
@@ -233,8 +229,6 @@ class AgentSettings {
         maxModelRounds > 100 ||
         maxToolCalls < 1 ||
         maxToolCalls > 500 ||
-        maxTotalTokens < 1024 ||
-        maxTotalTokens > 1000000 ||
         historyRetentionDays < 0 ||
         historyRetentionDays > 3650 ||
         (historyRetentionDays > 0 && historyRetentionDays < 7)) {
@@ -278,7 +272,6 @@ class AgentSettings {
       'systemInstructions': systemInstructions,
       'maxModelRounds': maxModelRounds,
       'maxToolCalls': maxToolCalls,
-      'maxTotalTokens': maxTotalTokens,
       'historyRetentionDays': historyRetentionDays,
     };
   }
@@ -288,10 +281,11 @@ class AgentSettings {
       'systemInstructions',
       'maxModelRounds',
       'maxToolCalls',
-      'maxTotalTokens',
       'historyRetentionDays',
       'models',
     };
+    // Legacy token budgets no longer affect loading, equality or execution.
+    const ignoredLegacyKeys = {'maxTotalTokens'};
     const keys = {
       'enabled',
       'permissionMode',
@@ -305,7 +299,9 @@ class AgentSettings {
         value.keys.any(
           (key) =>
               key is! String ||
-              (!keys.contains(key) && !preferenceKeys.contains(key)),
+              (!keys.contains(key) &&
+                  !preferenceKeys.contains(key) &&
+                  !ignoredLegacyKeys.contains(key)),
         ) ||
         value['enabled'] is! bool ||
         value['endpoint'] is! String ||
@@ -352,7 +348,6 @@ class AgentSettings {
       systemInstructions: value['systemInstructions'] as String? ?? '',
       maxModelRounds: value['maxModelRounds'] as int? ?? 24,
       maxToolCalls: value['maxToolCalls'] as int? ?? 128,
-      maxTotalTokens: value['maxTotalTokens'] as int? ?? 100000,
       historyRetentionDays: value['historyRetentionDays'] as int? ?? 0,
     );
     result.validate();
@@ -372,7 +367,6 @@ class AgentSettings {
       systemInstructions == other.systemInstructions &&
       maxModelRounds == other.maxModelRounds &&
       maxToolCalls == other.maxToolCalls &&
-      maxTotalTokens == other.maxTotalTokens &&
       historyRetentionDays == other.historyRetentionDays;
 
   @override
@@ -387,7 +381,6 @@ class AgentSettings {
     systemInstructions,
     maxModelRounds,
     maxToolCalls,
-    maxTotalTokens,
     historyRetentionDays,
   );
 }

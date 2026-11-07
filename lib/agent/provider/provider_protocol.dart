@@ -50,7 +50,7 @@ Map<String, Object?> encodeProviderRequest(ProviderRequest request) {
         'reasoning_effort': request.reasoningEffort,
       'stream': true,
       'stream_options': {'include_usage': true},
-      'max_completion_tokens': request.limits.maxOutputTokens,
+      'max_completion_tokens': ?request.limits.maxOutputTokens,
       'messages': request.messages
           .map(
             (message) => <String, Object?>{
@@ -114,7 +114,7 @@ Map<String, Object?> encodeProviderRequest(ProviderRequest request) {
       'reasoning': {'effort': request.reasoningEffort},
     'stream': true,
     'store': false,
-    'max_output_tokens': request.limits.maxOutputTokens,
+    'max_output_tokens': ?request.limits.maxOutputTokens,
     'input': input,
     if (tools.isNotEmpty)
       'tools': tools.map((tool) => {'type': 'function', ...tool}).toList(),
@@ -551,7 +551,8 @@ class ProviderResponseDecoder {
       cachedInputTokens: cached,
       reasoningTokens: reasoning,
     );
-    if (total > request.limits.maxTotalTokens) {
+    final limit = request.limits.maxTotalTokens;
+    if (limit != null && total > limit) {
       throw const ProviderException(ProviderError.tokenBudgetExceeded);
     }
     events.add(ProviderUsageEvent(_usage!));

@@ -4086,7 +4086,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get agentRunLimitsTitle => '单次运行限额';
 
   @override
-  String get agentRunLimitsHint => '限制一次任务的模型请求、工具调用和 token 用量。';
+  String get agentRunLimitsHint => '限制一次任务的模型请求和工具调用次数。';
 
   @override
   String get agentHistoryRetentionTitle => '聊天记录保留';
@@ -4259,6 +4259,15 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String agentBudgetSummaryRequestTokenUsage(int reported, int limit) {
     return '本次请求 · 已报告用量 $reported/$limit Token';
+  }
+
+  @override
+  String agentBudgetSummaryReportedUsage(
+    int requests,
+    int requestLimit,
+    int tokens,
+  ) {
+    return '模型请求 $requests/$requestLimit 轮 · 已报告用量 $tokens Token';
   }
 }
 
@@ -8346,7 +8355,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get agentRunLimitsTitle => '單次執行限額';
 
   @override
-  String get agentRunLimitsHint => '限制一次任務的模型請求、工具呼叫與 token 用量。';
+  String get agentRunLimitsHint => '限制一次任務的模型請求和工具呼叫次數。';
 
   @override
   String get agentHistoryRetentionTitle => '聊天記錄保留';
@@ -8519,5 +8528,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String agentBudgetSummaryRequestTokenUsage(int reported, int limit) {
     return '本次請求 · 已報告用量 $reported/$limit Token';
+  }
+
+  @override
+  String agentBudgetSummaryReportedUsage(
+    int requests,
+    int requestLimit,
+    int tokens,
+  ) {
+    return '模型請求 $requests/$requestLimit 輪 · 已回報用量 $tokens Token';
   }
 }

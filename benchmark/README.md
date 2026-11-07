@@ -487,3 +487,16 @@ Earlier timing reports retain their recorded dataset and source versions. This
 serialization contract update supplies no timing, memory or device evidence;
 new comparisons must freeze the same dataset version on both sides and repeat
 the documented protocol in an exclusive measurement window.
+
+## Dataset version 9: remove the Agent token budget
+
+Local Agent configuration no longer serializes `maxTotalTokens`. Dataset version
+9 updates the two local AppData encode/decode checksums. Portable backup
+checksums, all other workload checksums and the full course/event data remain
+unchanged. The regression inserts only the former default field, in its original
+position, and requires all four dataset 8 serialization checksums before applying
+the existing historical normalizations.
+
+Existing performance reports retain their original dataset versions. Fresh
+comparisons use dataset 9 on both sides; this serialization change adds no timing
+or memory observations.

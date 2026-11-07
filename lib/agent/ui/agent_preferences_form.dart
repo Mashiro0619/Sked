@@ -27,9 +27,6 @@ class _AgentPreferencesFormState extends State<AgentPreferencesForm> {
   late final _calls = TextEditingController(
     text: '${widget.settings.maxToolCalls}',
   );
-  late final _tokens = TextEditingController(
-    text: '${widget.settings.maxTotalTokens}',
-  );
   late final _retention = TextEditingController(
     text: '${widget.settings.historyRetentionDays}',
   );
@@ -39,13 +36,7 @@ class _AgentPreferencesFormState extends State<AgentPreferencesForm> {
 
   @override
   void dispose() {
-    for (final controller in [
-      _instructions,
-      _rounds,
-      _calls,
-      _tokens,
-      _retention,
-    ]) {
+    for (final controller in [_instructions, _rounds, _calls, _retention]) {
       controller.dispose();
     }
     super.dispose();
@@ -64,7 +55,6 @@ class _AgentPreferencesFormState extends State<AgentPreferencesForm> {
           systemInstructions: _instructions.text,
           maxModelRounds: int.parse(_rounds.text),
           maxToolCalls: int.parse(_calls.text),
-          maxTotalTokens: int.parse(_tokens.text),
           historyRetentionDays: int.parse(_retention.text),
         ),
       );
@@ -127,13 +117,6 @@ class _AgentPreferencesFormState extends State<AgentPreferencesForm> {
             ),
             number('agent-max-rounds', l.agentMaxModelRounds, _rounds, 1, 100),
             number('agent-max-calls', l.agentMaxToolCalls, _calls, 1, 500),
-            number(
-              'agent-max-tokens',
-              l.agentMaxTotalTokens,
-              _tokens,
-              1024,
-              1000000,
-            ),
             number(
               'agent-history-retention',
               l.agentHistoryRetentionDays,

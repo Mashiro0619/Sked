@@ -7761,7 +7761,7 @@ abstract class AppLocalizations {
   /// No description provided for @agentRunLimitsHint.
   ///
   /// In en, this message translates to:
-  /// **'Limit model requests, tool calls and token usage for each run.'**
+  /// **'Limit model requests and tool calls for each run.'**
   String get agentRunLimitsHint;
 
   /// No description provided for @agentHistoryRetentionTitle.
@@ -8055,6 +8055,16 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This request · {reported}/{limit} reported tokens'**
   String agentBudgetSummaryRequestTokenUsage(int reported, int limit);
+
+  /// No description provided for @agentBudgetSummaryReportedUsage.
+  ///
+  /// In en, this message translates to:
+  /// **'{requests}/{requestLimit} model requests · {tokens} reported tokens'**
+  String agentBudgetSummaryReportedUsage(
+    int requests,
+    int requestLimit,
+    int tokens,
+  );
 }
 
 class _AppLocalizationsDelegate

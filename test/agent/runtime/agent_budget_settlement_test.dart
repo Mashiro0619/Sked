@@ -117,14 +117,14 @@ http.Response _wireResponse(
 void main() {
   for (final protocol in AgentModelProtocol.values) {
     test(
-      '${protocol.name} freezes remaining limits and reserves a read-only final wire request',
+      '${protocol.name} reserves a read-only final round without limiting tokens',
       () async {
         final wires = <Map<String, dynamic>>[];
         final provider = ProviderClient(
           client: MockClient((request) async {
             wires.add(jsonDecode(request.body) as Map<String, dynamic>);
             return wires.length == 1
-                ? _wireResponse(protocol, callId: 'read', tokens: 9400)
+                ? _wireResponse(protocol, callId: 'read', tokens: 1940000)
                 : _wireResponse(
                     protocol,
                     text: 'The recorded read completed. Further work remains.',
@@ -137,7 +137,10 @@ void main() {
           protocol: protocol,
           limits: const AgentRuntimeLimits(
             maxModelRounds: 2,
-            maxTotalTokens: 10000,
+            providerLimits: ProviderLimits(
+              maxTotalTokens: 10000,
+              maxOutputTokens: 128,
+            ),
           ),
         );
         addTearDown(h.close);
@@ -149,8 +152,8 @@ void main() {
         final outputKey = protocol == AgentModelProtocol.chatCompletions
             ? 'max_completion_tokens'
             : 'max_output_tokens';
-        expect(wires.first[outputKey], 4096);
-        expect(wires.last[outputKey], 600);
+        expect(wires.first, isNot(contains(outputKey)));
+        expect(wires.last, isNot(contains(outputKey)));
         expect(wires.first['tools'], isNotEmpty);
         expect(wires.last['tools'] ?? [], isEmpty);
         expect(jsonEncode(wires.last), contains('All tools are disabled'));
@@ -165,7 +168,11 @@ void main() {
           true,
         );
         expect(h.summary['reason'], 'rounds');
-        expect((h.summary['tokens'] as Map)['reported'], 9500);
+        expect(h.summary['version'], 2);
+        expect(h.summary['tokens'], {
+          'reported': 1940100,
+          'unreportedRequests': 0,
+        });
         expect((h.summary['counts'] as Map)['completed'], 1);
         expect(
           h.runtime.state.value.runFor(h.id).errorMessage,
@@ -309,10 +316,7 @@ void main() {
       final h = await _Harness.create(
         provider: provider,
         withQuestions: true,
-        limits: const AgentRuntimeLimits(
-          maxModelRounds: 2,
-          maxTotalTokens: 100,
-        ),
+        limits: const AgentRuntimeLimits(maxModelRounds: 2),
       );
       addTearDown(h.close);
       final waiting = Completer<void>();
@@ -334,7 +338,7 @@ void main() {
       final question = h.saved.pendingQuestion!;
       final before = h.saved.runs.single.toJson();
       expect(provider.requests, hasLength(1));
-      expect(provider.requests.single.limits.maxTotalTokens, 75);
+      expect(provider.requests.single.limits.maxTotalTokens, isNull);
       expect(h.saved.runs.single.requests.single.usage!.totalTokens, 12);
       await expectLater(
         h.runtime.answerQuestion(h.id, question.id, [
@@ -358,7 +362,7 @@ void main() {
       ]);
       await send;
       expect(provider.requests, hasLength(2));
-      expect(provider.requests.last.limits.maxTotalTokens, 88);
+      expect(provider.requests.last.limits.maxTotalTokens, isNull);
       expect(provider.requests.last.tools, isEmpty);
       expect(h.saved.pendingQuestion, isNull);
       final answers = h.saved.messages
@@ -377,67 +381,37 @@ void main() {
   );
 
   test(
-    'exhausted token budget produces a host summary without another request',
+    'large cumulative usage preserves tool execution and natural completion',
     () async {
       final provider = _Provider(
         (index, _) => index == 0
-            ? _response(calls: [_call('read')], tokens: 3)
-            : _response(
-                text: 'The recorded read completed. Work remains.',
-                tokens: 1,
-              ),
+            ? _response(calls: [_call('read')], tokens: 600001)
+            : _response(text: 'The recorded read completed.', tokens: 600001),
       );
       final h = await _Harness.create(
         provider: provider,
-        limits: const AgentRuntimeLimits(maxModelRounds: 3, maxTotalTokens: 4),
+        limits: const AgentRuntimeLimits(maxModelRounds: 3),
       );
       addTearDown(h.close);
       await h.runtime.send(h.id, 'Read the data.');
       expect(provider.requests, hasLength(2));
-      expect(provider.requests.first.limits.maxTotalTokens, 3);
-      expect(provider.requests.last.limits.maxTotalTokens, 1);
-      expect(provider.requests.last.tools, isEmpty);
+      expect(provider.requests.first.limits.maxTotalTokens, isNull);
+      expect(provider.requests.last.limits.maxTotalTokens, isNull);
+      expect(provider.requests.last.tools, isNotEmpty);
       expect(h.saved.runs.single.requests, hasLength(2));
-      expect(h.summary['reason'], 'tokens');
-      expect(h.summary['counts'], {
-        'completed': 1,
-        'failed': 0,
-        'notStarted': 0,
-        'unknown': 0,
-      });
-      expect((h.summary['requests'] as Map)['attempted'], 2);
-      expect((h.summary['requests'] as Map)['limit'], 3);
-      expect((h.summary['tokens'] as Map)['reported'], 4);
-      expect((h.summary['tokens'] as Map)['limit'], 4);
-      expect(h.executed.map((call) => call.id), ['read']);
       expect(
-        h.runtime.state.value.runFor(h.id).errorMessage,
-        'tokenBudgetExceeded',
+        h.saved.runs.single.requests.map(
+          (request) => request.usage!.totalTokens,
+        ),
+        [600001, 600001],
       );
+      expect(h.summaries, isEmpty);
+      expect(h.executed.map((call) => call.id), ['read']);
+      expect(h.saved.status, ConversationStatus.idle);
+      expect(h.saved.runs.single.status, ConversationRunStatus.completed);
+      expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
     },
   );
-
-  test('reported budget excess is retained without another model request or tool execution', () async {
-    final provider = _Provider(
-      (_, _) => _response(calls: [_call('unaccepted')], tokens: 11),
-    );
-    final h = await _Harness.create(
-      provider: provider,
-      limits: const AgentRuntimeLimits(maxTotalTokens: 10),
-    );
-    addTearDown(h.close);
-    await h.runtime.send(h.id, 'Read the data.');
-    expect(provider.requests, hasLength(1));
-    expect(provider.requests.single.limits.maxTotalTokens, 8);
-    expect(provider.requests.single.limits.maxOutputTokens, 8);
-    expect(h.executed, isEmpty);
-    expect(h.saved.runs.single.requests.single.usage!.totalTokens, 11);
-    expect((h.summary['tokens'] as Map)['reported'], 11);
-    expect(
-      h.runtime.state.value.runFor(h.id).errorMessage,
-      'tokenBudgetExceeded',
-    );
-  });
 
   test('one-round work preserves actual partial results and explicit continuation can work again', () async {
     final provider = _Provider(
@@ -445,7 +419,7 @@ void main() {
           ? _response(
               calls: [_call('committed'), _call('failed'), _call('skipped')],
             )
-          : _response(calls: [_call('continued')], tokens: 4),
+          : _response(calls: [_call('continued')], tokens: 4000001),
     );
     final h = await _Harness.create(
       provider: provider,
@@ -493,7 +467,7 @@ void main() {
       'notStarted': 0,
       'unknown': 0,
     });
-    expect((h.summary['tokens'] as Map)['reported'], 4);
+    expect((h.summary['tokens'] as Map)['reported'], 4000001);
     expect((h.summary['tokens'] as Map)['unreportedRequests'], 0);
   });
 
@@ -577,13 +551,15 @@ void main() {
     expect(h.summaries, isEmpty);
   });
 
-  test('reply regeneration uses the same request limits without reserving another turn', () async {
+  test('reply regeneration records large usage without a token limit or another turn', () async {
     final provider = _Provider(
-      (_, _) => _response(text: 'A regenerated answer.', tokens: 4),
+      (_, _) => _response(text: 'A regenerated answer.', tokens: 1100005),
     );
     final h = await _Harness.create(
       provider: provider,
-      limits: const AgentRuntimeLimits(maxTotalTokens: 9),
+      limits: const AgentRuntimeLimits(
+        providerLimits: ProviderLimits(maxTotalTokens: 9, maxOutputTokens: 4),
+      ),
     );
     addTearDown(h.close);
     await h.repository.update(
@@ -606,10 +582,12 @@ void main() {
       ),
     );
     await h.runtime.regenerateReply(h.id, 'reply');
-    expect(provider.requests.single.limits.maxTotalTokens, 9);
-    expect(provider.requests.single.limits.maxOutputTokens, 9);
+    expect(provider.requests.single.limits.maxTotalTokens, isNull);
+    expect(provider.requests.single.limits.maxOutputTokens, isNull);
     expect(provider.requests.single.tools, isEmpty);
     expect(h.saved.messages.last.text, 'A regenerated answer.');
+    expect(h.saved.runs.last.requests.single.usage!.totalTokens, 1100005);
+    expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
     expect(h.summaries, isEmpty);
   });
 }

@@ -2871,7 +2871,7 @@
   "@agentConversationGuidanceHint": {},
   "agentRunLimitsTitle": "单次运行限额",
   "@agentRunLimitsTitle": {},
-  "agentRunLimitsHint": "限制一次任务的模型请求、工具调用和 token 用量。",
+  "agentRunLimitsHint": "限制一次任务的模型请求和工具调用次数。",
   "@agentRunLimitsHint": {},
   "agentHistoryRetentionTitle": "聊天记录保留",
   "@agentHistoryRetentionTitle": {},
@@ -3050,6 +3050,20 @@
         "type": "int"
       },
       "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "agentBudgetSummaryReportedUsage": "模型请求 {requests}/{requestLimit} 轮 · 已报告用量 {tokens} Token",
+  "@agentBudgetSummaryReportedUsage": {
+    "placeholders": {
+      "requests": {
+        "type": "int"
+      },
+      "requestLimit": {
+        "type": "int"
+      },
+      "tokens": {
         "type": "int"
       }
     }

@@ -29,13 +29,19 @@ class AgentBudgetSummary {
       if (value is! Map<String, dynamic> ||
           value['kind'] != 'agent_budget_summary' ||
           value['version'] is! int ||
-          value['version'] != 1 ||
+          !const {1, 2}.contains(value['version']) ||
           !const {
             'tokens',
             'requestTokens',
             'rounds',
             'tools',
           }.contains(value['reason'])) {
+        return null;
+      }
+      final legacy = value['version'] == 1;
+      if (!legacy &&
+          (!const {'rounds', 'tools'}.contains(value['reason']) ||
+              value.containsKey('requestTokens'))) {
         return null;
       }
       final runId = value['runId'];
@@ -59,7 +65,11 @@ class AgentBudgetSummary {
         value['reason'] as String,
         counts('counts', ['completed', 'failed', 'notStarted', 'unknown']),
         counts('requests', ['attempted', 'limit']),
-        counts('tokens', ['reported', 'unreportedRequests', 'limit']),
+        counts('tokens', [
+          'reported',
+          'unreportedRequests',
+          if (legacy) 'limit',
+        ]),
         runId: runId as String?,
         requestTokens: value.containsKey('requestTokens')
             ? counts('requestTokens', ['reported', 'limit'])
@@ -109,15 +119,19 @@ class AgentBudgetSummaryView extends StatelessWidget {
                 summary.counts['unknown']!,
               ),
             ),
-            Text(
-              l.agentBudgetSummaryUsage(
+            Text(switch (summary.tokens['limit']) {
+              final tokenLimit? => l.agentBudgetSummaryUsage(
                 summary.requests['attempted']!,
                 summary.requests['limit']!,
                 summary.tokens['reported']!,
-                summary.tokens['limit']!,
+                tokenLimit,
               ),
-              style: textTheme.bodySmall,
-            ),
+              null => l.agentBudgetSummaryReportedUsage(
+                summary.requests['attempted']!,
+                summary.requests['limit']!,
+                summary.tokens['reported']!,
+              ),
+            }, style: textTheme.bodySmall),
             if (summary.tokens['unreportedRequests']! > 0)
               Text(
                 l.agentBudgetSummaryMissingUsage(

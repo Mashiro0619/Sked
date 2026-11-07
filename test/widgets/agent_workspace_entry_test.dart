@@ -218,7 +218,6 @@ class _Application extends ChangeNotifier implements AgentApplication {
       systemInstructions: value.systemInstructions,
       maxModelRounds: value.maxModelRounds,
       maxToolCalls: value.maxToolCalls,
-      maxTotalTokens: value.maxTotalTokens,
       historyRetentionDays: value.historyRetentionDays,
     );
     runtime.refreshSettings();

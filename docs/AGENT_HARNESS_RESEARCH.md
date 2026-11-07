@@ -109,7 +109,7 @@ Sked 应保证目录完整可遍历、缺失或截断可见，统一技能加载
 
 OpenCode 每轮发送前估算并按需压缩，计量结合最近实际 usage、新增消息、系统提示、工具定义和 schema，阈值关联模型上下文窗口。Cherry Studio 进一步将请求实际声明的输出预留扣除后，作为输入、附件和工具输出预算的共同基准。[OpenCode 请求循环](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/core/src/session/runner/llm.ts#L232-L313)、[完整输入计量](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/core/src/session/compaction.ts#L1129-L1243)、[Cherry 输入空间](https://github.com/CherryHQ/cherry-studio/blob/87d4851181ed801cde36cceb7aea4f7b5cc4ee3b/src/main/ai/contextBuild/resolveInputRoom.ts)
 
-Sked 当前字符检查、UTF-8 请求上限、固定单请求 32768 token 限制和累计运行预算分别处理，部分拒绝发生在远端响应之后。发送前需要统一计算消息、工具、附件、输出预留和剩余运行额度，并提供明确的未知 usage 策略。GUI 分别显示当前上下文占用和累计运行用量，压缩运行与失败具有独立状态。
+初次研究时，Sked 的字符检查、UTF-8 请求上限、单请求 32768 token 限制和累计运行预算分别处理，部分拒绝发生在远端响应之后。2026-11-07 已取消普通 Agent 的 Token 硬限制及默认输出上限，实际用量继续统计，工具发现结果按当前公开定义去重。请求字节计量与完整工具组压缩继续沿传输边界执行。
 
 OpenCode 在配置的最后一步要求总结并禁用工具，其测试验证模型继续请求工具也不会执行。Sked 应在总额度内预留只读收尾轮，预算已耗尽时从已保存回执生成确定性阶段结果。[收尾控制](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/core/src/session/runner/llm.ts#L252-L273)、[最后一步回归](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/core/test/session-runner.test.ts#L5717-L5747)、[上下文 GUI](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/gui-plugins/src/context/indicator.tsx#L47-L74)
 

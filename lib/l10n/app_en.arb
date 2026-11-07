@@ -2941,7 +2941,7 @@
   "@agentConversationGuidanceHint": {},
   "agentRunLimitsTitle": "Limits per run",
   "@agentRunLimitsTitle": {},
-  "agentRunLimitsHint": "Limit model requests, tool calls and token usage for each run.",
+  "agentRunLimitsHint": "Limit model requests and tool calls for each run.",
   "@agentRunLimitsHint": {},
   "agentHistoryRetentionTitle": "Chat history retention",
   "@agentHistoryRetentionTitle": {},
@@ -3120,6 +3120,20 @@
         "type": "int"
       },
       "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "agentBudgetSummaryReportedUsage": "{requests}/{requestLimit} model requests · {tokens} reported tokens",
+  "@agentBudgetSummaryReportedUsage": {
+    "placeholders": {
+      "requests": {
+        "type": "int"
+      },
+      "requestLimit": {
+        "type": "int"
+      },
+      "tokens": {
         "type": "int"
       }
     }

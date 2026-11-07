@@ -226,7 +226,7 @@ Future<PreparedMutation> prepareUndo(ReceiptId receiptId);
 
 独立读取可并行；默认串行写入和平台副作用。即使某个外部 harness 宣称工具可并行，Sked 执行层仍负责协调同一数据的写入。
 
-当前可配置预算包括模型请求次数、工具调用次数和 provider 报告的总 token；请求/响应、工具参数及上下文另有固定边界。运行时用返回的 usage 执行本次运行预算，并在会话 v2 持久记录各请求、工具尝试及显式继续关系。输入/输出及服务提供的推理/缓存用量可查询和导出，未返回字段保持未知；没有可信单价时不推算费用。限流和身份错误返回可核对状态，不自动无限重放；超限结束当前步骤并保留会话记录。
+当前可配置预算包括模型请求次数和工具调用次数；请求/响应、工具参数及上下文另有固定边界。Token 用量只用于统计，普通 Agent 不设置累计、单请求总量和输出 Token 上限。会话持久记录各请求、工具尝试及显式继续关系。输入/输出及服务提供的推理/缓存用量可查询和导出，未返回字段保持未知；没有可信单价时不推算费用。限流和身份错误返回可核对状态，不自动无限重放；超限结束当前步骤并保留会话记录。
 
 ### 7.2 运行状态
 
@@ -238,7 +238,7 @@ Future<PreparedMutation> prepareUndo(ReceiptId receiptId);
 
 ### 7.3 Provider 可替换
 
-已实现的 Dart Provider 适配层支持 Chat Completions 和 Responses 的 JSON/SSE 响应，聚合完整工具参数后才向宿主交付；Responses 保留续接所需的原始 assistant items。应用工具名通过可逆编码适配线路名称。请求、响应、事件、工具和 token 均有预算；取消会中止 HTTP，请求不自动重放，重定向不会携带凭据继续发送。API Key 只作为单次调用参数进入 Authorization，不进入工具、消息或异常正文。协议回归使用替身 HTTP 响应验证，不代表真实服务商或原生设备联调已通过。
+已实现的 Dart Provider 适配层支持 Chat Completions 和 Responses 的 JSON/SSE 响应，聚合完整工具参数后才向宿主交付；Responses 保留续接所需的原始 assistant items。应用工具名通过可逆编码适配线路名称。请求、响应、事件和工具保留传输边界，普通请求不设置 Token 额度；取消会中止 HTTP，请求不自动重放，重定向不会携带凭据继续发送。API Key 只作为单次调用参数进入 Authorization，不进入工具、消息或异常正文。协议回归使用替身 HTTP 响应验证，不代表真实服务商或原生设备联调已通过。
 
 第一批协议为 OpenAI-compatible Chat Completions 和 Responses；用适配器屏蔽请求、流式工具参数、tool result、usage、错误及取消差异。后续增加 Anthropic 原生协议或本地模型端点时，沿用同一运行事件和工具契约。
 

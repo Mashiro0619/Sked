@@ -104,7 +104,6 @@ const _settingsFields = <BackupSettingsGroup, Set<String>>{
     'systemInstructions',
     'maxModelRounds',
     'maxToolCalls',
-    'maxTotalTokens',
     'historyRetentionDays',
   },
 };
@@ -689,6 +688,9 @@ PreparedMainBackupRestore prepareMainBackupRestore(
             .where((group) => group.name == record.key.id)
             .firstOrNull;
         if (group == null) backupInvalid('Unknown settings group.');
+        if (group == BackupSettingsGroup.agentPreferences) {
+          data.remove('maxTotalTokens');
+        }
         backupMap(data, _settingsFields[group]!);
         final Map<String, dynamic> target = switch (group) {
           BackupSettingsGroup.student => student,

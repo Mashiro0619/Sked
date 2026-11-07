@@ -46,6 +46,7 @@ void main() {
       await mount(1200, 1);
       await tester.tap(field('agent-settings-preferences'));
       await tester.pumpAndSettle();
+      expect(field('agent-max-tokens'), findsNothing);
       final semantics = tester.ensureSemantics();
       try {
         final labels = AppLocalizations.of(
@@ -62,18 +63,14 @@ void main() {
         field('agent-system-instructions'),
         'Use concise replies.',
       );
-      final values = {
-        'agent-max-rounds': '12',
-        'agent-max-calls': '36',
-        'agent-max-tokens': '12000',
-      };
+      final values = {'agent-max-rounds': '12', 'agent-max-calls': '36'};
       for (final entry in values.entries) {
         await reveal(field(entry.key));
         await tester.enterText(field(entry.key), entry.value);
       }
       expect(
         tester.getTopLeft(field('agent-max-rounds')).dy,
-        tester.getTopLeft(field('agent-max-tokens')).dy,
+        tester.getTopLeft(field('agent-max-calls')).dy,
       );
 
       await mount(320, 2);
@@ -87,7 +84,7 @@ void main() {
       }
       expect(
         tester.getTopLeft(field('agent-max-rounds')).dy,
-        lessThan(tester.getTopLeft(field('agent-max-tokens')).dy),
+        lessThan(tester.getTopLeft(field('agent-max-calls')).dy),
       );
       await reveal(field('agent-history-retention'));
       await tester.enterText(field('agent-history-retention'), '30');
@@ -111,7 +108,6 @@ void main() {
       expect(app.agent.settings.systemInstructions, 'Use concise replies.');
       expect(app.agent.settings.maxModelRounds, 12);
       expect(app.agent.settings.maxToolCalls, 36);
-      expect(app.agent.settings.maxTotalTokens, 12000);
       expect(app.agent.settings.historyRetentionDays, 30);
       expect(tester.takeException(), isNull);
     },

@@ -278,8 +278,8 @@ void main() {
   for (final scenario in [
     'incomplete',
     'missingUsage',
-    'overBudget',
-    'completedOverBudget',
+    'largeUsage',
+    'completedLargeUsage',
     'completedWithoutUsage',
     'disconnected',
   ]) {
@@ -287,13 +287,14 @@ void main() {
       'real Responses SSE persists $scenario usage and request outcome',
       () async {
         final incomplete =
-            scenario != 'completedOverBudget' &&
+            scenario != 'completedLargeUsage' &&
             scenario != 'completedWithoutUsage';
         final missingUsage =
             scenario == 'missingUsage' || scenario == 'completedWithoutUsage';
-        final overBudget =
-            scenario == 'overBudget' || scenario == 'completedOverBudget';
+        final largeUsage =
+            scenario == 'largeUsage' || scenario == 'completedLargeUsage';
         var executions = 0;
+        var requests = 0;
         final event = scenario == 'disconnected'
             ? {'type': 'response.output_text.delta', 'delta': 'Partial text'}
             : {
@@ -302,7 +303,7 @@ void main() {
                     : 'response.completed',
                 'response': {
                   'status': incomplete ? 'incomplete' : 'completed',
-                  'output': scenario == 'completedOverBudget'
+                  'output': scenario == 'completedLargeUsage'
                       ? [
                           {
                             'type': 'function_call',
@@ -317,30 +318,61 @@ void main() {
                     'incomplete_details': {'reason': 'max_output_tokens'},
                   if (!missingUsage)
                     'usage': {
-                      'input_tokens': 100,
-                      'output_tokens': 4096,
-                      'total_tokens': 4196,
+                      'input_tokens': largeUsage ? 1000000 : 100,
+                      'output_tokens': largeUsage ? 100000 : 4096,
+                      'total_tokens': largeUsage ? 1100000 : 4196,
                     },
                 },
               };
         final actual = ProviderClient(
-          client: MockClient(
-            (_) async => http.Response(
-              'data: ${jsonEncode(event)}\n\n',
+          client: MockClient((_) async {
+            requests++;
+            final next = requests == 1
+                ? event
+                : {
+                    'type': 'response.completed',
+                    'response': {
+                      'status': 'completed',
+                      'output': [
+                        {
+                          'type': 'message',
+                          'role': 'assistant',
+                          'content': [
+                            {'type': 'output_text', 'text': 'Completed.'},
+                          ],
+                        },
+                      ],
+                      'usage': {
+                        'input_tokens': 1,
+                        'output_tokens': 0,
+                        'total_tokens': 1,
+                      },
+                    },
+                  };
+            return http.Response(
+              'data: ${jsonEncode(next)}\n\n',
               200,
               headers: {'content-type': 'text/event-stream'},
-            ),
-          ),
+            );
+          }),
         );
         final h = await _Harness.create(
           protocol: AgentModelProtocol.responses,
-          limits: AgentRuntimeLimits(
+          limits: const AgentRuntimeLimits(
             providerLimits: ProviderLimits(
-              maxTotalTokens: overBudget ? 4195 : 4196,
+              maxTotalTokens: 4195,
+              maxOutputTokens: 4096,
             ),
           ),
-          handler: (request, cancellation) =>
-              actual.stream(request, apiKey: _key, cancellation: cancellation),
+          handler: (request, cancellation) {
+            expect(request.limits.maxTotalTokens, isNull);
+            expect(request.limits.maxOutputTokens, isNull);
+            return actual.stream(
+              request,
+              apiKey: _key,
+              cancellation: cancellation,
+            );
+          },
           execute: (_, _, _) async {
             executions++;
             return {'status': 'read'};
@@ -355,32 +387,45 @@ void main() {
         final saved = ConversationArchive.decode(h.storage.source!)
             .conversations
             .single;
-        final attempt = saved.runs.single.requests.single;
+        final attempt = saved.runs.single.requests.first;
         expect(
           attempt.outcome,
           scenario == 'disconnected'
               ? ConversationAttemptOutcome.unknown
-              : scenario == 'completedWithoutUsage'
+              : scenario == 'completedWithoutUsage' ||
+                    scenario == 'completedLargeUsage'
               ? ConversationAttemptOutcome.completed
               : ConversationAttemptOutcome.failed,
         );
         expect(
           attempt.usage?.totalTokens,
-          missingUsage || scenario == 'disconnected' ? null : 4196,
+          missingUsage || scenario == 'disconnected'
+              ? null
+              : largeUsage
+              ? 1100000
+              : 4196,
         );
         expect(
           attempt.errorCode,
-          scenario == 'completedWithoutUsage'
+          scenario == 'completedWithoutUsage' ||
+                  scenario == 'completedLargeUsage'
               ? null
-              : overBudget
-              ? 'provider.tokenBudgetExceeded'
               : 'provider.incompleteResponse',
         );
-        expect(executions, 0);
+        expect(executions, scenario == 'completedLargeUsage' ? 1 : 0);
+        expect(
+          saved.runs.single.requests,
+          hasLength(scenario == 'completedLargeUsage' ? 2 : 1),
+        );
         expect(
           saved.messages.any((message) => message.toolCalls.isNotEmpty),
-          isFalse,
+          scenario == 'completedLargeUsage',
         );
+        if (scenario == 'completedLargeUsage') {
+          expect(saved.status, ConversationStatus.idle);
+          expect(saved.runs.single.status, ConversationRunStatus.completed);
+          expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
+        }
       },
     );
   }
@@ -1459,66 +1504,55 @@ void main() {
     );
   });
 
-  test(
-    'token budget does not execute completed but over-budget calls',
-    () async {
-      var executions = 0;
-      final h = await _Harness.create(
-        limits: const AgentRuntimeLimits(maxTotalTokens: 1),
-        handler: (_, _) => _events(
-          ProviderResponse(
-            text: '',
-            toolCalls: [_call('one')],
-            finishReason: 'tool_calls',
-            usage: const ProviderUsage(
-              inputTokens: 3,
-              outputTokens: 2,
-              totalTokens: 5,
-            ),
-          ),
-        ),
-        execute: (_, _, _) async {
-          executions++;
-          return {'status': 'read'};
-        },
-      );
-      addTearDown(h.dispose);
-      await h.runtime.send(h.id, 'query');
-      expect(executions, 0);
-      expect(h.provider.requests, hasLength(1));
-      final saved = ConversationArchive.decode(h.storage.source!)
-          .conversations
-          .single;
-      expect(saved.runs.single.requests.single.usage!.totalTokens, 5);
-      expect(
-        saved.runs.single.requests.single.errorCode,
-        'tokenBudgetExceeded',
-      );
-      expect(saved.runs.single.tools, isEmpty);
-      expect(
-        saved.messages.where(
-          (message) => message.role == ConversationRole.tool,
-        ),
-        isEmpty,
-      );
-      final summary = jsonDecode(saved.messages.last.text) as Map;
-      expect(summary['kind'], 'agent_budget_summary');
-      expect(summary['reason'], 'tokens');
-      expect(summary['counts'], {
-        'completed': 0,
-        'failed': 0,
-        'notStarted': 0,
-        'unknown': 0,
-      });
-      expect((summary['tokens'] as Map)['reported'], 5);
-      expect((summary['tokens'] as Map)['unreportedRequests'], 0);
-      expect(saved.status, ConversationStatus.interrupted);
-      expect(
-        h.runtime.state.value.runFor(h.id).errorMessage,
-        'tokenBudgetExceeded',
-      );
-    },
-  );
+  test('large reported usage preserves completed tool calls and their durable results', () async {
+    var executions = 0;
+    var requests = 0;
+    final h = await _Harness.create(
+      handler: (_, _) => _events(
+        ++requests == 1
+            ? ProviderResponse(
+                text: '',
+                toolCalls: [_call('one')],
+                finishReason: 'tool_calls',
+                usage: const ProviderUsage(
+                  inputTokens: 1300000,
+                  outputTokens: 20000,
+                  totalTokens: 1320000,
+                ),
+              )
+            : _response('Completed.'),
+      ),
+      execute: (_, _, _) async {
+        executions++;
+        return {'status': 'read'};
+      },
+    );
+    addTearDown(h.dispose);
+    await h.runtime.send(h.id, 'query');
+    expect(executions, 1);
+    expect(h.provider.requests, hasLength(2));
+    final saved = ConversationArchive.decode(h.storage.source!)
+        .conversations
+        .single;
+    expect(saved.runs.single.requests.first.usage!.totalTokens, 1320000);
+    expect(saved.runs.single.requests.first.errorCode, isNull);
+    expect(
+      saved.runs.single.tools.single.outcome,
+      ConversationAttemptOutcome.completed,
+    );
+    expect(
+      saved.messages.where((message) => message.role == ConversationRole.tool),
+      hasLength(1),
+    );
+    final tool = saved.messages.singleWhere(
+      (message) => message.role == ConversationRole.tool,
+    );
+    expect(jsonDecode(tool.text)['status'], 'read');
+    expect(saved.messages.last.text, 'Completed.');
+    expect(saved.status, ConversationStatus.idle);
+    expect(saved.runs.single.status, ConversationRunStatus.completed);
+    expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
+  });
 
   test('duplicate call IDs across model rounds cannot execute twice', () async {
     var executions = 0;

@@ -20,7 +20,7 @@ void main() {
   });
 
   test('fixture has the fixed large-data shape', () {
-    expect(performanceDatasetVersion, 8);
+    expect(performanceDatasetVersion, 9);
     expect(fixtures.generalData1000.schedules, hasLength(8));
     expect(
       fixtures.generalData1000.schedules.expand((schedule) => schedule.events),
@@ -103,6 +103,37 @@ void main() {
 
     expect(actual, expectedPerformanceFixtureChecksums);
   });
+
+  test(
+    'removing the Agent token budget accounts for the entire dataset 9 change',
+    () {
+      expect(
+        checksumString(_asDataset8(fixtures.appData.encode())),
+        'fnv1a64-utf16le:41138787e26eb567',
+      );
+      expect(
+        checksumString(
+          _asDataset8(
+            AppData.decodeStorageSnapshot(fixtures.appDataSnapshot).encode(),
+          ),
+        ),
+        'fnv1a64-utf16le:7d17b9c7ab307747',
+      );
+      expect(
+        checksumString(
+          _asDataset8(encodeAppBackup(fixtures.appData, fixtures.schoolSites)),
+        ),
+        'fnv1a64-utf16le:e5333b9b4bb7ed76',
+      );
+      final decoded = decodeAppBackup(fixtures.appBackupSnapshot);
+      final checksum = StableChecksum()
+        ..addBool(decoded.includesSchoolSites)
+        ..addString(
+          _asDataset8(encodeAppBackup(decoded.appData, decoded.schoolSites)),
+        );
+      expect(checksum.finish(), 'fnv1a64-utf16le:db3a0eb536199d79');
+    },
+  );
 
   test(
     'schema 6 and Agent model defaults account for the entire dataset 8 change',
@@ -253,10 +284,27 @@ void main() {
   );
 }
 
+/// Restore only the obsolete field, in its historical order, to verify that
+/// dataset 9 retains every other byte of the dataset 8 workload.
+String _asDataset8(String source) {
+  final root = jsonDecode(source) as Map<String, dynamic>;
+  if (root.containsKey('data')) return source;
+  final agent = root['agentSettings'] as Map<String, dynamic>;
+  expect(agent, isNot(contains('maxTotalTokens')));
+  expect(agent['maxToolCalls'], 128);
+  root['agentSettings'] = {
+    for (final entry in agent.entries) ...{
+      entry.key: entry.value,
+      if (entry.key == 'maxToolCalls') 'maxTotalTokens': 100000,
+    },
+  };
+  return jsonEncode(root);
+}
+
 /// Reverse only the exact dataset 8 serialization changes. Portable backups
 /// omit local Agent configuration, but retain the owning AppData schema.
 String _asDataset7(String source) {
-  final root = jsonDecode(source) as Map<String, dynamic>;
+  final root = jsonDecode(_asDataset8(source)) as Map<String, dynamic>;
   final portable = root.containsKey('data');
   final app = portable
       ? (root['data'] as Map<String, dynamic>)['appData']
