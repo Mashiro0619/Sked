@@ -135,11 +135,15 @@ class ProviderToolCall {
     required this.id,
     required this.name,
     required this.arguments,
+    this.wireName,
   });
 
   final String id;
   final String name;
   final String arguments;
+
+  /// Original function name for a rejected, unadvertised call in history.
+  final String? wireName;
 
   Map<String, Object?> get decodedArguments {
     final value = jsonDecode(arguments);

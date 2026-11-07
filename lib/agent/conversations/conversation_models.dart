@@ -30,15 +30,18 @@ class ConversationToolCall {
     required this.id,
     required this.name,
     required this.arguments,
+    this.wireName,
   });
   final String id;
   final String name;
   final String arguments;
+  final String? wireName;
 
   Map<String, Object?> toJson() => {
     'id': id,
     'name': name,
     'arguments': arguments,
+    'wireName': ?wireName,
   };
 
   factory ConversationToolCall.fromJson(Map<String, dynamic> json) =>
@@ -46,7 +49,16 @@ class ConversationToolCall {
         id: _string(json, 'id', max: 256),
         name: _string(json, 'name', max: 128),
         arguments: _string(json, 'arguments', max: 128 * 1024, empty: true),
+        wireName: _readWireName(json),
       );
+  static String? _readWireName(Map<String, dynamic> json) {
+    final value = _optionalString(json, 'wireName', max: 64);
+    if (value != null &&
+        !RegExp(r'^[A-Za-z][A-Za-z0-9_.-]{0,63}$').hasMatch(value)) {
+      throw const FormatException('Invalid tool call wire name.');
+    }
+    return value;
+  }
 }
 
 class ConversationMessage {

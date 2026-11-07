@@ -185,13 +185,20 @@ void main() {
           );
         } else {
           expect(executed, ['capabilities.describe']);
-          expect(requests, 2);
-          final failure = h.runtime.state.value.runFor(h.id);
-          expect(failure.errorMessage, 'provider.unknownTool');
-          expect(failure.providerErrorDetails, contains('undisclosed.action'));
+          expect(requests, 3);
+          expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
+          final failure = h.repository
+              .find(h.id)!
+              .messages
+              .singleWhere((message) => message.toolCallId == 'call-2');
+          expect(jsonDecode(failure.text)['error']['code'], 'unsupported');
           expect(
-            failure.providerErrorResponseBody,
-            contains('undisclosed.action'),
+            (wires.last['messages'] as List).any(
+              (message) =>
+                  message['role'] == 'tool' &&
+                  message['tool_call_id'] == 'call-2',
+            ),
+            isTrue,
           );
         }
       },

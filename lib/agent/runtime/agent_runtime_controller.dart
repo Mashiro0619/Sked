@@ -32,6 +32,7 @@ import 'operation_outcome.dart';
 import 'operation_recovery.dart';
 import 'repeated_tool_failure.dart';
 import 'secret_content.dart';
+import 'tool_argument_context.dart';
 
 part 'agent_user_questions.dart';
 part 'agent_reference_context.dart';
@@ -1333,7 +1334,11 @@ class AgentRuntimeController implements AgentUiDelegate {
         final response = await _modelResponse(run, messages);
         _checkRun(run);
         _validateResponse(response, conversation, run);
-        await _append(
+        final rejectedCalls = <String, OperationProblem>{
+          for (final call in response.toolCalls)
+            call.id: ?_callContractProblem(call, run.tools),
+        };
+        await _appendModelResponse(
           run,
           ConversationMessage(
             id: _id(),
@@ -1348,9 +1353,11 @@ class AgentRuntimeController implements AgentUiDelegate {
                 id: call.id,
                 name: call.name,
                 arguments: call.arguments,
+                wireName: call.wireName,
               ),
             ),
           ),
+          rejectedCalls,
         );
         run.issuedToolCallIds.addAll(response.toolCalls.map((call) => call.id));
         _setDisplay(run, const AgentUiRunState(phase: AgentUiPhase.running));
@@ -1360,6 +1367,11 @@ class AgentRuntimeController implements AgentUiDelegate {
         if (response.toolCalls.isEmpty) return;
         for (var index = 0; index < response.toolCalls.length; index++) {
           final call = response.toolCalls[index];
+          if (rejectedCalls.containsKey(call.id)) {
+            run.toolCalls++;
+            repeatedFailures.record(call, rejectedCalls[call.id]);
+            continue;
+          }
           if (run.scope.isCancelled) {
             await _recordUnexecuted(
               run,
@@ -1393,6 +1405,8 @@ class AgentRuntimeController implements AgentUiDelegate {
           run.activeToolCall = call;
           try {
             _checkRun(run);
+            final contractProblem = _callContractProblem(call, run.tools);
+            if (contractProblem != null) throw contractProblem;
             if (run.recoveryRequired && !isAgentRecoveryRead(call.name)) {
               throw const AgentRuntimeException(
                 AgentRuntimeError.interruptedRunNeedsReview,
@@ -1627,6 +1641,60 @@ class AgentRuntimeController implements AgentUiDelegate {
       }
       if (failure != null) run.failureCode = _safeError(failure);
     }
+  }
+
+  Future<void> _appendModelResponse(
+    _Run run,
+    ConversationMessage message,
+    Map<String, OperationProblem> rejected,
+  ) async {
+    if (rejected.isEmpty) return _append(run, message);
+    _checkRun(run);
+    final replies = <ConversationMessage>[];
+    for (final call in message.toolCalls) {
+      final failure = rejected[call.id];
+      if (failure == null) continue;
+      final result = _toolFailureResult(failure, run.apiKey);
+      _rejectSecretValues(result, run.apiKey);
+      run.usage = run.usage.withTool(
+        ConversationToolUsage(
+          id: call.id,
+          name: call.name,
+          outcome: ConversationAttemptOutcome.failed,
+        ),
+      );
+      replies.add(
+        ConversationMessage(
+          id: _id(),
+          role: ConversationRole.tool,
+          toolCallId: call.id,
+          text: jsonEncode(result),
+          createdAt: _clock().toUtc(),
+        ),
+      );
+    }
+    // Rejected calls and their no-effect results are one durable unit. A crash
+    // cannot leave an invalid mutation.commit looking like an unknown write.
+    final added = [message, ...replies];
+    await repository.update(run.conversationId, (item) {
+      _checkRun(run);
+      return item.copyWith(
+        messages: [...item.messages, ...added],
+        runs: _runRecords(item, run),
+        turns: [
+          for (final turn in item.turns)
+            if (turn.id == run.turnId)
+              turn.copyWith(
+                messageIds: [
+                  ...turn.messageIds,
+                  ...added.map((message) => message.id),
+                ],
+              )
+            else
+              turn,
+        ],
+      );
+    }, expectedRunId: run.id);
   }
 
   Future<void> _append(
@@ -2107,18 +2175,25 @@ class AgentRuntimeController implements AgentUiDelegate {
     Iterable<ProviderToolCall> calls,
     String reason,
   ) async {
+    final replied = {
+      for (final message
+          in repository.find(run.conversationId)?.executionMessages ??
+              const <ConversationMessage>[])
+        if (message.role == ConversationRole.tool) message.toolCallId,
+    };
     final messages = [
       for (final call in calls)
-        ConversationMessage(
-          id: _id(),
-          role: ConversationRole.tool,
-          text: jsonEncode({
-            'status': 'not_executed',
-            'error': {'code': reason},
-          }),
-          toolCallId: call.id,
-          createdAt: _clock().toUtc(),
-        ),
+        if (!replied.contains(call.id))
+          ConversationMessage(
+            id: _id(),
+            role: ConversationRole.tool,
+            text: jsonEncode({
+              'status': 'not_executed',
+              'error': {'code': reason},
+            }),
+            toolCallId: call.id,
+            createdAt: _clock().toUtc(),
+          ),
     ];
     if (messages.isEmpty || repository.find(run.conversationId) == null) return;
     await repository.update(
@@ -2914,6 +2989,7 @@ class AgentRuntimeController implements AgentUiDelegate {
                   id: call.id,
                   name: call.name,
                   arguments: call.arguments,
+                  wireName: call.wireName,
                 ),
               )
               .toList(),
@@ -3003,7 +3079,7 @@ class AgentRuntimeController implements AgentUiDelegate {
       }
       for (final call in message.toolCalls) {
         _rejectSecret(call.id, run.apiKey);
-        _rejectSecretJson(call.arguments, run.apiKey);
+        _rejectToolArgumentSecrets(call.arguments, run.apiKey);
       }
     }
     return bounded;
@@ -3041,21 +3117,23 @@ class AgentRuntimeController implements AgentUiDelegate {
     if (response.toolCalls.isEmpty && response.text.trim().isEmpty) {
       throw const ProviderException(ProviderError.incompleteResponse);
     }
-    final names = run.tools.map((tool) => tool.name).toSet();
     final ids = {
       for (final message in history.messages)
         for (final call in message.toolCalls) call.id,
     };
     for (final call in response.toolCalls) {
-      if (call.id.isEmpty || !names.contains(call.name)) {
+      if (call.id.isEmpty ||
+          call.id.length > 256 ||
+          !RegExp(r'^[A-Za-z][A-Za-z0-9_.-]{0,127}$').hasMatch(call.name)) {
         throw const AgentRuntimeException(AgentRuntimeError.invalidToolCall);
       }
       if (!ids.add(call.id)) {
         throw const AgentRuntimeException(AgentRuntimeError.duplicateToolCall);
       }
       _rejectSecret(call.id, run.apiKey);
-      _rejectSecret(call.arguments, run.apiKey);
-      _rejectSecretValues(call.decodedArguments, run.apiKey);
+      _rejectSecret(call.name, run.apiKey);
+      if (call.wireName case final name?) _rejectSecret(name, run.apiKey);
+      _rejectToolArgumentSecrets(call.arguments, run.apiKey);
     }
   }
 }
@@ -3264,6 +3342,43 @@ ProviderProtocol _protocol(AgentModelProtocol protocol) =>
     ? ProviderProtocol.responses
     : ProviderProtocol.chatCompletions;
 bool _notInMaintenance() => false;
+void _rejectToolArgumentSecrets(String source, String apiKey) {
+  _rejectSecret(source, apiKey);
+  if (apiKey.isEmpty) return;
+  // Preserve every declared field, including duplicate-key prefixes that a
+  // successful jsonDecode would otherwise overwrite before the check.
+  _rejectSecretValues(toolArgumentCredentialContext(source), apiKey);
+}
+
+OperationProblem? _callContractProblem(
+  ProviderToolCall call,
+  List<ToolDefinition> tools,
+) {
+  if (!tools.any((tool) => tool.name == call.name)) {
+    return const OperationProblem(
+      OperationErrorCode.unsupported,
+      'This function was not advertised in the current request. Use an exact advertised function name or discover the missing capability before calling it.',
+      field: 'name',
+    );
+  }
+  try {
+    call.decodedArguments;
+  } on FormatException {
+    return const OperationProblem(
+      OperationErrorCode.invalidArgument,
+      'Tool arguments must be one valid JSON object. Correct the JSON and retry the requested operation.',
+      field: 'arguments',
+    );
+  } on ProviderException {
+    return const OperationProblem(
+      OperationErrorCode.invalidArgument,
+      'Tool arguments must be a valid JSON object accepted by the advertised schema.',
+      field: 'arguments',
+    );
+  }
+  return null;
+}
+
 String _defaultApprovalSummary(ApprovalPlan plan) =>
     plan.changes.map((change) => change.key).join(', ');
 String _defaultInstructions(AgentConversation conversation) =>
@@ -3311,7 +3426,7 @@ void _rejectHistorySecrets(
   for (final message in messages) {
     _rejectSecretValues(message.toJson(), apiKey);
     for (final call in message.toolCalls) {
-      _rejectSecretJson(call.arguments, apiKey);
+      _rejectToolArgumentSecrets(call.arguments, apiKey);
     }
     if (message.role == ConversationRole.tool) {
       _rejectSecretJson(message.text, apiKey);

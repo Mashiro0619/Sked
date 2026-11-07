@@ -313,32 +313,10 @@ void main() {
             },
           ],
         }, finish: 'tool_calls')}data: [DONE]\n\n';
-    await expectLater(
-      collect(payload),
-      throwsA(
-        isA<ProviderException>()
-            .having(
-              (error) => error.code,
-              'local error',
-              ProviderError.unknownTool,
-            )
-            .having(
-              (error) => error.responseMessage,
-              'returned name',
-              contains('undisclosed__operation'),
-            )
-            .having(
-              (error) => error.responseBody,
-              'actual tool frame',
-              contains('undisclosed__operation'),
-            )
-            .having(
-              (error) => error.responseBody,
-              'bounded tail',
-              startsWith('…\n'),
-            ),
-      ),
-    );
+    final response = await collect(payload);
+    expect(response.text, 'x' * 40000);
+    expect(response.toolCalls.single.name, 'undisclosed__operation');
+    expect(response.toolCalls.single.wireName, 'undisclosed__operation');
   });
 
   for (final protocol in ProviderProtocol.values) {
@@ -411,34 +389,21 @@ void main() {
   );
 
   test(
-    'logical aliases cannot invoke an unadvertised registered-looking tool',
+    'unadvertised logical names remain untrusted calls for host correction',
     () async {
-      await expectLater(
-        collect(
-          '${_chat({
-            'tool_calls': [
-              {
-                'index': 0,
-                'id': 'call',
-                'function': {'name': 'resources.delete', 'arguments': '{}'},
-              },
-            ],
-          }, finish: 'tool_calls')}data: [DONE]\n\n',
-        ),
-        throwsA(
-          isA<ProviderException>()
-              .having(
-                (error) => error.code,
-                'rejected',
-                ProviderError.unknownTool,
-              )
-              .having(
-                (error) => error.responseMessage,
-                'actual name',
-                contains('resources.delete'),
-              ),
-        ),
+      final response = await collect(
+        '${_chat({
+          'tool_calls': [
+            {
+              'index': 0,
+              'id': 'call',
+              'function': {'name': 'resources.delete', 'arguments': '{}'},
+            },
+          ],
+        }, finish: 'tool_calls')}data: [DONE]\n\n',
       );
+      expect(response.toolCalls.single.name, 'resources.delete');
+      expect(response.toolCalls.single.wireName, 'resources.delete');
     },
   );
 
@@ -1472,25 +1437,25 @@ void main() {
     });
   }
 
-  for (final fixture in <ProviderError, Map<String, Object?>>{
-    ProviderError.unknownTool: {'name': 'unknown__tool', 'arguments': '{}'},
-    ProviderError.invalidToolArguments: {
-      'name': 'events__list',
-      'arguments': '{',
-    },
+  for (final fixture in <String, Map<String, Object?>>{
+    'unknown': {'name': 'unknown__tool', 'arguments': '{}'},
+    'malformed arguments': {'name': 'events__list', 'arguments': '{'},
+    'non-object arguments': {'name': 'events__list', 'arguments': '[]'},
   }.entries) {
-    test('rejects ${fixture.key.name} before completing tools', () async {
-      await expectLater(
-        collect(
+    test(
+      'retains ${fixture.key} as a complete call for host correction',
+      () async {
+        final response = await collect(
           '${_chat({
             'tool_calls': [
               {'index': 0, 'id': 'call', 'function': fixture.value},
             ],
           }, finish: 'tool_calls')}data: [DONE]\n\n',
-        ),
-        throwsA(_error(fixture.key)),
-      );
-    });
+        );
+        expect(response.toolCalls.single.id, 'call');
+        expect(response.toolCalls.single.arguments, fixture.value['arguments']);
+      },
+    );
   }
 
   test('rejects duplicate call IDs', () async {

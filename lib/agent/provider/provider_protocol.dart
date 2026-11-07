@@ -7,6 +7,17 @@ import 'tool_name_codec.dart';
 
 const _chatReasoningItemType = 'chat_reasoning';
 
+final _wireNamePattern = RegExp(r'^[A-Za-z][A-Za-z0-9_.-]{0,63}$');
+
+String _callWireName(ProviderToolCall call) {
+  final original = call.wireName;
+  if (original == null) return ToolNameCodec.encode(call.name);
+  if (!_wireNamePattern.hasMatch(original)) {
+    throw const ProviderException(ProviderError.invalidRequest);
+  }
+  return original;
+}
+
 Map<String, Object?> encodeProviderRequest(ProviderRequest request) {
   final names = <String>{};
   for (final tool in request.tools) {
@@ -66,7 +77,7 @@ Map<String, Object?> encodeProviderRequest(ProviderRequest request) {
                         'id': call.id,
                         'type': 'function',
                         'function': {
-                          'name': ToolNameCodec.encode(call.name),
+                          'name': _callWireName(call),
                           'arguments': call.arguments,
                         },
                       },
@@ -102,7 +113,7 @@ Map<String, Object?> encodeProviderRequest(ProviderRequest request) {
         input.add({
           'type': 'function_call',
           'call_id': call.id,
-          'name': ToolNameCodec.encode(call.name),
+          'name': _callWireName(call),
           'arguments': call.arguments,
         });
       }
@@ -574,7 +585,9 @@ class ProviderResponseDecoder {
     for (final index in _tools.keys.toList()..sort()) {
       final tool = _tools[index]!;
       final id = tool.id.toString();
-      if (id.isEmpty) {
+      if (id.isEmpty ||
+          id.length > 256 ||
+          id.codeUnits.any((unit) => unit < 32 || unit == 127)) {
         throw const ProviderException(ProviderError.invalidResponse);
       }
       if (!ids.add(id)) {
@@ -589,24 +602,27 @@ class ProviderResponseDecoder {
               .where((definition) => definition.name == returnedName)
               .firstOrNull
               ?.name;
-      if (name == null) {
+      if (name == null && request.tools.isEmpty) {
         throw ProviderException.fromResponse(ProviderError.unknownTool, {
           'message':
               'Tool function "$returnedName" was not advertised in this request.',
         }, apiKey: _apiKey);
       }
+      if (name == null && !_wireNamePattern.hasMatch(returnedName)) {
+        throw const ProviderException(ProviderError.invalidResponse);
+      }
       final arguments = tool.arguments.toString();
       if (utf8.encode(arguments).length > request.limits.maxToolArgumentBytes) {
         throw const ProviderException(ProviderError.toolBudgetExceeded);
       }
-      try {
-        if (jsonDecode(arguments) is! Map<String, dynamic>) {
-          throw const FormatException();
-        }
-      } on FormatException {
-        throw const ProviderException(ProviderError.invalidToolArguments);
-      }
-      calls.add(ProviderToolCall(id: id, name: name, arguments: arguments));
+      calls.add(
+        ProviderToolCall(
+          id: id,
+          name: name ?? returnedName,
+          arguments: arguments,
+          wireName: name == null ? returnedName : null,
+        ),
+      );
     }
     if (_hasChatReasoning) {
       _responseItems = [
@@ -632,8 +648,8 @@ class ProviderResponseDecoder {
             if (item['type'] == 'function_call')
               {
                 ...item,
-                'name': ToolNameCodec.encode(
-                  calls.firstWhere((call) => call.id == item['call_id']).name,
+                'name': _callWireName(
+                  calls.firstWhere((call) => call.id == item['call_id']),
                 ),
               }
             else
