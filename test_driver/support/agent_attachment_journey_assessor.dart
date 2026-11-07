@@ -45,6 +45,44 @@ void _digest(Object? value, String description) {
   );
 }
 
+void validateAgentAttachmentUploadProgress(
+  List<Object?> stages, {
+  required int bodyByteLength,
+}) {
+  _require(
+    bodyByteLength > 0 && stages.length >= 2,
+    'Streamed attachment progress must include sending and final acceptance.',
+  );
+  var sentBytes = 0;
+  for (var index = 0; index < stages.length; index++) {
+    final stage = _map(stages[index], 'Attachment upload progress');
+    final completed = stage['completedBytes'];
+    _require(
+      stage['totalBytes'] is int &&
+          stage['totalBytes'] == bodyByteLength &&
+          completed is int,
+      'Attachment progress must use the actual encoded request byte length.',
+    );
+    final completedBytes = completed as int;
+    if (index == stages.length - 1) {
+      _require(
+        stage['phase'] == 'accepted' &&
+            sentBytes == bodyByteLength &&
+            completedBytes == bodyByteLength,
+        'Attachment acceptance must follow the complete streamed request.',
+      );
+    } else {
+      _require(
+        stage['phase'] == 'sending' &&
+            completedBytes > sentBytes &&
+            completedBytes <= bodyByteLength,
+        'Attachment sending progress must strictly advance within the request length.',
+      );
+      sentBytes = completedBytes;
+    }
+  }
+}
+
 void _oneId(Object? value, String id, String description) {
   _require(
     value is List && value.length == 1 && value.single == id,
@@ -227,24 +265,9 @@ void _provider(
     'The actual native image_url content block did not encode the original PNG bytes.',
   );
   _digest(wire['bodySha256'], 'Encoded request body');
-  _require(
-    stages.length == 3,
-    'The actual encoding, sending and synthetic acceptance phases are incomplete.',
-  );
-  final encoding = _map(stages[0], 'Attachment encoding progress');
-  final sending = _map(stages[1], 'Attachment sending progress');
-  final accepted = _map(stages[2], 'Attachment acceptance progress');
-  _require(
-    encoding['phase'] == 'encoding' &&
-        encoding['completedBytes'] == 79 &&
-        encoding['totalBytes'] == 79 &&
-        sending['phase'] == 'sending' &&
-        sending['completedBytes'] == 0 &&
-        sending['totalBytes'] == wire['bodyByteLength'] &&
-        accepted['phase'] == 'accepted' &&
-        accepted['completedBytes'] == wire['bodyByteLength'] &&
-        accepted['totalBytes'] == wire['bodyByteLength'],
-    'Production provider progress does not match actual encoded bytes and the synthetic response.',
+  validateAgentAttachmentUploadProgress(
+    stages,
+    bodyByteLength: wire['bodyByteLength'] as int,
   );
 }
 
