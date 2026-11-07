@@ -31,6 +31,10 @@ void main() {
     expect(find.text('Waiting for the required information'), findsNothing);
     await tester.tap(find.text('Task plan · 1/4'));
     await tester.pumpAndSettle();
+    final planDetails = tester.widget<DecoratedBox>(
+      find.byKey(const ValueKey('agent-activity-branch-task-plan-run')),
+    );
+    expect((planDetails.decoration as BoxDecoration).border, isNull);
     for (final status in ['Pending', 'In progress', 'Completed', 'Blocked']) {
       expect(find.text(status), findsNothing);
     }
@@ -42,6 +46,12 @@ void main() {
     await tester.tap(find.text('Review the result'));
     await tester.pumpAndSettle();
     expect(find.text('Waiting for the required information'), findsOneWidget);
+    final stepDetails = tester.widget<DecoratedBox>(
+      find.byKey(
+        const ValueKey('agent-activity-branch-task-plan-run-step-review'),
+      ),
+    );
+    expect((stepDetails.decoration as BoxDecoration).border, isNull);
   });
 
   testWidgets(

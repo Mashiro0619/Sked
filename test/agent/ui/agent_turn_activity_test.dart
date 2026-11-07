@@ -102,17 +102,15 @@ void main() {
       final childBranch = key('agent-activity-branch-tool-0');
       final childDecoration =
           tester.widget<DecoratedBox>(childBranch).decoration as BoxDecoration;
-      final childBorder = childDecoration.border! as BorderDirectional;
-      expect(childBorder.start.width, 1.5);
-      expect(childBorder.start.style, BorderStyle.solid);
+      expect(childDecoration.border, isNull);
       final childLeading = find.descendant(
         of: childToggle,
         matching: find.byIcon(Icons.check_rounded),
       );
-      final childBorderEdge = direction == TextDirection.ltr
+      final childBranchEdge = direction == TextDirection.ltr
           ? tester.getRect(childBranch).left
           : tester.getRect(childBranch).right;
-      expect(childBorderEdge, closeTo(tester.getCenter(childLeading).dx, .01));
+      expect(childBranchEdge, closeTo(tester.getCenter(childLeading).dx, .01));
       expect(tester.takeException(), isNull);
     }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
   }
@@ -162,9 +160,7 @@ void main() {
       key('agent-activity-branch-tool-0'),
     );
     final decoration = branch.decoration as BoxDecoration;
-    final border = decoration.border! as BorderDirectional;
-    expect(border.start.width, 1.5);
-    expect(border.start.style, BorderStyle.solid);
+    expect(decoration.border, isNull);
     await tester.tap(key('agent-activity-toggle-tool-0'));
     await tester.pumpAndSettle();
     expect(find.byType(AgentSelectableText), findsNothing);

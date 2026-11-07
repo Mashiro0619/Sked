@@ -83,7 +83,6 @@ class AgentActivityDisclosure extends StatefulWidget {
     this.statusLabel,
     this.statusIcon,
     this.semanticsLabel,
-    this.showBranchLine = true,
     this.initiallyExpanded = false,
     this.active = true,
     this.interactive = true,
@@ -95,7 +94,6 @@ class AgentActivityDisclosure extends StatefulWidget {
   final String? statusLabel;
   final IconData? statusIcon;
   final String? semanticsLabel;
-  final bool showBranchLine;
   final AgentToolActivityStatus status;
   final Widget child;
   final bool initiallyExpanded;
@@ -178,16 +176,7 @@ class _AgentActivityDisclosureState extends State<AgentActivityDisclosure> {
             padding: const EdgeInsetsDirectional.only(start: 16, bottom: 4),
             child: DecoratedBox(
               key: ValueKey('agent-activity-branch-${widget.id}'),
-              decoration: BoxDecoration(
-                border: widget.showBranchLine
-                    ? BorderDirectional(
-                        start: BorderSide(
-                          color: colors.outlineVariant,
-                          width: 1.5,
-                        ),
-                      )
-                    : null,
-              ),
+              decoration: const BoxDecoration(),
               child: Padding(
                 padding: const EdgeInsetsDirectional.only(start: 8),
                 child: ExcludeFocus(
@@ -270,7 +259,6 @@ class AgentTurnActivity extends StatelessWidget {
           ? agentToolActivityStatusLabel(activity.status, l)
           : null,
       initiallyExpanded: activity.status == AgentToolActivityStatus.running,
-      showBranchLine: false,
       active: active,
       interactive: interactive,
       interactionRevision: interactionRevision,

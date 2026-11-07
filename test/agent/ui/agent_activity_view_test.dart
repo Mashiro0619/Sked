@@ -350,6 +350,24 @@ void main() {
           tester,
           _key('agent-activity-toggle-operation-${operation.operation.id}'),
         );
+        final details = tester.widget<DecoratedBox>(
+          _key('agent-activity-branch-operation-${operation.operation.id}'),
+        );
+        expect((details.decoration as BoxDecoration).border, isNull);
+        for (final tool in operation.operation.tools) {
+          await _tap(
+            tester,
+            _key('agent-activity-toggle-operation-technical-${tool.id}'),
+          );
+          final technicalDetails = tester.widget<DecoratedBox>(
+            _key('agent-activity-branch-operation-technical-${tool.id}'),
+          );
+          expect((technicalDetails.decoration as BoxDecoration).border, isNull);
+          await _tap(
+            tester,
+            _key('agent-activity-toggle-operation-technical-${tool.id}'),
+          );
+        }
       }
       expect(find.byType(AgentOperationCard), findsNWidgets(2));
       final rejected = tester
