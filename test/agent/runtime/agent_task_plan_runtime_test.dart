@@ -115,10 +115,10 @@ void main() {
           );
         case 2:
           return _call('discover', 'capabilities.describe', {
-            'names': ['mutation.prepare', 'mutation.commit'],
+            'names': ['mutation.apply'],
           });
         case 3:
-          return _call('prepare', 'mutation.prepare', {
+          return _call('apply', 'mutation.apply', {
             'commands': [
               {
                 'kind': 'calendar',
@@ -128,10 +128,6 @@ void main() {
             ],
           });
         case 4:
-          return _call('commit', 'mutation.commit', {
-            'planId': _lastResult(request)['planId'],
-          });
-        case 5:
           operationId = _lastResult(request)['operationId'] as String;
           return _planCall(
             'completed-plan',
@@ -247,62 +243,6 @@ void main() {
     expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
   });
 
-  test('compaction retains the full latest plan as Agent-reported task checkpoint data', () async {
-    final h = await _Harness.create(
-      limits: const AgentRuntimeLimits(maxContextMessages: 7),
-    );
-    addTearDown(h.close);
-    final steps = [
-      {
-        'id': 'inspect',
-        'title': 'Inspect the requested resource',
-        'status': 'inProgress',
-        'detail': 'Keep the user-confirmed dates and do not overwrite other calendars.',
-      },
-      {
-        'id': 'save',
-        'title': 'Save and verify the result',
-        'status': 'pending',
-      },
-    ];
-    h.provider.respond = (_) {
-      final round = h.provider.requests.length;
-      if (round == 1) {
-        return _planCall('compressed-plan', steps);
-      }
-      if (round <= 6) {
-        return _call('read-$round', 'capabilities.describe', {
-          'names': ['events.list'],
-        });
-      }
-      return _done();
-    };
-    await h.runtime.send(h.id, 'Follow this multi-step task');
-    expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
-    final request = h.provider.requests.last;
-    final checkpointMessage = request.messages.singleWhere(
-      (message) => message.text.startsWith('Earlier conversation checkpoint'),
-    );
-    final checkpoint = jsonDecode(
-      checkpointMessage.text.substring(
-        checkpointMessage.text.indexOf('\n') + 1,
-      ),
-    ) as Map;
-    final saved = projectAgentTaskPlan(h.current)!;
-    expect(checkpoint['taskPlan'], {
-      'source': 'agentProgressReport',
-      ...saved.toJson(),
-    });
-    expect((checkpoint['omittedMessageCount'] as int), greaterThan(0));
-    expect(
-      request.messages.any(
-        (message) => message.toolCallId == 'compressed-plan',
-      ),
-      isFalse,
-    );
-    expect(_plans(h.current), hasLength(1));
-  });
-
   test('unknown write recovery permits a blocked plan without repeating or verifying the write', () async {
     final h = await _Harness.create();
     addTearDown(h.close);
@@ -326,8 +266,37 @@ void main() {
             toolCalls: const [
               ConversationToolCall(
                 id: 'unknown-write',
-                name: 'mutation.commit',
-                arguments: '{"operationId":"unknown-operation"}',
+                name: 'mutation.apply',
+                arguments: '{}',
+              ),
+            ],
+          ),
+        ],
+        runId: 'old-run',
+        runs: [
+          ConversationRunUsage(
+            id: 'old-run',
+            startedAt: _now,
+            settledAt: _now,
+            kind: ConversationRunKind.model,
+            protocol: 'chatCompletions',
+            model: 'fixture',
+            status: ConversationRunStatus.interrupted,
+          ),
+        ],
+        turns: [
+          ConversationTurn(
+            id: 'old-turn',
+            requestMessageId: 'old-user',
+            ownershipComplete: true,
+            messageIds: ['old-user', 'old-write'],
+            runIds: ['old-run'],
+            operations: [
+              ConversationOperationBinding(
+                operationId: 'unknown-operation',
+                store: ConversationOperationStore.main,
+                runId: 'old-run',
+                toolCallId: 'unknown-write',
               ),
             ],
           ),
@@ -342,9 +311,9 @@ void main() {
       projectAgentTaskPlan(h.current)!.steps.single.status,
       AgentTaskStepStatus.blocked,
     );
-    expect(h.current.runs.single.tools.single.name, 'update_plan');
+    expect(h.current.runs.last.tools.single.name, 'update_plan');
     expect(
-      h.current.runs.single.tools.single.outcome,
+      h.current.runs.last.tools.single.outcome,
       ConversationAttemptOutcome.completed,
     );
     expect(h.runtime.state.value.runFor(h.id).recoveryRequired, isTrue);
@@ -504,7 +473,6 @@ class _Harness {
 
   static Future<_Harness> create({
     AgentPermissionMode mode = AgentPermissionMode.ask,
-    AgentRuntimeLimits limits = const AgentRuntimeLimits(),
   }) async {
     final core = CoreToolHarness();
     await core.initialize();
@@ -542,12 +510,10 @@ class _Harness {
       executeTool: h.host.execute,
       onRunSettled: h.host.finishScope,
       onOpenSettings: () {},
-      limits: limits,
-      readPreparedOperation: (call) => call.name == 'mutation.commit'
-          ? core.mutations.plan(call.decodedArguments['planId'] as String)
-          : null,
+
       readOperationReceipt: (_, id) async => core.mutations.status(id)?.result,
     );
+    h.host.onOperationPrepared = h.runtime.recordToolOperation;
     return h;
   }
 

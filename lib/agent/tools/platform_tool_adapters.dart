@@ -28,6 +28,8 @@ PlatformToolAdapters registerPlatformTools(
   bool schoolWebSessionSupported = false,
   AgentConnectionManager? connectionManager,
   Future<String> Function()? loadBundledSchoolSites,
+  Future<ExternalEffectResult?> Function(ExternalOperationContext)?
+  readLegacyEffect,
 }) {
   final adapters = PlatformToolAdapters._(
     host: host,
@@ -40,7 +42,9 @@ PlatformToolAdapters registerPlatformTools(
     loadBundledSchoolSites:
         loadBundledSchoolSites ??
         () => rootBundle.loadString(SchoolSiteService.schoolSitesAssetPath),
+    readLegacyEffect: readLegacyEffect,
   );
+  host.registerCandidateDisposer('external.commit', external.discard);
   adapters._register();
   return adapters;
 }
@@ -57,6 +61,7 @@ class PlatformToolAdapters {
     required this._schoolWebSessionSupported,
     required this._connectionManager,
     required this._loadBundledSchoolSites,
+    this.readLegacyEffect,
   });
 
   final ApplicationToolHost _host;
@@ -67,6 +72,8 @@ class PlatformToolAdapters {
   bool _schoolWebSessionSupported;
   final AgentConnectionManager? _connectionManager;
   final Future<String> Function() _loadBundledSchoolSites;
+  final Future<ExternalEffectResult?> Function(ExternalOperationContext)?
+  readLegacyEffect;
   final _readBack = <String, ExternalEffect>{};
   late final DeviceToolAdapters devices;
   int _serviceBinding = 0;
@@ -157,7 +164,7 @@ class PlatformToolAdapters {
     _add(
       'external.status',
       'Read a durable external operation receipt without reissuing its action.',
-      {'operationId': _string},
+      {'operationId': operationReferenceSchema},
       (args, _, _) async {
         _keys(args, {'operationId'});
         final receipt = _external.status(_text(args, 'operationId'));
@@ -170,7 +177,7 @@ class PlatformToolAdapters {
     _add(
       'external.reconcile',
       'Read back an unresolved external action through its registered adapter. This never replays the action.',
-      {'operationId': _string},
+      {'operationId': operationReferenceSchema},
       (args, scope, _) async {
         _keys(args, {'operationId'});
         final operationId = _text(args, 'operationId');
@@ -188,7 +195,9 @@ class PlatformToolAdapters {
         return boundedToolReceipt(
           (await _external.reconcile(
             operationId: operationId,
-            readBack: readBack,
+            readBack: (operation) async =>
+                await readLegacyEffect?.call(operation) ??
+                await readBack(operation),
             scope: scope,
           )).toJson(),
         );
@@ -232,10 +241,11 @@ class PlatformToolAdapters {
       _add(
         '$name.prepare',
         switch (action) {
-          'permission' => 'Prepare a system notification permission request; the actual granted, denied or unknown state is read back.',
-          'exact_alarm' => 'Prepare an exact-alarm permission request on a supported platform.',
-          'settings' => 'Prepare opening system notification settings. Opening settings does not mean permission was granted.',
-          _ => 'Prepare rebuilding notifications for the committed application snapshot. This does not prove native delivery.',
+          'permission' => 'Request system notification permission; the actual granted, denied or unknown state is read back.',
+          'exact_alarm' =>
+            'Request exact-alarm permission on a supported platform.',
+          'settings' => 'Open system notification settings. Opening settings does not mean permission was granted.',
+          _ => 'Rebuild notifications for the committed application snapshot. This does not prove native delivery.',
         },
         {'operationId': _string},
         (args, scope, _) async {
@@ -318,7 +328,7 @@ class PlatformToolAdapters {
         if (service == null || !service.isSupported) {
           _unsupported('Notification reminders are unavailable.');
         }
-        final offset = _number(args, 'offset', 0, 0, 100000);
+        final offset = _number(args, 'offset', 0, 0, null);
         final limit = _number(args, 'limit', 50, 1, 100);
         final keys = (await service.reminderActionKeys()).toList()..sort();
         final data = _host.session.committedData;
@@ -366,7 +376,7 @@ class PlatformToolAdapters {
     });
     _add(
       'notifications.snooze.prepare',
-      'Prepare the existing ten-minute snooze for a reminder returned by notifications.reminders. Requires its exact key and revision. Commit with external.commit; delivery remains unverified.',
+      'Apply the existing ten-minute snooze for a reminder returned by notifications.reminders. Requires its exact key and revision. Native delivery is reported separately.',
       {'key': _string, 'revision': _string, 'operationId': _string},
       (args, scope, _) async {
         _keys(args, {'key', 'revision', 'operationId'});
@@ -437,7 +447,7 @@ class PlatformToolAdapters {
     );
     _add(
       'notifications.test.prepare',
-      'Prepare an immediate or thirty-second diagnostic notification, or clear only diagnostic notifications. Production reminders remain unchanged. Commit with external.commit.',
+      'Send an immediate or thirty-second diagnostic notification, or clear only diagnostic notifications. Production reminders remain unchanged.',
       {
         'action': {
           'type': 'string',
@@ -693,7 +703,7 @@ class PlatformToolAdapters {
     );
     _add(
       'school_session.clear.prepare',
-      'Prepare clearing local school-browser cookies, storage and cache through the existing browser suspension workflow. Remote sessions are unaffected.',
+      'Clear local school-browser cookies, storage and cache through the existing browser suspension workflow. Remote sessions are unaffected.',
       {'operationId': _string},
       (args, scope, _) async {
         _keys(args, {'operationId'});
@@ -781,7 +791,7 @@ class PlatformToolAdapters {
       (args, _, _) async {
         _keys(args, {'offset', 'limit'});
         final snapshot = await _sites();
-        final offset = _number(args, 'offset', 0, 0, 100000);
+        final offset = _number(args, 'offset', 0, 0, null);
         final limit = _number(args, 'limit', 50, 1, 100);
         return {
           'version': snapshot.version,
@@ -844,7 +854,7 @@ class PlatformToolAdapters {
     registerReadBack('school_sites.replace', _readBackSites);
     _add(
       'school_sites.prepare',
-      'Prepare add, patch, delete, JSON import or restoring bundled school sites. Existing targets require the handle returned by list/get.',
+      'Add, patch, delete, import JSON or restore bundled school sites. Existing targets require the handle returned by list/get.',
       {
         'action': {
           'type': 'string',
@@ -1142,10 +1152,10 @@ int _number(
   String name,
   int fallback,
   int min,
-  int max,
+  int? max,
 ) {
   final value = args[name] ?? fallback;
-  if (value is! int || value < min || value > max) {
+  if (value is! int || value < min || (max != null && value > max)) {
     _invalid('$name is outside the supported range.');
   }
   return value;

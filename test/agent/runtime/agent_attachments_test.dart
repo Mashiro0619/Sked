@@ -11,7 +11,6 @@ import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/history/conversation_history.dart';
 import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/runtime/agent_runtime_controller.dart';
-import 'package:sked/agent/runtime/conversation_context.dart';
 import 'package:sked/models/agent_settings.dart';
 
 void main() {
@@ -308,40 +307,6 @@ void main() {
     expect(reopened.find(h.id)!.status, ConversationStatus.interrupted);
     expect(await h.attachments.readBytes(attachment), [1]);
     reopened.dispose();
-  });
-
-  test('context compression never turns a current request file into a filename-only checkpoint', () {
-    final attachment = ProviderAttachment(
-      id: 'current',
-      filename: 'photo.png',
-      mediaType: 'image/png',
-      byteLength: 1,
-      digest: '0' * 64,
-      openRead: () => Stream.value([1]),
-    );
-    final messages = [
-      ProviderMessage(role: ProviderRole.user, text: 'old request'),
-      ProviderMessage(
-        role: ProviderRole.assistant,
-        text: 'old explanation' * 500,
-      ),
-      ProviderMessage(
-        role: ProviderRole.user,
-        text: 'current request',
-        attachments: [attachment],
-      ),
-      ProviderMessage(role: ProviderRole.assistant, text: 'latest output'),
-    ];
-    final bounded = boundConversationContext(
-      messages,
-      maxMessages: 10,
-      maxCharacters: 1600,
-    )!;
-    expect(bounded.expand((m) => m.attachments).single, same(attachment));
-    expect(
-      boundConversationContext(messages, maxMessages: 1, maxCharacters: 1600),
-      isNull,
-    );
   });
 }
 

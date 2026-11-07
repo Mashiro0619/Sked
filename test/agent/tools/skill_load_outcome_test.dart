@@ -249,7 +249,7 @@ Future<Map<String, Object?>> _call(
   OperationScope scope,
   String name,
   Map<String, Object?> args,
-) => host.execute(
+) => host.executeInternal(
   ProviderToolCall(id: name, name: name, arguments: jsonEncode(args)),
   scope,
   (_) async => null,

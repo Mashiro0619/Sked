@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/provider/provider_protocol.dart';
-import 'package:sked/agent/runtime/conversation_context.dart';
 
 void main() {
   final tool = ToolDefinition(
@@ -152,49 +151,43 @@ void main() {
     );
   }
 
-  test(
-    'invalid reasoning types and oversized continuation fail before completion',
-    () async {
-      for (final reasoning in <Object>[
-        42,
-        ['unexpected'],
-        '中' * 180000,
-      ]) {
-        final client = ProviderClient(
-          client: MockClient(
-            (_) async => http.Response(
-              jsonEncode({
-                'choices': [
-                  {
-                    'message': {
-                      'content': 'Done',
-                      'reasoning_content': reasoning,
-                    },
-                    'finish_reason': 'stop',
+  test('invalid reasoning types fail before completion', () async {
+    for (final reasoning in <Object>[
+      42,
+      ['unexpected'],
+    ]) {
+      final client = ProviderClient(
+        client: MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'choices': [
+                {
+                  'message': {
+                    'content': 'Done',
+                    'reasoning_content': reasoning,
                   },
-                ],
-              }),
-              200,
-              headers: {'content-type': 'application/json'},
-            ),
+                  'finish_reason': 'stop',
+                },
+              ],
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
           ),
-        );
-        addTearDown(client.close);
-        await expectLater(
-          client.collect(request(), apiKey: 'fixture-key'),
-          throwsA(
-            isA<ProviderException>().having(
-              (error) => error.code,
-              'code',
-              reasoning is String
-                  ? ProviderError.responseBudgetExceeded
-                  : ProviderError.invalidResponse,
-            ),
+        ),
+      );
+      addTearDown(client.close);
+      await expectLater(
+        client.collect(request(), apiKey: 'fixture-key'),
+        throwsA(
+          isA<ProviderException>().having(
+            (error) => error.code,
+            'code',
+            ProviderError.invalidResponse,
           ),
-        );
-      }
-    },
-  );
+        ),
+      );
+    }
+  });
 
   test(
     'Chat continuation validates its shape and cannot become Responses input',
@@ -255,55 +248,35 @@ void main() {
     },
   );
 
-  test('context budgeting counts reasoning and retains it with its complete tool group', () {
-    final messages = [
-      ProviderMessage(role: ProviderRole.user, text: 'Read the agenda'),
-      ProviderMessage(
-        role: ProviderRole.assistant,
-        text: 'Earlier explanation ' * 200,
-      ),
-      ProviderMessage(
-        role: ProviderRole.assistant,
-        toolCalls: [
-          ProviderToolCall(id: 'latest', name: 'events.list', arguments: '{}'),
-        ],
-        responseItems: [
-          {
-            'type': 'chat_reasoning',
-            'reasoning_content': 'Latest continuation',
-          },
-        ],
-      ),
-      ProviderMessage(
-        role: ProviderRole.tool,
-        toolCallId: 'latest',
-        text: '{"items":[]}',
-      ),
-    ];
-    final bounded = boundConversationContext(
-      messages,
-      maxMessages: 4,
-      maxCharacters: 1400,
-    )!;
-    expect(
-      bounded[bounded.length - 2].responseItems.single['reasoning_content'],
-      'Latest continuation',
-    );
-    expect(bounded.last.toolCallId, 'latest');
-    expect(
-      boundConversationContext(
-        [
+  test('large reasoning continuation survives a complete tool group', () {
+    final reasoning = '中' * 180000;
+    final encoded = encodeProviderRequest(
+      request(
+        messages: [
           ProviderMessage(
             role: ProviderRole.assistant,
+            toolCalls: [
+              ProviderToolCall(
+                id: 'latest',
+                name: 'events.list',
+                arguments: '{}',
+              ),
+            ],
             responseItems: [
-              {'type': 'chat_reasoning', 'reasoning_content': 'x' * 1600},
+              {'type': 'chat_reasoning', 'reasoning_content': reasoning},
             ],
           ),
+          ProviderMessage(
+            role: ProviderRole.tool,
+            toolCallId: 'latest',
+            text: '{"items":[]}',
+          ),
         ],
-        maxMessages: 4,
-        maxCharacters: 1400,
       ),
-      isNull,
     );
+    final messages = encoded['messages'] as List;
+    expect(messages.first['reasoning_content'], reasoning);
+    expect(messages.first['tool_calls'][0]['id'], 'latest');
+    expect(messages.last['tool_call_id'], 'latest');
   });
 }

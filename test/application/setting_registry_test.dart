@@ -119,6 +119,35 @@ void main() {
     }
   });
 
+  test('Agent preferences share unbounded text and nonnegative retention semantics with the model', () {
+    final text = '  ${'Long instruction. ' * 2000}  ';
+    final data = sample();
+    final description = registry.descriptor('agent.historyRetentionDays');
+    expect(description.minimum, 0);
+    expect(description.maximum, isNull);
+    expect(description.toJson().containsKey('maximum'), isFalse);
+    for (final days in [0, 1, 2, 3651, 1000000000]) {
+      final result = registry.prepare(data, [
+        SettingEdit.set('agent.systemInstructions', text),
+        SettingEdit.set('agent.historyRetentionDays', days),
+      ]);
+      expect(result.candidate.agentSettings.systemInstructions, text);
+      expect(result.candidate.agentSettings.historyRetentionDays, days);
+      expect(
+        AgentSettings.fromJson(result.candidate.agentSettings.toJson()),
+        result.candidate.agentSettings,
+      );
+    }
+    for (final value in [-1, 1.5, '30']) {
+      expect(
+        () => registry.prepare(data, [
+          SettingEdit.set('agent.historyRetentionDays', value),
+        ]),
+        throwsA(isA<SettingValidationException>()),
+      );
+    }
+  });
+
   test('every Agent configuration field is classified and authority stays host-owned', () {
     expect(
       registry
@@ -173,7 +202,7 @@ void main() {
     );
     expect(
       () => registry.prepare(before, const [
-        SettingEdit.set('agent.historyRetentionDays', 2),
+        SettingEdit.set('agent.historyRetentionDays', -1),
       ]),
       rejectsSetting(SettingValidationCode.invalidValue),
     );
@@ -207,7 +236,7 @@ void main() {
     final descriptor = registry.descriptor('agent.models');
     expect(descriptor.type, SettingValueType.objectList);
     expect(descriptor.requiresAdapter, isTrue);
-    expect(descriptor.adapterTool, 'connection.prepare');
+    expect(descriptor.adapterTool, 'connection.apply');
     expect(descriptor.canPrepare, isFalse);
     expect(descriptor.defaultValue, isEmpty);
     expect(

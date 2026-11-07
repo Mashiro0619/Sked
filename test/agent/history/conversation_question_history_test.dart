@@ -292,6 +292,7 @@ void main() {
   test('a failed answer materialization keeps pending answers durable for storage recovery and retry', () async {
     final h = await harness();
     final stopped = await h.stopAfterAnswer();
+    await h.restart(stopped.answerSnapshot);
     final before = h.chats.source;
     h.chats.beforeSave = (_) async {
       throw const ConversationStorageException(
@@ -413,12 +414,10 @@ void main() {
     await steering;
     await running;
     h.chats.beforeSave = null;
-    await h.waitUntil(
-      () =>
-          h.provider.requests.length == 2 &&
-          !h.app.agent.runtime.isRunning(h.id) &&
-          h.app.agent.runtime.pendingInputCount(h.id) == 0,
-    );
+    await h.app.agent.runtime.waitForIdle().timeout(const Duration(seconds: 5));
+    expect(h.provider.requests, hasLength(2));
+    expect(h.app.agent.runtime.isRunning(h.id), isFalse);
+    expect(h.app.agent.runtime.pendingInputCount(h.id), 0);
 
     final stored = h.chats.saved;
     expect(queuedBeforeAnswerAcknowledgement, true);
@@ -571,13 +570,13 @@ class _Harness {
       await app.agent.runtime.send(id, 'Original task before redo');
     }
     var round = 0;
-    provider.respond = (request) {
+    provider.respond = (_) {
       if (!createCalendar) return _ask();
       return switch (round++) {
         0 => _call('discover', 'capabilities.describe', {
-          'names': ['mutation.prepare', 'mutation.commit'],
+          'names': ['mutation.apply'],
         }),
-        1 => _call('prepare', 'mutation.prepare', {
+        1 => _call('apply', 'mutation.apply', {
           'commands': [
             {
               'kind': 'calendar',
@@ -585,13 +584,6 @@ class _Harness {
               'values': {'name': 'Question history calendar'},
             },
           ],
-        }),
-        2 => _call('commit', 'mutation.commit', {
-          'planId': (jsonDecode(
-            request.messages
-                .lastWhere((message) => message.role == ProviderRole.tool)
-                .text,
-          ) as Map)['planId'],
         }),
         _ => _ask(),
       };
@@ -622,13 +614,18 @@ class _Harness {
     }
     chats.didSave = null;
     await running;
-    expect(current.pendingQuestion!.isResolved, true);
     expect(answerSnapshot, isNotNull);
-    return _StoppedAnswer(
-      current.messages.first.id,
-      current.pendingQuestion!,
-      answerSnapshot!,
-    );
+    final accepted = ConversationArchive.decode(answerSnapshot!)
+        .conversations
+        .single
+        .pendingQuestion!;
+    expect(accepted.isResolved, isTrue);
+    expect(current.pendingQuestion, isNull);
+    _expectResult(_reply(current.messages, accepted.toolCallId), accepted);
+    // Resume the actual durable boundary before the tool reply for tests of
+    // unfinished redo answers. A normal Stop now settles the accepted answer.
+    if (redo) await restart(answerSnapshot!);
+    return _StoppedAnswer(current.messages.first.id, accepted, answerSnapshot!);
   }
 
   Future<void> referenceTimetable() async {
@@ -684,13 +681,14 @@ class _Harness {
       if (!ready.isCompleted && predicate()) ready.complete();
     }
 
-    app.agent.runtime.state.addListener(changed);
+    final conversationRun = app.agent.runtime.watchConversation(id);
+    conversationRun.addListener(changed);
     app.agent.conversations.addListener(changed);
     try {
       changed();
       await ready.future.timeout(const Duration(seconds: 5));
     } finally {
-      app.agent.runtime.state.removeListener(changed);
+      conversationRun.removeListener(changed);
       app.agent.conversations.removeListener(changed);
     }
   }

@@ -49,7 +49,8 @@ class ConversationOperationBinding {
 }
 
 /// An explicit, ordered interaction. Steering and resumed runs remain inside
-/// the same turn; an accepted follow-up starts another turn. Old chats have no
+/// the same turn; an accepted follow-up starts another turn. A host action starts
+/// a turn at its actual tool-call message without inventing a user message. Old chats have no
 /// reliable turn table and remain readable without invented undo ownership.
 class ConversationTurn {
   ConversationTurn({
@@ -270,7 +271,7 @@ class ConversationUndoTicket {
     required this.token,
     required this.digest,
     required Iterable<String> operationIds,
-  }) : operationIds = historyIds(operationIds, max: 128) {
+  }) : operationIds = historyIds(operationIds) {
     historyText(token);
     if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(digest) ||
         this.operationIds.isEmpty) {
@@ -301,7 +302,7 @@ class ConversationUndoTicket {
       owner: historyEnum(ConversationUndoOwner.values, json['owner']),
       token: historyText(json['token']),
       digest: historyText(json['digest'], max: 64),
-      operationIds: historyIdList(json['operationIds'], max: 128),
+      operationIds: historyIdList(json['operationIds']),
     );
   }
 }
@@ -337,7 +338,7 @@ class ConversationRedoBatch {
     Iterable<ConversationUndoTicket> tickets = const [],
     Iterable<ConversationUndoOwner> completedOwners = const [],
   }) : turnIds = historyIds(turnIds),
-       attachmentIds = historyIds(attachmentIds, max: 20),
+       attachmentIds = historyIds(attachmentIds),
        tickets = List.unmodifiable(tickets),
        completedOwners = List.unmodifiable(completedOwners) {
     for (final value in [
@@ -352,7 +353,7 @@ class ConversationRedoBatch {
     }
     historyDate(createdAt.toUtc().toIso8601String());
     historyText(text, max: null, empty: true);
-    if (lastError != null) historyText(lastError, max: 128);
+    if (lastError != null) historyText(lastError);
     if (this.turnIds.isEmpty ||
         this.turnIds.first != sourceTurnId ||
         text.trim().isEmpty && this.attachmentIds.isEmpty ||
@@ -466,24 +467,20 @@ class ConversationRedoBatch {
       replayRunId: historyText(json['replayRunId']),
       createdAt: historyDate(json['createdAt']),
       text: historyText(json['text'], max: null, empty: true),
-      attachmentIds: historyIdList(json['attachmentIds'], max: 20),
+      attachmentIds: historyIdList(json['attachmentIds']),
       modelSelection: json['modelSelection'] == null
           ? null
           : AgentModelSelection.fromJson(json['modelSelection']),
       contextDigest: historyText(json['contextDigest'], max: 64),
       turnIds: historyIdList(json['turnIds']),
-      tickets: historyList(
-        json['tickets'],
-        max: 2,
-      ).map(ConversationUndoTicket.fromJson),
-      completedOwners: historyList(
-        json['completedOwners'],
-        max: 2,
-      ).map((item) => historyEnum(ConversationUndoOwner.values, item)),
+      tickets: historyList(json['tickets'])
+          .map(ConversationUndoTicket.fromJson),
+      completedOwners: historyList(json['completedOwners'])
+          .map((item) => historyEnum(ConversationUndoOwner.values, item)),
       phase: historyEnum(ConversationRedoPhase.values, json['phase']),
       lastError: json['lastError'] == null
           ? null
-          : historyText(json['lastError'], max: 128),
+          : historyText(json['lastError']),
     );
   }
 }
@@ -497,6 +494,10 @@ void validateConversationTurns(
   List<ConversationTurn> turns,
 ) {
   final messageMap = {for (final message in messages) message.id: message};
+  final messagePositions = {
+    for (var index = 0; index < messages.length; index++)
+      messages[index].id: index,
+  };
   final runMap = {for (final run in runs) run.id: run};
   final ownedMessages = <String>{};
   final ownedRuns = <String>{};
@@ -509,11 +510,15 @@ void validateConversationTurns(
   }
   for (final turn in turns) {
     final request = messageMap[turn.requestMessageId];
+    final startsWithHostAction =
+        request?.role == ConversationRole.assistant &&
+        request!.toolCalls.isNotEmpty &&
+        runMap[turn.runIds.first]?.kind == ConversationRunKind.host;
     final positions = turn.messageIds
-        .map((id) => messages.indexWhere((item) => item.id == id))
+        .map((id) => messagePositions[id] ?? -1)
         .toList();
     final start = positions.first;
-    if (request?.role != ConversationRole.user ||
+    if ((request?.role != ConversationRole.user && !startsWithHostAction) ||
         start <= previousEnd ||
         Iterable<int>.generate(positions.length - 1)
             .any((index) => positions[index + 1] <= positions[index]) ||
@@ -546,7 +551,7 @@ Map<String, Object?> historyObject(Object? value, [Set<String>? fields]) {
   return Map<String, Object?>.from(value);
 }
 
-String historyText(Object? value, {int? max = 256, bool empty = false}) {
+String historyText(Object? value, {int? max, bool empty = false}) {
   if (value is! String ||
       (max != null && value.length > max) ||
       !empty && value.trim().isEmpty) {

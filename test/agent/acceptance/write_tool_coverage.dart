@@ -56,56 +56,52 @@ final writeToolCoverage = <String, WriteToolCoverage>{
     WriteBoundary.conversationInteraction,
     'test/agent/runtime/agent_user_questions_test.dart',
   ),
-  for (final name in ['mutation.prepare', 'mutation.commit', 'undo.prepare'])
+  for (final name in ['mutation.apply', 'operations.undo'])
     name: const WriteToolCoverage(
       WriteBoundary.mainCommit,
       'test/application/resource_mutations_test.dart',
     ),
-  for (final name in ['settings.prepare', 'agent_settings.prepare'])
+  for (final name in ['settings.update', 'agent_settings.update'])
     name: const WriteToolCoverage(
       WriteBoundary.mainCommit,
       'test/application/setting_registry_test.dart',
     ),
-  'imports.prepare': const WriteToolCoverage(
+  'imports.apply': const WriteToolCoverage(
     WriteBoundary.mainCommit,
     'test/agent/imports/school_import_tool_adapter_test.dart',
   ),
-  'file_imports.prepare': const WriteToolCoverage(
+  'file_imports.apply': const WriteToolCoverage(
     WriteBoundary.mainCommit,
     'test/agent/tools/workflow_tool_adapters_test.dart',
   ),
-  for (final name in ['courses.display.prepare', 'navigation.range.prepare'])
+  for (final name in ['courses.display.apply', 'navigation.range.apply'])
     name: const WriteToolCoverage(
       WriteBoundary.mainCommit,
       'test/agent/tools/display_range_tool_adapters_test.dart',
     ),
-  'external.commit': const WriteToolCoverage(
-    WriteBoundary.externalCommit,
-    'test/application/external_operation_coordinator_test.dart',
-  ),
   'external.reconcile': const WriteToolCoverage(
     WriteBoundary.receiptReadback,
     'test/agent/tools/platform_tool_adapters_test.dart',
   ),
   for (final name in [
-    'notifications.permission.prepare',
-    'notifications.exact_alarm.prepare',
-    'notifications.settings.prepare',
-    'notifications.reconcile.prepare',
-    'notifications.snooze.prepare',
-    'notifications.test.prepare',
-    'school_sites.prepare',
-    'school_session.clear.prepare',
+    'notifications.permission.apply',
+    'notifications.exact_alarm.apply',
+    'notifications.settings.apply',
+    'notifications.reconcile.apply',
+    'notifications.snooze.apply',
+    'notifications.test.apply',
+    'school_sites.apply',
+    'school_session.clear.apply',
   ])
     name: const WriteToolCoverage(
       WriteBoundary.externalCommit,
       'test/agent/tools/platform_tool_adapters_test.dart',
     ),
   for (final name in [
-    'device.layout.prepare',
-    'device.preferences.prepare',
+    'device.layout.apply',
+    'device.preferences.apply',
     'platform.request_action',
-    'window.prepare',
+    'window.apply',
   ])
     name: const WriteToolCoverage(
       WriteBoundary.externalCommit,
@@ -113,16 +109,16 @@ final writeToolCoverage = <String, WriteToolCoverage>{
     ),
   for (final name in [
     'exports.write',
-    'maintenance.prepare_clear',
-    'workspaces.prepare',
+    'maintenance.clear',
+    'workspaces.apply',
     'navigation.open',
-    'developer.sample.prepare',
+    'developer.sample.apply',
   ])
     name: const WriteToolCoverage(
       WriteBoundary.externalCommit,
       'test/agent/tools/workflow_tool_adapters_test.dart',
     ),
-  'backups.prepare_restore': const WriteToolCoverage(
+  'backups.restore': const WriteToolCoverage(
     WriteBoundary.externalCommit,
     'test/backup/selective_backup_tools_test.dart',
   ),
@@ -140,19 +136,15 @@ final writeToolCoverage = <String, WriteToolCoverage>{
       'test/agent/tools/conversation_tool_adapters_test.dart',
     ),
   for (final name in [
-    'connection.prepare',
-    'connection.test.prepare',
-    'connection.models.prepare',
+    'connection.apply',
+    'connection.test.apply',
+    'connection.models.apply',
   ])
     name: const WriteToolCoverage(
       WriteBoundary.externalCommit,
       'test/agent/tools/agent_control_tool_adapters_test.dart',
     ),
-  for (final name in [
-    'skills.prepare',
-    'memories.prepare',
-    'knowledge.undo.prepare',
-  ])
+  for (final name in ['skills.apply', 'memories.apply', 'knowledge.undo.apply'])
     name: const WriteToolCoverage(
       WriteBoundary.externalCommit,
       'test/agent/tools/knowledge_tool_adapters_test.dart',
@@ -210,7 +202,7 @@ final readOnlyToolInventory = <String>{
   'platform.status',
   'window.status',
   'file_imports.inspect',
-  'exports.prepare',
+  'exports.generate',
   'backups.describe',
   'backups.inspect',
   'workspaces.describe',

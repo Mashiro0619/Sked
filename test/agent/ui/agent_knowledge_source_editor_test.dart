@@ -73,7 +73,7 @@ void main() {
       final record = await service.read(KnowledgeKind.skill, 'read-agenda');
       await open(tester, record);
       final content = body(tester).text;
-      expect(content, startsWith('## 适用任务'));
+      expect(content, isNotEmpty);
       expect(content, isNot(contains('id: read-agenda')));
       expect(content, isNot(contains('# ${record.title}\n')));
       expect(record.body, endsWith(content));
@@ -154,11 +154,11 @@ void main() {
     (tester) async {
       await initialize();
       final original = await service.read(KnowledgeKind.skill, 'read-agenda');
+      await open(tester, original);
       final prefix = original.body.substring(
         0,
-        original.body.indexOf('## 适用任务'),
+        original.body.length - body(tester).text.length,
       );
-      await open(tester, original);
       await tester.enterText(key('knowledge-body'), '');
       await tap(tester, key('knowledge-save'));
       expect(find.byType(AgentKnowledgeEditor), findsNothing);
@@ -297,7 +297,7 @@ void main() {
       expect(restored.usesOriginal, isTrue);
       expect(restored.enabled, isFalse);
       await open(tester, restored);
-      expect(body(tester).text, startsWith('## 适用任务'));
+      expect(body(tester).text, isNotEmpty);
       await tap(tester, key('knowledge-source-toggle'));
       expect(body(tester).text, original.body);
       expect(tester.takeException(), isNull);

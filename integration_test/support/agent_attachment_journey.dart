@@ -59,7 +59,7 @@ class _AttachmentPicker extends FileSelectorPlatform {
   };
 }
 
-/// The production provider still performs budgeting, attachment reads, native
+/// The production provider performs streaming encoding, attachment reads, native
 /// content-block encoding, progress and response decoding. Only HTTP delivery
 /// is replaced here; no socket or real model request is created.
 class _AttachmentTransport extends http.BaseClient {
@@ -430,7 +430,8 @@ class AgentAttachmentJourney implements AgentNativeFeature {
     await application.conversations.waitForPendingWrites().timeout(
       const Duration(seconds: 20),
     );
-    final saved = ConversationArchive.decode(journey.session.chatSource);
+    final chatSource = await journey.session.readChatSource();
+    final saved = ConversationArchive.decode(chatSource);
     final conversation = saved.conversations.singleWhere(
       (item) => item.id == agentNativeLongId,
     );
@@ -458,9 +459,9 @@ class AgentAttachmentJourney implements AgentNativeFeature {
       'The saved attachment reference and verified private bytes disagree.',
     );
     requireAgentFeature(
-      !journey.session.chatSource.contains(_sourcePath) &&
-          !journey.session.chatSource.contains(_pngBase64) &&
-          !journey.session.chatSource.contains('data:image/png;base64,'),
+      !chatSource.contains(_sourcePath) &&
+          !chatSource.contains(_pngBase64) &&
+          !chatSource.contains('data:image/png;base64,'),
       'The conversation JSON contains the source path or binary payload.',
     );
     return {
@@ -482,13 +483,18 @@ class AgentAttachmentJourney implements AgentNativeFeature {
 
   Future<Map<String, Object?>> _select(AgentFeatureJourney journey) async {
     _assertRequests(0);
-    final archive = ConversationArchive.decode(journey.session.chatSource);
+    final archive = ConversationArchive.decode(
+      await journey.session.readChatSource(),
+    );
     _shortHistoryDigest = AgentNativeSession.historyDigest(
       archive.conversations
           .singleWhere((item) => item.id == agentNativeShortId)
           .messages,
     );
     await journey.enterDraft('');
+    final more = journey.key('agent-composer-more');
+    await journey.reveal(more, 'the composer More menu');
+    await journey.tap(more, 'the composer More menu');
     final attach = journey.key('agent-attach-file');
     await journey.reveal(attach, 'the actual attachment picker button');
     await journey.tap(attach, 'the actual attachment picker button');
@@ -665,7 +671,9 @@ class AgentAttachmentJourney implements AgentNativeFeature {
     await journey.session.app.agent.conversations
         .waitForPendingWrites()
         .timeout(const Duration(seconds: 20));
-    final saved = ConversationArchive.decode(journey.session.chatSource);
+    final saved = ConversationArchive.decode(
+      await journey.session.readChatSource(),
+    );
     final long = saved.conversations.singleWhere(
       (item) => item.id == agentNativeLongId,
     );
@@ -836,7 +844,9 @@ class AgentAttachmentJourney implements AgentNativeFeature {
     await journey.session.app.session.repository
         .waitForPendingWrites(propagateErrors: true)
         .timeout(const Duration(seconds: 20));
-    final saved = ConversationArchive.decode(journey.session.chatSource);
+    final saved = ConversationArchive.decode(
+      await journey.session.readChatSource(),
+    );
     final long = saved.conversations.singleWhere(
       (item) => item.id == agentNativeLongId,
     );
@@ -897,7 +907,7 @@ class AgentAttachmentJourney implements AgentNativeFeature {
       'picker': _picker.toJson(),
       'mainSnapshotUnchangedSinceEntry': true,
       'mainSha256': agentNativeDigest(journey.session.mainSource),
-      'storage': journey.session.storageReport(),
+      'storage': await journey.session.storageReport(),
       'configuration': journey.assertOwner(),
     };
   }

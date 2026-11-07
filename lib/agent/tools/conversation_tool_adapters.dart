@@ -53,6 +53,7 @@ class ConversationToolAdapters {
   static const fieldOwnership = <String, String>{
     'id': 'host_identity',
     'title': 'conversations.rename',
+    'titleWasEdited': 'conversations.rename',
     'createdAt': 'host_identity',
     'updatedAt': 'host_persistence',
     'mode': 'user_permission_control',
@@ -61,14 +62,21 @@ class ConversationToolAdapters {
     'draft': 'user_input_queue',
     'connectionFingerprint': 'private_endpoint_binding',
     'runId': 'runtime_lifecycle',
+    'modelSelection': 'user_model_selection',
+    'pendingQuestion': 'runtime_user_interaction',
     'executionHistoryStart': 'host_history_execution_boundary',
     'messages': 'current_conversation_history_or_approved_export',
     'sources': 'current_conversation_sources_or_approved_export',
     'runs': 'runtime_usage_or_approved_export',
+    'attachments': 'host_attachment_storage',
+    'draftAttachmentIds': 'user_attachment_selection',
+    'draftReferences': 'user_context_references',
     'turns': 'runtime_turn_ownership',
     'historyVersions': 'user_history_redo',
     'replyRevisions': 'user_reply_regeneration',
     'redoBatches': 'host_history_recovery',
+    'queuedInputs': 'user_input_queue',
+    'queuedControls': 'user_context_compaction_queue',
   };
   Future<AgentArtifactWriteResult> Function(AgentDataArtifact)? _saveArtifact;
   int _binding = 0;
@@ -81,10 +89,15 @@ class ConversationToolAdapters {
   }
 
   /// Direct UI export is a user-selected file operation, not an Agent grant.
-  Future<AgentArtifactWriteResult> exportConversation(String conversationId) {
-    final save = _saveArtifact;
+  Future<AgentArtifactWriteResult> exportConversation(
+    String conversationId,
+  ) async {
+    final save = _saveArtifact, binding = _binding;
     if (save == null) _unsupported('No file destination picker is attached.');
-    return save(_artifact(_requireConversation(conversationId)));
+    _requireConversation(conversationId);
+    final target = await _repository.read(conversationId);
+    if (_binding != binding || !identical(_saveArtifact, save)) _conflict();
+    return save(_artifact(target));
   }
 
   void _add(
@@ -114,7 +127,7 @@ class ConversationToolAdapters {
       const {},
       (args, _, _) async {
         _keys(args, {});
-        return {'fields': fieldOwnership, 'commitTool': 'external.commit'};
+        return {'fields': fieldOwnership};
       },
     );
     _add(
@@ -151,7 +164,9 @@ class ConversationToolAdapters {
         final limit = _integer(args, 'limit', 20, 1, 50);
         final end = (offset + limit).clamp(0, items.length);
         return {
-          'conversations': items.sublist(offset, end).map(_summary).toList(),
+          'conversations': await Future.wait(
+            items.sublist(offset, end).map((item) => _readSummary(item.id)),
+          ),
           'offset': offset,
           'total': items.length,
           'nextOffset': end < items.length ? end : null,
@@ -165,7 +180,7 @@ class ConversationToolAdapters {
       {'id': _string},
       (args, _, _) async {
         _keys(args, {'id'});
-        return _summary(_requireConversation(_text(args, 'id')));
+        return _readSummary(_text(args, 'id'));
       },
       required: ['id'],
     );
@@ -183,7 +198,7 @@ class ConversationToolAdapters {
       final name = 'conversations.${entry.key}';
       _add(
         name,
-        'Prepare ${entry.key} for an explicit conversation. Commit with external.commit under the current three-mode policy. Conversation permissions cannot be supplied or upgraded by this tool.',
+        'Apply ${entry.key} for an explicit conversation. Conversation permissions cannot be supplied or upgraded by this tool.',
         {...entry.value, 'operationId': _string},
         (args, scope, _) => _prepare(name, args, scope),
         required: entry.value.keys.toList(),
@@ -207,7 +222,7 @@ class ConversationToolAdapters {
       final name = 'runs.$action';
       _add(
         name,
-        'Prepare $action for an existing conversation run; external.commit applies the current policy. Resume continues only existing input under that conversation\'s user-selected mode and never grants business write permission. Stop does not undo accepted writes.',
+        'Apply $action for an existing conversation run; the current permission mode applies. Resume continues only existing input under that conversation\'s user-selected mode and never grants business write permission. Stop does not undo accepted writes.',
         {'conversationId': _string, 'operationId': _string},
         (args, scope, _) => _prepare(name, args, scope),
         required: ['conversationId'],
@@ -298,6 +313,7 @@ class ConversationToolAdapters {
           checkQueuedCreate();
           final value = await _repository.create(
             title: title,
+            titleWasEdited: true,
             mode: mode,
             modelSelection: modelSelection,
             id: id,
@@ -313,7 +329,9 @@ class ConversationToolAdapters {
       args,
       action.startsWith('runs.') ? 'conversationId' : 'id',
     );
-    final target = _requireConversation(id);
+    _requireConversation(id);
+    final target = await _repository.read(id);
+    scope.checkActive();
     if (action == 'conversations.export') {
       return _prepareExport(target, request, scope, operationId);
     }
@@ -400,7 +418,7 @@ class ConversationToolAdapters {
           case 'conversations.rename':
             await _repository.update(id, (current) {
               checkQueuedTarget(current);
-              return current.copyWith(title: title);
+              return current.copyWith(title: title, titleWasEdited: true);
             });
           case 'conversations.archive':
             await _runtime.setArchived(
@@ -526,14 +544,23 @@ class ConversationToolAdapters {
     };
     return applied
         ? _applied({
-            'conversation': _summary(target),
+            'conversation': await _readSummary(target.id),
             if (operation.action.startsWith('runs.'))
               'run': _runtime.describeRun(id),
           })
         : _unknown();
   }
 
-  Map<String, Object?> _summary(AgentConversation item) => {
+  Future<Map<String, Object?>> _readSummary(String id) async {
+    _requireConversation(id);
+    final statistics = await _repository.statistics(id);
+    return _summary(_requireConversation(id), statistics: statistics);
+  }
+
+  Map<String, Object?> _summary(
+    AgentConversation item, {
+    ConversationStatistics? statistics,
+  }) => {
     'id': item.id,
     'title': item.title,
     'archived': item.archived,
@@ -541,11 +568,11 @@ class ConversationToolAdapters {
     'permissionMode': item.mode.name,
     'createdAt': item.createdAt.toUtc().toIso8601String(),
     'updatedAt': item.updatedAt.toUtc().toIso8601String(),
-    'messageCount': item.messages.length,
-    'sourceCount': item.sources.length,
+    'messageCount': statistics?.messageCount ?? item.messages.length,
+    'sourceCount': statistics?.sourceCount ?? item.sources.length,
     'hasDraft': item.draft.isNotEmpty,
     'runActive': _runtime.isRunning(item.id),
-    'usage': summarizeConversationUsage(item.runs),
+    'usage': statistics?.usage ?? summarizeConversationUsage(item.runs),
   };
 
   AgentDataArtifact _artifact(
@@ -605,6 +632,13 @@ String _targetVersion(AgentConversation value, String action) =>
         'mode': value.mode.name,
         'runId': value.runId,
         'draft': value.draft,
+        'queuedInputs': value.queuedInputs
+            .map((input) => input.toJson())
+            .toList(),
+        'draftAttachmentIds': value.draftAttachmentIds,
+        'draftReferences': value.draftReferences
+            .map((reference) => reference.toJson())
+            .toList(),
         'inputs': value.messages
             .where(
               (item) =>
@@ -633,8 +667,8 @@ void _keys(Map<String, Object?> args, Set<String> allowed) {
 
 String _text(Map<String, Object?> args, String key) {
   final value = args[key];
-  if (value is! String || value.trim().isEmpty || value.length > 256) {
-    _invalid('$key must be a bounded nonempty string.');
+  if (value is! String || value.trim().isEmpty) {
+    _invalid('$key must be a nonempty string.');
   }
   return value;
 }

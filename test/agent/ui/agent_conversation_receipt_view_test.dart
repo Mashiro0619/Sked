@@ -1,3 +1,5 @@
+import 'package:sked/agent/operations/tool_outcome.dart';
+
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -6,6 +8,7 @@ import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_operation_card.dart';
 import 'package:sked/l10n/app_localizations.dart';
+import 'package:sked/application/operation_contracts.dart';
 
 import '../acceptance/acceptance_harness.dart';
 import 'agent_ui_test_support.dart';
@@ -48,7 +51,7 @@ void main() {
                       'archived': action == 'archive',
                   },
                 );
-                receipt = await h.externalCommit(plan);
+                receipt = plan;
                 expect(receipt['effectStatus'], 'applied');
                 if (action == 'create') {
                   targetId =
@@ -67,7 +70,9 @@ void main() {
             await mountAgentUi(
               tester,
               SingleChildScrollView(
-                child: AgentOperationCard(receipt: receipt),
+                child: AgentOperationCard(
+                  outcome: ToolOutcome.fromResult(receipt),
+                ),
               ),
               locale: locale,
               scale: 2,
@@ -122,6 +127,13 @@ void main() {
         late Map<String, Object?> plan;
         await _realAsync(
           tester,
+          () => h.app.agent.runtime.setMode(
+            h.conversationId,
+            AgentPermissionMode.plan,
+          ),
+        );
+        await _realAsync(
+          tester,
           () => h.run(() async {
             plan = await h.call('conversations.create', {
               'title': 'Not created yet',
@@ -132,7 +144,7 @@ void main() {
         await mountAgentUi(
           tester,
           AgentOperationCard(
-            receipt: plan,
+            outcome: ToolOutcome.fromResult(plan),
             onOpenResource: (_) => fail('A proposal cannot open a target.'),
           ),
         );
@@ -165,25 +177,28 @@ void main() {
         try {
           late Map<String, Object?> plan;
           late String targetId;
-          await _realAsync(
-            tester,
-            () => h.run(() async {
-              final created = await h.externalCommit(
-                await h.call('conversations.create', {
-                  'title': 'Existing conversation',
-                }),
-              );
+          await _realAsync(tester, () async {
+            await h.run(() async {
+              final created = await h.call('conversations.create', {
+                'title': 'Existing conversation',
+              });
               targetId =
                   ((created['effectResult'] as Map)['conversation']
                           as Map)['id']
                       as String;
+            });
+            await h.app.agent.runtime.setMode(
+              h.conversationId,
+              AgentPermissionMode.plan,
+            );
+            await h.run(() async {
               plan = await h.call('conversations.rename', {
                 'id': targetId,
                 'title': 'Proposed title',
               });
-            }),
-          );
-          // The snapshots and identity come from the actual prepare tool.
+            });
+          });
+          // The snapshots and identity come from the actual plan-mode call.
           // Controlled recovery envelopes exercise display policy only; they
           // are not evidence that a backend failure was executed here.
           final receipt = <String, Object?>{
@@ -223,10 +238,17 @@ void main() {
               delegate: ui.delegate,
             ),
           );
+          await _openOperation(tester, 'rename-proposal');
           final l = AppLocalizations.of(
             tester.element(find.byType(AgentConversationView)),
           );
-          expect(find.text('Proposed title'), findsOneWidget);
+          expect(
+            find.descendant(
+              of: find.byType(AgentOperationCard),
+              matching: find.text('Proposed title'),
+            ),
+            findsOneWidget,
+          );
           expect(
             find.text('${l.agentChangeUpdated} · Proposed title'),
             findsNothing,
@@ -258,22 +280,18 @@ void main() {
           late String targetId;
           await _realAsync(tester, () async {
             await h.run(() async {
-              receipt = await h.externalCommit(
-                await h.call('conversations.create', {
-                  'title': 'Receipt target',
-                }),
-              );
+              receipt = await h.call('conversations.create', {
+                'title': 'Receipt target',
+              });
               targetId =
                   ((receipt['effectResult'] as Map)['conversation']
                           as Map)['id']
                       as String;
               if (archived) {
-                receipt = await h.externalCommit(
-                  await h.call('conversations.archive', {
-                    'id': targetId,
-                    'archived': true,
-                  }),
-                );
+                receipt = await h.call('conversations.archive', {
+                  'id': targetId,
+                  'archived': true,
+                });
               }
             });
             await sourceRepository.update(
@@ -310,6 +328,7 @@ void main() {
             ),
             size: const Size(1000, 900),
           );
+          await _openOperation(tester, 'actual-operation');
           final composer = find.byKey(const ValueKey('agent-composer'));
           await tester.enterText(composer, 'Keep the sender draft');
           final l = AppLocalizations.of(
@@ -374,9 +393,9 @@ void main() {
         late String targetId;
         await _realAsync(tester, () async {
           await h.run(() async {
-            receipt = await h.externalCommit(
-              await h.call('conversations.create', {'title': 'Later deleted'}),
-            );
+            receipt = await h.call('conversations.create', {
+              'title': 'Later deleted',
+            });
             targetId =
                 ((receipt['effectResult'] as Map)['conversation'] as Map)['id']
                     as String;
@@ -405,6 +424,7 @@ void main() {
           AgentConversationView(repository: repository, delegate: ui.delegate),
           size: const Size(1000, 900),
         );
+        await _openOperation(tester, 'actual-create');
         final l = AppLocalizations.of(
           tester.element(find.byType(AgentConversationView)),
         );
@@ -424,6 +444,15 @@ void main() {
       }
     },
   );
+}
+
+Future<void> _openOperation(WidgetTester tester, String callId) async {
+  final toggle = find.byKey(
+    ValueKey('agent-activity-toggle-operation-$callId'),
+  );
+  await tester.ensureVisible(toggle);
+  await tester.tap(toggle);
+  await tester.pumpAndSettle();
 }
 
 Future<void> _realAsync(

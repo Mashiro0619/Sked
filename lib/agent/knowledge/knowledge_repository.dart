@@ -29,6 +29,11 @@ class AgentKnowledgeRepository extends ChangeNotifier {
   KnowledgeUndoReservation? _undoReservation;
   bool recovered = false;
   bool get isLoaded => _loaded;
+  bool get supportsRestoreMarkers => _storage is TransactionalKnowledgeStorage;
+  Future<int> readStorageRevision() =>
+      (_storage as TransactionalKnowledgeStorage).readRevision();
+  Future<String?> readRestoreMarker(String restoreId) =>
+      (_storage as TransactionalKnowledgeStorage).readRestoreMarker(restoreId);
   bool get isFrozen => _frozen;
   bool get canWrite =>
       _loaded &&
@@ -52,7 +57,7 @@ class AgentKnowledgeRepository extends ChangeNotifier {
       .firstOrNull;
 
   Future<KnowledgeUndoReservation> reserveForHistoryUndo(String batchId) async {
-    knowledgeText(batchId, max: 256);
+    knowledgeText(batchId);
     final current = _undoReservation;
     if (current != null) {
       if (current.batchId != batchId) _conflict();
@@ -118,8 +123,8 @@ class AgentKnowledgeRepository extends ChangeNotifier {
     bool allowRevive = false,
   }) {
     _checkWritable();
-    if (desired.isEmpty || desired.length > 128) {
-      knowledgeInvalid('Select 1–128 knowledge records.');
+    if (desired.isEmpty) {
+      knowledgeInvalid('Select at least one knowledge record.');
     }
     final changes = <KnowledgeChange>[];
     for (final entry in desired.entries) {
@@ -211,14 +216,12 @@ class AgentKnowledgeRepository extends ChangeNotifier {
   }) {
     _checkWritable(undoReservation: undoReservation);
     final ids = operationIds.toList();
-    if (ids.isEmpty ||
-        ids.length > KnowledgeLimits.receipts ||
-        ids.toSet().length != ids.length) {
-      knowledgeInvalid('Select a bounded, unique operation range.');
+    if (ids.isEmpty || ids.toSet().length != ids.length) {
+      knowledgeInvalid('Select a unique operation range.');
     }
     final originals = <KnowledgeReceipt>[];
     for (final id in ids) {
-      knowledgeText(id, max: 512);
+      knowledgeText(id);
       final receipt = receiptFor(id);
       if (receipt == null ||
           receipt.inverseTargets.isNotEmpty ||
@@ -248,12 +251,6 @@ class AgentKnowledgeRepository extends ChangeNotifier {
         }
         versions[change.key] = change.expectedRevision;
         touched.add(change.key);
-        if (touched.length > 128) {
-          throw const KnowledgeException(
-            KnowledgeError.limit,
-            'The complete inverse has too many targets.',
-          );
-        }
       }
     }
     final keys = touched.toList()..sort();
@@ -299,31 +296,14 @@ class AgentKnowledgeRepository extends ChangeNotifier {
         operationId: operationId,
         plan: plan,
       );
-      final retained = [..._archive.undoBatches];
-      while (retained.length >= KnowledgeLimits.undoBatches) {
-        final removable = retained.indexWhere(
-          (item) => receiptFor(item.operationId)?.digest == item.digest,
-        );
-        if (removable < 0) {
-          throw const KnowledgeException(
-            KnowledgeError.limit,
-            'Too many incomplete knowledge undo batches.',
-          );
-        }
-        retained.removeAt(removable);
-      }
       final prepared = KnowledgeArchive(
         revision: revision,
         storageRevision: _archive.storageRevision + 1,
         records: records,
         tombstones: _archive.tombstones,
         receipts: _archive.receipts,
-        undoBatches: [...retained, batch],
+        undoBatches: [..._archive.undoBatches, batch],
       );
-      // Include the eventual receipt and preserved owner plan in admission.
-      // A cross-store coordinator must learn about this limit before the main
-      // data owner has accepted its inverse.
-      _projectCommit(plan, operationId, base: prepared).archive.encode();
       await _saveOwnerState(prepared);
       return batch;
     });
@@ -344,7 +324,6 @@ class AgentKnowledgeRepository extends ChangeNotifier {
       return;
     }
     validate(batch.plan, undoReservation: reservation);
-    _projectCommit(batch.plan, batch.operationId).archive.encode();
   }
 
   Future<KnowledgeReceipt> commitInverseBatch(
@@ -396,7 +375,7 @@ class AgentKnowledgeRepository extends ChangeNotifier {
     return _enqueue(() async {
       if (epoch != _writeEpoch) _unavailable();
       _checkWritable(undoReservation: undoReservation);
-      knowledgeText(operationId, max: 512);
+      knowledgeText(operationId);
       final old = receiptFor(operationId);
       if (old != null) {
         if (old.digest != plan.digest) {
@@ -452,29 +431,13 @@ class AgentKnowledgeRepository extends ChangeNotifier {
       inverseOperationIds: plan.inverseOperationIds,
     );
     final receipts = [...source.receipts, receipt];
-    final evictedReceiptIds = receipts
-        .take(
-          (receipts.length - KnowledgeLimits.receipts).clamp(
-            0,
-            receipts.length,
-          ),
-        )
-        .map((item) => item.operationId)
-        .toSet();
     final archive = KnowledgeArchive(
       revision: nextRevision,
       storageRevision: source.storageRevision + 1,
       records: next.values,
       tombstones: deleted,
-      receipts: receipts.skip(
-        (receipts.length - KnowledgeLimits.receipts).clamp(0, receipts.length),
-      ),
-      // A completed owner ticket cannot remain after its completion evidence
-      // expires; otherwise it would be misclassified as an incomplete batch
-      // and eventually consume every reserved history slot.
-      undoBatches: source.undoBatches.where(
-        (batch) => !evictedReceiptIds.contains(batch.operationId),
-      ),
+      receipts: receipts,
+      undoBatches: source.undoBatches,
     );
     return (archive: archive, receipt: receipt);
   }
@@ -503,7 +466,7 @@ class AgentKnowledgeRepository extends ChangeNotifier {
   });
 
   /// Produces a complete fixed target with only selected content replaced.
-  /// Large selections use bounded receipt groups but one side-store write.
+  /// The complete selection is committed as one business operation.
   KnowledgeArchive projectFrozenRestore(
     Iterable<KnowledgeRecord> selected, {
     required String restoreId,
@@ -519,41 +482,33 @@ class AgentKnowledgeRepository extends ChangeNotifier {
     validateOwner();
     final desired = selected.toList();
     if (desired.isEmpty ||
-        desired.length > KnowledgeLimits.records ||
         desired.map((record) => record.key).toSet().length != desired.length) {
       knowledgeInvalid('Invalid selected knowledge restore targets.');
     }
-    var result = _archive;
-    for (var offset = 0; offset < desired.length; offset += 128) {
-      final current = {for (final record in result.records) record.key: record};
-      final plan = KnowledgeChangeSet(
-        id: 'backup-$restoreId-$offset',
-        changes: [
-          for (final record in desired.skip(offset).take(128))
-            KnowledgeChange(
-              key: record.key,
-              expectedRevision:
-                  current[record.key]?.revision ??
-                  result.tombstones[record.key] ??
-                  0,
-              before: current[record.key],
-              after: record,
-            ),
-        ],
-      );
-      result = _projectCommit(
-        plan,
-        'backup-restore:$restoreId:$offset',
-        base: result,
-      ).archive;
-    }
-    KnowledgeArchive.decode(result.encode());
-    return result;
+    final current = {for (final record in _archive.records) record.key: record};
+    final plan = KnowledgeChangeSet(
+      id: 'backup-$restoreId',
+      changes: [
+        for (final record in desired)
+          KnowledgeChange(
+            key: record.key,
+            expectedRevision:
+                current[record.key]?.revision ??
+                _archive.tombstones[record.key] ??
+                0,
+            before: current[record.key],
+            after: record,
+          ),
+      ],
+    );
+    return _projectCommit(plan, 'backup-restore:$restoreId').archive;
   }
 
   Future<void> replaceFrozenForRestore(
     KnowledgeArchive target, {
     required void Function() validateOwner,
+    String? restoreId,
+    String? restoreFingerprint,
   }) => _enqueue(() async {
     if (!_frozen ||
         _disposed ||
@@ -563,22 +518,17 @@ class AgentKnowledgeRepository extends ChangeNotifier {
       _unavailable();
     }
     validateOwner();
-    final source = target.encode();
-    KnowledgeArchive.decode(source);
     if (target.storageRevision <= _archive.storageRevision &&
-        source != _archive.encode()) {
+        target.encode() != _archive.encode()) {
       _conflict();
     }
     try {
-      await _saveOwnerState(target);
-      final confirmed = await _storage.load();
+      await _saveOwnerState(
+        target,
+        restoreId: restoreId,
+        restoreFingerprint: restoreFingerprint,
+      );
       validateOwner();
-      if (confirmed.archive.encode() != source) {
-        throw const KnowledgeException(
-          KnowledgeError.unknown,
-          'The knowledge restore could not be read back.',
-        );
-      }
     } catch (_) {
       _blocked = true;
       _notify();
@@ -625,11 +575,21 @@ class AgentKnowledgeRepository extends ChangeNotifier {
     }
   }
 
-  Future<void> _saveOwnerState(KnowledgeArchive archive) async {
-    // Admission failures do not poison otherwise healthy storage.
-    archive.encode();
+  Future<void> _saveOwnerState(
+    KnowledgeArchive archive, {
+    String? restoreId,
+    String? restoreFingerprint,
+  }) async {
     try {
-      await _storage.save(archive);
+      if (restoreId == null) {
+        await _storage.save(archive);
+      } else {
+        await (_storage as TransactionalKnowledgeStorage).saveRestore(
+          archive,
+          restoreId: restoreId,
+          fingerprint: restoreFingerprint!,
+        );
+      }
       _archive = archive;
     } catch (_) {
       _blocked = true;

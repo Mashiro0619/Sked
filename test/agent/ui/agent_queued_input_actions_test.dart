@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter_test/flutter_test.dart';
@@ -250,15 +249,11 @@ class _Harness {
             text: 'Initial request',
             createdAt: DateTime.utc(2026, 11, 7),
           ),
-          ConversationMessage(
+        ],
+        queuedInputs: [
+          ConversationQueuedInput(
             id: 'queued',
-            role: ConversationRole.notice,
-            text: jsonEncode({
-              'kind': 'agent_pending_input',
-              'version': 1,
-              'mode': 'followUp',
-              'text': 'Original queued text',
-            }),
+            text: 'Original queued text',
             createdAt: DateTime.utc(2026, 11, 7),
             contextReferences: [reference],
           ),

@@ -73,9 +73,9 @@ extension AgentComposerReferences on AgentApplication {
     final epoch = _session.mutationEpoch;
     final latest = await createReferenceSearch(conversationId);
     final resolved = await _validateSelectedReferences(latest, selected);
-    // Admission uses a separate loader so queued input cannot expose tools or
-    // consume the active run's Skill allowance. Check the complete selection
-    // before accepting the message or clearing its editable draft.
+    // Admission uses a separate loader so queued input cannot expose tools in
+    // the active run. Resolve the selection before accepting the message or
+    // clearing its editable draft.
     for (final reference in resolved.where(
       (reference) => reference.kind == AgentComposerReferenceKind.skill,
     )) {
@@ -85,9 +85,9 @@ extension AgentComposerReferences on AgentApplication {
         expectedSha256: reference.skillSha256,
       );
       if (!loaded.isLoaded) {
-        throw const OperationProblem(
+        throw OperationProblem(
           OperationErrorCode.expired,
-          'The selected Skills are unavailable or exceed the loading budget. Remove a Skill and retry.',
+          'The selected Skill cannot be loaded: ${loaded.status.name}.',
           field: 'references',
         );
       }

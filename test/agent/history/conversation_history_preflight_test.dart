@@ -6,6 +6,70 @@ import 'package:sked/agent/history/conversation_history.dart';
 import 'package:sked/agent/history/conversation_history_preflight.dart';
 
 void main() {
+  test('a host tool-call turn is retained in history but cannot be edited as a user request', () async {
+    final now = DateTime.utc(2026, 11, 7);
+    final hostCall = ConversationMessage(
+      id: 'host-call',
+      role: ConversationRole.assistant,
+      text: '',
+      createdAt: now,
+      toolCalls: [
+        ConversationToolCall(
+          id: 'call',
+          name: 'operations.undo',
+          arguments: '{}',
+        ),
+      ],
+    );
+    final result = ConversationMessage(
+      id: 'host-result',
+      role: ConversationRole.tool,
+      text: '{"status":"committed"}',
+      toolCallId: 'call',
+      createdAt: now,
+    );
+    final turn = ConversationTurn(
+      id: 'host-run',
+      requestMessageId: hostCall.id,
+      ownershipComplete: true,
+      messageIds: [hostCall.id, result.id],
+      runIds: ['host-run'],
+    );
+    final conversation = AgentConversation(
+      id: 'chat',
+      title: 'Host action',
+      createdAt: now,
+      updatedAt: now,
+      messages: [hostCall, result],
+      runs: [
+        ConversationRunUsage(
+          id: 'host-run',
+          startedAt: now,
+          settledAt: now,
+          status: ConversationRunStatus.completed,
+          kind: ConversationRunKind.host,
+        ),
+      ],
+      turns: [turn],
+    );
+    final reloaded = AgentConversation.fromJson(conversation.toJson());
+    expect(reloaded.turns.single.toJson(), turn.toJson());
+    final preflight = ConversationHistoryPreflight(
+      readReceipt: (_) async =>
+          throw StateError('No operation should be read for a host selection'),
+    );
+    for (final message in conversation.messages) {
+      await expectLater(
+        preflight.prepare(
+          conversation: conversation,
+          turns: conversation.turns,
+          selectedMessageId: message.id,
+        ),
+        throwsA(_error(ConversationHistoryError.invalidSelection)),
+      );
+    }
+  });
+
   test(
     'selected assistant belongs to its complete request and later turns',
     () async {
@@ -109,6 +173,113 @@ void main() {
     );
     expect(fixture.readIds, isEmpty);
   });
+
+  test(
+    'receipt queries do not claim ownership of the read operation',
+    () async {
+      final fixture = _Fixture();
+      final conversation = fixture.conversation.copyWith(
+        messages: fixture.conversation.messages.map(
+          (message) => message.id == 'answer-1'
+              ? ConversationMessage(
+                  id: message.id,
+                  role: message.role,
+                  text: message.text,
+                  createdAt: message.createdAt,
+                  responseItems: message.responseItems,
+                  toolCalls: const [
+                    ConversationToolCall(
+                      id: 'call-1',
+                      name: 'operations.status',
+                      arguments: '{}',
+                    ),
+                  ],
+                )
+              : message,
+        ),
+        runs: fixture.conversation.runs.map(
+          (run) => run.id == 'run-1'
+              ? run.copyWith(
+                  tools: const [
+                    ConversationToolUsage(
+                      id: 'call-1',
+                      name: 'operations.status',
+                      outcome: ConversationAttemptOutcome.completed,
+                    ),
+                  ],
+                )
+              : run,
+        ),
+      );
+      final selection = await fixture.preflight.prepare(
+        conversation: conversation,
+        turns: [
+          fixture.turns.first.copyWith(operations: []),
+          fixture.turns.last,
+        ],
+        selectedMessageId: 'request-1',
+      );
+      expect(selection.operationIds(ConversationUndoOwner.main), isEmpty);
+      expect(fixture.readIds, ['operation-2']);
+    },
+  );
+
+  test(
+    'a binding still requires the actual invocation recorded by its run',
+    () async {
+      final fixture = _Fixture();
+      final conversation = fixture.conversation.copyWith(
+        runs: [
+          fixture.conversation.runs.first.copyWith(
+            tools: const [
+              ConversationToolUsage(
+                id: 'call-1',
+                name: 'events.list',
+                outcome: ConversationAttemptOutcome.completed,
+              ),
+            ],
+          ),
+          fixture.conversation.runs.last,
+        ],
+      );
+      await expectLater(
+        fixture.preflight.prepare(
+          conversation: conversation,
+          turns: fixture.turns,
+          selectedMessageId: 'request-1',
+        ),
+        throwsA(_error(ConversationHistoryError.missingReceipt)),
+      );
+      expect(fixture.readIds, isEmpty);
+    },
+  );
+
+  test(
+    'a declined bound action with no durable effect needs no inverse',
+    () async {
+      final fixture = _Fixture();
+      final preflight = ConversationHistoryPreflight(
+        readReceipt: (binding) async => ConversationHistoryOperation(
+          binding: binding,
+          effect: ConversationHistoryEffect.none,
+          digest: 'a' * 64,
+        ),
+      );
+      final selected = await preflight.prepare(
+        conversation: fixture.conversation.copyWith(
+          messages: fixture.conversation.messages.map(
+            (message) => message.role == ConversationRole.tool
+                ? message.copyWith(text: '{"status":"cancelled"}')
+                : message,
+          ),
+        ),
+        turns: fixture.turns,
+        selectedMessageId: 'request-1',
+      );
+      expect(selected.operationIds(ConversationUndoOwner.main), isEmpty);
+      expect(selected.operationIds(ConversationUndoOwner.knowledge), isEmpty);
+    },
+  );
 
   test('a later irreversible effect rejects the whole range', () async {
     final fixture = _Fixture();
@@ -301,7 +472,7 @@ class _Fixture {
           toolCalls: [
             ConversationToolCall(
               id: 'call-$index',
-              name: index == 1 ? 'mutation.commit' : 'external.commit',
+              name: index == 1 ? 'mutation.apply' : 'memories.apply',
               arguments: '{}',
             ),
           ],
@@ -309,7 +480,10 @@ class _Fixture {
         ConversationMessage(
           id: 'result-$index',
           role: ConversationRole.tool,
-          text: '{}',
+          text: jsonEncode({
+            'status': index == 1 ? 'committed' : 'applied',
+            'operationId': 'operation-$index',
+          }),
           toolCallId: 'call-$index',
           createdAt: DateTime.utc(2026),
         ),
@@ -328,7 +502,7 @@ class _Fixture {
           tools: [
             ConversationToolUsage(
               id: 'call-$index',
-              name: index == 1 ? 'mutation.commit' : 'external.commit',
+              name: index == 1 ? 'mutation.apply' : 'memories.apply',
               outcome: ConversationAttemptOutcome.completed,
             ),
           ],

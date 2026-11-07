@@ -28,12 +28,7 @@ class PlatformAttachmentStorage extends AttachmentStorage {
     final temporary = File('${file.path}.pending');
     final handle = await temporary.open(mode: FileMode.write);
     try {
-      var count = 0;
       await for (final chunk in bytes) {
-        count += chunk.length;
-        if (count > ConversationAttachment.maxFileBytes) {
-          throw const AttachmentException(AttachmentError.tooLarge);
-        }
         await handle.writeFrom(chunk);
       }
       await handle.flush();
@@ -56,9 +51,6 @@ class PlatformAttachmentStorage extends AttachmentStorage {
     final file = await _file(id);
     if (!await file.exists()) {
       throw const AttachmentException(AttachmentError.missing);
-    }
-    if (await file.length() > ConversationAttachment.maxFileBytes) {
-      throw const AttachmentException(AttachmentError.tooLarge);
     }
     yield* file.openRead();
   }

@@ -89,7 +89,7 @@ class _AgentCredentialDialogState extends State<_AgentCredentialDialog> {
             obscureText: !_visible,
             autocorrect: false,
             enableSuggestions: false,
-            maxLength: 16 * 1024,
+
             decoration: InputDecoration(
               filled: true,
               labelText: l.agentApiKey,

@@ -15,9 +15,15 @@ import '../widgets/sked_dropdown_menu.dart';
 
 /// Edits one model; the connection page retains its own endpoint/key draft.
 class AgentModelSettingsPage extends StatefulWidget {
-  const AgentModelSettingsPage({super.key, this.model, this.suggestedId});
+  const AgentModelSettingsPage({
+    super.key,
+    this.model,
+    this.suggestedId,
+    this.reportedContextTokens,
+  });
   final AgentModelConfig? model;
   final String? suggestedId;
+  final int? reportedContextTokens;
   @override
   State<AgentModelSettingsPage> createState() => _AgentModelSettingsPageState();
 }
@@ -33,6 +39,13 @@ class _AgentModelSettingsPageState extends State<AgentModelSettingsPage>
   };
   late AgentReasoningEffort? _defaultEffort =
       widget.model?.defaultReasoningEffort;
+  late final _contextWindow = TextEditingController(
+    text: widget.model?.maxContextTokens?.toString() ?? '',
+  );
+  late final _compactThreshold = TextEditingController(
+    text: widget.model?.autoCompactAtTokens?.toString() ?? '',
+  );
+  late bool _autoCompact = widget.model?.autoCompact ?? true;
   late AgentSettings _baseline;
   bool _defaultModel = false;
   bool _initialized = false;
@@ -46,6 +59,9 @@ class _AgentModelSettingsPageState extends State<AgentModelSettingsPage>
     _efforts.fold<int>(0, (bits, effort) => bits | 1 << effort.index),
     _defaultEffort,
     _defaultModel,
+    _contextWindow.text,
+    _compactThreshold.text,
+    _autoCompact,
   );
   @override
   bool get settingsExitBlocked => _saving;
@@ -103,6 +119,12 @@ class _AgentModelSettingsPageState extends State<AgentModelSettingsPage>
             if (_efforts.contains(effort)) effort,
         ],
         defaultReasoningEffort: _defaultEffort!,
+        maxContextTokens: int.tryParse(_contextWindow.text.trim()),
+        reportedContextTokens:
+            (widget.reportedContextTokens ??
+            widget.model?.reportedContextTokens),
+        autoCompactAtTokens: int.tryParse(_compactThreshold.text.trim()),
+        autoCompact: _autoCompact,
       );
       final index = widget.model == null
           ? models.length
@@ -151,6 +173,8 @@ class _AgentModelSettingsPageState extends State<AgentModelSettingsPage>
   @override
   void dispose() {
     _id.dispose();
+    _contextWindow.dispose();
+    _compactThreshold.dispose();
     super.dispose();
   }
 
@@ -172,15 +196,13 @@ class _AgentModelSettingsPageState extends State<AgentModelSettingsPage>
                 enabled: !_saving,
                 readOnly: widget.model != null,
                 autocorrect: false,
-                maxLength: 256,
+
                 decoration: InputDecoration(
                   labelText: l.agentManualModelId,
                   counterText: '',
                 ),
                 onChanged: (_) => setState(() {}),
-                validator: (value) =>
-                    value?.trim().isNotEmpty == true &&
-                        value!.trim().length <= 256
+                validator: (value) => value?.trim().isNotEmpty == true
                     ? null
                     : l.agentRequiredField,
               ),
@@ -244,6 +266,52 @@ class _AgentModelSettingsPageState extends State<AgentModelSettingsPage>
                       ? null
                       : (value) => setState(() => _defaultModel = value),
                 ),
+              const SizedBox(height: 20),
+              TextFormField(
+                key: const ValueKey('agent-model-context-window'),
+                controller: _contextWindow,
+                enabled: !_saving,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: l.agentContextWindow,
+                  hintText:
+                      (widget.reportedContextTokens ??
+                              widget.model?.reportedContextTokens)
+                          ?.toString() ??
+                      l.agentContextUnset,
+                  suffixText: 'Token',
+                ),
+                validator: (value) => _validateTokens(value, l),
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 12),
+              SwitchListTile.adaptive(
+                key: const ValueKey('agent-model-auto-compact'),
+                contentPadding: EdgeInsets.zero,
+                title: Text(l.agentContextAutoCompact),
+                value: _autoCompact,
+                onChanged: _saving
+                    ? null
+                    : (value) => setState(() => _autoCompact = value),
+              ),
+              TextFormField(
+                key: const ValueKey('agent-model-context-threshold'),
+                controller: _compactThreshold,
+                enabled: !_saving,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: l.agentContextThreshold,
+                  hintText: switch (int.tryParse(_contextWindow.text.trim()) ??
+                      (widget.reportedContextTokens ??
+                          widget.model?.reportedContextTokens)) {
+                    final int window => '${(window * .8).floor()}',
+                    null => l.agentContextUnset,
+                  },
+                  suffixText: 'Token',
+                ),
+                validator: (value) => _validateTokens(value, l),
+                onChanged: (_) => setState(() {}),
+              ),
               if (_incomplete) ...[
                 const SizedBox(height: 12),
                 Text(
@@ -286,6 +354,12 @@ class _AgentModelSettingsPageState extends State<AgentModelSettingsPage>
         ),
       ),
     );
+  }
+
+  String? _validateTokens(String? value, AppLocalizations l) {
+    if (value == null || value.trim().isEmpty) return null;
+    final tokens = int.tryParse(value.trim());
+    return tokens == null || tokens <= 0 ? l.agentRequiredField : null;
   }
 }
 

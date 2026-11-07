@@ -29,11 +29,13 @@ class _TrackedFile extends XFile {
     required this.reportedLength,
     required this.chunks,
     this.subsequentLength,
+    this.ignoreReadRanges = false,
   }) : super('memory://text-import');
 
   final int reportedLength;
   final int? subsequentLength;
   final Iterable<Uint8List> chunks;
+  final bool ignoreReadRanges;
   final readRequests = <(int?, int?)>[];
   var lengthCalls = 0;
   var wholeFileReads = 0;
@@ -57,14 +59,27 @@ class _TrackedFile extends XFile {
   @override
   Stream<Uint8List> openRead([int? start, int? end]) {
     readRequests.add((start, end));
-    return _readChunks();
+    return _readChunks(start ?? 0, end);
   }
 
-  Stream<Uint8List> _readChunks() async* {
+  Stream<Uint8List> _readChunks(int start, int? end) async* {
     try {
+      var offset = 0;
       for (final chunk in chunks) {
-        yieldedChunks += 1;
-        yield chunk;
+        final nextOffset = offset + chunk.length;
+        if (ignoreReadRanges) {
+          yieldedChunks += 1;
+          yield chunk;
+        } else if (nextOffset > start && (end == null || offset < end)) {
+          final from = (start - offset).clamp(0, chunk.length);
+          final to = end == null
+              ? chunk.length
+              : (end - offset).clamp(0, chunk.length);
+          yieldedChunks += 1;
+          yield Uint8List.sublistView(chunk, from, to);
+        }
+        offset = nextOffset;
+        if (!ignoreReadRanges && end != null && offset >= end) break;
       }
     } finally {
       streamClosed = true;
@@ -93,17 +108,19 @@ _FilePicker _select(XFile? file) {
   return picker;
 }
 
-Future<String?> _pick() =>
-    TextFilePicker.pickText(allowedExtensions: const ['json', 'ics']);
+Future<String?> _pick({int? byteLimit = TextFilePicker.maxBytes}) async =>
+    (await TextFilePicker.pickDocument(
+      allowedExtensions: const ['json', 'ics'],
+      byteLimit: byteLimit,
+    ))?.text;
 
 void _expectBoundedRead(_TrackedFile file, {int lengthChecks = 2}) {
   expect(file.lengthCalls, lengthChecks);
   expect(file.wholeFileReads, 0);
-  expect(file.readRequests, [(0, file.reportedLength)]);
-  expect(
-    file.readRequests.single.$2,
-    lessThanOrEqualTo(TextFilePicker.maxBytes),
-  );
+  expect(file.readRequests, [
+    for (var start = 0; start < file.reportedLength; start += 65536)
+      (start, (start + 65536).clamp(0, file.reportedLength)),
+  ]);
 }
 
 void main() {
@@ -182,55 +199,102 @@ void main() {
     },
   );
 
-  test('accepts exactly 20 decimal megabytes', () async {
-    expect(TextFilePicker.maxMegabytes, 20);
-    expect(TextFilePicker.maxBytes, 20 * 1000 * 1000);
+  test('accepts a file exactly at an explicit caller limit', () async {
+    const byteLimit = 1024;
     final file = _TrackedFile(
-      reportedLength: TextFilePicker.maxBytes,
-      chunks: _asciiChunks(TextFilePicker.maxBytes),
+      reportedLength: byteLimit,
+      chunks: _asciiChunks(byteLimit),
     );
     _select(file);
 
-    final text = await _pick();
+    final text = await _pick(byteLimit: byteLimit);
 
     expect(text, isNotNull);
-    expect(text!.length, TextFilePicker.maxBytes);
+    expect(text!.length, byteLimit);
     expect(text.startsWith('aaaa'), isTrue);
     expect(text.endsWith('aaaa'), isTrue);
     _expectBoundedRead(file);
     expect(file.streamClosed, isTrue);
   });
 
-  test('rejects one byte over the declared limit before reading', () async {
-    final file = _TrackedFile(
-      reportedLength: TextFilePicker.maxBytes + 1,
-      chunks: const [],
-    );
-    _select(file);
+  test(
+    'an unlimited attachment streams beyond the shared default cap',
+    () async {
+      final byteLength = TextFilePicker.maxBytes + 1;
+      final file = _TrackedFile(
+        reportedLength: byteLength,
+        chunks: _asciiChunks(byteLength),
+      );
+      _select(file);
 
-    await expectLater(_pick(), throwsA(isA<TextFileTooLargeException>()));
+      final text = await _pick(byteLimit: null);
 
-    expect(file.lengthCalls, 1);
-    expect(file.readRequests, isEmpty);
-    expect(file.wholeFileReads, 0);
-    expect(file.yieldedChunks, 0);
-  });
+      expect(text, hasLength(byteLength));
+      _expectBoundedRead(file);
+      expect(file.streamClosed, isTrue);
+    },
+  );
+
+  test(
+    'decodes a multibyte character split across bounded read ranges',
+    () async {
+      final content = '${'a' * 65535}课';
+      final encoded = _bytes(utf8.encode(content));
+      final file = _TrackedFile(
+        reportedLength: encoded.length,
+        chunks: [encoded],
+      );
+      _select(file);
+
+      expect(await _pick(), content);
+      _expectBoundedRead(file);
+    },
+  );
+
+  test(
+    'the shared text picker rejects its default limit before reading',
+    () async {
+      final file = _TrackedFile(
+        reportedLength: TextFilePicker.maxBytes + 1,
+        chunks: const [],
+      );
+      _select(file);
+
+      await expectLater(
+        TextFilePicker.pickText(allowedExtensions: const ['json', 'ics']),
+        throwsA(isA<TextFileTooLargeException>()),
+      );
+
+      expect(file.lengthCalls, 1);
+      expect(file.readRequests, isEmpty);
+      expect(file.wholeFileReads, 0);
+      expect(file.yieldedChunks, 0);
+    },
+  );
 
   test(
     'rejects a falsely reported length when actual bytes exceed the cap',
     () async {
+      const byteLimit = 1024;
       var reachedTrailingChunk = false;
       Iterable<Uint8List> chunks() sync* {
-        yield* _asciiChunks(TextFilePicker.maxBytes);
+        yield* _asciiChunks(byteLimit);
         yield _bytes([0x61]);
         reachedTrailingChunk = true;
         yield _bytes([0x61]);
       }
 
-      final file = _TrackedFile(reportedLength: 1, chunks: chunks());
+      final file = _TrackedFile(
+        reportedLength: 1,
+        chunks: chunks(),
+        ignoreReadRanges: true,
+      );
       _select(file);
 
-      await expectLater(_pick(), throwsA(isA<TextFileTooLargeException>()));
+      await expectLater(
+        _pick(byteLimit: byteLimit),
+        throwsA(isA<TextFileTooLargeException>()),
+      );
 
       _expectBoundedRead(file, lengthChecks: 1);
       expect(file.streamClosed, isTrue);
@@ -239,18 +303,23 @@ void main() {
   );
 
   test('counts the UTF-8 BOM bytes toward the file limit', () async {
+    const byteLimit = 1024;
     Iterable<Uint8List> chunks() sync* {
       yield _bytes([0xef, 0xbb, 0xbf]);
-      yield* _asciiChunks(TextFilePicker.maxBytes - 2);
+      yield* _asciiChunks(byteLimit - 2);
     }
 
     final file = _TrackedFile(
-      reportedLength: TextFilePicker.maxBytes,
+      reportedLength: byteLimit,
       chunks: chunks(),
+      ignoreReadRanges: true,
     );
     _select(file);
 
-    await expectLater(_pick(), throwsA(isA<TextFileTooLargeException>()));
+    await expectLater(
+      _pick(byteLimit: byteLimit),
+      throwsA(isA<TextFileTooLargeException>()),
+    );
     _expectBoundedRead(file, lengthChecks: 1);
   });
 
@@ -282,6 +351,7 @@ void main() {
           reportedLength: reportedLength,
           subsequentLength: subsequentLength,
           chunks: [_bytes(utf8.encode(content))],
+          ignoreReadRanges: name == 'returns extra bytes within the cap',
         );
         _select(file);
 
@@ -350,7 +420,7 @@ void main() {
       _select(file);
 
       await expectLater(_pick(), throwsA(isA<FormatException>()));
-      _expectBoundedRead(file);
+      _expectBoundedRead(file, lengthChecks: 1);
     });
   }
 }

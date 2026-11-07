@@ -209,6 +209,7 @@ class WorkspaceResourcePanel extends StatelessWidget {
     this.settingsFocusNode,
     this.resourceIcon,
     this.contentBuilder,
+    this.showResourceHeading = true,
   });
   final String title;
   final List<Widget> children;
@@ -220,6 +221,7 @@ class WorkspaceResourcePanel extends StatelessWidget {
   final FocusNode? settingsFocusNode;
   final IconData? resourceIcon;
   final Widget Function(bool shrinkWrap)? contentBuilder;
+  final bool showResourceHeading;
 
   @override
   Widget build(BuildContext context) {
@@ -530,93 +532,95 @@ class WorkspaceResourcePanel extends StatelessWidget {
                     ? assistant?.onToggle
                     : null,
               ),
-            Padding(
-              padding: resourceHeadingPadding,
-              child: SizedBox(
-                height: m.resourceRowHeight,
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: compactWidth,
-                      child: Center(
-                        child: Builder(
-                          builder: (anchor) {
-                            final icon =
-                                resourceIcon ??
-                                (workspace.activeMode == AppMode.student
-                                    ? Icons.view_week_outlined
-                                    : Icons.category_outlined);
-                            if (!collapsed &&
-                                onOpenResourcesAt == null &&
-                                onOpenResources == null) {
-                              return ExcludeSemantics(
-                                child: SizedBox.square(
-                                  key: const ValueKey(
-                                    'workspace-resource-heading-icon',
-                                  ),
-                                  dimension: m.iconTarget,
-                                  child: Center(
-                                    child: Icon(
-                                      icon,
-                                      size: m.desktop ? 18 : 22,
-                                      color: colors.onSurfaceVariant,
+            if (showResourceHeading || collapsed)
+              Padding(
+                padding: resourceHeadingPadding,
+                child: SizedBox(
+                  height: m.resourceRowHeight,
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: compactWidth,
+                        child: Center(
+                          child: Builder(
+                            builder: (anchor) {
+                              final icon =
+                                  resourceIcon ??
+                                  (workspace.activeMode == AppMode.student
+                                      ? Icons.view_week_outlined
+                                      : Icons.category_outlined);
+                              if (!collapsed &&
+                                  onOpenResourcesAt == null &&
+                                  onOpenResources == null) {
+                                return ExcludeSemantics(
+                                  child: SizedBox.square(
+                                    key: const ValueKey(
+                                      'workspace-resource-heading-icon',
+                                    ),
+                                    dimension: m.iconTarget,
+                                    child: Center(
+                                      child: Icon(
+                                        icon,
+                                        size: m.desktop ? 18 : 22,
+                                        color: colors.onSurfaceVariant,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              );
-                            }
-                            return IconButton(
-                              key: const ValueKey('workspace-resource-open'),
-                              style: m.iconStyle,
-                              tooltip: title,
-                              onPressed: enabled
-                                  ? () {
-                                      resourceScope?.close();
-                                      if (onOpenResourcesAt != null) {
-                                        onOpenResourcesAt!(anchor);
-                                      } else {
-                                        (onOpenResources ?? toggle)();
+                                );
+                              }
+                              return IconButton(
+                                key: const ValueKey('workspace-resource-open'),
+                                style: m.iconStyle,
+                                tooltip: title,
+                                onPressed: enabled
+                                    ? () {
+                                        resourceScope?.close();
+                                        if (onOpenResourcesAt != null) {
+                                          onOpenResourcesAt!(anchor);
+                                        } else {
+                                          (onOpenResources ?? toggle)();
+                                        }
                                       }
-                                    }
-                                  : null,
-                              icon: Icon(icon),
-                            );
-                          },
+                                    : null,
+                                icon: Icon(icon),
+                              );
+                            },
+                          ),
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: IgnorePointer(
-                        ignoring: !detailsInteractive,
-                        child: ExcludeFocus(
-                          excluding: !detailsInteractive,
-                          child: ExcludeSemantics(
+                      Expanded(
+                        child: IgnorePointer(
+                          ignoring: !detailsInteractive,
+                          child: ExcludeFocus(
                             excluding: !detailsInteractive,
-                            child: TooltipVisibility(
-                              visible: detailsInteractive,
-                              child: label(
-                                Padding(
-                                  padding: const EdgeInsetsDirectional.only(
-                                    end: 8,
-                                  ),
-                                  child: IconButtonTheme(
-                                    data: IconButtonThemeData(
-                                      style: m.iconStyle,
+                            child: ExcludeSemantics(
+                              excluding: !detailsInteractive,
+                              child: TooltipVisibility(
+                                visible: detailsInteractive,
+                                child: label(
+                                  Padding(
+                                    padding: const EdgeInsetsDirectional.only(
+                                      end: 8,
                                     ),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            title,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .titleSmall,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
+                                    child: IconButtonTheme(
+                                      data: IconButtonThemeData(
+                                        style: m.iconStyle,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              title,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .titleSmall,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
                                           ),
-                                        ),
-                                        ...headerActions,
-                                      ],
+                                          ...headerActions,
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -625,11 +629,10 @@ class WorkspaceResourcePanel extends StatelessWidget {
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
           ];
           final settings = onSettings == null
               ? const SizedBox.shrink()

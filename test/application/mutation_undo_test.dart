@@ -11,6 +11,26 @@ import 'package:sked/models/timetable_models.dart';
 
 void main() {
   test(
+    'reverse receipts accept more than the former change-list threshold',
+    () {
+      final base = fixture();
+      final applied = apply(base, [
+        mutation(
+          ResourceKind.event,
+          ResourceMutationAction.patch,
+          'middle',
+          parent: 'a',
+          values: {'title': 'Changed'},
+        ),
+      ]);
+      final change = (applied.receipt.undo!['changes'] as List).single;
+      final large = receipt(List.filled(10001, change));
+      final reversed = MutationUndoCompiler().prepare(applied.data, large);
+      expect(reversed.candidate.toJson(), base.toJson());
+    },
+  );
+
+  test(
     'Agent preference changes and reset reverse without changing authority',
     () {
       final base = fixture();

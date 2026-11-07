@@ -63,28 +63,30 @@ void main() {
     );
   });
 
-  test('provider item growth preserves byte, depth and credential checks', () {
+  test('provider items grow beyond old byte and depth thresholds while excluding credential fields', () {
     final larger = message(List.generate(65, (_) => {'type': 'reasoning'}));
     expect(larger.responseItems, hasLength(65));
     expect(
       ConversationMessage.fromJson(larger.toJson()).responseItems,
       larger.responseItems,
     );
+    final largeText = message([
+      {'text': '中' * (200 * 1024)},
+    ]);
     expect(
-      () => message([
-        {'text': '中' * (200 * 1024)},
-      ]),
-      throwsFormatException,
+      ConversationMessage.fromJson(largeText.toJson()).responseItems,
+      largeText.responseItems,
     );
     Object? nested;
     for (var i = 0; i < 24; i++) {
       nested = {'next': nested};
     }
+    final deep = message([
+      {'deep': nested},
+    ]);
     expect(
-      () => message([
-        {'deep': nested},
-      ]),
-      throwsFormatException,
+      ConversationMessage.fromJson(deep.toJson()).responseItems,
+      deep.responseItems,
     );
     for (final key in [
       'Authorization',

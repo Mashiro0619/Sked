@@ -1,3 +1,5 @@
+import 'package:sked/agent/operations/tool_outcome.dart';
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -9,6 +11,7 @@ import 'package:sked/agent/knowledge/knowledge_storage.dart';
 import 'package:sked/agent/ui/agent_operation_card.dart';
 import 'package:sked/agent/ui/agent_resource_view.dart';
 import 'package:sked/application/resource_contracts.dart';
+import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/controllers/app_session.dart';
 import 'package:sked/models/timetable_models.dart';
 
@@ -82,7 +85,7 @@ void main() {
                     : h.app.agent.knowledgeRepository.records.singleWhere(
                         (record) => record.id == id,
                       );
-                final plan = await h.call('$family.prepare', {
+                final plan = await h.call('$family.apply', {
                   'action': action,
                   if (current == null) ...{
                     'title': originalTitle,
@@ -93,7 +96,7 @@ void main() {
                     if (action == 'update') 'title': updatedTitle,
                   },
                 });
-                receipt = await h.externalCommit(plan);
+                receipt = plan;
                 expect(receipt['effectStatus'], 'applied');
                 if (action == 'create') {
                   id = h.app.agent.knowledgeRepository.records.single.id;
@@ -169,7 +172,7 @@ void main() {
                 ),
                 isEmpty,
               );
-              final plan = await h.call('skills.prepare', {
+              final plan = await h.call('skills.apply', {
                 'action': firstAction,
                 'id': 'read-agenda',
                 'revision': original['revision'],
@@ -178,7 +181,7 @@ void main() {
                 else
                   'enabled': false,
               });
-              firstReceipt = await h.externalCommit(plan);
+              firstReceipt = plan;
               expect(firstReceipt['effectStatus'], 'applied');
             });
           });
@@ -208,12 +211,12 @@ void main() {
           await _realAsync(tester, () async {
             await h.run(() async {
               final edited = await h.call('skills.get', {'id': 'read-agenda'});
-              final plan = await h.call('skills.prepare', {
+              final plan = await h.call('skills.apply', {
                 'action': 'restoreOriginal',
                 'id': 'read-agenda',
                 'revision': edited['revision'],
               });
-              restoredReceipt = await h.externalCommit(plan);
+              restoredReceipt = plan;
               expect(restoredReceipt['effectStatus'], 'applied');
             });
           });
@@ -265,12 +268,19 @@ void main() {
         final initialKnowledge = h.app.agent.knowledgeRepository.snapshot
             .encode();
         final prepared = <({Map<String, Object?> receipt, String label})>[];
+        await _realAsync(
+          tester,
+          () => h.app.agent.runtime.setMode(
+            h.conversationId,
+            AgentPermissionMode.plan,
+          ),
+        );
         await _realAsync(tester, () async {
           for (final kind in KnowledgeKind.values) {
             await h.run(() async {
               final isSkill = kind == KnowledgeKind.skill;
               final plan = await h.call(
-                '${isSkill ? 'skills' : 'memories'}.prepare',
+                '${isSkill ? 'skills' : 'memories'}.apply',
                 {
                   'action': 'create',
                   'title': 'Planned ${kind.name}',
@@ -302,7 +312,7 @@ void main() {
             encodeAppBackup(source, const []),
           );
           await h.run(() async {
-            final plan = await h.call('backups.prepare_restore', {
+            final plan = await h.call('backups.restore', {
               'sourceId': 'receipt-view-restore-preview',
               'objects': [
                 {'kind': 'calendar', 'id': 'visible'},
@@ -317,8 +327,8 @@ void main() {
         expect(prepared, hasLength(3));
         for (final item in prepared) {
           final receipt = item.receipt;
-          expect(receipt['planId'], isA<String>());
-          expect(receipt['status'], isNull);
+          expect(receipt.containsKey('planId'), isFalse);
+          expect(receipt['status'], 'preview');
           expect(receipt['effectStatus'], isNull);
           final change = (receipt['changes'] as List).single as Map;
           expect(change.containsKey('action'), isFalse);
@@ -375,12 +385,12 @@ void main() {
           const title = 'Requested study preference';
           await _realAsync(tester, () async {
             await h.run(() async {
-              final plan = await h.call('memories.prepare', {
+              final plan = await h.call('memories.apply', {
                 'action': 'create',
                 'title': title,
                 'body': 'Synthetic content for an unconfirmed receipt.',
               });
-              receipt = await h.externalCommit(plan);
+              receipt = plan;
               expect(
                 receipt['effectStatus'],
                 afterWrite ? 'unknown' : 'failed',
@@ -505,7 +515,7 @@ void main() {
             encodeAppBackup(source, const []),
           );
           await h.run(() async {
-            final plan = await h.call('backups.prepare_restore', {
+            final plan = await h.call('backups.restore', {
               'sourceId': 'receipt-view-restore',
               'objects': [
                 {'kind': 'timetable', 'id': 'other'},
@@ -514,11 +524,16 @@ void main() {
                 {'kind': 'calendar', 'id': 'recovered-calendar'},
               ],
             });
-            receipt = await h.externalCommit(plan);
+            receipt = plan;
             expect(receipt['effectStatus'], 'applied');
           });
         });
         final rawChanges = receipt['changes'] as List;
+        expect(
+          ToolOutcome.fromResult(receipt).kind,
+          ToolOutcomeKind.saved,
+          reason: jsonEncode(receipt),
+        );
         expect(rawChanges, hasLength(4));
         for (final change in rawChanges.cast<Map>()) {
           expect(change.containsKey('action'), isFalse);
@@ -608,7 +623,9 @@ Future<void> _mountReceipt(
     child: Builder(
       builder: (context) => SingleChildScrollView(
         child: AgentOperationCard(
-          receipt: h.app.agent.tools.describeCommitResult(receipt),
+          outcome: ToolOutcome.fromResult(
+            h.app.agent.tools.describeCommitResult(receipt),
+          ),
           onOpenResource: (ref) {
             opened.add(ref);
             unawaited(AgentResourceView.open(context, ref));

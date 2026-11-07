@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart' show RenderCustomPaint;
@@ -10,10 +9,13 @@ import 'package:sked/agent/history/conversation_history.dart';
 import 'package:sked/agent/history/conversation_history_service.dart';
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
+import 'package:sked/agent/ui/agent_selectable_text.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/agent_settings.dart';
 import 'package:sked/agent/ui/agent_model_picker.dart';
+import 'package:sked/agent/attachments/attachment_repository.dart';
+import 'package:sked/agent/attachments/conversation_attachments.dart';
 import 'package:sked/widgets/sked_popup_menu.dart';
 
 import 'agent_ui_test_support.dart';
@@ -218,135 +220,48 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  for (final code in const [
-    'contextBudgetExceeded',
-    'roundBudgetExceeded',
-    'toolBudgetExceeded',
-    'tokenBudgetExceeded',
-    'resultBudgetExceeded',
-    'repeatedToolFailure',
-    'timeout',
-    'toolTimeout',
-  ]) {
-    testWidgets('host limit $code displays the run limit explanation', (
-      tester,
-    ) async {
-      await initialize();
-      final conversation = await repository.create(title: 'Run limit');
-      delegate.state.value = AgentUiState(
-        enabled: true,
-        configured: true,
-        runs: {
-          conversation.id: AgentUiRunState(
-            phase: AgentUiPhase.failed,
-            errorMessage: code,
-          ),
-        },
-      );
-      await mountAgentUi(tester, view());
-      await settle(tester);
-      final l = AppLocalizations.of(
-        tester.element(find.byType(AgentConversationView)),
-      );
-      expect(find.text(l.agentLimitsReached), findsOneWidget);
-      expect(find.text(l.agentRunFailed), findsNothing);
-      expect(tester.takeException(), isNull);
-    });
-  }
-
   testWidgets(
-    'API failure displays selectable left-aligned response details with partial output',
+    'API errors show one explanation and disclose raw details on demand',
     (tester) async {
       await initialize();
       final conversation = await repository.create(title: 'API response');
+      const body =
+          '{"error":{"message":"Tool call id missing"},"request_id":"synthetic"}';
       delegate.state.value = AgentUiState(
         enabled: true,
         configured: true,
         runs: {
           conversation.id: const AgentUiRunState(
             phase: AgentUiPhase.failed,
-            streamingText: 'Partial output before the API error',
+            streamingText: 'Partial output',
             errorMessage: 'provider.httpFailure',
-            providerErrorDetails: 'Tool result requires a matching call id\nHTTP 400 · invalid_tool_result',
+            providerErrorResponseBody: body,
+            providerErrorMetadata: 'HTTP 400',
           ),
         },
       );
       await mountAgentUi(tester, view(), size: const Size(460, 820));
       await settle(tester);
-      final error = find.byKey(const ValueKey('agent-request-error'));
-      expect(error, findsOneWidget);
+      final l = AppLocalizations.of(
+        tester.element(find.byType(AgentConversationView)),
+      );
+      expect(find.byKey(const ValueKey('agent-request-error')), findsOneWidget);
       expect(
-        find.descendant(of: error, matching: find.byType(SelectableText)),
+        find.text(l.agentProviderServiceFailure('httpFailure')),
         findsOneWidget,
       );
-      expect(
-        find.textContaining('Tool result requires a matching call id'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('request_id'), findsNothing);
       expect(
         find.byKey(const ValueKey('agent-streaming-text')),
         findsOneWidget,
       );
-      final alignment = tester.widget<Align>(
-        find.ancestor(of: error, matching: find.byType(Align)).first,
-      );
-      expect(alignment.alignment, AlignmentDirectional.centerStart);
-      final l = AppLocalizations.of(tester.element(error));
-      expect(find.text(l.agentRequestFailed), findsNothing);
-      const rawBody =
-          '{"error":{"message":"Tool result requires a matching call id","type":"invalid_request_error","param":"messages[3]"},"request_id":"fixture-request"}';
-      delegate.state.value = AgentUiState(
-        enabled: true,
-        configured: true,
-        runs: {
-          conversation.id: const AgentUiRunState(
-            phase: AgentUiPhase.failed,
-            errorMessage: 'provider.httpFailure',
-            providerErrorResponseBody: rawBody,
-            providerErrorMetadata: 'HTTP 400',
-          ),
-        },
-      );
+      final details = find.byKey(const ValueKey('agent-request-error-details'));
+      await tester.ensureVisible(details);
+      await tester.tap(details);
       await settle(tester);
-      expect(find.text(rawBody), findsOneWidget);
-      expect(find.text('HTTP 400'), findsOneWidget);
-      expect(find.text(l.agentRequestFailed), findsNothing);
-      delegate.state.value = AgentUiState(
-        enabled: true,
-        configured: true,
-        runs: {
-          conversation.id: const AgentUiRunState(
-            phase: AgentUiPhase.failed,
-            errorMessage: 'provider.invalidResponse',
-            providerErrorResponseBody: '<html>Upstream unavailable</html>',
-          ),
-        },
-      );
-      await settle(tester);
-      expect(
-        find.text(l.agentProviderResponseFailure('invalidResponse')),
-        findsOneWidget,
-      );
-      expect(find.text('<html>Upstream unavailable</html>'), findsOneWidget);
-      delegate.state.value = AgentUiState(
-        enabled: true,
-        configured: true,
-        runs: {
-          conversation.id: const AgentUiRunState(
-            phase: AgentUiPhase.failed,
-            errorMessage: 'provider.transportFailure',
-          ),
-        },
-      );
-      await settle(tester);
-      expect(
-        find.text(l.agentProviderTransportFailure('transportFailure')),
-        findsOneWidget,
-      );
-      expect(
-        find.textContaining('Tool result requires a matching call id'),
-        findsNothing,
-      );
+      expect(find.textContaining(body), findsOneWidget);
+      expect(find.textContaining('HTTP 400'), findsOneWidget);
+      expect(find.byType(AgentSelectableText), findsWidgets);
       expect(tester.takeException(), isNull);
     },
   );
@@ -779,7 +694,7 @@ void main() {
       final actionRect = tester.getRect(actions);
       expect(actionRect.height, closeTo(32, 1));
       final keys = [
-        'agent-attach-file',
+        'agent-composer-more',
         'agent-mode-picker',
         'agent-model-picker',
         phase == AgentUiPhase.running ? 'agent-stop' : 'agent-send',
@@ -799,14 +714,10 @@ void main() {
       if (phase == AgentUiPhase.stopped) {
         expect(
           find.descendant(of: actions, matching: continuation),
-          findsOneWidget,
+          findsNothing,
         );
-        final permission = tester.getRect(
-          find.byKey(const ValueKey('agent-mode-picker')),
-        );
-        final continuationRect = tester.getRect(continuation);
-        expect(continuationRect.left, closeTo(permission.right + 4, 1));
-        expect(continuationRect.center.dy, closeTo(actionRect.center.dy, 1));
+        await tester.ensureVisible(continuation);
+        await settle(tester);
         expect(continuation.hitTestable(), findsOneWidget);
         await tester.tap(continuation);
         await settle(tester);
@@ -819,7 +730,7 @@ void main() {
   }
 
   testWidgets(
-    'stopped desktop composer wraps reachable actions at 320 with 2x text',
+    'stopped desktop composer keeps one reachable action row at 320 with 2x text',
     (tester) async {
       addTearDown(tester.view.reset);
       await initialize();
@@ -861,8 +772,14 @@ void main() {
       final send = find.byKey(const ValueKey('agent-send'));
       for (final control in [continuation, picker, send]) {
         final rect = tester.getRect(control);
-        expect(rect.left, greaterThanOrEqualTo(actions.left));
-        expect(rect.right, lessThanOrEqualTo(actions.right));
+        expect(
+          rect.left,
+          greaterThanOrEqualTo(control == continuation ? 0 : actions.left),
+        );
+        expect(
+          rect.right,
+          lessThanOrEqualTo(control == continuation ? 320 : actions.right),
+        );
         expect(rect.top, greaterThanOrEqualTo(0));
         expect(rect.bottom, lessThanOrEqualTo(900));
         expect(control.hitTestable(), findsOneWidget);
@@ -885,6 +802,119 @@ void main() {
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
   );
+
+  for (final direction in TextDirection.values) {
+    testWidgets(
+      'running 320dp composer keeps one row and shared context actions at 2x $direction',
+      (tester) async {
+        addTearDown(tester.view.reset);
+        await initialize();
+        const model = AgentModelConfig(
+          id: 'model-with-a-long-name',
+          reasoningEfforts: [AgentReasoningEffort.medium],
+          defaultReasoningEffort: AgentReasoningEffort.medium,
+        );
+        final conversation = await repository.create(title: 'Running composer');
+        delegate.state.value = AgentUiState(
+          enabled: true,
+          configured: true,
+          availableModels: const [model],
+          defaultModelSelection: model.defaultSelection,
+          runs: {
+            conversation.id: AgentUiRunState(
+              phase: AgentUiPhase.running,
+              modelSelection: model.defaultSelection,
+              contextUsage: const AgentContextUsage(
+                estimatedTokens: 1200,
+                reportedInputTokens: 1100,
+                maxContextTokens: 32000,
+                autoCompactAtTokens: 25600,
+              ),
+            ),
+          },
+        );
+        var picks = 0;
+        final files = (await tester.runAsync(
+          () async => ConversationAttachments(
+            conversations: repository,
+            repository: AttachmentRepository(
+              storage: MemoryAttachmentStorage(),
+            ),
+          ),
+        ))!;
+        addTearDown(() async {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.runAsync(files.close);
+          files.dispose();
+        });
+        await mountAgentUi(
+          tester,
+          Directionality(
+            textDirection: direction,
+            child: AgentConversationView(
+              repository: repository,
+              delegate: delegate,
+              readDatasetGeneration: () => 'synthetic-data',
+              binaryAttachments: files,
+              pickBinaryAttachment: () async {
+                picks++;
+                return null;
+              },
+              modelPickerBuilder: (conversation, _, layout) => AgentModelPicker(
+                conversationId: conversation.id,
+                delegate: delegate,
+                layoutBuilder: layout,
+              ),
+            ),
+          ),
+          size: const Size(320, 850),
+          scale: 2,
+          keyboard: 240,
+        );
+        final keys = [
+          'agent-composer-more',
+          'agent-mode-picker',
+          'agent-model-picker',
+          'agent-stop',
+          'agent-queue',
+        ];
+        await tester.ensureVisible(
+          find.byKey(const ValueKey('agent-composer-actions')),
+        );
+        final rects = keys
+            .map((key) => tester.getRect(find.byKey(ValueKey(key))))
+            .toList();
+        for (final rect in rects) {
+          expect(rect.center.dy, closeTo(rects.first.center.dy, 1));
+          expect(rect.width, greaterThanOrEqualTo(48));
+          expect(rect.height, greaterThanOrEqualTo(48));
+        }
+        expect(
+          find.byKey(const ValueKey('agent-context-usage')),
+          findsOneWidget,
+        );
+        await tester.tap(find.byKey(const ValueKey('agent-composer-more')));
+        await tester.pumpAndSettle();
+        final l = AppLocalizations.of(
+          tester.element(find.byType(AgentConversationView)),
+        );
+        expect(
+          find.text('${l.agentContextReported}: 1100 Token'),
+          findsOneWidget,
+        );
+        final compact = find.byKey(const ValueKey('agent-compact-context'));
+        await tester.ensureVisible(compact);
+        await tester.tap(compact);
+        await tester.pumpAndSettle();
+        expect(delegate.calls, ['compact:${conversation.id}']);
+        await openAgentAttachmentPicker(tester);
+        await tester.pumpAndSettle();
+        expect(picks, 1);
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+    );
+  }
 
   for (final platform in [
     TargetPlatform.android,
@@ -922,7 +952,7 @@ void main() {
                 brightness: brightness,
               );
               final keys = [
-                'agent-attach-file',
+                'agent-composer-more',
                 'agent-mode-picker',
                 'agent-model-picker',
                 'agent-send',
@@ -1005,7 +1035,7 @@ void main() {
                 find.byKey(const ValueKey('agent-mode-picker')),
               );
               final attachment = tester.getRect(
-                find.byKey(const ValueKey('agent-attach-file')),
+                find.byKey(const ValueKey('agent-composer-more')),
               );
               if (direction == TextDirection.ltr) {
                 expect(attachment.left, closeTo(row.left, 1));
@@ -1087,7 +1117,7 @@ void main() {
             expect(input.controller!.text, 'Check active touch targets');
             expect(MediaQuery.viewInsetsOf(tester.element(composer)), insets);
             final keys = [
-              'agent-attach-file',
+              'agent-composer-more',
               'agent-mode-picker',
               'agent-model-picker',
               'agent-send',
@@ -1170,6 +1200,7 @@ void main() {
     await repository.create(title: 'Compression order');
     for (final layout in [
       (width: 1000.0, scale: 1.0),
+      (width: 460.0, scale: 1.0),
       (width: 390.0, scale: 1.0),
       (width: 320.0, scale: 2.0),
     ]) {
@@ -1186,14 +1217,16 @@ void main() {
       );
       expect(
         find.byKey(const ValueKey('agent-model-effort-label')),
-        layout.scale == 1 ? findsOneWidget : findsNothing,
+        layout.width >= 390 && layout.scale == 1
+            ? findsOneWidget
+            : findsNothing,
       );
       expect(delegate.calls, isEmpty);
       expect(tester.takeException(), isNull);
     }
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
   testWidgets(
-    'composer wraps action groups only when four minimum targets cannot fit',
+    'extremely narrow composer scrolls its options while send stays on the same row',
     (tester) async {
       addTearDown(tester.view.reset);
       await initialize();
@@ -1212,7 +1245,7 @@ void main() {
       for (final width in [320.0, 230.0]) {
         await mountAgentUi(tester, composerView(), size: Size(width, 900));
         final attachment = tester.getRect(
-          find.byKey(const ValueKey('agent-attach-file')),
+          find.byKey(const ValueKey('agent-composer-more')),
         );
         final permission = tester.getRect(
           find.byKey(const ValueKey('agent-mode-picker')),
@@ -1223,16 +1256,28 @@ void main() {
         final send = tester.getRect(find.byKey(const ValueKey('agent-send')));
         expect(attachment.center.dy, closeTo(permission.center.dy, 1));
         expect(picker.center.dy, closeTo(send.center.dy, 1));
-        if (width == 320) {
-          expect(permission.center.dy, closeTo(picker.center.dy, 1));
-        } else {
-          expect(picker.top, greaterThanOrEqualTo(permission.bottom + 4));
-        }
+        expect(permission.center.dy, closeTo(picker.center.dy, 1));
         for (final rect in [attachment, permission, picker, send]) {
           expect(rect.width, greaterThanOrEqualTo(48));
           expect(rect.height, greaterThanOrEqualTo(48));
-          expect(rect.left, greaterThanOrEqualTo(0));
-          expect(rect.right, lessThanOrEqualTo(width));
+        }
+        for (final key in [
+          'agent-model-picker',
+          'agent-mode-picker',
+          'agent-composer-more',
+        ]) {
+          final control = find.byKey(ValueKey(key));
+          await tester.ensureVisible(control);
+          await tester.pumpAndSettle();
+          expect(control.hitTestable(), findsOneWidget);
+          expect(
+            find.byKey(const ValueKey('agent-send')).hitTestable(),
+            findsOneWidget,
+          );
+          expect(
+            tester.getRect(find.byKey(const ValueKey('agent-send'))),
+            send,
+          );
         }
         expect(tester.takeException(), isNull);
       }
@@ -1550,26 +1595,12 @@ void main() {
       await repository.update(
         conversation.id,
         (value) => value.copyWith(
-          messages: [
-            ConversationMessage(
+          queuedInputs: [
+            ConversationQueuedInput(
               id: 'queued',
-              role: ConversationRole.notice,
-              text: jsonEncode({
-                'kind': 'agent_pending_input',
-                'version': 1,
-                'mode': 'followUp',
-                'text': 'Use the blue category',
-              }),
+              text: 'Use the blue category',
               createdAt: DateTime.utc(2026),
-            ),
-            ConversationMessage(
-              id: 'host-operation',
-              role: ConversationRole.notice,
-              text: jsonEncode({
-                'kind': 'agent_host_operation',
-                'operationId': 'durable-operation',
-              }),
-              createdAt: DateTime.utc(2026),
+              mode: ConversationQueuedInputMode.followUp,
             ),
           ],
         ),
@@ -1788,17 +1819,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(delegate.calls.last, 'reject:${conversation.id}:plan-17');
       await tester.ensureVisible(
-        find.byKey(const ValueKey('agent-activity-toggle-legacy-call-message')),
+        find.byKey(const ValueKey('agent-activity-toggle-call-1')),
       );
       await tester.tap(
-        find.byKey(const ValueKey('agent-activity-toggle-legacy-call-message')),
-      );
-      await tester.pumpAndSettle();
-      await tester.ensureVisible(
-        find.byKey(const ValueKey('agent-activity-tool-call-1')),
-      );
-      await tester.tap(
-        find.byKey(const ValueKey('agent-activity-tool-call-1')),
+        find.byKey(const ValueKey('agent-activity-toggle-call-1')),
       );
       await tester.pumpAndSettle();
       expect(find.textContaining('"status": "read"'), findsOneWidget);

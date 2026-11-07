@@ -821,7 +821,7 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor>
             key: const ValueKey('knowledge-title'),
             controller: _title,
             enabled: !_saving,
-            maxLength: 256,
+
             decoration: InputDecoration(labelText: l.agentKnowledgeTitle),
             validator: (value) => value == null || value.trim().isEmpty
                 ? l.agentRequiredField
@@ -832,7 +832,7 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor>
             key: const ValueKey('knowledge-summary'),
             controller: _summary,
             enabled: !_saving,
-            maxLength: 2048,
+
             decoration: InputDecoration(labelText: l.agentKnowledgeSummary),
             minLines: 1,
             maxLines: 3,
@@ -885,7 +885,7 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor>
             TextFormField(
               controller: _source,
               enabled: !_saving,
-              maxLength: 2048,
+
               decoration: InputDecoration(labelText: l.agentKnowledgeSource),
               minLines: 1,
               maxLines: 3,
@@ -927,8 +927,7 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor>
           if (_error != null)
             Text(switch (_error) {
               KnowledgeError.conflict => l.agentKnowledgeConflict,
-              KnowledgeError.invalid ||
-              KnowledgeError.limit => l.agentKnowledgeInvalid,
+              KnowledgeError.invalid => l.agentKnowledgeInvalid,
               _ => l.agentKnowledgeStorageFailed,
             }, style: TextStyle(color: colors.error)),
         ],

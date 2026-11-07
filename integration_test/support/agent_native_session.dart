@@ -11,8 +11,8 @@ import 'package:sked/agent/attachments/attachment_storage.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
 import 'package:sked/agent/conversations/conversation_models.dart';
 import 'package:sked/agent/conversations/conversation_storage.dart';
-import 'package:sked/agent/knowledge/knowledge_storage.dart';
 import 'package:sked/agent/provider/provider.dart';
+import 'package:sked/agent/store/agent_store.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/backup/selective_restore_coordinator.dart';
@@ -320,30 +320,75 @@ class _MainStorage implements TimetableStorage {
   Future<String?> filePath() async => 'memory://agent-native-main';
 }
 
-class _ChatStorage extends ConversationStorage {
-  _ChatStorage(this.source) : super.base();
-  String source;
+class _ChatStorage extends SqliteConversationStorage {
+  _ChatStorage(super.store);
   var loads = 0;
+  var pageLoads = 0;
+  var fullConversationLoads = 0;
   var writes = 0;
-  var revision = 0;
+  var _restoreDepth = 0;
 
   @override
-  Future<ConversationStorageLoad> load() async {
+  Future<
+    ({
+      ConversationArchive archive,
+      Set<String> unloadedIds,
+      Map<String, ConversationPage> pages,
+    })
+  >
+  readIndex() async {
     loads++;
-    return ConversationStorageLoad(source: source);
+    return super.readIndex();
   }
 
   @override
-  Future<void> save(String value, {required int revision}) async {
-    final decoded = ConversationArchive.decode(value);
-    if (decoded.revision != revision) {
-      throw StateError(
-        'Conversation save revision does not match its archive.',
+  Future<void> writeArchive(
+    ConversationArchive archive, {
+    required ConversationArchive previous,
+  }) async {
+    await super.writeArchive(archive, previous: previous);
+    if (_restoreDepth == 0) writes++;
+  }
+
+  @override
+  Future<void> writeRestore(
+    ConversationArchive archive, {
+    required ConversationArchive previous,
+    required String restoreId,
+    required String fingerprint,
+    Iterable<String>? replacedConversationIds,
+  }) async {
+    _restoreDepth++;
+    try {
+      await super.writeRestore(
+        archive,
+        previous: previous,
+        restoreId: restoreId,
+        fingerprint: fingerprint,
+        replacedConversationIds: replacedConversationIds,
       );
+      writes++;
+    } finally {
+      _restoreDepth--;
     }
-    writes++;
-    this.revision = revision;
-    source = value;
+  }
+
+  @override
+  Future<AgentConversation?> readConversation(String id) async {
+    final result = await super.readConversation(id);
+    fullConversationLoads++;
+    return result;
+  }
+
+  @override
+  Future<ConversationPage> readPage(
+    String id, {
+    int? before,
+    int pageSize = 50,
+  }) async {
+    final result = await super.readPage(id, before: before, pageSize: pageSize);
+    pageLoads++;
+    return result;
   }
 }
 
@@ -474,6 +519,9 @@ AppData _mainFixture() {
   );
 }
 
+/// Shared immutable input for native UI and persistence performance protocols.
+ConversationArchive agentNativeConversationFixture() => _chatFixture();
+
 ConversationArchive _chatFixture() {
   final start = DateTime.utc(2026, 9, 7, 12);
   final messages = List.generate(agentNativeMessageCount, (index) {
@@ -532,13 +580,16 @@ ConversationArchive _chatFixture() {
 /// Owns every persistence boundary explicitly, while retaining the production
 /// codec, normal write scheduling, runtime and formal home-page composition.
 class AgentNativeSession {
-  AgentNativeSession({ProviderClient? provider})
-    : provider = provider ?? AgentNativeProvider() {
-    final fixture = _chatFixture();
-    _chat = _ChatStorage(fixture.encode());
+  AgentNativeSession._(
+    this.directory,
+    this.store,
+    ConversationArchive fixture, {
+    ProviderClient? provider,
+  }) : provider = provider ?? AgentNativeProvider() {
+    _chat = _ChatStorage(store);
     _main = _MainStorage(_mainFixture().encode());
     initialMainDigest = agentNativeDigest(_main.source);
-    initialArchiveDigest = agentNativeDigest(_chat.source);
+    initialArchiveDigest = agentNativeDigest(fixture.encode());
     originalMessages = List.unmodifiable(fixture.conversations.first.messages);
     originalHistoryDigest = historyDigest(originalMessages);
     _ownedProvider = _OwnedProvider(this.provider);
@@ -553,16 +604,45 @@ class AgentNativeSession {
         developerUi: developerUi,
       ),
       workspaceMutationLock: (action) => action(),
+      agentStore: store,
       agentConversationStorage: _chat,
       agentAttachmentStorage: MemoryAttachmentStorage(),
       backupStagingStorage: MemoryAttachmentStorage(),
       selectiveRestoreJournal: MemorySelectiveRestoreJournal(),
-      agentKnowledgeStorage: MemoryKnowledgeStorage(),
+      agentKnowledgeStorage: store.knowledge,
       agentCredentialStore: MemoryAgentCredentialStore(),
       agentProvider: _ownedProvider,
     );
   }
 
+  static Future<AgentNativeSession> create({ProviderClient? provider}) async {
+    final directory = await Directory.systemTemp.createTemp(
+      'sked-agent-native-store-',
+    );
+    final store = AgentStore.open(
+      filePath: '${directory.path}${Platform.pathSeparator}agent.sqlite',
+    );
+    try {
+      final fixture = _chatFixture();
+      await store.conversations.writeArchive(
+        fixture,
+        previous: ConversationArchive(),
+      );
+      return AgentNativeSession._(
+        directory,
+        store,
+        fixture,
+        provider: provider,
+      );
+    } catch (_) {
+      await store.close();
+      await directory.delete(recursive: true);
+      rethrow;
+    }
+  }
+
+  final Directory directory;
+  final AgentStore store;
   final ProviderClient provider;
   late final _OwnedProvider _ownedProvider;
   final layout = DesktopLayoutPreferences.memory();
@@ -580,10 +660,12 @@ class AgentNativeSession {
   late final String originalHistoryDigest;
   late final List<ConversationMessage> originalMessages;
   Future<Map<String, Object?>>? _closing;
+  Map<String, Object?>? _closedStorageReport;
 
   int get conversationLoads => _chat.loads;
   String get mainSource => _main.source;
-  String get chatSource => _chat.source;
+  Future<String> readChatSource() async =>
+      (await store.conversations.readArchive()).encode();
   AgentNativeProvider get controlledProvider {
     final client = provider;
     if (client is! AgentNativeProvider) {
@@ -616,18 +698,27 @@ class AgentNativeSession {
     'timetableCount': 1,
     'calendarCount': 1,
     'eventCount': 1,
-    'storage': 'explicit synthetic in-memory owners; production codecs',
+    'storage': 'synthetic main data; test-owned background SQLite Agent store; production codecs',
   };
 
-  Map<String, Object?> storageReport() => {
-    'mainLoads': _main.loads,
-    'mainWrites': _main.writes,
-    'conversationLoads': _chat.loads,
-    'conversationWrites': _chat.writes,
-    'conversationRevision': _chat.revision,
-    'mainSha256': agentNativeDigest(_main.source),
-    'archiveSha256': agentNativeDigest(_chat.source),
-  };
+  Future<Map<String, Object?>> storageReport({
+    bool includeArchive = true,
+  }) async =>
+      _closedStorageReport ??
+      {
+        'backend': 'drift-sqlite',
+        'mainLoads': _main.loads,
+        'mainWrites': _main.writes,
+        'conversationLoads': _chat.loads,
+        'conversationPageLoads': _chat.pageLoads,
+        'fullConversationLoads': _chat.fullConversationLoads,
+        'conversationWrites': _chat.writes,
+        'conversationRevision': await _chat.readRevision(),
+        'mainSha256': agentNativeDigest(_main.source),
+        'archiveReadForReport': includeArchive,
+        if (includeArchive)
+          'archiveSha256': agentNativeDigest(await readChatSource()),
+      };
 
   /// Called only after the native widgets have been unmounted. Every failed
   /// drain is retained; cleanup never replaces the primary journey failure.
@@ -675,6 +766,14 @@ class AgentNativeSession {
       layout.dispose();
       developerUi.dispose();
     });
+    await step('snapshot-agent-storage', () async {
+      _closedStorageReport = await storageReport();
+    });
+    await step('close-agent-store', store.close);
+    await step(
+      'remove-agent-data',
+      () => directory.delete(recursive: true).then<void>((_) {}),
+    );
     return {
       'status': steps.every((step) => step['status'] == 'complete')
           ? 'complete'

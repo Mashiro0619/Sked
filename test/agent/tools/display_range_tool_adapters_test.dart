@@ -483,10 +483,23 @@ void main() {
           generalMode: data.generalMode.copyWith(selectedDateIso: '2026-10-29'),
         ),
       );
-      await expectLater(
-        h.commit(stale),
-        throwsA(_problem(OperationErrorCode.conflict)),
-      );
+      if (tool == 'courses.display.prepare') {
+        final rebased = await h.commit(stale);
+        expect(rebased['status'], 'committed');
+        expect(
+          h.session.committedData.generalMode.selectedDateIso,
+          '2026-10-29',
+        );
+        final revert = await h.call('undo.prepare', {
+          'operationId': stale['operationId'],
+        });
+        await h.commit(revert);
+      } else {
+        await expectLater(
+          h.commit(stale),
+          throwsA(_problem(OperationErrorCode.conflict)),
+        );
+      }
       final before = h.session.committedData;
       final failed = await h.call(tool, args);
       storage.failNext = true;

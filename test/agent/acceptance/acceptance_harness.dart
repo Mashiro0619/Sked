@@ -260,6 +260,8 @@ class AcceptanceHarness {
     String name, [
     Map<String, Object?> args = const {},
   ]) async {
+    expect(app.agent.tools.registeredNames, contains(name));
+    expect(name.contains('.prepare') || name.endsWith('.commit'), isFalse);
     invokedTools.add(name);
     return app.agent.tools.execute(
       ProviderToolCall(
@@ -272,19 +274,15 @@ class AcceptanceHarness {
     );
   }
 
-  Future<Map<String, Object?>> commit(Map<String, Object?> plan) async {
-    final result = await call('mutation.commit', {'planId': plan['planId']});
+  Future<Map<String, Object?>> verifySaved(Map<String, Object?> result) async {
     expect(result['status'], 'committed');
     final receipt = await call('operations.status', {
-      'operationId': plan['operationId'],
+      'operationId': result['operationId'],
     });
     expect(receipt['status'], 'committed');
-    expect(receipt['operationId'], plan['operationId']);
+    expect(receipt['operationId'], result['operationId']);
     return result;
   }
-
-  Future<Map<String, Object?>> externalCommit(Map<String, Object?> plan) =>
-      call('external.commit', {'planId': plan['planId']});
 
   Future<void> run(Future<void> Function() task, {String? skill}) async {
     Object? failure;

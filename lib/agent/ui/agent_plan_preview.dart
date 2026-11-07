@@ -109,9 +109,8 @@ class _AgentPlanPreviewState extends State<AgentPlanPreview> {
           (config is Map ? config['name'] : null);
       if (label is String && label.trim().isNotEmpty) return label;
     }
-    return change['label'] as String? ??
-        agentSettingLabel(change, l) ??
-        change['key'] as String? ??
-        '';
+    return agentSettingLabel(change, l) ??
+        change['label'] as String? ??
+        l.agentPlanDetails;
   }
 }

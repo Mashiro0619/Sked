@@ -9,6 +9,7 @@ import '../../models/agent_settings.dart';
 import '../../utils/time_utils.dart' show tryParseStrictIsoDateTime;
 import '../attachments/attachment_models.dart';
 import '../interactions/agent_question.dart';
+import '../operations/tool_outcome.dart';
 import '../references/agent_composer_reference.dart';
 import 'conversation_usage.dart';
 
@@ -25,6 +26,160 @@ enum ConversationStatus {
 
 enum ConversationRole { user, assistant, tool, notice }
 
+enum ConversationQueuedInputMode { followUp, steering }
+
+enum ConversationControlKind { compactContext }
+
+enum ConversationControlStatus { queued, failed, cancelled }
+
+class ConversationControlCommand {
+  ConversationControlCommand({
+    required this.id,
+    required this.kind,
+    required this.createdAt,
+    this.status = ConversationControlStatus.queued,
+    this.errorMessage,
+  }) {
+    if (id.isEmpty) {
+      throw const FormatException('Invalid conversation control identity.');
+    }
+  }
+
+  final String id;
+  final ConversationControlKind kind;
+  final DateTime createdAt;
+  final ConversationControlStatus status;
+  final String? errorMessage;
+
+  ConversationControlCommand copyWith({
+    ConversationControlStatus? status,
+    String? errorMessage,
+    bool clearErrorMessage = false,
+  }) => ConversationControlCommand(
+    id: id,
+    kind: kind,
+    createdAt: createdAt,
+    status: status ?? this.status,
+    errorMessage: clearErrorMessage ? null : errorMessage ?? this.errorMessage,
+  );
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'kind': kind.name,
+    'createdAt': createdAt.toUtc().toIso8601String(),
+    'status': status.name,
+    if (errorMessage != null) 'errorMessage': errorMessage,
+  };
+
+  factory ConversationControlCommand.fromJson(Map<String, dynamic> json) =>
+      ConversationControlCommand(
+        id: _string(json, 'id'),
+        kind: _enumValue(ConversationControlKind.values, json['kind']),
+        createdAt: _date(json, 'createdAt'),
+        status: _enumValue(ConversationControlStatus.values, json['status']),
+        errorMessage: json['errorMessage'] == null
+            ? null
+            : _string(json, 'errorMessage', empty: true),
+      );
+}
+
+class ConversationQueuedInput {
+  ConversationQueuedInput({
+    required this.id,
+    required this.text,
+    required this.createdAt,
+    this.mode = ConversationQueuedInputMode.followUp,
+    this.modelSelection,
+    Iterable<String> attachmentIds = const [],
+    Iterable<AgentComposerReference> contextReferences = const [],
+  }) : attachmentIds = List.unmodifiable(attachmentIds),
+       contextReferences = AgentComposerReference.validatedList(
+         contextReferences,
+       ) {
+    if (id.isEmpty ||
+        this.attachmentIds.toSet().length != this.attachmentIds.length ||
+        this.attachmentIds.any((id) => !validAttachmentId(id)) ||
+        (text.trim().isEmpty &&
+            this.attachmentIds.isEmpty &&
+            this.contextReferences.isEmpty)) {
+      throw const FormatException('Invalid queued Agent input.');
+    }
+  }
+  final String id, text;
+  final DateTime createdAt;
+  final ConversationQueuedInputMode mode;
+  final AgentModelSelection? modelSelection;
+  final List<String> attachmentIds;
+  final List<AgentComposerReference> contextReferences;
+
+  ConversationQueuedInput copyWith({
+    String? text,
+    ConversationQueuedInputMode? mode,
+    AgentModelSelection? modelSelection,
+    Iterable<String>? attachmentIds,
+    Iterable<AgentComposerReference>? contextReferences,
+  }) => ConversationQueuedInput(
+    id: id,
+    text: text ?? this.text,
+    createdAt: createdAt,
+    mode: mode ?? this.mode,
+    modelSelection: modelSelection ?? this.modelSelection,
+    attachmentIds: attachmentIds ?? this.attachmentIds,
+    contextReferences: contextReferences ?? this.contextReferences,
+  );
+
+  ConversationMessage asUserMessage() => ConversationMessage(
+    id: id,
+    role: ConversationRole.user,
+    text: text,
+    createdAt: createdAt,
+    modelSelection: modelSelection,
+    attachmentIds: attachmentIds,
+    contextReferences: contextReferences,
+  );
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'text': text,
+    'createdAt': createdAt.toUtc().toIso8601String(),
+    'mode': mode.name,
+    if (modelSelection != null) 'modelSelection': modelSelection!.toJson(),
+    'attachmentIds': attachmentIds,
+    'contextReferences': contextReferences
+        .map((item) => item.toJson())
+        .toList(),
+  };
+
+  factory ConversationQueuedInput.fromJson(Map<String, dynamic> json) =>
+      ConversationQueuedInput(
+        id: _string(json, 'id'),
+        text: _string(json, 'text', empty: true),
+        createdAt: _date(json, 'createdAt'),
+        mode: _enumValue(ConversationQueuedInputMode.values, json['mode']),
+        modelSelection: json['modelSelection'] == null
+            ? null
+            : AgentModelSelection.fromJson(json['modelSelection']),
+        attachmentIds: _attachmentIds(json['attachmentIds']),
+        contextReferences: AgentComposerReference.decodeList(
+          json['contextReferences'],
+        ),
+      );
+}
+
+Map<String, Object?>? decodeConversationToolObject(String source) {
+  try {
+    final value = jsonDecode(source);
+    return value is Map<String, dynamic> ? Map.unmodifiable(value) : null;
+  } on FormatException {
+    return null;
+  }
+}
+
+ToolOutcome? conversationToolOutcome(String source) {
+  final value = decodeConversationToolObject(source);
+  return value == null ? null : ToolOutcome.fromResult(value);
+}
+
 class ConversationToolCall {
   const ConversationToolCall({
     required this.id,
@@ -37,6 +192,11 @@ class ConversationToolCall {
   final String arguments;
   final String? wireName;
 
+  static final _decodedArguments = Expando<({Map<String, Object?>? value})>();
+  Map<String, Object?>? get argumentsObject => (_decodedArguments[this] ??= (
+    value: decodeConversationToolObject(arguments),
+  )).value;
+
   Map<String, Object?> toJson() => {
     'id': id,
     'name': name,
@@ -46,9 +206,9 @@ class ConversationToolCall {
 
   factory ConversationToolCall.fromJson(Map<String, dynamic> json) =>
       ConversationToolCall(
-        id: _string(json, 'id', max: 256),
+        id: _string(json, 'id'),
         name: _string(json, 'name', max: 128),
-        arguments: _string(json, 'arguments', max: 128 * 1024, empty: true),
+        arguments: _string(json, 'arguments', empty: true),
         wireName: _readWireName(json),
       );
   static String? _readWireName(Map<String, dynamic> json) {
@@ -86,8 +246,7 @@ class ConversationMessage {
         'Only assistant messages have provider items.',
       );
     }
-    if (this.attachmentIds.length > ConversationAttachment.maxPerMessage ||
-        this.attachmentIds.any((id) => !validAttachmentId(id)) ||
+    if (this.attachmentIds.any((id) => !validAttachmentId(id)) ||
         this.attachmentIds.toSet().length != this.attachmentIds.length ||
         (this.attachmentIds.isNotEmpty &&
             role != ConversationRole.user &&
@@ -124,6 +283,11 @@ class ConversationMessage {
   final List<AgentComposerReference> contextReferences;
   final AttachmentDelivery attachmentDelivery;
 
+  /// Decoding belongs to the immutable protocol record, shared by every view.
+  late final ToolOutcome? toolOutcome = role == ConversationRole.tool
+      ? conversationToolOutcome(text)
+      : null;
+
   ConversationMessage copyWith({
     String? text,
     ConversationRole? role,
@@ -150,7 +314,7 @@ class ConversationMessage {
     attachmentDelivery: attachmentDelivery ?? this.attachmentDelivery,
   );
 
-  /// Bounded, immutable provider continuation data; never request headers or
+  /// Immutable provider continuation data; never request headers or
   /// credentials. The model endpoint remains bound at conversation level.
   final List<Map<String, Object?>> responseItems;
 
@@ -179,7 +343,9 @@ class ConversationMessage {
       json,
       'toolCalls',
     ).map(ConversationToolCall.fromJson).toList();
-    final toolCallId = _optionalString(json, 'toolCallId', max: 256);
+    final toolCallId = json['toolCallId'] == null
+        ? null
+        : _string(json, 'toolCallId');
     if ((role == ConversationRole.tool) != (toolCallId != null) ||
         (calls.isNotEmpty && role != ConversationRole.assistant) ||
         calls.map((call) => call.id).toSet().length != calls.length) {
@@ -214,17 +380,12 @@ List<Map<String, Object?>> _freezeResponseItems(
   Iterable<Map<String, Object?>> source,
 ) {
   final items = source.toList();
-  var nodes = 0;
-  Object? freeze(Object? value, int depth) {
-    if (depth > 20 || ++nodes > 20000) {
-      throw const FormatException('Provider continuation is too complex.');
-    }
+  Object? freeze(Object? value) {
     if (value is Map) {
       final result = <String, Object?>{};
       for (final entry in value.entries) {
         final key = entry.key;
         if (key is! String ||
-            key.length > 128 ||
             const {
               'authorization',
               'api_key',
@@ -236,17 +397,12 @@ List<Map<String, Object?>> _freezeResponseItems(
             }.contains(key.toLowerCase())) {
           throw const FormatException('Invalid provider continuation field.');
         }
-        result[key] = freeze(entry.value, depth + 1);
+        result[key] = freeze(entry.value);
       }
       return Map<String, Object?>.unmodifiable(result);
     }
     if (value is List) {
-      return List<Object?>.unmodifiable(
-        value.map((item) => freeze(item, depth + 1)),
-      );
-    }
-    if (value is String && value.length > 512 * 1024) {
-      throw const FormatException('Provider continuation text is too large.');
+      return List<Object?>.unmodifiable(value.map(freeze));
     }
     if (value == null ||
         value is String ||
@@ -258,13 +414,8 @@ List<Map<String, Object?>> _freezeResponseItems(
   }
 
   final result = List<Map<String, Object?>>.unmodifiable(
-    items.map((item) => freeze(item, 0)! as Map<String, Object?>),
+    items.map((item) => freeze(item)! as Map<String, Object?>),
   );
-  if (utf8.encode(jsonEncode(result)).length > 512 * 1024) {
-    throw const FormatException(
-      'Provider continuation exceeds its byte budget.',
-    );
-  }
   return result;
 }
 
@@ -349,7 +500,7 @@ class ConversationSource {
   }
 }
 
-/// Provenance for a reviewed source, separate from its data body.
+/// Bounded provenance for a reviewed source, separate from its data body.
 /// Its absence preserves the exact JSON and digest of historical sources.
 class ConversationSourceProvenance {
   const ConversationSourceProvenance({
@@ -407,6 +558,7 @@ class AgentConversation {
   AgentConversation({
     required this.id,
     required this.title,
+    this.titleWasEdited = false,
     required this.createdAt,
     required this.updatedAt,
     this.mode = AgentPermissionMode.ask,
@@ -428,6 +580,8 @@ class AgentConversation {
     Iterable<ConversationHistoryVersion> historyVersions = const [],
     Iterable<ConversationReplyRevision> replyRevisions = const [],
     Iterable<ConversationRedoBatch> redoBatches = const [],
+    Iterable<ConversationQueuedInput> queuedInputs = const [],
+    Iterable<ConversationControlCommand> queuedControls = const [],
   }) : messages = List.unmodifiable(messages),
        sources = List.unmodifiable(sources),
        runs = List.unmodifiable(runs),
@@ -437,18 +591,69 @@ class AgentConversation {
        turns = List.unmodifiable(turns),
        historyVersions = List.unmodifiable(historyVersions),
        replyRevisions = List.unmodifiable(replyRevisions),
-       redoBatches = List.unmodifiable(redoBatches) {
+       redoBatches = List.unmodifiable(redoBatches),
+       queuedInputs = List.unmodifiable(queuedInputs),
+       queuedControls = List.unmodifiable(queuedControls) {
+    if (id.trim().isEmpty || title.trim().isEmpty) {
+      throw const FormatException(
+        'Conversation identity and title are required.',
+      );
+    }
     if (executionHistoryStart < 0 ||
         executionHistoryStart > this.messages.length) {
       throw const FormatException('Invalid executable history boundary.');
     }
+    _validateStoredReferences();
     validateConversationTurns(this.messages, this.runs, this.turns);
+    if (this.queuedInputs.map((item) => item.id).toSet().length !=
+            this.queuedInputs.length ||
+        this.queuedInputs.any(
+          (item) => this.messages.any((message) => message.id == item.id),
+        )) {
+      throw const FormatException('Duplicate queued input identity.');
+    }
+    if (this.queuedControls.map((item) => item.id).toSet().length !=
+        this.queuedControls.length) {
+      throw const FormatException('Duplicate conversation control identity.');
+    }
     _validatePendingQuestion();
     _validateReferenceAttachments();
   }
 
+  AgentConversation._withUpdatedAt(AgentConversation source, this.updatedAt)
+    : id = source.id,
+      title = source.title,
+      titleWasEdited = source.titleWasEdited,
+      createdAt = source.createdAt,
+      mode = source.mode,
+      status = source.status,
+      archived = source.archived,
+      draft = source.draft,
+      connectionFingerprint = source.connectionFingerprint,
+      runId = source.runId,
+      modelSelection = source.modelSelection,
+      pendingQuestion = source.pendingQuestion,
+      executionHistoryStart = source.executionHistoryStart,
+      messages = source.messages,
+      sources = source.sources,
+      runs = source.runs,
+      attachments = source.attachments,
+      draftAttachmentIds = source.draftAttachmentIds,
+      draftReferences = source.draftReferences,
+      turns = source.turns,
+      historyVersions = source.historyVersions,
+      replyRevisions = source.replyRevisions,
+      redoBatches = source.redoBatches,
+      queuedInputs = source.queuedInputs,
+      queuedControls = source.queuedControls;
+
+  /// Timestamp changes reuse the already validated immutable records.
+  AgentConversation withUpdatedAt(DateTime value) =>
+      value == updatedAt ? this : AgentConversation._withUpdatedAt(this, value);
+
   final String id;
   final String title;
+  final bool titleWasEdited;
   final DateTime createdAt;
   final DateTime updatedAt;
   final AgentPermissionMode mode;
@@ -472,11 +677,17 @@ class AgentConversation {
   final List<ConversationHistoryVersion> historyVersions;
   final List<ConversationReplyRevision> replyRevisions;
   final List<ConversationRedoBatch> redoBatches;
+  final List<ConversationQueuedInput> queuedInputs;
+  final List<ConversationControlCommand> queuedControls;
+  bool get hasPendingControls => queuedControls.any(
+    (command) => command.status != ConversationControlStatus.cancelled,
+  );
   ConversationRedoBatch? get pendingRedo =>
       redoBatches.where((batch) => !batch.isTerminal).firstOrNull;
 
   AgentConversation copyWith({
     String? title,
+    bool? titleWasEdited,
     DateTime? updatedAt,
     AgentPermissionMode? mode,
     ConversationStatus? status,
@@ -500,9 +711,13 @@ class AgentConversation {
     Iterable<ConversationHistoryVersion>? historyVersions,
     Iterable<ConversationReplyRevision>? replyRevisions,
     Iterable<ConversationRedoBatch>? redoBatches,
+    Iterable<ConversationQueuedInput>? queuedInputs,
+    Iterable<ConversationControlCommand>? queuedControls,
   }) => AgentConversation(
     id: id,
     title: title ?? this.title,
+    titleWasEdited:
+        titleWasEdited ?? (title != null ? true : this.titleWasEdited),
     createdAt: createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     mode: mode ?? this.mode,
@@ -530,11 +745,14 @@ class AgentConversation {
     historyVersions: historyVersions ?? this.historyVersions,
     replyRevisions: replyRevisions ?? this.replyRevisions,
     redoBatches: redoBatches ?? this.redoBatches,
+    queuedInputs: queuedInputs ?? this.queuedInputs,
+    queuedControls: queuedControls ?? this.queuedControls,
   );
 
   Map<String, Object?> toJson() => {
     'id': id,
     'title': title,
+    'titleWasEdited': titleWasEdited,
     'createdAt': createdAt.toUtc().toIso8601String(),
     'updatedAt': updatedAt.toUtc().toIso8601String(),
     'mode': mode.name,
@@ -563,6 +781,10 @@ class AgentConversation {
     'historyVersions': historyVersions.map((item) => item.toJson()).toList(),
     'replyRevisions': replyRevisions.map((item) => item.toJson()).toList(),
     'redoBatches': redoBatches.map((item) => item.toJson()).toList(),
+    if (queuedInputs.isNotEmpty)
+      'queuedInputs': queuedInputs.map((item) => item.toJson()).toList(),
+    if (queuedControls.isNotEmpty)
+      'queuedControls': queuedControls.map((item) => item.toJson()).toList(),
   };
 
   factory AgentConversation.fromJson(Map<String, dynamic> json) {
@@ -602,49 +824,22 @@ class AgentConversation {
       json,
       'redoBatches',
     ).map(ConversationRedoBatch.fromJson).toList();
+    final queuedInputs = _objects(
+      json,
+      'queuedInputs',
+    ).map(ConversationQueuedInput.fromJson).toList();
+    final queuedControls = _objects(
+      json,
+      'queuedControls',
+    ).map(ConversationControlCommand.fromJson).toList();
     final executionHistoryStart = json['executionHistoryStart'] ?? 0;
-    if (executionHistoryStart is! int ||
-        executionHistoryStart < 0 ||
-        executionHistoryStart > messages.length ||
-        historyVersions.map((item) => item.id).toSet().length !=
-            historyVersions.length ||
-        replyRevisions.map((item) => item.id).toSet().length !=
-            replyRevisions.length ||
-        redoBatches.map((item) => item.id).toSet().length !=
-            redoBatches.length ||
-        redoBatches.where((item) => !item.isTerminal).length > 1 ||
-        redoBatches.any((item) => item.conversationId != json['id'])) {
-      throw const FormatException('Invalid conversation history references.');
-    }
-    final attachmentIds = attachments.map((a) => a.id).toSet();
-    if (attachmentIds.length != attachments.length ||
-        [
-          ...draftAttachmentIds,
-          ...messages.expand((m) => m.attachmentIds),
-          ...historyVersions
-              .expand((v) => v.messages)
-              .expand((m) => m.attachmentIds),
-          ...redoBatches.expand((batch) => batch.attachmentIds),
-        ].any((id) => !attachmentIds.contains(id))) {
-      throw const FormatException(
-        'Missing or duplicate attachment references.',
-      );
-    }
-    if (messages.map((message) => message.id).toSet().length !=
-            messages.length ||
-        sources.map((source) => source.id).toSet().length != sources.length ||
-        runs.map((run) => run.id).toSet().length != runs.length ||
-        runs
-                .expand((run) => run.requests)
-                .map((request) => request.id)
-                .toSet()
-                .length !=
-            runs.fold<int>(0, (count, run) => count + run.requests.length)) {
-      throw const FormatException('Duplicate conversation item ID.');
+    if (executionHistoryStart is! int) {
+      throw const FormatException('Invalid executable history boundary.');
     }
     return AgentConversation(
       id: _string(json, 'id', max: 256),
       title: _string(json, 'title'),
+      titleWasEdited: json['titleWasEdited'] as bool? ?? false,
       createdAt: _date(json, 'createdAt'),
       updatedAt: _date(json, 'updatedAt'),
       mode: _enumValue(AgentPermissionMode.values, json['mode']),
@@ -676,7 +871,31 @@ class AgentConversation {
       historyVersions: historyVersions,
       replyRevisions: replyRevisions,
       redoBatches: redoBatches,
+      queuedInputs: queuedInputs,
+      queuedControls: queuedControls,
     );
+  }
+
+  void _validateStoredReferences() {
+    if (historyVersions.map((item) => item.id).toSet().length !=
+            historyVersions.length ||
+        replyRevisions.map((item) => item.id).toSet().length !=
+            replyRevisions.length ||
+        redoBatches.map((item) => item.id).toSet().length !=
+            redoBatches.length ||
+        redoBatches.where((item) => !item.isTerminal).length > 1 ||
+        redoBatches.any((item) => item.conversationId != id)) {
+      throw const FormatException('Invalid conversation history references.');
+    }
+    if (sources.map((source) => source.id).toSet().length != sources.length ||
+        runs
+                .expand((run) => run.requests)
+                .map((request) => request.id)
+                .toSet()
+                .length !=
+            runs.fold<int>(0, (count, run) => count + run.requests.length)) {
+      throw const FormatException('Duplicate conversation item ID.');
+    }
   }
 
   void _validatePendingQuestion() {
@@ -713,21 +932,24 @@ class AgentConversation {
 
   void _validateReferenceAttachments() {
     final metadata = <String, ConversationAttachment>{};
-    final duplicates = <String>{};
     for (final attachment in attachments) {
-      if (metadata.containsKey(attachment.id)) duplicates.add(attachment.id);
+      if (metadata.containsKey(attachment.id)) {
+        throw const FormatException('Duplicate attachment identity.');
+      }
       metadata[attachment.id] = attachment;
     }
     void validate(
       Iterable<AgentComposerReference> references,
       Iterable<String> attachedIds,
     ) {
+      if (attachedIds.any((id) => !metadata.containsKey(id))) {
+        throw const FormatException('Missing attachment references.');
+      }
       for (final reference in references) {
         if (reference.kind != AgentComposerReferenceKind.attachment) continue;
         final attachment = metadata[reference.attachmentId];
         if (reference.conversationId != id ||
             attachment == null ||
-            duplicates.contains(reference.attachmentId) ||
             attachment.digest != reference.attachmentDigest ||
             !attachedIds.contains(reference.attachmentId)) {
           throw const FormatException(
@@ -738,11 +960,19 @@ class AgentConversation {
     }
 
     validate(draftReferences, draftAttachmentIds);
-    for (final message in [
-      ...messages,
-      ...historyVersions.expand((version) => version.messages),
-    ]) {
+    for (final input in queuedInputs) {
+      validate(input.contextReferences, input.attachmentIds);
+    }
+    for (final message in messages) {
       validate(message.contextReferences, message.attachmentIds);
+    }
+    for (final version in historyVersions) {
+      for (final message in version.messages) {
+        validate(message.contextReferences, message.attachmentIds);
+      }
+    }
+    for (final batch in redoBatches) {
+      validate(const [], batch.attachmentIds);
     }
   }
 }
@@ -787,69 +1017,34 @@ class ConversationArchive {
        handoffs = List.unmodifiable(handoffs),
        terminatedIds = Set.unmodifiable(terminatedIds);
 
-  static const currentVersion = 8;
+  static const currentVersion = 9;
   final int revision;
   final String? selectedId;
   final List<AgentConversation> conversations;
   final List<ConversationHandoff> handoffs;
   final Set<String> terminatedIds;
 
-  String encode() {
-    final encoded = jsonEncode({
-      'version': currentVersion,
-      'revision': revision,
-      'selectedId': selectedId,
-      'conversations': conversations.map((item) => item.toJson()).toList(),
-      'handoffs': handoffs.map((item) => item.toJson()).toList(),
-      'terminatedIds': terminatedIds.toList(),
-    });
-    return encoded;
-  }
+  Map<String, Object?> toJson() => {
+    'version': currentVersion,
+    'revision': revision,
+    'selectedId': selectedId,
+    'conversations': conversations.map((item) => item.toJson()).toList(),
+    'handoffs': handoffs.map((item) => item.toJson()).toList(),
+    'terminatedIds': terminatedIds.toList(),
+  };
+  String encode() => jsonEncode(toJson());
 
   factory ConversationArchive.decode(String source) {
-    final json = _object(jsonDecode(source));
-    if ((!const [
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
-          7,
-          currentVersion,
-        ].contains(json['version'])) ||
+    return ConversationArchive.fromJson(_object(jsonDecode(source)));
+  }
+
+  factory ConversationArchive.fromJson(Map<String, dynamic> json) {
+    if (json['version'] != currentVersion ||
         json['revision'] is! int ||
         (json['revision'] as int) < 0) {
       throw const FormatException('Unsupported conversation archive version.');
     }
     final rawConversations = _objects(json, 'conversations');
-    if ((json['version'] as int) < 8 &&
-        rawConversations.any(
-          (conversation) => _objects(
-            conversation,
-            'redoBatches',
-          ).any((batch) => batch['phase'] == 'abandoned'),
-        )) {
-      throw const FormatException(
-        'Ending redo requires conversation archive version 8.',
-      );
-    }
-    if ((json['version'] as int) < 6 &&
-        rawConversations.any(
-          (item) =>
-              item['pendingQuestion'] != null ||
-              item['status'] == 'waitingUser',
-        )) {
-      throw const FormatException(
-        'Question waits require conversation archive version 6.',
-      );
-    }
-    if ((json['version'] as int) < 7 &&
-        rawConversations.any(_hasComposerReferenceFields)) {
-      throw const FormatException(
-        'Composer references require conversation archive version 7.',
-      );
-    }
     final conversations = rawConversations
         .map(AgentConversation.fromJson)
         .toList();
@@ -917,7 +1112,6 @@ class ConversationArchive {
 List<String> _attachmentIds(Object? value) {
   if (value == null) return const [];
   if (value is! List ||
-      value.length > ConversationAttachment.maxPerMessage ||
       value.any((id) => id is! String || !validAttachmentId(id)) ||
       value.toSet().length != value.length) {
     throw const FormatException('Invalid attachment references.');
@@ -932,6 +1126,7 @@ Set<String> conversationAttachmentIds(AgentConversation conversation) => {
       .expand((version) => version.messages)
       .expand((message) => message.attachmentIds),
   ...conversation.redoBatches.expand((batch) => batch.attachmentIds),
+  ...conversation.queuedInputs.expand((input) => input.attachmentIds),
 };
 
 Iterable<AgentComposerReference> _referencesForAttachments(
@@ -945,16 +1140,6 @@ Iterable<AgentComposerReference> _referencesForAttachments(
         reference.kind != AgentComposerReferenceKind.attachment ||
         remaining.contains(reference.attachmentId),
   );
-}
-
-bool _hasComposerReferenceFields(Map<String, dynamic> conversation) {
-  if (conversation.containsKey('draftReferences')) return true;
-  final messages = [
-    ..._objects(conversation, 'messages'),
-    for (final version in _objects(conversation, 'historyVersions'))
-      ..._objects(version, 'messages'),
-  ];
-  return messages.any((message) => message.containsKey('contextReferences'));
 }
 
 Map<String, dynamic> _object(Object? value) {

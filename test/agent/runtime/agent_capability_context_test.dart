@@ -56,25 +56,6 @@ void main() {
     );
 
     test(
-      '${protocol.name} keeps original discovery definitions during read-only settlement',
-      () async {
-        final h = await _Harness.create(protocol: protocol, maxRounds: 2);
-        addTearDown(h.close);
-        await h.runtime.send(h.id, 'Read before the budget closes.');
-        expect(h.wires, hasLength(2));
-        expect(h.wires.last['tools'] ?? [], isEmpty);
-        expect(h.toolResult(h.wires.last), h.discoveryReply.text);
-        expect(jsonDecode(h.toolResult(h.wires.last))['tools'], [
-          h.definitionRecord,
-        ]);
-        expect(
-          h.runtime.state.value.runFor(h.id).errorMessage,
-          'roundBudgetExceeded',
-        );
-      },
-    );
-
-    test(
       '${protocol.name} reply regeneration retains definitions with its empty tool set',
       () async {
         final h = await _Harness.create(protocol: protocol);
@@ -206,7 +187,6 @@ class _Harness {
   static Future<_Harness> create({
     AgentModelProtocol protocol = AgentModelProtocol.chatCompletions,
     MemoryConversationStorage? storage,
-    int maxRounds = 24,
     String? changedDefinition,
     bool alwaysExpose = false,
     String apiKey = '',
@@ -288,7 +268,6 @@ class _Harness {
       executeTool: h.core.tools.execute,
       onRunSettled: h.core.tools.finishScope,
       onOpenSettings: () {},
-      limits: AgentRuntimeLimits(maxModelRounds: maxRounds),
     );
     return h;
   }

@@ -1,4 +1,4 @@
-part of 'agent_runtime_controller.dart';
+part of 'agent_service.dart';
 
 bool _sameReferences(
   List<AgentComposerReference> first,
@@ -19,7 +19,10 @@ String _referenceBindingDigest(List<AgentComposerReference> references) =>
         )
         .toString();
 
-String _referenceMessageText(ConversationMessage message, _Run run) {
+String _referenceMessageText(
+  ConversationMessage message,
+  _ExecutionAttempt run,
+) {
   if (message.contextReferences.isEmpty) return message.text;
   final current = message.id == run.inputMessageId;
   final context = current
@@ -35,9 +38,9 @@ String _referenceMessageText(ConversationMessage message, _Run run) {
       '${jsonEncode(context)}';
 }
 
-extension _AgentReferenceContext on AgentRuntimeController {
+extension _AgentReferenceContext on AgentService {
   Future<List<AgentComposerReference>> _validateInputReferences(
-    _Run run,
+    _ExecutionAttempt run,
     List<AgentComposerReference> references,
   ) async {
     _checkRun(run);
@@ -82,7 +85,7 @@ extension _AgentReferenceContext on AgentRuntimeController {
     }
   }
 
-  Future<void> _prepareInputReferenceContext(_Run run) async {
+  Future<void> _prepareInputReferenceContext(_ExecutionAttempt run) async {
     if (run.inputReferences.isEmpty) return;
     if (!run.referencesValidated) {
       run.inputReferences = await _validateInputReferences(

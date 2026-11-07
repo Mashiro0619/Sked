@@ -13,23 +13,18 @@ class AgentTaskPlanStep {
     this.detail,
     Iterable<String> operationIds = const [],
   }) : operationIds = List.unmodifiable(operationIds) {
-    _text(id, 128);
-    _text(title, maxTitleLength);
+    _text(id);
+    _text(title);
     if (detail != null) {
-      _text(detail, maxDetailLength);
+      _text(detail);
     }
-    if (this.operationIds.length > maxOperationIds ||
-        this.operationIds.toSet().length != this.operationIds.length) {
+    if (this.operationIds.toSet().length != this.operationIds.length) {
       throw const FormatException('Invalid task plan operation identities.');
     }
     for (final operationId in this.operationIds) {
-      _text(operationId, 256);
+      _text(operationId);
     }
   }
-
-  static const maxTitleLength = 240;
-  static const maxDetailLength = 2000;
-  static const maxOperationIds = 32;
 
   final String id;
   final String title;
@@ -54,17 +49,12 @@ class AgentTaskPlanStep {
       throw const FormatException('Invalid task plan status.');
     }
     return AgentTaskPlanStep(
-      id: _text(value['id'], 128),
-      title: _text(value['title'], maxTitleLength),
+      id: _text(value['id']),
+      title: _text(value['title']),
       status: status,
-      detail: value['detail'] == null
-          ? null
-          : _text(value['detail'], maxDetailLength),
+      detail: value['detail'] == null ? null : _text(value['detail']),
       operationIds: value.containsKey('operationIds')
-          ? _list(
-              value['operationIds'],
-              maxOperationIds,
-            ).map((id) => _text(id, 256))
+          ? _list(value['operationIds']).map((id) => _text(id))
           : const [],
     );
   }
@@ -77,15 +67,13 @@ class AgentTaskPlan {
     required this.revision,
     required Iterable<AgentTaskPlanStep> steps,
   }) : steps = List.unmodifiable(steps) {
-    _text(runId, 256);
-    if (revision < 1 || revision > maxRevision) {
+    _text(runId);
+    if (revision < 1) {
       throw const FormatException('Invalid task plan revision.');
     }
     _validateSteps(this.steps);
   }
 
-  static const maxSteps = 20;
-  static const maxRevision = 0x7fffffff;
   final String runId;
   final int revision;
   final List<AgentTaskPlanStep> steps;
@@ -108,12 +96,10 @@ class AgentTaskPlan {
       throw const FormatException('Invalid task plan revision.');
     }
     return AgentTaskPlan(
-      runId: _text(value['runId'], 256),
+      runId: _text(value['runId']),
       revision: revision,
-      steps: _list(
-        value['steps'],
-        maxSteps,
-      ).map((step) => AgentTaskPlanStep.fromJson(_object(step))),
+      steps: _list(value['steps'])
+          .map((step) => AgentTaskPlanStep.fromJson(_object(step))),
     );
   }
 
@@ -130,10 +116,9 @@ List<AgentTaskPlanStep> parseAgentTaskPlanSteps(
   Map<String, Object?> arguments,
 ) {
   _keys(arguments, {'steps'});
-  final steps = _list(
-    arguments['steps'],
-    AgentTaskPlan.maxSteps,
-  ).map((step) => AgentTaskPlanStep.fromJson(_object(step))).toList();
+  final steps = _list(arguments['steps'])
+      .map((step) => AgentTaskPlanStep.fromJson(_object(step)))
+      .toList();
   _validateSteps(steps);
   return List.unmodifiable(steps);
 }
@@ -148,18 +133,13 @@ final agentUpdatePlanTool = ToolDefinition(
     'properties': {
       'steps': {
         'type': 'array',
-        'maxItems': AgentTaskPlan.maxSteps,
         'items': {
           'type': 'object',
           'additionalProperties': false,
           'required': ['id', 'title', 'status'],
           'properties': {
-            'id': {'type': 'string', 'minLength': 1, 'maxLength': 128},
-            'title': {
-              'type': 'string',
-              'minLength': 1,
-              'maxLength': AgentTaskPlanStep.maxTitleLength,
-            },
+            'id': {'type': 'string', 'minLength': 1},
+            'title': {'type': 'string', 'minLength': 1},
             'status': {
               'type': 'string',
               'enum': AgentTaskStepStatus.values
@@ -169,13 +149,11 @@ final agentUpdatePlanTool = ToolDefinition(
             'detail': {
               'type': ['string', 'null'],
               'minLength': 1,
-              'maxLength': AgentTaskPlanStep.maxDetailLength,
             },
             'operationIds': {
               'type': 'array',
-              'maxItems': AgentTaskPlanStep.maxOperationIds,
               'uniqueItems': true,
-              'items': {'type': 'string', 'minLength': 1, 'maxLength': 256},
+              'items': {'type': 'string', 'minLength': 1},
             },
           },
         },
@@ -259,8 +237,7 @@ AgentTaskPlan? projectAgentTaskPlan(AgentConversation conversation) {
 }
 
 void _validateSteps(List<AgentTaskPlanStep> steps) {
-  if (steps.length > AgentTaskPlan.maxSteps ||
-      steps.map((step) => step.id).toSet().length != steps.length ||
+  if (steps.map((step) => step.id).toSet().length != steps.length ||
       steps
               .where((step) => step.status == AgentTaskStepStatus.inProgress)
               .length >
@@ -269,15 +246,15 @@ void _validateSteps(List<AgentTaskPlanStep> steps) {
   }
 }
 
-String _text(Object? value, int maximum) {
-  if (value is! String || value.trim().isEmpty || value.length > maximum) {
+String _text(Object? value) {
+  if (value is! String || value.trim().isEmpty) {
     throw const FormatException('Invalid task plan text.');
   }
   return value;
 }
 
-List<Object?> _list(Object? value, int maximum) {
-  if (value is! List || value.length > maximum) {
+List<Object?> _list(Object? value) {
+  if (value is! List) {
     throw const FormatException('Invalid task plan list.');
   }
   return value;

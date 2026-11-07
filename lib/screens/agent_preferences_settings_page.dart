@@ -114,36 +114,24 @@ class _AgentPreferencesSettingsPageState
         Semantics(label: title, child: child),
       ],
     );
-    Widget number(
-      String key,
-      String title,
-      TextEditingController controller,
-      int min,
-      int max, {
-      bool retention = false,
-    }) => labelled(
-      title,
-      TextFormField(
-        key: ValueKey(key),
-        controller: controller,
-        enabled: !_saving,
-        keyboardType: TextInputType.number,
-        decoration: InputDecoration(
-          helperText: retention ? null : '$min–$max',
-          errorMaxLines: 3,
-        ),
-        onChanged: (_) => setState(() {}),
-        validator: (text) {
-          final value = int.tryParse(text ?? '');
-          return value == null ||
-                  value < min ||
-                  value > max ||
-                  (retention && value != 0 && value < 7)
-              ? l.agentInvalidPreference
-              : null;
-        },
-      ),
-    );
+    Widget number(String key, String title, TextEditingController controller) =>
+        labelled(
+          title,
+          TextFormField(
+            key: ValueKey(key),
+            controller: controller,
+            enabled: !_saving,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(errorMaxLines: 3),
+            onChanged: (_) => setState(() {}),
+            validator: (text) {
+              final value = int.tryParse(text ?? '');
+              return value == null || value < 0
+                  ? l.agentInvalidPreference
+                  : null;
+            },
+          ),
+        );
     Widget section(String key, String title, String hint, Widget child) =>
         Padding(
           key: ValueKey(key),
@@ -191,7 +179,7 @@ class _AgentPreferencesSettingsPageState
                     enabled: !_saving,
                     minLines: 3,
                     maxLines: 8,
-                    maxLength: 16000,
+
                     onChanged: (_) => setState(() {}),
                   ),
                 ),
@@ -204,9 +192,6 @@ class _AgentPreferencesSettingsPageState
                   'agent-history-retention',
                   l.agentHistoryRetentionDays,
                   _retention,
-                  0,
-                  3650,
-                  retention: true,
                 ),
               ),
               if (_error case final error?) ...[

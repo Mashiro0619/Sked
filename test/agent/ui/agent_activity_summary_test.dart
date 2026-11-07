@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/ui/agent_activity_summary.dart';
+import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/ui/agent_conversation_timeline.dart';
 import 'package:sked/agent/ui/agent_selectable_text.dart';
 import 'package:sked/agent/ui/agent_turn_activity.dart';
@@ -17,16 +18,23 @@ Future<AgentTimelineActivity> buildHostActivitySummaryFixture() async {
   final h = ToolAdapterHarness();
   await h.initialize();
   try {
-    final plan = await h.call('mutation.prepare', {
-      'commands': [
-        {
-          'kind': 'calendar',
-          'action': 'create',
-          'values': {'name': '项目计划'},
-        },
-      ],
-    });
-    await h.commit(plan);
+    await h.host.execute(
+      ProviderToolCall(
+        id: 'create',
+        name: 'mutation.apply',
+        arguments: jsonEncode({
+          'commands': [
+            {
+              'kind': 'calendar',
+              'action': 'create',
+              'values': {'name': '项目计划'},
+            },
+          ],
+        }),
+      ),
+      h.scope,
+      (_) async => null,
+    );
     final calendar = h.session.committedData.generalMode.schedules.singleWhere(
       (item) => item.name == '项目计划',
     );
@@ -194,44 +202,54 @@ void main() {
     }
     final settings = summarizeAgentToolActivity(
       tool('settings.get', {
-        'keys': ['agent.maxTotalTokens', 'secret-unknown-key'],
+        'keys': ['agent.historyRetentionDays', 'secret-unknown-key'],
       }),
       l,
     );
-    expect(settings.detail, l.agentMaxTotalTokens);
+    expect(settings.detail, l.agentHistoryRetentionDays);
   });
 
-  test('invalid dates, oversized or malformed payloads stay within the detail fallback', () {
-    expect(
-      summarizeAgentToolActivity(
-        tool('agenda.query', {'start': '2026-02-30', 'end': 'not-a-date'}),
-        l,
-      ).detail,
-      isNull,
-    );
-    for (final raw in ['not JSON', '[]', '{"query":"${'x' * (128 * 1024)}"}']) {
+  test(
+    'invalid dates and malformed payloads stay within the detail fallback',
+    () {
       expect(
         summarizeAgentToolActivity(
-          AgentToolActivity(
-            id: 'bad',
-            name: 'agenda.query',
-            arguments: raw,
-            status: AgentToolActivityStatus.completed,
-          ),
+          tool('agenda.query', {'start': '2026-02-30', 'end': 'not-a-date'}),
           l,
         ).detail,
         isNull,
       );
-    }
-    final summary = summarizeAgentToolActivity(
-      tool('skills.search', {'query': '\u202e${'长' * 120}\n'}),
-      l,
-    );
-    expect(summary.detail, endsWith('…'));
-    expect(summary.detail!.runes.length, lessThan(100));
-    expect(summary.detail, isNot(contains('\u202e')));
-    expect(summary.detail, isNot(contains('\n')));
-  });
+      for (final raw in ['not JSON', '[]']) {
+        expect(
+          summarizeAgentToolActivity(
+            AgentToolActivity(
+              id: 'bad',
+              name: 'agenda.query',
+              arguments: raw,
+              status: AgentToolActivityStatus.completed,
+            ),
+            l,
+          ).detail,
+          isNull,
+        );
+      }
+      final large = summarizeAgentToolActivity(
+        tool('agenda.query', {'query': 'x' * (128 * 1024)}),
+        l,
+      );
+      expect(large.detail, startsWith(l.agentKnowledgeSearch));
+      expect(large.detail, endsWith('…'));
+      expect(large.detail!.length, lessThan(120));
+      final summary = summarizeAgentToolActivity(
+        tool('skills.search', {'query': '\u202e${'长' * 120}\n'}),
+        l,
+      );
+      expect(summary.detail, endsWith('…'));
+      expect(summary.detail!.runes.length, lessThan(100));
+      expect(summary.detail, isNot(contains('\u202e')));
+      expect(summary.detail, isNot(contains('\n')));
+    },
+  );
 
   for (final platform in [TargetPlatform.android, TargetPlatform.windows]) {
     testWidgets(

@@ -132,7 +132,7 @@ def agent_scenario(name):
     }
     decision = {
         "action": "approve" if accessible else "reject",
-        "toolCallId": f"native-msaa-{name}-3", "toolResult": tool_result,
+        "toolCallId": f"native-msaa-{name}-2", "toolResult": tool_result,
         "beforeCommittedSha256": before_hash, "beforeStoredSha256": before_hash,
         "afterCommittedSha256": after_hash, "afterStoredSha256": after_hash,
         "eventCountBefore": 1, "eventCountAfter": 22 if accessible else 1,
@@ -145,11 +145,11 @@ def agent_scenario(name):
             "conversationStatus": "idle" if accessible else "interrupted",
             "conversationSha256": "c" * 64, "storedConversationSha256": "c" * 64,
             "runStatus": "completed" if accessible else "interrupted", "settled": True,
-            "requestCount": 4 if accessible else 3,
-            "requestOutcomes": ["completed"] * (4 if accessible else 3),
-            "toolOutcomes": ["completed", "completed", "completed" if accessible else "failed"],
+            "requestCount": 3 if accessible else 2,
+            "requestOutcomes": ["completed"] * (3 if accessible else 2),
+            "toolOutcomes": ["completed", "completed" if accessible else "failed"],
             "lastMessageRole": "assistant" if accessible else "tool",
-            "lastMessageToolCallId": None if accessible else f"native-msaa-{name}-3",
+            "lastMessageToolCallId": None if accessible else f"native-msaa-{name}-2",
             "finalProviderReply": accessible,
         },
     }
@@ -187,9 +187,9 @@ def agent_scenario(name):
             } for position, event in [("first", events[0]), ("last", events[-1])]],
         },
         "provider": {
-            "requests": 4 if accessible else 3,
-            "requestedTools": ["capabilities.describe", "mutation.prepare", "mutation.commit"],
-            "transportAttempts": 0, "closed": True, "preparedPlanId": "fixture-plan", "result": result,
+            "requests": 3 if accessible else 2,
+            "requestedTools": ["capabilities.describe", "mutation.apply"],
+            "transportAttempts": 0, "closed": True, "result": result,
         },
         "httpOperationAttempts": 0, "decision": decision,
         "storageAfterCleanup": {"mainSha256": after_hash},
@@ -199,7 +199,7 @@ def agent_scenario(name):
                 {"name": step, "status": "complete"} for step in [
                     "cancel-active-run", "quiesce", "dispose-runtime", "close-agent",
                     "close-backup-staging", "close-session", "drain-main-writes", "flush-layout",
-                    "release-owned-preferences",
+                    "release-owned-preferences", "snapshot-agent-storage", "close-agent-store", "remove-agent-data",
                 ]
             ]},
         },

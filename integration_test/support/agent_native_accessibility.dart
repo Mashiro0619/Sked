@@ -56,7 +56,7 @@ class _RejectingClient extends http.BaseClient {
   }
 }
 
-/// Only provider events are scripted. Capability discovery, preparation,
+/// Only provider events are scripted. Capability discovery, compilation,
 /// approval, persistence and receipt rendering use the production application.
 class _PreviewProvider extends ProviderClient {
   _PreviewProvider._(this.name, this.transport) : super(client: transport);
@@ -68,7 +68,6 @@ class _PreviewProvider extends ProviderClient {
   final tools = <String>[];
   var requests = 0;
   var closed = false;
-  Map<String, dynamic>? prepared;
   Map<String, dynamic>? result;
 
   Map<String, dynamic> _lastTool(ProviderRequest request) => jsonDecode(
@@ -113,14 +112,14 @@ class _PreviewProvider extends ProviderClient {
           _draft(name),
         );
         response = _call('capabilities.describe', {
-          'names': ['mutation.prepare', 'mutation.commit'],
+          'names': ['mutation.apply'],
         });
       case 2:
         expect(
           (_lastTool(request)['tools'] as List).map((tool) => tool['name']),
-          containsAll(['mutation.prepare', 'mutation.commit']),
+          contains('mutation.apply'),
         );
-        response = _call('mutation.prepare', {
+        response = _call('mutation.apply', {
           'commands': [
             for (var index = 1; index <= _changeCount; index++)
               {
@@ -138,11 +137,6 @@ class _PreviewProvider extends ProviderClient {
           ],
         });
       case 3:
-        prepared = _lastTool(request);
-        expect(prepared!['planId'], isA<String>());
-        expect(prepared!['changeCount'], _changeCount);
-        response = _call('mutation.commit', {'planId': prepared!['planId']});
-      case 4:
         result = _lastTool(request);
         response = ProviderResponse(
           text: _completedReply,
@@ -162,7 +156,6 @@ class _PreviewProvider extends ProviderClient {
     'requestedTools': tools,
     'transportAttempts': transport.attempts,
     'closed': closed,
-    'preparedPlanId': prepared?['planId'],
     'result': result,
   };
 
@@ -212,7 +205,9 @@ Future<void> runAgentNativeAccessibility(
       config.validate();
       guard.install();
       final scripted = provider = _PreviewProvider(name);
-      final native = session = AgentNativeSession(provider: scripted);
+      final native = session = await AgentNativeSession.create(
+        provider: scripted,
+      );
       report['fixture'] = native.fixtureReport();
       final journey = _MsaaScenario(
         tester,
@@ -261,7 +256,7 @@ Future<void> runAgentNativeAccessibility(
           cleanup['owners'] = owners;
           expect(owners['status'], 'complete');
         });
-        report['storageAfterCleanup'] = native.storageReport();
+        report['storageAfterCleanup'] = await native.storageReport();
       }
       await clean('httpGuard', () async {
         guard.restore();
@@ -757,7 +752,8 @@ class _MsaaScenario {
       final approval = session.app.agent.runtime.state.value
           .runFor(conversationId)
           .pendingApproval!;
-      expect(approval.id, provider.prepared!['planId']);
+      expect(approval.id, isNotEmpty);
+      expect(approval.details['operationId'], isA<String>());
       expect(approval.details['changeCount'], _changeCount);
       changes = (approval.details['changes'] as List)
           .map((item) => Map<String, dynamic>.from(item as Map))
@@ -786,7 +782,7 @@ class _MsaaScenario {
         for (var index = 1; index <= _changeCount; index++)
           _title(config.name, index),
       });
-      expect(provider.requests, 3);
+      expect(provider.requests, 2);
       await drain();
       unchanged();
       report['approval'] = {
@@ -1016,12 +1012,8 @@ class _MsaaScenario {
         const Duration(seconds: 20),
       );
       await drain();
-      expect(provider.requests, approve ? 4 : 3);
-      expect(provider.tools, [
-        'capabilities.describe',
-        'mutation.prepare',
-        'mutation.commit',
-      ]);
+      expect(provider.requests, approve ? 3 : 2);
+      expect(provider.tools, ['capabilities.describe', 'mutation.apply']);
       expect(preview, findsNothing);
       expect(
         session.app.agent.conversations.selected!.mode,
@@ -1032,16 +1024,16 @@ class _MsaaScenario {
       final conversation = session.app.agent.conversations.find(
         conversationId,
       )!;
-      final storedConversation = ConversationArchive.decode(session.chatSource)
-          .conversations
-          .singleWhere((item) => item.id == conversationId);
+      final storedConversation = ConversationArchive.decode(
+        await session.readChatSource(),
+      ).conversations.singleWhere((item) => item.id == conversationId);
       expect(storedConversation.toJson(), conversation.toJson());
-      final commitCallId = 'native-msaa-${config.name}-3';
+      final commitCallId = 'native-msaa-${config.name}-2';
       final toolMessages = storedConversation.messages
           .where((item) => item.role == ConversationRole.tool)
           .toList();
       expect(toolMessages.map((item) => item.toolCallId), [
-        for (var index = 1; index <= 3; index++)
+        for (var index = 1; index <= 2; index++)
           'native-msaa-${config.name}-$index',
       ]);
       final toolMessage = toolMessages.singleWhere(
@@ -1064,14 +1056,13 @@ class _MsaaScenario {
             : ConversationRunStatus.interrupted,
       );
       expect(run.settledAt, isNotNull);
-      expect(run.requests, hasLength(approve ? 4 : 3));
+      expect(run.requests, hasLength(approve ? 3 : 2));
       expect(
         run.requests.map((item) => item.outcome),
         everyElement(ConversationAttemptOutcome.completed),
       );
       expect(run.tools.map((item) => item.name), provider.tools);
       expect(run.tools.map((item) => item.outcome), [
-        ConversationAttemptOutcome.completed,
         ConversationAttemptOutcome.completed,
         approve
             ? ConversationAttemptOutcome.completed

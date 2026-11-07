@@ -119,7 +119,9 @@ void main() {
           await fixture.prepareHistory();
         });
         await mountAgentUi(tester, fixture.view);
-        expect(find.text('Reminder scheduling is pending.'), findsOneWidget);
+        await _openReceipt(tester);
+        expect(find.text('Reminder scheduling is pending.'), findsNothing);
+        expect(_effect(tester), 'pending');
         final beforeSource = fixture.storage.source;
         final composer = tester
             .widget<TextField>(find.byKey(const ValueKey('agent-composer')))
@@ -133,13 +135,14 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Reminder scheduling is pending.'), findsNothing);
         expect(
-          find.text(
+          find.textContaining(
             state == AgendaEffectState.applied
                 ? 'The reminder schedule was updated.'
                 : 'Reminder scheduling failed. Your changes are saved.',
           ),
-          findsOneWidget,
+          state == AgendaEffectState.applied ? findsNothing : findsOneWidget,
         );
+        expect(_effect(tester), state.name);
         expect(find.text('Changes saved'), findsOneWidget);
         expect(
           fixture.app.agent.conversations.selected!.messages.single.text,
@@ -188,6 +191,7 @@ void main() {
           await fixture.prepareHistory(initial: storedState);
         });
         await mountAgentUi(tester, fixture.view);
+        await _openReceipt(tester);
         final source = storage.source;
         final original =
             fixture.app.agent.conversations.selected!.messages.single.text;
@@ -196,8 +200,9 @@ void main() {
         await tester.pumpAndSettle();
         expect(
           find.text('The reminder scheduling result needs checking.'),
-          findsOneWidget,
+          findsNothing,
         );
+        expect(_effect(tester), 'unknown');
         expect(find.text('Changes saved'), findsOneWidget);
         fixture.tracker.complete(
           fixture.ticket.desiredRevision,
@@ -221,9 +226,10 @@ void main() {
           ),
         );
         await mountAgentUi(tester, restarted.view);
+        await _openReceipt(tester);
         expect(
           find.text('The reminder scheduling result needs checking.'),
-          findsOneWidget,
+          findsNothing,
         );
         expect(find.text('Changes saved'), findsOneWidget);
         expect(
@@ -252,12 +258,14 @@ void main() {
         await fixture.prepareHistory();
       });
       await mountAgentUi(tester, fixture.view);
+      await _openReceipt(tester);
       fixture.tracker.close();
       await tester.pumpAndSettle();
       expect(
         find.text('The reminder scheduling result needs checking.'),
-        findsOneWidget,
+        findsNothing,
       );
+      expect(_effect(tester), 'unknown');
       fixture.tracker.complete(
         fixture.ticket.desiredRevision,
         AgendaEffectState.applied,
@@ -270,3 +278,19 @@ void main() {
     },
   );
 }
+
+Future<void> _openReceipt(WidgetTester tester) async {
+  final row = find.byKey(
+    const ValueKey('agent-activity-toggle-operation-commit-call'),
+  );
+  await tester.ensureVisible(row);
+  await tester.tap(row);
+  await tester.pumpAndSettle();
+}
+
+String _effect(WidgetTester tester) =>
+    (tester
+                .widget<AgentOperationCard>(find.byType(AgentOperationCard))
+                .receipt['notificationEffect']
+            as Map)['state']
+        as String;

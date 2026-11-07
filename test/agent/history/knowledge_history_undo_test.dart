@@ -156,21 +156,20 @@ void main() {
   );
 
   test(
-    'metadata-only owner saves have a recoverable independent slot version',
+    'metadata-only owner saves retain the knowledge content revision',
     () async {
       final storage = MemoryKnowledgeStorage();
       final repository = AgentKnowledgeRepository(storage: storage);
       addTearDown(repository.dispose);
       await repository.load();
       await _save(repository, 'preference', 'Original', 'create');
-      final old = storage.source;
       final lease = await repository.reserveForHistoryUndo('redo');
       await repository.prepareInverseBatch(
         batchId: 'redo',
         operationIds: ['create'],
         reservation: lease,
       );
-      final loaded = decodeKnowledgeSlots([old, storage.source]).archive;
+      final loaded = (await storage.load()).archive;
       expect(loaded.revision, 1);
       expect(loaded.storageRevision, 2);
       expect(loaded.undoBatches, hasLength(1));
@@ -214,7 +213,7 @@ void main() {
     },
   );
 
-  test('old archives remain readable while prepared inverse corruption fails closed', () async {
+  test('retired archives are rejected while current inverse corruption fails closed', () async {
     final storage = MemoryKnowledgeStorage();
     final repository = AgentKnowledgeRepository(storage: storage);
     addTearDown(repository.dispose);
@@ -225,10 +224,10 @@ void main() {
     legacy['version'] = 1;
     legacy.remove('storageRevision');
     legacy.remove('undoBatches');
-    final migrated = KnowledgeArchive.decode(jsonEncode(legacy));
-    expect(migrated.storageRevision, 1);
-    expect(migrated.undoBatches, isEmpty);
-    expect(migrated.records.single.body, 'Original');
+    expect(
+      () => KnowledgeArchive.decode(jsonEncode(legacy)),
+      throwsA(_error(KnowledgeError.unavailable)),
+    );
     final lease = await repository.reserveForHistoryUndo('redo');
     await repository.prepareInverseBatch(
       batchId: 'redo',

@@ -8,6 +8,8 @@ import '../agent/agent_application.dart';
 import '../agent/attachments/attachment_storage.dart';
 import '../agent/conversations/conversation_models.dart';
 import '../agent/knowledge/knowledge_models.dart';
+import '../application/data_restore_receipt.dart';
+import '../models/application_ledger.dart';
 import '../models/agent_settings.dart';
 import '../models/school_site_models.dart';
 import '../models/timetable_models.dart';
@@ -56,8 +58,11 @@ class SelectiveBackupService extends ChangeNotifier {
             AppData.decodeStorageSnapshot(jsonEncode(current)),
             plan,
           ).target.toJson(),
+          buildCompletion: _operationCompletionLedger,
           write: (target) =>
               _writeData(AppData.decodeStorageSnapshot(jsonEncode(target))),
+          normalize: (value) =>
+              AppData.decodeStorageSnapshot(jsonEncode(value)).toJson(),
         ),
         _SnapshotParticipant(
           owner: BackupOwner.schoolSites,
@@ -78,47 +83,44 @@ class SelectiveBackupService extends ChangeNotifier {
         ),
         _SnapshotParticipant(
           owner: BackupOwner.knowledge,
-          read: () async => _json(
-            (await _agent.knowledgeRepository.readFrozenForRestore(
-              validateOwner: _validateOwner,
-            )).encode(),
-          ),
+          read: () async =>
+              (await _agent.knowledgeRepository.readFrozenForRestore(
+                validateOwner: _validateOwner,
+              )).toJson(),
           build: (plan, current) async {
             final selected = _agent.knowledge.normalizeRestoreRecords(
               selectedKnowledgeRestoreRecords(plan),
             );
-            return _json(
-              _agent.knowledgeRepository
-                  .projectFrozenRestore(
-                    selected,
-                    restoreId: plan.id,
-                    validateOwner: _validateOwner,
-                  )
-                  .encode(),
-            );
+            return _agent.knowledgeRepository
+                .projectFrozenRestore(
+                  selected,
+                  restoreId: plan.id,
+                  validateOwner: _validateOwner,
+                )
+                .toJson();
           },
           write: (target) => _agent.knowledgeRepository.replaceFrozenForRestore(
-            KnowledgeArchive.decode(jsonEncode(target)),
+            KnowledgeArchive.fromJson(target),
             validateOwner: _validateOwner,
           ),
+          versionBridge: _knowledgeRestoreBridge(),
+          legacyBridge: _legacyRestoreBridge(BackupOwner.knowledge),
         ),
         _SnapshotParticipant(
           owner: BackupOwner.conversations,
-          read: () async => _json(
-            (await _agent.conversations.readFrozenForRestore(
-              validateOwner: _validateOwner,
-            )).encode(),
-          ),
-          build: (plan, current) async => _json(
-            _conversationTarget(
-              ConversationArchive.decode(jsonEncode(current)),
-              plan,
-            ).encode(),
-          ),
+          read: () async => (await _agent.conversations.readFrozenForRestore(
+            validateOwner: _validateOwner,
+          )).toJson(),
+          build: (plan, current) async => _conversationTarget(
+            ConversationArchive.fromJson(current),
+            plan,
+          ).toJson(),
           write: (target) => _agent.conversations.replaceFrozenForRestore(
-            ConversationArchive.decode(jsonEncode(target)),
+            ConversationArchive.fromJson(target),
             validateOwner: _validateOwner,
           ),
+          versionBridge: _conversationRestoreBridge(),
+          legacyBridge: _legacyRestoreBridge(BackupOwner.conversations),
         ),
         _CredentialParticipant(agent: _agent, readData: _readData),
         _DevicePreferencesParticipant(
@@ -143,6 +145,7 @@ class SelectiveBackupService extends ChangeNotifier {
   final Future<List<SchoolSite>> Function() _readOwnedSites;
   final Future<void> Function(List<SchoolSite>) _writeOwnedSites;
   final Future<void> Function(Future<void> Function()) _runExclusive;
+  OperationReceipt? _restoreOperation;
   final void Function() _validateOwner;
   final void Function(bool) _onRecoveryChanged;
   final AttachmentStorage _staging;
@@ -152,6 +155,60 @@ class SelectiveBackupService extends ChangeNotifier {
   bool _busy = false, _pending = false, _disposed = false;
   bool get isBusy => _busy;
   bool get recoveryPending => _pending;
+
+  _LegacyAgentRestoreBridge? _legacyRestoreBridge(BackupOwner owner) {
+    final store = _agent.store;
+    if (store == null) return null;
+    String key(String restoreId) => 'legacy_restore:${owner.name}:$restoreId';
+    return _LegacyAgentRestoreBridge(
+      readMarker: (id) => store.readMetadata(key(id)),
+      writeMarker: (id, fingerprint) =>
+          store.writeMetadata(key(id), fingerprint),
+    );
+  }
+
+  _SnapshotVersionBridge? _conversationRestoreBridge() {
+    final repository = _agent.conversations;
+    if (!repository.supportsRestoreMarkers) return null;
+    return _SnapshotVersionBridge(
+      revisionField: 'revision',
+      readRevision: repository.readStorageRevision,
+      readMarker: repository.readRestoreMarker,
+      write: (target, id, fingerprint, affectedIds) async {
+        if (!repository.isArchiveLoaded || repository.blocked) {
+          await repository.readFrozenForRestore(validateOwner: _validateOwner);
+        }
+        await repository.replaceFrozenForRestore(
+          ConversationArchive.fromJson(target),
+          validateOwner: _validateOwner,
+          restoreId: id,
+          restoreFingerprint: fingerprint,
+          replacedConversationIds: affectedIds,
+        );
+      },
+    );
+  }
+
+  _SnapshotVersionBridge? _knowledgeRestoreBridge() {
+    final repository = _agent.knowledgeRepository;
+    if (!repository.supportsRestoreMarkers) return null;
+    return _SnapshotVersionBridge(
+      revisionField: 'storageRevision',
+      readRevision: repository.readStorageRevision,
+      readMarker: repository.readRestoreMarker,
+      write: (target, id, fingerprint, affectedIds) async {
+        if (!repository.isLoaded || repository.blocked) {
+          await repository.readFrozenForRestore(validateOwner: _validateOwner);
+        }
+        await repository.replaceFrozenForRestore(
+          KnowledgeArchive.fromJson(target),
+          validateOwner: _validateOwner,
+          restoreId: id,
+          restoreFingerprint: fingerprint,
+        );
+      },
+    );
+  }
 
   Future<bool> refreshRecoveryStatus() async {
     try {
@@ -180,9 +237,7 @@ class SelectiveBackupService extends ChangeNotifier {
   Future<SelectiveBackupBundle> _inventory() async {
     await _agent.prepareBackupRead();
     final data = _readData();
-    final conversations = List<AgentConversation>.of(
-      _agent.conversations.conversations,
-    );
+    final conversations = await _agent.conversations.readAll();
     final knowledge = <KnowledgeRecord>[];
     for (final kind in KnowledgeKind.values) {
       knowledge.addAll(
@@ -262,9 +317,6 @@ class SelectiveBackupService extends ChangeNotifier {
   }
 
   SelectiveBackupBundle decode(Uint8List bytes) {
-    if (bytes.length > SelectiveBackupLimits.archiveBytes) {
-      backupLimit('The backup file is too large.');
-    }
     var offset =
         bytes.length >= 3 &&
             bytes[0] == 0xef &&
@@ -316,7 +368,14 @@ class SelectiveBackupService extends ChangeNotifier {
   Future<void> restore(
     BackupRestorePlan plan, {
     BackupCancellation? cancellation,
-  }) => _perform(() => _restorePlan(plan, cancellation: cancellation));
+    OperationReceipt? operationReceipt,
+  }) => _perform(
+    () => _restorePlan(
+      plan,
+      cancellation: cancellation,
+      operationReceipt: operationReceipt,
+    ),
+  );
 
   Future<RestoredBackupInventory> restoreAndReadInventory(
     BackupRestorePlan plan,
@@ -328,12 +387,50 @@ class SelectiveBackupService extends ChangeNotifier {
   Future<void> _restorePlan(
     BackupRestorePlan plan, {
     BackupCancellation? cancellation,
+    OperationReceipt? operationReceipt,
   }) async {
     _admitting = plan;
+    _restoreOperation = operationReceipt;
     try {
       await _coordinator.start(plan, cancellation: cancellation);
     } finally {
       _admitting = null;
+      _restoreOperation = null;
+    }
+  }
+
+  Map<String, Object?>? _operationCompletionLedger(
+    BackupRestorePlan plan,
+    Map<String, Object?> target,
+  ) {
+    final pending = _restoreOperation;
+    if (pending == null) return null;
+    final current = _readData().applicationLedger;
+    final arguments = pending.result['arguments'];
+    final data = AppData.decodeStorageSnapshot(jsonEncode(target));
+    final ledger = data.applicationLedger;
+    if (ledger == null || ledger.generation != plan.dataGeneration) {
+      backupInvalid('The restore completion needs its fresh data generation.');
+    }
+    try {
+      return buildDataRestoreCompletionLedger(
+        current: current,
+        target: ledger,
+        pending: pending,
+        action: 'backups.restore_selected',
+        restoreId: plan.id,
+        version: plan.fingerprint,
+        effectDetails: {
+          'selectedObjects': plan.selected.length,
+          'skippedDeviceGroups': arguments is Map
+              ? arguments['unsupportedGroups'] ?? const []
+              : const [],
+          'permissionsPreserved': true,
+          'secretsImported': false,
+        },
+      ).toJson();
+    } on FormatException catch (error) {
+      backupInvalid(error.message);
     }
   }
 
@@ -394,6 +491,7 @@ class SelectiveBackupService extends ChangeNotifier {
           await _agent.conversations.waitForPendingWrites();
           await _agent.knowledgeRepository.waitForPendingWrites();
           bool completesDataRestore;
+          Set<BackupOwner> restoredOwners;
           if (_admitting case final plan?) {
             final conversations = await _agent.conversations
                 .readFrozenForRestore(validateOwner: _validateOwner);
@@ -414,14 +512,53 @@ class SelectiveBackupService extends ChangeNotifier {
             );
             plan.validateCurrent(current);
             completesDataRestore = plan.owners.isNotEmpty;
+            restoredOwners = plan.owners;
           } else {
             // A resume with no fixed target is an empty operation. A pending
             // restore can complete without selecting or replacing any chat.
-            completesDataRestore = await journal.read() != null;
+            final pendingRestore = await journal.read();
+            completesDataRestore = pendingRestore != null;
+            restoredOwners =
+                pendingRestore?.targets.map((item) => item.owner).toSet() ?? {};
+            if (pendingRestore != null) {
+              for (final target in pendingRestore.targets) {
+                if (!_isRetiredAgentRestoreTarget(target)) continue;
+                final bridge = _legacyRestoreBridge(target.owner);
+                if (bridge == null) {
+                  throw const SelectiveBackupException(
+                    SelectiveBackupError.unavailable,
+                    'The legacy Agent restore requires the replacement Agent database.',
+                  );
+                }
+                final marker = await bridge.readMarker(target.restoreId);
+                if (marker != null && marker != target.fingerprint) {
+                  throw const SelectiveBackupException(
+                    SelectiveBackupError.conflict,
+                    'The retired Agent restore target changed.',
+                  );
+                }
+                if (marker == null) {
+                  await bridge.writeMarker(
+                    target.restoreId,
+                    target.fingerprint,
+                  );
+                }
+              }
+            }
           }
           await action();
           if (completesDataRestore) {
             _validateOwner();
+            if (restoredOwners.contains(BackupOwner.conversations)) {
+              await _agent.conversations.refreshFrozenView(
+                validateOwner: _validateOwner,
+              );
+            }
+            if (restoredOwners.contains(BackupOwner.knowledge)) {
+              await _agent.knowledgeRepository.readFrozenForRestore(
+                validateOwner: _validateOwner,
+              );
+            }
             _agent.completeSuccessfulDataRestore();
           }
         } finally {
@@ -469,10 +606,7 @@ class SelectiveBackupService extends ChangeNotifier {
       ),
       terminatedIds: current.terminatedIds.difference(restoredIds),
     );
-    // Individual imported chats can be valid while their merged archive
-    // exceeds a quota or violates a shared reference. Reject that target before
-    // admitting the journal or applying any other restore participant.
-    ConversationArchive.decode(target.encode());
+    ConversationArchive.fromJson(target.toJson());
     return target;
   }
 
@@ -661,12 +795,59 @@ class _DevicePreferencesParticipant implements BackupRestoreParticipant {
   Future<void> cleanup(BackupPreparedTarget target) async {}
 }
 
-class _SnapshotParticipant implements BackupRestoreParticipant {
+class _SnapshotVersionBridge {
+  const _SnapshotVersionBridge({
+    required this.revisionField,
+    required this.readRevision,
+    required this.readMarker,
+    required this.write,
+  });
+  final String revisionField;
+  final Future<int> Function() readRevision;
+  final Future<String?> Function(String restoreId) readMarker;
+  final Future<void> Function(
+    Map<String, Object?> target,
+    String restoreId,
+    String fingerprint,
+    List<String> affectedIds,
+  )
+  write;
+}
+
+/// The old sealed journal still owns its business stages. Its obsolete Agent
+/// snapshots are acknowledged as retired, without importing executable state.
+class _LegacyAgentRestoreBridge {
+  const _LegacyAgentRestoreBridge({
+    required this.readMarker,
+    required this.writeMarker,
+  });
+  final Future<String?> Function(String restoreId) readMarker;
+  final Future<void> Function(String restoreId, String fingerprint) writeMarker;
+}
+
+bool _isRetiredAgentRestoreTarget(BackupPreparedTarget target) {
+  if (target.descriptor.containsKey('affectedIds')) return false;
+  final value = target.descriptor['target'];
+  if (value is! Map || value['version'] is! int) return false;
+  final version = value['version'] as int;
+  return switch (target.owner) {
+    BackupOwner.knowledge => version >= 1 && version <= 2,
+    BackupOwner.conversations => version >= 1 && version <= 8,
+    _ => false,
+  };
+}
+
+class _SnapshotParticipant
+    implements BackupRestoreParticipant, BackupRestoreCompletionParticipant {
   _SnapshotParticipant({
     required this.owner,
     required this.read,
     required this.build,
     required this.write,
+    this.versionBridge,
+    this.legacyBridge,
+    this.normalize,
+    this.buildCompletion,
   });
   @override
   final BackupOwner owner;
@@ -677,20 +858,55 @@ class _SnapshotParticipant implements BackupRestoreParticipant {
   )
   build;
   final Future<void> Function(Map<String, Object?>) write;
+  final _SnapshotVersionBridge? versionBridge;
+  final _LegacyAgentRestoreBridge? legacyBridge;
+  final Map<String, Object?> Function(Map<String, Object?> value)? normalize;
+  final Map<String, Object?>? Function(
+    BackupRestorePlan plan,
+    Map<String, Object?> target,
+  )?
+  buildCompletion;
+
+  Object? _normalized(Object? value) => normalize == null
+      ? value
+      : normalize!(Map<String, Object?>.from(value as Map));
   @override
   Future<BackupPreparedTarget> prepare(BackupRestorePlan plan) async {
     final before = await read();
+    final target = await build(plan, before);
+    final completionLedger = buildCompletion?.call(plan, target);
     return BackupPreparedTarget(
       owner: owner,
       restoreId: plan.id,
-      descriptor: {'before': before, 'target': await build(plan, before)},
+      descriptor: {
+        'before': before,
+        'target': target,
+        'completionLedger': ?completionLedger,
+        if (versionBridge != null)
+          'affectedIds': [
+            for (final change in plan.changes)
+              if (change.needsWrite && change.after.key.owner == owner)
+                change.after.key.id,
+          ],
+      },
     );
   }
 
   @override
   Future<void> validate(BackupPreparedTarget target) async {
+    final version = versionBridge;
+    if (version != null) {
+      final before = target.descriptor['before'] as Map;
+      if (await version.readRevision() != before[version.revisionField]) {
+        throw const SelectiveBackupException(
+          SelectiveBackupError.conflict,
+          'The Agent store changed during restore preparation.',
+        );
+      }
+      return;
+    }
     if (canonicalBackupJson(await read()) !=
-        canonicalBackupJson(target.descriptor['before'])) {
+        canonicalBackupJson(_normalized(target.descriptor['before']))) {
       throw const SelectiveBackupException(
         SelectiveBackupError.conflict,
         'A restore participant changed during preparation.',
@@ -701,11 +917,42 @@ class _SnapshotParticipant implements BackupRestoreParticipant {
   @override
   Future<BackupTargetState> readState(BackupPreparedTarget target) async {
     try {
+      if (_isRetiredAgentRestoreTarget(target)) {
+        final bridge = legacyBridge;
+        if (bridge == null) return BackupTargetState.unknown;
+        final marker = await bridge.readMarker(target.restoreId);
+        return marker == target.fingerprint
+            ? BackupTargetState.applied
+            : marker == null
+            ? BackupTargetState.prepared
+            : BackupTargetState.conflict;
+      }
+      final version = versionBridge;
+      if (version != null) {
+        final revision = await version.readRevision();
+        final marker = await version.readMarker(target.restoreId);
+        final after = target.descriptor['target'] as Map;
+        final before = target.descriptor['before'] as Map;
+        if (revision == after[version.revisionField] &&
+            marker == target.fingerprint) {
+          return BackupTargetState.applied;
+        }
+        return marker == null && revision == before[version.revisionField]
+            ? BackupTargetState.prepared
+            : BackupTargetState.conflict;
+      }
       final current = canonicalBackupJson(await read());
-      if (current == canonicalBackupJson(target.descriptor['target'])) {
+      if (_completedTarget(target) case final completed?) {
+        if (current == canonicalBackupJson(_normalized(completed))) {
+          return BackupTargetState.applied;
+        }
+      }
+      if (current ==
+          canonicalBackupJson(_normalized(target.descriptor['target']))) {
         return BackupTargetState.applied;
       }
-      return current == canonicalBackupJson(target.descriptor['before'])
+      return current ==
+              canonicalBackupJson(_normalized(target.descriptor['before']))
           ? BackupTargetState.prepared
           : BackupTargetState.conflict;
     } catch (_) {
@@ -713,17 +960,63 @@ class _SnapshotParticipant implements BackupRestoreParticipant {
     }
   }
 
+  Map<String, Object?>? _completedTarget(BackupPreparedTarget target) {
+    final ledger = target.descriptor['completionLedger'];
+    if (ledger is! Map || owner != BackupOwner.mainData) return null;
+    return {
+      ...Map<String, Object?>.from(target.descriptor['target'] as Map),
+      'applicationLedger': ledger,
+    };
+  }
+
   @override
-  Future<void> apply(BackupPreparedTarget target) async {
-    final state = await readState(target);
-    if (state == BackupTargetState.applied) return;
-    if (state != BackupTargetState.prepared) {
+  Future<void> complete(BackupPreparedTarget target) async {
+    final completed = _completedTarget(target);
+    if (completed == null) return;
+    final expected = canonicalBackupJson(_normalized(completed));
+    final current = canonicalBackupJson(await read());
+    if (current == expected) return;
+    if (current !=
+        canonicalBackupJson(_normalized(target.descriptor['target']))) {
       throw const SelectiveBackupException(
-        SelectiveBackupError.unknown,
-        'The restore precondition cannot be verified.',
+        SelectiveBackupError.conflict,
+        'The restored data changed before recording its completion.',
       );
     }
-    await write(Map<String, Object?>.from(target.descriptor['target'] as Map));
+    await write(completed);
+    if (canonicalBackupJson(await read()) != expected) {
+      throw const SelectiveBackupException(
+        SelectiveBackupError.unknown,
+        'The restore completion receipt was not acknowledged.',
+      );
+    }
+  }
+
+  @override
+  Future<void> apply(BackupPreparedTarget target) async {
+    if (_isRetiredAgentRestoreTarget(target)) {
+      final bridge = legacyBridge;
+      if (bridge == null) {
+        throw const SelectiveBackupException(
+          SelectiveBackupError.unavailable,
+          'The legacy Agent restore requires the replacement Agent database.',
+        );
+      }
+      await bridge.writeMarker(target.restoreId, target.fingerprint);
+      return;
+    }
+    final version = versionBridge;
+    final value = Map<String, Object?>.from(target.descriptor['target'] as Map);
+    if (version != null) {
+      await version.write(
+        value,
+        target.restoreId,
+        target.fingerprint,
+        (target.descriptor['affectedIds'] as List).cast<String>(),
+      );
+    } else {
+      await write(value);
+    }
   }
 
   @override
@@ -969,6 +1262,3 @@ Future<BackupTargetState> _blobState(
     return BackupTargetState.unknown;
   }
 }
-
-Map<String, Object?> _json(String source) =>
-    Map<String, Object?>.from(jsonDecode(source) as Map);

@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:intl/intl.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -20,7 +18,7 @@ AgentActivitySummary summarizeAgentToolActivity(
   AppLocalizations l,
 ) {
   final action = _actionLabel(tool.name, l);
-  final args = _object(tool.arguments);
+  final args = tool.argumentsObject;
   final resource = _resourceKind(tool.name);
   final subject = resource != null
       ? _resourceLabel(resource, l)
@@ -42,21 +40,23 @@ AgentActivitySummary summarizeAgentToolActivity(
           'skills.search' ||
           'skills.load' ||
           'skills.get' ||
-          'skills.prepare' => l.agentSkills,
+          'skills.apply' => l.agentSkills,
           'memories.search' ||
           'memories.get' ||
-          'memories.prepare' => l.agentMemories,
+          'memories.apply' => l.agentMemories,
           'agent_settings.describe' ||
-          'agent_settings.prepare' => l.agentSettingsTitle,
+          'agent_settings.update' => l.agentSettingsTitle,
           'connection.describe' ||
           'agent.connection.get' ||
-          'connection.prepare' => l.agentModelSettings,
-          'connection.test.prepare' => l.agentTestConnection,
-          'connection.models.prepare' ||
+          'connection.apply' => l.agentModelSettings,
+          'connection.test.apply' => l.agentTestConnection,
+          'connection.models.apply' ||
           'connection.models.get' => l.agentLoadModels,
           'credentials.request_input' => l.agentApiKey,
           'school_sites.list' || 'school_sites.get' => l.schoolSitesPageTitle,
-          'backups.describe' || 'backups.prepare' => l.selectiveBackupTitle,
+          'backups.describe' ||
+          'backups.apply' ||
+          'backups.restore' => l.selectiveBackupTitle,
           'workspaces.describe' || 'navigation.status' => l.workspaceFeatures,
           _ => null,
         };
@@ -105,7 +105,7 @@ AgentActivitySummary summarizeAgentToolActivity(
   // Read object names only from a completed, identity-matching host projection.
   // Never scan nested metadata, model prose, source text, URLs or credential data.
   if (tool.status == AgentToolActivityStatus.completed && args != null) {
-    final result = _object(tool.result);
+    final result = tool.outcome?.payload;
     String? target;
     if (resource != null && tool.name.endsWith('.get') && result != null) {
       final ref = result['ref'];
@@ -160,18 +160,8 @@ String? _resourceLabel(Object? kind, AppLocalizations l) => switch (kind) {
   _ => null,
 };
 
-Map<String, dynamic>? _object(String? source) {
-  if (source == null || source.length > 128 * 1024) return null;
-  try {
-    final value = jsonDecode(source);
-    return value is Map<String, dynamic> ? value : null;
-  } on FormatException {
-    return null;
-  }
-}
-
 String? _text(Object? value) {
-  if (value is! String || value.isEmpty || value.length > 4096) return null;
+  if (value is! String || value.isEmpty) return null;
   final text = value
       .replaceAll(RegExp(r'[\x00-\x1f\x7f\u202a-\u202e\u2066-\u2069]'), ' ')
       .replaceAll(RegExp(r'\s+'), ' ')
@@ -198,10 +188,20 @@ String _actionLabel(String name, AppLocalizations l) {
   if (name == 'capabilities.describe' || name == 'resources.describe') {
     return l.agentActivityCapabilities;
   }
-  if (name.endsWith('.prepare') || name == 'selection.create') {
+  if (name == 'selection.create') {
     return l.agentActivityPrepare;
   }
-  if (name.endsWith('.commit')) return l.agentActivityCommit;
+  if (name.endsWith('.apply') ||
+      const {
+        'settings.update',
+        'agent_settings.update',
+        'operations.undo',
+        'backups.restore',
+        'maintenance.clear',
+        'exports.write',
+      }.contains(name)) {
+    return l.agentActivityCommit;
+  }
   if (name.startsWith('notifications.')) return l.agentActivityNotifications;
   if (name.startsWith('skills.') ||
       name.startsWith('memories.') ||

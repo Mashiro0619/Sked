@@ -1,5 +1,7 @@
 # Sked agent harness 源码研究
 
+本文保留各节注明源码基线下的历史研究与当时建议。当前实现与后续验收以[运行行为](AGENT_RUNTIME.md)和[整体重构计划](AGENT_IMPLEMENTATION_PLAN.md)为准；普通任务的配额、强制收尾及有限纠错建议已撤销。
+
 ## 2026-11-07 第二轮深度排查与功能取舍
 
 Sked 基线为 `9d07f05c03e93b9ed1179be8f679be7bce6994df`。本轮沿用下节固定的四个主仓库和 OpenHands SDK 源码，扩大检查到协议续传、历史重做、普通完成判定、环境上下文和 GUI 生命周期。新增六项问题通过八个合成观察用例核对，整改尚待实施。
@@ -83,7 +85,7 @@ Windows 下使用当前源码、内存主库和合成消息执行三个临时诊
 | `skills.search {}`，内置 manifest 共 24 项 | 返回 20 项，结果只有 `skills` 键 | 默认目录静默漏掉最后四项，没有 offset、hasMore 或总数。自定义技能加入后，最大 24 项也不足以遍历目录。[工具宿主](../lib/agent/tools/application_tool_host.dart) |
 | 查询“帮我看看明天都有什么安排”“Show my schedule for tomorrow”“帮我把所有课程的地点改成第三教学楼” | 三条均返回 0 项，单独查询“日程”返回 3 项 | 按完整用户请求找技能的契约，与空白分词、完整子串和固定触发词算法存在差距。[技能搜索](../lib/agent/skills/shared_skill_loader.dart) |
 | `skills.load` 加载不存在的 ID，再投影到正式会话活动模型 | 工具结果为 `notFound`，活动状态为 `completed` | 技能加载结果缺统一错误语义，运行统计和 GUI 都可能把失败记为完成。[结果计量](../lib/agent/runtime/agent_runtime_controller.dart)、[活动投影](../lib/agent/ui/agent_conversation_timeline.dart) |
-| 相同的 12 组已完成查询，用户消息分别带附件和只含文字 | 纯文字可压缩，带附件返回无法压缩 | 遇到附件组直接退出压缩遍历，附件后的旧查询也无法处理。[上下文压缩](../lib/agent/runtime/conversation_context.dart) |
+| 相同的 12 组已完成查询，用户消息分别带附件和只含文字 | 纯文字可压缩，带附件返回无法压缩 | 遇到附件组直接退出压缩遍历，附件后的旧查询也无法处理。[上下文压缩](https://github.com/Mashiro0619/Sked/blob/a8426dd2c0b6ae4955f5fcb945ad4ee2149e9ca6/lib/agent/runtime/conversation_context.dart) |
 | 40 万中文字符的旧回复与两个短用户消息 | 通过 512 Ki 字符检查，随后被 1 MiB 请求字节限制拒绝 | 仅正文已占 1,200,000 UTF-8 字节，上下文规划与最终编码使用不同度量。[请求编码](../lib/agent/provider/provider_request_encoder.dart) |
 | 依次发现三个工具 | 暴露工具数从 6 增为 7、8、9，返回的 schema 同时进入后续 `tools` | 发现结果与后续工具定义重复携带 schema，运行内暴露集合持续增长。此探针中的三个返回 schema 共 3,997 字节。[工具发现](../lib/agent/tools/application_tool_host.dart) |
 
@@ -115,7 +117,7 @@ OpenCode 在配置的最后一步要求总结并禁用工具，其测试验证�
 
 #### 压缩后仍应保有可继续的任务状态
 
-OpenCode 的 checkpoint 明确保留目标、约束、决定、工作状态和下一步，并保留近期原文。Sked 现有摘要只保存用户原文、部分操作身份和 Skill ID，压缩后的模型输入缺少原方案正文，“采用第二种方案”等指代需要重新读取历史才能还原。应保留已经确认的决定、对象引用、未决回执和近期完整工具组，附件作为必须保留的独立内容参与重组。连续压缩、存储失败与中断恢复都需要回归。[摘要结构](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/core/src/session/compaction.ts#L174-L238)、[Sked 压缩实现](../lib/agent/runtime/conversation_context.dart)
+OpenCode 的 checkpoint 明确保留目标、约束、决定、工作状态和下一步，并保留近期原文。Sked 现有摘要只保存用户原文、部分操作身份和 Skill ID，压缩后的模型输入缺少原方案正文，“采用第二种方案”等指代需要重新读取历史才能还原。应保留已经确认的决定、对象引用、未决回执和近期完整工具组，附件作为必须保留的独立内容参与重组。连续压缩、存储失败与中断恢复都需要回归。[摘要结构](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/core/src/session/compaction.ts#L174-L238)、[Sked 压缩实现](https://github.com/Mashiro0619/Sked/blob/a8426dd2c0b6ae4955f5fcb945ad4ee2149e9ca6/lib/agent/runtime/conversation_context.dart)
 
 ### 验收方式与实施顺序
 

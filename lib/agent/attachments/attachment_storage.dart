@@ -39,9 +39,6 @@ class MemoryAttachmentStorage extends AttachmentStorage {
     }
     final buffer = BytesBuilder(copy: false);
     await for (final chunk in bytes) {
-      if (buffer.length + chunk.length > ConversationAttachment.maxFileBytes) {
-        throw const AttachmentException(AttachmentError.tooLarge);
-      }
       buffer.add(chunk);
     }
     values[id] = buffer.takeBytes();

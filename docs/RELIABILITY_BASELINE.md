@@ -36,7 +36,7 @@ Windows 学校页面清理需要等待锁定 WebView 插件 `dispose` 通道的�
 
 学校网页页头提供“退出登录”，确认后清理 Sked 内学校页面的 Cookie、站点存储与缓存，并重新建立网页；保留已经导入的课表、应用设置及 Agent 连接。取消确认不清理，清理失败不显示成功并保留重试入口。此动作只影响本机内嵌浏览器，不声称学校服务端的所有会话都已退出。
 
-统一连接中的凭据绑定实际端点；更换目的地不得自动转移旧密钥或发送旧会话。连接草稿在保存成功前保留，后台、销毁或模型工具不得伪造用户同意。旧本机解析连接仅在新连接字段尚未配置时迁移，单独修改统一指令或预算不阻止迁移。旧密钥只有同一端点的新安全存储写入并读回成功后才退役，失败保留恢复材料。旧专用提示词不变成 Agent 系统指令。暂存密钥期间发生的偏好变更必须从最新提交继承，不能随旧连接草稿覆盖。见 [连接迁移测试](../test/agent/connection/agent_connection_manager_test.dart)、[连接表单](../test/agent/ui/agent_model_settings_form_test.dart) 与 [旧密钥兼容](../test/controllers/school_import_secret_persistence_test.dart)。
+统一连接中的凭据绑定实际端点；更换目的地不得自动转移旧密钥或发送旧会话。连接草稿在保存成功前保留，后台、销毁或模型工具不得伪造用户同意。旧本机解析连接仅在新连接字段尚未配置时迁移，单独修改其他 Agent 偏好不阻止迁移。旧密钥只有同一端点的新安全存储写入并读回成功后才退役，失败保留恢复材料。旧专用提示词不变成 Agent 系统指令。暂存密钥期间发生的偏好变更必须从最新提交继承，不能随旧连接草稿覆盖。见 [连接迁移测试](../test/agent/connection/agent_connection_manager_test.dart)、[连接表单](../test/agent/ui/agent_settings_page_test.dart) 与 [旧密钥兼容](../test/controllers/school_import_secret_persistence_test.dart)。
 
 安全存储的 active 或 pending 记录使用较新格式时，连接初始化、取钥与替换请求保持阻断；另一有效槽不作为降级覆盖的依据。两槽原文、本机配置和兼容旧密钥保留。对应[连接回归](../test/agent/connection/agent_connection_manager_test.dart)先通过真实管理器生成当前记录，再提升其中一槽的格式版本，核对拒绝及零写入；安全存储使用明确替身，不代表原生 keyring 验收。
 
@@ -44,23 +44,23 @@ Windows 学校页面清理需要等待锁定 WebView 插件 `dispose` 通道的�
 
 ## Agent 保存、会话与外部效果
 
-课程冲突显示和自定义日期范围由确定性适配器生成主数据计划，复用课程投影及普通日期导航的纯变换，经 `mutation.commit` 保存。显示选择核对指定课表、周次、实际完整冲突键与可选课程；日期范围和必要焦点变化一起记入回执。停用工作区、非当前课表、旧格式冲突重置、三种权限模式、保存失败、重复操作和撤销冲突由[适配器专项](../test/agent/tools/display_range_tool_adapters_test.dart)验证。
+课程冲突显示和自定义日期范围由确定性适配器复用课程投影及普通日期导航的纯变换，宿主在一次业务调用内完成编译、权限决策与保存。显示选择核对指定课表、周次、实际完整冲突键与可选课程；日期范围和必要焦点变化一起记入回执。停用工作区、非当前课表、旧格式冲突重置、三种权限模式、保存失败、重复操作和撤销冲突由[适配器专项](../test/agent/tools/display_range_tool_adapters_test.dart)验证。
 
 各平台完整聊天共享 [应用级 Agent](../lib/agent/agent_application.dart)，界面销毁不拥有或终止唯一执行器。功能关闭、停止、维护预约和退出都会阻止未接受的新步骤；已接受的主数据写入或外部效果必须完成核对。外部队列中尚未开始的操作可以因取消立即返回，避免清空或退出等待另一个排在自己后面的会话；已经开始的操作仍等待真实结果。见 [运行时](../test/agent/runtime/agent_runtime_controller_test.dart)、[双会话维护队列](../test/agent/runtime/agent_maintenance_queue_test.dart) 与 [工作台入口](../test/widgets/agent_workspace_entry_test.dart)。
 
-主数据候选与持久回执一次保存。旧操作 ID 配不同参数会拒绝，淘汰回执之后的旧请求不能重新执行。跨主库、学校站点、安全存储、设备偏好和原生系统的动作使用独立的 pending/结果回执；不能把多个存储当成一个原子事务。停止或回复保存失败后先读取已有回执，平台状态未知不能改成成功。外部重试使用原请求与原版本，只核对结果，不再次发送通知、保存文件或清空数据。见 [操作协调器](../test/application/mutation_coordinator_test.dart)、[外部效果](../test/application/external_operation_coordinator_test.dart) 和 [设备适配器](../test/agent/tools/device_tool_adapters_test.dart)。
+主数据候选与持久回执一次保存。操作身份由宿主生成，重试读取同一身份的实际回执。跨主库、学校站点、安全存储、设备偏好和原生系统的动作使用独立的 pending/结果回执；停止或回复保存失败后先读取已有回执，平台状态未知不能改成成功。外部重试使用原请求与原版本，只核对结果，不再次发送通知、保存文件或清空数据。见 [操作协调器](../test/application/mutation_coordinator_test.dart)、[外部效果](../test/application/external_operation_coordinator_test.dart) 和 [设备适配器](../test/agent/tools/device_tool_adapters_test.dart)。
 
 清空前先停止运行并排空已接受写入，冻结会话存储，再处理网页会话、通知运行时、设备偏好、应用数据及安全存储。安全存储删除要读回确认；退出回调返回或失败后，独立会话库也不能重新写回已删除内容。清理失败可能留下部分结果，不能自动把旧内存快照当作完整存档继续写入；会话恢复需重新读取存储。见 [组合层回归](../test/agent/agent_application_test.dart) 与 [清空服务](../test/services/app_data_clear_service_io_test.dart)。
 
 [原生清空组合回归](../test/services/app_data_clear_service_io_test.dart)通过真实文件拥有者写入主库、聊天和附件引用、共享技能与记忆、历史恢复标记、选择恢复 journal 和二进制暂存，先读回内容，再统一清空并使用新拥有者核对空库、空标记及缺失文件。测试仅使用系统临时目录中的合成内容；凭据和网页会话是明确替身，原生 keyring、WebView 与进程强杀仍需单独验收。
 
-聊天、共享知识和选择恢复 journal 的任一文件槽包含较新的封装或内层版本时，另一有效槽不能成为降级覆盖的依据。[原生侧库版本回归](../test/agent/sidecar_future_version_io_test.dart)使用当前文件写入器生成合成内容并读回，只提升一层版本及其派生校验摘要，再由新拥有者核对读取、普通写入、恢复写入或 journal 清理均被阻断，两槽字节保持不变。聊天和知识仓储退出维护后仍须保持阻断；该文件回归不代表跨版本安装、物理断电或原生安全存储验收。
+聊天和共享知识使用 SQLite 的版本化行存储，选择恢复 journal 保留独立恢复协议。遇到较新版本时报告具体格式错误并保留原数据。SQLite 事务确认回滚后，原快照保持可写；提交结果未知时重新加载实际状态。输入验证在写入之前完成，不把无写入的参数错误误判为存储损坏。见 [数据库回归](../test/agent/store/agent_database_test.dart)、[事务与分页回归](../test/agent/store/agent_store_test.dart)和[恢复回归](../test/backup/selective_backup_recovery_test.dart)。
 
-学校网页交接的来源、首条消息和交接标识一起持久化，普通文件附件按本地添加流程单独保存到会话。成功删除同步两个存储副本，迟到模型响应不能复活会话。归档和删除先处理当前运行，删除聊天不撤销业务操作。保留策略只清理超过期限、无草稿、无运行或排队输入的已完成会话；中断运行与需要核对的结果不自动重放。上下文摘要不改写原始消息，不冒充实时数据查询。见 [会话仓库](../test/agent/conversations/conversation_repository_test.dart)、[上下文](../test/agent/runtime/conversation_context_test.dart) 与 [会话工具](../test/agent/tools/conversation_tool_adapters_test.dart)。
+学校网页交接的来源、首条消息和交接标识一起持久化，普通文件附件按本地添加流程单独保存到会话。删除同步处理关联事实及附件引用，迟到模型响应不能复活会话。归档和删除先处理当前运行，删除聊天不撤销业务操作。保留策略只清理超过期限、无草稿、无运行或排队输入的已完成会话；中断运行与需要核对的结果不自动重放。恢复的聊天保持历史只读身份，分页视图按页起点换算执行边界。上下文摘要保留原始消息与工具配对。见 [会话仓库](../test/agent/conversations/conversation_repository_test.dart)、[上下文](../test/agent/context/context_service_test.dart) 与 [会话工具](../test/agent/tools/conversation_tool_adapters_test.dart)。
 
-二进制会话附件先完成私有存储写入和读回核验，再发布草稿引用，不自动调用模型；每份上限 32 MB，每条消息最多 20 份，请求原始字节合计上限 48 MB。原生私有文件与 Web IndexedDB Blob 使用相同的长度、摘要、取消和引用规则；请求按原生协议编码，文本上下文与 Base64 开销分别核算。重试复用已核验文件身份，最终读回核验仍可取消；会话、消息边界和数据世代变化后拒绝发布旧引用。未发布的重试缓冲不等同于持久草稿。见[附件协议与验证入口](AGENT_ATTACHMENTS.md)、[应用生命周期](../test/agent/attachments/attachment_application_lifecycle_test.dart)和[聊天入口](../test/agent/ui/agent_binary_attachment_view_test.dart)。旧网页/文本来源接口仍保留原有严格 UTF-8 和小文本预算，不作为二进制文件入口的限制。
+二进制会话附件先完成私有存储写入和读回核验，再发布草稿引用，不自动调用模型。文件大小、单条消息附件数量及整次请求附件总量没有 Sked 固定额度。原生私有文件与 Web IndexedDB Blob 使用相同的长度、摘要、取消和引用规则；原生请求流式读取并按协议编码，文本与 Base64 开销分别核算。重试复用已核验文件身份，最终读回核验仍可取消；会话、消息边界和数据世代变化后拒绝发布旧引用。见[附件协议与验证入口](AGENT_ATTACHMENTS.md)、[应用生命周期](../test/agent/attachments/attachment_application_lifecycle_test.dart)和[聊天入口](../test/agent/ui/agent_binary_attachment_view_test.dart)。网页及文本来源继续验证实际格式与编码。
 
-连接诊断使用合成小请求，分别报告收到有效响应与观察到工具调用，不使用私人课表或聊天。模型目录只使用已配置来源的已知路径或明确的同源地址，拒绝重定向、超时、超量和无效响应；完整目录保存在操作回执中，分页读取不重复联网。诊断测试覆盖协议、取消与输出边界，不能代替具体服务、账号、原生 keyring 或实体设备验收。见 [诊断协议](../test/agent/connection/agent_connection_diagnostics_test.dart) 与 [连接工具](../test/agent/tools/agent_control_tool_adapters_test.dart)。
+连接诊断使用合成小请求和独立连接超时，分别报告收到有效响应与观察到工具调用。模型目录只使用已配置来源的已知路径或明确的同源地址，报告重定向、超时和无效响应；完整目录保存在操作回执中，分页读取不重复联网。诊断测试覆盖协议、取消与输出结果。见 [诊断协议](../test/agent/connection/agent_connection_diagnostics_test.dart) 与 [连接工具](../test/agent/tools/agent_control_tool_adapters_test.dart)。
 
 系统通知的兼容接口返回值不作为权限事实。打开设置不表示授权成功，OEM 自启动状态可保持 unknown。稍后提醒只作用于当前有效通知身份，读回保存的时间也不证明系统已投递；诊断通知与清除诊断通知不改变生产提醒。精确闹钟工具核对实际观测状态，不以兼容接口返回 true 当作授权；通知重建工具使用已提交日程，报告排程结果及未验证投递，结果未知后的核对不重复排程。Windows 原生状态、Android 通知/后台行为及构建结果分别验收。见 [平台适配](../test/agent/tools/platform_tool_adapters_test.dart) 与 [通知服务](../test/services/agenda_notification_service_test.dart)。
 
@@ -78,7 +78,7 @@ Windows 学校页面清理需要等待锁定 WebView 插件 `dispose` 通道的�
 
 ## 外部 JSON 与备份导入
 
-AppData schema 6 的 `AgentSettings` 不保存原始密钥；新装和旧本机数据的一次性迁移开启入口，默认采用询问模式。后续关闭状态及恢复开始时的本机配置保持不变；`ApplicationLedger` 与业务数据属于同一快照，首次操作前可为 null。回执保留连续末尾，最多 128 条且 JSON 合计不超过 4 MiB；单条结果与撤销材料超过 1 MiB 时整体拒绝，不截断。淘汰的序号必须由执行器按过期请求处理，不能重新创建同一操作。外部动作可在保持操作 ID、摘要、序号和顺序的前提下更新回执；容量淘汰遇到尚未核对的 pending/unknown 外部回执时拒绝新写入，先通过对应工作流核对，不能为腾出空间重做动作。账本变更有独立版本域，不单独触发提醒重排。
+AppData 当前 schema 为 8，保留业务数据升级路径。AgentSettings 不保存原始密钥；新装和旧本机数据的一次性迁移开启入口，默认采用询问模式。后续关闭状态及恢复开始时的本机配置保持不变。ApplicationLedger 与业务数据同次保存，不按固定条数或字节数淘汰、拒绝写入；实际提交顺序在保存时分配。外部动作保留操作身份和实际回执，未知结果由对应工作流核对，不阻止无关业务修改。账本变更有独立版本域，不单独触发提醒重排。
 
 旧 JSON 便携导出排除本机 Agent 配置与账本，兼容导入忽略这些字段；选择性 ZIP 只在显式勾选后携带连接和偏好组，仍排除密钥、运行权限和可执行回执。恢复固定新的数据世代并以恢复专用编码写入 journal，继续时使用已固定的世代、配置和映射。Android 受控设备迁移继续清除本机 Agent 权限、连接和回执，具体见[设备迁移约定](ANDROID_DEVICE_TRANSFER.md)。模型、实际文件、恢复工作流和 JVM 检查分别覆盖这些路径，不能替代物理断电或真实换机验收。
 
@@ -119,6 +119,8 @@ git diff --check
 ```
 
 覆盖率用于定位尚未验证的代码路径。[CI](../.github/workflows/flutter.yml) 只对当前提交执行一次完整 VM 测试，并保留生成的 `coverage/lcov.info` 作为诊断附件，不设总覆盖率或改动行百分比门槛，也不为覆盖率检出基准提交重跑全套。测试取舍以数据完整性、故障恢复、真实交互和已发生的回归为依据；测试失败仍阻止 CI 通过。
+
+默认 Agent 测试工厂为每个运行时创建隔离的内存 SQLite，结束时等待实际关闭。关闭缓存由每项测试的生命周期 zone 持有，并把结果及错误传回调用者的 zone，避免组件的 FakeAsync 结束后清理挂起。实际关闭和失败传播由[生命周期回归](../test/integration_support/runtime_store_lifecycle_test.dart)覆盖。
 
 ## CI 与平台检查
 

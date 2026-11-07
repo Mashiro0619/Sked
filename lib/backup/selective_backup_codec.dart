@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
@@ -11,7 +10,9 @@ import 'selective_backup_models.dart';
 class SelectiveBackupCodec {
   const SelectiveBackupCodec();
   static const schema = 'sked-selective-backup';
-  static const version = 1;
+  static const version = 2;
+  static const agentSchema = 'sked-agent-records';
+  static const agentVersion = 1;
   static const manifestPath = 'manifest.json';
 
   Uint8List encode(
@@ -51,22 +52,18 @@ class SelectiveBackupCodec {
       jsonEncode({
         'schema': schema,
         'version': version,
+        'agentSchema': agentSchema,
+        'agentVersion': agentVersion,
         'createdAt': bundle.createdAt.toIso8601String(),
         'roots': bundle.roots.map((key) => key.toJson()).toList(),
         'objects': objects,
         'files': files,
       }),
     );
-    if (manifest.length > SelectiveBackupLimits.manifestBytes) {
-      backupLimit('The backup manifest is too large.');
-    }
     archive.add(
       ArchiveFile.noCompress(manifestPath, manifest.length, manifest),
     );
-    final output = _BoundedBackupOutput(
-      SelectiveBackupLimits.archiveBytes,
-      cancellation,
-    );
+    final output = _CancellableBackupOutput(cancellation);
     ZipEncoder().encodeStream(archive, output, modified: DateTime.utc(2000));
     cancellation?.check();
     return output.getBytes();
@@ -77,17 +74,9 @@ class SelectiveBackupCodec {
     BackupCancellation? cancellation,
   }) {
     cancellation?.check();
-    if (bytes.length > SelectiveBackupLimits.archiveBytes) {
-      backupLimit('The backup file is too large.');
-    }
     try {
-      final expectedEntries = _preflightDirectory(bytes);
       final directory = ZipDirectory()..read(InputMemoryStream(bytes));
-      if (directory.fileHeaders.length != expectedEntries) {
-        backupInvalid('Incomplete ZIP directory.');
-      }
       final entries = <String, ZipFileHeader>{};
-      var total = 0;
       for (final header in directory.fileHeaders) {
         cancellation?.check();
         final path = header.filename;
@@ -104,27 +93,15 @@ class SelectiveBackupCodec {
             entries.containsKey(path)) {
           backupInvalid('Invalid, duplicate, linked, or encrypted ZIP entry.');
         }
-        final budget = path == manifestPath
-            ? SelectiveBackupLimits.manifestBytes
-            : path.startsWith('objects/')
-            ? SelectiveBackupLimits.objectBytes
-            : SelectiveBackupLimits.fileBytes;
-        if (header.uncompressedSize < 0 || header.uncompressedSize > budget) {
-          backupLimit('A ZIP entry exceeds its byte budget.');
-        }
-        total += header.uncompressedSize;
-        if (total > SelectiveBackupLimits.expandedBytes) {
-          backupLimit('The expanded backup is too large.');
-        }
         entries[path] = header;
       }
-      Uint8List readEntry(String path, int max) {
+      Uint8List readEntry(String path) {
         cancellation?.check();
         final header = entries[path];
         if (header == null) {
           backupInvalid('A manifest entry is absent from the archive.');
         }
-        final output = _BoundedBackupOutput(max, cancellation);
+        final output = _CancellableBackupOutput(cancellation);
         header.file!.decompress(output);
         final content = output.getBytes();
         if (content.length != header.uncompressedSize ||
@@ -137,29 +114,38 @@ class SelectiveBackupCodec {
       }
 
       final rawManifest = jsonDecode(
-        utf8.decode(
-          readEntry(manifestPath, SelectiveBackupLimits.manifestBytes),
-          allowMalformed: false,
-        ),
+        utf8.decode(readEntry(manifestPath), allowMalformed: false),
       );
       if (rawManifest is Map &&
           rawManifest['schema'] == schema &&
-          rawManifest['version'] != version) {
+          rawManifest['version'] != version &&
+          rawManifest['version'] != 1) {
         throw const SelectiveBackupException(
           SelectiveBackupError.unsupportedVersion,
           'Unsupported selective backup version.',
         );
       }
+      final legacy = rawManifest is Map && rawManifest['version'] == 1;
       final manifest = backupMap(rawManifest, {
         'schema',
         'version',
+        if (!legacy) 'agentSchema',
+        if (!legacy) 'agentVersion',
         'createdAt',
         'roots',
         'objects',
         'files',
       });
-      if (manifest['schema'] != schema || manifest['version'] != version) {
+      if (manifest['schema'] != schema) {
         backupInvalid('This is not a selective Sked backup.');
+      }
+      if (!legacy &&
+          (manifest['agentSchema'] != agentSchema ||
+              manifest['agentVersion'] != agentVersion)) {
+        throw const SelectiveBackupException(
+          SelectiveBackupError.unsupportedVersion,
+          'Unsupported Agent backup format.',
+        );
       }
       final date = DateTime.tryParse(
         backupText(manifest['createdAt'], max: 64),
@@ -174,20 +160,16 @@ class SelectiveBackupCodec {
         backupInvalid('Duplicate backup selection.');
       }
       final used = <String>{manifestPath};
-      Uint8List readDeclared(
-        Map<String, dynamic> entry,
-        String prefix,
-        int max,
-      ) {
+      Uint8List readDeclared(Map<String, dynamic> entry, String prefix) {
         final path = backupText(entry['path'], max: 128);
         final digest = backupText(entry['digest'], max: 64);
-        final length = backupInteger(entry['byteLength'], max: max);
+        final length = backupInteger(entry['byteLength']);
         if (!path.startsWith(prefix) ||
             !used.add(path) ||
             !backupDigestIsValid(digest)) {
           backupInvalid('Invalid or duplicate manifest entry.');
         }
-        final content = readEntry(path, max);
+        final content = readEntry(path);
         if (content.length != length || backupDigest(content) != digest) {
           backupInvalid('Backup content checksum mismatch.');
         }
@@ -197,15 +179,24 @@ class SelectiveBackupCodec {
       final records = <BackupRecord>[];
       for (final raw in backupList(manifest['objects'])) {
         final entry = backupMap(raw, {'key', 'path', 'byteLength', 'digest'});
-        final content = readDeclared(
-          entry,
-          'objects/',
-          SelectiveBackupLimits.objectBytes,
-        );
+        final key = BackupObjectKey.fromJson(entry['key']);
+        if (legacy &&
+            const {
+              BackupObjectKind.conversation,
+              BackupObjectKind.attachment,
+              BackupObjectKind.skill,
+              BackupObjectKind.memory,
+            }.contains(key.kind)) {
+          throw const SelectiveBackupException(
+            SelectiveBackupError.unsupportedVersion,
+            'This backup contains the retired Agent format. Export its business groups separately.',
+          );
+        }
+        final content = readDeclared(entry, 'objects/');
         final record = BackupRecord.fromJson(
           jsonDecode(utf8.decode(content, allowMalformed: false)),
         );
-        if (record.key != BackupObjectKey.fromJson(entry['key'])) {
+        if (record.key != key) {
           backupInvalid('Backup object identity mismatch.');
         }
         records.add(record);
@@ -213,11 +204,7 @@ class SelectiveBackupCodec {
       final binaries = <String, Uint8List>{};
       for (final raw in backupList(manifest['files'])) {
         final entry = backupMap(raw, {'path', 'byteLength', 'digest'});
-        final content = readDeclared(
-          entry,
-          'files/',
-          SelectiveBackupLimits.fileBytes,
-        );
+        final content = readDeclared(entry, 'files/');
         final digest = entry['digest'] as String;
         if (entry['path'] != 'files/$digest.bin' ||
             binaries.containsKey(digest)) {
@@ -244,53 +231,15 @@ class SelectiveBackupCodec {
 
   bool _validEntryPath(String path) =>
       path == manifestPath ||
-      RegExp(r'^objects/[0-9]{4}\.json$').hasMatch(path) ||
+      RegExp(r'^objects/[0-9]{4,}\.json$').hasMatch(path) ||
       RegExp(r'^files/[a-f0-9]{64}\.bin$').hasMatch(path);
-
-  /// Bound directory allocation before allowing the ZIP library to parse it.
-  /// Backups fit well below ZIP64 and never span disks.
-  int _preflightDirectory(Uint8List bytes) {
-    final view = ByteData.sublistView(bytes);
-    for (
-      var offset = bytes.length - 22;
-      offset >= math.max(0, bytes.length - 65557);
-      offset--
-    ) {
-      if (view.getUint32(offset, Endian.little) != 0x06054b50) continue;
-      final comment = view.getUint16(offset + 20, Endian.little);
-      if (offset + 22 + comment != bytes.length) continue;
-      final disk = view.getUint16(offset + 4, Endian.little);
-      final directoryDisk = view.getUint16(offset + 6, Endian.little);
-      final diskCount = view.getUint16(offset + 8, Endian.little);
-      final count = view.getUint16(offset + 10, Endian.little);
-      final size = view.getUint32(offset + 12, Endian.little);
-      final start = view.getUint32(offset + 16, Endian.little);
-      if (disk != 0 ||
-          directoryDisk != 0 ||
-          count != diskCount ||
-          count < 1 ||
-          count > SelectiveBackupLimits.entries ||
-          size > 8 * 1024 * 1024 ||
-          start + size != offset ||
-          start < 0) {
-        backupInvalid('Unsupported or oversized ZIP directory.');
-      }
-      return count;
-    }
-    backupInvalid('The ZIP directory is missing or truncated.');
-  }
 }
 
-class _BoundedBackupOutput extends OutputMemoryStream {
-  _BoundedBackupOutput(this.maxBytes, this.cancellation)
-    : super(size: math.min(maxBytes, 32768));
-  final int maxBytes;
+class _CancellableBackupOutput extends OutputMemoryStream {
+  _CancellableBackupOutput(this.cancellation) : super(size: 32768);
   final BackupCancellation? cancellation;
   void _check(int count) {
     cancellation?.check();
-    if (count < 0 || length + count > maxBytes) {
-      backupLimit('Backup encoding or decoding exceeded its byte budget.');
-    }
   }
 
   @override

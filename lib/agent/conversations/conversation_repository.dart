@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import '../../application/operation_contracts.dart';
 import '../../models/agent_settings.dart';
 import '../references/agent_composer_reference.dart';
+import '../history/conversation_history.dart';
 import 'conversation_models.dart';
 import 'conversation_storage.dart';
 
@@ -26,6 +27,10 @@ class ConversationRepository extends ChangeNotifier {
   final DateTime Function() _clock;
   final String Function() _id;
   ConversationArchive _archive = ConversationArchive();
+  final Set<String> _unloadedIds = {};
+  final _visibleMessages = <String, List<ConversationMessage>>{};
+  final _visibleStarts = <String, int>{};
+  final _turnIndexes = <String, List<ConversationTurn>>{};
   AgentConversation? _draftConversation;
   bool _draftSelected = false;
   Future<void> _tail = Future<void>.value();
@@ -40,6 +45,12 @@ class ConversationRepository extends ChangeNotifier {
   String? _historyOwner;
 
   bool get isLoaded => _loaded;
+  bool get isArchiveLoaded => _loaded && _unloadedIds.isEmpty;
+  bool get supportsRestoreMarkers => _storage is StructuredConversationStorage;
+  Future<int> readStorageRevision() =>
+      (_storage as StructuredConversationStorage).readRevision();
+  Future<String?> readRestoreMarker(String restoreId) =>
+      (_storage as StructuredConversationStorage).readRestoreMarker(restoreId);
   bool get blocked => _blocked;
   bool get canWrite =>
       _loaded && !_blocked && !_frozen && !_disposed && _historyOwner == null;
@@ -76,14 +87,7 @@ class ConversationRepository extends ChangeNotifier {
 
   /// Validates eventual publication before any participant changes live data.
   void validateHistoryCandidate(AgentConversation candidate) {
-    ConversationArchive.decode(
-      _next(
-        conversations: [
-          for (final item in conversations)
-            if (item.id == candidate.id) candidate else item,
-        ],
-      ).encode(),
-    );
+    AgentConversation.fromJson(candidate.toJson());
   }
 
   /// A failed clear may have removed some files. Explicit load/recovery must
@@ -141,15 +145,225 @@ class ConversationRepository extends ChangeNotifier {
             .where((conversation) => conversation.id == id)
             .firstOrNull;
 
+  bool isConversationLoaded(String id) => !_unloadedIds.contains(id);
+
+  List<ConversationMessage> visibleMessages(String id) {
+    final current = find(id);
+    if (current == null) return const [];
+    if (!_visibleMessages.containsKey(id)) {
+      if (_unloadedIds.contains(id)) return const [];
+      _refreshVisibleWindow(current);
+    }
+    return _visibleMessages[id]!;
+  }
+
+  List<ConversationTurn> visibleTurns(String id) =>
+      _turnIndexes[id] ?? find(id)?.turns ?? const [];
+  bool hasEarlierMessages(String id) => (_visibleStarts[id] ?? 0) > 0;
+
+  Future<void> loadEarlierMessages(String id) => _enqueue(() async {
+    await _ensureConversationPage(id);
+    final start = _visibleStarts[id] ?? 0;
+    if (start == 0) return;
+    final current = _requireConversation(id);
+    if (!_unloadedIds.contains(id)) {
+      _refreshVisibleWindow(
+        current,
+        start: _groupStart(current.messages, start > 50 ? start - 50 : 0),
+      );
+    } else {
+      final page = await (_storage as StructuredConversationStorage).readPage(
+        id,
+        before: start,
+      );
+      final messages = List<ConversationMessage>.unmodifiable([
+        ...page.conversation.messages,
+        ...visibleMessages(id),
+      ]);
+      final attachments = {
+        for (final item in [
+          ...page.conversation.attachments,
+          ...current.attachments,
+        ])
+          item.id: item,
+      };
+      final view = current.copyWith(
+        messages: messages,
+        attachments: attachments.values,
+        executionHistoryStart: current.executionHistoryStart > 0
+            ? page.conversation.messages.length + current.executionHistoryStart
+            : page.conversation.executionHistoryStart,
+      );
+      _replaceCachedConversation(view);
+      _visibleStarts[id] = page.start;
+      _visibleMessages[id] = messages;
+      _turnIndexes[id] ??= page.turns;
+    }
+    _notify();
+  });
+
+  static int _groupStart(List<ConversationMessage> messages, int target) {
+    if (messages.isEmpty) return 0;
+    var start = target < 0
+        ? 0
+        : (target < messages.length ? target : messages.length - 1);
+    while (start > 0 && messages[start].role != ConversationRole.user) {
+      start--;
+    }
+    return start;
+  }
+
+  void _refreshVisibleWindow(AgentConversation current, {int? start}) {
+    final previous = _visibleMessages[current.id];
+    final anchor = previous?.firstOrNull?.id;
+    final oldStart = _visibleStarts[current.id] ?? -1;
+    final retained = anchor == null
+        ? -1
+        : (oldStart >= 0 &&
+                  oldStart < current.messages.length &&
+                  current.messages[oldStart].id == anchor
+              ? oldStart
+              : current.messages.indexWhere((item) => item.id == anchor));
+    final index =
+        start ??
+        (retained >= 0
+            ? retained
+            : _groupStart(current.messages, current.messages.length - 50));
+    final messages = current.messages.sublist(index);
+    _visibleStarts[current.id] = index;
+    if (previous == null || !listEquals(previous, messages)) {
+      _visibleMessages[current.id] = List.unmodifiable(messages);
+    }
+    _turnIndexes[current.id] = current.turns;
+  }
+
+  void _replaceCachedConversation(AgentConversation value) {
+    _archive = ConversationArchive(
+      revision: _archive.revision,
+      selectedId: _archive.selectedId,
+      conversations: [
+        for (final item in conversations)
+          if (item.id == value.id) value else item,
+      ],
+      handoffs: _archive.handoffs,
+      terminatedIds: _archive.terminatedIds,
+    );
+  }
+
+  Future<void> _ensureConversationPage(String id) async {
+    if (_visibleMessages.containsKey(id)) return;
+    if (!_unloadedIds.contains(id)) {
+      _refreshVisibleWindow(_requireConversation(id));
+      return;
+    }
+    final page = await (_storage as StructuredConversationStorage).readPage(id);
+    _replaceCachedConversation(page.conversation);
+    _visibleMessages[id] = page.conversation.messages;
+    _visibleStarts[id] = page.start;
+    _turnIndexes[id] = page.turns;
+  }
+
+  /// Loads one transcript on demand. History lists can use metadata without
+  /// fetching every other conversation's messages and protocol payloads.
+  Future<AgentConversation> read(String id) => _enqueue(() async {
+    await _ensureConversationLoaded(id);
+    _notify();
+    return _requireConversation(id);
+  });
+
+  Future<ConversationStatistics> statistics(String id) => _enqueue(() async {
+    final current = _requireConversation(id);
+    if (_unloadedIds.contains(id)) {
+      return (_storage as StructuredConversationStorage).readStatistics(id);
+    }
+    return ConversationStatistics.fromConversation(current);
+  });
+
+  Future<List<AgentConversation>> readAll() => _enqueue(() async {
+    for (final id in _unloadedIds.toList()) {
+      await _ensureConversationLoaded(id);
+    }
+    return conversations;
+  });
+
+  Future<Set<String>> referencedAttachmentIds() => _enqueue(() async {
+    final storage = _storage;
+    return {
+      if (storage is StructuredConversationStorage)
+        ...await (storage as StructuredConversationStorage)
+            .referencedAttachmentIds()
+      else
+        for (final conversation in conversations)
+          ...conversationAttachmentIds(conversation),
+      if (_draftConversation case final draft?)
+        ...conversationAttachmentIds(draft),
+    };
+  });
+
+  Future<void> _ensureConversationLoaded(String id) async {
+    if (!_unloadedIds.contains(id)) return;
+    final storage = _storage as StructuredConversationStorage;
+    final full = await storage.readConversation(id);
+    if (full == null) throw StateError('The conversation no longer exists.');
+    _replaceCachedConversation(full);
+    _unloadedIds.remove(id);
+    if (_visibleMessages.containsKey(id) || id == selectedId) {
+      _refreshVisibleWindow(full);
+    }
+  }
+
+  Future<ConversationStorageLoad> _readCurrentView() async {
+    final storage = _storage;
+    final index = storage is StructuredConversationStorage
+        ? await (storage as StructuredConversationStorage).readIndex()
+        : null;
+    final result = index == null
+        ? await storage.load()
+        : ConversationStorageLoad(archive: index.archive);
+    _unloadedIds.clear();
+    _visibleMessages.clear();
+    _visibleStarts.clear();
+    _turnIndexes.clear();
+    if (index == null) return result;
+    _unloadedIds.addAll(index.unloadedIds);
+    for (final entry in index.pages.entries) {
+      _visibleMessages[entry.key] = entry.value.conversation.messages;
+      _visibleStarts[entry.key] = entry.value.start;
+      _turnIndexes[entry.key] = entry.value.turns;
+    }
+    return result;
+  }
+
+  Future<void> refreshFrozenView({required void Function() validateOwner}) =>
+      _enqueue(() async {
+        if (!_frozen || _disposed) {
+          throw StateError('Restore refresh requires frozen storage.');
+        }
+        validateOwner();
+        final result = await _readCurrentView();
+        validateOwner();
+        _archive =
+            result.archive ??
+            (result.source == null
+                ? ConversationArchive()
+                : ConversationArchive.decode(result.source!));
+        _loaded = true;
+        _blocked = false;
+        recovered = result.recovered;
+        _notify();
+      });
+
   Future<void> load() => _enqueue(() async {
     if (_disposed || _frozen) {
       throw StateError('Conversation storage is closed.');
     }
     try {
-      final result = await _storage.load();
-      final next = result.source == null
-          ? ConversationArchive()
-          : ConversationArchive.decode(result.source!);
+      final result = await _readCurrentView();
+      final next =
+          result.archive ??
+          (result.source == null
+              ? ConversationArchive()
+              : ConversationArchive.decode(result.source!));
       _archive = next;
       _reconcileDraft();
       _loaded = true;
@@ -205,6 +419,7 @@ class ConversationRepository extends ChangeNotifier {
 
   Future<AgentConversation> create({
     required String title,
+    bool titleWasEdited = false,
     AgentPermissionMode mode = AgentPermissionMode.ask,
     AgentModelSelection? modelSelection,
     String? id,
@@ -217,6 +432,7 @@ class ConversationRepository extends ChangeNotifier {
       mode,
       id: id,
       modelSelection: modelSelection,
+      titleWasEdited: titleWasEdited,
     );
     await _save(
       _next(
@@ -252,6 +468,7 @@ class ConversationRepository extends ChangeNotifier {
 
   Future<void> select(String id) => _enqueue(() async {
     _checkWritable();
+    await _ensureConversationPage(id);
     _requireConversation(id);
     if (isDraft(id)) {
       if (!_draftSelected) {
@@ -276,36 +493,49 @@ class ConversationRepository extends ChangeNotifier {
   }) => _enqueue(() async {
     _checkWritable();
     if (days == 0) return 0;
-    if (days < 7 || days > 3650) {
-      throw const FormatException(
-        'History retention must be 0 or 7–3650 days.',
-      );
+    if (days < 0) {
+      throw const FormatException('History retention must not be negative.');
     }
-    final cutoff = _clock().toUtc().subtract(Duration(days: days));
+    final now = _clock().toUtc();
+    bool hasExpired(DateTime updatedAt) {
+      final elapsed = now.difference(updatedAt);
+      return elapsed.inDays > days ||
+          (elapsed.inDays == days &&
+              elapsed.inMicroseconds.remainder(Duration.microsecondsPerDay) >
+                  0);
+    }
+
     final removed = conversations
         .where(
           (item) =>
               item.status == ConversationStatus.idle &&
               item.pendingRedo == null &&
               item.pendingQuestion == null &&
+              item.queuedInputs.isEmpty &&
+              !item.hasPendingControls &&
               item.draft.isEmpty &&
               item.draftAttachmentIds.isEmpty &&
               item.draftReferences.isEmpty &&
-              item.updatedAt.isBefore(cutoff) &&
+              hasExpired(item.updatedAt) &&
               canRemove(item.id),
         )
         .map((item) => item.id)
         .toSet();
     if (removed.isEmpty) return 0;
+    final replacementId = removed.contains(_archive.selectedId)
+        ? conversations
+              .where((item) => !removed.contains(item.id))
+              .lastOrNull
+              ?.id
+        : _archive.selectedId;
+    if (replacementId != null) await _ensureConversationPage(replacementId);
     final remaining = conversations
         .where((item) => !removed.contains(item.id))
         .toList();
     await _save(
       ConversationArchive(
         revision: _archive.revision + 1,
-        selectedId: removed.contains(_archive.selectedId)
-            ? remaining.lastOrNull?.id
-            : _archive.selectedId,
+        selectedId: replacementId,
         conversations: remaining,
         handoffs: _archive.handoffs,
         terminatedIds: {..._archive.terminatedIds, ...removed},
@@ -320,6 +550,7 @@ class ConversationRepository extends ChangeNotifier {
     String? expectedRunId,
   }) => _enqueue(() async {
     _checkWritable(expectedRunId: expectedRunId);
+    await _ensureConversationLoaded(id);
     final current = _requireConversation(id);
     if (expectedRunId != null && current.runId != expectedRunId) {
       throw const OperationProblem(
@@ -327,7 +558,7 @@ class ConversationRepository extends ChangeNotifier {
         'This conversation run is no longer current.',
       );
     }
-    final next = transform(current).copyWith(updatedAt: _clock().toUtc());
+    final next = transform(current).withUpdatedAt(_clock().toUtc());
     if (_frozen) _validateShutdownRunUpdate(current, next, expectedRunId!);
     if (next.id != current.id || next.createdAt != current.createdAt) {
       throw const OperationProblem(
@@ -398,6 +629,7 @@ class ConversationRepository extends ChangeNotifier {
       try {
         _checkWritable();
         if (_archive.terminatedIds.contains(id)) return;
+        await _ensureConversationLoaded(id);
         if (find(id) == null) {
           throw const OperationProblem(
             OperationErrorCode.notFound,
@@ -415,13 +647,17 @@ class ConversationRepository extends ChangeNotifier {
             'Finish or cancel the pending history redo before deleting this conversation.',
           );
         }
+        final replacementId = _archive.selectedId == id
+            ? conversations.where((item) => item.id != id).lastOrNull?.id
+            : _archive.selectedId;
+        if (replacementId != null) {
+          await _ensureConversationPage(replacementId);
+        }
         final remaining = conversations.where((item) => item.id != id).toList();
         await _save(
           ConversationArchive(
             revision: _archive.revision + 1,
-            selectedId: _archive.selectedId == id
-                ? remaining.lastOrNull?.id
-                : _archive.selectedId,
+            selectedId: replacementId,
             conversations: remaining,
             handoffs: _archive.handoffs,
             terminatedIds: {..._archive.terminatedIds, id},
@@ -452,6 +688,7 @@ class ConversationRepository extends ChangeNotifier {
           'This handoff ID belongs to different source material.',
         );
       }
+      await _ensureConversationLoaded(existing.conversationId);
       final conversation = _requireConversation(existing.conversationId);
       final message = [
         ...conversation.messages,
@@ -476,7 +713,7 @@ class ConversationRepository extends ChangeNotifier {
       title,
       mode,
       modelSelection: modelSelection,
-    ).copyWith(messages: [message], sources: [source]);
+    ).copyWith(messages: [message], sources: [source], titleWasEdited: true);
     await _save(
       _next(
         conversations: [...conversations, conversation],
@@ -510,10 +747,13 @@ class ConversationRepository extends ChangeNotifier {
     try {
       final loaded = await _storage.load();
       validateOwner();
-      final archive = loaded.source == null
-          ? ConversationArchive()
-          : ConversationArchive.decode(loaded.source!);
+      final archive =
+          loaded.archive ??
+          (loaded.source == null
+              ? ConversationArchive()
+              : ConversationArchive.decode(loaded.source!));
       _archive = archive;
+      _unloadedIds.clear();
       // This is one participant of a larger restore. Keep the volatile input
       // even if an incoming durable chat has the same ID until the owner has
       // confirmed every participant and cleared its recovery journal.
@@ -532,6 +772,9 @@ class ConversationRepository extends ChangeNotifier {
   Future<void> replaceFrozenForRestore(
     ConversationArchive target, {
     required void Function() validateOwner,
+    String? restoreId,
+    String? restoreFingerprint,
+    Iterable<String>? replacedConversationIds,
   }) => _enqueue(() async {
     if (!_frozen || _disposed || !_loaded || _blocked) {
       throw StateError('Conversation restore requires known frozen storage.');
@@ -544,14 +787,15 @@ class ConversationRepository extends ChangeNotifier {
       );
     }
     try {
-      await _save(target, reconcileDraft: false);
-      final confirmed = await _storage.load();
+      await _save(
+        target,
+        reconcileDraft: false,
+        restoreId: restoreId,
+        restoreFingerprint: restoreFingerprint,
+        replacedConversationIds: replacedConversationIds,
+      );
+      _unloadedIds.clear();
       validateOwner();
-      if (confirmed.source != target.encode()) {
-        throw const ConversationStorageException(
-          'The conversation restore could not be read back.',
-        );
-      }
     } catch (_) {
       _blocked = true;
       _notify();
@@ -645,6 +889,7 @@ class ConversationRepository extends ChangeNotifier {
     AgentPermissionMode mode, {
     String? id,
     AgentModelSelection? modelSelection,
+    bool titleWasEdited = false,
   }) {
     final resolvedId = id ?? _id();
     if (resolvedId.isEmpty || resolvedId.length > 256) {
@@ -664,6 +909,7 @@ class ConversationRepository extends ChangeNotifier {
     return AgentConversation(
       id: resolvedId,
       title: title,
+      titleWasEdited: titleWasEdited,
       mode: mode,
       modelSelection: modelSelection,
       createdAt: now,
@@ -704,6 +950,8 @@ class ConversationRepository extends ChangeNotifier {
         draft.historyVersions.isNotEmpty ||
         draft.replyRevisions.isNotEmpty ||
         draft.redoBatches.isNotEmpty ||
+        draft.queuedInputs.isNotEmpty ||
+        draft.queuedControls.isNotEmpty ||
         draft.pendingQuestion != null ||
         draft.archived ||
         draft.status != ConversationStatus.idle ||
@@ -714,12 +962,6 @@ class ConversationRepository extends ChangeNotifier {
         'Unsent input cannot contain executable conversation history.',
       );
     }
-    ConversationArchive.decode(
-      ConversationArchive(
-        selectedId: draft.id,
-        conversations: [draft],
-      ).encode(),
-    );
   }
 
   void _discardDraft() {
@@ -740,19 +982,54 @@ class ConversationRepository extends ChangeNotifier {
     ConversationArchive candidate, {
     bool selectDurable = false,
     bool reconcileDraft = true,
+    String? restoreId,
+    String? restoreFingerprint,
+    Iterable<String>? replacedConversationIds,
   }) async {
-    final source = candidate.encode();
-    // Every writer observes the same data shape and relationship checks as
-    // restart decoding, before any persistent state is modified.
-    ConversationArchive.decode(source);
+    final storage = _storage;
+    final source = storage is StructuredConversationStorage
+        ? null
+        : candidate.encode();
+    if (source != null) ConversationArchive.decode(source);
     try {
-      await _storage.save(source, revision: candidate.revision);
-    } catch (_) {
-      _blocked = true;
-      _notify();
+      if (storage is StructuredConversationStorage) {
+        final records = storage as StructuredConversationStorage;
+        if (restoreId == null) {
+          await records.writeArchive(candidate, previous: _archive);
+        } else {
+          await records.writeRestore(
+            candidate,
+            previous: _archive,
+            restoreId: restoreId,
+            fingerprint: restoreFingerprint!,
+            replacedConversationIds: replacedConversationIds,
+          );
+        }
+      } else {
+        // Explicit archive adapters are used for portable exports and tests.
+        await storage.save(source!, revision: candidate.revision);
+      }
+    } catch (error) {
+      if (error is! ConversationStorageException || error.outcomeUnknown) {
+        _blocked = true;
+        _notify();
+      }
       rethrow;
     }
     _archive = candidate;
+    for (final id in _visibleMessages.keys.toList()) {
+      final current = find(id);
+      if (current == null) {
+        _visibleMessages.remove(id);
+        _visibleStarts.remove(id);
+        _turnIndexes.remove(id);
+      } else if (!_unloadedIds.contains(id)) {
+        _refreshVisibleWindow(current);
+      }
+    }
+    _unloadedIds.removeWhere(
+      (id) => !candidate.conversations.any((item) => item.id == id),
+    );
     if (reconcileDraft) _reconcileDraft();
     if (selectDurable) _draftSelected = false;
     _notify();

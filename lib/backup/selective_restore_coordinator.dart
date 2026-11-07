@@ -20,7 +20,7 @@ class BackupPreparedTarget {
   final BackupOwner owner;
   final String restoreId;
   final Map<String, Object?> descriptor;
-  String get fingerprint => backupDigest(
+  late final String fingerprint = backupDigest(
     utf8.encode(
       canonicalBackupJson({
         'owner': owner.name,
@@ -70,6 +70,12 @@ abstract class BackupRestoreParticipant {
   /// Idempotent; called only before business effects, or after every participant
   /// has been durably marked applied. It never undoes committed business data.
   Future<void> cleanup(BackupPreparedTarget target);
+}
+
+/// A fixed completion target is written only after every restore participant
+/// has been read back. Its journal survives a failed completion acknowledgement.
+abstract interface class BackupRestoreCompletionParticipant {
+  Future<void> complete(BackupPreparedTarget target);
 }
 
 class SelectiveRestoreState {
@@ -327,6 +333,14 @@ class SelectiveRestoreCoordinator {
       }
       state = state.markApplied();
       await journal.write(state);
+    }
+    for (final target in state.targets) {
+      final participant = _participants[target.owner]!;
+      if (participant is BackupRestoreCompletionParticipant) {
+        await (participant as BackupRestoreCompletionParticipant).complete(
+          target,
+        );
+      }
     }
     // A completed marker makes cleanup retryable without reading a stage that
     // a preceding cleanup call already removed, or repeating business writes.

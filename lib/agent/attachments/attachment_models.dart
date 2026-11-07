@@ -12,8 +12,6 @@ class ConversationAttachment {
     required this.digest,
   });
 
-  static const maxFileBytes = 32 * 1000 * 1000;
-  static const maxPerMessage = 20;
   final String id;
   final String name;
   final String mediaType;
@@ -23,12 +21,10 @@ class ConversationAttachment {
   void validate() {
     if (!validAttachmentId(id) ||
         name.isEmpty ||
-        name.length > 256 ||
         name.contains(RegExp(r'[\x00-\x1f/\\]')) ||
         !RegExp(r'^[a-z0-9!#$&^_.+-]+/[a-z0-9!#$&^_.+-]+$')
             .hasMatch(mediaType) ||
         byteLength < 0 ||
-        byteLength > maxFileBytes ||
         !RegExp(r'^[a-f0-9]{64}$').hasMatch(digest)) {
       throw const AttachmentException(AttachmentError.invalidMetadata);
     }
@@ -76,7 +72,6 @@ bool validAttachmentId(String value) =>
 
 enum AttachmentError {
   invalidMetadata,
-  tooLarge,
   changed,
   missing,
   corrupt,

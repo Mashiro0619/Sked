@@ -35,6 +35,7 @@ void main() {
         );
         await _waitUntil(
           first,
+          id,
           () =>
               first.agent.runtime.state.value.runFor(id).phase ==
               AgentUiPhase.waitingUser,
@@ -82,6 +83,7 @@ void main() {
         if (!answered) {
           await _waitUntil(
             resumed,
+            id,
             () =>
                 resumed.agent.runtime.state.value.runFor(id).phase ==
                 AgentUiPhase.waitingUser,
@@ -242,20 +244,25 @@ ProviderResponse _done() => ProviderResponse(
 Map<String, Object?> _businessData(Map<String, Object?> data) =>
     Map<String, Object?>.from(data)..remove('applicationLedger');
 
-Future<void> _waitUntil(AppRuntime app, bool Function() predicate) async {
+Future<void> _waitUntil(
+  AppRuntime app,
+  String conversationId,
+  bool Function() predicate,
+) async {
   if (predicate()) return;
+  final execution = app.agent.runtime.watchConversation(conversationId);
   final done = Completer<void>();
   void changed() {
     if (!done.isCompleted && predicate()) done.complete();
   }
 
-  app.agent.runtime.state.addListener(changed);
+  execution.addListener(changed);
   app.agent.conversations.addListener(changed);
   try {
     changed();
     await done.future.timeout(const Duration(seconds: 5));
   } finally {
-    app.agent.runtime.state.removeListener(changed);
+    execution.removeListener(changed);
     app.agent.conversations.removeListener(changed);
   }
 }

@@ -39,7 +39,7 @@ void main() {
   });
 
   Future<Map<String, Object?>> call(String name, Map<String, Object?> args) =>
-      app.tools.execute(
+      app.tools.executeInternal(
         ProviderToolCall(id: name, name: name, arguments: jsonEncode(args)),
         scope,
         (_) async => null,

@@ -72,50 +72,9 @@ void main() {
   );
 
   test(
-    'an explicit wire limit cannot silently truncate the complete proposal',
-    () async {
-      final h = await _Harness.create(
-        maxRequestBytes: 8000,
-        toolDescription: '工具' * 650,
-      );
-      addTearDown(h.close);
-      await h.seed('Older query result ' * 250);
-      await h.runtime.send(h.id, 'Continue');
-      expect(h.bodies, isEmpty);
-      expect(
-        h.runtime.state.value.runFor(h.id).errorMessage,
-        'provider.requestBudgetExceeded',
-      );
-      expect(
-        h.repository.find(h.id)!.messages[1].text,
-        'Older query result ' * 250,
-      );
-    },
-  );
-
-  test(
-    'uncompressible schema fails before sending a provider request',
-    () async {
-      final h = await _Harness.create(
-        maxRequestBytes: 4000,
-        toolDescription: '工具' * 1000,
-      );
-      addTearDown(h.close);
-      await h.runtime.send(h.id, 'Read the agenda');
-      expect(h.bodies, isEmpty);
-      expect(
-        h.runtime.state.value.runFor(h.id).errorMessage,
-        'provider.requestBudgetExceeded',
-      );
-      expect(h.repository.find(h.id)!.messages.single.text, 'Read the agenda');
-    },
-  );
-
-  test(
     'regeneration measures its actual system instructions and empty tool set',
     () async {
       final h = await _Harness.create(
-        maxRequestBytes: 1600,
         toolDescription: '工具' * 1000,
         systemInstructions: (_) => 'Ordinary instructions ' * 1000,
       );
@@ -123,7 +82,6 @@ void main() {
       await h.seed('Original reply');
       await h.runtime.regenerateReply(h.id, 'old-assistant');
       expect(h.bodies, hasLength(1));
-      expect(h.bodies.single.length, lessThanOrEqualTo(1600));
       expect(
         utf8.decode(h.bodies.single),
         isNot(contains('Ordinary instructions')),
@@ -154,7 +112,6 @@ class _Harness {
 
   static Future<_Harness> create({
     AgentModelProtocol protocol = AgentModelProtocol.chatCompletions,
-    int? maxRequestBytes,
     String toolDescription = 'Read synthetic data',
     String Function(AgentConversation)? systemInstructions,
   }) async {
@@ -220,9 +177,7 @@ class _Harness {
       ],
       executeTool: (_, _, _) async => {'items': <Object?>[]},
       onOpenSettings: () {},
-      limits: AgentRuntimeLimits(
-        providerLimits: ProviderLimits(maxRequestBytes: maxRequestBytes),
-      ),
+
       systemInstructions: systemInstructions ?? (_) => 'Host rules',
     );
     return h;

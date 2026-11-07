@@ -29,8 +29,7 @@ const _unsentDraft = 'Unsent chat draft kept while editing a previous request';
 
 const _providerPhases = [
   'original-capabilities',
-  'original-prepare',
-  'original-commit',
+  'original-apply',
   'original-reply',
   'later-reply',
   'reply-regeneration',
@@ -113,9 +112,9 @@ class _HistoryProvider extends ProviderClient {
             users.isNotEmpty,
         'The history request did not use the explicit synthetic model.',
       );
-      final expectedInput = index < 4
+      final expectedInput = index < 3
           ? _originalRequest
-          : index < 6
+          : index < 5
           ? _laterRequest
           : _editedRequest;
       requireAgentFeature(
@@ -123,10 +122,10 @@ class _HistoryProvider extends ProviderClient {
         'A history action sent a different or repeated user request.',
       );
       requireAgentFeature(
-        index == 5 ? tools.isEmpty : tools.isNotEmpty,
+        index == 4 ? tools.isEmpty : tools.isNotEmpty,
         'Only reply regeneration may use the empty-tool request path.',
       );
-      if (index == 6) {
+      if (index == 5) {
         requireAgentFeature(
           !users.contains(_originalRequest) && !users.contains(_laterRequest),
           'The edited request replayed the retired user suffix.',
@@ -143,15 +142,6 @@ class _HistoryProvider extends ProviderClient {
         final result = Map<String, Object?>.from(decoded as Map);
         observed['lastToolResult'] = result;
         return result;
-      }
-
-      String preparedPlanId() {
-        final value = lastResult()['planId'];
-        requireAgentFeature(
-          value is String && value.isNotEmpty,
-          'The actual prepare result has no plan identity.',
-        );
-        return value as String;
       }
 
       ProviderResponse call(String name, Map<String, Object?> arguments) {
@@ -178,11 +168,17 @@ class _HistoryProvider extends ProviderClient {
         finishReason: 'stop',
       );
 
+      if (index == 2) {
+        requireAgentFeature(
+          lastResult()['status'] == 'committed',
+          'The single business action did not save its result.',
+        );
+      }
       final response = switch (index) {
         0 => call('capabilities.describe', {
-          'names': ['mutation.prepare', 'mutation.commit'],
+          'names': ['mutation.apply'],
         }),
-        1 => call('mutation.prepare', {
+        1 => call('mutation.apply', {
           'commands': [
             {
               'kind': 'calendar',
@@ -191,11 +187,10 @@ class _HistoryProvider extends ProviderClient {
             },
           ],
         }),
-        2 => call('mutation.commit', {'planId': preparedPlanId()}),
-        3 => done(_originalReply),
-        4 => done(_laterReply),
-        5 => done(_regeneratedReply),
-        6 => done(_replayedReply),
+        2 => done(_originalReply),
+        3 => done(_laterReply),
+        4 => done(_regeneratedReply),
+        5 => done(_replayedReply),
         _ => throw StateError('Unexpected history script index.'),
       };
       observed['response'] = {
@@ -338,7 +333,9 @@ class AgentHistoryJourney implements AgentNativeFeature {
     await app.agent.knowledgeRepository.waitForPendingWrites().timeout(
       const Duration(seconds: 20),
     );
-    final archive = ConversationArchive.decode(journey.session.chatSource);
+    final archive = ConversationArchive.decode(
+      await journey.session.readChatSource(),
+    );
     final saved = archive.conversations.singleWhere(
       (item) => item.id == agentNativeLongId,
     );
@@ -412,7 +409,8 @@ class AgentHistoryJourney implements AgentNativeFeature {
   ) async {
     final initial = await _readSaved(journey);
     _shortDigest = AgentNativeSession.historyDigest(
-      ConversationArchive.decode(journey.session.chatSource).conversations
+      ConversationArchive.decode(await journey.session.readChatSource())
+          .conversations
           .singleWhere((item) => item.id == agentNativeShortId)
           .messages,
     );
@@ -428,7 +426,7 @@ class AgentHistoryJourney implements AgentNativeFeature {
           _provider.requests == 0,
       'The seeded history contains execution or version ownership.',
     );
-    await _send(journey, _originalRequest, _originalReply, 4);
+    await _send(journey, _originalRequest, _originalReply, 3);
     final saved = await _readSaved(journey);
     final suffix = saved.messages.skip(agentNativeMessageCount).toList();
     final turn = saved.turns.single;
@@ -449,7 +447,7 @@ class AgentHistoryJourney implements AgentNativeFeature {
           suffix.last.text == _originalReply &&
           turn.ownershipComplete &&
           binding.store == ConversationOperationStore.main &&
-          binding.toolCallId == 'history-call-3-mutation.commit' &&
+          binding.toolCallId == 'history-call-2-mutation.apply' &&
           turn.runIds.contains(binding.runId) &&
           receipt.undo != null &&
           main.generalMode.schedules.length == 2 &&
@@ -476,7 +474,7 @@ class AgentHistoryJourney implements AgentNativeFeature {
   }
 
   Future<Map<String, Object?>> _createLater(AgentFeatureJourney journey) async {
-    await _send(journey, _laterRequest, _laterReply, 5);
+    await _send(journey, _laterRequest, _laterReply, 4);
     final saved = await _readSaved(journey);
     final last = saved.turns.last;
     final reply = saved.messages.last;
@@ -595,7 +593,7 @@ class AgentHistoryJourney implements AgentNativeFeature {
     await journey.tap(action, 'the real Regenerate reply button');
     await journey.until(
       () =>
-          _provider.requests == 6 &&
+          _provider.requests == 5 &&
           !journey.session.app.agent.runtime.state.value
               .runFor(agentNativeLongId)
               .isActive &&
@@ -636,7 +634,7 @@ class AgentHistoryJourney implements AgentNativeFeature {
       'mainSha256Before': agentNativeDigest(mainBefore),
       'mainSha256After': agentNativeDigest(journey.session.mainSource),
       'providerRequests': _provider.requests,
-      'regenerationRequestTools': _provider.trace[5]['toolNames'],
+      'regenerationRequestTools': _provider.trace[4]['toolNames'],
     };
   }
 
@@ -699,7 +697,7 @@ class AgentHistoryJourney implements AgentNativeFeature {
     final after = await _readSaved(journey);
     final visibleDraftAfterCancel = journey.field.controller!.text;
     requireAgentFeature(
-      _provider.requests == 6 &&
+      _provider.requests == 5 &&
           AgentNativeSession.historyDigest(after.messages) == historyBefore &&
           journey.session.mainSource == mainBefore &&
           after.historyVersions.isEmpty &&
@@ -755,7 +753,7 @@ class AgentHistoryJourney implements AgentNativeFeature {
     await journey.tap(confirmation, 'the product Confirm edit and redo button');
     await journey.until(
       () =>
-          _provider.requests == 7 &&
+          _provider.requests == 6 &&
           _current(journey).pendingRedo == null &&
           _current(journey).historyVersions.length == 1 &&
           _current(journey).messages.last.text == _replayedReply &&
@@ -883,7 +881,7 @@ class AgentHistoryJourney implements AgentNativeFeature {
   ) async {
     final saved = await _readSaved(journey);
     final mainBefore = journey.session.mainSource;
-    final chatBefore = journey.session.chatSource;
+    final chatBefore = await journey.session.readChatSource();
     final requestsBefore = _provider.requests;
     final menu = journey.key('agent-conversation-menu');
     await journey.tap(menu, 'the conversation menu');
@@ -968,14 +966,14 @@ class AgentHistoryJourney implements AgentNativeFeature {
       'the message history dialog to close',
     );
     final after = await _readSaved(journey);
-    final short = ConversationArchive.decode(journey.session.chatSource)
-        .conversations
+    final chatAfter = await journey.session.readChatSource();
+    final short = ConversationArchive.decode(chatAfter).conversations
         .singleWhere((item) => item.id == agentNativeShortId);
     requireAgentFeature(
-      _provider.requests == 7 &&
-          _provider.completedResponses == 7 &&
+      _provider.requests == 6 &&
+          _provider.completedResponses == 6 &&
           journey.session.mainSource == mainBefore &&
-          journey.session.chatSource == chatBefore &&
+          chatAfter == chatBefore &&
           jsonEncode(after.toJson()) == jsonEncode(saved.toJson()) &&
           journey.field.controller!.text == _unsentDraft,
       'Viewing historical versions replayed a request, changed context or lost the draft.',
@@ -990,7 +988,7 @@ class AgentHistoryJourney implements AgentNativeFeature {
       'mainSha256Before': agentNativeDigest(mainBefore),
       'mainSha256After': agentNativeDigest(journey.session.mainSource),
       'chatSha256Before': agentNativeDigest(chatBefore),
-      'chatSha256After': agentNativeDigest(journey.session.chatSource),
+      'chatSha256After': agentNativeDigest(chatAfter),
       'selectedId': journey.session.app.agent.conversations.selectedId,
       'savedDraft': after.draft,
       'visibleDraft': journey.field.controller!.text,

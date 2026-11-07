@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/provider/provider.dart';
+import 'package:sked/agent/history/conversation_history.dart';
 import 'package:sked/agent/runtime/agent_runtime_controller.dart';
 import 'package:sked/agent/imports/school_web_handoff.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
@@ -13,6 +14,7 @@ import 'package:sked/application/approval_plan.dart';
 import 'package:sked/application/mutation_coordinator.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/application/mutation_draft.dart';
+import 'package:sked/application/resource_contracts.dart';
 import 'package:sked/application/external_operation_coordinator.dart';
 import 'package:sked/models/agent_settings.dart';
 import 'package:sked/l10n/app_localizations_zh.dart';
@@ -365,15 +367,9 @@ void main() {
         );
         final h = await _Harness.create(
           protocol: AgentModelProtocol.responses,
-          limits: const AgentRuntimeLimits(
-            providerLimits: ProviderLimits(
-              maxTotalTokens: 4195,
-              maxOutputTokens: 4096,
-            ),
-          ),
+
           handler: (request, cancellation) {
-            expect(request.limits.maxTotalTokens, isNull);
-            expect(request.limits.maxOutputTokens, isNull);
+            expect(request.maxOutputTokens, isNull);
             return actual.stream(
               request,
               apiKey: _key,
@@ -445,7 +441,6 @@ void main() {
       var cancelled = false;
       var rounds = 0;
       final h = await _Harness.create(
-        stopwatchFactory: tester.binding.clock.stopwatch,
         handler: (_, _) => _events(
           rounds++ == 0
               ? _response('', calls: [_call('input')])
@@ -478,71 +473,6 @@ void main() {
     },
   );
 
-  for (final budget in ['tool', 'total']) {
-    testWidgets(
-      '$budget deadline preserves execution time across a long approval',
-      (tester) async {
-        final beforeApproval = Completer<void>();
-        var entered = false;
-        var resumed = false;
-        final h = await _Harness.create(
-          stopwatchFactory: tester.binding.clock.stopwatch,
-          limits: AgentRuntimeLimits(
-            toolTimeout: Duration(minutes: budget == 'tool' ? 1 : 5),
-            totalTimeout: Duration(minutes: budget == 'total' ? 1 : 5),
-          ),
-          handler: (_, _) => _events(_response('', calls: [_call('approval')])),
-          execute: (_, scope, requestApproval) async {
-            entered = true;
-            await beforeApproval.future;
-            final approval = await requestApproval(_Plan('long-review'));
-            scope.checkMutation(
-              planId: 'long-review',
-              approval: approval,
-              consumeApproval: true,
-            );
-            resumed = true;
-            await scope.whenCancelled;
-            return {'status': 'not_executed'};
-          },
-        );
-        addTearDown(h.dispose);
-        final send = h.runtime.send(h.id, 'Review these dates');
-        await tester.pump();
-        expect(
-          entered,
-          isTrue,
-          reason: h.runtime.state.value.runFor(h.id).errorMessage,
-        );
-        await tester.pump(const Duration(seconds: 40));
-        beforeApproval.complete();
-        await tester.pump();
-        expect(
-          h.runtime.state.value.runFor(h.id).phase,
-          AgentUiPhase.waitingApproval,
-        );
-        await tester.pump(const Duration(minutes: 20));
-        expect(
-          h.runtime.state.value.runFor(h.id).pendingApproval?.id,
-          'long-review',
-        );
-        await h.runtime.approve(h.id, 'long-review');
-        await tester.pump();
-        expect(resumed, isTrue);
-        await tester.pump(const Duration(seconds: 19));
-        expect(h.runtime.isRunning(h.id), isTrue);
-        expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
-        await tester.pump(const Duration(seconds: 1));
-        await send;
-        expect(
-          h.runtime.state.value.runFor(h.id).errorMessage,
-          budget == 'tool' ? 'toolTimeout' : 'timeout',
-        );
-        expect(h.runtime.isRunning(h.id), isFalse);
-      },
-    );
-  }
-
   for (final decision in ['approve', 'reject', 'stop']) {
     testWidgets('long business approval still supports $decision', (
       tester,
@@ -550,7 +480,6 @@ void main() {
       var round = 0;
       var commits = 0;
       final h = await _Harness.create(
-        stopwatchFactory: tester.binding.clock.stopwatch,
         handler: (_, _) => _events(
           round++ == 0
               ? _response('', calls: [_call('approval')])
@@ -602,11 +531,9 @@ void main() {
 
   for (final stopped in [false, true]) {
     testWidgets(
-      'HTTP approval pauses total budget and ${stopped ? 'can stop' : 'can send'}',
+      'HTTP approval waits for the user and ${stopped ? 'can stop' : 'can send'}',
       (tester) async {
-        final h = await _Harness.create(
-          stopwatchFactory: tester.binding.clock.stopwatch,
-        );
+        final h = await _Harness.create();
         addTearDown(h.dispose);
         h.settings = h.settings.copyWith(endpoint: 'http://model.example/v1');
         final send = h.runtime.send(h.id, 'Review HTTP transport');
@@ -639,9 +566,7 @@ void main() {
   testWidgets('host action approval pauses its execution deadline', (
     tester,
   ) async {
-    final h = await _Harness.create(
-      stopwatchFactory: tester.binding.clock.stopwatch,
-    );
+    final h = await _Harness.create();
     addTearDown(h.dispose);
     final action = h.runtime.runHostAction(h.id, (
       scope,
@@ -803,7 +728,7 @@ void main() {
       final writes = h.storage.saves;
       stream.add(const ProviderTextDelta('one'));
       stream.add(const ProviderTextDelta(' two'));
-      await pumpEventQueue();
+      await _waitStreamingText(h, 'one two');
       expect(h.runtime.state.value.runFor(h.id).streamingText, 'one two');
       expect(h.runtime.state.value.runFor(h.id).runId, runId);
       expect(h.runtime.state.value.runFor(h.id).replyTargetMessageId, isNull);
@@ -1426,23 +1351,6 @@ void main() {
     },
   );
 
-  test('context budget fails explicitly without truncating messages', () async {
-    final h = await _Harness.create(
-      limits: const AgentRuntimeLimits(maxContextCharacters: 10),
-    );
-    addTearDown(h.dispose);
-    await h.runtime.send(h.id, 'long message that remains intact');
-    expect(h.provider.requests, isEmpty);
-    expect(
-      h.repository.find(h.id)!.messages.single.text,
-      'long message that remains intact',
-    );
-    expect(
-      h.runtime.state.value.runFor(h.id).errorMessage,
-      'contextBudgetExceeded',
-    );
-  });
-
   test('missing historical query reply is marked unexecuted without replay or a write barrier', () async {
     final h = await _Harness.create();
     addTearDown(h.dispose);
@@ -1470,86 +1378,6 @@ void main() {
     expect(h.provider.requests, hasLength(1));
     expect(h.runtime.state.value.runFor(h.id).recoveryRequired, false);
     expect(h.repository.find(h.id)!.messages[1].text, contains('not_executed'));
-  });
-
-  test('tool and round budgets preserve complete call-result pairs', () async {
-    var executions = 0;
-    final h = await _Harness.create(
-      limits: const AgentRuntimeLimits(maxToolCalls: 1),
-      handler: (request, _) => request.tools.isEmpty
-          ? _events(_response('One read completed and the second was skipped.'))
-          : _events(_response('', calls: [_call('one'), _call('two')])),
-      execute: (_, _, _) async {
-        executions++;
-        return {'status': 'read'};
-      },
-    );
-    addTearDown(h.dispose);
-    await h.runtime.send(h.id, 'query');
-    expect(executions, 1);
-    expect(h.provider.requests, hasLength(2));
-    expect(h.provider.requests.last.tools, isEmpty);
-    expect(
-      h.repository
-          .find(h.id)!
-          .messages
-          .where((m) => m.role == ConversationRole.tool),
-      hasLength(2),
-    );
-    final toolResults = h.repository
-        .find(h.id)!
-        .messages
-        .where((message) => message.role == ConversationRole.tool)
-        .toList();
-    expect(toolResults.map((message) => message.toolCallId), ['one', 'two']);
-    expect(jsonDecode(toolResults[0].text)['status'], 'read');
-    expect(jsonDecode(toolResults[1].text)['status'], 'not_executed');
-    final toolSummary =
-        jsonDecode(h.repository.find(h.id)!.messages.last.text) as Map;
-    expect(toolSummary['kind'], 'agent_budget_summary');
-    expect(toolSummary['reason'], 'tools');
-    expect(toolSummary['counts'], {
-      'completed': 1,
-      'failed': 0,
-      'notStarted': 1,
-      'unknown': 0,
-    });
-    expect(
-      h.repository
-          .find(h.id)!
-          .messages
-          .any(
-            (message) =>
-                message.text ==
-                'One read completed and the second was skipped.',
-          ),
-      true,
-    );
-    expect(
-      h.runtime.state.value.runFor(h.id).errorMessage,
-      'toolBudgetExceeded',
-    );
-    final rounds = await _Harness.create(
-      limits: const AgentRuntimeLimits(maxModelRounds: 1),
-      handler: (_, _) => _events(_response('', calls: [_call('one')])),
-    );
-    addTearDown(rounds.dispose);
-    await rounds.runtime.send(rounds.id, 'query');
-    expect(rounds.provider.requests, hasLength(1));
-    expect(rounds.provider.requests.single.tools, isNotEmpty);
-    expect(
-      rounds.repository.find(rounds.id)!.runs.single.tools.single.outcome,
-      ConversationAttemptOutcome.completed,
-    );
-    final roundSummary = jsonDecode(
-      rounds.repository.find(rounds.id)!.messages.last.text,
-    ) as Map;
-    expect(roundSummary['reason'], 'rounds');
-    expect((roundSummary['counts'] as Map)['completed'], 1);
-    expect(
-      rounds.runtime.state.value.runFor(rounds.id).errorMessage,
-      'roundBudgetExceeded',
-    );
   });
 
   test('large reported usage preserves completed tool calls and their durable results', () async {
@@ -2061,61 +1889,6 @@ void main() {
     );
   }
 
-  for (final sensitiveIdentity in [false, true]) {
-    test(
-      'tiny result budget ${sensitiveIdentity ? 'excludes the rejected operation ID' : 'preserves the verified safe operation ID'}',
-      () async {
-        var executions = 0;
-        final h = await _Harness.create(
-          apiKey: _structuredKey,
-          mode: AgentPermissionMode.full,
-          limits: const AgentRuntimeLimits(maxToolResultCharacters: 1),
-          handler: (_, _) => _events(
-            _response('', calls: [_call('large-result'), _call('later')]),
-          ),
-          execute: (_, scope, _) async {
-            scope.checkMutation(planId: 'plan', consumeApproval: true);
-            executions++;
-            return {
-              'status': 'committed',
-              'operationId': sensitiveIdentity
-                  ? _structuredKey
-                  : 'safe-operation',
-              'details': 'A result larger than the configured budget.',
-            };
-          },
-        );
-        addTearDown(h.dispose);
-        await h.runtime.send(h.id, 'query');
-        final durable = ConversationArchive.decode(h.storage.source!)
-            .conversations
-            .single;
-        final result = durable.messages.singleWhere(
-          (message) => message.toolCallId == 'large-result',
-        );
-        expect(jsonDecode(result.text), {
-          'status': 'outcome_unknown',
-          'error': {'code': 'result_budget_exceeded'},
-          if (!sensitiveIdentity) 'operationId': 'safe-operation',
-        });
-        expect(executions, 1);
-        expect(h.provider.requests, hasLength(1));
-        expect(
-          jsonDecode(
-            durable.messages
-                .singleWhere((message) => message.toolCallId == 'later')
-                .text,
-          )['status'],
-          'not_executed',
-        );
-        expect(
-          h.runtime.state.value.runFor(h.id).errorMessage,
-          'resultBudgetExceeded',
-        );
-      },
-    );
-  }
-
   for (final location in ['nested value', 'nested field name']) {
     test(
       'a credential in approval $location is never presented or authorized',
@@ -2153,8 +1926,11 @@ void main() {
           unawaited(h.runtime.reject(h.id, approval.id));
         }
 
-        h.runtime.state.addListener(observeApproval);
-        addTearDown(() => h.runtime.state.removeListener(observeApproval));
+        h.runtime.watchConversation(h.id).addListener(observeApproval);
+        addTearDown(
+          () =>
+              h.runtime.watchConversation(h.id).removeListener(observeApproval),
+        );
         await h.runtime.send(h.id, 'change');
         expect(published, false);
         expect(commits, 0);
@@ -2173,7 +1949,7 @@ void main() {
           ),
           {
             'status': 'failed',
-            'error': {'code': 'tool_failure'},
+            'error': {'code': 'sensitiveContent'},
           },
         );
       },
@@ -2533,15 +2309,13 @@ void main() {
   });
 
   test(
-    'tool deadline cancels future work but still records accepted commit',
+    'user cancellation stops future work and records an accepted commit',
     () async {
       final entered = Completer<void>();
       final durable = Completer<void>();
       final h = await _Harness.create(
         mode: AgentPermissionMode.full,
-        limits: const AgentRuntimeLimits(
-          toolTimeout: Duration(milliseconds: 10),
-        ),
+
         handler: (_, _) => _events(_response('', calls: [_call('slow')])),
         execute: (_, scope, _) async {
           scope.checkMutation(planId: 'slow', consumeApproval: true);
@@ -2553,25 +2327,24 @@ void main() {
       addTearDown(h.dispose);
       final send = h.runtime.send(h.id, 'slow change');
       await entered.future;
-      await _waitPhase(h, AgentUiPhase.stopped);
+      final stop = h.runtime.stop(h.id);
       durable.complete();
+      await stop;
       await send;
       expect(
         h.repository.find(h.id)!.messages.last.text,
         contains('slow-operation'),
       );
-      expect(h.runtime.state.value.runFor(h.id).errorMessage, 'toolTimeout');
+      expect(h.runtime.state.value.runFor(h.id).phase, AgentUiPhase.stopped);
+      expect(h.runtime.state.value.runFor(h.id).errorMessage, 'cancelled');
       expect(h.provider.requests, hasLength(1));
     },
   );
 
-  test('total deadline includes credential retrieval and waitForIdle includes acceptance', () async {
+  test('cancellation during credential retrieval settles acceptance and waitForIdle', () async {
     final key = Completer<String>();
     final entered = Completer<void>();
     final h = await _Harness.create(
-      limits: const AgentRuntimeLimits(
-        totalTimeout: Duration(milliseconds: 10),
-      ),
       readKey: (_) {
         entered.complete();
         return key.future;
@@ -2581,9 +2354,12 @@ void main() {
     final send = h.runtime.send(h.id, 'query');
     final assertion = expectLater(
       send,
-      throwsA(_runtimeError(AgentRuntimeError.timeout)),
+      throwsA(_runtimeError(AgentRuntimeError.cancelled)),
     );
     await entered.future;
+    final stop = h.runtime.stop(h.id);
+    key.complete(_key);
+    await stop;
     var idle = false;
     final settled = h.runtime.waitForIdle().then((_) {
       idle = true;
@@ -2593,7 +2369,6 @@ void main() {
     await settled;
     expect(h.provider.requests, isEmpty);
     expect(h.repository.find(h.id)!.messages, isEmpty);
-    key.complete(_key);
   });
 }
 
@@ -2745,7 +2520,9 @@ void registerQueueOwnershipTests() {
       }
 
       addTearDown(() async {
-        h.runtime.state.removeListener(retryOnPreflightFailure);
+        h.runtime
+            .watchConversation(h.id)
+            .removeListener(retryOnPreflightFailure);
         h.runtime.cancelAll();
         unawaited(initial.close());
         unawaited(resumed.close());
@@ -2763,7 +2540,7 @@ void registerQueueOwnershipTests() {
       expect(h.runtime.pendingInputCount(h.id), 2);
       h.settings = h.settings.copyWith(endpoint: '');
       h.runtime.refreshSettings();
-      h.runtime.state.addListener(retryOnPreflightFailure);
+      h.runtime.watchConversation(h.id).addListener(retryOnPreflightFailure);
       await expectLater(
         h.runtime.continueConversation(h.id),
         throwsA(_runtimeError(AgentRuntimeError.unconfigured)),
@@ -3771,7 +3548,31 @@ void registerRecoveryTests() {
           },
         );
         await h.runtime.recordHostOperation(scope, prepared);
-        expect(h.storage.source, contains('agent_host_operation'));
+        final durable = ConversationArchive.decode(h.storage.source!)
+            .conversations
+            .single;
+        expect(
+          durable.messages.where(
+            (message) => message.role == ConversationRole.user,
+          ),
+          isEmpty,
+        );
+        expect(
+          durable.turns.single.requestMessageId,
+          durable.messages.single.id,
+        );
+        expect(durable.runs.single.kind, ConversationRunKind.host);
+        expect(
+          ConversationArchive.decode(h.storage.source!)
+              .conversations
+              .single
+              .turns
+              .single
+              .operations
+              .single
+              .operationId,
+          prepared.operationId,
+        );
         final result = await owner.external.commit(
           planId: prepared.id,
           scope: scope,
@@ -3793,6 +3594,17 @@ void registerRecoveryTests() {
         .singleWhere((m) => m.role == ConversationRole.tool);
     expect(jsonDecode(result.text)['recoveredFromOperationReceipt'], true);
     expect(jsonDecode(result.text)['status'], 'applied');
+    final context = h.provider.requests.single.messages;
+    final call = context.singleWhere((message) => message.toolCalls.isNotEmpty);
+    final reply = context.singleWhere(
+      (message) => message.role == ProviderRole.tool,
+    );
+    expect(call.role, ProviderRole.assistant);
+    expect(reply.toolCallId, call.toolCalls.single.id);
+    expect(
+      context.where((message) => message.role == ProviderRole.user),
+      isEmpty,
+    );
   });
 
   test(
@@ -3805,7 +3617,8 @@ void registerRecoveryTests() {
       final h = await _Harness.create(mode: AgentPermissionMode.full);
       addTearDown(h.dispose);
       h.storage.beforeSave = (value) async {
-        if (value.contains('agent_host_operation')) {
+        if (ConversationArchive.decode(value).conversations.single.turns
+            .any((turn) => turn.operations.isNotEmpty)) {
           throw StateError('identity save failed');
         }
       };
@@ -3967,10 +3780,10 @@ void registerRecoveryTests() {
         }
       }
 
-      h.runtime.state.addListener(watch);
+      h.runtime.watchConversation(h.id).addListener(watch);
       await h.runtime.approve(h.id, httpId);
       await business.future;
-      h.runtime.state.removeListener(watch);
+      h.runtime.watchConversation(h.id).removeListener(watch);
       expect(writes, 0);
       await h.runtime.approve(h.id, 'business');
       await send;
@@ -4051,8 +3864,8 @@ void registerRecoveryTests() {
           },
           readTools: (_) => [
             ToolDefinition(
-              name: 'mutation.prepare',
-              description: 'prepare',
+              name: 'mutation.apply',
+              description: 'Apply',
               parameters: {'type': 'object', 'properties': <String, Object?>{}},
             ),
           ],
@@ -4063,7 +3876,7 @@ void registerRecoveryTests() {
                     calls: [
                       ProviderToolCall(
                         id: 'new-plan',
-                        name: 'mutation.prepare',
+                        name: 'mutation.apply',
                         arguments: '{}',
                       ),
                     ],
@@ -4078,42 +3891,10 @@ void registerRecoveryTests() {
         addTearDown(h.dispose);
         await h.repository.update(
           h.id,
-          (c) => c.copyWith(
-            messages: [
-              ConversationMessage(
-                id: 'prepare-message',
-                role: ConversationRole.assistant,
-                text: '',
-                createdAt: DateTime.utc(2026),
-                toolCalls: const [
-                  ConversationToolCall(
-                    id: 'old-prepare',
-                    name: 'mutation.prepare',
-                    arguments: '{}',
-                  ),
-                ],
-              ),
-              ConversationMessage(
-                id: 'prepare-result',
-                role: ConversationRole.tool,
-                text: '{"planId":"old-plan","operationId":"previous-operation","alreadyCommitted":false}',
-                toolCallId: 'old-prepare',
-                createdAt: DateTime.utc(2026),
-              ),
-              ConversationMessage(
-                id: 'write-message',
-                role: ConversationRole.assistant,
-                text: '',
-                createdAt: DateTime.utc(2026),
-                toolCalls: const [
-                  ConversationToolCall(
-                    id: 'old-write',
-                    name: 'mutation.commit',
-                    arguments: '{"planId":"old-plan"}',
-                  ),
-                ],
-              ),
-            ],
+          (c) => _withPendingBoundWrite(
+            c,
+            operationId: 'previous-operation',
+            callId: 'old-write',
           ),
         );
         await h.runtime.send(h.id, 'Start a new task');
@@ -4267,7 +4048,12 @@ void registerRecoveryTests() {
       final send = h.runtime.send(h.id, 'first');
       await entered.future;
       h.storage.beforeSave = (value) async {
-        if (!queueSaving.isCompleted && value.contains('agent_pending_input')) {
+        if (!queueSaving.isCompleted &&
+            ConversationArchive.decode(value)
+                .conversations
+                .single
+                .queuedInputs
+                .isNotEmpty) {
           queueSaving.complete();
           await queueRelease.future;
         }
@@ -4334,24 +4120,10 @@ void registerRecoveryTests() {
       addTearDown(h.dispose);
       await h.repository.update(
         h.id,
-        (item) => item.copyWith(
-          runId: 'old-run',
-          status: ConversationStatus.interrupted,
-          messages: [
-            ConversationMessage(
-              id: 'old-message',
-              role: ConversationRole.assistant,
-              text: '',
-              createdAt: DateTime.utc(2026),
-              toolCalls: const [
-                ConversationToolCall(
-                  id: 'missing-result',
-                  name: 'mutation.commit',
-                  arguments: '{"operationId":"old-operation"}',
-                ),
-              ],
-            ),
-          ],
+        (item) => _withPendingBoundWrite(
+          item,
+          operationId: 'old-operation',
+          callId: 'missing-result',
         ),
       );
       await h.runtime.continueConversation(h.id);
@@ -4359,7 +4131,7 @@ void registerRecoveryTests() {
       expect(h.provider.requests, hasLength(1));
       final archive = ConversationArchive.decode(h.storage.source!);
       expect(
-        archive.conversations.single.messages[1].toolCallId,
+        archive.conversations.single.messages[2].toolCallId,
         'missing-result',
       );
       expect(
@@ -4399,8 +4171,7 @@ void registerRecoveryTests() {
         ConversationArchive.decode(h.storage.source!)
             .conversations
             .single
-            .messages
-            .where((m) => m.role == ConversationRole.notice),
+            .queuedInputs,
         hasLength(2),
       );
       release.complete();
@@ -4469,6 +4240,125 @@ void registerRecoveryTests() {
       expect(jsonDecode(oldNext.text)['status'], 'not_executed');
     },
   );
+
+  test('steering precedes earlier queued follow-up after an accepted write and keeps turn ownership', () async {
+    final owner = _OperationHarness();
+    await owner.initialize();
+    addTearDown(owner.close);
+    final saved = Completer<void>(), release = Completer<void>();
+    final observed = <String>[];
+    OperationScope? activeScope;
+    late _Harness h;
+    h = await _Harness.create(
+      mode: AgentPermissionMode.full,
+      handler: (request, _) {
+        final input = request.messages
+            .lastWhere((message) => message.role == ProviderRole.user)
+            .text;
+        observed.add(input);
+        if (observed.length == 1) {
+          return _events(
+            _response('', calls: [_call('accepted'), _call('stale')]),
+          );
+        }
+        expect(
+          owner.session.committedData.applicationLedger!.receipts,
+          hasLength(1),
+        );
+        expect(
+          request.messages
+              .where((message) => message.role == ProviderRole.tool)
+              .map((message) => message.text),
+          contains(contains('committed')),
+        );
+        return _events(_response('Completed $input'));
+      },
+      execute: (call, scope, _) async {
+        expect(call.id, 'accepted');
+        activeScope = scope;
+        final plan = owner.mutations.prepare(
+          scope: scope,
+          resources: [
+            ResourceMutation(
+              kind: ResourceKind.calendar,
+              action: ResourceMutationAction.create,
+              values: const {'name': 'Saved once'},
+            ),
+          ],
+        );
+        await h.runtime.recordToolOperation(
+          call,
+          scope,
+          'mutation.commit',
+          plan.summary(),
+        );
+        final result = await owner.mutations.commit(
+          planId: plan.id,
+          scope: scope,
+        );
+        saved.complete();
+        await release.future;
+        return result.toJson();
+      },
+    );
+    addTearDown(h.dispose);
+    final sending = h.runtime.send(h.id, 'A');
+    await saved.future;
+    await h.runtime.queueFollowUp(h.id, 'B');
+    final steeringSaved = Completer<void>(),
+        publishSteering = Completer<void>();
+    h.storage.beforeSave = (source) async {
+      final conversation = ConversationArchive.decode(source)
+          .conversations
+          .single;
+      if (!steeringSaved.isCompleted &&
+          conversation.queuedInputs.any(
+            (input) => input.mode == ConversationQueuedInputMode.steering,
+          )) {
+        steeringSaved.complete();
+        await publishSteering.future;
+      }
+    };
+    final steering = h.runtime.steer(h.id, 'C');
+    await steeringSaved.future;
+    expect(activeScope!.isCancelled, isFalse);
+    publishSteering.complete();
+    await steering;
+    expect(activeScope!.isCancelled, isTrue);
+    expect(observed, ['A']);
+    release.complete();
+    await sending;
+    await h.runtime.waitForIdle();
+    expect(observed, ['A', 'C', 'B']);
+    final current = h.repository.find(h.id)!;
+    final inputs = {
+      for (final message in current.messages.where(
+        (message) => message.role == ConversationRole.user,
+      ))
+        message.text: message.id,
+    };
+    expect(current.turns, hasLength(2));
+    expect(
+      current.turns.first.messageIds,
+      containsAll([inputs['A'], inputs['C']]),
+    );
+    expect(current.turns.first.messageIds, isNot(contains(inputs['B'])));
+    expect(current.turns.last.requestMessageId, inputs['B']);
+    expect(
+      owner.session.committedData.generalMode.schedules.where(
+        (calendar) => calendar.name == 'Saved once',
+      ),
+      hasLength(1),
+    );
+    expect(
+      jsonDecode(
+        current.messages
+            .singleWhere((message) => message.toolCallId == 'stale')
+            .text,
+      )['status'],
+      'not_executed',
+    );
+  });
 
   test('stop preserves queued inputs and explicit resume consumes them after reload', () async {
     final entered = Completer<void>();
@@ -4551,7 +4441,7 @@ void registerRecoveryTests() {
       await _waitPhase(h, AgentUiPhase.waitingApproval);
       await h.runtime.stop(h.id);
       final result = await action;
-      expect(result['status'], 'not_executed');
+      expect(result['status'], 'cancelled');
       expect(
         h.repository.find(h.id)!.messages.last.text,
         contains('cancelled'),
@@ -4559,45 +4449,6 @@ void registerRecoveryTests() {
       expect(h.provider.requests, isEmpty);
     },
   );
-
-  test('saved instructions accompany explicitly bounded host runs', () async {
-    final h = await _Harness.create(
-      limits: const AgentRuntimeLimits(maxModelRounds: 1),
-      handler: (request, _) {
-        expect(
-          request.messages.first.text,
-          contains('Prefer morning appointments.'),
-        );
-        return _events(_response('', calls: [_call('budget-call')]));
-      },
-    );
-    addTearDown(h.dispose);
-    h.settings = h.settings.copyWith(
-      systemInstructions: 'Prefer morning appointments.',
-    );
-    await h.runtime.send(h.id, 'check the agenda');
-    expect(h.provider.requests, hasLength(1));
-    expect(
-      h.runtime.state.value.runFor(h.id).errorMessage,
-      'roundBudgetExceeded',
-    );
-    final saved = h.repository.find(h.id)!;
-    final tool = saved.messages
-        .where((message) => message.role == ConversationRole.tool)
-        .single;
-    expect(tool.toolCallId, 'budget-call');
-    expect(jsonDecode(tool.text)['status'], 'read');
-    expect(
-      saved.runs.single.tools.single.outcome,
-      ConversationAttemptOutcome.completed,
-    );
-    expect(saved.messages.last.role, ConversationRole.notice);
-    final summary = jsonDecode(saved.messages.last.text) as Map;
-    expect(summary['kind'], 'agent_budget_summary');
-    expect(summary['reason'], 'rounds');
-    expect((summary['requests'] as Map)['limit'], 1);
-    expect((summary['counts'] as Map)['completed'], 1);
-  });
 }
 
 const _key = 'sk-runtime-fixture-key';
@@ -4653,17 +4504,18 @@ Matcher _runtimeError(AgentRuntimeError code) =>
     isA<AgentRuntimeException>().having((error) => error.code, 'code', code);
 
 Future<void> _waitPhase(_Harness harness, AgentUiPhase phase) {
-  if (harness.runtime.state.value.runFor(harness.id).phase == phase) {
+  final execution = harness.runtime.watchConversation(harness.id);
+  if (execution.value.phase == phase) {
     return Future.value();
   }
   final ready = Completer<void>();
   void changed() {
-    if (harness.runtime.state.value.runFor(harness.id).phase != phase) return;
-    harness.runtime.state.removeListener(changed);
+    if (execution.value.phase != phase) return;
+    execution.removeListener(changed);
     ready.complete();
   }
 
-  harness.runtime.state.addListener(changed);
+  execution.addListener(changed);
   return ready.future;
 }
 
@@ -4676,11 +4528,11 @@ Future<void> _waitStreamingText(_Harness harness, String text) {
     if (harness.runtime.state.value.runFor(harness.id).streamingText != text) {
       return;
     }
-    harness.runtime.state.removeListener(changed);
+    harness.runtime.watchConversation(harness.id).removeListener(changed);
     ready.complete();
   }
 
-  harness.runtime.state.addListener(changed);
+  harness.runtime.watchConversation(harness.id).addListener(changed);
   return ready.future;
 }
 
@@ -4745,8 +4597,7 @@ class _Harness {
     String apiKey = _key,
     _Handler? handler,
     AgentToolExecutor? execute,
-    AgentRuntimeLimits limits = const AgentRuntimeLimits(),
-    Stopwatch Function()? stopwatchFactory,
+
     Future<String> Function(AgentSettings)? readKey,
     List<ToolDefinition> Function(OperationScope)? readTools,
     void Function(OperationScope)? onRunSettled,
@@ -4810,8 +4661,7 @@ class _Harness {
       onOpenSettings: () {},
       onRunSettled: onRunSettled,
       readOperationReceipt: readOperationReceipt,
-      limits: limits,
-      stopwatchFactory: stopwatchFactory,
+
       idGenerator: () => 'run-or-message-${id++}',
     );
     return harness;
@@ -4978,4 +4828,65 @@ class _Plan implements ApprovalPlan {
   ];
   @override
   Map<String, Object?> summary() => {'planId': id, 'changeCount': 1};
+}
+
+AgentConversation _withPendingBoundWrite(
+  AgentConversation conversation, {
+  required String operationId,
+  required String callId,
+}) {
+  final now = DateTime.utc(2026);
+  return conversation.copyWith(
+    runId: 'old-run',
+    status: ConversationStatus.interrupted,
+    messages: [
+      ConversationMessage(
+        id: 'old-input',
+        role: ConversationRole.user,
+        text: 'Original action',
+        createdAt: now,
+      ),
+      ConversationMessage(
+        id: 'old-message',
+        role: ConversationRole.assistant,
+        text: '',
+        createdAt: now,
+        toolCalls: [
+          ConversationToolCall(
+            id: callId,
+            name: 'mutation.apply',
+            arguments: '{}',
+          ),
+        ],
+      ),
+    ],
+    runs: [
+      ConversationRunUsage(
+        id: 'old-run',
+        startedAt: now,
+        kind: ConversationRunKind.model,
+        protocol: 'chatCompletions',
+        model: 'fixture',
+        status: ConversationRunStatus.interrupted,
+        settledAt: now,
+      ),
+    ],
+    turns: [
+      ConversationTurn(
+        id: 'old-turn',
+        requestMessageId: 'old-input',
+        ownershipComplete: true,
+        messageIds: ['old-input', 'old-message'],
+        runIds: ['old-run'],
+        operations: [
+          ConversationOperationBinding(
+            operationId: operationId,
+            store: ConversationOperationStore.main,
+            runId: 'old-run',
+            toolCallId: callId,
+          ),
+        ],
+      ),
+    ],
+  );
 }

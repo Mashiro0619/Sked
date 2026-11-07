@@ -32,7 +32,7 @@ void main() {
             );
         await mountAgentUi(tester, view());
         final retainedState = tester.state(find.byType(AgentConversationView));
-        await tester.tap(find.byKey(const ValueKey('agent-attach-file')));
+        await openAgentAttachmentPicker(tester);
         await tester.pump();
         await mountAgentUi(
           tester,
@@ -83,7 +83,7 @@ void main() {
         },
       );
       await mountAgentUi(tester, view());
-      await tester.tap(find.byKey(const ValueKey('agent-attach-file')));
+      await openAgentAttachmentPicker(tester);
       await tester.pumpAndSettle();
       expect(repository.find(conversation.id)!.sources, isEmpty);
       expect(delegate.calls, isEmpty);
@@ -92,7 +92,7 @@ void main() {
         text: 'Exact\nsource content',
       );
       storage.fail = true;
-      await tester.tap(find.byKey(const ValueKey('agent-attach-file')));
+      await openAgentAttachmentPicker(tester);
       await tester.pumpAndSettle();
       expect(repository.canWrite, isFalse);
       expect(repository.find(conversation.id)!.sources, isEmpty);
@@ -123,12 +123,12 @@ void main() {
   );
 
   testWidgets(
-    'oversized attachment is rejected and never truncated into a conversation',
+    'text attachments larger than the old threshold remain complete',
     (tester) async {
       addTearDown(tester.view.reset);
       final repository = ConversationRepository(storage: UiMemoryStorage());
       await repository.load();
-      await repository.create(title: 'Too large');
+      await repository.create(title: 'Large text');
       final delegate = UiDelegate(repository);
       addTearDown(repository.dispose);
       addTearDown(delegate.state.dispose);
@@ -138,19 +138,14 @@ void main() {
           repository: repository,
           delegate: delegate,
           readDatasetGeneration: () => 'dataset',
-          pickAttachment: () async => PickedTextFile(
-            name: 'data.json',
-            text: 'x' * (ConversationFileAttachments.maxBytes + 1),
-          ),
+          pickAttachment: () async =>
+              PickedTextFile(name: 'data.json', text: 'x' * (512 * 1024 + 1)),
         ),
       );
-      await tester.tap(find.byKey(const ValueKey('agent-attach-file')));
+      await openAgentAttachmentPicker(tester);
       await tester.pumpAndSettle();
-      expect(
-        find.text('This attachment exceeds the 512 KiB limit.'),
-        findsOneWidget,
-      );
-      expect(repository.selected!.sources, isEmpty);
+      expect(repository.selected!.sources.single.text, 'x' * (512 * 1024 + 1));
+      expect(repository.selected!.sources.single.truncated, isFalse);
       expect(repository.canWrite, isTrue);
       expect(delegate.calls, isEmpty);
     },

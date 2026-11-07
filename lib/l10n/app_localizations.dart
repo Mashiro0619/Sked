@@ -145,6 +145,126 @@ abstract class AppLocalizations {
     Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
   ];
 
+  /// No description provided for @agentTaskDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Task details'**
+  String get agentTaskDetails;
+
+  /// No description provided for @agentTaskChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes'**
+  String get agentTaskChanges;
+
+  /// No description provided for @agentContextTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Context'**
+  String get agentContextTitle;
+
+  /// No description provided for @agentNoTaskChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'No changes in this task'**
+  String get agentNoTaskChanges;
+
+  /// No description provided for @agentNoTaskPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'No plan for this task'**
+  String get agentNoTaskPlan;
+
+  /// No description provided for @agentNoTaskAttachments.
+  ///
+  /// In en, this message translates to:
+  /// **'No attachments in this task'**
+  String get agentNoTaskAttachments;
+
+  /// No description provided for @agentLoadEarlierMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Load earlier messages'**
+  String get agentLoadEarlierMessages;
+
+  /// No description provided for @agentUseCurrentTimetable.
+  ///
+  /// In en, this message translates to:
+  /// **'Use as current timetable'**
+  String get agentUseCurrentTimetable;
+
+  /// No description provided for @agentUseCurrentCalendar.
+  ///
+  /// In en, this message translates to:
+  /// **'Use as current calendar'**
+  String get agentUseCurrentCalendar;
+
+  /// No description provided for @agentTechnicalDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Technical details'**
+  String get agentTechnicalDetails;
+
+  /// No description provided for @agentActivityCorrected.
+  ///
+  /// In en, this message translates to:
+  /// **'Corrected'**
+  String get agentActivityCorrected;
+
+  /// No description provided for @agentCompactContext.
+  ///
+  /// In en, this message translates to:
+  /// **'Compact context'**
+  String get agentCompactContext;
+
+  /// No description provided for @agentCompactingContext.
+  ///
+  /// In en, this message translates to:
+  /// **'Compacting context…'**
+  String get agentCompactingContext;
+
+  /// No description provided for @agentCompactionQueued.
+  ///
+  /// In en, this message translates to:
+  /// **'Compaction queued'**
+  String get agentCompactionQueued;
+
+  /// No description provided for @agentContextWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum context length'**
+  String get agentContextWindow;
+
+  /// No description provided for @agentContextThreshold.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic compaction trigger'**
+  String get agentContextThreshold;
+
+  /// No description provided for @agentContextAutoCompact.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic compaction'**
+  String get agentContextAutoCompact;
+
+  /// No description provided for @agentContextUnset.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get agentContextUnset;
+
+  /// No description provided for @agentContextEstimated.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimated'**
+  String get agentContextEstimated;
+
+  /// No description provided for @agentContextReported.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider reported'**
+  String get agentContextReported;
+
   /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:
@@ -6453,7 +6573,7 @@ abstract class AppLocalizations {
   /// No description provided for @agentPreferenceLimitHint.
   ///
   /// In en, this message translates to:
-  /// **'Keep forever, or choose 7–3650 days. Only finished conversations without drafts or queued input are removed.'**
+  /// **'Enter a number of days, or 0 to keep forever. Only finished conversations without drafts or queued input are removed.'**
   String get agentPreferenceLimitHint;
 
   /// No description provided for @agentPreferencesSaved.
@@ -6465,7 +6585,7 @@ abstract class AppLocalizations {
   /// No description provided for @agentInvalidPreference.
   ///
   /// In en, this message translates to:
-  /// **'Enter a value within the displayed range.'**
+  /// **'Enter a non-negative whole number.'**
   String get agentInvalidPreference;
 
   /// No description provided for @agentBackupConnectionPreserved.
@@ -7752,18 +7872,6 @@ abstract class AppLocalizations {
   /// **'Set response preferences to use in all conversations.'**
   String get agentConversationGuidanceHint;
 
-  /// No description provided for @agentRunLimitsTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Limits per run'**
-  String get agentRunLimitsTitle;
-
-  /// No description provided for @agentRunLimitsHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Limit model requests and tool calls for each run.'**
-  String get agentRunLimitsHint;
-
   /// No description provided for @agentHistoryRetentionTitle.
   ///
   /// In en, this message translates to:
@@ -7824,12 +7932,6 @@ abstract class AppLocalizations {
   /// **'The model request configuration is invalid ({code}).'**
   String agentProviderConfigurationFailure(String code);
 
-  /// No description provided for @agentProviderLimitFailure.
-  ///
-  /// In en, this message translates to:
-  /// **'The model request exceeded a limit ({code}).'**
-  String agentProviderLimitFailure(String code);
-
   /// No description provided for @agentProviderTimeoutFailure.
   ///
   /// In en, this message translates to:
@@ -7877,64 +7979,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Ask a question'**
   String get agentToolAskUser;
-
-  /// No description provided for @agentQuestionAnswerTooLong.
-  ///
-  /// In en, this message translates to:
-  /// **'Keep your answer within {limit} characters.'**
-  String agentQuestionAnswerTooLong(int limit);
-
-  /// No description provided for @agentBudgetSummaryTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Run summary'**
-  String get agentBudgetSummaryTitle;
-
-  /// No description provided for @agentBudgetSummaryTokenLimit.
-  ///
-  /// In en, this message translates to:
-  /// **'This run has insufficient token budget to continue. Progress has been saved.'**
-  String get agentBudgetSummaryTokenLimit;
-
-  /// No description provided for @agentBudgetSummaryRoundLimit.
-  ///
-  /// In en, this message translates to:
-  /// **'The model request limit has been reached.'**
-  String get agentBudgetSummaryRoundLimit;
-
-  /// No description provided for @agentBudgetSummaryToolLimit.
-  ///
-  /// In en, this message translates to:
-  /// **'The tool call limit has been reached.'**
-  String get agentBudgetSummaryToolLimit;
-
-  /// No description provided for @agentBudgetSummaryTools.
-  ///
-  /// In en, this message translates to:
-  /// **'Tool results — {completed} completed, {failed} failed, {notStarted} not started, {unknown} awaiting verification'**
-  String agentBudgetSummaryTools(
-    int completed,
-    int failed,
-    int notStarted,
-    int unknown,
-  );
-
-  /// No description provided for @agentBudgetSummaryUsage.
-  ///
-  /// In en, this message translates to:
-  /// **'{requests}/{requestLimit} model requests · {tokens}/{tokenLimit} reported tokens'**
-  String agentBudgetSummaryUsage(
-    int requests,
-    int requestLimit,
-    int tokens,
-    int tokenLimit,
-  );
-
-  /// No description provided for @agentBudgetSummaryMissingUsage.
-  ///
-  /// In en, this message translates to:
-  /// **'Usage is unreported for {count} requests.'**
-  String agentBudgetSummaryMissingUsage(int count);
 
   /// No description provided for @agentReferenceSearch.
   ///
@@ -8043,34 +8087,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Send or clear the current draft before moving this input back.'**
   String get agentQueuedRestoreDraftBusy;
-
-  /// No description provided for @agentBudgetSummaryRequestTokenLimit.
-  ///
-  /// In en, this message translates to:
-  /// **'The per-request token limit was reached. Progress has been saved.'**
-  String get agentBudgetSummaryRequestTokenLimit;
-
-  /// No description provided for @agentBudgetSummaryRequestTokenUsage.
-  ///
-  /// In en, this message translates to:
-  /// **'This request · {reported}/{limit} reported tokens'**
-  String agentBudgetSummaryRequestTokenUsage(int reported, int limit);
-
-  /// No description provided for @agentBudgetSummaryReportedUsage.
-  ///
-  /// In en, this message translates to:
-  /// **'{requests}/{requestLimit} model requests · {tokens} reported tokens'**
-  String agentBudgetSummaryReportedUsage(
-    int requests,
-    int requestLimit,
-    int tokens,
-  );
-
-  /// No description provided for @agentBudgetSummaryRecordedUsage.
-  ///
-  /// In en, this message translates to:
-  /// **'Model requests {requests} · {tokens} reported tokens'**
-  String agentBudgetSummaryRecordedUsage(int requests, int tokens);
 
   /// No description provided for @agentEndRedo.
   ///

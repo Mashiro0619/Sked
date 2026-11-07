@@ -117,11 +117,6 @@ ProviderResponse _call(String name, Map<String, Object?> arguments) =>
       ],
       finishReason: 'tool_calls',
     );
-Map<String, dynamic> _last(ProviderRequest request) => jsonDecode(
-  request.messages
-      .lastWhere((message) => message.role == ProviderRole.tool)
-      .text,
-) as Map<String, dynamic>;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -168,11 +163,11 @@ void main() {
 
   void createCalendarScript() {
     var round = 0;
-    provider.respond = (request) => switch (round++) {
+    provider.respond = (_) => switch (round++) {
       0 => _call('capabilities.describe', {
-        'names': ['mutation.prepare', 'mutation.commit'],
+        'names': ['mutation.apply'],
       }),
-      1 => _call('mutation.prepare', {
+      1 => _call('mutation.apply', {
         'commands': [
           {
             'kind': 'calendar',
@@ -181,23 +176,17 @@ void main() {
           },
         ],
       }),
-      2 => _call('mutation.commit', {'planId': _last(request)['planId']}),
       _ => _done(),
     };
   }
 
   void createBothScript() {
     var round = 0;
-    provider.respond = (request) => switch (round++) {
+    provider.respond = (_) => switch (round++) {
       0 => _call('capabilities.describe', {
-        'names': [
-          'mutation.prepare',
-          'mutation.commit',
-          'memories.prepare',
-          'external.commit',
-        ],
+        'names': ['mutation.apply', 'memories.apply'],
       }),
-      1 => _call('mutation.prepare', {
+      1 => _call('mutation.apply', {
         'commands': [
           {
             'kind': 'calendar',
@@ -206,13 +195,11 @@ void main() {
           },
         ],
       }),
-      2 => _call('mutation.commit', {'planId': _last(request)['planId']}),
-      3 => _call('memories.prepare', {
+      2 => _call('memories.apply', {
         'action': 'create',
         'title': 'History memory',
         'body': 'Synthetic shared memory',
       }),
-      4 => _call('external.commit', {'planId': _last(request)['planId']}),
       _ => _done(),
     };
   }
@@ -286,8 +273,8 @@ void main() {
         toolCalls: [
           ConversationToolCall(
             id: 'lost-commit',
-            name: 'mutation.commit',
-            arguments: '{"operationId":"unknown-operation"}',
+            name: 'mutation.apply',
+            arguments: '{}',
           ),
         ],
       );
@@ -297,7 +284,18 @@ void main() {
           messages: [...current.messages, call],
           turns: [
             for (final turn in current.turns)
-              turn.copyWith(messageIds: [...turn.messageIds, call.id]),
+              turn.copyWith(
+                messageIds: [...turn.messageIds, call.id],
+                operations: [
+                  ...turn.operations,
+                  ConversationOperationBinding(
+                    operationId: 'unknown-operation',
+                    store: ConversationOperationStore.main,
+                    runId: turn.runIds.last,
+                    toolCallId: 'lost-commit',
+                  ),
+                ],
+              ),
           ],
         ),
       );
@@ -792,10 +790,13 @@ void main() {
             },
           ],
         });
+        var conversationRun = app.agent.runtime.watchConversation(
+          conversation.id,
+        );
         final shown = Completer<void>();
         void observeQuestion() {
           if (shown.isCompleted) return;
-          final state = app.agent.runtime.state.value.runFor(conversation.id);
+          final state = conversationRun.value;
           if (state.phase == AgentUiPhase.waitingUser) {
             shown.complete();
           } else if (state.phase == AgentUiPhase.failed) {
@@ -807,7 +808,7 @@ void main() {
           }
         }
 
-        app.agent.runtime.state.addListener(observeQuestion);
+        conversationRun.addListener(observeQuestion);
         final editing = app.agent.history.editAndRedo(
           conversation.id,
           original.id,
@@ -816,7 +817,7 @@ void main() {
         try {
           await shown.future.timeout(const Duration(seconds: 5));
         } finally {
-          app.agent.runtime.state.removeListener(observeQuestion);
+          conversationRun.removeListener(observeQuestion);
         }
         final pending = app.agent.conversations
             .find(conversation.id)!
@@ -828,6 +829,7 @@ void main() {
         final answers = [
           AgentQuestionAnswer(questionId: 'confirm', text: '2026-11-09'),
         ];
+        String? answerSnapshot;
         if (answerSaved) {
           var stopped = false;
           chats.didSave = (archive) {
@@ -836,6 +838,7 @@ void main() {
                 .pendingQuestion;
             if (!stopped && saved?.answers != null) {
               stopped = true;
+              answerSnapshot = chats.source;
               unawaited(app.agent.runtime.stop(conversation.id));
             }
           };
@@ -850,6 +853,24 @@ void main() {
           await app.agent.runtime.stop(conversation.id);
         }
         await editing;
+        if (answerSaved) {
+          expect(answerSnapshot, isNotNull);
+          final storage = WorkspaceMemoryStorage(app.session.committedData);
+          await app.agent.quiesce();
+          app.dispose();
+          chats.source = answerSnapshot;
+          app = await workspaceProvider(
+            storage: storage,
+            agentConversationStorage: chats,
+            agentKnowledgeStorage: knowledge,
+            agentCredentialStore: MemoryAgentCredentialStore(),
+            agentProvider: provider,
+          );
+          await app.agent.initialize();
+          conversationRun = app.agent.runtime.watchConversation(
+            conversation.id,
+          );
+        }
         final interrupted = app.agent.conversations.find(conversation.id)!;
         final batchId = interrupted.pendingRedo!.id;
         expect(interrupted.pendingQuestion!.isResolved, answerSaved);
@@ -864,13 +885,12 @@ void main() {
 
         var redisplayed = 0;
         void observeResume() {
-          if (app.agent.runtime.state.value.runFor(conversation.id).phase ==
-              AgentUiPhase.waitingUser) {
+          if (conversationRun.value.phase == AgentUiPhase.waitingUser) {
             redisplayed++;
           }
         }
 
-        app.agent.runtime.state.addListener(observeResume);
+        conversationRun.addListener(observeResume);
         provider.respond = (_) =>
             _done('Continue with the updated reference selection');
         try {
@@ -878,7 +898,7 @@ void main() {
               .continueRedo(conversation.id)
               .timeout(const Duration(seconds: 5));
         } finally {
-          app.agent.runtime.state.removeListener(observeResume);
+          conversationRun.removeListener(observeResume);
         }
         expect(redisplayed, 0);
         final result = jsonDecode(
@@ -1318,8 +1338,7 @@ void main() {
       final original = app.agent.conversations.find(conversation.id)!;
       var requests = 0;
       provider.respond = (request) {
-        expect(request.limits.maxTotalTokens, isNull);
-        expect(request.limits.maxOutputTokens, isNull);
+        expect(request.maxOutputTokens, isNull);
         requests++;
         return ProviderResponse(
           text: requests == 1 ? '' : 'The edited request is complete.',
@@ -1545,7 +1564,7 @@ void main() {
           .last;
       provider.respond = (request) {
         expect(request.tools, isEmpty);
-        return _call('mutation.commit', {'planId': 'invented'});
+        return _call('mutation.apply', {'commands': []});
       };
       await app.agent.runtime.regenerateReply(conversation.id, reply.id);
       var current = app.agent.conversations.find(conversation.id)!;
@@ -1581,7 +1600,7 @@ void main() {
             ProviderToolCall(
               id: 'read-call-$index',
               name: 'capabilities.describe',
-              arguments: '{"names":["mutation.prepare"]}',
+              arguments: '{"names":["mutation.apply"]}',
             ),
         ],
       );

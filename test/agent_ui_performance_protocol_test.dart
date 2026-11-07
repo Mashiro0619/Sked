@@ -4,8 +4,15 @@ import '../benchmark/src/agent_ui_performance_scenarios.dart';
 import '../test_driver/agent_ui_performance_driver.dart';
 
 const _protocol = <String, Object?>{
-  'id': 'agent-ui-frames-v2',
-  'version': 2,
+  'id': 'agent-ui-frames-v3',
+  'version': 3,
+  'storage': {
+    'id': 'isolated-production-store-v1',
+    'backend': 'drift-sqlite',
+    'fixturePersistence': 'before-home-mount',
+    'inspection': 'outside-action-windows',
+    'fullArchiveReadBeforeFirstEntry': false,
+  },
   'nativeSemanticsHarnessVersion': 2,
   'iterations': 2,
   'requiredIndependentProcesses': 3,
@@ -23,7 +30,7 @@ void main() {
     final actions = platform == 'windows'
         ? agentUiPerformanceWindowsActions
         : agentUiPerformanceAndroidActions;
-    test('$platform v2 measures the complete cold and warm full-page path', () {
+    test('$platform v3 measures the complete cold and warm full-page path', () {
       expect(agentUiPerformanceProtocolId, _protocol['id']);
       final accepted = validateAgentUiPerformancePopulation(
         protocol: _protocol,
@@ -41,18 +48,24 @@ void main() {
       expect(accepted.length * agentUiPerformanceIterations, 12);
     });
 
-    test('$platform rejects old v1 evidence even with a new action list', () {
-      expect(
-        () => validateAgentUiPerformancePopulation(
-          protocol: {..._protocol, 'id': 'agent-ui-frames-v1', 'version': 1},
-          expectedActions: actions,
-          platform: platform,
-        ),
-        throwsStateError,
-      );
+    test('$platform rejects old evidence even with a new action list', () {
+      for (final version in [1, 2]) {
+        expect(
+          () => validateAgentUiPerformancePopulation(
+            protocol: {
+              ..._protocol,
+              'id': 'agent-ui-frames-v$version',
+              'version': version,
+            },
+            expectedActions: actions,
+            platform: platform,
+          ),
+          throwsStateError,
+        );
+      }
     });
 
-    test('$platform rejects a legacy pane action in the v2 population', () {
+    test('$platform rejects a legacy pane action in the v3 population', () {
       expect(
         () => validateAgentUiPerformancePopulation(
           protocol: _protocol,
@@ -64,7 +77,7 @@ void main() {
     });
   }
 
-  test('v2 preserves independent process and iteration requirements', () {
+  test('v3 preserves independent process and iteration requirements', () {
     for (final change in [
       {'iterations': 1},
       {'requiredIndependentProcesses': 1},
@@ -81,7 +94,7 @@ void main() {
     }
   });
 
-  test('v2 refuses an unrelated scroll target', () {
+  test('v3 refuses an unrelated scroll target', () {
     expect(
       () => validateAgentUiPerformancePopulation(
         protocol: {
@@ -96,5 +109,42 @@ void main() {
       ),
       throwsStateError,
     );
+  });
+
+  test('v3 accepts a real legacy backend for a matched baseline', () {
+    expect(
+      validateAgentUiPerformancePopulation(
+        protocol: {
+          ..._protocol,
+          'storage': {
+            ...(_protocol['storage']! as Map),
+            'backend': 'legacy-json',
+          },
+        },
+        expectedActions: agentUiPerformanceWindowsActions,
+        platform: 'windows',
+      ),
+      agentUiPerformanceWindowsActions,
+    );
+  });
+
+  test('v3 rejects memory storage and archive prewarming', () {
+    for (final change in [
+      {'backend': 'memory'},
+      {'fullArchiveReadBeforeFirstEntry': true},
+      {'inspection': 'inside-action-windows'},
+    ]) {
+      expect(
+        () => validateAgentUiPerformancePopulation(
+          protocol: {
+            ..._protocol,
+            'storage': {...(_protocol['storage']! as Map), ...change},
+          },
+          expectedActions: agentUiPerformanceWindowsActions,
+          platform: 'windows',
+        ),
+        throwsStateError,
+      );
+    }
   });
 }

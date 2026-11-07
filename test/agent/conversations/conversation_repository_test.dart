@@ -90,6 +90,58 @@ void main() {
     expect(history.find(original.id), isNotNull);
   });
 
+  for (final days in [1, 3651]) {
+    test(
+      'retention accepts $days days and preserves the exact boundary',
+      () async {
+        var date = DateTime.utc(2026, 1, 1);
+        final history = ConversationRepository(
+          storage: MemoryConversationStorage(),
+          clock: () => date,
+        );
+        addTearDown(history.dispose);
+        await history.load();
+        final original = await history.create(title: 'Boundary');
+        date = date.add(Duration(days: days));
+        expect(
+          await history.pruneHistory(days: days, canRemove: (_) => true),
+          0,
+        );
+        expect(history.find(original.id), isNotNull);
+        date = date.add(const Duration(microseconds: 1));
+        expect(
+          await history.pruneHistory(days: days, canRemove: (_) => true),
+          1,
+        );
+        expect(history.find(original.id), isNull);
+      },
+    );
+  }
+
+  test(
+    'retention accepts very large days without overflowing the date',
+    () async {
+      var date = DateTime.utc(2026, 1, 1);
+      final history = ConversationRepository(
+        storage: MemoryConversationStorage(),
+        clock: () => date,
+      );
+      addTearDown(history.dispose);
+      await history.load();
+      final original = await history.create(title: 'Long retention');
+      date = DateTime.utc(2036, 1, 1);
+      expect(
+        await history.pruneHistory(days: 1 << 60, canRemove: (_) => true),
+        0,
+      );
+      expect(history.find(original.id), isNotNull);
+      await expectLater(
+        history.pruneHistory(days: -1, canRemove: (_) => true),
+        throwsFormatException,
+      );
+    },
+  );
+
   late MemoryConversationStorage storage;
   late ConversationRepository repository;
   var nextId = 0;

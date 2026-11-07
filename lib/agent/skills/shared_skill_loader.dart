@@ -13,29 +13,15 @@ enum SkillStatus {
   missingDependencies,
   incompatible,
   invalidAsset,
-  budgetExceeded,
 }
 
-enum SkillPackError { unavailable, invalidManifest, manifestBudgetExceeded }
+enum SkillPackError { unavailable, invalidManifest }
 
 class SkillPackException implements Exception {
   const SkillPackException(this.code);
   final SkillPackError code;
   @override
   String toString() => 'SkillPackException(${code.name})';
-}
-
-class SkillBudgets {
-  const SkillBudgets({
-    this.maxManifestBytes = 128 * 1024,
-    this.maxSkillBytes,
-    this.maxLoadedBytes,
-    this.maxLoadedSkills,
-  });
-  final int maxManifestBytes;
-  final int? maxSkillBytes;
-  final int? maxLoadedBytes;
-  final int? maxLoadedSkills;
 }
 
 class SkillDescriptor {
@@ -161,19 +147,12 @@ class SharedSkillLoader {
     required this.loadString,
     required Set<String> registeredTools,
     this.runtimeContractVersion = 1,
-    this.toolApiVersion = '1.0.0',
-    this.budgets = const SkillBudgets(),
+    this.toolApiVersion = '2.0.0',
     SkillOverlaySnapshot? overlays,
   }) : _registeredTools = Set.unmodifiable(registeredTools),
        _overlays = overlays?.entries ?? const {} {
     _Version.parse(toolApiVersion);
-    if (runtimeContractVersion <= 0 ||
-        [
-          budgets.maxManifestBytes,
-          ?budgets.maxSkillBytes,
-          ?budgets.maxLoadedBytes,
-          ?budgets.maxLoadedSkills,
-        ].any((value) => value <= 0)) {
+    if (runtimeContractVersion <= 0) {
       throw const SkillPackException(SkillPackError.invalidManifest);
     }
   }
@@ -185,7 +164,6 @@ class SharedSkillLoader {
   final Map<String, SkillOverlay> _overlays;
   final int runtimeContractVersion;
   final String toolApiVersion;
-  final SkillBudgets budgets;
   final Map<String, SkillLoadResult> _loaded = {};
   Future<_Manifest>? _manifestFuture;
   Future<void> _tail = Future.value();
@@ -285,14 +263,6 @@ class SharedSkillLoader {
       );
     }
     if (_loaded[id] case final cached?) return cached;
-    if (budgets.maxLoadedSkills case final limit?
-        when _loaded.length >= limit) {
-      return SkillLoadResult(
-        id: id,
-        skill: skill,
-        status: SkillStatus.budgetExceeded,
-      );
-    }
     String body;
     try {
       body =
@@ -305,16 +275,6 @@ class SharedSkillLoader {
       );
     }
     final bytes = utf8.encode(body);
-    if ((budgets.maxSkillBytes != null &&
-            bytes.length > budgets.maxSkillBytes!) ||
-        (budgets.maxLoadedBytes != null &&
-            _loadedBytes + bytes.length > budgets.maxLoadedBytes!)) {
-      return SkillLoadResult(
-        id: id,
-        skill: skill,
-        status: SkillStatus.budgetExceeded,
-      );
-    }
     if (sha256.convert(bytes).toString() != skill.contentSha256 ||
         (_overlay(skill)?.body == null && !_validBody(body, skill))) {
       return SkillLoadResult(
@@ -371,9 +331,6 @@ class SharedSkillLoader {
     } catch (_) {
       throw const SkillPackException(SkillPackError.unavailable);
     }
-    if (utf8.encode(body).length > budgets.maxManifestBytes) {
-      throw const SkillPackException(SkillPackError.manifestBudgetExceeded);
-    }
     try {
       final value = jsonDecode(body);
       if (value is! Map<String, dynamic> ||
@@ -387,7 +344,7 @@ class SharedSkillLoader {
         _string(value['toolApiCompatibility']),
       );
       final raw = value['skills'];
-      if (raw is! List || raw.isEmpty || raw.length > 128) {
+      if (raw is! List || raw.isEmpty) {
         throw const FormatException();
       }
       final ids = <String>{};
@@ -411,7 +368,7 @@ class SharedSkillLoader {
         if (tools.toSet().length != tools.length ||
             tools.any(
               (tool) =>
-                  !RegExp(r'^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$')
+                  !RegExp(r'^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)*$')
                       .hasMatch(tool),
             )) {
           throw const FormatException();
@@ -471,30 +428,18 @@ bool _validBody(String body, SkillDescriptor skill) {
       metadata['summary'] != skill.summary) {
     return false;
   }
-  return [
-    '适用任务',
-    '何时不使用',
-    '输入',
-    '依赖工具',
-    '操作步骤',
-    '业务注意事项',
-    '完成条件',
-    '失败处理',
-  ].every(
-    (heading) =>
-        body.contains('## $heading\n') || body.contains('## $heading\r\n'),
-  );
+  return body.substring(match.end).trim().isNotEmpty;
 }
 
 String _string(Object? value) {
-  if (value is! String || value.trim().isEmpty || value.length > 4096) {
+  if (value is! String || value.trim().isEmpty) {
     throw const FormatException();
   }
   return value;
 }
 
 List<String> _strings(Object? value) {
-  if (value is! List || value.length > 128) throw const FormatException();
+  if (value is! List) throw const FormatException();
   final result = value.map(_string).toList();
   if (result.toSet().length != result.length) throw const FormatException();
   return List.unmodifiable(result);

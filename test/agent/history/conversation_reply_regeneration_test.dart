@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sked/agent/history/conversation_history_preflight.dart';
 import 'package:sked/agent/history/conversation_reply_regeneration.dart';
 import 'package:sked/agent/provider/provider_models.dart';
 
@@ -60,7 +59,13 @@ void main() {
             finishReason: 'tool_calls',
           ),
         ),
-        throwsA(isA<ConversationHistoryException>()),
+        throwsA(
+          isA<ProviderException>().having(
+            (error) => error.code,
+            'code',
+            ProviderError.unknownTool,
+          ),
+        ),
       );
       expect(
         () => validateConversationReplyResponse(
@@ -73,7 +78,13 @@ void main() {
             finishReason: 'stop',
           ),
         ),
-        throwsA(isA<ConversationHistoryException>()),
+        throwsA(
+          isA<ProviderException>().having(
+            (error) => error.code,
+            'code',
+            ProviderError.unknownTool,
+          ),
+        ),
       );
       validateConversationReplyResponse(
         ProviderResponse(

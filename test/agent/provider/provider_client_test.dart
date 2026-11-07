@@ -15,7 +15,6 @@ void main() {
   );
   ProviderRequest request({
     ProviderProtocol protocol = ProviderProtocol.chatCompletions,
-    ProviderLimits limits = const ProviderLimits(),
     List<ProviderMessage>? messages,
     List<ToolDefinition>? tools,
     Uri? endpoint,
@@ -24,7 +23,6 @@ void main() {
     endpoint: endpoint ?? Uri.parse('https://model.example/v1/custom'),
     model: 'user-chosen-model',
     protocol: protocol,
-    limits: limits,
     tools: tools ?? [tool],
     allowInsecureHttp: allowInsecureHttp,
     messages:
@@ -300,6 +298,22 @@ void main() {
             ),
       ),
     );
+  });
+
+  test('long service-generated tool identity remains intact', () async {
+    final id = 'call-${'x' * 2048}';
+    final payload =
+        '${_chat({
+          'tool_calls': [
+            {
+              'index': 0,
+              'id': id,
+              'function': {'name': 'events__list', 'arguments': '{}'},
+            },
+          ],
+        }, finish: 'tool_calls')}data: [DONE]\n\n';
+    final response = await collect(payload);
+    expect(response.toolCalls.single.id, id);
   });
 
   test('late unknown tool keeps its name and stream tail after long output', () async {
@@ -693,87 +707,6 @@ void main() {
     );
   });
 
-  for (final timeout in ['idle', 'total']) {
-    for (final completeBody in [true, false]) {
-      test(
-        '$timeout timeout reading ${completeBody ? 'complete' : 'partial'} HTTP error retains rejection',
-        () async {
-          var bodyCancelled = false;
-          var requestAborted = false;
-          final body = StreamController<List<int>>(
-            onCancel: () {
-              bodyCancelled = true;
-            },
-          );
-          final client = ProviderClient(
-            client: _Client((wire) async {
-              unawaited(
-                (wire as http.AbortableRequest).abortTrigger!.then((_) {
-                  requestAborted = true;
-                }),
-              );
-              return http.StreamedResponse(
-                body.stream,
-                completeBody ? 401 : 429,
-                headers: {'content-type': 'application/json'},
-              );
-            }),
-          );
-          body.add(
-            utf8.encode(
-              completeBody
-                  ? jsonEncode({
-                      'error': {
-                        'message': 'Invalid secret-runtime-key',
-                        'code': 'invalid_api_key',
-                      },
-                    })
-                  : '{"error":{"message":"Too many requests',
-            ),
-          );
-          try {
-            await expectLater(
-              client.collect(
-                request(
-                  limits: ProviderLimits(
-                    idleTimeout: Duration(
-                      milliseconds: timeout == 'idle' ? 50 : 1000,
-                    ),
-                    totalTimeout: Duration(
-                      milliseconds: timeout == 'total' ? 50 : 1000,
-                    ),
-                  ),
-                ),
-                apiKey: 'secret-runtime-key',
-              ),
-              throwsA(
-                isA<ProviderException>()
-                    .having(
-                      (error) => error.code,
-                      'HTTP classification',
-                      completeBody
-                          ? ProviderError.authentication
-                          : ProviderError.rateLimited,
-                    )
-                    .having(
-                      (error) => error.displayDetails,
-                      'bounded response details',
-                      completeBody
-                          ? 'Invalid [redacted]\nHTTP 401 · invalid_api_key'
-                          : 'HTTP 429',
-                    ),
-              ),
-            );
-            expect(bodyCancelled, isTrue);
-            expect(requestAborted, isTrue);
-          } finally {
-            await body.close();
-            client.close();
-          }
-        },
-      );
-    }
-  }
   for (final cancelSubscription in [false, true]) {
     test(
       '${cancelSubscription ? 'subscription' : 'token'} cancellation still stops HTTP diagnostic reads',
@@ -792,7 +725,7 @@ void main() {
         final client = ProviderClient(
           client: _Client((wire) async {
             unawaited(
-              (wire as http.AbortableRequest).abortTrigger!.then((_) {
+              (wire as http.Abortable).abortTrigger!.then((_) {
                 requestAborted.complete();
               }),
             );
@@ -884,9 +817,9 @@ void main() {
     },
   );
 
-  for (final overBudget in [false, true]) {
+  for (final reportedTokens in [4196, 2000000]) {
     test(
-      'incomplete response emits validated usage before ${overBudget ? 'budget' : 'terminal'} error',
+      'incomplete response preserves $reportedTokens reported tokens before the terminal error',
       () async {
         final client = ProviderClient(
           client: _Client(
@@ -897,9 +830,9 @@ void main() {
                   'status': 'incomplete',
                   'incomplete_details': {'reason': 'max_output_tokens'},
                   'usage': {
-                    'input_tokens': 100,
+                    'input_tokens': reportedTokens - 4096,
                     'output_tokens': 4096,
-                    'total_tokens': 4196,
+                    'total_tokens': reportedTokens,
                     'input_tokens_details': {'cached_tokens': 40},
                     'output_tokens_details': {'reasoning_tokens': 4000},
                   },
@@ -912,10 +845,7 @@ void main() {
         ProviderException? failure;
         try {
           await for (final event in client.stream(
-            request(
-              protocol: ProviderProtocol.responses,
-              limits: ProviderLimits(maxTotalTokens: overBudget ? 4195 : 4196),
-            ),
+            request(protocol: ProviderProtocol.responses),
             apiKey: '',
           )) {
             events.add(event);
@@ -924,16 +854,11 @@ void main() {
           failure = error;
         }
         final usage = events.whereType<ProviderUsageEvent>().single.usage;
-        expect(usage.totalTokens, 4196);
+        expect(usage.totalTokens, reportedTokens);
         expect(usage.cachedInputTokens, 40);
         expect(usage.reasoningTokens, 4000);
         expect(events.whereType<ProviderCompleted>(), isEmpty);
-        expect(
-          failure?.code,
-          overBudget
-              ? ProviderError.tokenBudgetExceeded
-              : ProviderError.incompleteResponse,
-        );
+        expect(failure?.code, ProviderError.incompleteResponse);
         expect(failure?.responseTerminated, isTrue);
         client.close();
       },
@@ -1045,7 +970,7 @@ void main() {
   });
 
   test('SSE handles BOM, UTF-8 byte splits, CRLF and multiline data', () {
-    final decoder = ProviderSseDecoder(maxEventBytes: 1024);
+    final decoder = ProviderSseDecoder();
     final frames = <ProviderSseFrame>[];
     for (final byte in utf8.encode(
       '\uFEFF: hello\r\nevent: value\r\ndata: 中\r\ndata: 文\r\n\r\n',
@@ -1216,10 +1141,12 @@ void main() {
   );
 
   test('outbound Chat request uses exact destination, safe names and runtime header', () async {
-    late http.Request sent;
+    late http.BaseRequest sent;
+    late String sentBody;
     final client = ProviderClient(
       client: _Client((value) async {
-        sent = value as http.Request;
+        sent = value;
+        sentBody = await value.finalize().bytesToString();
         return _sse(
           '${_chat({'content': 'ok'}, finish: 'stop')}data: [DONE]\n\n',
         );
@@ -1251,8 +1178,8 @@ void main() {
     expect(sent.headers['Authorization'], 'Bearer secret-runtime-key');
     expect(sent.followRedirects, false);
     expect(sent.maxRedirects, 0);
-    expect(sent.body, isNot(contains('secret-runtime-key')));
-    final body = jsonDecode(sent.body) as Map;
+    expect(sentBody, isNot(contains('secret-runtime-key')));
+    final body = jsonDecode(sentBody) as Map;
     expect(body['model'], 'user-chosen-model');
     expect(body['tools'][0]['function']['name'], 'events__list');
     expect(
@@ -1359,7 +1286,7 @@ void main() {
     },
   );
 
-  for (final scenario in ['reported', 'missing', 'overBudget']) {
+  for (final scenario in ['reported', 'missing']) {
     test(
       'Responses JSON incomplete preserves $scenario usage and terminal outcome',
       () async {
@@ -1392,12 +1319,7 @@ void main() {
         ProviderException? failure;
         try {
           await for (final event in client.stream(
-            request(
-              protocol: ProviderProtocol.responses,
-              limits: ProviderLimits(
-                maxTotalTokens: scenario == 'overBudget' ? 14 : 15,
-              ),
-            ),
+            request(protocol: ProviderProtocol.responses),
             apiKey: '',
           )) {
             events.add(event);
@@ -1409,12 +1331,7 @@ void main() {
         expect(usage, hasLength(scenario == 'missing' ? 0 : 1));
         if (usage.isNotEmpty) expect(usage.single.usage.totalTokens, 15);
         expect(failure?.responseTerminated, isTrue);
-        expect(
-          failure?.code,
-          scenario == 'overBudget'
-              ? ProviderError.tokenBudgetExceeded
-              : ProviderError.incompleteResponse,
-        );
+        expect(failure?.code, ProviderError.incompleteResponse);
         expect(events.whereType<ProviderCompleted>(), isEmpty);
         client.close();
       },
@@ -1500,41 +1417,6 @@ void main() {
     expect(events.whereType<ProviderToolCallDelta>(), hasLength(1));
   });
 
-  for (final fixture in <ProviderError, ProviderLimits>{
-    ProviderError.requestBudgetExceeded: const ProviderLimits(
-      maxRequestBytes: 10,
-    ),
-    ProviderError.responseBudgetExceeded: const ProviderLimits(
-      maxResponseBytes: 10,
-    ),
-    ProviderError.eventBudgetExceeded: const ProviderLimits(maxEventBytes: 10),
-    ProviderError.toolBudgetExceeded: const ProviderLimits(
-      maxToolArgumentBytes: 1,
-    ),
-    ProviderError.tokenBudgetExceeded: const ProviderLimits(maxTotalTokens: 1),
-  }.entries) {
-    test('enforces ${fixture.key.name}', () async {
-      await expectLater(
-        collect(
-          '${_chat({
-            'tool_calls': [
-              {
-                'index': 0,
-                'id': 'call',
-                'function': {'name': 'events__list', 'arguments': '{}'},
-              },
-            ],
-          }, finish: 'tool_calls')}${_frame({
-            'choices': [],
-            'usage': {'prompt_tokens': 2, 'completion_tokens': 2, 'total_tokens': 4},
-          })}data: [DONE]\n\n',
-          input: request(limits: fixture.value),
-        ),
-        throwsA(_error(fixture.key)),
-      );
-    });
-  }
-
   test(
     'cancellation aborts before headers even if client ignores abort',
     () async {
@@ -1543,7 +1425,7 @@ void main() {
       final pending = Completer<http.StreamedResponse>();
       final client = ProviderClient(
         client: _Client((value) {
-          aborted = (value as http.AbortableRequest).abortTrigger!;
+          aborted = (value as http.Abortable).abortTrigger!;
           entered.complete();
           return pending.future;
         }),
@@ -1573,7 +1455,7 @@ void main() {
     final client = ProviderClient(
       client: _Client((value) {
         unawaited(
-          (value as http.AbortableRequest).abortTrigger!.then(
+          (value as http.Abortable).abortTrigger!.then(
             (_) => aborted.complete(),
           ),
         );
@@ -1687,7 +1569,7 @@ void main() {
       final client = ProviderClient(
         client: _Client((request) {
           unawaited(
-            (request as http.AbortableRequest).abortTrigger!.then((_) {
+            (request as http.Abortable).abortTrigger!.then((_) {
               aborted = true;
             }),
           );
@@ -1714,51 +1596,6 @@ void main() {
       await tester.pump();
     },
   );
-
-  test('idle timeout cancels an open response stream', () async {
-    final bytes = StreamController<List<int>>();
-    var cancelled = false;
-    bytes.onCancel = () {
-      cancelled = true;
-    };
-    final client = ProviderClient(
-      client: _Client(
-        (_) async => http.StreamedResponse(
-          bytes.stream,
-          200,
-          headers: {'content-type': 'text/event-stream'},
-        ),
-      ),
-    );
-    await expectLater(
-      client.collect(
-        request(
-          limits: const ProviderLimits(idleTimeout: Duration(milliseconds: 10)),
-        ),
-        apiKey: '',
-      ),
-      throwsA(_error(ProviderError.timeout)),
-    );
-    expect(cancelled, true);
-    await bytes.close();
-  });
-
-  test('total timeout also bounds a pending send', () async {
-    final pending = Completer<http.StreamedResponse>();
-    final client = ProviderClient(client: _Client((_) => pending.future));
-    await expectLater(
-      client.collect(
-        request(
-          limits: const ProviderLimits(
-            totalTimeout: Duration(milliseconds: 10),
-          ),
-        ),
-        apiKey: '',
-      ),
-      throwsA(_error(ProviderError.timeout)),
-    );
-    pending.complete(_sse(''));
-  });
 
   test('rejects redirects and does not forward credentials', () async {
     var sends = 0;

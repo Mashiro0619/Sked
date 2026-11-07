@@ -195,8 +195,8 @@ void _provider(Object? value, {required bool closed}) {
   final provider = _map(value, 'History provider');
   _require(
     provider['type'] == 'history-scripted-offline' &&
-        provider['requests'] == 7 &&
-        provider['completedResponses'] == 7 &&
+        provider['requests'] == 6 &&
+        provider['completedResponses'] == 6 &&
         provider['transportAttempts'] == 0 &&
         provider['closed'] == closed &&
         provider['transportClosed'] == closed &&
@@ -206,8 +206,7 @@ void _provider(Object? value, {required bool closed}) {
   final trace = _maps(provider['trace'], 'History provider trace');
   const phases = [
     'original-capabilities',
-    'original-prepare',
-    'original-commit',
+    'original-apply',
     'original-reply',
     'later-reply',
     'reply-regeneration',
@@ -221,9 +220,9 @@ void _provider(Object? value, {required bool closed}) {
     final item = trace[index];
     final users = _list(item['userTexts'], 'Request user texts');
     final tools = _list(item['toolNames'], 'Request tool catalog');
-    final expectedInput = index < 4
+    final expectedInput = index < 3
         ? _originalRequest
-        : index < 6
+        : index < 5
         ? _laterRequest
         : _editedRequest;
     _require(
@@ -241,10 +240,10 @@ void _provider(Object? value, {required bool closed}) {
           users.last == expectedInput &&
           !users.contains(_draft) &&
           tools.every((value) => value is String) &&
-          (index == 5 ? tools.isEmpty : tools.isNotEmpty),
+          (index == 4 ? tools.isEmpty : tools.isNotEmpty),
       'History request ${index + 1} has an incorrect source, context, tools or credential boundary.',
     );
-    if (index == 6) {
+    if (index == 5) {
       _require(
         !users.contains(_originalRequest) && !users.contains(_laterRequest),
         'The replay context contains a retired user request.',
@@ -252,11 +251,10 @@ void _provider(Object? value, {required bool closed}) {
     }
     final response = _map(item['response'], 'Scripted response');
     final calls = _maps(response['toolCalls'], 'Response tool calls');
-    if (index < 3) {
+    if (index < 2) {
       final expectedTool = const [
         'capabilities.describe',
-        'mutation.prepare',
-        'mutation.commit',
+        'mutation.apply',
       ][index];
       _require(
         response['text'] == '' &&
@@ -269,7 +267,7 @@ void _provider(Object? value, {required bool closed}) {
       final args = _map(calls.single['arguments'], 'Tool arguments');
       if (index == 0) {
         _require(
-          _same(args['names'], ['mutation.prepare', 'mutation.commit']),
+          _same(args['names'], ['mutation.apply']),
           'The capability request changed scope.',
         );
       } else if (index == 1) {
@@ -285,24 +283,25 @@ void _provider(Object? value, {required bool closed}) {
           }),
           'The mutation preparation changed the synthetic target.',
         );
-      } else {
-        final result = _map(
-          item['lastToolResult'],
-          'Actual mutation prepare result',
-        );
-        _id(result['planId'], 'Actual prepared plan');
-        _require(
-          args['planId'] == result['planId'],
-          'The commit did not consume its actual prepared plan.',
-        );
       }
     } else {
+      if (index == 2) {
+        final result = _map(
+          item['lastToolResult'],
+          'Actual single-action result',
+        );
+        _require(
+          result['status'] == 'committed',
+          'The single-action result was not saved.',
+        );
+        _id(result['operationId'], 'Saved operation identity');
+      }
       final expectedText = [
         _originalReply,
         _laterReply,
         _regeneratedReply,
         _replayedReply,
-      ][index - 3];
+      ][index - 2];
       _require(
         calls.isEmpty && response['text'] == expectedText,
         'A text-only history response attempted a tool or changed content.',
@@ -360,7 +359,7 @@ void validateAgentHistoryJourney(Map<String, Object?> report) {
         original.last['text'] == _originalReply &&
         originalTurn['ownershipComplete'] == true &&
         operation['store'] == 'main' &&
-        operation['toolCallId'] == 'history-call-3-mutation.commit' &&
+        operation['toolCallId'] == 'history-call-2-mutation.apply' &&
         _list(
           originalTurn['runIds'],
           'Original run IDs',
@@ -376,7 +375,7 @@ void validateAgentHistoryJourney(Map<String, Object?> report) {
         calendar['isVisible'] == false &&
         _list(calendar['events'], 'Created calendar events').isEmpty &&
         created['calendarCount'] == 2 &&
-        created['providerRequests'] == 4 &&
+        created['providerRequests'] == 3 &&
         created['originalPrefixSha256'] == fixture['longHistorySha256'] &&
         created['storageReadback'] ==
             'ConversationArchive.decode / AppData.decodeStorageSnapshot',
@@ -421,7 +420,7 @@ void validateAgentHistoryJourney(Map<String, Object?> report) {
               .map((message) => message['id'])
               .toList(),
         ) &&
-        later['providerRequests'] == 5,
+        later['providerRequests'] == 4,
     'The later explanation changed the original operation or added extra activity.',
   );
 
@@ -461,7 +460,7 @@ void validateAgentHistoryJourney(Map<String, Object?> report) {
           regenerated['regenerationRequestTools'],
           'Regeneration tools',
         ).isEmpty &&
-        regenerated['providerRequests'] == 6,
+        regenerated['providerRequests'] == 5,
     'Reply regeneration changed transcript identity, owned turns or its text-only request contract.',
   );
   _unchanged(regenerated, 'mainSha256');
@@ -480,8 +479,8 @@ void validateAgentHistoryJourney(Map<String, Object?> report) {
         cancelled['historyVersionCount'] == 0 &&
         cancelled.containsKey('pendingRedo') &&
         cancelled['pendingRedo'] == null &&
-        cancelled['providerRequestsBefore'] == 6 &&
-        cancelled['providerRequestsAfter'] == 6,
+        cancelled['providerRequestsBefore'] == 5 &&
+        cancelled['providerRequestsAfter'] == 5,
     'Cancelling and reopening the edit lost its draft or executed work.',
   );
   _unchanged(cancelled, 'messagesSha256');
@@ -571,7 +570,7 @@ void validateAgentHistoryJourney(Map<String, Object?> report) {
         redone['mainCanWrite'] == true &&
         redone['savedDraft'] == _draft &&
         redone['visibleDraft'] == _draft &&
-        redone['providerRequests'] == 7 &&
+        redone['providerRequests'] == 6 &&
         redone['originalPrefixSha256'] == fixture['longHistorySha256'] &&
         redone['storageReadback'] ==
             'ConversationArchive.decode / AppData.decodeStorageSnapshot',
@@ -637,8 +636,8 @@ void validateAgentHistoryJourney(Map<String, Object?> report) {
     _rendered(rendered[index], expectedRendered[index].$2);
   }
   _require(
-    browsed['providerRequestsBefore'] == 7 &&
-        browsed['providerRequestsAfter'] == 7 &&
+    browsed['providerRequestsBefore'] == 6 &&
+        browsed['providerRequestsAfter'] == 6 &&
         browsed['selectedId'] == 'native-long-history' &&
         browsed['savedDraft'] == _draft &&
         browsed['visibleDraft'] == _draft &&

@@ -885,4 +885,29 @@ void main() {
       expect(h.effects, 1);
     },
   );
+
+  test('copying an ordinary old receipt into a new ledger cannot grant restore completion', () async {
+    final plan = h.prepare();
+    final committed = await h.commit(plan);
+    final reservation = h.maintenance.reserve();
+    await h.maintenance.runWithLease(reservation, () async {
+      h.session.replaceData(
+        h.session.data.copyWith(
+          applicationLedger: ApplicationLedger(
+            generation: h.id(),
+            nextSequence: 2,
+            receipts: [committed.receipt],
+          ),
+        ),
+      );
+      await h.session.persist(h.session.data);
+    });
+    h.maintenance.release(reservation);
+    expect(h.storage.data.applicationLedger!.receipts, [committed.receipt]);
+    expect(
+      () => h.coordinator.status(plan.operationId),
+      throwsA(_problem(OperationErrorCode.expired)),
+    );
+    expect(h.effects, 1);
+  });
 }

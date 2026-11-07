@@ -41,6 +41,7 @@ class _ControlledReadStorage extends MemoryAttachmentStorage {
 
 class _FailAfterMainJournal extends MemorySelectiveRestoreJournal {
   bool fail = false;
+  void Function(SelectiveRestoreState state)? afterWrite;
   final attempts = <SelectiveRestoreState>[];
   SelectiveRestoreState? failedState;
 
@@ -53,6 +54,7 @@ class _FailAfterMainJournal extends MemorySelectiveRestoreJournal {
       throw StateError('Stopped after the main store committed.');
     }
     await super.write(state);
+    afterWrite?.call(state);
   }
 }
 
@@ -118,12 +120,215 @@ void main() {
   });
   tearDown(() => h.close());
 
+  for (final mode in AgentPermissionMode.values) {
+    for (final unsupportedOnly in [false, true]) {
+      test(
+        '${mode.name} restore reports no changes for '
+        '${unsupportedOnly ? 'an unsupported device group' : 'an identical calendar'}',
+        () async {
+          final inventory = await h.app.backups.selective.inventory();
+          final foreignPlatform =
+              h.app.devicePreferences.platform == DevicePreferencePlatform.web
+              ? DevicePreferencePlatform.windows
+              : DevicePreferencePlatform.web;
+          final record = unsupportedOnly
+              ? deviceBackupRecord(
+                  PortableDevicePreferences(
+                    platform: foreignPlatform,
+                    group: DevicePreferenceGroup.desktopLayout,
+                    values: const {
+                      'regions': {
+                        'assistant': {'width': 999.0},
+                      },
+                    },
+                  ),
+                )
+              : inventory.records.singleWhere(
+                  (record) =>
+                      record.key ==
+                      const BackupObjectKey(
+                        BackupObjectKind.calendar,
+                        'visible',
+                      ),
+                );
+          final sourceId = await _attachBytes(
+            h,
+            const SelectiveBackupCodec().encode(
+              SelectiveBackupBundle(records: [record], roots: [record.key]),
+            ),
+          );
+          await h.run(() async {
+            h.scope.policy.update(mode: mode);
+            var approvals = 0;
+            h.approval = (_) async {
+              approvals++;
+              fail('An unchanged restore must not request approval.');
+            };
+            final saved = h.storage.data;
+            final sessionRevision = h.app.maintenance.writeSessionRevision;
+            final deviceValues = await h.app.devicePreferences.readAll();
+            var reservedMaintenance = false;
+            void observeMaintenance() {
+              reservedMaintenance |= h.app.maintenance.isReserved;
+            }
+
+            h.app.maintenance.addListener(observeMaintenance);
+            late Map<String, Object?> result;
+            try {
+              result = await h.call('backups.restore', {
+                'sourceId': sourceId,
+                'objects': [record.key.toJson()],
+              });
+            } finally {
+              h.app.maintenance.removeListener(observeMaintenance);
+            }
+            expect(result['status'], 'no_changes');
+            expect(result['dataStatus'], 'unchanged');
+            expect(result['changeCount'], 0);
+            expect(result['changes'], isEmpty);
+            expect(result['operationId'], isNull);
+            expect(result['effectResult'], containsPair('restored', false));
+            expect(result['effectResult'], containsPair('selectedObjects', 1));
+            final skipped = result['unsupportedGroups'] as List;
+            expect(skipped, hasLength(unsupportedOnly ? 1 : 0));
+            if (unsupportedOnly) {
+              expect(skipped.single, containsPair('id', record.key.id));
+              expect(
+                skipped.single,
+                containsPair('platform', foreignPlatform.name),
+              );
+            }
+            expect(
+              result['effectResult'],
+              containsPair('skippedDeviceGroups', skipped),
+            );
+            expect(approvals, 0);
+            expect(h.storage.data, same(saved));
+            expect(h.app.maintenance.writeSessionRevision, sessionRevision);
+            expect(reservedMaintenance, isFalse);
+            expect(await h.app.devicePreferences.readAll(), deviceValues);
+            expect(journal.attempts, isEmpty);
+            expect(await journal.read(), isNull);
+            expect(h.app.backups.selective.recoveryPending, isFalse);
+          });
+        },
+      );
+    }
+  }
+
+  test(
+    'a complete restore persists only its own cross-generation receipt',
+    () async {
+      late String previousOperation;
+      await h.run(() async {
+        final previous = await h.call('memories.apply', {
+          'action': 'create',
+          'title': 'Existing local memory',
+          'body': 'Preserved independently of the selected calendar.',
+        });
+        previousOperation = previous['operationId'] as String;
+      });
+      final previousGeneration = h.saved.applicationLedger!.generation;
+      await _attachRestore(h);
+      late Map<String, Object?> result;
+      await h.run(() async {
+        result = await h.call('backups.restore', {
+          'sourceId': 'restore-source',
+          'objects': [
+            {'kind': 'calendar', 'id': 'visible'},
+          ],
+        });
+      });
+      expect(result['status'], 'applied');
+      expect(result['receiptFinalized'], isTrue);
+      expect(result['recoveryRequired'], isFalse);
+      final reopened = AppData.decodeStorageSnapshot(h.saved.encode());
+      final ledger = reopened.applicationLedger!;
+      final operationId = result['operationId'] as String;
+      expect(ledger.generation, isNot(previousGeneration));
+      expect(ledger.receipts.map((item) => item.operationId), [operationId]);
+      expect(ledger.receipts.single.sequence, 1);
+      expect(ledger.nextSequence, 2);
+      expect(ledger.receipts.single.result['restoreCompletion'], {
+        'restoreId': (result['arguments'] as Map)['restoreId'],
+        'fromGeneration': previousGeneration,
+        'toGeneration': ledger.generation,
+        'commandDigest': ledger.receipts.single.commandDigest,
+      });
+      expect(h.app.agent.external.status(operationId), ledger.receipts.single);
+      expect(
+        () => h.app.agent.external.status(previousOperation),
+        throwsA(_problem(OperationErrorCode.expired)),
+      );
+      expect(await journal.read(), isNull);
+    },
+  );
+
+  test('a failed final receipt write resumes the fixed completion without restoring twice', () async {
+    await _attachRestore(h);
+    var injected = false;
+    journal.afterWrite = (state) {
+      if (state.isComplete && !injected) {
+        injected = true;
+        h.storage.saveError = StateError(
+          'Synthetic final receipt save failure',
+        );
+      }
+    };
+    Map<String, Object?>? result;
+    try {
+      await h.run(() async {
+        result = await h.call('backups.restore', {
+          'sourceId': 'restore-source',
+          'objects': [
+            {'kind': 'calendar', 'id': 'visible'},
+          ],
+        });
+      });
+    } on ConversationStorageException {
+      // The unfinished restore retains the application's write barrier.
+    }
+    expect(injected, isTrue);
+    expect(result, isNotNull);
+    expect(result!['receiptFinalized'], isFalse);
+    final pending = (await journal.read())!;
+    expect(pending.isComplete, isTrue);
+    final main = pending.targets.singleWhere(
+      (target) => target.owner == BackupOwner.mainData,
+    );
+    final completed = AppData.decodeStorageSnapshot(
+      jsonEncode({
+        ...main.descriptor['target'] as Map,
+        'applicationLedger': main.descriptor['completionLedger'],
+      }),
+    );
+    final beforeRetry = h.saved.generalMode.toJson();
+    expect(
+      h.saved.generalMode.schedules.first.name,
+      'Restored visible calendar',
+    );
+    expect(h.saved.applicationLedger!.receipts, isEmpty);
+    expect(h.app.backups.selective.recoveryPending, isTrue);
+    await h.app.lifecycle.retryStorageLoad();
+    expect(await journal.read(), isNull);
+    expect(h.app.backups.selective.recoveryPending, isFalse);
+    expect(h.app.session.canWrite, isTrue);
+    expect(h.saved.generalMode.toJson(), beforeRetry);
+    expect(h.saved.applicationLedger, completed.applicationLedger);
+    final receipt = h.app.agent.external.status(
+      result!['operationId'] as String,
+    )!;
+    expect(receipt.result['status'], 'applied');
+    expect(receipt.result['effectStatus'], 'applied');
+    expect(journal.attempts.last.targets.single.fingerprint, main.fingerprint);
+  });
+
   test('Agent inspects, generates and saves only selected backup objects through the normal permission gate', () async {
     await h.run(() async {
       final description = await h.call('backups.inspect', {'limit': 1});
       expect(description['objects'], hasLength(1));
       expect(description['nextOffset'], 1);
-      final artifact = await h.call('exports.prepare', {
+      final artifact = await h.call('exports.generate', {
         'format': 'backup_zip',
         'objects': [
           {'kind': 'calendar', 'id': 'hidden'},
@@ -131,20 +336,16 @@ void main() {
       });
       expect(artifact['mimeType'], 'application/zip');
       expect(h.writtenArtifacts, isEmpty);
-      final plan = await h.call('exports.write', {
+      h.scope.policy.update(mode: AgentPermissionMode.plan);
+      final preview = await h.call('exports.write', {
         'artifactId': artifact['artifactId'],
       });
-      h.scope.policy.update(mode: AgentPermissionMode.plan);
-      await expectLater(
-        h.externalCommit(plan),
-        throwsA(isA<OperationProblem>()),
-      );
+      expect(preview['status'], 'preview');
       expect(h.writtenArtifacts, isEmpty);
       h.scope.policy.update(mode: AgentPermissionMode.full);
-      final accepted = await h.call('exports.write', {
+      final result = await h.call('exports.write', {
         'artifactId': artifact['artifactId'],
       });
-      final result = await h.externalCommit(accepted);
       expect(result['effectStatus'], 'applied');
       final archive = const SelectiveBackupCodec().decode(
         h.writtenArtifacts.single.binaryBytes!,
@@ -172,16 +373,16 @@ void main() {
               object['group'] == 'desktopLayout',
         ) as Map;
         expect(device['supportedOnThisPlatform'], isTrue);
-        final artifact = await h.call('exports.prepare', {
+        final artifact = await h.call('exports.generate', {
           'format': 'backup_zip',
           'objects': [
             {'kind': 'deviceSettings', 'id': device['id']},
           ],
         });
-        final plan = await h.call('exports.write', {
+        final result = await h.call('exports.write', {
           'artifactId': artifact['artifactId'],
         });
-        await h.externalCommit(plan);
+        expect(result['effectStatus'], 'applied');
         final archive = const SelectiveBackupCodec().decode(
           h.writtenArtifacts.single.binaryBytes!,
         );
@@ -247,7 +448,8 @@ void main() {
           (object) => object['kind'] == 'deviceSettings',
         ) as Map;
         expect(device['supportedOnThisPlatform'], isFalse);
-        final prepared = await h.call('backups.prepare_restore', {
+        h.scope.policy.update(mode: AgentPermissionMode.plan);
+        final prepared = await h.call('backups.restore', {
           'sourceId': sourceId,
           'objects': [selectedCalendar.key.toJson(), unsupported.key.toJson()],
         });
@@ -256,7 +458,11 @@ void main() {
           (prepared['unsupportedGroups'] as List).single['id'],
           unsupported.key.id,
         );
-        final result = await h.externalCommit(prepared);
+        h.scope.policy.update(mode: AgentPermissionMode.full);
+        final result = await h.call('backups.restore', {
+          'sourceId': sourceId,
+          'objects': [selectedCalendar.key.toJson(), unsupported.key.toJson()],
+        });
         expect(result['effectStatus'], 'applied');
         expect(
           result['effectResult'],
@@ -272,7 +478,7 @@ void main() {
     final fileId = await _attachBytes(h, Uint8List.fromList([1, 2, 3]));
     blobs.stall = true;
     await h.run(() async {
-      final exporting = h.call('exports.prepare', {
+      final exporting = h.call('exports.generate', {
         'format': 'backup_zip',
         'objects': [
           {'kind': 'conversation', 'id': h.conversationId},
@@ -326,14 +532,14 @@ void main() {
           ),
           hasLength(2),
         );
-        final prepared = await h.call('backups.prepare_restore', {
+        final result = await h.call('backups.restore', {
           'sourceId': 'source',
           'objects': [
             {'kind': 'calendar', 'id': 'visible'},
           ],
           'attachmentIds': <String>[],
         });
-        await h.externalCommit(prepared);
+        expect(result['effectStatus'], 'applied');
         expect(
           h.saved.generalMode.schedules.first.name,
           'Restored visible calendar',
@@ -371,7 +577,7 @@ void main() {
       await h.run(() async {
         final before = h.saved.encode();
         await expectLater(
-          h.call('backups.prepare_restore', {
+          h.call('backups.restore', {
             'sourceId': 'restore-source',
             'objects': invalid.value,
           }),
@@ -408,7 +614,7 @@ void main() {
       await h.run(() async {
         final before = h.saved.encode();
         await expectLater(
-          h.call('backups.prepare_restore', {
+          h.call('backups.restore', {
             'sourceId': 'foreign-restore',
             'objects': [
               {'kind': 'calendar', 'id': 'visible'},
@@ -426,19 +632,27 @@ void main() {
   test('manual target edit after preparation rejects the restore before a journal write', () async {
     await _attachRestore(h);
     await h.run(() async {
-      final prepared = await h.call('backups.prepare_restore', {
+      h.scope.policy.update(mode: AgentPermissionMode.ask);
+      late Map<String, dynamic> manual;
+      h.approval = (plan) async {
+        await h.app.generalCommands.renameSchedule('visible', 'Manual name');
+        manual = h.saved.generalMode.toJson();
+        return h.scope.approve(plan.id);
+      };
+      final result = await h.call('backups.restore', {
         'sourceId': 'restore-source',
         'objects': [
           {'kind': 'calendar', 'id': 'visible'},
         ],
       });
-      await h.app.generalCommands.renameSchedule('visible', 'Manual name');
-      final manual = h.saved.encode();
-      await expectLater(
-        h.externalCommit(prepared),
-        throwsA(_problem(OperationErrorCode.conflict)),
-      );
-      expect(h.saved.encode(), manual);
+      expect(result['status'], 'failed');
+      expect(result['dataStatus'], 'unchanged');
+      expect(result['effectStatus'], 'failed');
+      expect(result['effectResult'], containsPair('code', 'conflict'));
+      expect(result['effectResult'], containsPair('effectStarted', false));
+      expect(result['receiptFinalized'], isTrue);
+      expect(result['recoveryRequired'], isFalse);
+      expect(h.saved.generalMode.toJson(), manual);
       expect(journal.attempts, isEmpty);
       expect(await journal.read(), isNull);
       expect(h.app.backups.selective.recoveryPending, isFalse);
@@ -471,18 +685,21 @@ void main() {
       ),
     );
     await h.run(() async {
-      final prepared = await h.call('backups.prepare_restore', {
+      h.scope.policy.update(mode: AgentPermissionMode.ask);
+      h.approval = (plan) async {
+        final before = h.saved.encode();
+        h.layout.setPreferredSize(
+          DesktopLayoutRegion.assistant,
+          const PreferredRegionSize(width: 540),
+        );
+        expect(await h.layout.flush(), isTrue);
+        expect(h.saved.encode(), before);
+        return h.scope.approve(plan.id);
+      };
+      final result = await h.call('backups.restore', {
         'sourceId': sourceId,
         'objects': [target.key.toJson()],
       });
-      final before = h.saved.encode();
-      h.layout.setPreferredSize(
-        DesktopLayoutRegion.assistant,
-        const PreferredRegionSize(width: 540),
-      );
-      expect(await h.layout.flush(), isTrue);
-      expect(h.saved.encode(), before);
-      final result = await h.externalCommit(prepared);
       expect(result['effectStatus'], 'failed');
       expect(result['dataStatus'], 'unchanged');
       expect(result['receiptFinalized'], isTrue);
@@ -522,20 +739,14 @@ void main() {
     late String restoreId;
     try {
       await h.run(() async {
-        final prepared = await h.call('backups.prepare_restore', {
+        result = await h.call('backups.restore', {
           'sourceId': sourceId,
           'objects': [
             {'kind': 'calendar', 'id': 'visible'},
             {'kind': 'memory', 'id': 'restored-note'},
           ],
         });
-        restoreId =
-            h.app.agent.external
-                    .plan(prepared['planId'] as String)!
-                    .operation
-                    .arguments['restoreId']
-                as String;
-        result = await h.externalCommit(prepared);
+        restoreId = journal.failedState!.restoreId;
       });
     } on ConversationStorageException {
       // A pending restore may freeze the terminal host-message save. Its tool

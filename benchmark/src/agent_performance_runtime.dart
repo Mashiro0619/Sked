@@ -4,11 +4,11 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:sked/agent/attachments/attachment_storage.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
+import 'package:sked/agent/conversations/conversation_models.dart';
 import 'package:sked/agent/conversations/conversation_storage.dart';
-import 'package:sked/agent/conversations/conversation_storage_io.dart';
 import 'package:sked/agent/knowledge/knowledge_models.dart';
 import 'package:sked/agent/knowledge/knowledge_storage.dart';
-import 'package:sked/agent/knowledge/knowledge_storage_io.dart';
+import 'package:sked/agent/store/agent_store.dart';
 import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/backup/selective_restore_coordinator.dart';
@@ -16,7 +16,6 @@ import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/data/timetable_storage_io.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/app_backup_restore_journal_io.dart';
-import 'package:sked/services/app_storage_layout_io.dart';
 import 'package:sked/services/device_preferences_store.dart';
 import 'package:sked/services/school_site_service.dart';
 import 'package:sked/services/school_site_store_io.dart';
@@ -85,6 +84,10 @@ class _OfflineProvider extends ProviderClient {
   }
 }
 
+ProviderClient createAgentPerformanceProvider(
+  AgentPerformanceNetworkGuard guard,
+) => _OfflineProvider(guard);
+
 class AgentPerformanceMainStorage extends IoTimetableStorage {
   AgentPerformanceMainStorage(Directory directory)
     : super(directoryProvider: () async => directory);
@@ -104,21 +107,31 @@ class AgentPerformanceMainStorage extends IoTimetableStorage {
   }
 }
 
-class AgentPerformanceChatStorage extends PlatformConversationStorage {
-  AgentPerformanceChatStorage({super.layout});
+class AgentPerformanceChatStorage extends SqliteConversationStorage {
+  AgentPerformanceChatStorage(super.store);
   int loads = 0;
   int writes = 0;
   int markerReads = 0;
 
   @override
-  Future<ConversationStorageLoad> load() async {
+  Future<
+    ({
+      ConversationArchive archive,
+      Set<String> unloadedIds,
+      Map<String, ConversationPage> pages,
+    })
+  >
+  readIndex() async {
     loads++;
-    return super.load();
+    return super.readIndex();
   }
 
   @override
-  Future<void> save(String source, {required int revision}) async {
-    await super.save(source, revision: revision);
+  Future<void> writeArchive(
+    ConversationArchive archive, {
+    required ConversationArchive previous,
+  }) async {
+    await super.writeArchive(archive, previous: previous);
     writes++;
   }
 
@@ -129,8 +142,8 @@ class AgentPerformanceChatStorage extends PlatformConversationStorage {
   }
 }
 
-class AgentPerformanceKnowledgeStorage extends PlatformKnowledgeStorage {
-  AgentPerformanceKnowledgeStorage({super.layout});
+class AgentPerformanceKnowledgeStorage extends SqliteKnowledgeStorage {
+  AgentPerformanceKnowledgeStorage(super.store);
   int loads = 0;
   int writes = 0;
 
@@ -205,28 +218,31 @@ class AgentPerformanceDiskSession {
     final directory = await Directory.systemTemp.createTemp(
       'sked-agent-performance-',
     );
+    final databasePath = '${directory.path}/Sked_agent.sqlite';
+    var agentStore = AgentStore.open(filePath: databasePath);
     try {
-      final layout = AppStorageLayout(directoryProvider: () async => directory);
       final storage = AgentPerformanceMainStorage(directory);
-      final chats = AgentPerformanceChatStorage(layout: layout);
-      final knowledge = AgentPerformanceKnowledgeStorage(layout: layout);
+      final chats = AgentPerformanceChatStorage(agentStore);
+      final knowledge = AgentPerformanceKnowledgeStorage(agentStore);
       await storage.save(fixtures.dataWithAgent(agentEnabled));
-      await chats.save(
-        fixtures.archive.encode(),
-        revision: fixtures.archive.revision,
+      await chats.writeArchive(
+        fixtures.archive,
+        previous: ConversationArchive(),
       );
       await knowledge.save(KnowledgeArchive());
+      await agentStore.writeMetadata('legacy_cutover', 'complete');
+      await agentStore.close();
+      agentStore = AgentStore.open(filePath: databasePath);
       storage.writes = 0;
-      chats.writes = 0;
-      knowledge.writes = 0;
       return AgentPerformanceDiskSession._(
         directory,
         storage,
-        chats,
-        knowledge,
+        AgentPerformanceChatStorage(agentStore),
+        AgentPerformanceKnowledgeStorage(agentStore),
         network,
       );
     } catch (_) {
+      await agentStore.close();
       await directory.delete(recursive: true);
       rethrow;
     }
@@ -248,6 +264,8 @@ class AgentPerformanceDiskSession {
   void constructRuntime() {
     if (_app != null) throw StateError('Each load uses a new AppRuntime.');
     _app = AppRuntime(
+      // ignore: invalid_use_of_visible_for_testing_member
+      agentStore: chats.store,
       storage: storage,
       secretStore: _EmptySecrets(),
       schoolSiteService: SchoolSiteService(
@@ -341,6 +359,7 @@ class AgentPerformanceDiskSession {
     } finally {
       try {
         _devicePreferences.dispose();
+        await chats.store.close();
       } finally {
         await directory.delete(recursive: true);
       }

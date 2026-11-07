@@ -124,7 +124,7 @@ class _Exports extends ExportService {
 void main() {
   late AppRuntime app;
   late _ReplyProvider provider;
-  late OperationScope scope;
+  String? hostConversationId;
   late _Exports exports;
   late WidgetTester activeTester;
   var call = 0;
@@ -140,15 +140,11 @@ void main() {
       AppMode.general,
       hideWorkspaceNavigation: false,
     );
-    scope = OperationScope(
-      id: 'host-scope',
-      policy: OperationPolicy(enabled: true, mode: AgentPermissionMode.full),
-    );
+    hostConversationId = null;
     exports = _Exports();
     call = 0;
   });
   tearDown(() {
-    scope.cancel();
     app.dispose();
   });
 
@@ -159,23 +155,33 @@ void main() {
     Object? failure;
     StackTrace? failureStack;
     final result = await activeTester.runAsync(() async {
-      try {
-        return await app.agent.tools
-            .execute(
-              ProviderToolCall(
-                id: 'host-call-${++call}',
-                name: name,
-                arguments: jsonEncode(args),
-              ),
-              scope,
-              (_) => throw StateError('Full mode must not request approval.'),
-            )
-            .timeout(const Duration(seconds: 10));
-      } catch (error, stack) {
-        failure = error;
-        failureStack = stack;
-        return null;
-      }
+      await app.agent.initialize();
+      hostConversationId ??= (await app.agent.conversations.create(
+        title: 'Native host tools',
+        mode: AgentPermissionMode.full,
+      )).id;
+      Map<String, Object?>? result;
+      await app.agent.runtime.runHostAction(hostConversationId!, (
+        scope,
+        ask,
+      ) async {
+        try {
+          result = await app.agent.tools.execute(
+            ProviderToolCall(
+              id: 'host-call-${++call}',
+              name: name,
+              arguments: jsonEncode(args),
+            ),
+            scope,
+            (_) => throw StateError('Full mode must not request approval.'),
+          );
+        } catch (error, stack) {
+          failure = error;
+          failureStack = stack;
+        }
+        return result ?? {'status': 'failed'};
+      });
+      return result;
     });
     if (failure != null) Error.throwWithStackTrace(failure!, failureStack!);
     return result!;
@@ -342,13 +348,10 @@ void main() {
       final timetable = app.session.committedData.studentMode.timetables
           .firstWhere((t) => t.courses.isNotEmpty);
       final course = timetable.courses.first;
-      final prepared = await tool('navigation.open', {
+      final result = await tool('navigation.open', {
         'workspace': 'student',
         'ref': {'kind': 'course', 'id': course.id, 'parentId': timetable.id},
         'week': 2,
-      });
-      final result = await tool('external.commit', {
-        'planId': prepared['planId'],
       });
       await tester.pumpAndSettle();
       expect(result['effectStatus'], 'applied');
@@ -372,13 +375,10 @@ void main() {
       final before = app.session.committedData;
       final timetable = before.studentMode.timetables.first;
       final selectedWeek = app.studentView.selectedWeek;
-      final prepared = await tool('navigation.open', {
+      final result = await tool('navigation.open', {
         'workspace': 'student',
         'ref': {'kind': 'timetable', 'id': timetable.id},
         'week': timetable.config.totalWeeks + 1,
-      });
-      final result = await tool('external.commit', {
-        'planId': prepared['planId'],
       });
       expect(result['effectStatus'], isNot('applied'));
       expect(app.session.committedData.activeMode, before.activeMode);
@@ -401,7 +401,7 @@ void main() {
         final language = studentEnabled ? 'english' : 'simplifiedChinese';
         if (studentEnabled) {
           await expectLater(
-            tool('developer.sample.prepare', {
+            tool('developer.sample.apply', {
               'language': 'unregistered-language',
             }),
             throwsA(
@@ -414,12 +414,8 @@ void main() {
           );
           expect(app.session.committedData.encode(), before.encode());
         }
-        final prepared = await tool('developer.sample.prepare', {
+        final result = await tool('developer.sample.apply', {
           'language': language,
-        });
-        expect(app.session.committedData.encode(), before.encode());
-        final result = await tool('external.commit', {
-          'planId': prepared['planId'],
         });
         expect(result['effectStatus'], 'applied');
         expect(result['dataStatus'], 'committed');
@@ -469,14 +465,11 @@ void main() {
         } else {
           expect(after.studentMode.toJson(), before.studentMode.toJson());
         }
-        final replay = await tool('developer.sample.prepare', {
-          'language': language,
-          'operationId': prepared['operationId'],
+        final recorded = await tool('operations.status', {
+          'operationId': result['operationId'],
         });
-        final repeated = await tool('external.commit', {
-          'planId': replay['planId'],
-        });
-        expect(repeated['replayed'], isTrue);
+        expect(recorded['operationId'], result['operationId']);
+        expect(recorded['effectStatus'], 'applied');
         expect(app.session.committedData.encode(), after.encode());
         await tester.pumpWidget(const SizedBox());
         final loaded = await tester.runAsync(
@@ -489,31 +482,75 @@ void main() {
   }
 
   testWidgets(
-    'file destination cancellation remains a failed effect and unmount revokes pending plans',
+    'file destination cancellation stays explicit and an unmounted host rejects new saves',
     (tester) async {
       await mount(tester);
       final id = app.session.committedData.studentMode.timetables.first.id;
-      final artifact = await tool('exports.prepare', {
-        'format': 'timetables_json',
-        'ids': [id],
-      });
-      final cancelled = await tool('exports.write', {
-        'artifactId': artifact['artifactId'],
-      });
+      Future<Map<String, Object?>> write({bool unmount = false}) async {
+        late Completer<void> generated;
+        late Completer<void> proceed;
+        late Future<Map<String, Object?>> running;
+        Object? failure;
+        StackTrace? failureStack;
+        await tester.runAsync(() async {
+          generated = Completer<void>();
+          proceed = Completer<void>();
+          await app.agent.initialize();
+          hostConversationId ??= (await app.agent.conversations.create(
+            title: 'Native export',
+            mode: AgentPermissionMode.full,
+          )).id;
+          running = app.agent.runtime.runHostAction(hostConversationId!, (
+            scope,
+            ask,
+          ) async {
+            try {
+              final artifact = await app.agent.tools.execute(
+                ProviderToolCall(
+                  id: 'generate-${++call}',
+                  name: 'exports.generate',
+                  arguments: jsonEncode({
+                    'format': 'timetables_json',
+                    'ids': [id],
+                  }),
+                ),
+                scope,
+                ask,
+              );
+              generated.complete();
+              await proceed.future;
+              return await app.agent.tools.execute(
+                ProviderToolCall(
+                  id: 'write-${++call}',
+                  name: 'exports.write',
+                  arguments: jsonEncode({'artifactId': artifact['artifactId']}),
+                ),
+                scope,
+                ask,
+              );
+            } catch (error, stack) {
+              failure = error;
+              failureStack = stack;
+              if (!generated.isCompleted) generated.complete();
+              return {'status': 'failed'};
+            }
+          });
+          await generated.future;
+        });
+        if (unmount) await tester.pumpWidget(const SizedBox.shrink());
+        final result = await tester.runAsync(() {
+          proceed.complete();
+          return running;
+        });
+        if (failure != null) Error.throwWithStackTrace(failure!, failureStack!);
+        return result!;
+      }
+
       exports.status = ExportSaveStatus.cancelled;
-      final result = await tool('external.commit', {
-        'planId': cancelled['planId'],
-      });
+      final result = await write();
       expect(result['effectStatus'], 'failed');
       expect(exports.payloads, hasLength(1));
-      final pending = await tool('exports.write', {
-        'artifactId': artifact['artifactId'],
-      });
-      await tester.pumpWidget(const SizedBox());
-      await expectLater(
-        tool('external.commit', {'planId': pending['planId']}),
-        throwsA(isA<OperationProblem>()),
-      );
+      await expectLater(write(unmount: true), throwsA(isA<OperationProblem>()));
       expect(exports.payloads, hasLength(1));
     },
   );

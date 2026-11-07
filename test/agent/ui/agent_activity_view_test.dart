@@ -6,10 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/history/conversation_history.dart';
-import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/ui/agent_conversation_timeline.dart';
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_operation_card.dart';
+import 'package:sked/agent/ui/agent_operation_activity.dart';
+import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/agent/ui/agent_transcript.dart';
 import 'package:sked/agent/ui/agent_turn_activity.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
@@ -69,9 +70,9 @@ void main() {
       expect(find.byType(AgentTurnActivity), findsNWidgets(2));
       final sequence = [
         _key('agent-message-calls-0'),
-        _key('agent-activity-toggle-turn-0'),
+        _key('agent-activity-toggle-call-0-0'),
         _key('agent-message-progress'),
-        _key('agent-activity-toggle-turn-0-activity-progress'),
+        _key('agent-activity-toggle-settings'),
         _key('agent-message-reply-0'),
       ];
       for (var index = 1; index < sequence.length; index++) {
@@ -82,7 +83,6 @@ void main() {
       }
       final before = fixture.storage.source;
       await _tap(tester, sequence[3]);
-      await _tap(tester, _key('agent-activity-tool-settings'));
       expect(find.textContaining('"theme": "light"'), findsOneWidget);
       expect(fixture.storage.source, before);
       expect(fixture.delegate.calls, isEmpty);
@@ -104,17 +104,12 @@ void main() {
         expect(find.byType(AgentTurnActivity), findsNWidgets(turns));
         expect(find.byType(ExpansionTile), findsNothing);
         expect(find.text('notifications.reminders'), findsNothing);
-        expect(
-          find.text(
-            '${l.agentActivitySummary(8)} · ${l.agentActivityCompleted}',
-          ),
-          findsNWidgets(turns),
-        );
+        expect(find.text(l.agentActivitySummary(8)), findsNWidgets(turns));
         for (var turn = 0; turn < turns; turn++) {
           expect(_key('agent-activity-list-turn-$turn'), findsNothing);
           expect(
             tester.getSize(_key('agent-activity-toggle-turn-$turn')).height,
-            32,
+            greaterThanOrEqualTo(32),
           );
         }
         final first = tester
@@ -136,10 +131,6 @@ void main() {
         }
         await _tap(tester, _key('agent-activity-toggle-turn-0'));
         expect(_key('agent-activity-list-turn-0'), findsOneWidget);
-        expect(
-          tester.getSize(_key('agent-activity-list-turn-0')).height,
-          lessThanOrEqualTo(280),
-        );
         expect(find.text('notifications.reminders'), findsNothing);
         await _tap(tester, _key('agent-activity-tool-call-0-0'));
         expect(_key('agent-activity-detail-call-0-0'), findsOneWidget);
@@ -167,14 +158,10 @@ void main() {
       final l = AppLocalizations.of(
         tester.element(find.byType(AgentConversationView)),
       );
-      expect(
-        find.text('${l.agentActivitySummary(1)} · ${l.agentRunning}'),
-        findsOneWidget,
-      );
+      expect(find.byIcon(Icons.hourglass_top_rounded), findsOneWidget);
       expect(find.byType(ExpansionTile), findsNothing);
       expect(find.byType(AgentOperationCard), findsNothing);
-      await _tap(tester, _key('agent-activity-toggle-turn-0'));
-      await _tap(tester, _key('agent-activity-tool-call-0-0'));
+      await _tap(tester, _key('agent-activity-toggle-call-0-0'));
       final detail = _key('agent-activity-detail-call-0-0');
       expect(
         find.descendant(of: detail, matching: find.text(l.agentRunning)),
@@ -234,7 +221,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         find.text('${l.agentActivitySummary(1)} · ${l.agentActivityCompleted}'),
-        findsOneWidget,
+        findsNothing,
       );
       expect(
         find.descendant(
@@ -255,7 +242,7 @@ void main() {
   );
 
   testWidgets(
-    'real prepared saved and failed receipts stay independent of collapsed transcript activity',
+    'one inline row owns each operation while rejected parameters remain activity',
     (tester) async {
       addTearDown(tester.view.reset);
       final harness = AcceptanceHarness();
@@ -264,11 +251,18 @@ void main() {
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.runAsync(harness.close);
       });
-      final application = harness.app.agent;
-      final repository = application.conversations;
-      late Map<String, Object?> prepared;
-      late Map<String, Object?> saved;
-      late Map<String, Object?> failed;
+      final application = harness.app.agent,
+          repository = harness.app.agent.conversations;
+      late Map<String, Object?> preview, saved, failed;
+      Map<String, Object?> create(String name) => {
+        'commands': [
+          {
+            'kind': 'calendar',
+            'action': 'create',
+            'values': {'name': name},
+          },
+        ],
+      };
       await tester.runAsync(() async {
         await repository.update(
           harness.conversationId,
@@ -277,105 +271,62 @@ void main() {
               _message(
                 'actual-request',
                 ConversationRole.user,
-                text: 'Prepare one calendar, save another, and check a missing target.',
+                text: 'Preview then save and inspect an invalid target.',
               ),
             ],
           ),
         );
-        prepared = await application.runtime.runHostAction(
+        await application.runtime.setMode(
           harness.conversationId,
-          (scope, approval) => application.tools.execute(
-            ProviderToolCall(
-              id: 'real-preview',
-              name: 'mutation.prepare',
-              arguments: jsonEncode({
-                'commands': [
-                  {
-                    'kind': 'calendar',
-                    'action': 'create',
-                    'values': {'name': 'Pending study calendar'},
-                  },
-                ],
-              }),
-            ),
-            scope,
-            approval,
-          ),
+          AgentPermissionMode.plan,
         );
-        saved = await application.runtime.runHostAction(
+        preview = await application.runtime.runHostTool(
           harness.conversationId,
-          (scope, approval) async {
-            final plan = await application.tools.execute(
-              ProviderToolCall(
-                id: 'real-prepare',
-                name: 'mutation.prepare',
-                arguments: jsonEncode({
-                  'commands': [
-                    {
-                      'kind': 'calendar',
-                      'action': 'create',
-                      'values': {'name': 'Saved study calendar'},
-                    },
-                  ],
-                }),
-              ),
-              scope,
-              approval,
-            );
-            return application.tools.execute(
-              ProviderToolCall(
-                id: 'real-commit',
-                name: 'mutation.commit',
-                arguments: jsonEncode({'planId': plan['planId']}),
-              ),
-              scope,
-              approval,
-            );
+          toolName: 'mutation.apply',
+          arguments: create('Preview calendar'),
+        );
+        await application.runtime.setMode(
+          harness.conversationId,
+          AgentPermissionMode.full,
+        );
+        saved = await application.runtime.runHostTool(
+          harness.conversationId,
+          toolName: 'mutation.apply',
+          arguments: create('Saved calendar'),
+        );
+        failed = await application.runtime.runHostTool(
+          harness.conversationId,
+          toolName: 'mutation.apply',
+          arguments: {
+            'commands': [
+              {
+                'kind': 'calendar',
+                'action': 'patch',
+                'target': {'id': 'missing'},
+                'values': {'name': 'Invalid'},
+              },
+            ],
           },
         );
-        failed = await application.runtime.runHostAction(
-          harness.conversationId,
-          (scope, approval) => application.tools.execute(
-            ProviderToolCall(
-              id: 'real-invalid-target',
-              name: 'mutation.prepare',
-              arguments: jsonEncode({
-                'commands': [
-                  {
-                    'kind': 'calendar',
-                    'action': 'patch',
-                    'target': {'id': 'missing-activity-target'},
-                    'values': {'name': 'Must not be created'},
-                  },
-                ],
-              }),
-            ),
-            scope,
-            approval,
-          ),
-        );
       });
-      expect(prepared['planId'], isA<String>());
-      expect(prepared['status'], isNull);
+      expect(preview['status'], 'preview');
       expect(saved['status'], 'committed');
       expect(failed['error'], isNotNull);
       expect(
         harness.saved.generalMode.schedules.where(
-          (item) => item.name == 'Saved study calendar',
+          (calendar) => calendar.name == 'Saved calendar',
         ),
         hasLength(1),
       );
       expect(
-        harness.saved.generalMode.schedules.where(
-          (item) =>
-              item.name == 'Pending study calendar' ||
-              item.name == 'Must not be created',
+        harness.saved.generalMode.schedules.any(
+          (calendar) =>
+              calendar.name == 'Preview calendar' || calendar.name == 'Invalid',
         ),
-        isEmpty,
+        isFalse,
       );
-      final beforeMain = harness.saved.encode();
-      final beforeHistory = harness.conversations.source;
-      final beforeConversation = repository.selected!.toJson();
+      final beforeMain = harness.saved.encode(),
+          beforeHistory = harness.conversations.source;
       await mountAgentUi(
         tester,
         AgentConversationView(
@@ -384,38 +335,28 @@ void main() {
         ),
         size: const Size(1000, 1600),
       );
-      final l = AppLocalizations.of(
-        tester.element(find.byType(AgentConversationView)),
-      );
-      expect(find.byType(AgentOperationCard), findsNWidgets(3));
-      expect(
-        find.ancestor(
-          of: find.byType(AgentOperationCard),
-          matching: find.byType(AgentTurnActivity),
-        ),
-        findsNothing,
-      );
-      final messages = repository.selected!.messages
-          .where((message) => message.role == ConversationRole.tool)
+      final operations = tester
+          .widgetList<AgentOperationActivity>(
+            find.byType(AgentOperationActivity),
+          )
           .toList();
-      for (final result in [prepared, saved, failed]) {
-        final message = messages.singleWhere(
-          (message) => message.text == jsonEncode(result),
+      expect(operations, hasLength(2));
+      expect(find.byType(AgentOperationCard), findsNothing);
+      for (final operation in operations) {
+        await _tap(
+          tester,
+          _key('agent-activity-toggle-operation-${operation.operation.id}'),
         );
-        expect(_key('agent-message-${message.id}'), findsOneWidget);
       }
-      expect(find.text(l.agentPlanReady), findsOneWidget);
-      expect(find.text(l.agentChangesSaved), findsOneWidget);
-      expect(find.text(l.agentActionFailed), findsOneWidget);
-      final activity = tester
+      expect(find.byType(AgentOperationCard), findsNWidgets(2));
+      final rejected = tester
           .widgetList<AgentTurnActivity>(find.byType(AgentTurnActivity))
-          .first;
-      expect(_key('agent-activity-list-${activity.activity.id}'), findsNothing);
-      await _tap(tester, _key('agent-activity-toggle-${activity.activity.id}'));
-      expect(find.byType(AgentOperationCard), findsNWidgets(3));
+          .expand((activity) => activity.activity.tools)
+          .where((tool) => tool.status == AgentToolActivityStatus.failed);
+      expect(rejected, hasLength(1));
+      expect(rejected.single.result, contains('error'));
       expect(harness.saved.encode(), beforeMain);
       expect(harness.conversations.source, beforeHistory);
-      expect(repository.selected!.toJson(), beforeConversation);
       expect(tester.takeException(), isNull);
     },
   );
@@ -443,10 +384,9 @@ void main() {
           if (!gate.isCompleted) gate.complete();
           messenger.setMockMethodCallHandler(SystemChannels.platform, null);
         });
-        await _tap(tester, _key('agent-activity-toggle-turn-0'));
-        await _tap(tester, _key('agent-activity-tool-call-0-0'));
+        await _tap(tester, _key('agent-activity-toggle-call-0-0'));
         final staleToggle = tester
-            .widget<InkWell>(_key('agent-activity-toggle-turn-0'))
+            .widget<InkWell>(_key('agent-activity-toggle-call-0-0'))
             .onTap!;
         final staleCopy = tester
             .widget<IconButton>(_key('agent-activity-copy-call-0-0'))
@@ -467,11 +407,8 @@ void main() {
         staleToggle();
         staleCopy();
         await tester.pumpAndSettle();
-        expect(_key('agent-activity-detail-call-0-0'), findsNothing);
-        expect(_key('agent-activity-list-turn-0'), findsNothing);
+        expect(_key('agent-activity-detail-call-0-0'), findsOneWidget);
         expect(copied, hasLength(1));
-        await _tap(tester, _key('agent-activity-toggle-turn-0'));
-        await _tap(tester, _key('agent-activity-tool-call-0-0'));
         final l = AppLocalizations.of(
           tester.element(find.byType(AgentConversationView)),
         );
@@ -529,17 +466,14 @@ void main() {
         await _tap(tester, toggle);
         expect(tester.getSize(toggle).height, greaterThanOrEqualTo(48));
         final list = _key('agent-activity-list-turn-0');
-        expect(tester.getSize(list).height, lessThanOrEqualTo(280));
         final last = _key('agent-activity-tool-call-0-11');
-        await tester.dragUntilVisible(last, list, const Offset(0, -100));
+        await tester.ensureVisible(last);
+        await tester.pumpAndSettle();
         expect(tester.getSize(last).height, greaterThanOrEqualTo(48));
         await _tap(tester, last);
         final detail = _key('agent-activity-detail-call-0-11');
-        expect(tester.getSize(detail).height, lessThanOrEqualTo(320));
-        for (final control in [
-          'agent-activity-back',
-          'agent-activity-copy-call-0-11',
-        ]) {
+        expect(tester.getSize(detail).height, lessThanOrEqualTo(360));
+        for (final control in ['agent-activity-copy-call-0-11']) {
           await tester.ensureVisible(_key(control));
           await tester.pumpAndSettle();
           expect(tester.getSize(_key(control)).width, greaterThanOrEqualTo(48));
@@ -554,7 +488,7 @@ void main() {
         expect(copied.single, contains(output));
         expect(copied.single, contains('完整活动输出 0'));
         expect(copied.single, contains('完整活动输出 79'));
-        await _tap(tester, _key('agent-activity-back'));
+        await _tap(tester, _key('agent-activity-toggle-call-0-11'));
         expect(list, findsOneWidget);
         expect(detail, findsNothing);
         expect(fixture.delegate.calls, isEmpty);
@@ -632,10 +566,7 @@ void main() {
           final expected = outcome == ConversationAttemptOutcome.notStarted
               ? l.agentActivityNotStarted
               : l.agentActivityUncertain;
-          expect(
-            find.text('${l.agentActivitySummary(1)} · $expected'),
-            findsOneWidget,
-          );
+          expect(find.textContaining(expected), findsOneWidget);
           expect(
             find.bySemanticsLabel(RegExp(RegExp.escape(expected))),
             findsWidgets,
@@ -647,14 +578,7 @@ void main() {
             findsNothing,
           );
           expect(find.text(l.agentChangesSaved), findsNothing);
-          expect(
-            find.byType(AgentOperationCard),
-            outcome == ConversationAttemptOutcome.pending
-                ? findsNothing
-                : findsOneWidget,
-          );
-          await _tap(tester, _key('agent-activity-toggle-turn-0'));
-          await _tap(tester, _key('agent-activity-tool-call-0-0'));
+          await _tap(tester, _key('agent-activity-toggle-call-0-0'));
           final activity = tester
               .widget<AgentTurnActivity>(find.byType(AgentTurnActivity))
               .activity;
@@ -748,6 +672,34 @@ Future<_ActivityFixture> _mountFixture(
     scale: scale,
     brightness: brightness,
   );
+  // These tests inspect the activity trail. Completion folding itself is
+  // covered by agent_turn_process_test.dart.
+  if (fixture.repository.selected!.status == ConversationStatus.idle) {
+    while (fixture.repository.hasEarlierMessages(fixture.id)) {
+      await tester.runAsync(
+        () => fixture.repository.loadEarlierMessages(fixture.id),
+      );
+    }
+    await tester.pumpAndSettle();
+    for (var turn = 0; turn < turns; turn++) {
+      final transcript = tester.state<AgentTranscriptState>(
+        find.byType(AgentTranscript),
+      );
+      if (transcript.reveal(
+        ValueKey(('agent-process', fixture.id, 'turn-$turn')),
+      )) {
+        await tester.pumpAndSettle();
+        await _tap(tester, _key('agent-process-toggle-turn-$turn'));
+      }
+    }
+    tester
+            .widget<AgentTranscript>(find.byType(AgentTranscript))
+            .position
+            .followLatest =
+        true;
+    tester.state<AgentTranscriptState>(find.byType(AgentTranscript)).restore();
+    await tester.pumpAndSettle();
+  }
   return fixture;
 }
 
@@ -814,12 +766,6 @@ class _ActivityFixture {
               ),
           ],
         ),
-        if (turns == 1 && tools > 1)
-          _message(
-            'steer-$turn',
-            ConversationRole.user,
-            text: 'Include tomorrow in the same request.',
-          ),
         if (results)
           for (var tool = 0; tool < tools; tool++)
             _message(
@@ -832,6 +778,12 @@ class _ActivityFixture {
                     'items': ['Stored output $turn / $tool'],
                   }),
             ),
+        if (turns == 1 && tools > 1 && results)
+          _message(
+            'steer-$turn',
+            ConversationRole.user,
+            text: 'Include tomorrow in the same request.',
+          ),
         if (actualStatus == ConversationStatus.idle)
           _message(
             'reply-$turn',

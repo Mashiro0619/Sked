@@ -270,9 +270,6 @@ SelectiveBackupBundle decodeLegacySelectiveBackup(
   String source, {
   String localeCode = defaultLocaleCode,
 }) {
-  if (utf8.encode(source).length > 20000000) {
-    backupLimit('The legacy backup exceeds its import byte budget.');
-  }
   final envelope = ImportExportEnvelope.decode(source);
   if (isImportExportSchema(envelope.schema, appBackupSchema) &&
           envelope.version > appBackupVersion ||
@@ -318,7 +315,6 @@ Future<SelectiveBackupBundle> exportSelectiveBackup({
   final selected = inventory.select(selection);
   final records = <BackupRecord>[];
   final binaries = <String, Uint8List>{};
-  var total = 0;
   for (final record in selected.records) {
     cancellation?.check();
     if (record.key.kind != BackupObjectKind.attachment ||
@@ -333,10 +329,6 @@ Future<SelectiveBackupBundle> exportSelectiveBackup({
       if (bytes.length != attachment.byteLength ||
           backupDigest(bytes) != attachment.digest) {
         backupInvalid('An attachment changed while the backup was prepared.');
-      }
-      total += bytes.length;
-      if (total > SelectiveBackupLimits.expandedBytes) {
-        backupLimit('The selected files exceed the backup byte budget.');
       }
       binaries[attachment.digest] = bytes;
     }
@@ -356,6 +348,7 @@ Map<String, Object?> portableConversationData(AgentConversation conversation) {
   return {
     'id': history.id,
     'title': history.title,
+    'titleWasEdited': history.titleWasEdited,
     'createdAt': history.createdAt.toUtc().toIso8601String(),
     'updatedAt': history.updatedAt.toUtc().toIso8601String(),
     'archived': history.archived,
@@ -391,7 +384,7 @@ AgentConversation restorePortableConversation(
     'attachments',
     'draftAttachmentIds',
   };
-  const optional = {'historyVersions', 'replyRevisions'};
+  const optional = {'historyVersions', 'replyRevisions', 'titleWasEdited'};
   if (!required.every(data.containsKey) ||
       data.keys.any(
         (key) => !required.contains(key) && !optional.contains(key),
@@ -401,7 +394,7 @@ AgentConversation restorePortableConversation(
   if (data['id'] != record.key.id) {
     backupInvalid('Conversation identity mismatch.');
   }
-  final messages = backupList(data['messages'], max: 1000);
+  final messages = backupList(data['messages']);
   for (final raw in messages) {
     if (raw is! Map || raw.containsKey('responseItems')) {
       backupInvalid(
@@ -585,7 +578,7 @@ PreparedMainBackupRestore prepareMainBackupRestore(
         final entity = _entity(data, record.key);
         _verifyEntityRoundtrip(entity, TimetableData.fromJson(entity).toJson());
         final ids = <String>{}, remapped = <String, String>{};
-        for (final raw in backupList(entity['courses'], max: 100000)) {
+        for (final raw in backupList(entity['courses'])) {
           final course = raw as Map<String, dynamic>;
           final id = backupText(course['id'], max: 256);
           if (!ids.add(id)) {
@@ -641,7 +634,7 @@ PreparedMainBackupRestore prepareMainBackupRestore(
           GeneralSchedule.fromJson(entity).toJson(),
         );
         final ids = <String>{}, remapped = <String, String>{};
-        for (final raw in backupList(entity['events'], max: 100000)) {
+        for (final raw in backupList(entity['events'])) {
           final event = raw as Map<String, dynamic>;
           final id = backupText(event['id'], max: 256);
           if (!ids.add(id) || event['calendarId'] != record.key.id) {
@@ -658,10 +651,7 @@ PreparedMainBackupRestore prepareMainBackupRestore(
             .where((calendar) => calendar.id == record.key.id)
             .firstOrNull;
         entity['sortOrder'] = old?.sortOrder ?? nextCalendarOrder++;
-        for (final raw in backupList(
-          data['reminderAcknowledgements'],
-          max: 100000,
-        )) {
+        for (final raw in backupList(data['reminderAcknowledgements'])) {
           final item = Map<String, dynamic>.from(raw as Map);
           final parts = parseGeneralOccurrenceKey(
             item['occurrenceKey'] as String,

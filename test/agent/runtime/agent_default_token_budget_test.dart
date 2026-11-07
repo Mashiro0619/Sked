@@ -148,70 +148,60 @@ void main() {
       },
     );
 
-    for (final limits in [
-      const AgentRuntimeLimits(),
-      const AgentRuntimeLimits(
-        providerLimits: ProviderLimits(
-          maxTotalTokens: 32768,
-          maxOutputTokens: 4096,
-        ),
-      ),
-    ]) {
-      test(
-        '$transport completes multi-round work above all retired token caps with ${limits.providerLimits.maxTotalTokens}',
-        () async {
-          final h = await _Harness.create(
-            streaming: streaming,
-            limits: limits,
-            respond: (index) => _Reply(
-              totalTokens: 1200000,
-              outputTokens: 20000,
-              toolCount: index < 2 ? 1 : 0,
-            ),
-          );
-          addTearDown(h.close);
-          await h.runtime.send(
-            h.id,
-            'Complete the task and record actual usage.',
-          );
-          expect(h.requests, hasLength(3));
-          expect(h.executed, hasLength(2));
-          expect(h.saved.status, ConversationStatus.idle);
-          expect(h.saved.runs.single.status, ConversationRunStatus.completed);
-          expect(
-            h.saved.runs.single.requests.fold<int>(
-              0,
-              (total, request) => total + request.usage!.totalTokens,
-            ),
-            3600000,
-          );
-          expect(
-            h.saved.runs.single.requests.every(
-              (request) =>
-                  request.outcome == ConversationAttemptOutcome.completed,
-            ),
-            isTrue,
-          );
-          expect(
-            h.saved.runs.single.tools.every(
-              (tool) => tool.outcome == ConversationAttemptOutcome.completed,
-            ),
-            isTrue,
-          );
-          expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
-          for (final wire in h.requests) {
-            expect(wire.containsKey('max_completion_tokens'), isFalse);
-            expect(wire.containsKey('max_tokens'), isFalse);
-          }
-          expect(
-            h.saved.messages.where(
-              (message) => message.role == ConversationRole.notice,
-            ),
-            isEmpty,
-          );
-        },
-      );
-    }
+    test(
+      '$transport completes multi-round work above all retired token caps',
+      () async {
+        final h = await _Harness.create(
+          streaming: streaming,
+
+          respond: (index) => _Reply(
+            totalTokens: 1200000,
+            outputTokens: 20000,
+            toolCount: index < 2 ? 1 : 0,
+          ),
+        );
+        addTearDown(h.close);
+        await h.runtime.send(
+          h.id,
+          'Complete the task and record actual usage.',
+        );
+        expect(h.requests, hasLength(3));
+        expect(h.executed, hasLength(2));
+        expect(h.saved.status, ConversationStatus.idle);
+        expect(h.saved.runs.single.status, ConversationRunStatus.completed);
+        expect(
+          h.saved.runs.single.requests.fold<int>(
+            0,
+            (total, request) => total + request.usage!.totalTokens,
+          ),
+          3600000,
+        );
+        expect(
+          h.saved.runs.single.requests.every(
+            (request) =>
+                request.outcome == ConversationAttemptOutcome.completed,
+          ),
+          isTrue,
+        );
+        expect(
+          h.saved.runs.single.tools.every(
+            (tool) => tool.outcome == ConversationAttemptOutcome.completed,
+          ),
+          isTrue,
+        );
+        expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
+        for (final wire in h.requests) {
+          expect(wire.containsKey('max_completion_tokens'), isFalse);
+          expect(wire.containsKey('max_tokens'), isFalse);
+        }
+        expect(
+          h.saved.messages.where(
+            (message) => message.role == ConversationRole.notice,
+          ),
+          isEmpty,
+        );
+      },
+    );
 
     test(
       '$transport regeneration saves output above the retired limits',
@@ -315,7 +305,6 @@ class _Harness {
   static Future<_Harness> create({
     required bool streaming,
     required _Reply Function(int index) respond,
-    AgentRuntimeLimits limits = const AgentRuntimeLimits(),
   }) async {
     final h = _Harness();
     h.repository = ConversationRepository(storage: h.storage);
@@ -357,7 +346,6 @@ class _Harness {
         return {'status': 'read', 'items': <Object?>[]};
       },
       onOpenSettings: () {},
-      limits: limits,
     );
     return h;
   }

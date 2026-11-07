@@ -78,7 +78,7 @@ class PlatformToolHarness {
   Future<Map<String, Object?>> call(
     String name, [
     Map<String, Object?> args = const {},
-  ]) => host.execute(
+  ]) => host.executeInternal(
     ProviderToolCall(id: name, name: name, arguments: jsonEncode(args)),
     scope,
     approval ?? (_) async => null,

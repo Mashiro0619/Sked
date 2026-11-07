@@ -7,6 +7,7 @@ import '../controllers/app_session.dart';
 import '../models/application_ledger.dart';
 import '../utils/unique_id.dart';
 import 'approval_plan.dart';
+import 'data_restore_receipt.dart';
 import 'mutation_coordinator.dart' show mutationDigest;
 import 'mutation_draft.dart';
 import 'operation_contracts.dart';
@@ -518,6 +519,20 @@ class ExternalOperationCoordinator {
     final revision = sessionRevision;
     try {
       _requireKnownStorage();
+      final restored = completedDataRestoreReceipt(
+        _session.committedData.applicationLedger,
+        pending.operationId,
+        pending: pending,
+      );
+      if (restored != null) {
+        return _result(
+          restored,
+          _externalReceipt(restored),
+          finalized: true,
+          replayed: replayed,
+          scope: scope,
+        );
+      }
       if (generation != identity.generation ||
           _dataSessionRevision() != revision) {
         _expired();
@@ -584,7 +599,11 @@ class ExternalOperationCoordinator {
     _requireKnownStorage();
     final identity = _identity(operationId);
     final ledger = _session.committedData.applicationLedger;
-    if (identity.generation != (ledger?.generation ?? generation)) _expired();
+    if (identity.generation != (ledger?.generation ?? generation)) {
+      final restored = completedDataRestoreReceipt(ledger, operationId);
+      if (restored != null) return restored;
+      _expired();
+    }
     final receipt = ledger?.receiptFor(operationId);
     if (receipt != null) _externalReceipt(receipt);
     return receipt;

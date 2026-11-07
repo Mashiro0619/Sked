@@ -1,9 +1,12 @@
+import 'dart:collection';
+
 import 'package:flutter/foundation.dart';
 
 import '../../application/operation_contracts.dart';
 import '../../models/agent_settings.dart';
 import '../conversations/conversation_models.dart';
 import '../interactions/agent_question.dart';
+import '../operations/operation_executor.dart';
 
 enum AgentUiPhase {
   idle,
@@ -27,6 +30,56 @@ class AgentUiApproval {
   final Map<String, Object?> details;
 }
 
+/// Current request context, separate from cumulative billing usage.
+class AgentContextUsage {
+  const AgentContextUsage({
+    this.modelId,
+    this.estimatedTokens,
+    this.reportedInputTokens,
+    this.maxContextTokens,
+    this.autoCompactAtTokens,
+    this.autoCompact = true,
+    this.isCompacting = false,
+    this.isCompactionQueued = false,
+    this.errorMessage,
+  });
+
+  final int? estimatedTokens;
+  final String? modelId;
+  final int? reportedInputTokens;
+  final int? maxContextTokens;
+  final int? autoCompactAtTokens;
+  final bool autoCompact;
+  final bool isCompacting;
+  final bool isCompactionQueued;
+  final String? errorMessage;
+
+  @override
+  bool operator ==(Object other) =>
+      other is AgentContextUsage &&
+      modelId == other.modelId &&
+      estimatedTokens == other.estimatedTokens &&
+      reportedInputTokens == other.reportedInputTokens &&
+      maxContextTokens == other.maxContextTokens &&
+      autoCompactAtTokens == other.autoCompactAtTokens &&
+      autoCompact == other.autoCompact &&
+      isCompacting == other.isCompacting &&
+      isCompactionQueued == other.isCompactionQueued &&
+      errorMessage == other.errorMessage;
+  @override
+  int get hashCode => Object.hash(
+    modelId,
+    estimatedTokens,
+    reportedInputTokens,
+    maxContextTokens,
+    autoCompactAtTokens,
+    autoCompact,
+    isCompacting,
+    isCompactionQueued,
+    errorMessage,
+  );
+}
+
 class AgentUiRunState {
   const AgentUiRunState({
     this.phase = AgentUiPhase.idle,
@@ -41,6 +94,8 @@ class AgentUiRunState {
     this.recoveryRequired = false,
     this.modelSelection,
     this.requiresModelSelection = false,
+    this.contextUsage,
+    this.operations = const [],
   });
 
   final AgentUiPhase phase;
@@ -67,14 +122,33 @@ class AgentUiRunState {
   final bool recoveryRequired;
   final AgentModelSelection? modelSelection;
   final bool requiresModelSelection;
+  final AgentContextUsage? contextUsage;
+  final List<AgentOperationUpdate> operations;
 
   bool get isActive =>
       phase == AgentUiPhase.running ||
       phase == AgentUiPhase.waitingApproval ||
-      phase == AgentUiPhase.waitingUser;
+      phase == AgentUiPhase.waitingUser ||
+      contextUsage?.isCompacting == true;
 }
 
 class AgentUiState {
+  /// Runtime snapshots read the authoritative conversation projections on
+  /// demand. Streaming notifications belong to watchConversation, not this
+  /// configuration listenable.
+  AgentUiState.live({
+    this.enabled = false,
+    this.configured = false,
+    this.maintenance = false,
+    this.defaultMode = AgentPermissionMode.ask,
+    List<AgentModelConfig> availableModels = const [],
+    this.defaultModelSelection,
+    Map<String, AgentModelSelection> modelSelections = const {},
+    required Map<String, AgentUiRunState> runs,
+  }) : runs = UnmodifiableMapView(runs),
+       availableModels = List.unmodifiable(availableModels),
+       modelSelections = Map.unmodifiable(modelSelections);
+
   AgentUiState({
     this.enabled = false,
     this.configured = false,
@@ -108,6 +182,13 @@ class AgentUiState {
 /// an approval, stores a credential, or initiates a model request by itself.
 abstract class AgentUiDelegate {
   ValueListenable<AgentUiState> get state;
+
+  /// Hosts with per-conversation publication can return their own listenable.
+  /// The default adapter is owned and disposed by the requesting view.
+  ValueListenable<AgentUiRunState> watchConversation(String conversationId) =>
+      AgentConversationRunListenable(state, conversationId);
+
+  Future<void> compactContext(String conversationId) async {}
 
   /// The host persists the user message and clears the accepted draft. It may
   /// complete this future after acceptance or after the whole run.
@@ -166,4 +247,32 @@ abstract class AgentUiDelegate {
     AgentModelSelection selection,
   ) async {}
   void openSettings();
+}
+
+class AgentConversationRunListenable extends ChangeNotifier
+    implements ValueListenable<AgentUiRunState> {
+  AgentConversationRunListenable(this.source, this.conversationId)
+    : _value = source.value.runFor(conversationId) {
+    source.addListener(_changed);
+  }
+
+  final ValueListenable<AgentUiState> source;
+  final String conversationId;
+  AgentUiRunState _value;
+
+  @override
+  AgentUiRunState get value => _value;
+
+  void _changed() {
+    final next = source.value.runFor(conversationId);
+    if (identical(next, _value)) return;
+    _value = next;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    source.removeListener(_changed);
+    super.dispose();
+  }
 }

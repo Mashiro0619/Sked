@@ -105,7 +105,7 @@ WorkflowToolAdapters registerWorkflowTools(
   runMaintenance: runMaintenance,
 ).._register();
 
-/// Pure codecs create bounded candidates. Main-data imports use the same
+/// Pure codecs create import candidates. Main-data imports use the same
 /// atomic receipt gate as other mutations; side effects use the existing
 /// backup/maintenance owners and external pending receipts.
 class WorkflowToolAdapters {
@@ -201,7 +201,7 @@ class WorkflowToolAdapters {
     );
     _add(
       'file_imports.prepare',
-      'Prepare an atomic import from one attached structured file. Select exact source IDs and add or replace an explicit target. Unknown IDs and missing semester dates fail. Commit with mutation.commit.',
+      'Apply an atomic import from one attached structured file. Select exact source IDs and add or replace an explicit target. Unknown IDs and missing semester dates fail.',
       {
         'sourceId': _string,
         'format': _format,
@@ -224,7 +224,7 @@ class WorkflowToolAdapters {
     );
     _add(
       'exports.prepare',
-      'Generate an immutable in-memory JSON/ICS/backup artifact from explicit resource IDs. This does not write a file or share it. Use exports.write then external.commit to save.',
+      'Generate an immutable in-memory JSON/ICS/backup artifact from explicit resource IDs. This does not write a file or share it. Use exports.write to save.',
       {
         'format': {
           'type': 'string',
@@ -239,7 +239,7 @@ class WorkflowToolAdapters {
     );
     _add(
       'exports.write',
-      'Prepare saving a generated artifact through the application file destination picker. This never shares externally; commit with external.commit.',
+      'Save a generated artifact through the application file destination picker. This never shares externally.',
       {'artifactId': _string, 'operationId': _string},
       _prepareArtifactWrite,
       required: ['artifactId'],
@@ -272,7 +272,7 @@ class WorkflowToolAdapters {
     );
     _add(
       'backups.prepare_restore',
-      'Prepare restore from an attached backup. Supply exact objects from backups.inspect for selective restore; only selected IDs and required dependencies change. Attachment bytes are selected separately. Unsupported device settings are listed as skipped, preserving local settings. Without objects, only the legacy complete JSON restore is supported. Commit with external.commit.',
+      'Restore from an attached backup. Supply exact objects from backups.inspect for selective restore; only selected IDs and required dependencies change. Attachment bytes are selected separately. Unsupported device settings are listed as skipped, preserving local settings. Without objects, only the legacy complete JSON restore is supported.',
       {
         'sourceId': _string,
         'operationId': _string,
@@ -284,7 +284,7 @@ class WorkflowToolAdapters {
     );
     _add(
       'maintenance.prepare_clear',
-      'Prepare clearing all local application data, conversations, credentials and device preferences through the normal cleanup and guarded exit workflow. Commit with external.commit.',
+      'Clear all local application data, conversations, credentials and device preferences through the normal cleanup and guarded exit workflow.',
       {'operationId': _string},
       _prepareClear,
     );
@@ -299,7 +299,7 @@ class WorkflowToolAdapters {
     );
     _add(
       'workspaces.prepare',
-      'Prepare enabling, disabling or switching an existing workspace. At least one remains enabled; existing editor exit guards apply. Commit with external.commit.',
+      'Enable, disable or switch an existing workspace. At least one remains enabled; existing editor exit guards apply.',
       {
         'workspace': _workspaceSchema,
         'action': {
@@ -323,7 +323,7 @@ class WorkflowToolAdapters {
     );
     _add(
       'navigation.open',
-      'Prepare revealing an explicit existing object, date or week. This changes navigation, never enables a disabled workspace. Commit with external.commit.',
+      'Reveal an explicit existing object, date or week. This changes navigation, never enables a disabled workspace.',
       {
         'workspace': _workspaceSchema,
         'ref': {
@@ -348,7 +348,7 @@ class WorkflowToolAdapters {
     );
     _add(
       'developer.sample.prepare',
-      'Prepare appending the existing deterministic developer sample data. This is an explicit data mutation and does not happen while changing ordinary preferences. Commit with external.commit.',
+      'Append the existing deterministic developer sample data. This is an explicit data mutation and does not happen while changing ordinary preferences.',
       {
         'language': {
           'type': 'string',
@@ -378,7 +378,7 @@ class WorkflowToolAdapters {
         final timetableId = _text(args, 'timetableId');
         final week = _integer(args, 'week', min: 1, max: 1000);
         final groups = _displayGroups(data, timetableId, week, DateTime.now());
-        final offset = _integer(args, 'offset', max: 1000000);
+        final offset = _integer(args, 'offset', max: null);
         final limit = _integer(args, 'limit', fallback: 25, min: 1);
         final page = groups.skip(offset).take(limit).toList();
         return {
@@ -415,7 +415,7 @@ class WorkflowToolAdapters {
     );
     _add(
       'courses.display.prepare',
-      'Prepare setting or resetting the displayed course for an exact full-conflict key returned by courses.display.list. A set must use a selectable course in that week. Commit with mutation.commit; this never switches or enables a workspace.',
+      'Set or reset the displayed course for an exact full-conflict key returned by courses.display.list. A set must use a selectable course in that week. This never switches or enables a workspace.',
       {
         'action': _setResetSchema,
         'timetableId': _string,
@@ -429,7 +429,7 @@ class WorkflowToolAdapters {
     );
     _add(
       'navigation.range.prepare',
-      'Prepare setting or resetting the general custom date range. Set requires real YYYY-MM-DD start/end dates spanning 1–14 inclusive days within 1970-01-01 through 2100-01-01. Preserves focus inside the range, otherwise focuses its start; reset follows normal hidden-weekend focus behavior. Commit with mutation.commit; disabled workspaces are supported.',
+      'Set or reset the general custom date range. Set requires real YYYY-MM-DD start/end dates spanning 1–14 inclusive days within 1970-01-01 through 2100-01-01. Preserves focus inside the range, otherwise focuses its start; reset follows normal hidden-weekend focus behavior. Disabled workspaces are supported.',
       {
         'action': _setResetSchema,
         'start': _string,
@@ -682,7 +682,7 @@ class WorkflowToolAdapters {
     } else if (decoded is List<CoursePeriodTime>) {
       records.addAll(decoded.map((p) => Map<String, Object?>.from(p.toJson())));
     }
-    final offset = _integer(args, 'offset', fallback: 0, max: 1000000);
+    final offset = _integer(args, 'offset', fallback: 0, max: null);
     final limit = _integer(args, 'limit', fallback: 50, min: 1, max: 100);
     final rows = [
       ...records.map((r) => {'type': 'item', ...r}),
@@ -930,9 +930,6 @@ class WorkflowToolAdapters {
         _invalid('Unknown export format.');
     }
     scope.checkActive();
-    if (utf8.encode(text).length > 32 * 1024 * 1024) {
-      _invalid('The export exceeds the in-memory artifact budget.');
-    }
     final artifact = AgentDataArtifact(
       id: generateUuidV4(),
       name: 'sked-$format.${format == 'schedules_ics' ? 'ics' : 'json'}',
@@ -948,19 +945,7 @@ class WorkflowToolAdapters {
     AgentDataArtifact artifact,
     OperationScope scope,
   ) {
-    final budget = SelectiveBackupLimits.archiveBytes;
-    if (artifact.byteLength > budget) {
-      _invalid('The export exceeds the artifact budget.');
-    }
     _artifacts.removeWhere((_, value) => value.scope.isCancelled);
-    var bytes = _artifacts.values.fold<int>(
-      0,
-      (sum, entry) => sum + entry.value.byteLength,
-    );
-    while (_artifacts.isNotEmpty &&
-        (_artifacts.length >= 8 || bytes + artifact.byteLength > budget)) {
-      bytes -= _artifacts.remove(_artifacts.keys.first)!.value.byteLength;
-    }
     _artifacts[artifact.id] = (value: artifact, scope: scope);
     return {
       'status': 'preparedArtifact',
@@ -1062,6 +1047,7 @@ class WorkflowToolAdapters {
         'request': _request(args),
         'sourceId': source.id,
         'sourceDigest': source.digest,
+        'restoreId': prepared.id,
       },
       version: source.digest,
       changes: [
@@ -1080,18 +1066,18 @@ class WorkflowToolAdapters {
       validate: () {
         if (!backups.isCurrent(prepared)) _conflict();
       },
-      execute: (_) => run(scope, () async {
-        final count = await backups.restorePrepared(prepared);
+      execute: (operation) => run(scope, () async {
+        final pending = _external.status(operation.operationId);
+        if (pending == null) _conflict();
+        await backups.restorePrepared(prepared, operationReceipt: pending);
+        final completed = _external.status(operation.operationId);
+        if (completed == null) _conflict();
         return ExternalEffectResult(
           state: ExternalEffectState.applied,
           dataStatus: ExternalDataState.committed,
-          details: {
-            'restored': true,
-            'restoredTimetables': count,
-            'generation': _host.mutations.generation,
-            'sourceDigest': source.digest,
-            'localAgentConfigurationPreserved': true,
-          },
+          details: Map<String, Object?>.from(
+            completed.result['effectResult'] as Map,
+          ),
         );
       }),
     );
@@ -1139,11 +1125,7 @@ class WorkflowToolAdapters {
           ? await service.inventory()
           : await _backupSource(sourceId, scope);
       scope.checkActive();
-      final offset = _integer(
-        args,
-        'offset',
-        max: SelectiveBackupLimits.objects,
-      );
+      final offset = _integer(args, 'offset', max: null);
       final limit = _integer(args, 'limit', fallback: 25, min: 1, max: 100);
       final records = bundle.records.skip(offset).take(limit).toList();
       return {
@@ -1204,6 +1186,22 @@ class WorkflowToolAdapters {
             'group': record.data['group'],
           },
       ];
+      if (prepared.owners.isEmpty) {
+        return boundedToolReceipt({
+          'status': 'no_changes',
+          'dataStatus': 'unchanged',
+          'changeCount': 0,
+          'changes': const [],
+          'unsupportedGroups': unsupportedGroups,
+          'effectResult': {
+            'restored': false,
+            'restoreId': prepared.id,
+            'sourceDigest': source.fingerprint,
+            'selectedObjects': prepared.selected.length,
+            'skippedDeviceGroups': unsupportedGroups,
+          },
+        });
+      }
       final generation = _host.mutations.generation;
       final plan = _external.prepare(
         scope: scope,
@@ -1241,7 +1239,7 @@ class WorkflowToolAdapters {
             _conflict();
           }
         },
-        execute: (_) async {
+        execute: (operation) async {
           ExternalEffectResult refused(String code) => ExternalEffectResult(
             state: ExternalEffectState.failed,
             dataStatus: ExternalDataState.unchanged,
@@ -1272,20 +1270,17 @@ class WorkflowToolAdapters {
           // Once restore ownership begins, exceptions retain the coordinator's
           // unknown outcome. An empty/cleared journal alone cannot prove refusal.
           return run(scope, () async {
-            await service.restore(prepared);
+            final pending = _external.status(operation.operationId);
+            if (pending == null) _conflict();
+            await service.restore(prepared, operationReceipt: pending);
+            final completed = _external.status(operation.operationId);
+            if (completed == null) _conflict();
             return ExternalEffectResult(
               state: ExternalEffectState.applied,
               dataStatus: ExternalDataState.committed,
-              details: {
-                'restored': true,
-                'restoreId': prepared.id,
-                'sourceDigest': source.fingerprint,
-                'selectedObjects': prepared.selected.length,
-                'skippedDeviceGroups': unsupportedGroups,
-                'generation': _host.mutations.generation,
-                'permissionsPreserved': true,
-                'secretsImported': false,
-              },
+              details: Map<String, Object?>.from(
+                completed.result['effectResult'] as Map,
+              ),
             );
           });
         },
@@ -1621,13 +1616,11 @@ const _idsSchema = {
   'type': 'array',
   'items': _string,
   'minItems': 1,
-  'maxItems': 512,
   'uniqueItems': true,
 };
 const _backupObjectsSchema = {
   'type': 'array',
   'minItems': 1,
-  'maxItems': 512,
   'uniqueItems': true,
   'items': {
     'type': 'object',
@@ -1655,13 +1648,12 @@ const _backupObjectsSchema = {
 const _backupAttachmentIdsSchema = {
   'type': 'array',
   'items': _string,
-  'maxItems': 512,
   'uniqueItems': true,
 };
 BackupSelection _backupSelection(Map<String, Object?> args) {
   final values = args['objects'];
-  if (values is! List || values.isEmpty || values.length > 512) {
-    _invalid('Select a bounded nonempty object list from backups.inspect.');
+  if (values is! List || values.isEmpty) {
+    _invalid('Select a nonempty object list from backups.inspect.');
   }
   final objects = values.map(BackupObjectKey.fromJson).toList();
   if (objects.any((key) => key.kind == BackupObjectKind.attachment)) {
@@ -1705,7 +1697,7 @@ String _text(Map<String, Object?> args, String key) {
 String? _optionalText(Map<String, Object?> args, String key) {
   final value = args[key];
   if (value == null) return null;
-  if (value is! String || value.trim().isEmpty || value.length > 4096) {
+  if (value is! String || value.trim().isEmpty) {
     _invalid('Invalid $key.');
   }
   return value;
@@ -1722,10 +1714,9 @@ List<String> _ids(Object? value, {bool required = true}) {
   if (value == null && !required) return const [];
   if (value is! List ||
       value.isEmpty ||
-      value.length > 512 ||
-      value.any((v) => v is! String || v.isEmpty || v.length > 2048) ||
+      value.any((v) => v is! String || v.isEmpty) ||
       value.toSet().length != value.length) {
-    _invalid('Select a nonempty bounded list of distinct resource IDs.');
+    _invalid('Select a nonempty list of distinct resource IDs.');
   }
   return value.cast<String>();
 }
@@ -1748,10 +1739,12 @@ int _integer(
   String key, {
   int fallback = 0,
   int min = 0,
-  int max = 100,
+  int? max = 100,
 }) {
   final value = args[key] ?? fallback;
-  if (value is! int || value < min || value > max) _invalid('Invalid $key.');
+  if (value is! int || value < min || (max != null && value > max)) {
+    _invalid('Invalid $key.');
+  }
   return value;
 }
 

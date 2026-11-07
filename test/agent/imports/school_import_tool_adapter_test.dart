@@ -75,7 +75,7 @@ void main() {
   AgentConversation? conversation;
   Future<MutationApproval?> Function(ApprovalPlan)? approve;
   Future<Map<String, Object?>> call(String name, Map<String, Object?> args) =>
-      host.execute(
+      host.executeInternal(
         ProviderToolCall(id: name, name: name, arguments: jsonEncode(args)),
         scope,
         approve ?? (_) async => null,
@@ -376,6 +376,20 @@ void main() {
       'Manual draft',
     );
     expect(storage.saves, 0);
+  });
+
+  test('import diagnostics preserve every complete source warning', () async {
+    final warnings = List.generate(25, (index) => '$index ${'detail ' * 100}');
+    final plan = await call('imports.prepare', {
+      'action': 'create',
+      'candidate': {
+        'timetable': _candidate(),
+        'meta': {'warnings': warnings},
+      },
+    });
+    expect(plan['warningCount'], warnings.length);
+    expect(plan['warningsTruncated'], isFalse);
+    expect(plan['warnings'], warnings);
   });
 
   test('attached source provenance and truncation cannot be omitted', () async {

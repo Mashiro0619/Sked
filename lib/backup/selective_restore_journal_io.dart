@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import '../services/app_storage_layout_io.dart';
-import 'selective_backup_models.dart';
 import 'selective_restore_journal.dart';
 
 class PlatformSelectiveJournalStorage implements SelectiveJournalStorage {
@@ -21,22 +20,9 @@ class PlatformSelectiveJournalStorage implements SelectiveJournalStorage {
         result.add(null);
         continue;
       }
-      if (await file.length() > SelectiveBackupLimits.journalBytes) {
-        throw const SelectiveBackupException(
-          SelectiveBackupError.unavailable,
-          'The restore journal exceeds its byte budget.',
-        );
-      }
       try {
         final bytes = BytesBuilder(copy: false);
         await for (final chunk in file.openRead()) {
-          if (bytes.length + chunk.length >
-              SelectiveBackupLimits.journalBytes) {
-            throw const SelectiveBackupException(
-              SelectiveBackupError.unavailable,
-              'The restore journal exceeds its byte budget.',
-            );
-          }
           bytes.add(chunk);
         }
         result.add(utf8.decode(bytes.takeBytes(), allowMalformed: false));

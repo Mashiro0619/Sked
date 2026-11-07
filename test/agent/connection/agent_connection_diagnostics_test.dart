@@ -40,6 +40,55 @@ Matcher _provider(ProviderError code) =>
     isA<ProviderException>().having((e) => e.code, 'code', code);
 
 void main() {
+  test('model metadata uses explicit context lengths without guessing unknown windows', () async {
+    final diagnostics = AgentConnectionDiagnostics(
+      client: _Client(
+        (_) async => _json({
+          'data': [
+            {'id': 'first', 'context_length': 128000},
+            {'id': 'second', 'context_window': 200000},
+            {'id': 'first', 'context_window': 128000},
+            {'id': 'unknown-with-large-name'},
+          ],
+        }),
+      ),
+    );
+    final catalog = await diagnostics.listModels(_settings, apiKey: '');
+    expect(catalog.models, ['first', 'second', 'unknown-with-large-name']);
+    expect(catalog.contextTokens, {'first': 128000, 'second': 200000});
+    expect(catalog.toJson()['contextTokens'], catalog.contextTokens);
+    expect(() => catalog.contextTokens['first'] = 1, throwsUnsupportedError);
+  });
+
+  test(
+    'conflicting or malformed explicit model context metadata is rejected',
+    () async {
+      for (final entries in [
+        [
+          {'id': 'same', 'context_length': 100},
+          {'id': 'same', 'context_window': 200},
+        ],
+        [
+          {'id': 'same', 'context_length': 100, 'context_window': 200},
+        ],
+        [
+          {'id': 'same', 'context_length': -1},
+        ],
+        [
+          {'id': 'same', 'context_window': '200000'},
+        ],
+      ]) {
+        final diagnostics = AgentConnectionDiagnostics(
+          client: _Client((_) async => _json({'data': entries})),
+        );
+        await expectLater(
+          diagnostics.listModels(_settings, apiKey: ''),
+          throwsA(isA<AgentConnectionDiagnosticException>()),
+        );
+      }
+    },
+  );
+
   for (final protocol in AgentModelProtocol.values) {
     test(
       'synthetic ${protocol.name} probe reuses base endpoint resolution and distinguishes tool support',
@@ -296,7 +345,7 @@ void main() {
   );
 
   test(
-    'malformed, oversized and over-count catalogs fail as whole responses',
+    'malformed catalogs fail while large catalogs remain complete',
     () async {
       final malformed = AgentConnectionDiagnostics(
         client: _Client(
@@ -311,35 +360,18 @@ void main() {
         malformed.listModels(_settings, apiKey: ''),
         throwsA(isA<AgentConnectionDiagnosticException>()),
       );
-      final large = AgentConnectionDiagnostics(
-        maxCatalogBytes: 16,
-        client: _Client(
-          (_) async => _json({
-            'data': [
-              {'id': 'too-much-data'},
-            ],
-          }),
-        ),
-      );
-      await expectLater(
-        large.listModels(_settings, apiKey: ''),
-        throwsA(_provider(ProviderError.responseBudgetExceeded)),
-      );
       final many = AgentConnectionDiagnostics(
-        maxModels: 1,
         client: _Client(
           (_) async => _json({
             'data': [
-              {'id': 'a'},
-              {'id': 'b'},
+              for (var i = 0; i < 2001; i++) {'id': 'model-$i'},
             ],
           }),
         ),
       );
-      await expectLater(
-        many.listModels(_settings, apiKey: ''),
-        throwsA(_provider(ProviderError.responseBudgetExceeded)),
-      );
+      final result = await many.listModels(_settings, apiKey: '');
+      expect(result.models, hasLength(2001));
+      expect(result.complete, isTrue);
     },
   );
 

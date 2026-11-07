@@ -108,11 +108,7 @@ ProviderRequest _request(Uri endpoint) => ProviderRequest(
     ProviderMessage(role: ProviderRole.user, text: 'Return browser-ok.'),
   ],
   allowInsecureHttp: true,
-  limits: const ProviderLimits(
-    totalTimeout: Duration(seconds: 10),
-    idleTimeout: Duration(seconds: 5),
-    maxOutputTokens: 32,
-  ),
+  maxOutputTokens: 32,
 );
 
 Future<Map<String, Object?>> _collect(Uri endpoint) async {
@@ -482,11 +478,7 @@ Future<Map<String, Object?>> _requestAttachment(Uri endpoint) =>
                 ],
               ),
             ],
-            limits: const ProviderLimits(
-              totalTimeout: Duration(seconds: 10),
-              idleTimeout: Duration(seconds: 5),
-              maxOutputTokens: 32,
-            ),
+            maxOutputTokens: 32,
           ),
           apiKey: _credentialMarker,
         );

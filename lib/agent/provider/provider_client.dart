@@ -44,8 +44,6 @@ class ProviderClient {
   }) {
     final stopped = Completer<ProviderException>();
     final aborted = Completer<void>();
-    Timer? totalTimer;
-    Timer? idleTimer;
     var finished = false;
     var subscriptionCancelled = false;
     StreamIterator<List<int>>? iterator;
@@ -55,13 +53,6 @@ class ProviderClient {
       if (finished) return;
       if (!stopped.isCompleted) stopped.complete(ProviderException(error));
       if (!aborted.isCompleted) aborted.complete();
-    }
-
-    void resetIdle() {
-      idleTimer?.cancel();
-      final timeout = request.limits.idleTimeout;
-      if (timeout == null) return;
-      idleTimer = Timer(timeout, () => stop(ProviderError.timeout));
     }
 
     Future<T> guarded<T>(Future<T> work) =>
@@ -82,9 +73,6 @@ class ProviderClient {
         if (cancellation?.isCancelled ?? false) {
           throw const ProviderException(ProviderError.cancelled);
         }
-        if (request.limits.totalTimeout case final timeout?) {
-          totalTimer = Timer(timeout, () => stop(ProviderError.timeout));
-        }
         if (cancellation != null) {
           unawaited(
             cancellation.whenCancelled.then(
@@ -98,52 +86,44 @@ class ProviderClient {
           }
         }
 
-        final body = await guarded(
-          encodeProviderRequestBody(
-            request,
-            abortSignal: aborted.future,
-            checkCancelled: checkEncoding,
-            onProgress: (completed, total) {
-              if (!subscriptionCancelled) {
-                controller.add(
-                  ProviderUploadProgress(
-                    ProviderUploadPhase.encoding,
-                    completedBytes: completed,
-                    totalBytes: total,
-                  ),
-                );
-              }
-            },
-          ),
-        );
-        checkEncoding();
-        resetIdle();
+        final size = measureProviderRequestSize(request);
+        final bodyLength = size.textBytes + size.encodedBytes;
         final hasAttachments = request.messages.any(
           (message) => message.attachments.isNotEmpty,
         );
-        if (hasAttachments && !subscriptionCancelled) {
-          controller.add(
-            ProviderUploadProgress(
-              ProviderUploadPhase.sending,
-              completedBytes: 0,
-              totalBytes: body.length,
-            ),
-          );
-        }
+        var sentBytes = 0;
+        final body =
+            encodeProviderRequestBody(
+              request,
+              abortSignal: aborted.future,
+              checkCancelled: checkEncoding,
+            ).map((chunk) {
+              sentBytes += chunk.length;
+              if (hasAttachments && !subscriptionCancelled) {
+                controller.add(
+                  ProviderUploadProgress(
+                    ProviderUploadPhase.sending,
+                    completedBytes: sentBytes,
+                    totalBytes: bodyLength,
+                  ),
+                );
+              }
+              return chunk;
+            });
         final wire =
-            http.AbortableRequest(
-                'POST',
+            _StreamingProviderRequest(
                 request.endpoint,
+                body: body,
                 abortTrigger: aborted.future,
               )
               ..followRedirects = false
               ..maxRedirects = 0
+              ..contentLength = bodyLength
               ..headers.addAll({
                 'Content-Type': 'application/json',
                 'Accept': 'text/event-stream, application/json',
                 if (apiKey.isNotEmpty) 'Authorization': 'Bearer $apiKey',
-              })
-              ..bodyBytes = body;
+              });
         final response = await guarded(
           _client.send(wire).then((response) {
             if (stopped.isCompleted) {
@@ -164,25 +144,22 @@ class ProviderClient {
             response.statusCode < 200 || response.statusCode >= 300;
         if (rejected || (!isJson && contentType != 'text/event-stream')) {
           final errorBytes = <int>[];
-          final limit = request.limits.maxResponseBytes.clamp(1, 32768);
+          const limit = 32768;
           try {
             while (errorBytes.length < limit &&
                 await guarded(iterator!.moveNext())) {
-              resetIdle();
               errorBytes.addAll(
                 iterator!.current.take(limit - errorBytes.length),
               );
             }
           } catch (_) {
             if (stopped.isCompleted) {
-              final reason = await stopped.future;
-              if (reason.code != ProviderError.timeout) throw reason;
+              throw await stopped.future;
             }
             if (cancellation?.isCancelled ?? false) {
               throw const ProviderException(ProviderError.cancelled);
             }
-            // Diagnostic reads can time out after a known HTTP rejection.
-            // Retain its status and any complete message already received.
+            // Preserve a known HTTP rejection if reading its diagnostic body fails.
           }
           Object? errorBody;
           final rawBody = utf8.decode(errorBytes, allowMalformed: true);
@@ -226,29 +203,17 @@ class ProviderClient {
           controller.add(
             ProviderUploadProgress(
               ProviderUploadPhase.accepted,
-              completedBytes: body.length,
-              totalBytes: body.length,
+              completedBytes: bodyLength,
+              totalBytes: bodyLength,
             ),
           );
         }
-        if ((response.contentLength ?? 0) > request.limits.maxResponseBytes) {
-          throw const ProviderException(ProviderError.responseBudgetExceeded);
-        }
         decoder = ProviderResponseDecoder(request, apiKey: apiKey);
-        final sse = ProviderSseDecoder(
-          maxEventBytes: request.limits.maxEventBytes,
-        );
+        final sse = ProviderSseDecoder();
         final jsonBytes = <int>[];
-        var bytes = 0;
-        resetIdle();
         while (await guarded(iterator!.moveNext())) {
-          resetIdle();
           final chunk = iterator!.current;
           diagnostic.add(chunk);
-          bytes += chunk.length;
-          if (bytes > request.limits.maxResponseBytes) {
-            throw const ProviderException(ProviderError.responseBudgetExceeded);
-          }
           if (isJson) {
             jsonBytes.addAll(chunk);
           } else {
@@ -305,8 +270,6 @@ class ProviderClient {
         }
       } finally {
         finished = true;
-        totalTimer?.cancel();
-        idleTimer?.cancel();
         if (!aborted.isCompleted) aborted.complete();
         unawaited(iterator?.cancel());
         unawaited(controller.close());
@@ -376,19 +339,23 @@ void _validate(ProviderRequest request, String apiKey) {
   if (uri.scheme == 'http' && !request.allowInsecureHttp) {
     throw const ProviderException(ProviderError.insecureEndpoint);
   }
-  final limits = request.limits;
-  if ((limits.totalTimeout != null && limits.totalTimeout! <= Duration.zero) ||
-      (limits.idleTimeout != null && limits.idleTimeout! <= Duration.zero) ||
-      [
-        ?limits.maxRequestBytes,
-        ?limits.maxAttachmentBytes,
-        limits.maxResponseBytes,
-        limits.maxEventBytes,
-        limits.maxToolArgumentBytes,
-        ?limits.maxToolCalls,
-        ?limits.maxOutputTokens,
-        ?limits.maxTotalTokens,
-      ].any((value) => value <= 0)) {
+  if (request.maxOutputTokens != null && request.maxOutputTokens! <= 0) {
     throw const ProviderException(ProviderError.invalidRequest);
+  }
+}
+
+class _StreamingProviderRequest extends http.BaseRequest with http.Abortable {
+  _StreamingProviderRequest(
+    Uri endpoint, {
+    required this.body,
+    required this.abortTrigger,
+  }) : super('POST', endpoint);
+  final Stream<List<int>> body;
+  @override
+  final Future<void> abortTrigger;
+  @override
+  http.ByteStream finalize() {
+    super.finalize();
+    return http.ByteStream(body);
   }
 }

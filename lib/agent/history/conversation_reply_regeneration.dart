@@ -1,5 +1,4 @@
 import '../provider/provider_models.dart';
-import 'conversation_history_preflight.dart';
 
 /// Reply regeneration uses the runtime's existing connection snapshot,
 /// cancellation, usage accounting and transport authorization. This helper
@@ -25,7 +24,6 @@ ProviderRequest conversationReplyRequest(
     ...verifiedContext,
   ],
   tools: const [],
-  limits: request.limits,
   allowInsecureHttp: request.allowInsecureHttp,
   reasoningEffort: request.reasoningEffort,
 );
@@ -50,8 +48,9 @@ void validateConversationReplyResponse(ProviderResponse response) {
           'mcp_call',
         }.contains(item['type']),
       )) {
-    throw const ConversationHistoryException(
-      ConversationHistoryError.invalidSelection,
+    throw const ProviderException(
+      ProviderError.unknownTool,
+      responseTerminated: true,
     );
   }
   if (response.text.trim().isEmpty) {

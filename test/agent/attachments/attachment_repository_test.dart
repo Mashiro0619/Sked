@@ -420,38 +420,41 @@ void main() {
     expect(conversations.find(id)!.draftAttachmentIds, [attachmentId]);
   });
 
-  test('oversized declarations fail before reading and corrupt content never verifies', () async {
-    final storage = MemoryAttachmentStorage();
-    final repository = AttachmentRepository(storage: storage);
-    var opened = false;
-    await expectLater(
-      repository.put(
-        id: 'large',
-        name: 'large.bin',
-        mediaType: 'application/octet-stream',
-        byteLength: ConversationAttachment.maxFileBytes + 1,
-        openRead: () {
-          opened = true;
-          return const Stream.empty();
-        },
-      ),
-      throwsA(isA<AttachmentException>()),
-    );
-    expect(opened, isFalse);
-    final attachment = await repository.put(
-      id: 'changed',
-      name: 'file.png',
-      mediaType: 'image/png',
-      byteLength: 2,
-      openRead: () => Stream.value([1, 2]),
-    );
-    storage.values[attachment.id] = Uint8List.fromList([1, 3]);
-    await expectLater(
-      repository.verify(attachment),
-      throwsA(isA<AttachmentException>()),
-    );
-    await repository.close();
-  });
+  test(
+    'mismatched declarations and corrupt content fail verification',
+    () async {
+      final storage = MemoryAttachmentStorage();
+      final repository = AttachmentRepository(storage: storage);
+      var opened = false;
+      await expectLater(
+        repository.put(
+          id: 'large',
+          name: 'large.bin',
+          mediaType: 'application/octet-stream',
+          byteLength: 32 * 1000 * 1000 + 1,
+          openRead: () {
+            opened = true;
+            return const Stream.empty();
+          },
+        ),
+        throwsA(isA<AttachmentException>()),
+      );
+      expect(opened, isTrue);
+      final attachment = await repository.put(
+        id: 'changed',
+        name: 'file.png',
+        mediaType: 'image/png',
+        byteLength: 2,
+        openRead: () => Stream.value([1, 2]),
+      );
+      storage.values[attachment.id] = Uint8List.fromList([1, 3]);
+      await expectLater(
+        repository.verify(attachment),
+        throwsA(isA<AttachmentException>()),
+      );
+      await repository.close();
+    },
+  );
 }
 
 class _ConversationMemory extends ConversationStorage {

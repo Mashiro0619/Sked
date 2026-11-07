@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show VoidCallback, debugPrint;
 
 import '../agent/agent_application.dart';
 import '../agent/attachments/attachment_storage.dart';
+import '../application/data_restore_receipt.dart';
 import '../backup/selective_backup_models.dart';
 import '../backup/selective_backup_service.dart';
 import '../backup/selective_restore_coordinator.dart';
@@ -32,8 +33,9 @@ import 'workspace_view_state.dart';
 enum AppImportMode { replaceAll, addAll }
 
 class PreparedAppBackup {
-  const PreparedAppBackup._(this.value, this._owner, this._session);
+  const PreparedAppBackup._(this.id, this.value, this._owner, this._session);
 
+  final String id;
   final AppBackupData value;
   final AppBackupController _owner;
   final AppDataSessionToken _session;
@@ -298,7 +300,12 @@ class AppBackupController {
       source,
       localeCode: _data.localeCode,
     );
-    final prepared = PreparedAppBackup._(backup, this, session);
+    final prepared = PreparedAppBackup._(
+      generateUuidV4(),
+      backup,
+      this,
+      session,
+    );
     _ensureCurrent(prepared);
     return prepared;
   }
@@ -315,7 +322,10 @@ class AppBackupController {
     }
   }
 
-  Future<int> restorePrepared(PreparedAppBackup prepared) async {
+  Future<int> restorePrepared(
+    PreparedAppBackup prepared, {
+    OperationReceipt? operationReceipt,
+  }) async {
     _ensureCurrent(prepared);
     for (final workspace in _data.enabledWorkspaces) {
       if (_workspaces.hasExitGuards(workspace) &&
@@ -325,7 +335,12 @@ class AppBackupController {
       _ensureCurrent(prepared);
     }
     return _enqueueAppBackupRestore(
-      () => _restoreAppBackup(prepared.value.appData, prepared.value),
+      () => _restoreAppBackup(
+        prepared.value.appData,
+        prepared.value,
+        operationReceipt: operationReceipt,
+        restoreId: prepared.id,
+      ),
     );
   }
 
@@ -374,7 +389,12 @@ class AppBackupController {
     );
   }
 
-  Future<int> _restoreAppBackup(AppData imported, AppBackupData backup) async {
+  Future<int> _restoreAppBackup(
+    AppData imported,
+    AppBackupData backup, {
+    OperationReceipt? operationReceipt,
+    String? restoreId,
+  }) async {
     _ensureNoSelectiveRecovery();
     await _secrets.ensurePersistenceKnown();
     final schoolSiteLease = _schoolSiteRestoreLease;
@@ -415,6 +435,21 @@ class AppBackupController {
     final restoredSchoolSites = assignSchoolSiteIdentities(
       backup.includesSchoolSites ? backup.schoolSites : siteResult.sites,
     );
+    final arguments = operationReceipt?.result['arguments'];
+    final completionLedger = operationReceipt == null
+        ? null
+        : buildDataRestoreCompletionLedger(
+            current: previousAppData.applicationLedger,
+            target: imported.applicationLedger!,
+            pending: operationReceipt,
+            action: 'backups.restore',
+            restoreId: restoreId ?? '',
+            version: arguments is Map ? arguments['sourceDigest'] : null,
+            effectDetails: {
+              'restoredTimetables': imported.studentMode.timetables.length,
+              'localAgentConfigurationPreserved': true,
+            },
+          );
 
     late AppBackupRestoreJournalLoadResult pendingRestore;
     // Backups never carry secrets. Keep the existing key until both data
@@ -425,6 +460,7 @@ class AppBackupController {
           journalAppData,
           restoredSchoolSites,
         ),
+        completionLedger: completionLedger,
         localeCode: imported.localeCode,
       );
     } on AppBackupRestoreJournalException catch (error) {
@@ -532,7 +568,7 @@ class AppBackupController {
     }
 
     try {
-      await _clearCompletedAppBackupRestoreJournal();
+      await _completeAppBackupRestore(pendingRestore);
     } catch (error, stackTrace) {
       Error.throwWithStackTrace(
         AppBackupRestoreException(error, const [], recoveryPending: true),
@@ -778,6 +814,7 @@ class AppBackupController {
             backup.appData,
             assignSchoolSiteIdentities(backup.schoolSites),
           ),
+          completionLedger: pendingRestore.completionLedger,
           apiKeyPolicy: pendingRestore.apiKeyPolicy,
           recoveryArtifacts: pendingRestore.journalRecoveryArtifacts,
           localeCode: backup.appData.localeCode,
@@ -822,8 +859,36 @@ class AppBackupController {
 
     if (pendingRestore.phase ==
         AppBackupRestoreJournalPhase.secretPolicyApplied) {
-      await _clearCompletedAppBackupRestoreJournal();
+      await _completeAppBackupRestore(pendingRestore);
     }
+  }
+
+  Future<void> _completeAppBackupRestore(
+    AppBackupRestoreJournalLoadResult pending,
+  ) async {
+    final completed = pending.completionLedger;
+    if (completed != null) {
+      try {
+        if (pending.phase != AppBackupRestoreJournalPhase.secretPolicyApplied) {
+          throw StateError('Restore owners have not all completed.');
+        }
+        final current = _session.committedData.applicationLedger;
+        if (current != completed) {
+          if (current != pending.backup?.appData.applicationLedger) {
+            throw StateError(
+              'The restore completion belongs to another target.',
+            );
+          }
+          _data = _data.copyWith(applicationLedger: completed);
+          await _persistence.saveAndNotify();
+        }
+      } catch (_) {
+        _session.blockWritesAfterInitializationFailure();
+        _notifyViewChanged();
+        rethrow;
+      }
+    }
+    await _clearCompletedAppBackupRestoreJournal();
   }
 
   Future<void> _clearCompletedAppBackupRestoreJournal() async {

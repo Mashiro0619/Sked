@@ -3,6 +3,10 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sked/application/external_operation_coordinator.dart';
+import 'package:sked/application/mutation_coordinator.dart' show mutationDigest;
+import 'package:sked/application/mutation_draft.dart' show ResourceChange;
+import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/data/app_repository.dart';
 import 'package:sked/data/timetable_storage.dart';
 import 'package:sked/models/school_site_models.dart';
@@ -26,6 +30,8 @@ class _MemoryTimetableStorage implements TimetableStorage {
   StorageLoadResult? structuredLoadResult;
   var saveCount = 0;
   final saveFailures = <Object?>[];
+  void Function(AppData)? beforeSave;
+  void Function(AppData)? afterSave;
 
   @override
   Future<StorageLoadResult> load() async =>
@@ -35,6 +41,7 @@ class _MemoryTimetableStorage implements TimetableStorage {
   @override
   Future<void> save(AppData data) async {
     saveCount += 1;
+    beforeSave?.call(data);
     if (saveFailures.isNotEmpty) {
       final error = saveFailures.removeAt(0);
       if (error != null) throw error;
@@ -45,6 +52,7 @@ class _MemoryTimetableStorage implements TimetableStorage {
     // perform a normalization write that cannot occur with the file backend.
     this.data = AppData.decodeStorageSnapshot(data.encode());
     structuredLoadResult = null;
+    afterSave?.call(data);
   }
 
   @override
@@ -357,6 +365,151 @@ void main() {
   const newSites = [
     SchoolSite(name: 'New University', loginUrl: 'https://new.test'),
   ];
+
+  for (final failure in ['receipt-save', 'receipt-response', 'journal-clear']) {
+    test(
+      'Agent full restore resumes its fixed completion after $failure',
+      () async {
+        final appStorage = _MemoryTimetableStorage(_appData('en'));
+        final siteStore = _MemorySchoolSiteStore(
+          encodeSchoolSiteStorageSnapshot(oldSites),
+        );
+        final secrets = _MemorySecretStore('local-key');
+        final journal = _MemoryBackupRestoreJournal();
+        final provider = await _provider(
+          appStorage: appStorage,
+          siteStore: siteStore,
+          secrets: secrets,
+          journal: journal,
+        );
+        addTearDown(provider.dispose);
+        final source = encodeAppBackup(_appData('zh'), newSites);
+        final prepared = await provider.backups.prepareJson(source);
+        final sourceDigest = mutationDigest(source);
+        final external = provider.agent.external;
+        final originalGeneration = external.generation;
+        final scope = OperationScope(
+          id: 'full-restore-$failure',
+          policy: OperationPolicy(
+            enabled: true,
+            mode: AgentPermissionMode.full,
+          ),
+        );
+        var executions = 0;
+        final plan = external.prepare(
+          scope: scope,
+          action: 'backups.restore',
+          arguments: {'restoreId': prepared.id, 'sourceDigest': sourceDigest},
+          version: sourceDigest,
+          changes: [
+            ResourceChange(key: 'backup.restore', before: 'en', after: 'zh'),
+          ],
+          validate: () => expect(provider.backups.isCurrent(prepared), isTrue),
+          execute: (operation) =>
+              provider.agent.runMaintenanceFromAgent(scope, () async {
+                executions++;
+                await provider.backups.restorePrepared(
+                  prepared,
+                  operationReceipt: external.status(operation.operationId)!,
+                );
+                final completed = external.status(operation.operationId)!;
+                return ExternalEffectResult(
+                  state: ExternalEffectState.applied,
+                  dataStatus: ExternalDataState.committed,
+                  details: Map<String, Object?>.from(
+                    completed.result['effectResult'] as Map,
+                  ),
+                );
+              }),
+        );
+        var injected = false;
+        bool isCompletion(AppData data) => data.applicationLedger!.receipts.any(
+          (receipt) => receipt.result.containsKey('restoreCompletion'),
+        );
+        if (failure == 'receipt-save') {
+          appStorage.beforeSave = (data) {
+            if (!injected && isCompletion(data)) {
+              injected = true;
+              throw StateError('Completion ledger save failed');
+            }
+          };
+        } else if (failure == 'receipt-response') {
+          appStorage.afterSave = (data) {
+            if (!injected && isCompletion(data)) {
+              injected = true;
+              throw const StorageWriteStateUnknownException(
+                writeError: 'Completion response lost',
+                rollbackError: 'Completion outcome needs readback',
+              );
+            }
+          };
+        } else {
+          injected = true;
+          journal.clearFailures.add(
+            StateError('Completion journal cleanup failed'),
+          );
+        }
+
+        final result = await external.commit(planId: plan.id, scope: scope);
+        expect(injected, isTrue);
+        expect(executions, 1);
+        expect(result.receiptFinalized, failure == 'journal-clear');
+        expect(provider.session.canWrite, isFalse);
+        final pending = await journal.load();
+        expect(pending.status, AppBackupRestoreJournalLoadStatus.valid);
+        expect(pending.phase, AppBackupRestoreJournalPhase.secretPolicyApplied);
+        final completed = pending.completionLedger!;
+        expect(completed.generation, isNot(originalGeneration));
+        expect(completed.receipts.single.operationId, plan.operationId);
+        expect(appStorage.data!.localeCode, 'zh');
+        expect(
+          decodeSchoolSitesStrict(siteStore.source!).single.name,
+          'New University',
+        );
+        expect(secrets.value, isEmpty);
+        expect(
+          appStorage.data!.applicationLedger,
+          failure == 'receipt-save'
+              ? pending.backup!.appData.applicationLedger
+              : completed,
+        );
+        final dataSaves = appStorage.saveCount;
+        final siteSaves = siteStore.saveCount;
+        final secretWrites = secrets.writeCount;
+        provider.dispose();
+
+        final restarted = await _provider(
+          appStorage: appStorage,
+          siteStore: siteStore,
+          secrets: secrets,
+          journal: journal,
+        );
+        addTearDown(restarted.dispose);
+        expect(journal.source, isNull);
+        expect(restarted.session.canWrite, isTrue);
+        expect(appStorage.data!.applicationLedger, completed);
+        expect(appStorage.data!.localeCode, 'zh');
+        expect(
+          appStorage.saveCount,
+          dataSaves + (failure == 'receipt-save' ? 1 : 0),
+        );
+        expect(siteStore.saveCount, siteSaves);
+        expect(secrets.writeCount, secretWrites);
+        expect(
+          restarted.agent.external.status(plan.operationId),
+          completed.receipts.single,
+        );
+        final replay = await restarted.agent.external.reconcile(
+          operationId: plan.operationId,
+          readBack: (_) =>
+              throw StateError('Completed restore must not execute again'),
+        );
+        expect(replay.receiptFinalized, isTrue);
+        expect(replay.replayed, isTrue);
+        expect(executions, 1);
+      },
+    );
+  }
 
   test(
     'full backup export includes stored school sites and excludes API key',

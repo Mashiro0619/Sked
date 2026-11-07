@@ -169,7 +169,7 @@ Map<String, _SettingBinding> _buildSettingBindings(
   final agentPreferences = {
     'enabled': (SettingValueType.boolean, null, null),
     'systemInstructions': (SettingValueType.string, null, null),
-    'historyRetentionDays': (SettingValueType.integer, 0, 3650),
+    'historyRetentionDays': (SettingValueType.integer, 0, null),
   };
   final agentFields = {
     'enabled',
@@ -219,12 +219,12 @@ Map<String, _SettingBinding> _buildSettingBindings(
                 throw SettingValidationException(
                   SettingValidationCode.invalidValue,
                   'agent.${entry.key}',
-                  'The Agent preference is outside its supported limits.',
+                  'The Agent preference has an invalid value.',
                 );
               }
             },
       resetMeaning: entry.key == 'historyRetentionDays'
-          ? 'Keep history until explicitly deleted; finite retention accepts 7–3650 days and excludes unfinished conversations.'
+          ? 'Keep history until explicitly deleted. A positive number of days enables retention cleanup and excludes unfinished conversations.'
           : preference == null
           ? 'Use the owning Agent connection or host control.'
           : 'Restore the declared default for future runs.',
@@ -841,22 +841,22 @@ Map<String, _SettingBinding> _buildSettingBindings(
 }
 
 String? _settingAdapterTool(String key) {
-  if (key.startsWith('device.layout.')) return 'device.layout.prepare';
+  if (key.startsWith('device.layout.')) return 'device.layout.apply';
   return switch (key) {
-    'app.activeMode' || 'app.enabledWorkspaces' => 'workspaces.prepare',
-    'app.agentSettings' => 'agent_settings.prepare',
+    'app.activeMode' || 'app.enabledWorkspaces' => 'workspaces.apply',
+    'app.agentSettings' => 'agent_settings.update',
     'agent.protocol' ||
     'agent.endpoint' ||
     'agent.model' ||
     'agent.models' ||
-    'agent.credentialRef' => 'connection.prepare',
+    'agent.credentialRef' => 'connection.apply',
     'student.activeTimetableId' ||
     'general.activeScheduleId' ||
     'general.selectedDateIso' => 'navigation.open',
-    'student.conflictDisplayCourseIds' => 'courses.display.prepare',
-    'general.customDateRange' => 'navigation.range.prepare',
-    'device.assistantPreviewEnabled' => 'device.preferences.prepare',
-    'device.schoolSites' => 'school_sites.prepare',
+    'student.conflictDisplayCourseIds' => 'courses.display.apply',
+    'general.customDateRange' => 'navigation.range.apply',
+    'device.assistantPreviewEnabled' => 'device.preferences.apply',
+    'device.schoolSites' => 'school_sites.apply',
     _ => null,
   };
 }

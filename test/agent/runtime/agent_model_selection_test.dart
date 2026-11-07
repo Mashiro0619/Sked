@@ -414,20 +414,20 @@ ProviderCompleted _done() => ProviderCompleted(
 Stream<ProviderEvent> _complete() => Stream.value(_done());
 
 Future<void> _waitForApproval(AgentRuntimeController runtime, String id) async {
+  final execution = runtime.watchConversation(id);
   final ready = Completer<void>();
   void changed() {
-    if (runtime.state.value.runFor(id).pendingApproval != null &&
-        !ready.isCompleted) {
+    if (execution.value.pendingApproval != null && !ready.isCompleted) {
       ready.complete();
     }
   }
 
-  runtime.state.addListener(changed);
+  execution.addListener(changed);
   try {
     changed();
     await ready.future.timeout(const Duration(seconds: 5));
   } finally {
-    runtime.state.removeListener(changed);
+    execution.removeListener(changed);
   }
 }
 

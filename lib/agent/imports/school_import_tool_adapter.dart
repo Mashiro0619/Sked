@@ -20,7 +20,7 @@ void registerSchoolImportTools(ApplicationToolHost host) {
           'Provide real startDate, totalWeeks, course weeks and times; ask for '
           'missing facts. Choose create or an explicit replacement target. '
           'Select an existing periodTimeSetId when the source has no period times. '
-          'Use mutation.commit to apply under the conversation permission mode.',
+          'The host applies the conversation permission mode in this call.',
       parameters: {
         'type': 'object',
         'properties': {

@@ -31,7 +31,7 @@ void main() {
   });
 
   Future<Map<String, Object?>> search(Map<String, Object?> args) =>
-      host.execute(
+      host.executeInternal(
         ProviderToolCall(
           id: 'search',
           name: 'skills.search',
@@ -40,6 +40,27 @@ void main() {
         scope,
         (_) async => null,
       );
+
+  test(
+    'loading the batch skill exposes its fixed selection workflow',
+    () async {
+      final result = await host.execute(
+        ProviderToolCall(
+          id: 'load-batch',
+          name: 'skills.load',
+          arguments: jsonEncode({'id': 'batch-change'}),
+        ),
+        scope,
+        (_) async => null,
+      );
+      expect(result['status'], 'loaded');
+      expect(result['instructions'], contains('selection.create'));
+      expect(
+        host.toolsFor(scope).map((tool) => tool.name),
+        containsAll(['selection.create', 'selection.get', 'mutation.apply']),
+      );
+    },
+  );
 
   test(
     'default catalog includes all bundled skills and explicit completeness',

@@ -397,16 +397,16 @@ for scenario in scenarios:
     provider = as_object(scenario.get("provider"))
     provider_result = as_object(provider.get("result"))
     if (
-        provider.get("requests") != (4 if accessible else 3) or provider.get("requestedTools") != [
-            "capabilities.describe", "mutation.prepare", "mutation.commit"
+        provider.get("requests") != (3 if accessible else 2) or provider.get("requestedTools") != [
+            "capabilities.describe", "mutation.apply"
         ] or provider.get("transportAttempts") != 0 or provider.get("closed") is not True
-        or provider.get("preparedPlanId") != approval.get("planId") or scenario.get("httpOperationAttempts") != 0
+        or scenario.get("httpOperationAttempts") != 0
     ):
         reasons.append(prefix + "the controlled decision-specific tool flow or zero-HTTP/closed-provider evidence is incomplete.")
     decision = as_object(scenario.get("decision"))
     tool_result = as_object(decision.get("toolResult"))
     terminal = as_object(decision.get("terminal"))
-    commit_call_id = f"native-msaa-{name}-3"
+    commit_call_id = f"native-msaa-{name}-2"
     if (
         decision.get("toolCallId") != commit_call_id
         or terminal.get("runtimeActive") is not False
@@ -417,9 +417,9 @@ for scenario in scenarios:
         or not digest(terminal.get("conversationSha256"))
         or terminal.get("storedConversationSha256") != terminal.get("conversationSha256")
         or terminal.get("runStatus") != ("completed" if accessible else "interrupted")
-        or terminal.get("settled") is not True or terminal.get("requestCount") != (4 if accessible else 3)
-        or terminal.get("requestOutcomes") != ["completed"] * (4 if accessible else 3)
-        or terminal.get("toolOutcomes") != ["completed", "completed", "completed" if accessible else "failed"]
+        or terminal.get("settled") is not True or terminal.get("requestCount") != (3 if accessible else 2)
+        or terminal.get("requestOutcomes") != ["completed"] * (3 if accessible else 2)
+        or terminal.get("toolOutcomes") != ["completed", "completed" if accessible else "failed"]
         or terminal.get("lastMessageRole") != ("assistant" if accessible else "tool")
         or terminal.get("lastMessageToolCallId") != (None if accessible else commit_call_id)
         or terminal.get("finalProviderReply") is not accessible
@@ -460,7 +460,8 @@ for scenario in scenarios:
     owners = as_object(cleanup.get("owners"))
     steps = as_objects(owners.get("steps"))
     expected_steps = ["cancel-active-run", "quiesce", "dispose-runtime", "close-agent", "close-backup-staging",
-                      "close-session", "drain-main-writes", "flush-layout", "release-owned-preferences"]
+                      "close-session", "drain-main-writes", "flush-layout", "release-owned-preferences",
+                      "snapshot-agent-storage", "close-agent-store", "remove-agent-data"]
     if (
         cleanup.get("unmount") != "complete" or cleanup.get("httpGuardRestored") is not True
         or owners.get("status") != "complete" or [item.get("name") for item in steps] != expected_steps

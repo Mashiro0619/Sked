@@ -1,6 +1,6 @@
-part of 'agent_runtime_controller.dart';
+part of 'agent_service.dart';
 
-extension _AgentQueuedInputManagement on AgentRuntimeController {
+extension _AgentQueuedInputManagement on AgentService {
   bool _canManageQueuedInput(
     String conversationId,
     String inputId, {
@@ -11,14 +11,12 @@ extension _AgentQueuedInputManagement on AgentRuntimeController {
         repository.canWrite &&
         !readMaintenance() &&
         (editing || !_editingQueuedInputs.contains(conversationId)) &&
-        (_runs[conversationId]?.accepted ?? true) &&
+        (_activeRun(conversationId)?.accepted ?? true) &&
         conversation != null &&
         !conversation.archived &&
         conversation.pendingRedo == null &&
-        _runs[conversationId]?.pendingInputId != inputId &&
-        conversation.executionMessages.any(
-          (message) => message.id == inputId && _queuedInput(message) != null,
-        );
+        _activeRun(conversationId)?.pendingInputId != inputId &&
+        conversation.queuedInputs.any((input) => input.id == inputId);
   }
 
   Future<void> _manageQueuedInput(
@@ -40,13 +38,11 @@ extension _AgentQueuedInputManagement on AgentRuntimeController {
         if (!_canManageQueuedInput(conversationId, input.id, editing: true)) {
           throw const AgentRuntimeException(AgentRuntimeError.busy);
         }
-        final pending = current.executionMessages
-            .where((message) => _queuedInput(message) != null)
-            .toList();
+        final pending = current.queuedInputs;
         final target = pending
             .where((message) => message.id == input.id)
             .single;
-        if (jsonEncode(target.toJson()) != expected) {
+        if (jsonEncode(target.asUserMessage().toJson()) != expected) {
           throw const AgentRuntimeException(AgentRuntimeError.busy);
         }
         if (restore &&
@@ -65,8 +61,10 @@ extension _AgentQueuedInputManagement on AgentRuntimeController {
           ifAbsent: () => 1,
         );
         return current.copyWith(
-          messages: current.messages.where((message) => message.id != input.id),
-          draft: restore ? _queuedInput(target)! : current.draft,
+          queuedInputs: current.queuedInputs.where(
+            (queued) => queued.id != input.id,
+          ),
+          draft: restore ? target.text : current.draft,
           draftReferences: restore
               ? target.contextReferences
               : current.draftReferences,
@@ -79,9 +77,9 @@ extension _AgentQueuedInputManagement on AgentRuntimeController {
         );
       });
       if (wasFirst &&
-          !_runs.containsKey(conversationId) &&
-          _display[conversationId]?.errorMessage == 'invalidReference') {
-        _display[conversationId] = const AgentUiRunState();
+          !(_activeRun(conversationId) != null) &&
+          _execution(conversationId).value.errorMessage == 'invalidReference') {
+        _execution(conversationId).transition(const AgentUiRunState());
       }
     } finally {
       _editingQueuedInputs.remove(conversationId);

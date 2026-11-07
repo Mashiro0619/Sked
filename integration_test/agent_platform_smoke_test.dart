@@ -13,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/agent/conversations/conversation_models.dart';
 import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/ui/agent_operation_card.dart';
+import 'package:sked/agent/ui/agent_operation_activity.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/screens/agent_page.dart';
 import 'package:sked/screens/adaptive_sked_shell.dart';
@@ -197,14 +198,14 @@ class _WriteProvider extends ProviderClient {
     switch (requests.length) {
       case 1:
         response = _call('capabilities.describe', {
-          'names': ['mutation.prepare', 'mutation.commit'],
+          'names': ['mutation.apply'],
         });
       case 2:
         expect(
           (_lastTool(request)['tools'] as List).map((tool) => tool['name']),
-          containsAll(['mutation.prepare', 'mutation.commit']),
+          contains('mutation.apply'),
         );
-        response = _call('mutation.prepare', {
+        response = _call('mutation.apply', {
           'commands': [
             {
               'kind': 'event',
@@ -221,10 +222,6 @@ class _WriteProvider extends ProviderClient {
               },
             },
           ],
-        });
-      case 3:
-        response = _call('mutation.commit', {
-          'planId': _lastTool(request)['planId'],
         });
       default:
         committedResult = _lastTool(request);
@@ -336,7 +333,7 @@ void main() {
           'a real pending mutation approval',
         );
         expect(h.saved.generalMode.schedules.first.events, isEmpty);
-        expect(provider.requests, hasLength(3));
+        expect(provider.requests, hasLength(2));
         expect(_key('agent-approve'), findsOneWidget);
         FocusManager.instance.primaryFocus?.unfocus();
         await _tap(tester, _key('agent-approve'));
@@ -354,8 +351,7 @@ void main() {
         expect(event.reminders.single.minutesBefore, 10);
         expect(provider.requestedTools, [
           'capabilities.describe',
-          'mutation.prepare',
-          'mutation.commit',
+          'mutation.apply',
         ]);
         expect(provider.committedResult!['status'], 'committed');
         expect(
@@ -365,8 +361,6 @@ void main() {
           ),
           isTrue,
         );
-        expect(find.byType(AgentOperationCard), findsWidgets);
-
         await h.app.agent.runtime.waitForIdle();
         await h.app.agent.conversations.waitForPendingWrites();
         await _until(
@@ -378,6 +372,13 @@ void main() {
               tester.widget<TextField>(_key('agent-composer')).enabled == true,
           'the completed send and editable composer frame',
         );
+        expect(find.byType(AgentOperationActivity), findsOneWidget);
+        expect(find.byType(AgentOperationCard), findsNothing);
+        final operation = _key('agent-activity-toggle-operation-smoke-2');
+        await _tap(tester, operation);
+        expect(find.byType(AgentOperationCard), findsOneWidget);
+        await _tap(tester, operation);
+        expect(find.byType(AgentOperationCard), findsNothing);
         const firstDraft = 'Keep this first conversation draft';
         await tester.enterText(_key('agent-composer'), firstDraft);
         await _until(
@@ -419,7 +420,7 @@ void main() {
           firstDraft,
         );
         expect(h.app.agent.conversations.selectedId, firstId);
-        expect(provider.requests, hasLength(4));
+        expect(provider.requests, hasLength(3));
 
         await openAgentShellHistory(tester);
         await _tap(tester, _key('agent-history-new'));
@@ -476,7 +477,7 @@ void main() {
         expect(h.app.agent.conversations.find(secondId)!.messages, isEmpty);
         expect(h.app.agent.conversations.isDraft(secondId), isTrue);
         expect(h.app.agent.conversations.conversations, hasLength(1));
-        expect(provider.requests, hasLength(4));
+        expect(provider.requests, hasLength(3));
         expect(tester.takeException(), isNull);
         binding.reportData = {
           ...?binding.reportData,

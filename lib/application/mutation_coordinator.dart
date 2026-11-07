@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
@@ -934,27 +935,64 @@ Never _mismatch() => throw const OperationProblem(
 
 String mutationDigest(Object? value) {
   try {
-    return sha256
-        .convert(utf8.encode(jsonEncode(_canonical(value, 0))))
-        .toString();
-  } catch (_) {
+    return sha256.convert(utf8.encode(_canonicalJson(value))).toString();
+  } on FormatException {
     throw const OperationProblem(
       OperationErrorCode.invalidArgument,
-      'Mutation input must contain bounded, finite JSON values.',
+      'Mutation input must contain finite JSON values without circular references.',
     );
   }
 }
 
-Object? _canonical(Object? value, int depth) {
-  if (depth > 64) {
-    throw const FormatException('Mutation value nesting is too deep.');
+String _canonicalJson(Object? value) {
+  final output = StringBuffer();
+  final active = HashSet<Object>.identity();
+  final pending = <void Function()>[];
+  void visit(Object? current) {
+    if (current is Map) {
+      if (!current.keys.every((key) => key is String) || !active.add(current)) {
+        throw const FormatException('Invalid JSON object.');
+      }
+      final keys = current.keys.cast<String>().toList()..sort();
+      output.write('{');
+      pending.add(() {
+        active.remove(current);
+        output.write('}');
+      });
+      for (var index = keys.length - 1; index >= 0; index--) {
+        final key = keys[index];
+        pending.add(() => visit(current[key]));
+        pending.add(() => output.write(':'));
+        pending.add(() => output.write(jsonEncode(key)));
+        if (index > 0) pending.add(() => output.write(','));
+      }
+    } else if (current is List) {
+      if (!active.add(current)) {
+        throw const FormatException('Circular JSON array.');
+      }
+      output.write('[');
+      pending.add(() {
+        active.remove(current);
+        output.write(']');
+      });
+      for (var index = current.length - 1; index >= 0; index--) {
+        final item = current[index];
+        pending.add(() => visit(item));
+        if (index > 0) pending.add(() => output.write(','));
+      }
+    } else if (current == null ||
+        current is String ||
+        current is bool ||
+        (current is num && current.isFinite)) {
+      output.write(jsonEncode(current));
+    } else {
+      throw const FormatException('Invalid JSON value.');
+    }
   }
-  if (value is Map) {
-    final keys = value.keys.cast<String>().toList()..sort();
-    return {for (final key in keys) key: _canonical(value[key], depth + 1)};
+
+  pending.add(() => visit(value));
+  while (pending.isNotEmpty) {
+    pending.removeLast()();
   }
-  if (value is List) {
-    return [for (final item in value) _canonical(item, depth + 1)];
-  }
-  return value;
+  return output.toString();
 }

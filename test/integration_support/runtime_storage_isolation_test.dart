@@ -7,6 +7,7 @@ import 'package:sked/agent/attachments/attachment_storage.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
 import 'package:sked/agent/conversations/conversation_storage.dart';
 import 'package:sked/agent/knowledge/knowledge_storage.dart';
+import 'package:sked/agent/store/agent_store.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/backup/backup_staging_storage.dart';
 import 'package:sked/backup/selective_backup_models.dart';
@@ -50,6 +51,7 @@ void main() {
     }
 
     debugSetConversationStorageFactory(() => reject('conversations'));
+    debugSetAgentStoreFactory(() => reject('Agent SQLite'));
     debugSetKnowledgeStorageFactory(() => reject('knowledge'));
     debugSetAttachmentStorageFactory(() => reject('attachments'));
     debugSetSelectiveRestoreJournalFactory(() => reject('selective journal'));
@@ -57,6 +59,7 @@ void main() {
     debugSetAppBackupRestoreJournalFactory(() => reject('legacy journal'));
     addTearDown(() {
       debugSetConversationStorageFactory(null);
+      debugSetAgentStoreFactory(null);
       debugSetKnowledgeStorageFactory(null);
       debugSetAttachmentStorageFactory(null);
       debugSetSelectiveRestoreJournalFactory(null);

@@ -1,3 +1,5 @@
+import 'package:sked/agent/operations/tool_outcome.dart';
+
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -5,7 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/ui/agent_operation_card.dart';
 import 'package:sked/agent/ui/agent_plan_preview.dart';
 import 'package:sked/agent/ui/agent_setting_labels.dart';
-import 'package:sked/application/approval_plan.dart';
+import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/application/setting_registry.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/services/desktop_layout_preferences.dart';
@@ -74,7 +76,7 @@ void main() {
                 final before = h.saved.encode();
                 final (tool, arguments, external) = switch (kind) {
                   'layout' => (
-                    'device.layout.prepare',
+                    'device.layout.apply',
                     <String, Object?>{
                       'region': 'assistant',
                       'action': 'set',
@@ -87,12 +89,12 @@ void main() {
                     true,
                   ),
                   'legacyPreview' => (
-                    'device.preferences.prepare',
+                    'device.preferences.apply',
                     <String, Object?>{'action': 'set', 'value': true},
                     true,
                   ),
                   'connection' => (
-                    'connection.prepare',
+                    'connection.apply',
                     <String, Object?>{
                       'action': 'set',
                       'endpoint': 'https://receipt.invalid/v1',
@@ -108,7 +110,7 @@ void main() {
                     true,
                   ),
                   'appSettings' => (
-                    'settings.prepare',
+                    'settings.update',
                     <String, Object?>{
                       'edits': [
                         {
@@ -126,7 +128,7 @@ void main() {
                     false,
                   ),
                   'agentPreferences' => (
-                    'agent_settings.prepare',
+                    'agent_settings.update',
                     <String, Object?>{
                       'edits': [
                         {
@@ -144,7 +146,7 @@ void main() {
                     false,
                   ),
                   _ => (
-                    'settings.prepare',
+                    'settings.update',
                     <String, Object?>{
                       'edits': [
                         {
@@ -162,23 +164,19 @@ void main() {
                     false,
                   ),
                 };
-                prepared = await h.call(tool, arguments);
-                expect(h.saved.encode(), before);
-                final id = prepared['planId'] as String;
-                final ApprovalPlan plan = external
-                    ? h.app.agent.external.plan(id)!
-                    : h.app.agent.tools.mutations.plan(id)!;
-                // Use the actual host plan's concrete changes, as the runtime does
-                // when publishing an approval; do not add invented display labels.
-                approval = {
-                  ...plan.summary(),
-                  'changes': [
-                    for (final change in plan.changes) change.toJson(),
-                  ],
+                h.scope.policy.update(mode: AgentPermissionMode.ask);
+                h.approval = (plan) async {
+                  expect(h.saved.encode(), before);
+                  prepared = plan.summary();
+                  approval = {
+                    ...plan.summary(),
+                    'changes': [
+                      for (final change in plan.changes) change.toJson(),
+                    ],
+                  };
+                  return h.scope.approve(plan.id);
                 };
-                receipt = external
-                    ? await h.externalCommit(prepared)
-                    : await h.commit(prepared);
+                receipt = await h.call(tool, arguments);
                 if (external) expect(receipt['effectStatus'], 'applied');
               }),
             );
@@ -224,7 +222,9 @@ void main() {
               await mountAgentUi(
                 tester,
                 SingleChildScrollView(
-                  child: AgentOperationCard(receipt: frame),
+                  child: AgentOperationCard(
+                    outcome: ToolOutcome.fromResult(frame),
+                  ),
                 ),
                 locale: locale,
                 scale: 2,
@@ -306,7 +306,9 @@ void main() {
       final original = jsonEncode(receipt);
       await mountAgentUi(
         tester,
-        SingleChildScrollView(child: AgentOperationCard(receipt: receipt)),
+        SingleChildScrollView(
+          child: AgentOperationCard(outcome: ToolOutcome.fromResult(receipt)),
+        ),
       );
       final l = AppLocalizations.of(
         tester.element(find.byType(AgentOperationCard)),

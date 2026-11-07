@@ -110,6 +110,7 @@ void main() {
             AgentTimelineMessage(:final message) => message.id,
             AgentTimelineActivity(:final anchorMessageId) =>
               'activity-$anchorMessageId',
+            _ => throw StateError('Unexpected timeline entry'),
           },
         ),
         [
@@ -364,7 +365,7 @@ void main() {
   );
 
   test(
-    'host plans, saved receipts and failures stay outside collapsed activity',
+    'operation receipts have one typed position and errors stay in activity',
     () {
       final stored = conversation([
         message('user', ConversationRole.user, text: 'Update the schedule'),
@@ -374,17 +375,17 @@ void main() {
           calls: const [
             ConversationToolCall(
               id: 'prepare',
-              name: 'mutation.prepare',
+              name: 'mutation.apply',
               arguments: '{}',
             ),
             ConversationToolCall(
               id: 'commit',
-              name: 'mutation.commit',
+              name: 'mutation.apply',
               arguments: '{}',
             ),
             ConversationToolCall(
               id: 'external',
-              name: 'external.commit',
+              name: 'platform.request_action',
               arguments: '{}',
             ),
             ConversationToolCall(
@@ -398,7 +399,7 @@ void main() {
           'plan',
           ConversationRole.tool,
           toolId: 'prepare',
-          text: '{"planId":"p"}',
+          text: '{"operationId":"p","status":"preview"}',
         ),
         message(
           'saved',
@@ -410,7 +411,8 @@ void main() {
           'uncertain',
           ConversationRole.tool,
           toolId: 'external',
-          text: '{"operationId":"e","effectStatus":"unknown"}',
+          text:
+              '{"operationId":"e","kind":"external","effectStatus":"unknown"}',
         ),
         message(
           'failed',
@@ -429,11 +431,13 @@ void main() {
         timeline.whereType<AgentTimelineMessage>().map(
           (entry) => entry.message.id,
         ),
-        ['user', 'plan', 'saved', 'uncertain', 'failed', 'reply'],
+        ['user', 'reply'],
       );
       final activity = timeline.whereType<AgentTimelineActivity>().single;
-      expect(activity.tools.every((tool) => tool.receipt), isTrue);
-      expect(activity.status, AgentToolActivityStatus.uncertain);
+      final operations = timeline.whereType<AgentTimelineOperation>().toList();
+      expect(operations, hasLength(3));
+      expect(operations.last.status, AgentToolActivityStatus.uncertain);
+      expect(activity.status, AgentToolActivityStatus.failed);
       expect(
         activity.tools.singleWhere((tool) => tool.id == 'failed').status,
         AgentToolActivityStatus.failed,
@@ -998,7 +1002,7 @@ void main() {
         );
         expect(
           timeline.whereType<AgentTimelineMessage>().last.message.id,
-          'result',
+          'user',
         );
       },
     );
@@ -1016,7 +1020,7 @@ void main() {
             calls: const [
               ConversationToolCall(
                 id: 'unknown',
-                name: 'mutation.commit',
+                name: 'mutation.apply',
                 arguments: '{}',
               ),
             ],
@@ -1032,12 +1036,12 @@ void main() {
           ),
         ]);
         final timeline = projectAgentConversationTimeline(stored);
-        final activity = timeline.whereType<AgentTimelineActivity>().single;
+        final activity = timeline.whereType<AgentTimelineOperation>().single;
         expect(activity.status, AgentToolActivityStatus.uncertain);
         expect(activity.tools.single.status, AgentToolActivityStatus.uncertain);
         expect(
           timeline.whereType<AgentTimelineMessage>().last.message.id,
-          'result',
+          'user',
         );
       },
     );

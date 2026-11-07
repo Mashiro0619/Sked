@@ -64,6 +64,10 @@ class UiDelegate extends AgentUiDelegate {
       calls.add('continue:$conversationId');
 
   @override
+  Future<void> compactContext(String conversationId) async =>
+      calls.add('compact:$conversationId');
+
+  @override
   int pendingInputCount(String conversationId) => queued;
 
   @override
@@ -95,6 +99,12 @@ class UiDelegate extends AgentUiDelegate {
 
   @override
   void openSettings() => calls.add('settings');
+}
+
+Future<void> openAgentAttachmentPicker(WidgetTester tester) async {
+  await tester.tap(find.byKey(const ValueKey('agent-composer-more')));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(const ValueKey('agent-attach-file')));
 }
 
 Future<void> mountAgentUi(

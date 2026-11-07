@@ -29,6 +29,8 @@ const _relevantSources = [
   'lib/widgets/assistant_pane.dart',
   'lib/agent/agent_application.dart',
   'lib/agent/conversations/conversation_repository.dart',
+  'lib/agent/store/agent_store.dart',
+  'lib/agent/store/agent_database.dart',
   'lib/agent/ui/agent_conversation_view.dart',
   'lib/agent/ui/agent_conversation_list.dart',
   'lib/agent/ui/agent_transcript.dart',
@@ -231,8 +233,12 @@ void _validate(Object? value) {
   _require(
     entry['historyMessageCount'] == 512 &&
         entry['sameApplicationAndRepository'] == true &&
-        entry['host'] == 'AgentPage',
-    'The formal product entry did not open its platform host and full history.',
+        entry['host'] == 'AgentPage' &&
+        entry['hasEarlierMessages'] == true &&
+        entry['loadedMessageCount'] is int &&
+        (entry['loadedMessageCount'] as int) > 0 &&
+        (entry['loadedMessageCount'] as int) < 512,
+    'The formal product entry did not open its platform host and latest SQLite history page.',
   );
   final scroll = observations['long-history-scroll']!;
   final before = _map(scroll['before'], 'Initial reading anchor');
@@ -258,7 +264,7 @@ void _validate(Object? value) {
         _map(host['provider'], 'Provider during host return')['cancelled'] ==
             false &&
         host['route'] ==
-            'full AgentPage → home side navigation → full AgentPage',
+            'embedded Agent → main business destination → embedded Agent',
     'The platform host transition is missing.',
   );
   final completed = observations['completion-and-history']!;

@@ -10,6 +10,66 @@ class AppLocalizationsPl extends AppLocalizations {
   AppLocalizationsPl([String locale = 'pl']) : super(locale);
 
   @override
+  String get agentTaskDetails => 'Task details';
+
+  @override
+  String get agentTaskChanges => 'Changes';
+
+  @override
+  String get agentContextTitle => 'Context';
+
+  @override
+  String get agentNoTaskChanges => 'No changes in this task';
+
+  @override
+  String get agentNoTaskPlan => 'No plan for this task';
+
+  @override
+  String get agentNoTaskAttachments => 'No attachments in this task';
+
+  @override
+  String get agentLoadEarlierMessages => 'Load earlier messages';
+
+  @override
+  String get agentUseCurrentTimetable => 'Use as current timetable';
+
+  @override
+  String get agentUseCurrentCalendar => 'Use as current calendar';
+
+  @override
+  String get agentTechnicalDetails => 'Technical details';
+
+  @override
+  String get agentActivityCorrected => 'Corrected';
+
+  @override
+  String get agentCompactContext => 'Compact context';
+
+  @override
+  String get agentCompactingContext => 'Compacting context…';
+
+  @override
+  String get agentCompactionQueued => 'Compaction queued';
+
+  @override
+  String get agentContextWindow => 'Maximum context length';
+
+  @override
+  String get agentContextThreshold => 'Automatic compaction trigger';
+
+  @override
+  String get agentContextAutoCompact => 'Automatic compaction';
+
+  @override
+  String get agentContextUnset => 'Not set';
+
+  @override
+  String get agentContextEstimated => 'Estimated';
+
+  @override
+  String get agentContextReported => 'Provider reported';
+
+  @override
   String get appTitle => 'Sked';
 
   @override
@@ -3654,14 +3714,13 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get agentPreferenceLimitHint =>
-      'Keep forever, or choose 7–3650 days. Only finished conversations without drafts or queued input are removed.';
+      'Enter a number of days, or 0 to keep forever. Only finished conversations without drafts or queued input are removed.';
 
   @override
   String get agentPreferencesSaved => 'Preferences saved';
 
   @override
-  String get agentInvalidPreference =>
-      'Enter a value within the displayed range.';
+  String get agentInvalidPreference => 'Enter a non-negative whole number.';
 
   @override
   String get agentBackupConnectionPreserved =>
@@ -4381,13 +4440,6 @@ class AppLocalizationsPl extends AppLocalizations {
       'Set response preferences to use in all conversations.';
 
   @override
-  String get agentRunLimitsTitle => 'Limits per run';
-
-  @override
-  String get agentRunLimitsHint =>
-      'Limit model requests and tool calls for each run.';
-
-  @override
   String get agentHistoryRetentionTitle => 'Chat history retention';
 
   @override
@@ -4427,11 +4479,6 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String agentProviderLimitFailure(String code) {
-    return 'The model request exceeded a limit ($code).';
-  }
-
-  @override
   String agentProviderTimeoutFailure(String code) {
     return 'The model response timed out ($code).';
   }
@@ -4456,51 +4503,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get agentToolAskUser => 'Ask a question';
-
-  @override
-  String agentQuestionAnswerTooLong(int limit) {
-    return 'Keep your answer within $limit characters.';
-  }
-
-  @override
-  String get agentBudgetSummaryTitle => 'Run summary';
-
-  @override
-  String get agentBudgetSummaryTokenLimit =>
-      'This run has insufficient token budget to continue. Progress has been saved.';
-
-  @override
-  String get agentBudgetSummaryRoundLimit =>
-      'The model request limit has been reached.';
-
-  @override
-  String get agentBudgetSummaryToolLimit =>
-      'The tool call limit has been reached.';
-
-  @override
-  String agentBudgetSummaryTools(
-    int completed,
-    int failed,
-    int notStarted,
-    int unknown,
-  ) {
-    return 'Tool results — $completed completed, $failed failed, $notStarted not started, $unknown awaiting verification';
-  }
-
-  @override
-  String agentBudgetSummaryUsage(
-    int requests,
-    int requestLimit,
-    int tokens,
-    int tokenLimit,
-  ) {
-    return '$requests/$requestLimit model requests · $tokens/$tokenLimit reported tokens';
-  }
-
-  @override
-  String agentBudgetSummaryMissingUsage(int count) {
-    return 'Usage is unreported for $count requests.';
-  }
 
   @override
   String get agentReferenceSearch => 'Search references';
@@ -4558,29 +4560,6 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get agentQueuedRestoreDraftBusy =>
       'Send or clear the current draft before moving this input back.';
-
-  @override
-  String get agentBudgetSummaryRequestTokenLimit =>
-      'The per-request token limit was reached. Progress has been saved.';
-
-  @override
-  String agentBudgetSummaryRequestTokenUsage(int reported, int limit) {
-    return 'This request · $reported/$limit reported tokens';
-  }
-
-  @override
-  String agentBudgetSummaryReportedUsage(
-    int requests,
-    int requestLimit,
-    int tokens,
-  ) {
-    return '$requests/$requestLimit model requests · $tokens reported tokens';
-  }
-
-  @override
-  String agentBudgetSummaryRecordedUsage(int requests, int tokens) {
-    return 'Model requests $requests · $tokens reported tokens';
-  }
 
   @override
   String get agentEndRedo => 'End redo';

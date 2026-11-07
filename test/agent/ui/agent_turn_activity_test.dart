@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
@@ -9,14 +8,15 @@ import 'package:sked/agent/ui/agent_conversation_timeline.dart';
 import 'package:sked/agent/ui/agent_selectable_text.dart';
 import 'package:sked/agent/ui/agent_turn_activity.dart';
 import 'package:sked/l10n/app_localizations.dart';
+import 'package:sked/theme/color_contrast.dart';
 
 import 'agent_ui_test_support.dart';
 
 void main() {
   AgentTimelineActivity activity({
-    int count = 8,
+    int count = 1,
     AgentToolActivityStatus status = AgentToolActivityStatus.completed,
-    String output = '{"items":[],"candidateCount":0}',
+    String output = '{"items":[]}',
   }) => AgentTimelineActivity(
     id: 'turn',
     anchorMessageId: 'calls',
@@ -34,290 +34,262 @@ void main() {
   Finder key(String value) => find.byKey(ValueKey(value));
 
   testWidgets(
-    'completed turn occupies one row and builds raw output only on request',
+    'running activity text remains readable on a dark narrow surface',
     (tester) async {
       addTearDown(tester.view.reset);
-      final entry = activity();
       await mountAgentUi(
         tester,
-        Align(
-          alignment: AlignmentDirectional.topStart,
-          child: AgentTurnActivity(activity: entry),
+        AgentTurnActivity(
+          activity: activity(status: AgentToolActivityStatus.running),
+        ),
+        size: const Size(360, 800),
+        scale: 2,
+        brightness: Brightness.dark,
+      );
+      final row = key('agent-activity-toggle-tool-0');
+      final text = tester.widget<Text>(
+        find.descendant(of: row, matching: find.byType(Text)).first,
+      );
+      final surface = Theme.of(tester.element(row)).colorScheme.surface;
+      expect(
+        colorContrastRatio(text.style!.color!, surface),
+        greaterThanOrEqualTo(4.5),
+      );
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  testWidgets('a single read opens inline without an activity-count wrapper', (
+    tester,
+  ) async {
+    addTearDown(tester.view.reset);
+    await mountAgentUi(tester, AgentTurnActivity(activity: activity()));
+    final l = AppLocalizations.of(
+      tester.element(find.byType(AgentTurnActivity)),
+    );
+    expect(find.text(l.agentActivitySummary(1)), findsNothing);
+    expect(find.byType(AgentSelectableText), findsNothing);
+    await tester.tap(key('agent-activity-toggle-tool-0'));
+    await tester.pumpAndSettle();
+    expect(find.text('notifications.reminders'), findsOneWidget);
+    expect(key('agent-activity-detail-tool-0'), findsOneWidget);
+    await tester.tap(key('agent-activity-toggle-tool-0'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AgentSelectableText), findsNothing);
+  });
+
+  testWidgets(
+    'finished read groups collapse and open each detail at its own row',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      await mountAgentUi(
+        tester,
+        SingleChildScrollView(
+          child: AgentTurnActivity(activity: activity(count: 8)),
         ),
         size: const Size(760, 900),
       );
       final l = AppLocalizations.of(
         tester.element(find.byType(AgentTurnActivity)),
       );
-      expect(
-        find.text('${l.agentActivitySummary(8)} · ${l.agentActivityCompleted}'),
-        findsOneWidget,
-      );
-      expect(tester.getSize(key('agent-activity-toggle-turn')).height, 32);
-      expect(find.byType(AgentSelectableText), findsNothing);
+      expect(find.text(l.agentActivitySummary(8)), findsOneWidget);
       expect(key('agent-activity-list-turn'), findsNothing);
-
+      expect(tester.getSize(key('agent-activity-toggle-turn')).height, 32);
       await tester.tap(key('agent-activity-toggle-turn'));
       await tester.pumpAndSettle();
-      expect(key('agent-activity-list-turn'), findsOneWidget);
-      expect(find.byType(AgentSelectableText), findsNothing);
-      expect(find.text('notifications.reminders'), findsNothing);
-      expect(
-        tester.getSize(key('agent-activity-list-turn')).height,
-        lessThanOrEqualTo(280),
-      );
-      await tester.tap(key('agent-activity-tool-tool-0'));
+      await tester.tap(key('agent-activity-toggle-tool-0'));
       await tester.pumpAndSettle();
-      expect(find.text('notifications.reminders'), findsOneWidget);
-      expect(
-        find.text(const JsonEncoder.withIndent('  ').convert({'limit': 20})),
-        findsOneWidget,
-      );
       expect(key('agent-activity-detail-tool-0'), findsOneWidget);
-      expect(key('agent-activity-list-turn'), findsNothing);
-      await tester.tap(key('agent-activity-back'));
-      await tester.pumpAndSettle();
       expect(key('agent-activity-list-turn'), findsOneWidget);
-      expect(find.byType(AgentSelectableText), findsNothing);
+      expect(key('agent-activity-tool-tool-1'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
   );
 
-  for (final state in [
-    AgentToolActivityStatus.failed,
-    AgentToolActivityStatus.uncertain,
-  ]) {
-    testWidgets('collapsed activity publishes its real $state status', (
+  for (final chosen in [false, true]) {
+    testWidgets('completion preserves reader expansion=$chosen', (
       tester,
     ) async {
       addTearDown(tester.view.reset);
-      final semantics = tester.ensureSemantics();
-      try {
-        await mountAgentUi(
-          tester,
-          AgentTurnActivity(activity: activity(status: state)),
-        );
-        final l = AppLocalizations.of(
-          tester.element(find.byType(AgentTurnActivity)),
-        );
-        final expected = agentToolActivityStatusLabel(state, l);
-        expect(
-          find.text('${l.agentActivitySummary(8)} · $expected'),
-          findsOneWidget,
-        );
-        expect(
-          find.bySemanticsLabel(RegExp(RegExp.escape(expected))),
-          findsWidgets,
-        );
-        expect(find.byType(AgentSelectableText), findsNothing);
-        expect(tester.takeException(), isNull);
-      } finally {
-        semantics.dispose();
+      var current = activity(count: 2, status: AgentToolActivityStatus.running);
+      late StateSetter change;
+      await mountAgentUi(
+        tester,
+        StatefulBuilder(
+          builder: (context, update) {
+            change = update;
+            return AgentTurnActivity(activity: current);
+          },
+        ),
+      );
+      expect(key('agent-activity-list-turn'), findsOneWidget);
+      if (chosen) {
+        await tester.tap(key('agent-activity-toggle-turn'));
+        await tester.pump();
+        await tester.tap(key('agent-activity-toggle-turn'));
+        await tester.pump();
       }
+      change(() => current = activity(count: 2));
+      await tester.pump();
+      expect(
+        key('agent-activity-list-turn'),
+        chosen ? findsOneWidget : findsNothing,
+      );
     });
   }
 
-  testWidgets(
-    'late copy acknowledgement cannot reappear after hiding and reopening details',
-    (tester) async {
+  for (final removes in [false, true]) {
+    testWidgets('stale copy cannot act after source change removes=$removes', (
+      tester,
+    ) async {
       addTearDown(tester.view.reset);
-      final gate = Completer<void>();
+      final copied = <String>[];
       final messenger =
           TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
       messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
-        if (call.method == 'Clipboard.setData') await gate.future;
+        if (call.method == 'Clipboard.setData') {
+          copied.add((call.arguments as Map)['text'] as String);
+        }
         return null;
       });
-      addTearDown(() {
-        if (!gate.isCompleted) gate.complete();
-        messenger.setMockMethodCallHandler(SystemChannels.platform, null);
-      });
+      addTearDown(
+        () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
+      );
+      var current = activity(output: 'Before');
+      late StateSetter change;
+      await mountAgentUi(
+        tester,
+        StatefulBuilder(
+          builder: (context, update) {
+            change = update;
+            return AgentTurnActivity(activity: current);
+          },
+        ),
+      );
+      await tester.tap(key('agent-activity-toggle-tool-0'));
+      await tester.pump();
+      final stale = tester
+          .widget<IconButton>(key('agent-activity-copy-tool-0'))
+          .onPressed!;
+      change(() => current = activity(count: removes ? 0 : 1, output: 'After'));
+      await tester.pump();
+      stale();
+      await tester.pump();
+      expect(copied, isEmpty);
+      if (!removes) {
+        await tester.tap(key('agent-activity-copy-tool-0'));
+        await tester.pump();
+        expect(copied.single, contains('After'));
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('copy acknowledgement expires across disabled view', (
+    tester,
+  ) async {
+    addTearDown(tester.view.reset);
+    final gate = Completer<void>();
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') await gate.future;
+      return null;
+    });
+    addTearDown(() {
+      if (!gate.isCompleted) gate.complete();
+      messenger.setMockMethodCallHandler(SystemChannels.platform, null);
+    });
+    var active = true;
+    late StateSetter change;
+    final current = activity();
+    await mountAgentUi(
+      tester,
+      StatefulBuilder(
+        builder: (context, update) {
+          change = update;
+          return AgentTurnActivity(activity: current, active: active);
+        },
+      ),
+    );
+    await tester.tap(key('agent-activity-toggle-tool-0'));
+    await tester.pump();
+    await tester.tap(key('agent-activity-copy-tool-0'));
+    await tester.pump();
+    change(() => active = false);
+    await tester.pump();
+    change(() => active = true);
+    await tester.pump();
+    gate.complete();
+    await tester.pump();
+    final l = AppLocalizations.of(
+      tester.element(find.byType(AgentTurnActivity)),
+    );
+    expect(find.byTooltip(l.agentCopied), findsNothing);
+    expect(key('agent-activity-detail-tool-0'), findsOneWidget);
+  });
+
+  for (final kind in [PointerDeviceKind.mouse, PointerDeviceKind.touch]) {
+    testWidgets('pressed row is retired across visibility changes for $kind', (
+      tester,
+    ) async {
+      addTearDown(tester.view.reset);
       var active = true;
       late StateSetter change;
       await mountAgentUi(
         tester,
         StatefulBuilder(
-          builder: (context, setState) {
-            change = setState;
+          builder: (context, update) {
+            change = update;
             return AgentTurnActivity(activity: activity(), active: active);
           },
         ),
       );
-      await tester.tap(key('agent-activity-toggle-turn'));
-      await tester.pumpAndSettle();
-      await tester.tap(key('agent-activity-tool-tool-0'));
-      await tester.pumpAndSettle();
-      await tester.tap(key('agent-activity-copy-tool-0'));
-      await tester.pump();
+      final pressed = await tester.startGesture(
+        tester.getCenter(key('agent-activity-toggle-tool-0')),
+        kind: kind,
+      );
       change(() => active = false);
       await tester.pump();
       change(() => active = true);
       await tester.pump();
-      gate.complete();
-      await tester.pumpAndSettle();
+      await pressed.up();
+      if (kind == PointerDeviceKind.mouse) await pressed.removePointer();
+      await tester.pump();
       expect(key('agent-activity-detail-tool-0'), findsNothing);
-      await tester.tap(key('agent-activity-toggle-turn'));
-      await tester.pumpAndSettle();
-      await tester.tap(key('agent-activity-tool-tool-0'));
-      await tester.pumpAndSettle();
-      final l = AppLocalizations.of(
-        tester.element(find.byType(AgentTurnActivity)),
-      );
-      expect(find.byTooltip(l.agentCopied), findsNothing);
-      expect(find.byTooltip(l.agentCopyActivity), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    },
-  );
-
-  for (final removesTool in [false, true]) {
-    testWidgets(
-      'a detail copy callback expires when its ${removesTool ? 'tool disappears' : 'output changes'}',
-      (tester) async {
-        addTearDown(tester.view.reset);
-        final copied = <String>[];
-        final messenger =
-            TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-        messenger.setMockMethodCallHandler(SystemChannels.platform, (
-          call,
-        ) async {
-          if (call.method == 'Clipboard.setData') {
-            copied.add((call.arguments as Map)['text'] as String);
-          }
-          return null;
-        });
-        addTearDown(
-          () =>
-              messenger.setMockMethodCallHandler(SystemChannels.platform, null),
-        );
-        var current = activity(count: 1, output: 'First output');
-        late StateSetter change;
-        await mountAgentUi(
-          tester,
-          StatefulBuilder(
-            builder: (context, setState) {
-              change = setState;
-              return AgentTurnActivity(activity: current);
-            },
-          ),
-        );
-        await tester.tap(key('agent-activity-toggle-turn'));
-        await tester.pumpAndSettle();
-        await tester.tap(key('agent-activity-tool-tool-0'));
-        await tester.pumpAndSettle();
-        final stale = tester
-            .widget<IconButton>(key('agent-activity-copy-tool-0'))
-            .onPressed!;
-        change(
-          () => current = activity(
-            count: removesTool ? 0 : 1,
-            output: 'Current output',
-          ),
-        );
-        await tester.pumpAndSettle();
-        stale();
-        await tester.pumpAndSettle();
-        expect(copied, isEmpty);
-        if (!removesTool) {
-          await tester.tap(key('agent-activity-copy-tool-0'));
-          await tester.pumpAndSettle();
-          expect(copied, hasLength(1));
-          expect(copied.single, contains('Current output'));
-          expect(copied.single, isNot(contains('First output')));
-        }
-        expect(tester.takeException(), isNull);
-      },
-    );
-  }
-
-  for (final kind in [PointerDeviceKind.mouse, PointerDeviceKind.touch]) {
-    for (final hideActive in [true, false]) {
-      testWidgets(
-        'a pressed activity from $kind expires across ${hideActive ? 'active' : 'interactive'} reentry',
-        (tester) async {
-          addTearDown(tester.view.reset);
-          var enabled = true;
-          late StateSetter change;
-          await mountAgentUi(
-            tester,
-            StatefulBuilder(
-              builder: (context, setState) {
-                change = setState;
-                return AgentTurnActivity(
-                  activity: activity(),
-                  active: hideActive ? enabled : true,
-                  interactive: hideActive ? true : enabled,
-                );
-              },
-            ),
-          );
-          final pressed = await tester.startGesture(
-            tester.getCenter(key('agent-activity-toggle-turn')),
-            kind: kind,
-          );
-          await tester.pump();
-          change(() => enabled = false);
-          await tester.pump();
-          change(() => enabled = true);
-          await tester.pump();
-          await pressed.up();
-          if (kind == PointerDeviceKind.mouse) await pressed.removePointer();
-          await tester.pumpAndSettle();
-          expect(key('agent-activity-list-turn'), findsNothing);
-          await tester.tap(key('agent-activity-toggle-turn'));
-          await tester.pumpAndSettle();
-          expect(key('agent-activity-list-turn'), findsOneWidget);
-          expect(tester.takeException(), isNull);
-        },
-      );
-    }
+    });
   }
 
   for (final direction in TextDirection.values) {
-    testWidgets(
-      'narrow 2x $direction detail stays bounded and keeps full touch targets',
-      (tester) async {
-        addTearDown(tester.view.reset);
-        final entry = activity(
-          count: 1,
-          output: jsonEncode({
-            'items': [for (var index = 0; index < 80; index++) '完整输出 $index'],
-          }),
-        );
-        await mountAgentUi(
-          tester,
-          Directionality(
-            textDirection: direction,
-            child: SingleChildScrollView(
-              child: AgentTurnActivity(activity: entry),
+    testWidgets('narrow 2x $direction detail keeps touch targets', (
+      tester,
+    ) async {
+      addTearDown(tester.view.reset);
+      await mountAgentUi(
+        tester,
+        Directionality(
+          textDirection: direction,
+          child: SingleChildScrollView(
+            child: AgentTurnActivity(
+              activity: activity(output: 'Full output ' * 80),
             ),
           ),
-          size: const Size(320, 740),
-          scale: 2,
-          brightness: Brightness.dark,
-        );
-        final toggle = key('agent-activity-toggle-turn');
-        expect(tester.getSize(toggle).height, greaterThanOrEqualTo(48));
-        expect(toggle.hitTestable(), findsOneWidget);
-        await tester.tap(toggle);
-        await tester.pumpAndSettle();
-        final row = key('agent-activity-tool-tool-0');
-        expect(tester.getSize(row).height, greaterThanOrEqualTo(48));
-        await tester.tap(row);
-        await tester.pumpAndSettle();
-        final detail = key('agent-activity-detail-tool-0');
-        expect(tester.getSize(detail).height, lessThanOrEqualTo(320));
-        for (final control in [
-          'agent-activity-back',
-          'agent-activity-copy-tool-0',
-        ]) {
-          expect(tester.getSize(key(control)).width, greaterThanOrEqualTo(48));
-          expect(tester.getSize(key(control)).height, greaterThanOrEqualTo(48));
-          expect(key(control).hitTestable(), findsOneWidget);
-        }
-        expect(tester.takeException(), isNull);
-      },
-      variant: TargetPlatformVariant.only(TargetPlatform.android),
-    );
+        ),
+        size: const Size(320, 740),
+        scale: 2,
+        brightness: Brightness.dark,
+      );
+      final toggle = key('agent-activity-toggle-tool-0');
+      expect(tester.getSize(toggle).height, greaterThanOrEqualTo(48));
+      await tester.tap(toggle);
+      await tester.pump();
+      final copy = key('agent-activity-copy-tool-0');
+      expect(tester.getSize(copy).width, greaterThanOrEqualTo(48));
+      expect(tester.getSize(copy).height, greaterThanOrEqualTo(48));
+      expect(copy.hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.android));
   }
 }

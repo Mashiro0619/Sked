@@ -348,31 +348,24 @@ void main() {
     expect(submit, findsNothing);
   });
 
-  testWidgets(
-    'answer length uses the model bound and keeps overlong emoji text',
-    (tester) async {
-      addTearDown(tester.view.reset);
-      await mount(tester, _request());
-      final text = '😀' * (AgentQuestionAnswer.maxTextLength ~/ 2 + 1);
-      await tester.enterText(field('free'), text);
-      await tester.pump();
-      expect(tester.widget<TextField>(field('free')).controller!.text, text);
-      expect(canSubmit(tester), false);
-      expect(
-        find.text(
-          labels(tester)
-              .agentQuestionAnswerTooLong(AgentQuestionAnswer.maxTextLength),
-        ),
-        findsOneWidget,
-      );
-      await tester.enterText(
-        field('free'),
-        '😀' * (AgentQuestionAnswer.maxTextLength ~/ 2),
-      );
-      await tester.pump();
-      expect(canSubmit(tester), true);
-    },
-  );
+  testWidgets('long answers stay editable and can be submitted', (
+    tester,
+  ) async {
+    addTearDown(tester.view.reset);
+    List<AgentQuestionAnswer>? submitted;
+    await mount(
+      tester,
+      _request(),
+      onAnswer: (answers) async => submitted = answers,
+    );
+    final text = '😀' * 5000;
+    await tester.enterText(field('free'), text);
+    await tester.pump();
+    expect(tester.widget<TextField>(field('free')).controller!.text, text);
+    expect(canSubmit(tester), true);
+    await tap(tester, submit);
+    expect(submitted!.single.text, text);
+  });
 
   testWidgets(
     'long questions and options remain reachable at 2x on a small screen',

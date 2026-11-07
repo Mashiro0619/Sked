@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import '../../services/text_file_picker.dart';
 import '../../utils/unique_id.dart';
 import '../conversations/conversation_repository.dart';
@@ -12,13 +10,12 @@ export '../../services/text_file_picker.dart'
 class ConversationFileAttachments {
   ConversationFileAttachments(this.repository);
   final ConversationRepository repository;
-  static const maxBytes = 512 * 1024;
   static const extensions = ['json', 'ics', 'txt', 'html', 'htm'];
   final _pending = <String, ConversationSource>{};
 
   static Future<PickedTextFile?> pickFile() => TextFilePicker.pickDocument(
     allowedExtensions: extensions,
-    byteLimit: maxBytes,
+    byteLimit: null,
   );
 
   ConversationSource? pending(String conversationId) =>
@@ -41,12 +38,7 @@ class ConversationFileAttachments {
     if (conversation == null || !canModify() || conversation.archived) {
       throw StateError('The conversation is no longer editable.');
     }
-    if (file.text.length > maxBytes ||
-        utf8.encode(file.text).length > maxBytes) {
-      throw const TextFileTooLargeException();
-    }
     if (file.name.isEmpty ||
-        file.name.length > 256 ||
         !extensions.contains(file.name.split('.').last.toLowerCase()) ||
         file.text.trim().isEmpty) {
       throw const FormatException('Attach a supported, non-empty text file.');

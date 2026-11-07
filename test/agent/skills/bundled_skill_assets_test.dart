@@ -21,10 +21,6 @@ void main() {
       final loader = SharedSkillLoader(
         loadString: rootBundle.loadString,
         registeredTools: tools,
-        budgets: const SkillBudgets(
-          maxLoadedSkills: 24,
-          maxLoadedBytes: 256 * 1024,
-        ),
       );
       final catalog = await loader.catalog();
       expect(catalog, hasLength(24));

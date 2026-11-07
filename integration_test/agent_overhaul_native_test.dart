@@ -12,8 +12,10 @@ import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/history/conversation_history.dart';
-import 'package:sked/agent/provider/provider.dart';
+import 'package:sked/agent/store/agent_store.dart';
 import 'package:sked/agent/ui/agent_turn_activity.dart';
+import 'package:sked/agent/ui/agent_operation_activity.dart';
+import 'package:sked/agent/ui/agent_operation_card.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/l10n/app_localizations.dart';
@@ -28,12 +30,13 @@ import 'package:sked/widgets/workbench_chrome_metrics.dart';
 import 'package:sked/widgets/workspace_frame.dart';
 
 import '../test/support/agent_workspace_navigation.dart';
-import '../test/support/memory_conversation_storage.dart';
 import '../test/support/workspace_harness.dart';
+import 'support/agent_overhaul_states.dart';
 
 // Windows native rendering and Win32 resize are real. Taps, text and Back are
-// framework-injected. History, storage and credentials are synthetic; this
-// entry does not call a model, replay tools or open personal application data.
+// framework-injected. Business data and credentials are synthetic; Agent data
+// uses a test-owned SQLite file. Controlled provider events drive the runtime
+// state scenes without contacting a model or opening personal application data.
 const _sourceSha = String.fromEnvironment('SKED_SOURCE_SHA');
 const _windowScriptPath = String.fromEnvironment(
   'SKED_AGENT_OVERHAUL_WINDOW_SCRIPT',
@@ -73,6 +76,12 @@ const _scenes = <_Scene>[
     brightness: Brightness.dark,
     scale: 2,
     requestedSize: Size(1280, 820),
+  ),
+  (
+    name: 'light-narrow',
+    brightness: Brightness.light,
+    scale: 1,
+    requestedSize: Size(640, 900),
   ),
 ];
 
@@ -129,21 +138,6 @@ class _RejectingTransport extends http.BaseClient {
   }
 }
 
-class _NoNetworkProvider extends ProviderClient {
-  _NoNetworkProvider(this.transport) : super(client: transport);
-  final _RejectingTransport transport;
-  int requests = 0;
-  @override
-  Stream<ProviderEvent> stream(
-    ProviderRequest request, {
-    required String apiKey,
-    ProviderCancellationToken? cancellation,
-  }) async* {
-    requests++;
-    throw StateError('The Agent overhaul fixture must not request a model.');
-  }
-}
-
 class _Captures {
   _Captures(this.directory, this.owned, this.temporaryRoot);
   final Directory directory;
@@ -156,7 +150,8 @@ class _Captures {
     'platform': Platform.operatingSystem,
     'surfaceOverrides': false,
     'input': 'framework taps, registered test keyboard and framework Back',
-    'fixture': 'memory main and side stores; seeded persistent tool history',
+    'fixture':
+        'synthetic main data and credentials; isolated Agent SQLite file',
     'status': 'running',
     'scenes': <Map<String, Object?>>[],
     'captures': <Map<String, Object?>>[],
@@ -210,8 +205,17 @@ class _Captures {
     return _Captures(Directory(resolvedTarget), false, resolvedRoot);
   }
 
-  Future<void> capture(WidgetTester tester, _Scene scene, String name) async {
-    await tester.pumpAndSettle();
+  Future<void> capture(
+    WidgetTester tester,
+    _Scene scene,
+    String name, {
+    bool settle = true,
+  }) async {
+    if (settle) {
+      await tester.pumpAndSettle();
+    } else {
+      await tester.pump(const Duration(milliseconds: 32));
+    }
     expect(tester.takeException(), isNull);
     final boundary =
         _captureBoundary.currentContext!.findRenderObject()!
@@ -369,36 +373,37 @@ Future<Map<String, dynamic>> _resizeWindow(
 
 Future<String> _seedToolTurn(AppRuntime app) async {
   final conversation = await app.agent.conversations.create(
-    title: '八项合成检查',
-    mode: AgentPermissionMode.plan,
+    title: '合成课表任务',
+    mode: AgentPermissionMode.full,
   );
-  final start = DateTime.utc(2026, 11, 5, 9);
+  final start = DateTime.utc(2026, 11, 7, 9);
   final messages = [
     ConversationMessage(
       id: 'native-overhaul-input',
       role: ConversationRole.user,
-      text: '查看这八项合成检查。',
+      text: '查询课表和课程，然后创建秋季课表并添加数学与英语。',
       createdAt: start,
     ),
     ConversationMessage(
-      id: 'native-overhaul-calls',
+      id: 'native-overhaul-queries',
       role: ConversationRole.assistant,
-      text: '',
+      text: '先读取当前课表与课程。',
+      createdAt: start,
       toolCalls: [
-        for (var index = 0; index < 8; index++)
+        for (var index = 0; index < 2; index++)
           ConversationToolCall(
             id: 'native-overhaul-tool-$index',
-            name: 'events.list',
-            arguments: jsonEncode({'limit': 20, 'page': index}),
+            name: index == 0 ? 'timetables.list' : 'courses.list',
+            arguments: jsonEncode({'limit': 50}),
           ),
       ],
-      createdAt: start.add(const Duration(seconds: 1)),
     ),
-    for (var index = 0; index < 8; index++)
+    for (var index = 0; index < 2; index++)
       ConversationMessage(
         id: 'native-overhaul-result-$index',
         role: ConversationRole.tool,
         toolCallId: 'native-overhaul-tool-$index',
+        createdAt: start,
         text: jsonEncode({
           'items': [
             for (var row = 0; row < 48; row++)
@@ -409,13 +414,59 @@ Future<String> _seedToolTurn(AppRuntime app) async {
           ],
           'complete': true,
         }),
-        createdAt: start.add(Duration(seconds: index + 2)),
       ),
+    ConversationMessage(
+      id: 'native-overhaul-change',
+      role: ConversationRole.assistant,
+      text: '将课表和两门课程一并保存。',
+      createdAt: start,
+      toolCalls: [
+        ConversationToolCall(
+          id: 'native-overhaul-apply',
+          name: 'mutation.apply',
+          arguments: jsonEncode({
+            'commands': [
+              {
+                'kind': 'timetable',
+                'action': 'create',
+                'values': {'name': '秋季课表'},
+              },
+              {
+                'kind': 'course',
+                'action': 'create',
+                'values': {'name': '数学'},
+              },
+              {
+                'kind': 'course',
+                'action': 'create',
+                'values': {'name': '英语'},
+              },
+            ],
+          }),
+        ),
+      ],
+    ),
+    ConversationMessage(
+      id: 'native-overhaul-saved',
+      role: ConversationRole.tool,
+      toolCallId: 'native-overhaul-apply',
+      createdAt: start,
+      text: jsonEncode({
+        'operationId': 'native-synthetic-operation',
+        'status': 'committed',
+        'changeCount': 3,
+        'changes': [
+          for (final name in ['秋季课表', '数学', '英语'])
+            {'action': 'created', 'label': name},
+        ],
+        'notificationEffect': {'state': 'unknown'},
+      }),
+    ),
     ConversationMessage(
       id: 'native-overhaul-reply',
       role: ConversationRole.assistant,
-      text: '八项检查已完成，需要时可查看详情。',
-      createdAt: start.add(const Duration(seconds: 10)),
+      text: '秋季课表已创建，数学与英语课程已加入。',
+      createdAt: start,
     ),
   ];
   await app.agent.conversations.update(
@@ -427,7 +478,7 @@ Future<String> _seedToolTurn(AppRuntime app) async {
         ConversationTurn(
           id: _turnId,
           requestMessageId: messages.first.id,
-          ownershipComplete: false,
+          ownershipComplete: true,
           messageIds: messages.map((message) => message.id),
           runIds: const [_runId],
         ),
@@ -436,17 +487,17 @@ Future<String> _seedToolTurn(AppRuntime app) async {
         ConversationRunUsage(
           id: _runId,
           startedAt: start,
-          settledAt: start.add(const Duration(seconds: 10)),
+          settledAt: start,
           kind: ConversationRunKind.model,
           status: ConversationRunStatus.completed,
           protocol: _settings.protocol.name,
           model: 'm1',
           reasoningEffort: AgentReasoningEffort.low,
           tools: [
-            for (var index = 0; index < 8; index++)
+            for (final call in messages.expand((message) => message.toolCalls))
               ConversationToolUsage(
-                id: 'native-overhaul-tool-$index',
-                name: 'events.list',
+                id: call.id,
+                name: call.name,
                 outcome: ConversationAttemptOutcome.completed,
               ),
           ],
@@ -546,7 +597,7 @@ void main() {
     await binding.endOfFrame;
   });
   testWidgets(
-    'Windows Agent overhaul keeps empty chats, grouped activity and hierarchical settings in the main shell',
+    'Windows Agent uses compact inline queries, one operation, task details and hierarchical settings',
     (tester) async {
       if (!Platform.isWindows ||
           Platform.resolvedExecutable.toLowerCase().contains(
@@ -578,14 +629,19 @@ void main() {
       try {
         for (final scene in _scenes) {
           final transport = _RejectingTransport();
-          final provider = _NoNetworkProvider(transport);
-          final storage = MemoryConversationStorage();
+          final provider = AgentOverhaulStateProvider(transport);
+          final dataDirectory = await Directory.systemTemp.createTemp(
+            'sked-agent-overhaul-data-',
+          );
+          final store = AgentStore.open(
+            filePath: path.join(dataDirectory.path, 'agent.sqlite'),
+          );
           AppRuntime? app;
           try {
             final geometry = await _resizeWindow(tester, scene);
             app = await workspaceProvider(
               locale: 'zh',
-              agentConversationStorage: storage,
+              agentStore: store,
               agentProvider: provider,
             );
             await app.agent.configure(_settings);
@@ -628,14 +684,14 @@ void main() {
               findsOneWidget,
             );
             expect(app.agent.conversations.conversations, isEmpty);
-            final source = storage.source;
+            final source = (await store.conversations.readArchive()).encode();
             await tester.enterText(_key('agent-composer'), '尚未发送的草稿。');
             await tester.pumpAndSettle();
             expect(
               tester.widget<TextField>(_key('agent-composer')).enabled,
               isNot(false),
             );
-            expect(storage.source, source);
+            expect((await store.conversations.readArchive()).encode(), source);
             expect(app.agent.conversations.conversations, isEmpty);
             expect(
               find.descendant(of: _header(), matching: find.text(l.agentTitle)),
@@ -651,49 +707,44 @@ void main() {
             );
             if (resources?.drawerOpen == true) await _back(tester);
             final id = await _seedToolTurn(app);
-            final durable = ConversationArchive.decode(storage.source!)
-                .conversations
-                .single;
-            expect(durable.turns.single.messageIds, hasLength(11));
-            expect(durable.runs.single.tools, hasLength(8));
+            final durable =
+                (await store.conversations.readArchive()).conversations.single;
+            expect(durable.turns.single.messageIds, hasLength(7));
+            expect(durable.runs.single.tools, hasLength(3));
             await openAgentShellHistory(tester);
             await _tap(tester, _key('agent-history-$id'));
             await _until(
               tester,
-              () =>
-                  _key('agent-activity-toggle-$_turnId').evaluate().isNotEmpty,
-              'one activity entry for the saved eight-tool turn',
+              () => _key('agent-process-toggle-$_turnId').evaluate().isNotEmpty,
+              'the completed task process disclosure',
             );
-            expect(find.byType(AgentTurnActivity), findsOneWidget);
+            expect(find.byType(AgentTurnActivity), findsNothing);
+            expect(find.byType(AgentOperationActivity), findsOneWidget);
+            expect(find.byType(AgentOperationCard), findsNothing);
+            final process = _key('agent-process-toggle-$_turnId');
             final toggle = _key('agent-activity-toggle-$_turnId');
-            expect(_key('agent-activity-list-$_turnId'), findsNothing);
-            await captures.capture(tester, scene, 'activity-collapsed');
-            await _tap(tester, toggle);
             final list = _key('agent-activity-list-$_turnId');
-            expect(tester.getSize(list).height, lessThanOrEqualTo(280));
-            final scroll = find
-                .descendant(of: list, matching: find.byType(Scrollable))
-                .first;
-            final listPosition = tester.state<ScrollableState>(scroll).position;
-            if (listPosition.maxScrollExtent > 0) {
-              await tester.drag(list, const Offset(0, -180));
-              await tester.pumpAndSettle();
-              expect(listPosition.pixels, greaterThan(0));
-            }
-            final listExtent = listPosition.maxScrollExtent;
-            await captures.capture(tester, scene, 'activity-list');
-            await tester.scrollUntilVisible(
-              _key('agent-activity-tool-native-overhaul-tool-7'),
-              100,
-              scrollable: scroll,
-              maxScrolls: 20,
+            expect(list, findsNothing);
+            await captures.capture(tester, scene, 'task-completed');
+            await _tap(tester, process);
+            expect(find.byType(AgentTurnActivity), findsOneWidget);
+            await _tap(tester, toggle);
+            expect(list, findsOneWidget);
+            expect(
+              find.descendant(
+                of: list,
+                matching: find.byType(AgentActivityDisclosure),
+              ),
+              findsNWidgets(2),
             );
-            await _tap(
-              tester,
-              _key('agent-activity-tool-native-overhaul-tool-7'),
+            final listHeight = tester.getSize(list).height;
+            await captures.capture(tester, scene, 'queries-inline');
+            final queryToggle = _key(
+              'agent-activity-toggle-native-overhaul-tool-0',
             );
-            final detail = _key('agent-activity-detail-native-overhaul-tool-7');
-            expect(tester.getSize(detail).height, lessThanOrEqualTo(320));
+            await _tap(tester, queryToggle);
+            final detail = _key('agent-activity-detail-native-overhaul-tool-0');
+            expect(tester.getSize(detail).height, lessThanOrEqualTo(360));
             final detailScroll = find
                 .descendant(of: detail, matching: find.byType(Scrollable))
                 .first;
@@ -706,18 +757,49 @@ void main() {
             await tester.pumpAndSettle();
             expect(detailPosition.pixels, greaterThan(0));
             final detailExtent = detailPosition.maxScrollExtent;
-            await captures.capture(tester, scene, 'activity-detail-scrolled');
-            await _tap(tester, _key('agent-activity-back'));
-            expect(list, findsOneWidget);
+            await captures.capture(tester, scene, 'query-detail-scrolled');
+            await _tap(tester, queryToggle);
             expect(detail, findsNothing);
             await _tap(tester, toggle);
             expect(list, findsNothing);
+            await _tap(tester, process);
+            expect(find.byType(AgentTurnActivity), findsNothing);
+            final operation = _key(
+              'agent-activity-toggle-operation-native-overhaul-apply',
+            );
+            await _tap(tester, operation);
+            expect(find.byType(AgentOperationCard), findsOneWidget);
+            expect(
+              tester
+                  .widget<AgentOperationCard>(find.byType(AgentOperationCard))
+                  .embedded,
+              isTrue,
+            );
+            expect(
+              find.text(l.agentNotificationEffect('unknown')),
+              findsNothing,
+            );
+            await captures.capture(tester, scene, 'single-saved-operation');
+            await _tap(tester, operation);
+            expect(find.byType(AgentOperationCard), findsNothing);
+            await _tap(tester, _key('agent-task-details'));
+            expect(_key('agent-task-inspector'), findsOneWidget);
+            await captures.capture(tester, scene, 'task-inspector');
+            await _tap(tester, _key('agent-inspector-close'));
             await _settingsJourney(tester, app, captures, scene);
             expect(provider.requests, 0);
+            final stateScenes = await exerciseAgentOverhaulStates(
+              tester: tester,
+              app: app,
+              store: store,
+              provider: provider,
+              capture: (name, settle) =>
+                  captures.capture(tester, scene, name, settle: settle),
+            );
             expect(transport.attempts, 0);
             expect(
-              ConversationArchive.decode(storage.source!).conversations,
-              hasLength(1),
+              (await store.conversations.readArchive()).conversations,
+              hasLength(7),
             );
             (captures.report['scenes']! as List<Map<String, Object?>>).add({
               'name': scene.name,
@@ -726,9 +808,13 @@ void main() {
               'nativeWindow': geometry,
               'textScale': scene.scale,
               'brightness': scene.brightness.name,
-              'savedConversationCount': 1,
-              'groupedToolCount': 8,
-              'activityListMaxScrollExtent': listExtent,
+              'savedConversationCount': 7,
+              'stateScenes': stateScenes,
+              'completedHistorySource':
+                  'synthetic completed tool turn persisted in SQLite',
+              'groupedQueryCount': 2,
+              'businessOperationCount': 1,
+              'activityListHeight': listHeight,
               'activityDetailMaxScrollExtent': detailExtent,
               'providerRequests': provider.requests,
               'httpAttempts': transport.attempts,
@@ -754,6 +840,8 @@ void main() {
                 }
               } finally {
                 provider.close();
+                await store.close();
+                await dataDirectory.delete(recursive: true);
               }
             }
           }

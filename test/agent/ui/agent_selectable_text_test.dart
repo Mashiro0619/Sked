@@ -1,3 +1,5 @@
+import 'package:sked/agent/operations/tool_outcome.dart';
+
 import 'dart:convert';
 import 'dart:ui' as ui;
 
@@ -131,7 +133,7 @@ void main() {
     ),
     (
       name: 'receipt details',
-      child: const AgentOperationCard(receipt: receipt),
+      child: AgentOperationCard(outcome: ToolOutcome.fromResult(receipt)),
       text: const JsonEncoder.withIndent('  ').convert(receipt),
       expand: true,
     ),

@@ -241,22 +241,49 @@ void main() {
     },
   );
 
-  test('preference limits and persisted types reject malformed values', () {
-    for (final entry in <String, Object?>{
-      'systemInstructions': 1,
-      'historyRetentionDays': 1,
-    }.entries) {
-      final json = const AgentSettings().toJson()..[entry.key] = entry.value;
-      expect(() => AgentSettings.fromJson(json), throwsFormatException);
-    }
-    expect(
-      () => const AgentSettings(historyRetentionDays: 3651).validate(),
-      throwsFormatException,
+  test(
+    'preference types and nonnegative retention remain valid constraints',
+    () {
+      for (final entry in <String, Object?>{
+        'systemInstructions': 1,
+        'historyRetentionDays': '1',
+      }.entries) {
+        final json = const AgentSettings().toJson()..[entry.key] = entry.value;
+        expect(() => AgentSettings.fromJson(json), throwsFormatException);
+      }
+      expect(
+        () => const AgentSettings(historyRetentionDays: -1).validate(),
+        throwsFormatException,
+      );
+      expect(
+        AgentSettings.fromJson(
+          const AgentSettings(historyRetentionDays: 3651).toJson(),
+        ).historyRetentionDays,
+        3651,
+      );
+      final instructions = 'x' * 16001;
+      expect(
+        AgentSettings.fromJson(
+          AgentSettings(systemInstructions: instructions).toJson(),
+        ).systemInstructions,
+        instructions,
+      );
+    },
+  );
+
+  test('model catalogs preserve more than 256 explicit configurations', () {
+    final settings = AgentSettings(
+      model: 'model-0',
+      models: List.generate(
+        300,
+        (index) => AgentModelConfig(
+          id: 'model-$index',
+          reasoningEfforts: const [AgentReasoningEffort.medium],
+          defaultReasoningEffort: AgentReasoningEffort.medium,
+        ),
+      ),
     );
-    expect(
-      () => AgentSettings(systemInstructions: 'x' * 16001).validate(),
-      throwsFormatException,
-    );
+    expect(AgentSettings.fromJson(settings.toJson()), settings);
   });
 
   test('context settings round trip independently for every model', () {

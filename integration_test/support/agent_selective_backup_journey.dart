@@ -257,7 +257,8 @@ class AgentSelectiveBackupJourney implements AgentNativeFeature {
       data.encode() == app.session.committedData.encode(),
       'The live main owner disagrees with its saved snapshot.',
     );
-    final archive = ConversationArchive.decode(session.chatSource);
+    final chatSource = await session.readChatSource();
+    final archive = ConversationArchive.decode(chatSource);
     final chatContent = Map<String, Object?>.from(
       jsonDecode(archive.encode()) as Map,
     )..remove('revision');
@@ -272,14 +273,14 @@ class AgentSelectiveBackupJourney implements AgentNativeFeature {
     );
     return {
       'mainSha256': agentNativeDigest(session.mainSource),
-      'mainWrites': session.storageReport()['mainWrites'],
+      'mainWrites': (await session.storageReport())['mainWrites'],
       'generation': data.applicationLedger!.generation,
       'selectedCalendar': selected.toJson(),
       'selectedCalendarSha256': _jsonDigest(selected.toJson()),
       'calendarIds': data.generalMode.schedules.map((item) => item.id).toList(),
       'studentSha256': _jsonDigest(data.studentMode.toJson()),
       'agentSettingsSha256': _jsonDigest(data.agentSettings.toJson()),
-      'chatSha256': agentNativeDigest(session.chatSource),
+      'chatSha256': agentNativeDigest(chatSource),
       'chatRevision': archive.revision,
       'chatContentSha256': _jsonDigest(chatContent),
       'conversationCount': archive.conversations.length,

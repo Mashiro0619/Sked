@@ -3,8 +3,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
-import 'package:sked/agent/history/conversation_history.dart';
+import 'package:sked/agent/store/agent_store_cutover.dart';
+import 'package:sked/agent/store/legacy_operation_reconciliation.dart';
 import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/models/timetable_models.dart';
 
@@ -20,20 +20,6 @@ const _retiredPreferences = [
   'maxToolCalls',
   'maxTotalTokens',
 ];
-
-class _Chats extends ConversationStorage {
-  _Chats(this.source) : super.base();
-  String source;
-
-  @override
-  Future<ConversationStorageLoad> load() async =>
-      ConversationStorageLoad(source: source);
-
-  @override
-  Future<void> save(String source, {required int revision}) async {
-    this.source = source;
-  }
-}
 
 class _MainStorage extends WorkspaceMemoryStorage {
   _MainStorage(super.data) : _inverseIds = _inverses(data);
@@ -101,28 +87,25 @@ void main() {
             : 'Updated workflow guidance.',
       );
       final mainStorage = _MainStorage(initial);
-      final chats = _Chats(jsonEncode(fixture['conversations']));
-      final prior = ConversationArchive.decode(chats.source)
-          .conversations
-          .single;
-      final batch = prior.pendingRedo!;
-      expect(batch.phase, ConversationRedoPhase.undoing);
-      expect(batch.completedOwners, isEmpty);
-      expect(batch.tickets, hasLength(1));
-      expect(batch.tickets.single.owner, ConversationUndoOwner.main);
-      final originalId = batch.tickets.single.operationIds.single;
+      final archive = Map<String, Object?>.from(
+        fixture['conversations'] as Map,
+      );
+      final prior = (archive['conversations'] as List).single as Map;
+      final batch = (prior['redoBatches'] as List).single as Map;
+      final ticket = (batch['tickets'] as List).single as Map;
+      final originalId = (ticket['operationIds'] as List).single as String;
       final originalReceipt = initial.applicationLedger!.receipts
           .singleWhere((receipt) => receipt.operationId == originalId)
           .toJson();
-      await chats.writePendingHistoryBatch(
-        fixture['pendingHistoryBatch'] as String,
+      final evidence = LegacyAgentCutoverEvidence(
+        archives: [archive],
+        mirrored: true,
+        pendingHistoryBatch: fixture['pendingHistoryBatch'] as String,
       );
       final provider = _NoModel();
-      // The normal lifecycle calls recoverHistoryBeforeWrites before it
-      // opens writes. Use the production hook, then repeat it for idempotency.
+      // Exercise the one-time cutover reconciler with original saved tickets.
       final app = await workspaceProvider(
         storage: mainStorage,
-        agentConversationStorage: chats,
         agentCredentialStore: MemoryAgentCredentialStore(),
         agentProvider: provider,
       );
@@ -130,24 +113,20 @@ void main() {
         await app.agent.quiesce();
         app.dispose();
       });
-      await app.agent.recoverHistoryBeforeWrites();
-      final recovered = app.agent.conversations.find(prior.id)!;
-      expect(recovered.pendingRedo!.phase, ConversationRedoPhase.ready);
-      expect(
-        recovered.pendingRedo!.tickets.single.digest,
-        batch.tickets.single.digest,
-      );
-      expect(recovered.pendingRedo!.completedOwners, [
-        ConversationUndoOwner.main,
-      ]);
-      expect(recovered.messages.single.text, 'Explain the settings instead.');
-      expect(recovered.historyVersions, hasLength(1));
-      expect(await chats.pendingHistoryBatch(), isNull);
-      expect(app.agent.history.ownsMaintenance, isFalse);
-      expect(app.session.canWrite, isTrue);
-      expect(app.agent.conversations.canWrite, isTrue);
-      expect(provider.requests, 0);
+      Future<void> reconcile() async {
+        await reconcileLegacyAgentOperations(
+          evidence: evidence,
+          mutations: app.agent.mutations,
+          readCommittedData: () => app.session.committedData,
+          reconcileExternal: (_) async =>
+              throw StateError('No external write expected'),
+        );
+      }
 
+      await reconcile();
+      await reconcile();
+      expect(provider.requests, 0);
+      expect(app.agent.conversations.conversations, isEmpty);
       final restored = app.session.committedData;
       expect(
         restored.agentSettings.systemInstructions,
@@ -157,7 +136,7 @@ void main() {
       _expectNoRetiredPreferences(restored);
       _expectNoRetiredPreferences(AppData.decode(mainStorage.data.encode()));
       final inverseReceipts = restored.applicationLedger!.receipts.where(
-        (receipt) => receipt.result['undoBatchId'] == batch.id,
+        (receipt) => receipt.result['undoBatchId'] == batch['id'],
       );
       expect(inverseReceipts, hasLength(1));
       expect(inverseReceipts.single.result['undoOperationIds'], [originalId]);
@@ -170,10 +149,8 @@ void main() {
       );
 
       final savedData = mainStorage.data.encode();
-      final savedChats = chats.source;
-      await app.agent.recoverHistoryBeforeWrites();
+      await reconcile();
       expect(mainStorage.data.encode(), savedData);
-      expect(chats.source, savedChats);
       expect(mainStorage.committedInverses, inverseAlreadyApplied ? 0 : 1);
       expect(provider.requests, 0);
     });

@@ -38,25 +38,11 @@ extension _AgentTaskPlanTools on ApplicationToolHost {
       // Failed saves cannot advance this revision or replace the visible plan.
       final previous = projectAgentTaskPlan(conversation);
       final revision = previous?.runId == scope.id ? previous!.revision + 1 : 1;
-      if (revision > AgentTaskPlan.maxRevision) {
-        throw const OperationProblem(
-          OperationErrorCode.invalidArgument,
-          'The current run has reached its task plan revision limit.',
-        );
-      }
       final result = AgentTaskPlan(
         runId: scope.id,
         revision: revision,
         steps: steps,
       ).toToolResult();
-      if (utf8.encode(jsonEncode(result)).length >
-          ApplicationToolHost.maxResultBytes) {
-        throw const OperationProblem(
-          OperationErrorCode.invalidArgument,
-          'The task plan exceeds the result budget. Shorten its step details.',
-          field: 'steps',
-        );
-      }
       // These IDs describe scope ownership only. Existing receipt cards verify
       // business outcomes against their actual owners independently of a plan.
       return result;

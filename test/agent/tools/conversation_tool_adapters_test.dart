@@ -3,7 +3,9 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
+import 'package:sked/agent/interactions/agent_question.dart';
 import 'package:sked/agent/provider/provider.dart';
+import 'package:sked/agent/references/agent_composer_reference.dart';
 import 'package:sked/agent/runtime/agent_runtime_controller.dart';
 import 'package:sked/agent/tools/conversation_tool_adapters.dart';
 import 'package:sked/agent/tools/workflow_tool_adapters.dart';
@@ -140,6 +142,7 @@ void main() {
     final result = await h.externalCommit(plan);
     final created = conversations.conversations.last;
     expect(created.title, 'Second');
+    expect(created.titleWasEdited, isTrue);
     expect(created.mode, AgentPermissionMode.ask);
     expect(
       created.modelSelection,
@@ -418,7 +421,7 @@ void main() {
     () async {
       Future<Map<String, Object?>> act(String name, String argument) =>
           runtime.runHostAction(targetId, (scope, approval) async {
-            final prepared = await h.host.execute(
+            final prepared = await h.host.executeInternal(
               ProviderToolCall(
                 id: 'prepare-$name',
                 name: name,
@@ -427,7 +430,7 @@ void main() {
               scope,
               approval,
             );
-            return h.host.execute(
+            return h.host.executeInternal(
               ProviderToolCall(
                 id: 'commit-$name',
                 name: 'external.commit',
@@ -541,15 +544,97 @@ void main() {
   test(
     'every persisted conversation field has an explicit management owner',
     () async {
+      final now = DateTime.utc(2026, 11, 7);
+      const file = ConversationAttachment(
+        id: 'coverage-file',
+        name: 'empty.txt',
+        mediaType: 'text/plain',
+        byteLength: 0,
+        digest:
+            'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+      );
+      final reference = AgentComposerReference.attachment(
+        attachment: file,
+        conversationId: targetId,
+      );
+      final question = AgentQuestionRequest(
+        id: 'coverage-question',
+        toolCallId: 'coverage-ask',
+        runId: 'run-identity',
+        requestMessageId: 'coverage-assistant',
+        createdAt: now,
+        connectionFingerprint: 'endpoint-binding',
+        questions: [AgentQuestionPrompt(id: 'date', question: 'Which date?')],
+      );
       final populated = conversations
           .find(targetId)!
           .copyWith(
             connectionFingerprint: 'endpoint-binding',
             runId: 'run-identity',
+            status: ConversationStatus.waitingUser,
+            modelSelection: const AgentModelSelection(
+              modelId: 'fixture',
+              reasoningEffort: AgentReasoningEffort.medium,
+            ),
+            attachments: [file],
+            draftAttachmentIds: [file.id],
+            draftReferences: [reference],
+            pendingQuestion: question,
+            messages: [
+              ...conversations.find(targetId)!.messages,
+              ConversationMessage(
+                id: question.requestMessageId,
+                role: ConversationRole.assistant,
+                text: '',
+                createdAt: now,
+                toolCalls: [
+                  ConversationToolCall(
+                    id: question.toolCallId,
+                    name: 'ask_user',
+                    arguments: jsonEncode({
+                      'questions': question.questions
+                          .map((value) => value.toJson())
+                          .toList(),
+                    }),
+                  ),
+                ],
+              ),
+            ],
+            runs: [
+              ConversationRunUsage(
+                id: question.runId,
+                startedAt: now,
+                kind: ConversationRunKind.model,
+                protocol: 'chatCompletions',
+                model: 'fixture',
+              ),
+            ],
+            queuedInputs: [
+              ConversationQueuedInput(
+                id: 'coverage-follow-up',
+                text: 'Use the attached file next.',
+                createdAt: now,
+                attachmentIds: [file.id],
+                contextReferences: [reference],
+              ),
+            ],
+            queuedControls: [
+              ConversationControlCommand(
+                id: 'coverage-compact',
+                kind: ConversationControlKind.compactContext,
+                createdAt: now,
+              ),
+            ],
           );
+      final serialized = populated.toJson();
+      expect(
+        AgentConversation.fromJson(Map<String, dynamic>.from(serialized))
+            .toJson(),
+        serialized,
+      );
       expect(
         ConversationToolAdapters.fieldOwnership.keys.toSet(),
-        populated.toJson().keys.toSet(),
+        serialized.keys.toSet(),
       );
       final description = await h.call('conversations.describe');
       expect((description['fields'] as Map)['mode'], 'user_permission_control');
@@ -659,6 +744,7 @@ class _Repository extends ConversationRepository {
   @override
   Future<AgentConversation> create({
     required String title,
+    bool titleWasEdited = false,
     AgentPermissionMode mode = AgentPermissionMode.ask,
     AgentModelSelection? modelSelection,
     String? id,
@@ -667,6 +753,7 @@ class _Repository extends ConversationRepository {
     onMutationQueued?.call();
     return super.create(
       title: title,
+      titleWasEdited: titleWasEdited,
       mode: mode,
       modelSelection: modelSelection,
       id: id,

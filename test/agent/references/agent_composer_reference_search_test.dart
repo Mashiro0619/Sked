@@ -525,7 +525,7 @@ class _Skills {
         'schemaVersion': 1,
         'packVersion': '1.0.0',
         'runtimeContractVersion': 1,
-        'toolApiCompatibility': '>=1.0.0 <2.0.0',
+        'toolApiCompatibility': '>=2.0.0 <3.0.0',
         'skills': List.generate(
           count,
           (index) => {

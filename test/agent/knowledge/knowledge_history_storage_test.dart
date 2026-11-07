@@ -6,46 +6,42 @@ import 'package:sked/agent/knowledge/knowledge_repository.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test(
-    'expired completion receipts retire their knowledge history tickets',
-    () async {
-      final storage = MemoryKnowledgeStorage();
-      final repository = AgentKnowledgeRepository(storage: storage);
-      addTearDown(repository.dispose);
-      await repository.load();
-      await _save(repository, 'preference', 'Original', 'create');
-      final reservation = await repository.reserveForHistoryUndo('old-batch');
-      final batch = await repository.prepareInverseBatch(
-        batchId: 'old-batch',
-        operationIds: ['create'],
-        reservation: reservation,
-      );
-      await repository.commitInverseBatch(batch, reservation: reservation);
-      repository.releaseHistoryUndo(reservation);
+  test('completed knowledge undo remains available beyond the former receipt limit', () async {
+    final storage = MemoryKnowledgeStorage();
+    final repository = AgentKnowledgeRepository(storage: storage);
+    addTearDown(repository.dispose);
+    await repository.load();
+    await _save(repository, 'preference', 'Original', 'create');
+    final reservation = await repository.reserveForHistoryUndo('old-batch');
+    final batch = await repository.prepareInverseBatch(
+      batchId: 'old-batch',
+      operationIds: ['create'],
+      reservation: reservation,
+    );
+    await repository.commitInverseBatch(batch, reservation: reservation);
+    repository.releaseHistoryUndo(reservation);
 
-      for (var index = 0; index < KnowledgeLimits.receipts; index++) {
-        await _save(repository, 'retained', 'Value $index', 'edit-$index');
-      }
-      expect(repository.receiptFor(batch.operationId), isNull);
-      expect(repository.snapshot.undoBatches, isEmpty);
-      expect((await storage.load()).archive.undoBatches, isEmpty);
+    const edits = 129;
+    for (var index = 0; index < edits; index++) {
+      await _save(repository, 'retained', 'Value $index', 'edit-$index');
+    }
+    expect(repository.receiptFor(batch.operationId), isNotNull);
+    expect(repository.snapshot.undoBatches.single.batchId, 'old-batch');
+    expect(
+      (await storage.load()).archive.undoBatches.single.batchId,
+      'old-batch',
+    );
 
-      final nextReservation = await repository.reserveForHistoryUndo(
-        'new-batch',
-      );
-      final next = await repository.prepareInverseBatch(
-        batchId: 'new-batch',
-        operationIds: ['edit-${KnowledgeLimits.receipts - 1}'],
-        reservation: nextReservation,
-      );
-      await repository.commitInverseBatch(next, reservation: nextReservation);
-      expect(
-        repository.find('memory:retained')!.body,
-        'Value ${KnowledgeLimits.receipts - 2}',
-      );
-      repository.releaseHistoryUndo(nextReservation);
-    },
-  );
+    final nextReservation = await repository.reserveForHistoryUndo('new-batch');
+    final next = await repository.prepareInverseBatch(
+      batchId: 'new-batch',
+      operationIds: ['edit-${edits - 1}'],
+      reservation: nextReservation,
+    );
+    await repository.commitInverseBatch(next, reservation: nextReservation);
+    expect(repository.find('memory:retained')!.body, 'Value ${edits - 2}');
+    repository.releaseHistoryUndo(nextReservation);
+  });
 
   test('failed acquisition releases its unseen reservation after an accepted save fails', () async {
     final storage = _GatedFailingStorage();

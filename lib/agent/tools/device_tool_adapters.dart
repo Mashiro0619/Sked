@@ -111,7 +111,7 @@ class DeviceToolAdapters {
     );
     _add(
       'device.layout.prepare',
-      'Prepare setting or resetting device panel dimensions. Set preserves omitted dimensions; null removes one dimension. Reset with region all resets every role. Commit with external.commit.',
+      'Set or reset device panel dimensions. Set preserves omitted dimensions; null removes one dimension. Reset with region all resets every role.',
       {
         'region': {
           'type': 'string',
@@ -156,7 +156,7 @@ class DeviceToolAdapters {
     );
     _add(
       'device.preferences.prepare',
-      'Prepare the existing developer preview preference. This never changes Agent permission or enables Agent. Commit with external.commit.',
+      'Change the existing developer preview preference. This never changes Agent permission or enables Agent.',
       {
         'action': {
           'type': 'string',
@@ -179,7 +179,7 @@ class DeviceToolAdapters {
     );
     _add(
       'platform.request_action',
-      'Prepare a battery-optimization or OEM autostart settings request. Opening a page does not grant permission. Commit with external.commit.',
+      'Open battery-optimization or OEM autostart settings. Opening a page does not grant permission.',
       {
         'action': {
           'type': 'string',
@@ -201,7 +201,7 @@ class DeviceToolAdapters {
     );
     _add(
       'window.prepare',
-      'Prepare minimize, maximize, restore or a guarded close request for a supported native window. Commit with external.commit; close uses normal save and exit guards.',
+      'Minimize, maximize, restore or request a guarded close for a supported native window. Close uses normal save and exit guards.',
       {
         'action': {
           'type': 'string',
@@ -649,7 +649,7 @@ void _keys(Map<String, Object?> value, Set<String> allowed) {
 
 String _text(Map<String, Object?> args, String key) {
   final value = args[key];
-  if (value is! String || value.trim().isEmpty || value.length > 4096) {
+  if (value is! String || value.trim().isEmpty) {
     _invalid('Missing or invalid $key.');
   }
   return value;

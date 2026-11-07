@@ -70,10 +70,7 @@ class KnowledgeToolAdapters {
         {'id': _string},
         (args, _) async {
           _keys(args, {'id'});
-          final record = await service.read(
-            kind,
-            knowledgeText(args['id'], max: 128),
-          );
+          final record = await service.read(kind, knowledgeText(args['id']));
           return {
             ...record.toJson(),
             'needsRecheck': service.needsRecheck(record),
@@ -85,7 +82,7 @@ class KnowledgeToolAdapters {
       );
       _add(
         '$family.prepare',
-        'Prepare creating, editing, deleting or enabling shared ${kind.name} content. Existing records require the exact revision from get. Built-in Skills can be disabled or restored, not deleted. Commit with external.commit under the current three-mode policy.',
+        'Create, edit, delete or enable shared ${kind.name} content. Existing records require the exact revision from get. Built-in Skills can be disabled or restored, not deleted.',
         {
           'action': {
             'type': 'string',
@@ -118,15 +115,12 @@ class KnowledgeToolAdapters {
     registerReadBack('knowledge.undo', _readBack);
     _add(
       'knowledge.undo.prepare',
-      'Prepare a conditional inverse of one locally recorded knowledge operation. A later edit blocks the whole inverse. Commit with external.commit.',
+      'Apply a conditional inverse of one locally recorded knowledge operation. A later edit blocks the whole inverse.',
       {'targetOperationId': _string, 'operationId': _string},
       (args, scope) async {
         _keys(args, {'targetOperationId', 'operationId'});
         final request = _request(args);
-        final operationId = knowledgeOptionalText(
-          args['operationId'],
-          max: 512,
-        );
+        final operationId = knowledgeOptionalText(args['operationId']);
         final replay = external.prepareRecorded(
           scope: scope,
           action: 'knowledge.undo',
@@ -138,7 +132,7 @@ class KnowledgeToolAdapters {
         await service.initialize();
         return _stage(
           service.repository.prepareInverse(
-            knowledgeText(args['targetOperationId'], max: 512),
+            knowledgeText(args['targetOperationId']),
           ),
           'knowledge.undo',
           request,
@@ -154,7 +148,7 @@ class KnowledgeToolAdapters {
       {'proposalId': _string},
       (args, scope) async {
         _keys(args, {'proposalId'});
-        final id = knowledgeText(args['proposalId'], max: 256);
+        final id = knowledgeText(args['proposalId']);
         final proposal = _proposals[id];
         if (proposal == null || !identical(proposal.scope, scope)) {
           throw const OperationProblem(
@@ -211,7 +205,7 @@ class KnowledgeToolAdapters {
     Map<String, Object?> args,
     OperationScope scope,
   ) async {
-    final action = knowledgeText(args['action'], max: 32);
+    final action = knowledgeText(args['action']);
     final fields = {
       'title',
       'summary',
@@ -240,7 +234,7 @@ class KnowledgeToolAdapters {
       knowledgeInvalid('Unknown knowledge action.');
     }
     final request = _request(args),
-        operationId = knowledgeOptionalText(args['operationId'], max: 512);
+        operationId = knowledgeOptionalText(args['operationId']);
     final replay = external.prepareRecorded(
       scope: scope,
       action: actionName,
@@ -255,11 +249,11 @@ class KnowledgeToolAdapters {
     if (action == 'create') {
       record = service.newRecord(
         kind,
-        title: knowledgeText(args['title'], max: 256),
-        body: knowledgeText(args['body'], max: null),
+        title: knowledgeText(args['title']),
+        body: knowledgeText(args['body']),
       );
     } else {
-      record = await service.read(kind, knowledgeText(args['id'], max: 128));
+      record = await service.read(kind, knowledgeText(args['id']));
       if (record.revision != knowledgeInteger(args['revision'])) {
         throw const KnowledgeException(
           KnowledgeError.conflict,
@@ -301,12 +295,7 @@ class KnowledgeToolAdapters {
     String? operationId,
   ) {
     _proposals.removeWhere((_, entry) => entry.scope.isCancelled);
-    if (_proposals.length >= 128) {
-      throw const OperationProblem(
-        OperationErrorCode.busy,
-        'Finish the existing knowledge proposals first.',
-      );
-    }
+
     final prepared = external.prepare(
       scope: scope,
       action: action,
@@ -457,8 +446,7 @@ T _guardSync<T>(T Function() action) {
 
 Never _rethrowKnowledge(KnowledgeException error) =>
     throw OperationProblem(switch (error.code) {
-      KnowledgeError.invalid ||
-      KnowledgeError.limit => OperationErrorCode.invalidArgument,
+      KnowledgeError.invalid => OperationErrorCode.invalidArgument,
       KnowledgeError.conflict => OperationErrorCode.conflict,
       KnowledgeError.duplicate => OperationErrorCode.duplicateMismatch,
       KnowledgeError.unknown => OperationErrorCode.outcomeUnknown,
@@ -472,9 +460,4 @@ void _keys(Map<String, Object?> args, Set<String> allowed) {
 
 const _string = {'type': 'string'};
 const _integer = {'type': 'integer', 'minimum': 0};
-const _strings = {
-  'type': 'array',
-  'maxItems': 64,
-  'uniqueItems': true,
-  'items': _string,
-};
+const _strings = {'type': 'array', 'uniqueItems': true, 'items': _string};

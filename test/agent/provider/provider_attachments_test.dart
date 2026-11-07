@@ -99,8 +99,11 @@ void main() {
           )
           .toList();
       expect(
-        events.whereType<ProviderUploadProgress>().map((event) => event.phase),
-        [ProviderUploadPhase.sending, ProviderUploadPhase.accepted],
+        events
+            .whereType<ProviderUploadProgress>()
+            .map((event) => event.phase)
+            .toSet(),
+        {ProviderUploadPhase.sending, ProviderUploadPhase.accepted},
       );
       expect(events.whereType<ProviderCompleted>().single.response.text, 'ok');
     },
@@ -241,63 +244,7 @@ void main() {
     provider.close();
     client.close();
   });
-  test('binary budget is independent of text and declared over-budget input is rejected before reading', () async {
-    var calls = 0, reads = 0;
-    final client = MockClient((request) async {
-      calls++;
-      return _reply(ProviderProtocol.responses);
-    });
-    final provider = ProviderClient(client: client);
-    final bytes = Uint8List(3000);
-    await provider.collect(
-      _request(
-        ProviderProtocol.responses,
-        [_attachment('p.png', 'image/png', bytes)],
-        limits: const ProviderLimits(
-          maxRequestBytes: 512,
-          maxAttachmentBytes: 4000,
-        ),
-      ),
-      apiKey: '',
-    );
-    await expectLater(
-      provider.collect(
-        _request(
-          ProviderProtocol.responses,
-          [
-            ProviderAttachment(
-              id: 'large',
-              filename: 'p.png',
-              mediaType: 'image/png',
-              byteLength: 4001,
-              digest: '0' * 64,
-              openRead: () {
-                reads++;
-                return const Stream.empty();
-              },
-            ),
-          ],
-          limits: const ProviderLimits(
-            maxRequestBytes: 512,
-            maxAttachmentBytes: 4000,
-          ),
-        ),
-        apiKey: '',
-      ),
-      throwsA(
-        isA<ProviderException>().having(
-          (e) => e.code,
-          'code',
-          ProviderError.requestBudgetExceeded,
-        ),
-      ),
-    );
-    expect(calls, 1);
-    expect(reads, 0);
-    provider.close();
-    client.close();
-  });
-  test('stop during base64 encoding sends no HTTP request and corrupt bytes cannot reach HTTP', () async {
+  test('stop cancels the outgoing stream and changed attachments cannot complete a request', () async {
     var calls = 0;
     final client = MockClient((request) async {
       calls++;
@@ -315,7 +262,7 @@ void main() {
     await expectLater(
       events.map((event) {
         if (event is ProviderUploadProgress &&
-            event.phase == ProviderUploadPhase.encoding) {
+            event.phase == ProviderUploadPhase.sending) {
           cancellation.cancel();
         }
         return event;
@@ -367,13 +314,11 @@ ProviderAttachment _attachment(String name, String media, List<int> bytes) =>
     );
 ProviderRequest _request(
   ProviderProtocol protocol,
-  List<ProviderAttachment> attachments, {
-  ProviderLimits limits = const ProviderLimits(),
-}) => ProviderRequest(
+  List<ProviderAttachment> attachments,
+) => ProviderRequest(
   endpoint: Uri.parse('https://files.example/${protocol.name}'),
   model: 'fixture',
   protocol: protocol,
-  limits: limits,
   messages: [
     ProviderMessage(
       role: ProviderRole.user,

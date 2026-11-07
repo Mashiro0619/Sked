@@ -11,16 +11,17 @@ import 'package:sked/services/import_export_service.dart';
 
 import 'benchmark_fixtures.dart';
 
-const agentPerformanceDatasetVersion = 1;
-const agentPerformanceProtocol = 'agent-host-jit-v1';
+const agentPerformanceDatasetVersion = 2;
+const agentPerformanceProtocol = 'agent-host-jit-v2-sqlite';
 const agentPerformanceLongConversationId = 'agent-benchmark-long';
 const agentPerformanceBulkConversationId = 'agent-benchmark-bulk';
 const agentPerformanceGeneration = '00000000-0000-4000-8000-000000000001';
 const agentPerformanceLongTurns = 128;
 const agentPerformanceHistoryPageSize = 50;
 const agentPerformanceReadPageSize = 512;
-const agentPerformanceContextMessages = 48;
-const agentPerformanceContextCharacters = 12000;
+const agentPerformanceSummarySourceMessages = 384;
+const agentPerformanceSummary =
+    'The earlier 96 synthetic read-only timetable queries completed. Preserve all user constraints and continue the latest request. No business write was performed.';
 const agentPerformanceTimetableFields = [
   'courseCount',
   'name',
@@ -269,8 +270,8 @@ class AgentPerformanceFixtures {
       0,
       (sum, conversation) => sum + conversation.messages.length,
     ),
-    'contextMaxMessages': agentPerformanceContextMessages,
-    'contextMaxCharacters': agentPerformanceContextCharacters,
+    'contextSummarySourceMessages': agentPerformanceSummarySourceMessages,
+    'contextSummary': agentPerformanceSummary,
     'knowledgeRecords': 0,
     'binaryAttachments': 0,
     'credentials': 'empty memory store',
@@ -284,16 +285,6 @@ class AgentPerformanceFixtures {
         'coursesChanged': 100,
         'timetablesTouched': 5,
       },
-    },
-    // Historical limits captured by the original v1 workload.
-    'capacityBoundary': {
-      'originalDraftCase': 'batch-five-timetable-names',
-      'originalDraftCompleted': false,
-      'originalDraftFailure': 'receipt structural and byte admission limits',
-      'originalDraftUndoChangesJsonBytes': 3707556,
-      'receiptMaxJsonBytes': 1024 * 1024,
-      'receiptMaxJsonNodes': 100000,
-      'singleTimetableMeasurementValidatesOriginalDraft': false,
     },
   };
 

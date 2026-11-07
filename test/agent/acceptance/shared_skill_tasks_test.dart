@@ -4,6 +4,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/agent/skills/shared_skill_loader.dart';
 import 'package:sked/agent/tools/agent_control_tool_adapters.dart';
+import 'package:sked/agent/tools/model_configuration.dart';
 import 'package:sked/models/agent_settings.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/services/agenda_notification_service.dart';
@@ -74,7 +75,8 @@ List<Map> _items(Map result) => (result['items'] as List).cast<Map>();
 Future<Map<String, Object?>> _mutate(
   AcceptanceHarness h,
   List<Map<String, Object?>> commands,
-) async => h.commit(await h.call('mutation.prepare', {'commands': commands}));
+) async =>
+    h.verifySaved(await h.call('mutation.apply', {'commands': commands}));
 
 Map<String, Object?> _patch(
   String kind,
@@ -100,8 +102,7 @@ Future<void> _locate(AcceptanceHarness h) async {
     'ref': target['ref'],
     'week': 2,
   });
-  expect(h.navigationTargets, isEmpty);
-  final result = await h.externalCommit(plan);
+  final result = plan;
   expect(result['effectStatus'], 'applied');
   expect(h.navigationTargets.single.ref!.id, 'other-algebra');
   expect(h.navigationTargets.single.ref!.parentId, 'other');
@@ -244,8 +245,8 @@ Future<void> _conflictDisplay(AcceptanceHarness h) async {
   });
   final group = (groups['rows'] as List).single as Map;
   expect(group['selectableCourseIds'], ['algebra', 'physics']);
-  await h.commit(
-    await h.call('courses.display.prepare', {
+  await h.verifySaved(
+    await h.call('courses.display.apply', {
       'action': 'set',
       'timetableId': 'current',
       'week': 1,
@@ -326,8 +327,8 @@ Future<void> _recurring(AcceptanceHarness h) async {
 }
 
 Future<void> _reminders(AcceptanceHarness h) async {
-  await h.commit(
-    await h.call('settings.prepare', {
+  await h.verifySaved(
+    await h.call('settings.update', {
       'edits': [
         {
           'key': 'app.notifications.generalDefaultMinutesBefore',
@@ -394,8 +395,8 @@ Future<void> _sourceImport(AcceptanceHarness h, String kind) async {
   final source = await h.call('sources.read', {'id': 'source'});
   expect(source['text'], material);
   final existing = h.saved.studentMode.activeTimetableId;
-  await h.commit(
-    await h.call('imports.prepare', {
+  await h.verifySaved(
+    await h.call('imports.apply', {
       'sourceId': 'source',
       'action': 'create',
       'periodTimeSetId': 'periods',
@@ -446,8 +447,8 @@ Future<void> _structuredImport(AcceptanceHarness h) async {
     'format': 'schedules_json',
   });
   expect((inspected['rows'] as List).single['id'], 'from-file');
-  await h.commit(
-    await h.call('file_imports.prepare', {
+  await h.verifySaved(
+    await h.call('file_imports.apply', {
       'sourceId': 'file',
       'format': 'schedules_json',
       'action': 'add',
@@ -462,12 +463,11 @@ Future<void> _structuredImport(AcceptanceHarness h) async {
 }
 
 Future<void> _export(AcceptanceHarness h) async {
-  final artifact = await h.call('exports.prepare', {'format': 'backup_json'});
+  final artifact = await h.call('exports.generate', {'format': 'backup_json'});
   final plan = await h.call('exports.write', {
     'artifactId': artifact['artifactId'],
   });
-  expect(h.writtenArtifacts, isEmpty);
-  final result = await h.externalCommit(plan);
+  final result = plan;
   expect(result['effectStatus'], 'applied');
   final backup = decodeAppBackup(h.writtenArtifacts.single.text);
   expect(backup.appData.studentMode.timetables.map((t) => t.id), [
@@ -490,10 +490,20 @@ Future<void> _restore(AcceptanceHarness h) async {
   );
   final description = await h.call('backups.describe');
   expect(description['supported'], isTrue);
-  final plan = await h.call('backups.prepare_restore', {'sourceId': 'restore'});
-  await h.externalCommit(plan);
-  // Restoration changes generation, so the old external receipt need not be
-  // writable into the new ledger. Assert the actual journal-owned result.
+  final result = await h.call('backups.restore', {'sourceId': 'restore'});
+  expect(result['status'], 'applied');
+  expect(result['receiptFinalized'], isTrue);
+  expect(result['recoveryRequired'], isFalse);
+  final ledger = h.saved.applicationLedger!;
+  final receipt = ledger.receipts.single;
+  expect(receipt.operationId, result['operationId']);
+  expect(receipt.result['restoreCompletion'], {
+    'restoreId': (result['arguments'] as Map)['restoreId'],
+    'fromGeneration': oldGeneration,
+    'toGeneration': ledger.generation,
+    'commandDigest': receipt.commandDigest,
+  });
+  expect(h.app.agent.external.status(receipt.operationId), receipt);
   expect(h.saved.localeCode, 'zh');
   expect(h.saved.agentSettings, retainedSettings);
   expect(h.app.agent.mutations.generation, isNot(oldGeneration));
@@ -502,20 +512,20 @@ Future<void> _restore(AcceptanceHarness h) async {
 }
 
 Future<void> _appearance(AcceptanceHarness h) async {
-  await h.commit(
-    await h.call('settings.prepare', {
+  await h.verifySaved(
+    await h.call('settings.update', {
       'edits': [
         {'key': 'student.themeMode', 'action': 'set', 'value': 'dark'},
         {'key': 'general.themeMode', 'action': 'set', 'value': 'light'},
       ],
     }),
   );
-  final plan = await h.call('device.layout.prepare', {
+  final plan = await h.call('device.layout.apply', {
     'region': 'assistant',
     'action': 'set',
     'values': {'width': 480, 'dockedWidth': 420},
   });
-  expect((await h.externalCommit(plan))['effectStatus'], 'applied');
+  expect(plan['effectStatus'], 'applied');
   expect(h.saved.studentMode.themeMode, 'dark');
   expect(h.saved.generalMode.themeMode, 'light');
   expect(
@@ -531,8 +541,8 @@ Future<void> _display(AcceptanceHarness h) async {
     'keys': ['general.showWeekends'],
   });
   expect((read['values'] as Map)['general.showWeekends'], original);
-  await h.commit(
-    await h.call('settings.prepare', {
+  await h.verifySaved(
+    await h.call('settings.update', {
       'edits': [
         {'key': 'general.showWeekends', 'action': 'set', 'value': !original},
         {'key': 'general.customDayMinWidth', 'action': 'set', 'value': 104},
@@ -541,8 +551,8 @@ Future<void> _display(AcceptanceHarness h) async {
   );
   expect(h.saved.generalMode.showWeekends, !original);
   expect(h.saved.generalMode.customDayMinWidth, 104);
-  await h.commit(
-    await h.call('settings.prepare', {
+  await h.verifySaved(
+    await h.call('settings.update', {
       'edits': [
         {'key': 'general.customDayMinWidth', 'action': 'reset'},
       ],
@@ -554,11 +564,11 @@ Future<void> _display(AcceptanceHarness h) async {
 
 Future<void> _workspaces(AcceptanceHarness h) async {
   final storedCourses = h.saved.studentMode.toJson();
-  final plan = await h.call('workspaces.prepare', {
+  final plan = await h.call('workspaces.apply', {
     'workspace': 'student',
     'action': 'disable',
   });
-  expect((await h.externalCommit(plan))['effectStatus'], 'applied');
+  expect(plan['effectStatus'], 'applied');
   expect(h.saved.enabledWorkspaces, {AppMode.general});
   expect(h.saved.activeMode, AppMode.general);
   expect(h.saved.studentMode.toJson(), storedCourses);
@@ -569,9 +579,8 @@ Future<void> _workspaces(AcceptanceHarness h) async {
 Future<void> _notifications(AcceptanceHarness h) async {
   final before = await h.call('notifications.status');
   expect((before['platform'] as Map)['permission'], 'denied');
-  final plan = await h.call('notifications.permission.prepare');
-  expect(h.gateway.permission, AgendaNotificationPermissionState.denied);
-  final result = await h.externalCommit(plan);
+  final plan = await h.call('notifications.permission.apply');
+  final result = plan;
   expect(result['effectStatus'], 'applied');
   expect(h.gateway.permission, AgendaNotificationPermissionState.granted);
   final after = await h.call('notifications.status');
@@ -581,24 +590,24 @@ Future<void> _notifications(AcceptanceHarness h) async {
 
 Future<void> _schoolSites(AcceptanceHarness h) async {
   expect(_items(await h.call('school_sites.list')), isEmpty);
-  final plan = await h.call('school_sites.prepare', {
+  final plan = await h.call('school_sites.apply', {
     'action': 'create',
     'site': {
       'name': 'Synthetic campus',
       'loginUrl': 'https://campus.invalid/login',
     },
   });
-  expect((await h.externalCommit(plan))['effectStatus'], 'applied');
+  expect(plan['effectStatus'], 'applied');
   final row = _items(await h.call('school_sites.list')).single;
   final detail = await h.call('school_sites.get', {'handle': row['handle']});
   expect(detail['name'], 'Synthetic campus');
   expect(detail['loginUrl'], 'https://campus.invalid/login');
-  final patched = await h.call('school_sites.prepare', {
+  final patched = await h.call('school_sites.apply', {
     'action': 'patch',
     'handle': row['handle'],
     'site': {'name': 'Renamed campus'},
   });
-  expect((await h.externalCommit(patched))['effectStatus'], 'applied');
+  expect(patched['effectStatus'], 'applied');
   expect(
     _items(await h.call('school_sites.list')).single['name'],
     'Renamed campus',
@@ -615,22 +624,23 @@ Future<void> _connection(AcceptanceHarness h) async {
     'endpoint': 'https://new-acceptance.invalid/v1',
   });
   expect(jsonEncode(handle), isNot(contains(syntheticSecret)));
-  final plan = await h.call('connection.prepare', {
+  final plan = await h.call('connection.apply', {
     'action': 'set',
     'endpoint': 'https://new-acceptance.invalid/v1',
     'model': 'new-fixture',
     'models': [
-      const AgentModelConfig(
-        id: 'new-fixture',
-        reasoningEfforts: [AgentReasoningEffort.medium],
-        defaultReasoningEffort: AgentReasoningEffort.medium,
-      ).toJson(),
+      AgentModelToolConfiguration.arguments(
+        const AgentModelConfig(
+          id: 'new-fixture',
+          reasoningEfforts: [AgentReasoningEffort.medium],
+          defaultReasoningEffort: AgentReasoningEffort.medium,
+        ),
+      ),
     ],
     'credentialAction': 'replace',
     'credentialHandle': handle['credentialHandle'],
   });
   expect(jsonEncode(plan), isNot(contains(syntheticSecret)));
-  await h.externalCommit(plan);
   expect(h.saved.agentSettings.endpoint, 'https://new-acceptance.invalid/v1');
   expect(h.saved.agentSettings.model, 'new-fixture');
   expect(
@@ -643,26 +653,26 @@ Future<void> _connection(AcceptanceHarness h) async {
 
 Future<void> _undo(AcceptanceHarness h) async {
   final original = h.saved.studentMode.timetables.last.courses.single.toJson();
-  final plan = await h.call('mutation.prepare', {
+  final plan = await h.call('mutation.apply', {
     'commands': [
       _patch('course', 'other-algebra', {
         'location': 'Temporary lab',
       }, parent: 'other'),
     ],
   });
-  await h.commit(plan);
+  await h.verifySaved(plan);
   expect(
     h.saved.studentMode.timetables.last.courses.single.location,
     'Temporary lab',
   );
-  final inverse = await h.call('undo.prepare', {
-    'operationId': plan['operationId'],
+  final inverse = await h.call('operations.undo', {
+    'targetOperationId': plan['operationId'],
   });
-  await h.commit(inverse);
+  await h.verifySaved(inverse);
   expect(h.saved.studentMode.timetables.last.courses.single.toJson(), original);
-  final replay = await h.call('undo.prepare', {
-    'operationId': plan['operationId'],
+  final replay = await h.call('operations.undo', {
+    'targetOperationId': plan['operationId'],
   });
-  expect((await h.commit(replay))['replayed'], isTrue);
+  expect((await h.verifySaved(replay))['replayed'], isTrue);
   expect(h.saved.studentMode.timetables.last.courses.single.toJson(), original);
 }

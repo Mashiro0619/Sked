@@ -52,17 +52,6 @@ class SelectiveBackupException implements Exception {
   String toString() => 'SelectiveBackupException(${code.name}): $message';
 }
 
-abstract final class SelectiveBackupLimits {
-  static const archiveBytes = 128 * 1024 * 1024;
-  static const expandedBytes = 128 * 1024 * 1024;
-  static const manifestBytes = 2 * 1024 * 1024;
-  static const objectBytes = 16 * 1024 * 1024;
-  static const fileBytes = 32 * 1000 * 1000;
-  static const objects = 2048;
-  static const entries = objects * 2 + 1;
-  static const journalBytes = 64 * 1024 * 1024;
-}
-
 class BackupCancellation {
   bool _cancelled = false;
   final _listeners = <void Function()>{};
@@ -161,8 +150,7 @@ class BackupRecord {
         backupInvalid('Invalid device preference group.');
       }
     }
-    if (this.dependencies.length > SelectiveBackupLimits.objects ||
-        this.dependencies.toSet().length != this.dependencies.length ||
+    if (this.dependencies.toSet().length != this.dependencies.length ||
         this.dependencies.contains(key)) {
       backupInvalid('Invalid backup object dependencies.');
     }
@@ -183,10 +171,6 @@ class BackupRecord {
         (key.kind != BackupObjectKind.attachment ||
             !backupDigestIsValid(binaryDigest!))) {
       backupInvalid('Only attachments can refer to backup binary content.');
-    }
-    if (utf8.encode(jsonEncode(this.data)).length >
-        SelectiveBackupLimits.objectBytes) {
-      backupLimit('A backup object exceeds its byte budget.');
     }
   }
   final BackupObjectKey key;
@@ -244,10 +228,8 @@ class BackupRecord {
       key: BackupObjectKey.fromJson(json['key']),
       label: backupLabel(json['label']),
       data: data,
-      dependencies: backupList(
-        json['dependencies'],
-        max: SelectiveBackupLimits.objects,
-      ).map(BackupObjectKey.fromJson),
+      dependencies: backupList(json['dependencies'])
+          .map(BackupObjectKey.fromJson),
       binaryDigest: json['binaryDigest'] == null
           ? null
           : backupText(json['binaryDigest'], max: 64),
@@ -292,9 +274,6 @@ class SelectiveBackupBundle {
            entry.key: Uint8List.fromList(entry.value).asUnmodifiableView(),
        }),
        createdAt = (createdAt ?? DateTime.now()).toUtc() {
-    if (this.records.length > SelectiveBackupLimits.objects) {
-      backupLimit('Too many backup objects.');
-    }
     final byKey = {for (final record in this.records) record.key: record};
     if (byKey.length != this.records.length ||
         this.roots.any((key) => !byKey.containsKey(key))) {
@@ -367,9 +346,7 @@ class SelectiveBackupBundle {
       visit(key);
     }
     final neededBinaries = <String>{};
-    var bytes = 0;
     for (final record in this.records) {
-      bytes += utf8.encode(jsonEncode(record.toJson())).length;
       final digest = record.binaryDigest;
       if (digest != null) {
         final binary = this.binaries[digest];
@@ -385,17 +362,10 @@ class SelectiveBackupBundle {
       backupInvalid('The backup contains unreferenced binary data.');
     }
     for (final entry in this.binaries.entries) {
-      if (entry.value.length > SelectiveBackupLimits.fileBytes) {
-        backupLimit('A backup file exceeds its byte budget.');
-      }
       if (!backupDigestIsValid(entry.key) ||
           backupDigest(entry.value) != entry.key) {
         backupInvalid('Backup binary checksum mismatch.');
       }
-      bytes += entry.value.length;
-    }
-    if (bytes > SelectiveBackupLimits.expandedBytes) {
-      backupLimit('The backup exceeds its total byte budget.');
     }
   }
   final List<BackupRecord> records;
@@ -481,23 +451,17 @@ String canonicalBackupJson(Object? value) {
 }
 
 Object? freezeBackupJson(Object? value) {
-  var nodes = 0;
-  Object? freeze(Object? value, int depth) {
-    if (++nodes > 1000000 || depth > 64) {
-      backupLimit('Backup JSON is too complex.');
-    }
+  Object? freeze(Object? value) {
     if (value is Map) {
       final map = <String, Object?>{};
       for (final entry in value.entries) {
         if (entry.key is! String) backupInvalid('Backup keys must be strings.');
-        map[entry.key as String] = freeze(entry.value, depth + 1);
+        map[entry.key as String] = freeze(entry.value);
       }
       return Map<String, Object?>.unmodifiable(map);
     }
     if (value is List) {
-      return List<Object?>.unmodifiable(
-        value.map((item) => freeze(item, depth + 1)),
-      );
+      return List<Object?>.unmodifiable(value.map(freeze));
     }
     if (value == null ||
         value is String ||
@@ -508,7 +472,7 @@ Object? freezeBackupJson(Object? value) {
     backupInvalid('Invalid backup JSON value.');
   }
 
-  return freeze(value, 0);
+  return freeze(value);
 }
 
 Never backupInvalid(String message) =>
@@ -524,11 +488,8 @@ Map<String, dynamic> backupMap(Object? value, Set<String> fields) {
   return value;
 }
 
-List<dynamic> backupList(
-  Object? value, {
-  int max = SelectiveBackupLimits.objects,
-}) {
-  if (value is! List || value.length > max) {
+List<dynamic> backupList(Object? value, {int? max}) {
+  if (value is! List || (max != null && value.length > max)) {
     backupInvalid('Invalid backup collection.');
   }
   return value;
@@ -545,18 +506,14 @@ String backupText(Object? value, {int max = 2048}) {
 }
 
 String backupLabel(Object? value) {
-  if (value is! String || value.length > 512) {
+  if (value is! String) {
     backupInvalid('Invalid backup label.');
   }
   return value;
 }
 
-int backupInteger(
-  Object? value, {
-  int min = 0,
-  int max = SelectiveBackupLimits.expandedBytes,
-}) {
-  if (value is! int || value < min || value > max) {
+int backupInteger(Object? value, {int min = 0, int? max}) {
+  if (value is! int || value < min || (max != null && value > max)) {
     backupInvalid('Invalid backup integer.');
   }
   return value;

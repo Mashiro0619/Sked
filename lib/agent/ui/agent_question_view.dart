@@ -38,9 +38,8 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
 
   bool get _complete => widget.request.questions.every(
     (question) =>
-        _text[question.id]!.text.length <= AgentQuestionAnswer.maxTextLength &&
-        (_selected[question.id]!.isNotEmpty ||
-            _text[question.id]!.text.trim().isNotEmpty),
+        _selected[question.id]!.isNotEmpty ||
+        _text[question.id]!.text.trim().isNotEmpty,
   );
 
   @override
@@ -136,10 +135,10 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
     final l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final generation = _generation;
-    return Card.filled(
-      margin: EdgeInsets.zero,
+    return Material(
+      type: MaterialType.transparency,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
@@ -171,15 +170,6 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
                     decoration: InputDecoration(
                       labelText: l.agentQuestionAnswer,
                       filled: true,
-                      counterText:
-                          '${_text[question.id]!.text.length}/${AgentQuestionAnswer.maxTextLength}',
-                      errorText:
-                          _text[question.id]!.text.length >
-                              AgentQuestionAnswer.maxTextLength
-                          ? l.agentQuestionAnswerTooLong(
-                              AgentQuestionAnswer.maxTextLength,
-                            )
-                          : null,
                       errorMaxLines: 3,
                     ),
                     onChanged: (_) {

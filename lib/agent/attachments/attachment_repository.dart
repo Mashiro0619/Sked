@@ -31,10 +31,8 @@ class AttachmentRepository {
     void Function(int bytes)? onProgress,
   }) => _enqueue(() async {
     _checkWritable();
-    if (!validAttachmentId(id) ||
-        byteLength < 0 ||
-        byteLength > ConversationAttachment.maxFileBytes) {
-      throw const AttachmentException(AttachmentError.tooLarge);
+    if (!validAttachmentId(id) || byteLength < 0) {
+      throw const AttachmentException(AttachmentError.invalidMetadata);
     }
     ConversationAttachment(
       id: id,
@@ -55,8 +53,7 @@ class AttachmentRepository {
           token.check();
           final chunk = iterator.current;
           count += chunk.length;
-          if (count > byteLength ||
-              count > ConversationAttachment.maxFileBytes) {
+          if (count > byteLength) {
             throw const AttachmentException(AttachmentError.changed);
           }
           hash.add(chunk);

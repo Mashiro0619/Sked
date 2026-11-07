@@ -4,7 +4,7 @@
 
 ## knowledge 的固定流程
 
-1. 使用 `AgentNativeSession(provider:)` 的显式合成内存存储装载真实 `AppRuntime`，主页挂载前后均核对 Agent 历史尚未加载。
+1. 使用 `await AgentNativeSession.create(provider:)` 装载真实 `AppRuntime`；主库和凭据为合成内容，聊天与知识位于独立临时 SQLite。主页挂载前后均核对 Agent 尚未加载历史，进入后核对 512 条持久消息的最新分页与草稿。
 2. Windows 从主页侧栏进入真实 `AgentPage`；Android 通过主页导航按钮打开现有侧抽屉，再进入同一完整聊天。核对同一 `AgentApplication`、主会话、会话仓库及 512 条历史，并通过输入框保存一条未发送草稿。
 3. 通过会话菜单进入 Agent 设置总览，打开 Memory 二级页，再在三级编辑页创建并保存一条合成记忆。等待知识仓库写入完成，再调用生产知识服务 `initialize(reload: true)` 读回存储，核对 ID、内容、版本及实际保存回执。
 4. 点击同一记录，编辑标题和正文并保存，再次读回存储。记录保持同一 ID，版本从 1 增至 2，档案中仍只有一条 Memory。
@@ -76,7 +76,7 @@ JSON 通过之后，仍需复核本轮原生进程日志中的 Flutter 错误、
 
 在独立进程中将上例的 `SKED_AGENT_FEATURE_JOURNEY=knowledge` 改为 `SKED_AGENT_FEATURE_JOURNEY=attachments`，使用附件专属标签和新输出目录，并继续遵守同一原生平台、Windows 测试命名空间与代理准备要求。不得以文件选择器替身代替 Windows 原生测试进程隔离。
 
-1. 从真实主页进入 Agent，清空合成长会话的输入框，然后点击 `agent-attach-file`。本旅程独占并最终恢复 `FileSelectorPlatform.instance`，只返回一次内存中的 4 × 4 合成 PNG；产品正常执行本地复制、摘要核验和草稿引用发布。
+1. 从真实主页进入 Agent，清空合成长会话的输入框，打开 `agent-composer-more`，然后点击 `agent-attach-file`。本旅程独占并最终恢复 `FileSelectorPlatform.instance`，只返回一次内存中的 4 × 4 合成 PNG；产品正常执行本地复制、摘要核验和草稿引用发布。
 2. 等待文件成为本地已保存状态，读取实际聊天存储和 `attachmentStore.readBytes`，核对原始 79 字节、SHA-256、稳定 ID 和唯一文件。聊天 JSON 不得包含来源路径或 Base64 正文，选择文件不发起请求，也不自动预览。
 3. 从草稿附件菜单点击“预览文件”，等待真实 `RawImage` / `RenderImage` 完成解码，核对其内存图片字节和非零实际渲染尺寸。随后点击真实“关闭”按钮。仅构造 `Image` 组件不能视为解码通过。
 4. 保持输入框为空，点击发送。生产 `ProviderClient` 完成预算检查、文件读取、`image_url` 原生内容块编码、进度和响应解码；专属离线 `http.BaseClient` 接收编码后的请求，核对 Base64 中的原始 PNG 字节与摘要，再返回一次合成 HTTP 200 JSON 回复。
@@ -92,7 +92,7 @@ JSON 通过之后，仍需复核本轮原生进程日志中的 Flutter 错误、
 
 在独立进程中选择 `SKED_AGENT_FEATURE_JOURNEY=history`，另设本轮标签和新的系统 Temp 输出目录。继续使用真实主页、`AgentNativeSession` 的明确合成存储，以及同一平台与框架配置。Windows 使用独立测试 checkout/build tree 和非空 `SKED_WINDOWS_TEST_NAMESPACE`；最终 `flutter drive` 必须使用已经核对过该 namespace 的同一 CMakeCache。参见 [Windows 原生验收](../docs/WINDOWS_NATIVE_ACCEPTANCE.md)。
 
-1. 从正式主页进入当前 Agent 长会话，经可见输入框和发送按钮发出一个合成请求。受控 provider 只返回 `capabilities.describe → mutation.prepare → mutation.commit` 的真实工具调用，以及最终文字回复。应用工具创建一个隐藏的空合成日历；旅程通过生产 codec 读回主库和聊天，核对真实可逆回执及宿主记录的运行/工具/轮次归属。
+1. 从正式主页进入当前 Agent 长会话，经可见输入框和发送按钮发出一个合成请求。受控 provider 只返回 `capabilities.describe → mutation.apply` 的真实工具调用，以及最终文字回复。应用工具创建一个隐藏的空合成日历；旅程通过生产 codec 读回主库和聊天，核对真实可逆回执及宿主记录的运行/工具/轮次归属。
 2. 再通过输入框发送一个后续纯文字请求。保留两个独立轮次，原日历操作仍只属于首轮。
 3. 点击实际回复的“重新生成回复”按钮。受控 provider 检查这次请求没有工具目录，只返回新文字。原回复 ID、消息顺序、操作归属和主库保持不变，两份回复文字版本均保留；同时读取实际 RenderParagraph / RenderEditable 核对可见的新正文。
 4. 保存一条未发送的聊天草稿。通过首轮用户消息的“编辑并重做”进入实际对话框，修改文字后点击“取消”；聊天内容、主库和 provider 次数不变。重新打开同一对话框，实际输入框仍保存刚取消的编辑内容，聊天输入草稿保持独立。
@@ -100,7 +100,7 @@ JSON 通过之后，仍需复核本轮原生进程日志中的 Flutter 错误、
 6. 从会话菜单打开“消息历史”，分别展开旧后缀和两份回复版本。核对实际可见旧文字，关闭对话框后请求数、当前上下文与存储摘要不变，未发草稿保持。原 512 条历史、短对照会话和共享知识也保持各自原状态。
 7. 沿公共清理流程卸载界面，排空写入并关闭运行时、仓储、provider 和偏好。provider 和 transport 均只关闭一次；本功能不安装文件选择器或平台 channel 替身。
 
-provider 固定为七次本地受控响应：首轮四次、后续文字一次、重新生成一次、编辑重做一次。普通请求保持正式工具目录，只有重新生成请求为空；重做请求不得包含已退役的两条用户消息，也不得发送仍在输入框中的草稿。原始报告记录各次用户消息列表、工具名、工具参数和实际回执来源；不记录凭据。注入的 HTTP client 拒绝任何发送，不访问真实模型。
+provider 固定为六次本地受控响应：首轮三次（发现能力、调用一次 `mutation.apply`、回复）、后续文字一次、重新生成一次、编辑重做一次。普通请求保持正式工具目录，只有重新生成请求为空；重做请求不得包含已退役的两条用户消息，也不得发送仍在输入框中的草稿。原始报告记录各次用户消息列表、工具名、工具参数和实际回执来源；不记录凭据。注入的 HTTP client 拒绝任何发送，不访问真实模型。
 
 这组验证的是原生 Flutter 产品 UI、正式历史协调器、主库撤销及纯文字重新生成的组合。它不注入存储故障，也不覆盖跨仓储中断、知识逆变更、恢复后继续、冲突降级、原生文件持久化、系统强杀、真实模型或实体设备。相关故障/恢复证明仍分别见 [历史协议](../docs/AGENT_HISTORY.md) 中的专项入口。界面打开、返回、主题和 2× 字号是实际运行配置的证据，不等同于 OS IME、物理手势或原生无障碍验收。
 

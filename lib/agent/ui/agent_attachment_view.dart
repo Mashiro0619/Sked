@@ -11,7 +11,6 @@ import 'agent_selectable_text.dart';
 
 String agentAttachmentError(AppLocalizations l, AttachmentError error) =>
     switch (error) {
-      AttachmentError.tooLarge => l.agentFileTooLarge,
       AttachmentError.changed => l.agentFileChanged,
       AttachmentError.missing => l.agentFileMissing,
       AttachmentError.corrupt => l.agentFileCorrupt,

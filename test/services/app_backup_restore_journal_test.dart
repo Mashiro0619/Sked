@@ -8,6 +8,8 @@ import 'package:sked/services/app_backup_restore_journal.dart';
 import 'package:sked/utils/app_storage_keys.dart';
 import 'package:sked/utils/shared_preferences_recovery.dart';
 
+import '../support/data_restore_receipt_fixture.dart';
+
 AppData _appData() => buildInitialAppData(buildDefaultPeriodTimes());
 
 String _journalSource(String backupSource) {
@@ -379,7 +381,7 @@ void main() {
     expect(result.journalRecoveryArtifacts, [artifact]);
   });
 
-  test('persists and confirms every version-two restore phase', () async {
+  test('persists and confirms every current restore phase', () async {
     final journal = SharedPreferencesAppBackupRestoreJournal();
     final backupSource = encodeAppBackupForRecovery(_appData(), const []);
 
@@ -400,8 +402,69 @@ void main() {
       AppBackupRestoreJournalPhase.secretPolicyApplied,
     );
     expect(secretApplied.backupSource, backupSource);
-    expect(jsonDecode(secretApplied.source!)['version'], 2);
+    expect(jsonDecode(secretApplied.source!)['version'], 3);
   });
+
+  test(
+    'retains the sealed completion ledger through phases and artifact metadata',
+    () async {
+      final fixture = dataRestoreReceiptFixture();
+      final journal = SharedPreferencesAppBackupRestoreJournal();
+      var state = await journal.writePrepared(
+        encodeAppBackupForRecovery(fixture.data, const []),
+        completionLedger: fixture.completion,
+      );
+      for (final phase in AppBackupRestoreJournalPhase.values.skip(1)) {
+        expect(state.completionLedger, fixture.completion);
+        state = await journal.advancePhase(state, phase);
+      }
+      final reopened = await SharedPreferencesAppBackupRestoreJournal().load();
+      expect(reopened.completionLedger, fixture.completion);
+      expect(reopened.backup!.appData.applicationLedger!.receipts, isEmpty);
+      final tracked = withAppBackupRestoreJournalRecoveryArtifacts(reopened, [
+        'memory://older-recovery',
+      ]);
+      expect(tracked.completionLedger, fixture.completion);
+    },
+  );
+
+  for (final damage in [
+    'generation',
+    'restoreId',
+    'digest',
+    'action',
+    'legacy',
+  ]) {
+    test('rejects a completion journal with mismatched $damage', () async {
+      final fixture = dataRestoreReceiptFixture();
+      final journal = SharedPreferencesAppBackupRestoreJournal();
+      final state = await journal.writePrepared(
+        encodeAppBackupForRecovery(fixture.data, const []),
+        completionLedger: fixture.completion,
+      );
+      final encoded = jsonDecode(state.source!) as Map;
+      final ledger = (encoded['data'] as Map)['completionLedger'] as Map;
+      final receipt = (ledger['receipts'] as List).single as Map;
+      final result = receipt['result'] as Map;
+      switch (damage) {
+        case 'generation':
+          ledger['generation'] = '00000000-0000-4000-8000-000000000099';
+        case 'restoreId':
+          (result['restoreCompletion'] as Map)['restoreId'] = 'another-restore';
+        case 'digest':
+          receipt['commandDigest'] = 'b' * 64;
+        case 'action':
+          result['action'] = 'device.set';
+        case 'legacy':
+          encoded['version'] = 2;
+      }
+      await journal.write(jsonEncode(encoded));
+      expect(
+        (await journal.load()).status,
+        AppBackupRestoreJournalLoadStatus.corrupt,
+      );
+    });
+  }
 
   test('phase advancement rejects invalid or skipped states', () async {
     final journal = SharedPreferencesAppBackupRestoreJournal();
@@ -465,7 +528,7 @@ void main() {
     for (final source in [
       ImportExportEnvelope(
         schema: 'app-backup-restore-journal',
-        version: 3,
+        version: 4,
         data: const {},
       ).encode(),
       ImportExportEnvelope(

@@ -71,9 +71,13 @@ void main() {
         final h = await _Harness.create(key: key, leak: 'stream');
         addTearDown(h.close);
         final published = <String>[];
-        h.runtime.state.addListener(
-          () => published.add(h.runtime.state.value.runFor(h.id).streamingText),
-        );
+        h.runtime
+            .watchConversation(h.id)
+            .addListener(
+              () => published.add(
+                h.runtime.state.value.runFor(h.id).streamingText,
+              ),
+            );
         await h.runtime.send(h.id, 'Use the exact text and test this example.');
         final encoded = jsonEncode(key);
         final exposed = 'API key: ${encoded.substring(0, encoded.length - 1)}';

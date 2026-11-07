@@ -276,9 +276,9 @@ void main() {
           }
         }
 
-        restored.runtime.state.addListener(observe);
+        restored.runtime.watchConversation(restored.id).addListener(observe);
         await restored.runtime.continueConversation(restored.id);
-        restored.runtime.state.removeListener(observe);
+        restored.runtime.watchConversation(restored.id).removeListener(observe);
         expect(displayedQuestions, 0);
         expect(restored.provider.requests, hasLength(1));
         final result = _questionResult(restored.provider.requests.single);
@@ -330,146 +330,6 @@ void main() {
     );
     expect(restored.current.pendingQuestion, isNull);
   });
-
-  for (final budget in ['bytes', 'characters']) {
-    test(
-      'oversized answer $budget are rejected without consuming the question',
-      () async {
-        final questions = List.generate(
-          AgentQuestionRequest.maxQuestions,
-          (index) => AgentQuestionPrompt(
-            id: 'question-$index',
-            question: 'What value should be used for item $index?',
-          ),
-        );
-        final h = await _QuestionHarness.create(
-          questions: questions,
-          limits: budget == 'characters'
-              ? const AgentRuntimeLimits(maxToolResultCharacters: 4096)
-              : const AgentRuntimeLimits(),
-        );
-        addTearDown(h.close);
-        final send = h.runtime.send(h.id, 'Ask for the item values');
-        final pending = await h.waitForQuestion();
-        final snapshot = h.storage.source;
-        final oversized = questions
-            .map(
-              (question) => AgentQuestionAnswer(
-                questionId: question.id,
-                text:
-                    (budget == 'bytes' ? '值' : 'a') *
-                    AgentQuestionAnswer.maxTextLength,
-              ),
-            )
-            .toList();
-        final answerJson = jsonEncode(
-          oversized.map((answer) => answer.toJson()).toList(),
-        );
-        if (budget == 'bytes') {
-          expect(utf8.encode(answerJson).length, greaterThan(48 * 1024));
-        } else {
-          expect(answerJson.length, greaterThan(4096));
-          expect(utf8.encode(answerJson).length, lessThan(48 * 1024));
-        }
-
-        await expectLater(
-          h.runtime.answerQuestion(h.id, pending.id, oversized),
-          throwsA(_operationError(OperationErrorCode.invalidArgument)),
-        );
-        expect(h.storage.source, snapshot);
-        expect(h.current.pendingQuestion!.isResolved, isFalse);
-        expect(
-          h.runtime.state.value.runFor(h.id).phase,
-          AgentUiPhase.waitingUser,
-        );
-        expect(h.provider.requests, hasLength(1));
-
-        final concise = questions
-            .map(
-              (question) => AgentQuestionAnswer(
-                questionId: question.id,
-                text: 'Use the current value',
-              ),
-            )
-            .toList();
-        await h.runtime.answerQuestion(h.id, pending.id, concise);
-        await send;
-        expect(
-          _questionResult(h.provider.requests.last)['answers'],
-          concise.map((answer) => answer.toJson()).toList(),
-        );
-        expect(h.current.pendingQuestion, isNull);
-        expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
-      },
-    );
-  }
-
-  for (final budget in ['tool', 'total']) {
-    testWidgets(
-      '$budget execution budget pauses only during the user question',
-      (tester) async {
-        final beforeQuestion = Completer<void>();
-        var entered = false;
-        var answered = false;
-        final prepared = (await tester.runAsync(() async {
-          final core = CoreToolHarness();
-          await core.initialize();
-          final manifest = await rootBundle.loadString(
-            'assets/agent/skills/manifest.json',
-          );
-          return (core, manifest);
-        }))!;
-        final h = await _QuestionHarness.create(
-          core: prepared.$1,
-          manifest: prepared.$2,
-          stopwatchFactory: tester.binding.clock.stopwatch,
-          limits: AgentRuntimeLimits(
-            toolTimeout: Duration(minutes: budget == 'tool' ? 1 : 5),
-            totalTimeout: Duration(minutes: budget == 'total' ? 1 : 5),
-          ),
-        );
-        addTearDown(() => tester.runAsync(h.close));
-        h.beforeQuestion = (_) async {
-          entered = true;
-          await beforeQuestion.future;
-        };
-        h.afterQuestion = (scope) async {
-          answered = true;
-          await scope.whenCancelled;
-        };
-        final send = h.runtime.send(h.id, 'Wait for my choices');
-        await tester.pump();
-        expect(entered, isTrue);
-        await tester.pump(const Duration(seconds: 40));
-        beforeQuestion.complete();
-        await tester.pump();
-        expect(
-          h.runtime.state.value.runFor(h.id).phase,
-          AgentUiPhase.waitingUser,
-        );
-        final question = h.current.pendingQuestion!;
-        await tester.pump(const Duration(minutes: 20));
-        expect(
-          h.runtime.state.value.runFor(h.id).phase,
-          AgentUiPhase.waitingUser,
-        );
-        expect(h.provider.requests, hasLength(1));
-        await h.runtime.answerQuestion(h.id, question.id, _answers());
-        await tester.pump();
-        expect(answered, isTrue);
-        await tester.pump(const Duration(seconds: 19));
-        expect(h.runtime.isRunning(h.id), isTrue);
-        expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
-        await tester.pump(const Duration(seconds: 1));
-        await send;
-        expect(h.runtime.isRunning(h.id), isFalse);
-        expect(
-          h.runtime.state.value.runFor(h.id).errorMessage,
-          budget == 'tool' ? 'toolTimeout' : 'timeout',
-        );
-      },
-    );
-  }
 }
 
 List<AgentQuestionPrompt> _questions() => [
@@ -613,8 +473,7 @@ class _QuestionHarness {
     String? conversationId,
     bool askFirst = true,
     List<AgentQuestionPrompt>? questions,
-    AgentRuntimeLimits limits = const AgentRuntimeLimits(),
-    Stopwatch Function()? stopwatchFactory,
+
     CoreToolHarness? core,
     String? manifest,
   }) async {
@@ -682,17 +541,16 @@ class _QuestionHarness {
       },
       onRunSettled: harness.tools.finishScope,
       onOpenSettings: () {},
-      limits: limits,
-      stopwatchFactory: stopwatchFactory,
     );
     return harness;
   }
 
   Future<AgentQuestionRequest> waitForQuestion() async {
+    final execution = runtime.watchConversation(id);
     final ready = Completer<AgentQuestionRequest>();
     void changed() {
       if (ready.isCompleted) return;
-      final display = runtime.state.value.runFor(id);
+      final display = execution.value;
       final pending = current.pendingQuestion;
       if (display.phase == AgentUiPhase.waitingUser && pending != null) {
         ready.complete(pending);
@@ -703,12 +561,12 @@ class _QuestionHarness {
       }
     }
 
-    runtime.state.addListener(changed);
+    execution.addListener(changed);
     try {
       changed();
       return await ready.future.timeout(const Duration(seconds: 5));
     } finally {
-      runtime.state.removeListener(changed);
+      execution.removeListener(changed);
     }
   }
 

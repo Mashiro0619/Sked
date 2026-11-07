@@ -1,13 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/agent/knowledge/knowledge_repository.dart';
-import 'package:sked/agent/knowledge/knowledge_storage_io.dart' as native;
-import 'package:sked/agent/knowledge/knowledge_storage_stub.dart' as web;
-import 'package:sked/services/app_storage_layout_io.dart';
 
 KnowledgeRecord _memory(String id, [String body = 'Prefer quiet study time']) =>
     KnowledgeRecord(
@@ -21,6 +16,30 @@ Matcher _error(KnowledgeError code) =>
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test(
+    'knowledge dependencies accept host tools and preserve long metadata',
+    () {
+      final record = KnowledgeRecord(
+        kind: KnowledgeKind.skill,
+        id: 'skill-${'a' * 300}',
+        title: 'title' * 100,
+        body: 'Use the current host tool definitions.',
+        requiredTools: const ['ask_user', 'update_plan', 'mutation.apply'],
+        sourceConversationId: 'chat-${'b' * 300}',
+        sourceMessageId: 'message-${'c' * 300}',
+      );
+      final restored = KnowledgeRecord.fromJson(record.toJson());
+      expect(restored.toJson(), record.toJson());
+      expect(
+        () => record.copyWith(requiredTools: ['ask_user', 'ask_user']),
+        throwsA(_error(KnowledgeError.invalid)),
+      );
+      expect(
+        () => record.copyWith(requiredTools: ['bad tool']),
+        throwsA(_error(KnowledgeError.invalid)),
+      );
+    },
+  );
   test('commit, restart, conditional inverse and operation replay preserve exact content', () async {
     final storage = MemoryKnowledgeStorage();
     final repository = AgentKnowledgeRepository(storage: storage);
@@ -158,62 +177,6 @@ void main() {
     repository.dispose();
   });
 
-  test('native successful delete mirrors both slots and damaged slot cannot revive content', () async {
-    final directory = await Directory.systemTemp.createTemp(
-      'sked-knowledge-storage-',
-    );
-    final storage = native.PlatformKnowledgeStorage(
-      layout: AppStorageLayout(directoryProvider: () async => directory),
-    );
-    final repository = AgentKnowledgeRepository(storage: storage);
-    try {
-      await repository.load();
-      await repository.commit(
-        repository.prepare({'memory:gone': _memory('gone')}),
-        operationId: 'create',
-      );
-      await repository.commit(
-        repository.prepare({'memory:gone': null}),
-        operationId: 'delete',
-      );
-      await File('${directory.path}/Sked_agent_knowledge.0.json')
-          .writeAsString('{damaged');
-      final loaded = await storage.load();
-      expect(loaded.archive.records, isEmpty);
-      expect(loaded.archive.tombstones, contains('memory:gone'));
-      expect(loaded.recovered, true);
-    } finally {
-      await repository.waitForPendingWrites();
-      repository.dispose();
-      await directory.delete(recursive: true);
-    }
-  });
-
-  test('browser adapter persists actual preferences and rejects a future format beside valid data', () async {
-    SharedPreferences.setMockInitialValues({});
-    final storage = web.PlatformKnowledgeStorage();
-    final repository = AgentKnowledgeRepository(storage: storage);
-    await repository.load();
-    await repository.commit(
-      repository.prepare({'memory:saved': _memory('saved')}),
-      operationId: 'save',
-    );
-    expect(
-      (await web.PlatformKnowledgeStorage().load()).archive.records,
-      hasLength(1),
-    );
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.setString(
-      '${web.PlatformKnowledgeStorage.storageKeyPrefix}0',
-      jsonEncode({'version': 99}),
-    );
-    await expectLater(
-      storage.load(),
-      throwsA(_error(KnowledgeError.unavailable)),
-    );
-    repository.dispose();
-  });
-
   test('strict reload rejects conflicting receipt targets, versions and current content', () async {
     final repository = AgentKnowledgeRepository(
       storage: MemoryKnowledgeStorage(),
@@ -266,7 +229,7 @@ void main() {
   });
 
   test(
-    'retained history stays readable after its oldest receipts are evicted',
+    'knowledge history remains complete beyond the former receipt limit',
     () async {
       final repository = AgentKnowledgeRepository(
         storage: MemoryKnowledgeStorage(),
@@ -284,7 +247,8 @@ void main() {
         repository.prepare({'memory:deleted': null}),
         operationId: 'old-delete',
       );
-      for (var index = 0; index <= KnowledgeLimits.receipts; index++) {
+      const edits = 129;
+      for (var index = 0; index < edits; index++) {
         final current = repository.find('memory:record');
         await repository.commit(
           repository.prepare({
@@ -295,10 +259,12 @@ void main() {
         );
       }
       final restored = KnowledgeArchive.decode(repository.snapshot.encode());
-      expect(restored.receipts, hasLength(KnowledgeLimits.receipts));
+      expect(restored.receipts, hasLength(edits + 2));
+      expect(repository.receiptFor('old-records'), isNotNull);
+      expect(repository.receiptFor('old-delete'), isNotNull);
       expect(
         restored.records.singleWhere((record) => record.id == 'record').body,
-        'Edit ${KnowledgeLimits.receipts}',
+        'Edit ${edits - 1}',
       );
       expect(
         restored.records.singleWhere((record) => record.id == 'unchanged').body,

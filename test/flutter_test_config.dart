@@ -9,10 +9,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/agent/conversations/conversation_storage.dart';
 import 'package:sked/agent/attachments/attachment_storage.dart';
 import 'package:sked/agent/knowledge/knowledge_storage.dart';
+import 'package:sked/agent/store/agent_store.dart';
 import 'package:sked/backup/backup_staging_storage.dart';
 import 'package:sked/backup/selective_restore_coordinator.dart';
 import 'package:sked/backup/selective_restore_journal.dart';
 import 'package:sked/services/app_backup_restore_journal.dart';
+
+import 'support/agent_store_test_factory.dart';
 
 class _TestConversationStorage extends ConversationStorage {
   _TestConversationStorage() : super.base();
@@ -103,6 +106,15 @@ class _TestAppBackupRestoreJournal extends AppBackupRestoreJournal {
 
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   final appBackupRestoreJournalState = _TestAppBackupRestoreJournalState();
+  final agentStores = <AgentStore>[];
+  var storeLifecycleZone = Zone.current;
+  AgentStore createStore() {
+    final store = createTestAgentStore(lifecycleZone: storeLifecycleZone);
+    agentStores.add(store);
+    return store;
+  }
+
+  debugSetAgentStoreFactory(createStore);
   // Defaults remain isolated even when a test constructs AppRuntime directly.
   // Each test captures a fresh store so late work retains its own old state.
   debugSetConversationStorageFactory(_TestConversationStorage.new);
@@ -114,6 +126,8 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
     () => _TestAppBackupRestoreJournal(appBackupRestoreJournalState),
   );
   setUp(() {
+    storeLifecycleZone = Zone.current;
+    debugSetAgentStoreFactory(createStore);
     final conversations = _TestConversationStorage();
     debugSetConversationStorageFactory(() => conversations);
     final attachments = MemoryAttachmentStorage();
@@ -128,7 +142,14 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
     FlutterSecureStorage.setMockInitialValues({});
     SharedPreferences.setMockInitialValues({});
   });
+  tearDown(() async {
+    for (final store in agentStores) {
+      await store.close();
+    }
+    agentStores.clear();
+  });
   tearDownAll(() {
+    debugSetAgentStoreFactory(null);
     debugSetConversationStorageFactory(null);
     debugSetAttachmentStorageFactory(null);
     debugSetKnowledgeStorageFactory(null);

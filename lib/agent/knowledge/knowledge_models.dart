@@ -4,14 +4,7 @@ import 'package:crypto/crypto.dart';
 
 enum KnowledgeKind { skill, memory }
 
-enum KnowledgeError {
-  invalid,
-  unavailable,
-  conflict,
-  duplicate,
-  limit,
-  unknown,
-}
+enum KnowledgeError { invalid, unavailable, conflict, duplicate, unknown }
 
 class KnowledgeException implements Exception {
   const KnowledgeException(this.code, this.message);
@@ -19,15 +12,6 @@ class KnowledgeException implements Exception {
   final String message;
   @override
   String toString() => 'KnowledgeException(${code.name}): $message';
-}
-
-abstract final class KnowledgeLimits {
-  static const archiveBytes = 8 * 1024 * 1024;
-  static const records = 512;
-  static const receipts = 128;
-  static const tombstones = 4096;
-  static const memoryBytes = 8 * 1024;
-  static const undoBatches = 32;
 }
 
 /// A source reference is evidence to recheck, never a writable object handle.
@@ -39,7 +23,7 @@ class KnowledgeReference {
     this.parentId,
   }) {
     for (final value in [kind, id, generation, ?parentId]) {
-      knowledgeText(value, max: 256);
+      knowledgeText(value);
     }
   }
   final String kind;
@@ -55,10 +39,10 @@ class KnowledgeReference {
   factory KnowledgeReference.fromJson(Object? value) {
     final json = knowledgeMap(value, {'kind', 'id', 'generation', 'parentId'});
     return KnowledgeReference(
-      kind: knowledgeText(json['kind'], max: 256),
-      id: knowledgeText(json['id'], max: 256),
-      generation: knowledgeText(json['generation'], max: 256),
-      parentId: knowledgeOptionalText(json['parentId'], max: 256),
+      kind: knowledgeText(json['kind']),
+      id: knowledgeText(json['id']),
+      generation: knowledgeText(json['generation']),
+      parentId: knowledgeOptionalText(json['parentId']),
     );
   }
 }
@@ -92,27 +76,20 @@ class KnowledgeRecord {
        requiredTools = List.unmodifiable(requiredTools),
        optionalTools = List.unmodifiable(optionalTools),
        references = List.unmodifiable(references) {
-    if (!RegExp(r'^[a-z][a-z0-9-]{0,127}$').hasMatch(id) || revision < 0) {
+    if (!RegExp(r'^[a-z][a-z0-9-]*$').hasMatch(id) || revision < 0) {
       knowledgeInvalid('Invalid knowledge identity or revision.');
     }
-    knowledgeText(title, max: 256);
-    knowledgeText(summary, max: 2048, empty: true);
-    knowledgeText(sourceNote, max: 2048, empty: true);
-    knowledgeText(body, max: null, empty: builtIn && usesOriginal);
-    if (kind == KnowledgeKind.memory &&
-        utf8.encode(body).length > KnowledgeLimits.memoryBytes) {
-      throw const KnowledgeException(
-        KnowledgeError.limit,
-        'Content is too large.',
-      );
-    }
+    knowledgeText(title);
+    knowledgeText(summary, empty: true);
+    knowledgeText(sourceNote, empty: true);
+    knowledgeText(body, empty: builtIn && usesOriginal);
     if ((baseVersion == null) != (baseSha256 == null) ||
         builtIn != (baseVersion != null && baseSha256 != null) ||
         (usesOriginal && !builtIn) ||
         (kind == KnowledgeKind.memory && (builtIn || usesOriginal))) {
       knowledgeInvalid('Invalid built-in provenance.');
     }
-    if (baseVersion != null) knowledgeText(baseVersion, max: 128);
+    if (baseVersion != null) knowledgeText(baseVersion);
     if (baseSha256 != null &&
         !RegExp(r'^[0-9a-f]{64}$').hasMatch(baseSha256!)) {
       knowledgeInvalid('Invalid original content digest.');
@@ -129,16 +106,15 @@ class KnowledgeRecord {
     if (tools.toSet().length != tools.length ||
         tools.any(
           (tool) =>
-              !RegExp(r'^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+$')
+              !RegExp(r'^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)*$')
                   .hasMatch(tool),
         )) {
       knowledgeInvalid('Invalid or duplicate tool dependency.');
     }
-    if (this.references.length > 16) knowledgeInvalid('Too many references.');
     if (sourceConversationId != null) {
-      knowledgeText(sourceConversationId, max: 256);
+      knowledgeText(sourceConversationId);
     }
-    if (sourceMessageId != null) knowledgeText(sourceMessageId, max: 256);
+    if (sourceMessageId != null) knowledgeText(sourceMessageId);
   }
 
   final KnowledgeKind kind;
@@ -260,37 +236,34 @@ class KnowledgeRecord {
         .where((kind) => kind.name == json['kind'])
         .firstOrNull;
     if (kind == null) knowledgeInvalid('Unknown knowledge kind.');
-    final rawExpiry = knowledgeOptionalText(json['expiresAt'], max: 128);
+    final rawExpiry = knowledgeOptionalText(json['expiresAt']);
     final expiry = rawExpiry == null ? null : DateTime.tryParse(rawExpiry);
     if (rawExpiry != null && expiry == null) {
       knowledgeInvalid('Invalid expiry.');
     }
     final rawReferences = json['references'];
-    if (rawReferences is! List || rawReferences.length > 16) {
+    if (rawReferences is! List) {
       knowledgeInvalid('Invalid references.');
     }
     return KnowledgeRecord(
       kind: kind,
-      id: knowledgeText(json['id'], max: 128),
-      title: knowledgeText(json['title'], max: 256),
-      body: knowledgeText(json['body'], max: null, empty: true),
-      summary: knowledgeText(json['summary'], max: 2048, empty: true),
+      id: knowledgeText(json['id']),
+      title: knowledgeText(json['title']),
+      body: knowledgeText(json['body'], empty: true),
+      summary: knowledgeText(json['summary'], empty: true),
       revision: knowledgeInteger(json['revision']),
       enabled: knowledgeBoolean(json['enabled']),
       builtIn: knowledgeBoolean(json['builtIn']),
       usesOriginal: knowledgeBoolean(json['usesOriginal']),
-      baseVersion: knowledgeOptionalText(json['baseVersion'], max: 128),
-      baseSha256: knowledgeOptionalText(json['baseSha256'], max: 64),
+      baseVersion: knowledgeOptionalText(json['baseVersion']),
+      baseSha256: knowledgeOptionalText(json['baseSha256']),
       triggers: knowledgeStrings(json['triggers']),
       sourceKinds: knowledgeStrings(json['sourceKinds']),
       requiredTools: knowledgeStrings(json['requiredTools']),
       optionalTools: knowledgeStrings(json['optionalTools']),
-      sourceNote: knowledgeText(json['sourceNote'], max: 2048, empty: true),
-      sourceConversationId: knowledgeOptionalText(
-        json['sourceConversationId'],
-        max: 256,
-      ),
-      sourceMessageId: knowledgeOptionalText(json['sourceMessageId'], max: 256),
+      sourceNote: knowledgeText(json['sourceNote'], empty: true),
+      sourceConversationId: knowledgeOptionalText(json['sourceConversationId']),
+      sourceMessageId: knowledgeOptionalText(json['sourceMessageId']),
       references: rawReferences.map(KnowledgeReference.fromJson),
       expiresAt: expiry,
     );
@@ -321,7 +294,7 @@ class KnowledgeChange {
       'before',
       'after',
     });
-    final key = knowledgeText(json['key'], max: 256);
+    final key = knowledgeText(json['key']);
     final before = json['before'] == null
         ? null
         : KnowledgeRecord.fromJson(json['before']);
@@ -350,8 +323,8 @@ class KnowledgeChangeSet {
     Iterable<String> inverseOperationIds = const [],
   }) : changes = List.unmodifiable(changes),
        inverseOperationIds = List.unmodifiable(inverseOperationIds) {
-    knowledgeText(id, max: 256);
-    if (inverseOf != null) knowledgeText(inverseOf, max: 512);
+    knowledgeText(id);
+    if (inverseOf != null) knowledgeText(inverseOf);
     _validateInverseTargets(inverseOf, this.inverseOperationIds);
     if (this.inverseOperationIds.isEmpty &&
         this.changes.any(
@@ -362,7 +335,6 @@ class KnowledgeChangeSet {
       );
     }
     if (this.changes.isEmpty ||
-        this.changes.length > 128 ||
         this.changes.map((change) => change.key).toSet().length !=
             this.changes.length) {
       knowledgeInvalid('Invalid knowledge change targets.');
@@ -402,9 +374,9 @@ class KnowledgeChangeSet {
     final raw = json['changes'];
     if (raw is! List) knowledgeInvalid('Invalid prepared knowledge changes.');
     return KnowledgeChangeSet(
-      id: knowledgeText(json['id'], max: 256),
+      id: knowledgeText(json['id']),
       changes: raw.map(KnowledgeChange.fromJson),
-      inverseOf: knowledgeOptionalText(json['inverseOf'], max: 512),
+      inverseOf: knowledgeOptionalText(json['inverseOf']),
       inverseOperationIds: _inverseIds(json['inverseOperationIds']),
     );
   }
@@ -462,14 +434,14 @@ class KnowledgeReceipt {
       'inverseOperationIds',
     });
     final raw = json['changes'];
-    if (raw is! List || raw.isEmpty || raw.length > 128) {
+    if (raw is! List || raw.isEmpty) {
       knowledgeInvalid('Invalid receipt changes.');
     }
     final receipt = KnowledgeReceipt(
-      operationId: knowledgeText(json['operationId'], max: 512),
-      digest: knowledgeText(json['digest'], max: 64),
+      operationId: knowledgeText(json['operationId']),
+      digest: knowledgeText(json['digest']),
       revision: knowledgeInteger(json['revision'], min: 1),
-      inverseOf: knowledgeOptionalText(json['inverseOf'], max: 512),
+      inverseOf: knowledgeOptionalText(json['inverseOf']),
       inverseOperationIds: _inverseIds(json['inverseOperationIds']),
       changes: raw.map(KnowledgeChange.fromJson),
     );
@@ -506,8 +478,8 @@ class KnowledgeUndoBatch {
     required this.operationId,
     required this.plan,
   }) {
-    knowledgeText(batchId, max: 256);
-    knowledgeText(operationId, max: 512);
+    knowledgeText(batchId);
+    knowledgeText(operationId);
     if (operationId != 'history-undo:${knowledgeDigest(batchId)}' ||
         plan.inverseOf != null ||
         plan.inverseOperationIds.isEmpty ||
@@ -536,8 +508,8 @@ class KnowledgeUndoBatch {
       'digest',
     });
     final batch = KnowledgeUndoBatch(
-      batchId: knowledgeText(json['batchId'], max: 256),
-      operationId: knowledgeText(json['operationId'], max: 512),
+      batchId: knowledgeText(json['batchId']),
+      operationId: knowledgeText(json['operationId']),
       plan: KnowledgeChangeSet.fromJson(json['plan']),
     );
     if (batch.digest != json['digest']) {
@@ -560,65 +532,34 @@ class KnowledgeArchive {
        tombstones = Map.unmodifiable(tombstones),
        receipts = List.unmodifiable(receipts),
        undoBatches = List.unmodifiable(undoBatches);
-  static const currentVersion = 2;
+  static const currentVersion = 3;
   final int revision;
   final int storageRevision;
   final List<KnowledgeRecord> records;
   final Map<String, int> tombstones;
   final List<KnowledgeReceipt> receipts;
   final List<KnowledgeUndoBatch> undoBatches;
-  String encode() {
-    final source = jsonEncode({
-      'version': currentVersion,
-      'revision': revision,
-      'storageRevision': storageRevision,
-      'records': records.map((record) => record.toJson()).toList(),
-      'tombstones': tombstones,
-      'receipts': receipts.map((receipt) => receipt.toJson()).toList(),
-      'undoBatches': undoBatches.map((batch) => batch.toJson()).toList(),
-    });
-    if (utf8.encode(source).length > KnowledgeLimits.archiveBytes ||
-        records.length > KnowledgeLimits.records ||
-        tombstones.length > KnowledgeLimits.tombstones ||
-        receipts.length > KnowledgeLimits.receipts ||
-        undoBatches.length > KnowledgeLimits.undoBatches) {
-      throw const KnowledgeException(
-        KnowledgeError.limit,
-        'Knowledge storage budget exceeded.',
-      );
-    }
-    return source;
-  }
+  Map<String, Object?> toJson() => {
+    'version': currentVersion,
+    'revision': revision,
+    'storageRevision': storageRevision,
+    'records': records.map((record) => record.toJson()).toList(),
+    'tombstones': tombstones,
+    'receipts': receipts.map((receipt) => receipt.toJson()).toList(),
+    'undoBatches': undoBatches.map((batch) => batch.toJson()).toList(),
+  };
+  String encode() => jsonEncode(toJson());
 
   factory KnowledgeArchive.decode(String source) {
-    if (utf8.encode(source).length > KnowledgeLimits.archiveBytes) {
-      knowledgeInvalid('Knowledge archive too large.');
-    }
-    final raw = jsonDecode(source);
-    if (raw is! Map<String, dynamic> ||
-        raw['version'] != 1 && raw['version'] != currentVersion) {
+    return KnowledgeArchive.fromJson(jsonDecode(source));
+  }
+
+  factory KnowledgeArchive.fromJson(Object? raw) {
+    if (raw is! Map<String, dynamic> || raw['version'] != currentVersion) {
       throw const KnowledgeException(
         KnowledgeError.unavailable,
         'Unsupported knowledge format.',
       );
-    }
-    if (raw['version'] == 1) {
-      knowledgeMap(raw, {
-        'version',
-        'revision',
-        'records',
-        'tombstones',
-        'receipts',
-      });
-      if (raw['receipts'] is List &&
-          (raw['receipts'] as List).any(
-            (receipt) =>
-                receipt is Map && receipt.containsKey('inverseOperationIds'),
-          )) {
-        knowledgeInvalid('A legacy archive contains newer inverse metadata.');
-      }
-      raw['storageRevision'] = raw['revision'];
-      raw['undoBatches'] = <Object?>[];
     }
     final json = knowledgeMap(raw, {
       'version',
@@ -639,13 +580,9 @@ class KnowledgeArchive {
         rawDeleted = json['tombstones'],
         rawBatches = json['undoBatches'];
     if (rawRecords is! List ||
-        rawRecords.length > KnowledgeLimits.records ||
         rawReceipts is! List ||
-        rawReceipts.length > KnowledgeLimits.receipts ||
         rawDeleted is! Map<String, dynamic> ||
-        rawDeleted.length > KnowledgeLimits.tombstones ||
-        rawBatches is! List ||
-        rawBatches.length > KnowledgeLimits.undoBatches) {
+        rawBatches is! List) {
       knowledgeInvalid('Invalid knowledge archive collections.');
     }
     final records = rawRecords.map(KnowledgeRecord.fromJson).toList();
@@ -670,8 +607,7 @@ class KnowledgeArchive {
     }
     final tombstones = <String, int>{};
     for (final entry in rawDeleted.entries) {
-      if (!RegExp(r'^(skill|memory):[a-z][a-z0-9-]{0,127}$')
-          .hasMatch(entry.key)) {
+      if (!RegExp(r'^(skill|memory):[a-z][a-z0-9-]*$').hasMatch(entry.key)) {
         knowledgeInvalid('Invalid tombstone identity.');
       }
       tombstones[entry.key] = knowledgeInteger(entry.value, min: 1);
@@ -689,7 +625,7 @@ class KnowledgeArchive {
         tombstones.values.any((value) => value > revision)) {
       knowledgeInvalid('Knowledge archive identities conflict.');
     }
-    if (receipts.length != revision.clamp(0, KnowledgeLimits.receipts) ||
+    if (receipts.length != revision ||
         receipts.isNotEmpty && receipts.last.revision != revision) {
       knowledgeInvalid('Knowledge operation history is incomplete.');
     }
@@ -752,7 +688,7 @@ class KnowledgeArchive {
 }
 
 void _validateKnowledgeChange(KnowledgeChange change) {
-  if (!RegExp(r'^(skill|memory):[a-z][a-z0-9-]{0,127}$').hasMatch(change.key) ||
+  if (!RegExp(r'^(skill|memory):[a-z][a-z0-9-]*$').hasMatch(change.key) ||
       change.expectedRevision < 0 ||
       change.before == null &&
           change.after == null &&
@@ -766,20 +702,19 @@ void _validateKnowledgeChange(KnowledgeChange change) {
 }
 
 List<String> _inverseIds(Object? value) {
-  if (value is! Iterable || value.length > KnowledgeLimits.receipts) {
+  if (value is! Iterable) {
     knowledgeInvalid('Invalid inverse operation list.');
   }
-  return List.unmodifiable(value.map((item) => knowledgeText(item, max: 512)));
+  return List.unmodifiable(value.map((item) => knowledgeText(item)));
 }
 
 void _validateInverseTargets(String? inverseOf, List<String> operationIds) {
   if (inverseOf != null && operationIds.isNotEmpty ||
-      operationIds.length > KnowledgeLimits.receipts ||
       operationIds.toSet().length != operationIds.length) {
     knowledgeInvalid('Invalid inverse operation identities.');
   }
   for (final id in operationIds) {
-    knowledgeText(id, max: 512);
+    knowledgeText(id);
   }
 }
 
@@ -796,17 +731,15 @@ Map<String, dynamic> knowledgeMap(Object? value, Set<String> keys) {
   return value;
 }
 
-String knowledgeText(Object? value, {int? max = 2048, bool empty = false}) {
-  if (value is! String ||
-      (max != null && value.length > max) ||
-      (!empty && value.trim().isEmpty)) {
+String knowledgeText(Object? value, {bool empty = false}) {
+  if (value is! String || (!empty && value.trim().isEmpty)) {
     knowledgeInvalid('Invalid knowledge text.');
   }
   return value;
 }
 
-String? knowledgeOptionalText(Object? value, {int max = 2048}) =>
-    value == null ? null : knowledgeText(value, max: max);
+String? knowledgeOptionalText(Object? value) =>
+    value == null ? null : knowledgeText(value);
 int knowledgeInteger(Object? value, {int min = 0}) {
   if (value is! int || value < min) {
     knowledgeInvalid('Invalid knowledge number.');
@@ -820,10 +753,10 @@ bool knowledgeBoolean(Object? value) {
 }
 
 List<String> knowledgeStrings(Object? value) {
-  if (value is! Iterable || value.length > 64) {
+  if (value is! Iterable) {
     knowledgeInvalid('Invalid knowledge list.');
   }
-  final result = value.map((item) => knowledgeText(item, max: 256)).toList();
+  final result = value.map((item) => knowledgeText(item)).toList();
   if (result.toSet().length != result.length) {
     knowledgeInvalid('Duplicate knowledge list item.');
   }

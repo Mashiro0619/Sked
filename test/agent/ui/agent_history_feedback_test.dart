@@ -654,7 +654,13 @@ void main() {
 
           owner.storage.fail = false;
           await _tap(tester, _inHistory('agent-restore-$_firstArchivedId'));
-          await tester.runAsync(owner.repository.waitForPendingWrites);
+          await _until(
+            tester,
+            () =>
+                !owner.repository.blocked &&
+                owner.repository.find(_firstArchivedId)?.archived == false,
+            reason: 'Storage recovery and the accepted archive restore must both complete.',
+          );
           await tester.pumpAndSettle();
 
           expect(owner.recoverCalls, 1);

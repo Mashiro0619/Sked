@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 
 enum ProviderProtocol { chatCompletions, responses }
@@ -13,7 +14,7 @@ class ProviderRequest {
     required List<ProviderMessage> messages,
     this.protocol = ProviderProtocol.chatCompletions,
     List<ToolDefinition> tools = const [],
-    this.limits = const ProviderLimits(),
+    this.maxOutputTokens,
     this.allowInsecureHttp = false,
     this.reasoningEffort,
   }) : messages = List.unmodifiable(messages),
@@ -25,43 +26,13 @@ class ProviderRequest {
   final ProviderProtocol protocol;
   final List<ProviderMessage> messages;
   final List<ToolDefinition> tools;
-  final ProviderLimits limits;
+
+  /// Optional service output length for explicit probes or user configuration.
+  final int? maxOutputTokens;
   final bool allowInsecureHttp;
 
   /// Null omits the parameter, leaving the model/service default untouched.
   final String? reasoningEffort;
-}
-
-class ProviderLimits {
-  const ProviderLimits({
-    this.totalTimeout,
-    this.idleTimeout,
-    this.maxRequestBytes,
-    this.maxAttachmentBytes,
-    this.maxResponseBytes = 8 * 1024 * 1024,
-    this.maxEventBytes = 512 * 1024,
-    this.maxToolArgumentBytes = 128 * 1024,
-    this.maxToolCalls,
-    this.maxOutputTokens,
-    this.maxTotalTokens,
-  });
-
-  final Duration? totalTimeout;
-  final Duration? idleTimeout;
-  final int? maxRequestBytes;
-
-  /// Raw binary input budget, independent from the text/tool JSON budget.
-  final int? maxAttachmentBytes;
-  final int maxResponseBytes;
-  final int maxEventBytes;
-  final int maxToolArgumentBytes;
-  final int? maxToolCalls;
-
-  /// Null leaves output length to the selected model/service.
-  final int? maxOutputTokens;
-
-  /// Optional local usage cap for explicitly bounded requests such as diagnostics.
-  final int? maxTotalTokens;
 }
 
 class ProviderMessage {
@@ -88,8 +59,8 @@ class ProviderMessage {
   final List<Map<String, Object?>> responseItems;
 }
 
-/// A lazy immutable file reference. Bytes are read only after request budgets
-/// and cancellation have been installed, and never serialized in chat JSON.
+/// A lazy immutable file reference streamed during upload and never embedded
+/// in the persisted conversation JSON.
 class ProviderAttachment {
   const ProviderAttachment({
     required this.id,
@@ -145,7 +116,9 @@ class ProviderToolCall {
   /// Original function name for a rejected, unadvertised call in history.
   final String? wireName;
 
-  Map<String, Object?> get decodedArguments {
+  late final Map<String, Object?> decodedArguments = _decodeArguments();
+
+  Map<String, Object?> _decodeArguments() {
     final value = jsonDecode(arguments);
     if (value is! Map<String, dynamic>) {
       throw const ProviderException(ProviderError.invalidToolArguments);
@@ -245,11 +218,6 @@ enum ProviderError {
   insecureEndpoint,
   cancelled,
   timeout,
-  requestBudgetExceeded,
-  responseBudgetExceeded,
-  eventBudgetExceeded,
-  toolBudgetExceeded,
-  tokenBudgetExceeded,
   redirectRejected,
   authentication,
   rateLimited,
@@ -431,27 +399,56 @@ class ProviderCancellationToken {
   }
 }
 
-Map<String, Object?> freezeProviderMap(Map<String, Object?> value) =>
-    _freeze(value, 0) as Map<String, Object?>;
+Map<String, Object?> freezeProviderMap(Map<String, Object?> value) {
+  final active = HashSet<Object>.identity();
+  final pending = <void Function()>[];
+  Object? result;
+  void visit(Object? current, void Function(Object?) assign) {
+    if (current is Map) {
+      if (!current.keys.every((key) => key is String) || !active.add(current)) {
+        throw const ProviderException(ProviderError.invalidRequest);
+      }
+      final frozen = <String, Object?>{};
+      pending.add(() {
+        active.remove(current);
+        assign(Map<String, Object?>.unmodifiable(frozen));
+      });
+      for (final entry in current.entries.toList().reversed) {
+        pending.add(
+          () => visit(
+            entry.value,
+            (child) => frozen[entry.key as String] = child,
+          ),
+        );
+      }
+    } else if (current is List) {
+      if (!active.add(current)) {
+        throw const ProviderException(ProviderError.invalidRequest);
+      }
+      final frozen = List<Object?>.filled(current.length, null);
+      pending.add(() {
+        active.remove(current);
+        assign(List<Object?>.unmodifiable(frozen));
+      });
+      for (var index = current.length - 1; index >= 0; index--) {
+        final target = index;
+        pending.add(
+          () => visit(current[target], (child) => frozen[target] = child),
+        );
+      }
+    } else if (current == null ||
+        current is String ||
+        current is bool ||
+        (current is num && current.isFinite)) {
+      assign(current);
+    } else {
+      throw const ProviderException(ProviderError.invalidRequest);
+    }
+  }
 
-Object? _freeze(Object? value, int depth) {
-  if (depth > 64) throw const ProviderException(ProviderError.invalidRequest);
-  if (value is Map && value.keys.every((key) => key is String)) {
-    return Map<String, Object?>.unmodifiable({
-      for (final entry in value.entries)
-        entry.key as String: _freeze(entry.value, depth + 1),
-    });
+  pending.add(() => visit(value, (frozen) => result = frozen));
+  while (pending.isNotEmpty) {
+    pending.removeLast()();
   }
-  if (value is List) {
-    return List<Object?>.unmodifiable(
-      value.map((item) => _freeze(item, depth + 1)),
-    );
-  }
-  if (value == null ||
-      value is String ||
-      value is bool ||
-      (value is num && value.isFinite)) {
-    return value;
-  }
-  throw const ProviderException(ProviderError.invalidRequest);
+  return result as Map<String, Object?>;
 }

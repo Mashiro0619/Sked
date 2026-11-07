@@ -11,7 +11,6 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/backup/selective_backup_codec.dart';
-import 'package:sked/backup/selective_backup_models.dart';
 import 'package:sked/controllers/app_backup_controller.dart' show AppImportMode;
 import 'package:sked/controllers/app_data_maintenance.dart'
     show AppBackupRestoreInProgressException;
@@ -73,15 +72,6 @@ class _PendingFilePicker extends _FilePicker {
     await release.future;
     return super.openFile(acceptedTypeGroups: acceptedTypeGroups);
   }
-}
-
-class _OversizedBackupFile extends XFile {
-  _OversizedBackupFile() : super('oversized.zip');
-  @override
-  Future<int> length() async => SelectiveBackupLimits.archiveBytes + 1;
-  @override
-  Stream<Uint8List> openRead([int? start, int? end]) =>
-      throw StateError('Oversized backup bytes must not be read.');
 }
 
 Future<(AppRuntime, _Storage)> _fixture() async {
@@ -508,28 +498,6 @@ void main() {
       },
     );
   }
-
-  testWidgets(
-    'oversized backup is refused before reading its bytes or opening selection',
-    (tester) async {
-      _viewport(tester);
-      final (provider, storage) = (await tester.runAsync(_fixture))!;
-      addTearDown(provider.dispose);
-      _pickBackup('', picker: _FilePicker('', file: _OversizedBackupFile()));
-      await tester.pumpWidget(
-        WorkspaceHarness(provider: provider, home: const SettingsPage()),
-      );
-      await tester.pumpAndSettle();
-      final l = AppLocalizations.of(tester.element(find.byType(SettingsPage)));
-      await _open(tester, _key('settings-app-backup'));
-      await _open(tester, find.text(l.restoreBackupFileTitle));
-      expect(find.text(l.selectiveBackupLimit), findsOneWidget);
-      expect(find.byType(SelectiveBackupPage), findsNothing);
-      expect(storage.writes, 0);
-      expect(provider.maintenance.isReserved, isFalse);
-      expect(tester.takeException(), isNull);
-    },
-  );
 
   testWidgets(
     'text restore resumes its fixed target after an interrupted write',

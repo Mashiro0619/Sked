@@ -27,9 +27,9 @@ void main() {
   ) async {
     addTearDown(tester.view.reset);
     await mountAgentUi(tester, view(_plan()));
-    expect(find.text('Reported by Agent · 1/4'), findsOneWidget);
+    expect(find.text('Task plan · 1/4'), findsOneWidget);
     expect(find.text('Waiting for the required information'), findsNothing);
-    await tester.tap(find.text('Task plan'));
+    await tester.tap(find.text('Task plan · 1/4'));
     await tester.pumpAndSettle();
     for (final status in ['Pending', 'In progress', 'Completed', 'Blocked']) {
       expect(find.text(status), findsOneWidget);
@@ -42,13 +42,13 @@ void main() {
     (tester) async {
       addTearDown(tester.view.reset);
       await mountAgentUi(tester, view(_plan()));
-      await tester.tap(find.text('Task plan'));
+      await tester.tap(find.text('Task plan · 1/4'));
       await tester.pumpAndSettle();
       expect(find.text('Completed'), findsOneWidget);
       expect(find.text('operation-1'), findsNothing);
-      expect(find.text('Reported by Agent · 1/4'), findsOneWidget);
+      expect(find.text('Task plan · 1/4'), findsOneWidget);
       await mountAgentUi(tester, view(_plan(revision: 2)));
-      expect(find.text('Reported by Agent · 1/4'), findsOneWidget);
+      expect(find.text('Task plan · 1/4'), findsOneWidget);
       expect(find.text('Waiting for the required information'), findsOneWidget);
     },
   );
@@ -58,7 +58,7 @@ void main() {
     (tester) async {
       addTearDown(tester.view.reset);
       await mountAgentUi(tester, view(_plan()));
-      await tester.tap(find.text('Task plan'));
+      await tester.tap(find.text('Task plan · 1/4'));
       await tester.pumpAndSettle();
       await mountAgentUi(tester, view(_plan(runId: 'new-run')));
       expect(find.text('Waiting for the required information'), findsNothing);
@@ -67,7 +67,7 @@ void main() {
         view(AgentTaskPlan(runId: 'new-run', revision: 2, steps: [])),
       );
       expect(find.byType(ExpansionTile), findsNothing);
-      expect(find.text('Task plan'), findsNothing);
+      expect(find.textContaining('Task plan'), findsNothing);
     },
   );
 
@@ -93,7 +93,7 @@ void main() {
       size: const Size(320, 480),
       scale: 2,
     );
-    await tester.tap(find.text('Task plan'));
+    await tester.tap(find.text('Task plan · 0/1'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.text(plan.steps.single.detail!));
     await tester.pumpAndSettle();

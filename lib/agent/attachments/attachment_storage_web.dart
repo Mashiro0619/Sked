@@ -129,12 +129,7 @@ class PlatformAttachmentStorage extends AttachmentStorage {
       throw const AttachmentException(AttachmentError.invalidMetadata);
     }
     final parts = <web.BlobPart>[];
-    var count = 0;
     await for (final chunk in bytes) {
-      count += chunk.length;
-      if (count > ConversationAttachment.maxFileBytes) {
-        throw const AttachmentException(AttachmentError.tooLarge);
-      }
       parts.add(Uint8List.fromList(chunk).toJS);
     }
     final blob = web.Blob(
@@ -157,9 +152,7 @@ class PlatformAttachmentStorage extends AttachmentStorage {
       throw const AttachmentException(AttachmentError.corrupt);
     }
     final blob = value as web.Blob;
-    if (blob.size > ConversationAttachment.maxFileBytes) {
-      throw const AttachmentException(AttachmentError.tooLarge);
-    }
+
     for (var offset = 0; offset < blob.size; offset += 65536) {
       final end = offset + 65536 < blob.size ? offset + 65536 : blob.size;
       yield (await blob.slice(offset, end).arrayBuffer().toDart).toDart

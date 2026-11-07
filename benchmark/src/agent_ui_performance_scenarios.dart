@@ -26,7 +26,7 @@ import '../../integration_test/support/agent_native_session.dart';
 import 'native_semantics_probe.dart';
 import 'ui_performance_metrics.dart';
 
-const agentUiPerformanceProtocolId = 'agent-ui-frames-v2';
+const agentUiPerformanceProtocolId = 'agent-ui-frames-v3';
 const agentUiPerformanceScrollId = 'agent-transcript-scroll-v1';
 const agentUiPerformanceIterations = 2;
 const agentUiPerformanceWindowsActions = agentUiPerformanceAndroidActions;
@@ -238,7 +238,14 @@ Future<Map<String, Object?>> runAgentUiPerformanceBenchmarks(
     'failures': failures,
     'protocol': {
       'id': agentUiPerformanceProtocolId,
-      'version': 2,
+      'version': 3,
+      'storage': {
+        'id': 'isolated-production-store-v1',
+        'backend': 'drift-sqlite',
+        'fixturePersistence': 'before-home-mount',
+        'inspection': 'outside-action-windows',
+        'fullArchiveReadBeforeFirstEntry': false,
+      },
       'nativeSemanticsHarnessVersion': 2,
       'scrollTargeting': {
         'id': agentUiPerformanceScrollId,
@@ -386,7 +393,7 @@ Future<Map<String, Object?>> runAgentUiPerformanceBenchmarks(
         buildSignature: '',
         installerStore: '',
       );
-      final nativeSession = session = AgentNativeSession();
+      final nativeSession = session = await AgentNativeSession.create();
       recorder = _Recorder(tester, nativeSession)..attach();
       report['fixture'] = nativeSession.fixtureReport();
       report['expectedActions'] = Platform.isWindows
@@ -418,7 +425,9 @@ Future<Map<String, Object?>> runAgentUiPerformanceBenchmarks(
         'Home preparation opened Agent before its measured first entry.',
       );
       _assertIdle(nativeSession);
-      report['storageBeforeActions'] = nativeSession.storageReport();
+      report['storageBeforeActions'] = await nativeSession.storageReport(
+        includeArchive: false,
+      );
       report['preparationScope'] = 'Fixed fixtures, main load and real home mount before action timing. No Agent host or history prewarming.';
     });
 
@@ -455,7 +464,7 @@ Future<Map<String, Object?>> runAgentUiPerformanceBenchmarks(
       await native.app.session.repository
           .waitForPendingWrites(propagateErrors: true)
           .timeout(const Duration(seconds: 20));
-      final archive = ConversationArchive.decode(native.chatSource);
+      final archive = ConversationArchive.decode(await native.readChatSource());
       final long = archive.conversations.singleWhere(
         (value) => value.id == agentNativeLongId,
       );
@@ -480,7 +489,7 @@ Future<Map<String, Object?>> runAgentUiPerformanceBenchmarks(
         'draftsUnchanged': true,
       };
       report['providerBeforeCleanup'] = native.providerReport();
-      report['storageAfterActions'] = native.storageReport();
+      report['storageAfterActions'] = await native.storageReport();
       _require(
         guard.attempts == 0,
         'An offline Profile action attempted HTTP.',
@@ -508,7 +517,7 @@ Future<Map<String, Object?>> runAgentUiPerformanceBenchmarks(
         if (native != null) {
           cleanup['owners'] = await native.close();
           cleanup['provider'] = native.providerReport();
-          cleanup['storage'] = native.storageReport();
+          cleanup['storage'] = await native.storageReport();
         }
         try {
           guard.restore();
@@ -773,9 +782,15 @@ class _AgentJourney {
     );
     _require(
       session.app.agent.conversations.selectedId == agentNativeLongId &&
-          session.app.agent.conversations.selected!.messages.length ==
-              agentNativeMessageCount,
-      'The active transcript is not the complete 512-message fixture.',
+          session.app.agent.conversations
+              .visibleMessages(agentNativeLongId)
+              .isNotEmpty &&
+          session.app.agent.conversations
+                  .visibleMessages(agentNativeLongId)
+                  .last
+                  .id ==
+              session.originalMessages.last.id,
+      'The active SQLite page does not contain the fixture\'s latest message.',
     );
     _require(
       tester.widget<TextField>(composer).controller!.text ==

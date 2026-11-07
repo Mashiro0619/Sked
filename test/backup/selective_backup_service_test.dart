@@ -133,7 +133,7 @@ void main() {
     (200, 'local-0'),
   ]) {
     test(
-      'chat restore accepts $existingCount existing chats with target $incomingId at the archive limit',
+      'chat restore merges $existingCount existing chats with target $incomingId',
       () async {
         final storage = MemoryConversationStorage()
           ..source = ConversationArchive(
@@ -177,7 +177,7 @@ void main() {
     );
   }
 
-  test('an oversized merged chat archive is rejected before journal admission or main-data changes', () async {
+  test('restoring beyond the former chat count completes all selected business changes', () async {
     final storage = MemoryConversationStorage()
       ..source = ConversationArchive(
         conversations: List.generate(200, (i) => _chat('local-$i')),
@@ -191,12 +191,11 @@ void main() {
     final service = runtime.backups.selective;
     await service.inventory();
     final before = runtime.session.committedData;
-    final beforeChats = storage.source;
     final calendar = before.generalMode.schedules.first;
     final source = buildSelectiveBackupInventory(
       appData: before.copyWith(
         generalMode: before.generalMode.withSchedule(
-          calendar.copyWith(name: 'Must not be applied'),
+          calendar.copyWith(name: 'Restored calendar'),
         ),
       ),
       conversations: [_chat('incoming')],
@@ -211,17 +210,28 @@ void main() {
       ),
     );
 
-    await expectLater(service.restore(plan), throwsFormatException);
+    await service.restore(plan);
 
-    expect(journal.writes, 0);
+    expect(journal.writes, greaterThan(0));
     expect(await journal.read(), isNull);
-    expect(runtime.session.committedData.toJson(), before.toJson());
-    expect(storage.source, beforeChats);
+    expect(
+      runtime.session.committedData.generalMode.schedules
+          .singleWhere((value) => value.id == calendar.id)
+          .name,
+      'Restored calendar',
+    );
+    final restored = ConversationArchive.decode(storage.source!);
+    expect(restored.conversations, hasLength(201));
+    expect(
+      restored.conversations.map((value) => value.id),
+      unorderedEquals([for (var i = 0; i < 200; i++) 'local-$i', 'incoming']),
+    );
     expect(service.recoveryPending, isFalse);
     expect(runtime.session.canWrite, isTrue);
     expect(runtime.agent.conversations.canWrite, isTrue);
+    final completedWrites = journal.writes;
     await service.resume();
-    expect(journal.writes, 0);
+    expect(journal.writes, completedWrites);
     expect(runtime.session.canWrite, isTrue);
   });
 

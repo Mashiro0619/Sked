@@ -7,9 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/agent/attachments/attachment_storage_io.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
-import 'package:sked/agent/conversations/conversation_storage_io.dart';
 import 'package:sked/agent/knowledge/knowledge_repository.dart';
-import 'package:sked/agent/knowledge/knowledge_storage_io.dart';
+import 'package:sked/agent/store/agent_store.dart';
 import 'package:sked/backup/selective_backup_models.dart';
 import 'package:sked/backup/selective_restore_coordinator.dart';
 import 'package:sked/backup/selective_restore_journal.dart';
@@ -238,9 +237,12 @@ void main() {
     final data = buildInitialAppData(buildDefaultPeriodTimes());
     await mainStorage.save(data);
 
-    final chatStorage = PlatformConversationStorage(layout: layout);
+    final agentStore = AgentStore.open(
+      filePath: path.join(root.path, 'Sked_agent.sqlite'),
+    );
+    final chatStorage = agentStore.conversations;
     final chats = ConversationRepository(storage: chatStorage);
-    final knowledgeStorage = PlatformKnowledgeStorage(layout: layout);
+    final knowledgeStorage = agentStore.knowledge;
     final knowledge = AgentKnowledgeRepository(storage: knowledgeStorage);
     final attachments = PlatformAttachmentStorage(layout: layout);
     final staging = PlatformAttachmentStorage(layout: stagingLayout);
@@ -251,6 +253,7 @@ void main() {
       knowledge.dispose();
       await attachments.close();
       await staging.close();
+      await agentStore.close();
     });
     const bytes = [0, 1, 127, 128, 255];
     final attachment = ConversationAttachment(
@@ -323,19 +326,12 @@ void main() {
       await agentCredentials.write(slot, 'synthetic-${slot.name}');
     }
 
-    final storedChat = ConversationArchive.decode(
-      (await PlatformConversationStorage(layout: layout).load()).source!,
-    ).conversations.single;
+    final storedChat = (await chatStorage.readArchive()).conversations.single;
     expect(storedChat.messages.single.text, 'Stored private request');
     expect(storedChat.messages.single.attachmentIds, [attachment.id]);
     expect(storedChat.draft, 'Unsent private draft');
-    expect(
-      await PlatformConversationStorage(layout: layout).pendingHistoryBatch(),
-      'clear-history-batch',
-    );
-    final storedKnowledge = (await PlatformKnowledgeStorage(
-      layout: layout,
-    ).load()).archive;
+    expect(await chatStorage.pendingHistoryBatch(), 'clear-history-batch');
+    final storedKnowledge = (await knowledgeStorage.load()).archive;
     expect(
       storedKnowledge.records.map((record) => record.id),
       containsAll(['clear-memory', 'clear-skill']),
@@ -353,16 +349,15 @@ void main() {
     expect((await mainStorage.load()).data!.encode(), data.encode());
     chats.freeze();
     knowledge.freeze();
+    await agentStore.suspendForDataClear();
 
     await service.clear();
     expect(await root.list(followLinks: false).toList(), isEmpty);
 
-    final reopenedChats = PlatformConversationStorage(layout: layout);
-    expect((await reopenedChats.load()).source, isNull);
+    final reopenedChats = agentStore.conversations;
+    expect((await reopenedChats.readArchive()).conversations, isEmpty);
     expect(await reopenedChats.pendingHistoryBatch(), isNull);
-    final reopenedKnowledge = (await PlatformKnowledgeStorage(
-      layout: layout,
-    ).load()).archive;
+    final reopenedKnowledge = (await agentStore.knowledge.load()).archive;
     expect(reopenedKnowledge.records, isEmpty);
     expect(reopenedKnowledge.receipts, isEmpty);
     expect(reopenedKnowledge.tombstones, isEmpty);

@@ -1,9 +1,7 @@
 import 'dart:convert';
 
-import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
-import 'package:sked/agent/conversations/conversation_storage_codec.dart';
 
 void main() {
   final date = DateTime.utc(2026, 10, 30, 9);
@@ -26,38 +24,15 @@ void main() {
     runs: runs,
   );
 
-  test('version one archives migrate without inventing historical usage', () {
+  test('retired conversation archives require rebuilding Agent data', () {
     final legacy = jsonDecode(
       ConversationArchive(conversations: [conversation()]).encode(),
     ) as Map<String, dynamic>;
     legacy['version'] = 1;
     (legacy['conversations'] as List).single.remove('runs');
-    final migrated = ConversationArchive.decode(jsonEncode(legacy));
-    expect(migrated.conversations.single.runs, isEmpty);
     expect(
-      jsonDecode(migrated.encode())['version'],
-      ConversationArchive.currentVersion,
-    );
-  });
-
-  test('a future usage archive blocks fallback to an older storage slot', () {
-    final previous = ConversationArchive(revision: 1).encode();
-    final future = jsonEncode({
-      ...jsonDecode(previous) as Map<String, dynamic>,
-      'version': ConversationArchive.currentVersion + 1,
-    });
-    final futureSlot = jsonEncode({
-      'version': 1,
-      'revision': 1,
-      'source': future,
-      'checksum': sha256.convert(utf8.encode(future)).toString(),
-    });
-    expect(
-      () => decodeConversationSlots([
-        futureSlot,
-        encodeConversationSlot(previous, 1),
-      ]),
-      throwsA(isA<ConversationStorageException>()),
+      () => ConversationArchive.decode(jsonEncode(legacy)),
+      throwsFormatException,
     );
   });
 

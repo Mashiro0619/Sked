@@ -895,14 +895,8 @@ Future<Uint8List?> pickSelectiveBackupBytes() async {
     ],
   );
   if (file == null) return null;
-  if (await file.length() > SelectiveBackupLimits.archiveBytes) {
-    backupLimit('The backup file is too large.');
-  }
   final bytes = BytesBuilder(copy: false);
   await for (final chunk in file.openRead()) {
-    if (bytes.length + chunk.length > SelectiveBackupLimits.archiveBytes) {
-      backupLimit('The backup file is too large.');
-    }
     bytes.add(chunk);
   }
   return bytes.takeBytes();

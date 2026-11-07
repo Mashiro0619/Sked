@@ -315,6 +315,38 @@ void main() {
   });
 
   testWidgets(
+    'expanded Agent history has one controls row and keeps collapsed access',
+    (tester) async {
+      final application = await _Application.create();
+      addTearDown(application.dispose);
+      addTearDown(tester.view.reset);
+      await _mountFrame(tester, application, size: const Size(1440, 1000));
+      await selectAgentShellDestination(tester, 'agent');
+      await tester.pumpAndSettle();
+      final semantics = tester.ensureSemantics();
+      expect(_key('agent-history-new').hitTestable(), findsOneWidget);
+      expect(_key('agent-history-search-toggle').hitTestable(), findsOneWidget);
+      expect(_key('workspace-resource-heading-icon'), findsNothing);
+      expect(_key('workspace-resource-open'), findsNothing);
+      await tester.tap(_key('workspace-resource-collapse'));
+      await tester.pumpAndSettle();
+      expect(_key('workspace-resource-open').hitTestable(), findsOneWidget);
+      expect(
+        tester
+            .getSemantics(_key('workspace-resource-open'))
+            .getSemanticsData()
+            .tooltip,
+        AppLocalizations.of(tester.element(_key('workspace-resource-open')))
+            .agentConversations,
+      );
+      semantics.dispose();
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets(
     'connection model and run preference pages retain independent drafts',
     (tester) async {
       final application = (await tester.runAsync(_Application.create))!;
@@ -415,7 +447,7 @@ void main() {
       await tester.pump();
       await tester.ensureVisible(_key('agent-queue'));
       expect(
-        tester.widget<FilledButton>(_key('agent-queue')).onPressed,
+        tester.widget<IconButton>(_key('agent-queue')).onPressed,
         isNotNull,
       );
       await tester.tap(_key('agent-queue'));

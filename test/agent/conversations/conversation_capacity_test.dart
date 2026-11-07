@@ -1,13 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
-import 'package:sked/agent/conversations/conversation_storage_io.dart'
-    as native;
+import 'package:sked/agent/store/agent_store.dart';
 import 'package:sked/agent/history/conversation_history.dart';
-import 'package:sked/services/app_storage_layout_io.dart';
 
 import '../../support/memory_conversation_storage.dart';
 
@@ -95,6 +92,34 @@ Future<(ConversationRepository, MemoryConversationStorage)> _open(
 }
 
 void main() {
+  test('redo codec preserves long error details and complete large inverse and attachment sets', () {
+    final ticket = ConversationUndoTicket(
+      owner: ConversationUndoOwner.main,
+      token: 'prepared-inverse',
+      digest: '0' * 64,
+      operationIds: [for (var i = 0; i < 150; i++) 'operation-$i'],
+    );
+    final batch = ConversationRedoBatch(
+      id: 'redo',
+      conversationId: 'chat',
+      sourceTurnId: 'turn-0',
+      sourceMessageId: 'request',
+      historyVersionId: 'history',
+      replayRunId: 'run',
+      createdAt: _now,
+      text: 'Updated request',
+      contextDigest: '0' * 64,
+      turnIds: [for (var i = 0; i < 300; i++) 'turn-$i'],
+      attachmentIds: [for (var i = 0; i < 35; i++) 'file-$i'],
+      tickets: [ticket],
+      lastError: 'Details ' * 100,
+    );
+    final restored = ConversationRedoBatch.fromJson(batch.toJson());
+    expect(restored.tickets.single.operationIds, ticket.operationIds);
+    expect(restored.attachmentIds, batch.attachmentIds);
+    expect(restored.turnIds, batch.turnIds);
+    expect(restored.lastError, batch.lastError);
+  });
   test('more than 200 conversations remain writable and reloadable', () async {
     final (repository, storage) = await _open([
       for (var index = 0; index < 205; index++) _conversation('chat-$index'),
@@ -252,60 +277,41 @@ void main() {
     },
   );
 
-  test(
-    'native mirrored slots save and recover archives above 16 MiB',
-    () async {
-      final directory = await Directory.systemTemp.createTemp(
-        'sked-chat-capacity-',
-      );
-      addTearDown(() => directory.delete(recursive: true));
-      final storage = native.PlatformConversationStorage(
-        layout: AppStorageLayout(directoryProvider: () async => directory),
-      );
-      final text = 'z' * 512000;
-      final source = ConversationArchive(
-        revision: 7,
-        conversations: [
-          _conversation(
-            'large',
-            messages: [
-              for (var index = 0; index < 33; index++)
-                _message('large-$index', text),
-            ],
-          ),
-        ],
-      ).encode();
-      final expectedDigest = sha256.convert(utf8.encode(source)).toString();
-      expect(utf8.encode(source).length, greaterThan(16 * 1024 * 1024));
-      await storage.save(source, revision: 7);
-      for (var slot = 0; slot < 2; slot++) {
-        expect(
-          await File('${directory.path}/Sked_agent_conversations.$slot.json')
-              .length(),
-          greaterThan(16 * 1024 * 1024),
-        );
-      }
-      final loaded = await storage.load();
-      expect(
-        sha256.convert(utf8.encode(loaded.source!)).toString(),
-        expectedDigest,
-      );
-      expect(loaded.recovered, isFalse);
-      final restored = ConversationArchive.decode(loaded.source!)
-          .conversations
-          .single;
-      expect(restored.messages, hasLength(33));
-      expect(restored.messages.last.text.length, text.length);
-      await File('${directory.path}/Sked_agent_conversations.0.json')
-          .writeAsString('{torn');
-      final recovered = await storage.load();
-      expect(recovered.recovered, isTrue);
-      expect(
-        sha256.convert(utf8.encode(recovered.source!)).toString(),
-        expectedDigest,
-      );
-    },
-  );
+  test('native SQLite stores and reopens conversations above 16 MiB', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'sked-chat-capacity-',
+    );
+    addTearDown(() => directory.delete(recursive: true));
+    final filename = '${directory.path}/agent.sqlite';
+    final store = AgentStore.open(filePath: filename);
+    final text = 'z' * 512000;
+    final source = ConversationArchive(
+      revision: 7,
+      conversations: [
+        _conversation(
+          'large',
+          messages: [
+            for (var index = 0; index < 33; index++)
+              _message('large-$index', text),
+          ],
+        ),
+      ],
+    ).encode();
+    expect(utf8.encode(source).length, greaterThan(16 * 1024 * 1024));
+    await store.conversations.writeArchive(
+      ConversationArchive.decode(source),
+      previous: ConversationArchive(),
+    );
+    await store.close();
+    expect(await File(filename).length(), greaterThan(16 * 1024 * 1024));
+    final reopened = AgentStore.open(filePath: filename);
+    addTearDown(reopened.close);
+    final loaded = await reopened.conversations.readArchive();
+    expect(loaded.encode(), source);
+    final restored = loaded.conversations.single;
+    expect(restored.messages, hasLength(33));
+    expect(restored.messages.last.text.length, text.length);
+  });
 
   test(
     'removing capacity ceilings retains identity and ownership validation',

@@ -10,6 +10,66 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get agentTaskDetails => '任务详情';
+
+  @override
+  String get agentTaskChanges => '变更';
+
+  @override
+  String get agentContextTitle => '上下文';
+
+  @override
+  String get agentNoTaskChanges => '本轮暂无变更';
+
+  @override
+  String get agentNoTaskPlan => '本轮暂无计划';
+
+  @override
+  String get agentNoTaskAttachments => '本轮暂无附件';
+
+  @override
+  String get agentLoadEarlierMessages => '加载更早消息';
+
+  @override
+  String get agentUseCurrentTimetable => '设为当前课表';
+
+  @override
+  String get agentUseCurrentCalendar => '设为当前日历';
+
+  @override
+  String get agentTechnicalDetails => '技术详情';
+
+  @override
+  String get agentActivityCorrected => '已纠正';
+
+  @override
+  String get agentCompactContext => '压缩上下文';
+
+  @override
+  String get agentCompactingContext => '正在压缩上下文…';
+
+  @override
+  String get agentCompactionQueued => '压缩已排队';
+
+  @override
+  String get agentContextWindow => '最大上下文长度';
+
+  @override
+  String get agentContextThreshold => '自动压缩触发大小';
+
+  @override
+  String get agentContextAutoCompact => '自动压缩';
+
+  @override
+  String get agentContextUnset => '未设置';
+
+  @override
+  String get agentContextEstimated => '估算';
+
+  @override
+  String get agentContextReported => '服务报告';
+
+  @override
   String get appTitle => 'Sked';
 
   @override
@@ -3403,13 +3463,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentPreferenceLimitHint =>
-      '可永久保留，或选择 7–3650 天。只清理已结束且没有草稿或待处理输入的会话。';
+      '输入保留天数，0 表示永久保留。只清理已结束且没有草稿或待处理输入的会话。';
 
   @override
   String get agentPreferencesSaved => '偏好已保存';
 
   @override
-  String get agentInvalidPreference => '请输入所示范围内的值。';
+  String get agentInvalidPreference => '请输入非负整数。';
 
   @override
   String get agentBackupConnectionPreserved =>
@@ -4083,12 +4143,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get agentConversationGuidanceHint => '指定常用的回答方式和偏好，应用到所有对话。';
 
   @override
-  String get agentRunLimitsTitle => '单次运行限额';
-
-  @override
-  String get agentRunLimitsHint => '限制一次任务的模型请求和工具调用次数。';
-
-  @override
   String get agentHistoryRetentionTitle => '聊天记录保留';
 
   @override
@@ -4127,11 +4181,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String agentProviderLimitFailure(String code) {
-    return '模型请求超过运行限制（$code）。';
-  }
-
-  @override
   String agentProviderTimeoutFailure(String code) {
     return '等待模型服务响应超时（$code）。';
   }
@@ -4156,48 +4205,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentToolAskUser => '询问用户';
-
-  @override
-  String agentQuestionAnswerTooLong(int limit) {
-    return '请将回答控制在 $limit 个字符以内。';
-  }
-
-  @override
-  String get agentBudgetSummaryTitle => '本轮执行结果';
-
-  @override
-  String get agentBudgetSummaryTokenLimit => '本轮 Token 额度不足，已保留进度。';
-
-  @override
-  String get agentBudgetSummaryRoundLimit => '已达到模型请求轮次上限。';
-
-  @override
-  String get agentBudgetSummaryToolLimit => '已达到工具调用次数上限。';
-
-  @override
-  String agentBudgetSummaryTools(
-    int completed,
-    int failed,
-    int notStarted,
-    int unknown,
-  ) {
-    return '工具结果 · 完成 $completed 项，失败 $failed 项，未开始 $notStarted 项，待核对 $unknown 项';
-  }
-
-  @override
-  String agentBudgetSummaryUsage(
-    int requests,
-    int requestLimit,
-    int tokens,
-    int tokenLimit,
-  ) {
-    return '模型请求 $requests/$requestLimit 轮 · 已报告用量 $tokens/$tokenLimit Token';
-  }
-
-  @override
-  String agentBudgetSummaryMissingUsage(int count) {
-    return '另有 $count 次请求的用量未知。';
-  }
 
   @override
   String get agentReferenceSearch => '搜索引用';
@@ -4254,28 +4261,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get agentQueuedRestoreDraftBusy => '请先发送或清空当前草稿，再移回这条输入。';
 
   @override
-  String get agentBudgetSummaryRequestTokenLimit => '已达到单次请求的 Token 上限，已保留进度。';
-
-  @override
-  String agentBudgetSummaryRequestTokenUsage(int reported, int limit) {
-    return '本次请求 · 已报告用量 $reported/$limit Token';
-  }
-
-  @override
-  String agentBudgetSummaryReportedUsage(
-    int requests,
-    int requestLimit,
-    int tokens,
-  ) {
-    return '模型请求 $requests/$requestLimit 轮 · 已报告用量 $tokens Token';
-  }
-
-  @override
-  String agentBudgetSummaryRecordedUsage(int requests, int tokens) {
-    return '模型请求 $requests 轮 · 已报告用量 $tokens Token';
-  }
-
-  @override
   String get agentEndRedo => '结束重做';
 
   @override
@@ -4288,6 +4273,66 @@ class AppLocalizationsZh extends AppLocalizations {
 /// The translations for Chinese, using the Han script (`zh_Hant`).
 class AppLocalizationsZhHant extends AppLocalizationsZh {
   AppLocalizationsZhHant() : super('zh_Hant');
+
+  @override
+  String get agentTaskDetails => '任務詳情';
+
+  @override
+  String get agentTaskChanges => '變更';
+
+  @override
+  String get agentContextTitle => '上下文';
+
+  @override
+  String get agentNoTaskChanges => '本輪尚無變更';
+
+  @override
+  String get agentNoTaskPlan => '本輪尚無計畫';
+
+  @override
+  String get agentNoTaskAttachments => '本輪尚無附件';
+
+  @override
+  String get agentLoadEarlierMessages => '載入更早訊息';
+
+  @override
+  String get agentUseCurrentTimetable => '設為目前課表';
+
+  @override
+  String get agentUseCurrentCalendar => '設為目前行事曆';
+
+  @override
+  String get agentTechnicalDetails => '技術詳情';
+
+  @override
+  String get agentActivityCorrected => '已修正';
+
+  @override
+  String get agentCompactContext => '壓縮上下文';
+
+  @override
+  String get agentCompactingContext => '正在壓縮上下文…';
+
+  @override
+  String get agentCompactionQueued => '壓縮已排隊';
+
+  @override
+  String get agentContextWindow => '最大上下文長度';
+
+  @override
+  String get agentContextThreshold => '自動壓縮觸發大小';
+
+  @override
+  String get agentContextAutoCompact => '自動壓縮';
+
+  @override
+  String get agentContextUnset => '未設定';
+
+  @override
+  String get agentContextEstimated => '估算';
+
+  @override
+  String get agentContextReported => '服務報告';
 
   @override
   String get appTitle => 'Sked';
@@ -7685,13 +7730,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentPreferenceLimitHint =>
-      '可永久保留，或選擇 7–3650 天。只清理已結束且沒有草稿或待處理輸入的對話。';
+      '輸入保留天數，0 表示永久保留。只清理已結束且沒有草稿或待處理輸入的對話。';
 
   @override
   String get agentPreferencesSaved => '偏好已儲存';
 
   @override
-  String get agentInvalidPreference => '請輸入所示範圍內的值。';
+  String get agentInvalidPreference => '請輸入非負整數。';
 
   @override
   String get agentBackupConnectionPreserved =>
@@ -8366,12 +8411,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get agentConversationGuidanceHint => '指定常用的回答方式與偏好，套用至所有對話。';
 
   @override
-  String get agentRunLimitsTitle => '單次執行限額';
-
-  @override
-  String get agentRunLimitsHint => '限制一次任務的模型請求和工具呼叫次數。';
-
-  @override
   String get agentHistoryRetentionTitle => '聊天記錄保留';
 
   @override
@@ -8410,11 +8449,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String agentProviderLimitFailure(String code) {
-    return '模型請求超過執行限制（$code）。';
-  }
-
-  @override
   String agentProviderTimeoutFailure(String code) {
     return '等待模型服務回應逾時（$code）。';
   }
@@ -8439,48 +8473,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentToolAskUser => '詢問使用者';
-
-  @override
-  String agentQuestionAnswerTooLong(int limit) {
-    return '請將回答控制在 $limit 個字元以內。';
-  }
-
-  @override
-  String get agentBudgetSummaryTitle => '本輪執行結果';
-
-  @override
-  String get agentBudgetSummaryTokenLimit => '本輪 Token 額度不足，已保留進度。';
-
-  @override
-  String get agentBudgetSummaryRoundLimit => '已達到模型請求輪次上限。';
-
-  @override
-  String get agentBudgetSummaryToolLimit => '已達到工具呼叫次數上限。';
-
-  @override
-  String agentBudgetSummaryTools(
-    int completed,
-    int failed,
-    int notStarted,
-    int unknown,
-  ) {
-    return '工具結果 · 完成 $completed 項，失敗 $failed 項，未開始 $notStarted 項，待核對 $unknown 項';
-  }
-
-  @override
-  String agentBudgetSummaryUsage(
-    int requests,
-    int requestLimit,
-    int tokens,
-    int tokenLimit,
-  ) {
-    return '模型請求 $requests/$requestLimit 輪 · 已回報用量 $tokens/$tokenLimit Token';
-  }
-
-  @override
-  String agentBudgetSummaryMissingUsage(int count) {
-    return '另有 $count 次請求的用量未知。';
-  }
 
   @override
   String get agentReferenceSearch => '搜尋參照';
@@ -8535,28 +8527,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentQueuedRestoreDraftBusy => '請先傳送或清空目前草稿，再移回這則輸入。';
-
-  @override
-  String get agentBudgetSummaryRequestTokenLimit => '已達到單次請求的 Token 上限，已保留進度。';
-
-  @override
-  String agentBudgetSummaryRequestTokenUsage(int reported, int limit) {
-    return '本次請求 · 已報告用量 $reported/$limit Token';
-  }
-
-  @override
-  String agentBudgetSummaryReportedUsage(
-    int requests,
-    int requestLimit,
-    int tokens,
-  ) {
-    return '模型請求 $requests/$requestLimit 輪 · 已回報用量 $tokens Token';
-  }
-
-  @override
-  String agentBudgetSummaryRecordedUsage(int requests, int tokens) {
-    return '模型請求 $requests 輪 · 已回報用量 $tokens Token';
-  }
 
   @override
   String get agentEndRedo => '結束重做';

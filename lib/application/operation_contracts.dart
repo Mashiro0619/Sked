@@ -1,5 +1,11 @@
 import 'dart:async';
 
+/// A reference to an existing host-owned receipt, never a new operation ID.
+const operationReferenceSchema = <String, Object?>{
+  'type': 'string',
+  'description': 'Use the exact operationId returned by the host for the existing operation.',
+};
+
 /// The three user-selectable policies of the single built-in Agent.
 enum AgentPermissionMode { plan, ask, full }
 

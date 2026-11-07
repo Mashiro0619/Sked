@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:file_selector/file_selector.dart';
 
@@ -26,13 +25,13 @@ class TextFilePicker {
     required List<String> allowedExtensions,
   }) async => (await pickDocument(allowedExtensions: allowedExtensions))?.text;
 
-  /// Shares the existing bounded UTF-8 reader while retaining a display name.
-  /// A consumer may lower its budget; no caller may bypass the global limit.
+  /// Reads UTF-8 incrementally while retaining the display name.
+  /// Agent attachments pass no application-imposed byte limit.
   static Future<PickedTextFile?> pickDocument({
     required List<String> allowedExtensions,
-    int byteLimit = maxBytes,
+    int? byteLimit = maxBytes,
   }) async {
-    if (byteLimit < 1 || byteLimit > maxBytes) {
+    if (byteLimit != null && byteLimit < 1) {
       throw ArgumentError.value(byteLimit, 'byteLimit');
     }
     final file = await openFile(
@@ -47,22 +46,26 @@ class TextFilePicker {
       return null;
     }
     final declaredLength = await file.length();
-    if (declaredLength > byteLimit) {
+    if (byteLimit != null && declaredLength > byteLimit) {
       throw const TextFileTooLargeException();
     }
-    final bytes = BytesBuilder(copy: false);
     var length = 0;
-    // An exact bounded range also supports in-memory XFile data and limits
-    // the Blob slice on web, where openRead may buffer its entire range.
-    await for (final chunk in file.openRead(0, declaredLength)) {
-      length += chunk.length;
-      if (length > byteLimit) {
-        throw const TextFileTooLargeException();
+    Stream<List<int>> read() async* {
+      for (var start = 0; start < declaredLength; start += 65536) {
+        final end = (start + 65536).clamp(0, declaredLength);
+        await for (final chunk in file.openRead(start, end)) {
+          length += chunk.length;
+          if (byteLimit != null && length > byteLimit) {
+            throw const TextFileTooLargeException();
+          }
+          yield chunk;
+        }
       }
-      bytes.add(chunk);
     }
+
+    final text = await utf8.decoder.bind(read()).join();
     final finalLength = await file.length();
-    if (finalLength > byteLimit) {
+    if (byteLimit != null && finalLength > byteLimit) {
       throw const TextFileTooLargeException();
     }
     if (finalLength != declaredLength || length != declaredLength) {
@@ -70,9 +73,6 @@ class TextFilePicker {
     }
     // Utf8Decoder removes the initial UTF-8 BOM, including across chunks,
     // while retaining embedded U+FEFF and rejecting malformed byte sequences.
-    return PickedTextFile(
-      name: file.name,
-      text: utf8.decode(bytes.takeBytes()),
-    );
+    return PickedTextFile(name: file.name, text: text);
   }
 }

@@ -89,7 +89,7 @@ Future<Map<String, Object?>> runAgentFeatureJourney(
     } catch (error, stack) {
       result.addAll({'status': 'failed', 'error': '$error', 'stack': '$stack'});
       try {
-        result['lastObservedState'] = activeJourney?.state();
+        result['lastObservedState'] = await activeJourney?.state();
         result['featureState'] = feature?.diagnostics();
         result['provider'] = feature?.providerReport();
       } catch (diagnosticError) {
@@ -116,7 +116,9 @@ Future<Map<String, Object?>> runAgentFeatureJourney(
         selected.name == featureName,
         'The feature dispatcher returned a different journey.',
       );
-      final native = session = AgentNativeSession(provider: selected.provider);
+      final native = session = await AgentNativeSession.create(
+        provider: selected.provider,
+      );
       journey = AgentFeatureJourney(
         tester,
         native,
@@ -137,7 +139,7 @@ Future<Map<String, Object?>> runAgentFeatureJourney(
       );
       return {
         'agentInitialized': native.app.agent.isInitialized,
-        'storage': native.storageReport(),
+        'storage': await native.storageReport(),
         'applicationOwner': native.app.runtimeType.toString(),
         'provider': selected.providerReport(),
       };
@@ -155,7 +157,7 @@ Future<Map<String, Object?>> runAgentFeatureJourney(
   } finally {
     try {
       report['providerBeforeCleanup'] = feature?.providerReport();
-      report['storageBeforeCleanup'] = session?.storageReport();
+      report['storageBeforeCleanup'] = await session?.storageReport();
     } catch (error, stack) {
       report['finalObservationFailure'] = {
         'error': '$error',
@@ -199,7 +201,7 @@ Future<Map<String, Object?>> runAgentFeatureJourney(
           if (native == null) selected?.provider.close();
           cleanup['provider'] = selected?.providerReport();
           cleanup['ownedProvider'] = native?.providerReport();
-          cleanup['storage'] = native?.storageReport();
+          cleanup['storage'] = await native?.storageReport();
         } catch (error, stack) {
           cleanup['providerFailure'] = {'error': '$error', 'stack': '$stack'};
         }
@@ -370,7 +372,7 @@ class AgentFeatureJourney {
       _checkFramework(tester);
       if (watch.elapsed > const Duration(seconds: 20)) {
         throw StateError(
-          'Timed out waiting for $description. ${jsonEncode(state())}',
+          'Timed out waiting for $description. ${jsonEncode(await state())}',
         );
       }
       await tester.pump(const Duration(milliseconds: 16));
@@ -428,7 +430,7 @@ class AgentFeatureJourney {
     );
   }
 
-  Map<String, Object?> state() => {
+  Future<Map<String, Object?>> state() async => {
     'selectedId': session.app.agent.conversations.selectedId,
     'composerCount': composer.evaluate().length,
     'agentInitialized': session.app.agent.isInitialized,
@@ -439,7 +441,7 @@ class AgentFeatureJourney {
         .runFor(agentNativeLongId)
         .isActive,
     'provider': feature.providerReport(),
-    'storage': session.storageReport(),
+    'storage': await session.storageReport(),
     if (composer.evaluate().length == 1) 'visibleDraft': field.controller!.text,
   };
 
@@ -536,21 +538,26 @@ class AgentFeatureJourney {
       'The native feature journey must use the shared main-shell content.',
     );
     final observedConfig = assertOwner();
+    final repository = session.app.agent.conversations;
+    final statistics = await repository.statistics(agentNativeLongId);
     requireAgentFeature(
-      session.app.agent.conversations.selected!.messages.length ==
-              agentNativeMessageCount &&
+      statistics.messageCount == agentNativeMessageCount &&
+          repository.visibleMessages(agentNativeLongId).isNotEmpty &&
+          repository.selected!.messages.length < agentNativeMessageCount &&
+          repository.hasEarlierMessages(agentNativeLongId) &&
           field.controller!.text == agentNativeInitialDraft,
-      'Opening Agent lost the seeded history or draft.',
+      'Opening Agent lost the paged SQLite history or seeded draft.',
     );
     return {
-      ...state(),
+      ...await state(),
       'entry': 'main shell navigation / Agent',
       'entryControl': homeControl != 'workspace-main-navigation'
           ? homeControl
           : '$homeControl / workspace-agent-entry',
       'host': 'main shell / embedded AgentPage / shared resources',
-      'historyMessageCount':
-          session.app.agent.conversations.selected!.messages.length,
+      'historyMessageCount': statistics.messageCount,
+      'loadedMessageCount': repository.selected!.messages.length,
+      'hasEarlierMessages': repository.hasEarlierMessages(agentNativeLongId),
       'initialDraft': field.controller!.text,
       'mainSha256': agentNativeDigest(mainAtEntry),
       'sameApplicationAndRepository': true,

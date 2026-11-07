@@ -3,6 +3,8 @@ import '../../models/agent_settings.dart' show AgentReasoningEffort;
 
 enum ConversationRunKind { model, host }
 
+enum ConversationRequestKind { response, contextCompaction }
+
 enum ConversationRunStatus { running, completed, interrupted }
 
 /// A pending attempt is recorded before invocation. It may have reached the
@@ -64,6 +66,7 @@ class ConversationRequestUsage {
   const ConversationRequestUsage({
     required this.id,
     required this.startedAt,
+    this.kind = ConversationRequestKind.response,
     this.outcome = ConversationAttemptOutcome.pending,
     this.usage,
     this.errorCode,
@@ -71,6 +74,7 @@ class ConversationRequestUsage {
 
   final String id;
   final DateTime startedAt;
+  final ConversationRequestKind kind;
   final ConversationAttemptOutcome outcome;
   final ConversationTokenUsage? usage;
   final String? errorCode;
@@ -82,6 +86,7 @@ class ConversationRequestUsage {
   }) => ConversationRequestUsage(
     id: id,
     startedAt: startedAt,
+    kind: kind,
     outcome: outcome,
     usage: usage ?? this.usage,
     errorCode: errorCode,
@@ -90,6 +95,7 @@ class ConversationRequestUsage {
   Map<String, Object?> toJson() => {
     'id': id,
     'startedAt': startedAt.toUtc().toIso8601String(),
+    if (kind != ConversationRequestKind.response) 'kind': kind.name,
     'outcome': outcome.name,
     'usage': usage?.toJson(),
     if (errorCode != null) 'errorCode': errorCode,
@@ -99,6 +105,9 @@ class ConversationRequestUsage {
       ConversationRequestUsage(
         id: _text(json, 'id'),
         startedAt: _date(json, 'startedAt'),
+        kind: json['kind'] == null
+            ? ConversationRequestKind.response
+            : _enum(ConversationRequestKind.values, json['kind']),
         outcome: _enum(ConversationAttemptOutcome.values, json['outcome']),
         usage: json['usage'] == null
             ? null
@@ -129,13 +138,13 @@ class ConversationToolUsage {
 
   factory ConversationToolUsage.fromJson(Map<String, dynamic> json) =>
       ConversationToolUsage(
-        id: _text(json, 'id'),
+        id: _text(json, 'id', max: null),
         name: _text(json, 'name'),
         outcome: _enum(ConversationAttemptOutcome.values, json['outcome']),
       );
 }
 
-/// Immutable, bounded accounting for one accepted runtime scope. Explicit
+/// Immutable accounting for one accepted runtime scope. Explicit
 /// continuation creates another run linked to this one; it never re-adds the
 /// old requests. There are no automatic provider retries in this runtime.
 class ConversationRunUsage {
@@ -382,9 +391,11 @@ int _count(Map<String, dynamic> json, String key) {
 int? _optionalCount(Map<String, dynamic> json, String key) =>
     json[key] == null ? null : _count(json, key);
 
-String _text(Map<String, dynamic> json, String key) {
+String _text(Map<String, dynamic> json, String key, {int? max = 256}) {
   final value = json[key];
-  if (value is! String || value.trim().isEmpty || value.length > 256) {
+  if (value is! String ||
+      value.trim().isEmpty ||
+      (max != null && value.length > max)) {
     throw const FormatException('Invalid usage identity.');
   }
   return value;

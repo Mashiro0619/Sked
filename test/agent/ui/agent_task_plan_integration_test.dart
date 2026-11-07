@@ -8,6 +8,7 @@ import 'package:sked/agent/interactions/agent_task_plan.dart';
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_operation_card.dart';
 import 'package:sked/agent/ui/agent_task_plan_view.dart';
+import 'package:sked/agent/ui/agent_task_inspector.dart';
 import 'package:sked/l10n/app_localizations.dart';
 
 import 'agent_ui_test_support.dart';
@@ -47,7 +48,7 @@ void main() {
     await reveal(tester);
     final title = find.descendant(
       of: planView,
-      matching: find.text(labels(tester).agentTaskPlanTitle),
+      matching: find.textContaining(labels(tester).agentTaskPlanTitle),
     );
     final transcript = find
         .descendant(
@@ -69,7 +70,7 @@ void main() {
   }
 
   testWidgets(
-    'the current plan reports Agent progress alongside separate receipt cards',
+    'the turn plan shows progress beside the single saved operation',
     (tester) async {
       addTearDown(tester.view.reset);
       final app = await fixture();
@@ -79,7 +80,7 @@ void main() {
       expect(
         find.descendant(
           of: planView,
-          matching: find.textContaining(l.agentTaskPlanReported),
+          matching: find.text('${l.agentTaskPlanTitle} · 1/2'),
         ),
         findsOneWidget,
       );
@@ -117,6 +118,12 @@ void main() {
             widget is AgentOperationCard &&
             widget.receipt['operationId'] == 'operation',
       );
+      final operation = find.byKey(
+        const ValueKey('agent-activity-toggle-operation-save'),
+      );
+      await tester.ensureVisible(operation);
+      await tester.tap(operation);
+      await tester.pumpAndSettle();
       if (receipt.evaluate().isEmpty) {
         await tester.scrollUntilVisible(
           receipt,
@@ -135,7 +142,7 @@ void main() {
   );
 
   testWidgets(
-    'a paired revision updates the plan and a new user request clears it',
+    'a paired revision updates its original turn and a new request retains that history',
     (tester) async {
       addTearDown(tester.view.reset);
       final app = await fixture();
@@ -162,7 +169,9 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(planView, findsNothing);
+      await reveal(tester);
+      expect(tester.widget<AgentTaskPlanView>(planView).plan.revision, 2);
+      expect(find.text('Updated task step'), findsOneWidget);
     },
   );
 
@@ -192,19 +201,25 @@ void main() {
     },
   );
 
-  testWidgets('imported transcript plans do not become current progress', (
-    tester,
-  ) async {
-    addTearDown(tester.view.reset);
-    final app = await fixture();
-    await app.repository.update(
-      'conversation',
-      (current) =>
-          current.copyWith(executionHistoryStart: current.messages.length),
-    );
-    await mountAgentUi(tester, app.view());
-    expect(planView, findsNothing);
-  });
+  testWidgets(
+    'imported transcript retains the historical plan in its own turn',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      final app = await fixture();
+      await app.repository.update(
+        'conversation',
+        (current) =>
+            current.copyWith(executionHistoryStart: current.messages.length),
+      );
+      await mountAgentUi(tester, app.view());
+      await reveal(tester);
+      expect(tester.widget<AgentTaskPlanView>(planView).identity, 'plan-turn');
+      await tester.tap(find.byKey(const ValueKey('agent-task-details')));
+      await tester.pumpAndSettle();
+      final inspector = find.byType(AgentTaskInspector);
+      expect(tester.widget<AgentTaskInspector>(inspector).plan, isNull);
+    },
+  );
 
   testWidgets(
     'equal conversation and run IDs in another repository use its own plan',
@@ -308,22 +323,22 @@ class _PlanFixture {
         createdAt: _now,
       ),
       ConversationMessage(
-        id: 'commit-call',
+        id: 'save-call',
         role: ConversationRole.assistant,
         text: '',
         createdAt: _now,
         toolCalls: [
           ConversationToolCall(
-            id: 'commit',
-            name: 'mutation.commit',
-            arguments: '{"planId":"prepared"}',
+            id: 'save',
+            name: 'mutation.apply',
+            arguments: '{"operations":[]}',
           ),
         ],
       ),
       ConversationMessage(
-        id: 'commit-result',
+        id: 'save-result',
         role: ConversationRole.tool,
-        toolCallId: 'commit',
+        toolCallId: 'save',
         createdAt: _now,
         text: jsonEncode({
           'status': 'committed',
@@ -361,7 +376,7 @@ class _PlanFixture {
                 operationId: 'operation',
                 store: ConversationOperationStore.main,
                 runId: 'run',
-                toolCallId: 'commit',
+                toolCallId: 'save',
               ),
             ],
           ),

@@ -7,6 +7,8 @@ import '../../application/mutation_coordinator.dart';
 import '../../models/application_ledger.dart';
 import '../conversations/conversation_models.dart';
 import '../knowledge/knowledge_repository.dart';
+import '../operations/tool_outcome.dart';
+import '../tools/tool_effects.dart';
 import 'conversation_history.dart';
 
 enum ConversationHistoryError {
@@ -17,7 +19,6 @@ enum ConversationHistoryError {
   missingReceipt,
   irreversible,
   outcomeUnknown,
-  budgetExceeded,
   storageUnavailable,
   cancelled,
   permissionDenied,
@@ -223,6 +224,14 @@ class ConversationHistoryPreflight {
       );
     }
     final selected = turns[turnIndex];
+    if (conversation.messages
+            .firstWhere((message) => message.id == selected.requestMessageId)
+            .role !=
+        ConversationRole.user) {
+      throw const ConversationHistoryException(
+        ConversationHistoryError.invalidSelection,
+      );
+    }
     final affectedTurns = turns.skip(turnIndex).toList();
     if (affectedTurns.any((turn) => !turn.ownershipComplete)) {
       throw const ConversationHistoryException(
@@ -234,8 +243,7 @@ class ConversationHistoryPreflight {
     final firstMessage = conversation.messages.indexWhere(
       (message) => messageIds.contains(message.id),
     );
-    // Reordering or an unowned suffix prevents partial undo. Pending input
-    // notices must be invalidated by the host before this preflight.
+    // Reordering or an unowned transcript suffix prevents partial undo.
     if (firstMessage < executionHistoryStart ||
         conversation.messages
             .skip(firstMessage)
@@ -256,15 +264,32 @@ class ConversationHistoryPreflight {
     final bindingKeys = {
       for (final binding in bindings) (binding.runId, binding.toolCallId),
     };
+    final calls = {
+      for (final message in conversation.messages)
+        for (final call in message.toolCalls) call.id: call,
+    };
+    final replies = {
+      for (final message in conversation.messages)
+        if (message.role == ConversationRole.tool) message.toolCallId: message,
+    };
     for (final run in affectedRuns) {
       for (final tool in run.tools) {
-        if (const {
-              'mutation.commit',
-              'external.commit',
-              'host.action',
-            }.contains(tool.name) &&
-            tool.outcome != ConversationAttemptOutcome.notStarted &&
-            !bindingKeys.contains((run.id, tool.id))) {
+        if (bindingKeys.contains((run.id, tool.id)) ||
+            applicationReadOnlyTools.contains(tool.name)) {
+          continue;
+        }
+        final reply = replies[tool.id];
+        if (reply == null) continue;
+        Object? value;
+        try {
+          value = jsonDecode(reply.text);
+        } on FormatException {
+          continue;
+        }
+        if (value is! Map<String, Object?>) continue;
+        final outcome = ToolOutcome.fromResult(value);
+        if (outcome.kind == ToolOutcomeKind.saved ||
+            outcome.kind == ToolOutcomeKind.needsReconciliation) {
           throw const ConversationHistoryException(
             ConversationHistoryError.missingReceipt,
           );
@@ -280,15 +305,13 @@ class ConversationHistoryPreflight {
       final tool = run?.tools
           .where((tool) => tool.id == binding.toolCallId)
           .firstOrNull;
-      final expected = binding.store == ConversationOperationStore.main
-          ? 'mutation.commit'
-          : 'external.commit';
-      if (tool == null || tool.name != expected && tool.name != 'host.action') {
+      if (tool == null || calls[binding.toolCallId]?.name != tool.name) {
         throw const ConversationHistoryException(
           ConversationHistoryError.missingReceipt,
         );
       }
     }
+
     final operations = <ConversationHistoryOperation>[];
     for (final binding in bindings) {
       final operation = await readReceipt(binding);

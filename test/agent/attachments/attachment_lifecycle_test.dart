@@ -141,6 +141,50 @@ void main() {
     expect(sent, isEmpty);
   });
 
+  test('a file imported across a queued-input boundary stays available without entering the later draft', () async {
+    final id = await conversation();
+    final file = _HeldLengthFile('pending.png');
+    addTearDown(() {
+      if (!file.release.isCompleted) file.release.complete();
+    });
+    final importing = app.agent.binaryAttachments.attach(
+      id,
+      file,
+      canModify: () => true,
+    );
+    final rejected = expectLater(
+      importing,
+      throwsA(
+        isA<AttachmentException>().having(
+          (error) => error.code,
+          'code',
+          AttachmentError.conflict,
+        ),
+      ),
+    );
+    await file.entered.future;
+    await app.agent.conversations.update(
+      id,
+      (current) => current.copyWith(
+        queuedInputs: [
+          ConversationQueuedInput(
+            id: 'next-input',
+            text: 'Next request',
+            createdAt: DateTime.utc(2026),
+          ),
+        ],
+      ),
+    );
+    file.release.complete();
+    await rejected;
+    final current = app.agent.conversations.find(id)!;
+    expect(current.queuedInputs.single.id, 'next-input');
+    expect(current.draftAttachmentIds, isEmpty);
+    expect(app.agent.binaryAttachments.hasPending(id), isTrue);
+    await app.agent.binaryAttachments.discardPending(id);
+    expect(blobs.values, isEmpty);
+  });
+
   test('unsent attachments survive collection without a persisted conversation row', () async {
     final id = await conversation(draft: true);
     await attach(id);
@@ -240,7 +284,6 @@ void main() {
     expect(
       progress,
       containsAllInOrder([
-        AttachmentDelivery.preparing,
         AttachmentDelivery.sending,
         AttachmentDelivery.accepted,
       ]),

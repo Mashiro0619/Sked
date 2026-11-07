@@ -32,24 +32,23 @@ void main() {
   test(
     'discovery and provider schemas explain host-owned operation IDs',
     () async {
-      const optionalNames = {
-        'settings.prepare',
-        'agent_settings.prepare',
-        'mutation.prepare',
-        'developer.sample.prepare',
-        'notifications.permission.prepare',
+      const businessNames = {
+        'settings.update',
+        'agent_settings.update',
+        'mutation.apply',
+        'developer.sample.apply',
+        'notifications.permission.apply',
       };
-      const requiredNames = {
+      const receiptNames = {
         'operations.status',
-        'undo.prepare',
         'external.status',
         'external.reconcile',
       };
       final discovery = await h.call('capabilities.describe', {
-        'names': [...optionalNames, ...requiredNames],
+        'names': [...businessNames, ...receiptNames, 'operations.undo'],
       });
       final tools = discovery['tools'] as List;
-      expect(tools, hasLength(optionalNames.length + requiredNames.length));
+      expect(tools, hasLength(businessNames.length + receiptNames.length + 1));
       final providerTools = {
         for (final tool in h.host.toolsFor(h.scope)) tool.name: tool,
       };
@@ -57,22 +56,16 @@ void main() {
         final name = tool['name'] as String;
         final parameters = tool['parameters'] as Map;
         final properties = parameters['properties'] as Map;
-        final identity = properties['operationId'] as Map;
-        expect(identity['type'], 'string');
-        expect(
-          identity['description'],
-          contains('exact operationId'),
-          reason: name,
-        );
-        if (optionalNames.contains(name)) {
-          expect(identity['description'], contains('Omit for a new operation'));
-          expect(
-            identity['description'],
-            contains('keep the original arguments'),
-          );
-          expect(parameters['required'], isNot(contains('operationId')));
+        if (businessNames.contains(name)) {
+          expect(properties.containsKey('operationId'), isFalse);
+        } else if (name == 'operations.undo') {
+          expect(properties.containsKey('operationId'), isFalse);
+          expect(parameters['required'], contains('targetOperationId'));
         } else {
-          expect(identity['description'], contains('for the target operation'));
+          expect(
+            (properties['operationId'] as Map)['description'],
+            contains('exact operationId'),
+          );
           expect(parameters['required'], contains('operationId'));
         }
         expect(providerTools[name]!.parameters, parameters);
@@ -103,22 +96,18 @@ void main() {
       );
       h.host.register(definition, (args, _, _) async => args);
       await h.call('capabilities.describe', {
-        'names': [definition.name],
+        'names': ['identity_test.apply'],
       });
       final exposed = h.host
           .toolsFor(h.scope)
-          .singleWhere((tool) => tool.name == definition.name);
+          .singleWhere((tool) => tool.name == 'identity_test.apply');
       expect(exposed.strict, isTrue);
-      expect(exposed.description, definition.description);
+      expect(exposed.description, contains('adapter operation'));
       expect(exposed.parameters['required'], ['value']);
       expect(exposed.parameters['additionalProperties'], isFalse);
       final properties = exposed.parameters['properties'] as Map;
       expect(properties['value'], {'type': 'string'});
-      expect((properties['operationId'] as Map)['maxLength'], 256);
-      expect(
-        (properties['operationId'] as Map)['description'],
-        startsWith('Adapter retry identity.'),
-      );
+      expect(properties.containsKey('operationId'), isFalse);
       expect(
         ((definition.parameters['properties'] as Map)['operationId']
             as Map)['description'],

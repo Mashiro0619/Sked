@@ -281,8 +281,7 @@ class AgentKnowledgeService extends ChangeNotifier {
     await initialize();
     final revision = repository.revision;
     final selected = ids.toList();
-    if (selected.toSet().length != selected.length ||
-        selected.length > KnowledgeLimits.records) {
+    if (selected.toSet().length != selected.length) {
       knowledgeInvalid('Invalid export selection.');
     }
     final result = <KnowledgeRecord>[];

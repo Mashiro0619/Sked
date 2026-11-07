@@ -1,6 +1,8 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../interactions/agent_task_plan.dart';
+import 'agent_conversation_timeline.dart';
+import 'agent_turn_activity.dart';
 
 class AgentTaskPlanLabels {
   const AgentTaskPlanLabels({
@@ -26,11 +28,13 @@ class AgentTaskPlanView extends StatelessWidget {
     required this.plan,
     required this.labels,
     this.initiallyExpanded = false,
+    this.identity,
   });
 
   final AgentTaskPlan plan;
   final AgentTaskPlanLabels labels;
   final bool initiallyExpanded;
+  final String? identity;
 
   @override
   Widget build(BuildContext context) {
@@ -38,17 +42,16 @@ class AgentTaskPlanView extends StatelessWidget {
     final completed = plan.steps
         .where((step) => step.status == AgentTaskStepStatus.completed)
         .length;
-    return Card.filled(
-      margin: EdgeInsets.zero,
-      child: ExpansionTile(
-        key: ValueKey('agent-task-plan-${plan.runId}'),
-        initiallyExpanded: initiallyExpanded,
-        tilePadding: const EdgeInsets.symmetric(horizontal: 16),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        title: Text(labels.title),
-        subtitle: Text(
-          '${labels.agentReported} · $completed/${plan.steps.length}',
-        ),
+    return AgentActivityDisclosure(
+      key: ValueKey('agent-task-plan-${identity ?? plan.runId}'),
+      id: identity ?? 'task-plan-${plan.runId}',
+      title: '${labels.title} · $completed/${plan.steps.length}',
+      status: completed == plan.steps.length
+          ? AgentToolActivityStatus.completed
+          : AgentToolActivityStatus.running,
+      initiallyExpanded: initiallyExpanded,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (final step in plan.steps) ...[
             if (step != plan.steps.first) const SizedBox(height: 16),

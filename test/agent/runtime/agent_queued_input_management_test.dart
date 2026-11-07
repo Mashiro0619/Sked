@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/agent/agent_application.dart';
@@ -213,17 +212,10 @@ void main() {
     await h.app.agent.conversations.update(
       h.id,
       (current) => current.copyWith(
-        messages: current.messages.map(
-          (message) => message.id == previous.id
-              ? message.copyWith(
-                  text: jsonEncode({
-                    'kind': 'agent_pending_input',
-                    'version': 1,
-                    'mode': 'followUp',
-                    'text': 'Changed queued text',
-                  }),
-                )
-              : message,
+        queuedInputs: current.queuedInputs.map(
+          (input) => input.id == previous.id
+              ? input.copyWith(text: 'Changed queued text')
+              : input,
         ),
       ),
     );
@@ -445,14 +437,8 @@ class _Harness {
   final _Credentials credentials;
   final String id;
   AgentConversation get current => app.agent.conversations.find(id)!;
-  List<ConversationMessage> get queued => current.executionMessages
-      .where(
-        (message) =>
-            message.role == ConversationRole.notice &&
-            jsonDecode(message.text) is Map &&
-            (jsonDecode(message.text) as Map)['kind'] == 'agent_pending_input',
-      )
-      .toList();
+  List<ConversationMessage> get queued =>
+      current.queuedInputs.map((input) => input.asUserMessage()).toList();
 
   static Future<_Harness> create() async {
     final provider = _Provider();
@@ -507,17 +493,20 @@ class _Harness {
   }
 
   Future<void> waitUntil(bool Function() predicate) async {
+    final execution = app.agent.runtime.watchConversation(id);
     final done = Completer<void>();
     void changed() {
       if (!done.isCompleted && predicate()) done.complete();
     }
 
     app.agent.runtime.state.addListener(changed);
+    execution.addListener(changed);
     try {
       changed();
       await done.future.timeout(const Duration(seconds: 5));
     } finally {
       app.agent.runtime.state.removeListener(changed);
+      execution.removeListener(changed);
     }
   }
 

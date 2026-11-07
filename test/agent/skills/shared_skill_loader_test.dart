@@ -57,12 +57,24 @@ void main() {
       for (final entry in catalog) {
         final result = await loader.load(entry.skill.id);
         expect(result.status, SkillStatus.loaded, reason: entry.skill.id);
-        expect(result.body, contains('只读计划模式'));
-        expect(result.body, contains('每次修改前询问模式'));
+        expect(result.body, contains('计划模式返回预览'));
+        expect(result.body, contains('确认模式等待用户决定'));
         expect(result.body, contains('完全权限'));
-        expect(result.body, contains('正常：'));
-        expect(result.body, contains('边界：'));
-        expect(result.body, contains('失败：'));
+        expect(result.body, isNot(contains('.prepare')));
+        expect(result.body, isNot(contains('.commit')));
+        final declared = {
+          ...entry.skill.requiredTools,
+          ...entry.skill.optionalTools,
+        };
+        final referenced = RegExp(r'\b[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)+\b')
+            .allMatches(result.body!)
+            .map((match) => match.group(0)!)
+            .toSet();
+        expect(
+          referenced.difference(declared),
+          isEmpty,
+          reason: entry.skill.id,
+        );
       }
       expect(loader.loadedSkills, hasLength(24));
     },
@@ -299,7 +311,7 @@ void main() {
   );
 
   test(
-    'frontmatter and required structure are checked even with matching digest',
+    'frontmatter is validated while useful body structure is flexible',
     () async {
       final fixture = _Fixture();
       fixture.setBody(
@@ -315,7 +327,7 @@ void main() {
       );
       fixture.setBody(
         'read-agenda',
-        _body('read-agenda').replaceFirst('## 失败处理', '## 无失败处理'),
+        "${_body('read-agenda').split('\n\n').first}\n",
       );
       expect(
         (await fixture.loader().load('read-agenda')).status,
@@ -324,63 +336,28 @@ void main() {
     },
   );
 
-  test('manifest byte budget includes multibyte text', () async {
-    final fixture = _Fixture();
-    await expectLater(
-      fixture
-          .loader(budgets: const SkillBudgets(maxManifestBytes: 10))
-          .catalog(),
-      throwsA(_packError(SkillPackError.manifestBudgetExceeded)),
-    );
-  });
-
-  test('per-body and total byte budgets reject before caching', () async {
-    final fixture = _Fixture();
-    final length = utf8.encode(fixture.bodies['read-agenda']!).length;
-    expect(
-      (await fixture
-              .loader(budgets: SkillBudgets(maxSkillBytes: length - 1))
-              .load('read-agenda'))
-          .status,
-      SkillStatus.budgetExceeded,
-    );
-    final loader = fixture.loader(
-      budgets: SkillBudgets(maxLoadedBytes: length),
-    );
-    expect((await loader.load('read-agenda')).status, SkillStatus.loaded);
-    expect((await loader.load('read-agenda')).status, SkillStatus.loaded);
-    expect(
-      (await loader.load('edit-events')).status,
-      SkillStatus.budgetExceeded,
-    );
-    expect(loader.loadedBytes, length);
-    expect(loader.loadedSkills, hasLength(1));
-  });
-
-  test('concurrent loads cannot oversubscribe count budget', () async {
-    final fixture = _Fixture();
-    final loader = fixture.loader(
-      budgets: const SkillBudgets(maxLoadedSkills: 1),
-    );
-    final results = await Future.wait([
-      loader.load('read-agenda'),
-      loader.load('edit-events'),
-      loader.load('read-agenda'),
-    ]);
-    expect(results.map((result) => result.status), [
-      SkillStatus.loaded,
-      SkillStatus.budgetExceeded,
-      SkillStatus.loaded,
-    ]);
-    expect(
-      fixture.reads.where((path) => path.endsWith('read-agenda/SKILL.md')),
-      hasLength(1),
-    );
-    expect(
-      fixture.reads.where((path) => path.endsWith('edit-events/SKILL.md')),
-      isEmpty,
-    );
-  });
+  test(
+    'large bodies remain complete and concurrent loads reuse the cached asset',
+    () async {
+      final fixture = _Fixture();
+      final body = _body('read-agenda') + ('大段知识内容。' * 50000);
+      fixture.setBody('read-agenda', body);
+      final loader = fixture.loader();
+      final results = await Future.wait([
+        loader.load('read-agenda'),
+        loader.load('edit-events'),
+        loader.load('read-agenda'),
+      ]);
+      expect(results.every((result) => result.isLoaded), isTrue);
+      expect(results.first.body, body);
+      expect(loader.loadedSkills, hasLength(2));
+      expect(
+        fixture.reads.where((path) => path.endsWith('read-agenda/SKILL.md')),
+        hasLength(1),
+      );
+      expect(loader.loadedBytes, greaterThan(128 * 1024));
+    },
+  );
 
   test('asset loading exceptions are sanitized', () async {
     final loader = SharedSkillLoader(
@@ -446,7 +423,6 @@ class _Fixture {
     Set<String>? tools,
     int runtimeVersion = 1,
     String toolVersion = '1.0.0',
-    SkillBudgets budgets = const SkillBudgets(),
   }) => SharedSkillLoader(
     loadString: (asset) async {
       reads.add(asset);
@@ -461,7 +437,6 @@ class _Fixture {
     registeredTools: tools ?? {'agenda.query'},
     runtimeContractVersion: runtimeVersion,
     toolApiVersion: toolVersion,
-    budgets: budgets,
   );
 }
 

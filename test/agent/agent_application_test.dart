@@ -1,14 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:crypto/crypto.dart';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:sked/agent/agent_application.dart';
 import 'package:sked/agent/connection/agent_connection_manager.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
-import 'package:sked/agent/conversations/conversation_storage_codec.dart';
 import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/tools/application_tool_host.dart';
 import 'package:sked/agent/tools/agent_control_tool_adapters.dart';
@@ -23,7 +20,6 @@ import '../support/workspace_harness.dart';
 class _ConversationStorage extends ConversationStorage {
   _ConversationStorage() : super.base();
   String? source;
-  List<String?>? slots;
   bool failLoad = false;
   bool failSave = false;
   Future<void> Function()? beforeSave;
@@ -33,7 +29,6 @@ class _ConversationStorage extends ConversationStorage {
   Future<ConversationStorageLoad> load() async {
     loads++;
     if (failLoad) throw StateError('fixture storage failure');
-    if (slots != null) return decodeConversationSlots(slots!);
     return ConversationStorageLoad(source: source);
   }
 
@@ -102,18 +97,23 @@ Map<String, dynamic> _lastTool(ProviderRequest request) => jsonDecode(
       .text,
 ) as Map<String, dynamic>;
 
-Future<void> _until(AppRuntime app, bool Function() predicate) async {
+Future<void> _until(
+  AppRuntime app,
+  String conversationId,
+  bool Function() predicate,
+) async {
   if (predicate()) return;
   final done = Completer<void>();
   void changed() {
     if (predicate() && !done.isCompleted) done.complete();
   }
 
-  app.agent.runtime.state.addListener(changed);
+  final conversationRun = app.agent.runtime.watchConversation(conversationId);
+  conversationRun.addListener(changed);
   try {
     await done.future.timeout(const Duration(seconds: 5));
   } finally {
-    app.agent.runtime.state.removeListener(changed);
+    conversationRun.removeListener(changed);
   }
 }
 
@@ -161,9 +161,9 @@ void main() {
     var round = 0;
     provider.respond = (request) => switch (round++) {
       0 => _call('capabilities.describe', {
-        'names': ['mutation.prepare', 'mutation.commit'],
+        'names': ['mutation.apply'],
       }),
-      1 => _call('mutation.prepare', {
+      1 => _call('mutation.apply', {
         'commands': [
           {
             'kind': 'calendar',
@@ -172,7 +172,6 @@ void main() {
           },
         ],
       }),
-      2 => _call('mutation.commit', {'planId': _lastTool(request)['planId']}),
       _ => _done(),
     };
   }
@@ -249,10 +248,6 @@ void main() {
       final loader = SharedSkillLoader(
         loadString: rootBundle.loadString,
         registeredTools: app.agent.tools.registeredNames,
-        budgets: const SkillBudgets(
-          maxLoadedSkills: 24,
-          maxLoadedBytes: 256 * 1024,
-        ),
       );
       final catalog = await loader.catalog();
       expect(catalog, hasLength(24));
@@ -354,7 +349,7 @@ void main() {
       toolCalls: const [
         ConversationToolCall(
           id: 'tool',
-          name: 'mutation.prepare',
+          name: 'mutation.apply',
           arguments: '{"name":"课程"}',
         ),
       ],
@@ -394,10 +389,7 @@ void main() {
         'limit': 8000,
       });
       output.write(part['text']);
-      expect(
-        utf8.encode(jsonEncode(part)).length,
-        lessThan(ApplicationToolHost.maxResultBytes),
-      );
+      expect((part['text'] as String).runes.length, lessThanOrEqualTo(8000));
       if (part['hasMore'] != true) break;
       offset = part['nextOffset'] as int;
     }
@@ -429,18 +421,18 @@ void main() {
       expect(conversations.source, contains('committed'));
       expect(
         provider.requests.first.tools.map((tool) => tool.name),
-        isNot(contains('mutation.commit')),
+        isNot(contains('mutation.apply')),
       );
       expect(
         provider.requests[1].tools.map((tool) => tool.name),
-        contains('mutation.commit'),
+        contains('mutation.apply'),
       );
       final other = await app.agent.conversations.create(title: 'Other');
       provider.respond = (_) => _done();
       await app.agent.runtime.send(other.id, 'Hello');
       expect(
         provider.requests.last.tools.map((tool) => tool.name),
-        isNot(contains('mutation.commit')),
+        isNot(contains('mutation.apply')),
       );
       expect(
         provider.requests.last.messages.any(
@@ -452,7 +444,7 @@ void main() {
   );
 
   test(
-    'planning mode prepares but cannot commit through the real host',
+    'planning mode returns a preview through one business tool call',
     () async {
       final conversation = await ready(AgentPermissionMode.plan);
       createCalendarScript();
@@ -463,10 +455,7 @@ void main() {
         hasLength(before),
       );
       expect(app.session.committedData.applicationLedger, isNull);
-      expect(
-        _lastTool(provider.requests.last)['error'],
-        containsPair('code', 'readOnly'),
-      );
+      expect(_lastTool(provider.requests.last)['status'], 'preview');
     },
   );
 
@@ -477,14 +466,13 @@ void main() {
       var round = 0;
       provider.respond = (request) => switch (round++) {
         0 => _call('capabilities.describe', {
-          'names': ['agent_settings.prepare', 'mutation.commit'],
+          'names': ['agent_settings.update'],
         }),
-        1 => _call('agent_settings.prepare', {
+        1 => _call('agent_settings.update', {
           'edits': [
             {'key': 'agent.enabled', 'action': 'set', 'value': false},
           ],
         }),
-        2 => _call('mutation.commit', {'planId': _lastTool(request)['planId']}),
         _ => throw StateError(
           'No further model request is allowed after disabling Agent.',
         ),
@@ -494,7 +482,7 @@ void main() {
         'Disable the Agent feature',
       );
       expect(app.agent.settings.enabled, isFalse);
-      expect(provider.requests, hasLength(3));
+      expect(provider.requests, hasLength(2));
       expect(
         app
             .session
@@ -520,6 +508,7 @@ void main() {
       );
       await _until(
         app,
+        conversation.id,
         () =>
             app.agent.runtime.state.value
                 .runFor(conversation.id)
@@ -554,6 +543,7 @@ void main() {
       );
       await _until(
         app,
+        conversation.id,
         () =>
             app.agent.runtime.state.value
                 .runFor(conversation.id)
@@ -630,6 +620,7 @@ void main() {
       );
       await _until(
         app,
+        conversation.id,
         () =>
             app.agent.runtime.state.value
                 .runFor(conversation.id)
@@ -711,7 +702,7 @@ void main() {
     },
   );
 
-  test('checksum-valid retired automatic metadata fails safely without clearing conversations', () async {
+  test('invalid retired model metadata reports failure without clearing conversations', () async {
     final createdAt = DateTime.utc(2026, 10, 30);
     final archive = ConversationArchive(
       revision: 5,
@@ -734,24 +725,15 @@ void main() {
             as Map)['reasoningEffort'] =
         'auto';
     final source = jsonEncode(raw);
-    final slot = jsonEncode({
-      'version': 1,
-      'revision': 5,
-      'checksum': sha256.convert(utf8.encode(source)).toString(),
-      'source': source,
-    });
-    conversations.slots = [slot, slot];
-    await expectLater(
-      app.agent.initialize(),
-      throwsA(isA<ConversationStorageException>()),
-    );
+    conversations.source = source;
+    await expectLater(app.agent.initialize(), throwsFormatException);
     expect(
       app.agent.initializationFailure,
       AgentInitializationFailure.conversationStorage,
     );
     expect(app.agent.isInitialized, isFalse);
     expect(app.agent.runtime.state.value.enabled, isFalse);
-    expect(conversations.slots, [slot, slot]);
+    expect(conversations.source, source);
     expect(conversations.saves, 0);
     expect(app.session.canWrite, isTrue);
     expect(provider.requests, isEmpty);
@@ -957,7 +939,7 @@ void main() {
         },
       ]) {
         await expectLater(
-          invoke('mutation.prepare', args),
+          invoke('mutation.apply', args),
           throwsA(
             isA<OperationProblem>().having(
               (e) => e.code,
@@ -970,23 +952,24 @@ void main() {
     },
   );
 
-  test('receipt byte compaction preserves applied status and continuation', () {
-    final value = boundedToolReceipt({
-      'status': 'committed',
-      'operationId': 'fixed',
-      'replayed': false,
-      'changes': List.generate(
-        30,
-        (i) => {'key': 'event:$i', 'before': 'x' * 80000, 'after': null},
-      ),
-    });
-    expect(
-      utf8.encode(jsonEncode(value)).length,
-      lessThan(ApplicationToolHost.maxResultBytes),
-    );
-    expect(value['status'], 'committed');
-    expect(value['operationId'], 'fixed');
-    expect(value['hasMoreChanges'], isTrue);
-    expect(value['nextOffset'], 1);
-  });
+  test(
+    'receipt pagination preserves complete change details and continuation',
+    () {
+      final value = boundedToolReceipt({
+        'status': 'committed',
+        'operationId': 'fixed',
+        'replayed': false,
+        'changes': List.generate(
+          30,
+          (i) => {'key': 'event:$i', 'before': 'x' * 80000, 'after': null},
+        ),
+      });
+      expect((value['changes'] as List), hasLength(20));
+      expect((value['changes'] as List).first['before'], 'x' * 80000);
+      expect(value['status'], 'committed');
+      expect(value['operationId'], 'fixed');
+      expect(value['hasMoreChanges'], isTrue);
+      expect(value['nextOffset'], 20);
+    },
+  );
 }

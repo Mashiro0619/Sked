@@ -1,4 +1,24 @@
 {
+  "agentTaskDetails": "Task details",
+  "agentTaskChanges": "Changes",
+  "agentContextTitle": "Context",
+  "agentNoTaskChanges": "No changes in this task",
+  "agentNoTaskPlan": "No plan for this task",
+  "agentNoTaskAttachments": "No attachments in this task",
+  "agentLoadEarlierMessages": "Load earlier messages",
+  "agentUseCurrentTimetable": "Use as current timetable",
+  "agentUseCurrentCalendar": "Use as current calendar",
+  "agentTechnicalDetails": "Technical details",
+  "agentActivityCorrected": "Corrected",
+  "agentCompactContext": "Compact context",
+  "agentCompactingContext": "Compacting context…",
+  "agentCompactionQueued": "Compaction queued",
+  "agentContextWindow": "Maximum context length",
+  "agentContextThreshold": "Automatic compaction trigger",
+  "agentContextAutoCompact": "Automatic compaction",
+  "agentContextUnset": "Not set",
+  "agentContextEstimated": "Estimated",
+  "agentContextReported": "Provider reported",
   "@@locale": "en",
   "appTitle": "Sked",
   "@appTitle": {},
@@ -2448,11 +2468,11 @@
   "@agentMaxTotalTokens": {},
   "agentHistoryRetentionDays": "History retention (days; 0 keeps history)",
   "@agentHistoryRetentionDays": {},
-  "agentPreferenceLimitHint": "Keep forever, or choose 7–3650 days. Only finished conversations without drafts or queued input are removed.",
+  "agentPreferenceLimitHint": "Enter a number of days, or 0 to keep forever. Only finished conversations without drafts or queued input are removed.",
   "@agentPreferenceLimitHint": {},
   "agentPreferencesSaved": "Preferences saved",
   "@agentPreferencesSaved": {},
-  "agentInvalidPreference": "Enter a value within the displayed range.",
+  "agentInvalidPreference": "Enter a non-negative whole number.",
   "@agentInvalidPreference": {},
   "agentBackupConnectionPreserved": "The local Agent connection, permissions and credentials are preserved. This backup will not change the model connection.",
   "@agentBackupConnectionPreserved": {},
@@ -2939,10 +2959,6 @@
   "@agentConversationGuidanceTitle": {},
   "agentConversationGuidanceHint": "Set response preferences to use in all conversations.",
   "@agentConversationGuidanceHint": {},
-  "agentRunLimitsTitle": "Limits per run",
-  "@agentRunLimitsTitle": {},
-  "agentRunLimitsHint": "Limit model requests and tool calls for each run.",
-  "@agentRunLimitsHint": {},
   "agentHistoryRetentionTitle": "Chat history retention",
   "@agentHistoryRetentionTitle": {},
   "agentApprovalReviseHint": "Describe the changes in the message box, then choose “Update current request”. The pending changes have not been approved.",
@@ -2987,14 +3003,6 @@
       }
     }
   },
-  "agentProviderLimitFailure": "The model request exceeded a limit ({code}).",
-  "@agentProviderLimitFailure": {
-    "placeholders": {
-      "code": {
-        "type": "String"
-      }
-    }
-  },
   "agentProviderTimeoutFailure": "The model response timed out ({code}).",
   "@agentProviderTimeoutFailure": {
     "placeholders": {
@@ -3017,64 +3025,6 @@
   "@agentWaitingForAnswer": {},
   "agentToolAskUser": "Ask a question",
   "@agentToolAskUser": {},
-  "agentQuestionAnswerTooLong": "Keep your answer within {limit} characters.",
-  "@agentQuestionAnswerTooLong": {
-    "placeholders": {
-      "limit": {
-        "type": "int"
-      }
-    }
-  },
-  "agentBudgetSummaryTitle": "Run summary",
-  "@agentBudgetSummaryTitle": {},
-  "agentBudgetSummaryTokenLimit": "This run has insufficient token budget to continue. Progress has been saved.",
-  "@agentBudgetSummaryTokenLimit": {},
-  "agentBudgetSummaryRoundLimit": "The model request limit has been reached.",
-  "@agentBudgetSummaryRoundLimit": {},
-  "agentBudgetSummaryToolLimit": "The tool call limit has been reached.",
-  "@agentBudgetSummaryToolLimit": {},
-  "agentBudgetSummaryTools": "Tool results — {completed} completed, {failed} failed, {notStarted} not started, {unknown} awaiting verification",
-  "@agentBudgetSummaryTools": {
-    "placeholders": {
-      "completed": {
-        "type": "int"
-      },
-      "failed": {
-        "type": "int"
-      },
-      "notStarted": {
-        "type": "int"
-      },
-      "unknown": {
-        "type": "int"
-      }
-    }
-  },
-  "agentBudgetSummaryUsage": "{requests}/{requestLimit} model requests · {tokens}/{tokenLimit} reported tokens",
-  "@agentBudgetSummaryUsage": {
-    "placeholders": {
-      "requests": {
-        "type": "int"
-      },
-      "requestLimit": {
-        "type": "int"
-      },
-      "tokens": {
-        "type": "int"
-      },
-      "tokenLimit": {
-        "type": "int"
-      }
-    }
-  },
-  "agentBudgetSummaryMissingUsage": "Usage is unreported for {count} requests.",
-  "@agentBudgetSummaryMissingUsage": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "agentReferenceSearch": "Search references",
   "@agentReferenceSearch": {},
   "agentReferenceEmpty": "No matching references",
@@ -3111,44 +3061,6 @@
   "@agentQueuedCancel": {},
   "agentQueuedRestoreDraftBusy": "Send or clear the current draft before moving this input back.",
   "@agentQueuedRestoreDraftBusy": {},
-  "agentBudgetSummaryRequestTokenLimit": "The per-request token limit was reached. Progress has been saved.",
-  "@agentBudgetSummaryRequestTokenLimit": {},
-  "agentBudgetSummaryRequestTokenUsage": "This request · {reported}/{limit} reported tokens",
-  "@agentBudgetSummaryRequestTokenUsage": {
-    "placeholders": {
-      "reported": {
-        "type": "int"
-      },
-      "limit": {
-        "type": "int"
-      }
-    }
-  },
-  "agentBudgetSummaryReportedUsage": "{requests}/{requestLimit} model requests · {tokens} reported tokens",
-  "@agentBudgetSummaryReportedUsage": {
-    "placeholders": {
-      "requests": {
-        "type": "int"
-      },
-      "requestLimit": {
-        "type": "int"
-      },
-      "tokens": {
-        "type": "int"
-      }
-    }
-  },
-  "agentBudgetSummaryRecordedUsage": "Model requests {requests} · {tokens} reported tokens",
-  "@agentBudgetSummaryRecordedUsage": {
-    "placeholders": {
-      "requests": {
-        "type": "int"
-      },
-      "tokens": {
-        "type": "int"
-      }
-    }
-  },
   "agentEndRedo": "End redo",
   "@agentEndRedo": {},
   "agentEndRedoTitle": "End this redo?",

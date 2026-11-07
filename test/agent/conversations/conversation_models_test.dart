@@ -3,8 +3,49 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/agent/conversations/conversation_models.dart';
 
+class _CountedMessage extends ConversationMessage {
+  _CountedMessage(DateTime now)
+    : super(
+        id: 'message',
+        role: ConversationRole.user,
+        text: 'Text',
+        createdAt: now,
+      );
+
+  int identityReads = 0;
+
+  @override
+  String get id {
+    identityReads++;
+    return super.id;
+  }
+}
+
 void main() {
   final now = DateTime.utc(2026, 10, 30);
+
+  test('timestamp updates reuse validated history without scanning message identities', () {
+    final message = _CountedMessage(now);
+    final source = AgentConversation(
+      id: 'conversation',
+      title: 'Conversation',
+      createdAt: now,
+      updatedAt: now,
+      messages: [message],
+    );
+    message.identityReads = 0;
+    final updatedAt = now.add(const Duration(seconds: 1));
+    final updated = source.withUpdatedAt(updatedAt);
+    expect(message.identityReads, 0);
+    expect(updated.messages, same(source.messages));
+    expect(updated.runs, same(source.runs));
+    expect(updated.historyVersions, same(source.historyVersions));
+    expect(updated.toJson(), {
+      ...source.toJson(),
+      'updatedAt': updatedAt.toIso8601String(),
+    });
+    expect(source.updatedAt, now);
+  });
 
   test('provider continuation is immutable and round trips without entering user messages', () {
     final item = <String, Object?>{
@@ -41,14 +82,13 @@ void main() {
     );
   });
 
-  test('credential fields and unbounded continuation data cannot enter the archive', () {
+  test('credential fields and non-finite continuation values cannot enter the archive', () {
     for (final item in <Map<String, Object?>>[
       {'authorization': 'fixture'},
       {
         'nested': {'access_token': 'fixture'},
       },
       {'value': double.infinity},
-      {'value': 'x' * (512 * 1024 + 1)},
     ]) {
       expect(
         () => ConversationMessage(
@@ -61,6 +101,25 @@ void main() {
         throwsFormatException,
       );
     }
+  });
+
+  test('large continuation data round trips without a local size quota', () {
+    final payload = 'x' * (512 * 1024 + 1);
+    final source = ConversationMessage(
+      id: 'large-continuation',
+      role: ConversationRole.assistant,
+      text: '',
+      createdAt: now,
+      responseItems: [
+        {'value': payload},
+      ],
+    );
+    expect(
+      ConversationMessage.fromJson(source.toJson())
+          .responseItems
+          .single['value'],
+      payload,
+    );
   });
 
   test('legacy source bytes remain stable and attachment markers require a file source', () {

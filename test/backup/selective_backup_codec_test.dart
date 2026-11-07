@@ -88,6 +88,76 @@ void main() {
   });
 
   test(
+    'Agent backup has a new explicit schema and rejects retired Agent archives',
+    () {
+      final source = codec.encode(_bundle());
+      final zip = ZipDecoder().decodeBytes(source);
+      final manifest = jsonDecode(
+        utf8.decode(
+          zip.findFile(SelectiveBackupCodec.manifestPath)!.readBytes()!,
+        ),
+      ) as Map;
+      expect(manifest['version'], 2);
+      expect(manifest['agentSchema'], 'sked-agent-records');
+      expect(manifest['agentVersion'], 1);
+      expect(
+        () => codec.decode(
+          _rewriteManifest(source, (manifest) {
+            manifest['version'] = 1;
+            manifest.remove('agentSchema');
+            manifest.remove('agentVersion');
+          }),
+        ),
+        throwsA(error(SelectiveBackupError.unsupportedVersion)),
+      );
+    },
+  );
+
+  test('legacy business-only ZIP remains readable', () {
+    const key = BackupObjectKey(BackupObjectKind.calendar, 'calendar');
+    final bundle = SelectiveBackupBundle(
+      records: [
+        BackupRecord(
+          key: key,
+          label: 'Calendar',
+          data: {
+            'entity': {'id': 'calendar'},
+          },
+        ),
+      ],
+      roots: [key],
+    );
+    final source = _rewriteManifest(codec.encode(bundle), (manifest) {
+      manifest['version'] = 1;
+      manifest.remove('agentSchema');
+      manifest.remove('agentVersion');
+    });
+    expect(codec.decode(source).byKey[key]!.label, 'Calendar');
+  });
+
+  test(
+    'backup objects and message collections exceed the former fixed count',
+    () {
+      final records = [
+        for (var i = 0; i < 2050; i++)
+          BackupRecord(
+            key: BackupObjectKey(BackupObjectKind.calendar, 'calendar-$i'),
+            label: 'Calendar $i',
+            data: {
+              'entity': {'id': 'calendar-$i'},
+            },
+          ),
+      ];
+      final bundle = SelectiveBackupBundle(
+        records: records,
+        roots: records.map((value) => value.key),
+      );
+      expect(codec.decode(codec.encode(bundle)).records, hasLength(2050));
+      expect(backupList(List.generate(3000, (i) => i)), hasLength(3000));
+    },
+  );
+
+  test(
     'manifest rejects mismatched digest, missing entries and future versions',
     () {
       final source = codec.encode(_bundle());

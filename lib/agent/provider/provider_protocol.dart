@@ -61,7 +61,7 @@ Map<String, Object?> encodeProviderRequest(ProviderRequest request) {
         'reasoning_effort': request.reasoningEffort,
       'stream': true,
       'stream_options': {'include_usage': true},
-      'max_completion_tokens': ?request.limits.maxOutputTokens,
+      'max_completion_tokens': ?request.maxOutputTokens,
       'messages': request.messages
           .map(
             (message) => <String, Object?>{
@@ -125,7 +125,7 @@ Map<String, Object?> encodeProviderRequest(ProviderRequest request) {
       'reasoning': {'effort': request.reasoningEffort},
     'stream': true,
     'store': false,
-    'max_output_tokens': ?request.limits.maxOutputTokens,
+    'max_output_tokens': ?request.maxOutputTokens,
     'input': input,
     if (tools.isNotEmpty)
       'tools': tools.map((tool) => {'type': 'function', ...tool}).toList(),
@@ -497,10 +497,6 @@ class ProviderResponseDecoder {
   }
 
   _ToolBuffer _tool(int index) {
-    final limit = request.limits.maxToolCalls;
-    if (limit != null && !_tools.containsKey(index) && _tools.length >= limit) {
-      throw const ProviderException(ProviderError.toolBudgetExceeded);
-    }
     return _tools.putIfAbsent(index, _ToolBuffer.new);
   }
 
@@ -512,10 +508,6 @@ class ProviderResponseDecoder {
 
   void _addArguments(int index, String arguments, List<ProviderEvent> events) {
     final tool = _tool(index);
-    tool.argumentBytes += utf8.encode(arguments).length;
-    if (tool.argumentBytes > request.limits.maxToolArgumentBytes) {
-      throw const ProviderException(ProviderError.toolBudgetExceeded);
-    }
     tool.arguments.write(arguments);
     if (arguments.isNotEmpty) {
       events.add(
@@ -562,20 +554,12 @@ class ProviderResponseDecoder {
       cachedInputTokens: cached,
       reasoningTokens: reasoning,
     );
-    final limit = request.limits.maxTotalTokens;
-    if (limit != null && total > limit) {
-      throw const ProviderException(ProviderError.tokenBudgetExceeded);
-    }
     events.add(ProviderUsageEvent(_usage!));
   }
 
   ProviderCompleted _finish() {
     if (_finishReason != 'stop' && _finishReason != 'tool_calls') {
       throw const ProviderException(ProviderError.incompleteResponse);
-    }
-    final limit = request.limits.maxToolCalls;
-    if (limit != null && _tools.length > limit) {
-      throw const ProviderException(ProviderError.toolBudgetExceeded);
     }
     if ((_finishReason == 'tool_calls') != _tools.isNotEmpty) {
       throw const ProviderException(ProviderError.invalidResponse);
@@ -585,9 +569,7 @@ class ProviderResponseDecoder {
     for (final index in _tools.keys.toList()..sort()) {
       final tool = _tools[index]!;
       final id = tool.id.toString();
-      if (id.isEmpty ||
-          id.length > 256 ||
-          id.codeUnits.any((unit) => unit < 32 || unit == 127)) {
+      if (id.isEmpty || id.codeUnits.any((unit) => unit < 32 || unit == 127)) {
         throw const ProviderException(ProviderError.invalidResponse);
       }
       if (!ids.add(id)) {
@@ -602,19 +584,10 @@ class ProviderResponseDecoder {
               .where((definition) => definition.name == returnedName)
               .firstOrNull
               ?.name;
-      if (name == null && request.tools.isEmpty) {
-        throw ProviderException.fromResponse(ProviderError.unknownTool, {
-          'message':
-              'Tool function "$returnedName" was not advertised in this request.',
-        }, apiKey: _apiKey);
-      }
       if (name == null && !_wireNamePattern.hasMatch(returnedName)) {
         throw const ProviderException(ProviderError.invalidResponse);
       }
       final arguments = tool.arguments.toString();
-      if (utf8.encode(arguments).length > request.limits.maxToolArgumentBytes) {
-        throw const ProviderException(ProviderError.toolBudgetExceeded);
-      }
       calls.add(
         ProviderToolCall(
           id: id,
@@ -631,10 +604,6 @@ class ProviderResponseDecoder {
           'reasoning_content': _chatReasoning.toString(),
         },
       ];
-      // Match the existing archive's continuation budget before publication.
-      if (utf8.encode(jsonEncode(_responseItems)).length > 512 * 1024) {
-        throw const ProviderException(ProviderError.responseBudgetExceeded);
-      }
     }
     _complete = true;
     return ProviderCompleted(
@@ -665,7 +634,6 @@ class _ToolBuffer {
   final StringBuffer name = StringBuffer();
   final StringBuffer arguments = StringBuffer();
   String? itemId;
-  int argumentBytes = 0;
 
   bool matches(_ToolBuffer other) =>
       id.toString() == other.id.toString() &&

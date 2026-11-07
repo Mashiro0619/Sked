@@ -1,7 +1,5 @@
 import 'dart:convert';
 
-import 'provider_models.dart';
-
 class ProviderSseFrame {
   const ProviderSseFrame(this.event, this.data);
   final String? event;
@@ -11,13 +9,11 @@ class ProviderSseFrame {
 /// Incremental SSE decoder with UTF-8, CR/LF/CRLF, comments and data folding.
 /// A stream ending without a blank line never completes its pending frame.
 class ProviderSseDecoder {
-  ProviderSseDecoder({required this.maxEventBytes});
+  ProviderSseDecoder();
 
-  final int maxEventBytes;
   final List<int> _line = [];
   final List<String> _data = [];
   String? _event;
-  int _eventBytes = 0;
   bool _skipLf = false;
   bool _firstLine = true;
 
@@ -29,9 +25,6 @@ class ProviderSseDecoder {
         continue;
       }
       _skipLf = false;
-      if (++_eventBytes > maxEventBytes) {
-        throw const ProviderException(ProviderError.eventBudgetExceeded);
-      }
       if (byte == 10 || byte == 13) {
         _skipLf = byte == 13;
         var line = utf8.decode(_line);
@@ -44,7 +37,6 @@ class ProviderSseDecoder {
           }
           _data.clear();
           _event = null;
-          _eventBytes = 0;
         } else if (!line.startsWith(':')) {
           final colon = line.indexOf(':');
           final field = colon < 0 ? line : line.substring(0, colon);

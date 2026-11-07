@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:material_ui/material_ui.dart';
@@ -12,7 +11,6 @@ import '../agent/ui/agent_conversation_view.dart';
 import '../agent/ui/agent_ui_delegate.dart';
 import '../agent/ui/agent_model_picker.dart';
 import '../agent/ui/agent_resource_view.dart';
-import '../agent/provider/provider.dart';
 import '../application/operation_contracts.dart';
 import '../l10n/app_localizations.dart';
 import '../models/agent_settings.dart';
@@ -133,6 +131,7 @@ class _AgentPageState extends State<AgentPage> {
           return WorkspaceResourcePanel(
             title: AppLocalizations.of(context).agentConversations,
             resourceIcon: Icons.history,
+            showResourceHeading: false,
             contentBuilder: historyBuilder,
             onOpenResources:
                 resources?.canExpandInline == false &&
@@ -454,34 +453,11 @@ class _AgentConversationHostState extends State<AgentConversationHost> {
         }
       },
       onUndoOperation: (conversationId, operationId) async {
-        await application.runtime.runHostAction(conversationId, (
-          scope,
-          approve,
-        ) async {
-          final plan = await application.tools.execute(
-            ProviderToolCall(
-              id: '${scope.id}-undo-prepare',
-              name: 'undo.prepare',
-              arguments: jsonEncode({'operationId': operationId}),
-            ),
-            scope,
-            approve,
-          );
-          final prepared = application.mutations.plan(
-            plan['planId']! as String,
-          );
-          if (prepared == null) throw StateError('The undo plan expired.');
-          await application.runtime.recordHostOperation(scope, prepared);
-          return application.tools.execute(
-            ProviderToolCall(
-              id: '${scope.id}-undo-commit',
-              name: 'mutation.commit',
-              arguments: jsonEncode({'planId': plan['planId']}),
-            ),
-            scope,
-            approve,
-          );
-        });
+        await application.runtime.runHostTool(
+          conversationId,
+          toolName: 'operations.undo',
+          arguments: {'targetOperationId': operationId},
+        );
       },
       onOpenResource: (ref) => AgentResourceView.open(context, ref),
       onExportConversation: (id) async {
@@ -515,6 +491,12 @@ class _RoutedAgentDelegate implements AgentUiDelegate {
 
   @override
   ValueListenable<AgentUiState> get state => runtime.state;
+  @override
+  ValueListenable<AgentUiRunState> watchConversation(String conversationId) =>
+      runtime.watchConversation(conversationId);
+  @override
+  Future<void> compactContext(String conversationId) =>
+      runtime.compactContext(conversationId);
   @override
   Future<void> send(String conversationId, String text) =>
       runtime.send(conversationId, text);

@@ -18,35 +18,32 @@ void main() {
       await runtime.setMode(h.conversationId, AgentPermissionMode.ask);
       final original = h.saved.encode();
       final set = h.saved.studentMode.periodTimeSets.first;
+      final conversationRun = runtime.watchConversation(h.conversationId);
       final announced = Completer<AgentUiApproval>();
       void capture() {
-        final approval = runtime.state.value
-            .runFor(h.conversationId)
-            .pendingApproval;
+        final approval = conversationRun.value.pendingApproval;
         if (approval != null && !announced.isCompleted) {
           announced.complete(approval);
         }
       }
 
-      runtime.state.addListener(capture);
-      late Map<String, Object?> summary;
+      conversationRun.addListener(capture);
       final running = h.run(() async {
-        summary = await h.call('mutation.prepare', {
-          'commands': [
-            {
-              'kind': 'timetable',
-              'action': 'create',
-              'values': {
-                'name': 'Review with reused times',
-                'startDate': '2026-09-07',
-                'totalWeeks': 18,
-                'periodTimeSetId': set.id,
-              },
-            },
-          ],
-        });
         await expectLater(
-          h.call('mutation.commit', {'planId': summary['planId']}),
+          h.call('mutation.apply', {
+            'commands': [
+              {
+                'kind': 'timetable',
+                'action': 'create',
+                'values': {
+                  'name': 'Review with reused times',
+                  'startDate': '2026-09-07',
+                  'totalWeeks': 18,
+                  'periodTimeSetId': set.id,
+                },
+              },
+            ],
+          }),
           throwsA(
             isA<OperationProblem>().having(
               (e) => e.code,
@@ -67,12 +64,11 @@ void main() {
             (approval.details['references'] as Map)['periodTimeSets'] as Map;
         expect(sets.keys, [set.id]);
         expect(sets[set.id], {'status': 'reused', 'value': set.toJson()});
-        expect(summary.containsKey('references'), isFalse);
         await runtime.reject(h.conversationId, approval.id);
         await running;
         expect(h.saved.encode(), original);
       } finally {
-        runtime.state.removeListener(capture);
+        conversationRun.removeListener(capture);
         await runtime.stop(h.conversationId);
         await running;
       }

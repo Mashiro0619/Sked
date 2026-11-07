@@ -6,7 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../application/resource_contracts.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/school_site_models.dart' show validSchoolSiteId;
-import '../runtime/operation_outcome.dart';
+import '../operations/tool_outcome.dart';
 import 'agent_conversation_receipt.dart';
 import 'agent_setting_labels.dart';
 import 'agent_selectable_text.dart';
@@ -16,33 +16,21 @@ import 'agent_selectable_text.dart';
 class AgentOperationCard extends StatefulWidget {
   const AgentOperationCard({
     super.key,
-    required this.receipt,
+    required this.outcome,
     this.onUndo,
     this.onOpenResource,
     this.canOpenConversation,
     this.onOpenConversation,
+    this.embedded = false,
   });
 
-  final Map<String, Object?> receipt;
+  final ToolOutcome outcome;
+  Map<String, Object?> get receipt => outcome.payload;
   final VoidCallback? onUndo;
   final void Function(Map<String, Object?> ref)? onOpenResource;
   final bool Function(String id)? canOpenConversation;
   final ValueChanged<String>? onOpenConversation;
-
-  static Map<String, Object?>? parse(String text) {
-    try {
-      final value = jsonDecode(text);
-      if (value is Map<String, dynamic> &&
-          (value.containsKey('operationId') ||
-              value.containsKey('planId') ||
-              value.containsKey('error'))) {
-        return Map<String, Object?>.from(value);
-      }
-    } on FormatException {
-      // Other tool replies remain readable in their original result view.
-    }
-    return null;
-  }
+  final bool embedded;
 
   @override
   State<AgentOperationCard> createState() => _AgentOperationCardState();
@@ -55,8 +43,7 @@ class _AgentOperationCardState extends State<AgentOperationCard> {
   @override
   void didUpdateWidget(AgentOperationCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if ((oldWidget.receipt['operationId'] ?? oldWidget.receipt['planId']) !=
-        (receipt['operationId'] ?? receipt['planId'])) {
+    if (oldWidget.outcome.operationId != widget.outcome.operationId) {
       _showDetails = false;
     }
   }
@@ -68,15 +55,10 @@ class _AgentOperationCardState extends State<AgentOperationCard> {
     final onOpenConversation = widget.onOpenConversation;
     final canOpenConversation = widget.canOpenConversation;
     final l = AppLocalizations.of(context);
-    final applied =
-        receipt['status'] == 'committed' ||
-        receipt['effectStatus'] == 'applied';
-    final prepared = receipt.containsKey('planId') && receipt['status'] == null;
-    final uncertain =
-        requiresAgentOutcomeReview(receipt) ||
-        receipt['effectStatus'] == 'unknown' ||
-        receipt['effectStatus'] == 'pending' ||
-        receipt['status'] == 'partial';
+    final outcome = widget.outcome;
+    final applied = outcome.kind == ToolOutcomeKind.saved;
+    final prepared = outcome.kind == ToolOutcomeKind.preview;
+    final uncertain = outcome.kind == ToolOutcomeKind.needsReconciliation;
     final title = uncertain
         ? l.agentActionUncertain
         : prepared
@@ -122,57 +104,61 @@ class _AgentOperationCardState extends State<AgentOperationCard> {
         ? storedChangeCount
         : null;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Card.filled(
-        margin: EdgeInsets.zero,
-        color: Theme.of(context).colorScheme.surfaceContainerLow,
+      padding: widget.embedded
+          ? EdgeInsets.zero
+          : const EdgeInsets.symmetric(vertical: 6),
+      child: Material(
+        type: MaterialType.transparency,
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: widget.embedded ? EdgeInsets.zero : const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                children: [
-                  Icon(
-                    uncertain
-                        ? Icons.pending_outlined
-                        : applied
-                        ? Icons.check_circle_outline
-                        : prepared
-                        ? Icons.preview_outlined
-                        : Icons.error_outline,
-                    size: 20,
-                    color: uncertain
-                        ? Theme.of(context).colorScheme.tertiary
-                        : !applied && !prepared
-                        ? Theme.of(context).colorScheme.error
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Wrap(
-                      spacing: 12,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        Text(
-                          title,
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                        if (changeCount case final int count)
-                          Text(
-                            l.agentChangeCount(count),
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                      ],
+              if (!widget.embedded)
+                Row(
+                  children: [
+                    Icon(
+                      uncertain
+                          ? Icons.pending_outlined
+                          : applied
+                          ? Icons.check_circle_outline
+                          : prepared
+                          ? Icons.preview_outlined
+                          : Icons.error_outline,
+                      size: 20,
+                      color: uncertain
+                          ? Theme.of(context).colorScheme.tertiary
+                          : !applied && !prepared
+                          ? Theme.of(context).colorScheme.error
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
-                  ),
-                ],
-              ),
-              if (receipt['notificationEffect'] case final Map effect)
-                if (effect['state'] != 'notRequired') ...[
-                  const SizedBox(height: 6),
-                  Text(l.agentNotificationEffect('${effect['state']}')),
-                ],
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Wrap(
+                        spacing: 12,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(
+                            title,
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          if (changeCount case final int count)
+                            Text(
+                              l.agentChangeCount(count),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              if (!widget.embedded)
+                if (receipt['notificationEffect'] case final Map effect)
+                  if (effect['state'] == 'failed' ||
+                      effect['state'] == 'pending') ...[
+                    const SizedBox(height: 6),
+                    Text(l.agentNotificationEffect('${effect['state']}')),
+                  ],
               for (final change in changes) ...[
                 const SizedBox(height: 6),
                 Row(
@@ -227,8 +213,7 @@ class _AgentOperationCardState extends State<AgentOperationCard> {
                           _showDetails ? Icons.expand_less : Icons.expand_more,
                         ),
                         label: Text(
-                          receipt.containsKey('operationId') ||
-                                  receipt.containsKey('planId')
+                          outcome.operationId != null
                               ? l.agentPlanDetails
                               : l.agentActivityDetails,
                         ),
@@ -345,13 +330,13 @@ Map _presentChange(
 }) {
   if (!_isNamedObjectChange(change)) {
     final label =
-        change['label'] ??
         agentSettingLabel(change, l) ??
+        change['label'] ??
         _objectLabel(change['after']) ??
         _objectLabel(change['before']);
     final presented = label == null ? change : {...change, 'label': label};
     if (applied) return presented;
-    // Standard prepare receipts already contain actions and object references.
+    // Operation previews contain actions and object references.
     // Those describe the proposal, not a confirmed write or an existing target.
     return {...presented, 'action': 'unconfirmed'}..remove('ref');
   }

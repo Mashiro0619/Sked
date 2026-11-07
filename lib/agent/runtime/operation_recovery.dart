@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../conversations/conversation_models.dart';
+import '../history/conversation_history.dart';
 import 'operation_outcome.dart';
 
 typedef AgentOperationReceiptReader = Future<Map<String, Object?>?> Function(
@@ -16,50 +17,11 @@ recoverAgentOperationHistory(
   required AgentOperationReceiptReader? readReceipt,
   required String Function() id,
   required DateTime Function() clock,
-  int? maxResultCharacters,
+  Iterable<ConversationOperationBinding> operationBindings = const [],
 }) async {
-  final bindings = <String, ({String operationId, String toolName})>{};
-  final hostBindings = <String, ({String operationId, String toolName})>{};
-  final calls = <String, ConversationToolCall>{};
-  for (final message in source) {
-    for (final call in message.toolCalls) {
-      calls[call.id] = call;
-    }
-    if (message.role == ConversationRole.notice) {
-      final record = _object(message.text);
-      if (record?['kind'] == 'agent_host_operation' &&
-          record?['version'] == 1 &&
-          record?['toolCallId'] is String &&
-          record?['operationId'] is String &&
-          const {
-            'mutation.commit',
-            'external.commit',
-          }.contains(record?['toolName']) &&
-          calls[record?['toolCallId']]?.name == 'host.action') {
-        hostBindings[record!['toolCallId'] as String] = (
-          operationId: record['operationId'] as String,
-          toolName: record['toolName'] as String,
-        );
-      }
-      continue;
-    }
-    if (message.role != ConversationRole.tool) continue;
-    final result = _object(message.text), call = calls[message.toolCallId];
-    if (result == null ||
-        call == null ||
-        result['planId'] is! String ||
-        result['operationId'] is! String) {
-      continue;
-    }
-    // Main-store preparation has no external action name in its summary.
-    final type = result['action'] is String
-        ? 'external.commit'
-        : 'mutation.commit';
-    bindings[result['planId'] as String] = (
-      operationId: result['operationId'] as String,
-      toolName: type,
-    );
-  }
+  final bindings = {
+    for (final binding in operationBindings) binding.toolCallId: binding,
+  };
   final result = <ConversationMessage>[];
   final pending = <String, ConversationToolCall>{};
   var blocked = false, changed = false;
@@ -72,13 +34,8 @@ recoverAgentOperationHistory(
         (previous == null || !requiresAgentOutcomeReview(previous))) {
       return existing;
     }
-    final isWrite = const {
-      'mutation.commit',
-      'external.commit',
-      'host.action',
-    }.contains(call.name);
-    if (!isWrite) {
-      if (existing != null) return existing;
+    final binding = bindings[call.id];
+    if (binding == null && previous == null) {
       changed = true;
       return ConversationMessage(
         id: id(),
@@ -91,23 +48,13 @@ recoverAgentOperationHistory(
         createdAt: clock().toUtc(),
       );
     }
-    final args = _object(call.arguments) ?? const <String, Object?>{};
-    final binding = call.name == 'host.action'
-        ? hostBindings[call.id]
-        : bindings[args['planId'] ?? previous?['planId']];
-    final operationId =
-        previous?['operationId'] ?? args['operationId'] ?? binding?.operationId;
-    String? toolName = call.name;
-    if (call.name == 'host.action') {
-      toolName = previous != null && previous['kind'] == 'external'
-          ? 'external.commit'
-          : binding?.toolName;
-    }
+    final operationId = binding?.operationId;
+    final toolName = binding?.store == ConversationOperationStore.main
+        ? 'mutation.commit'
+        : 'external.commit';
+    Map<String, Object?>? recoveryError;
     Map<String, Object?>? verified;
-    if (operationId is String &&
-        toolName is String &&
-        readReceipt != null &&
-        (binding == null || binding.toolName == toolName)) {
+    if (operationId != null && readReceipt != null) {
       try {
         final receipt = await readReceipt(toolName, operationId);
         if (receipt != null &&
@@ -122,8 +69,11 @@ recoverAgentOperationHistory(
                   }.contains(receipt['status']))) {
           verified = {...receipt, 'recoveredFromOperationReceipt': true};
         }
-      } catch (_) {
-        // Expired IDs and unavailable stores are not proof of nonexecution.
+      } catch (error) {
+        recoveryError = {
+          'code': 'receiptReadFailed',
+          'message': error.toString(),
+        };
       }
     }
     if (verified == null) blocked = true;
@@ -134,31 +84,15 @@ recoverAgentOperationHistory(
           'status': 'outcome_unknown',
           'error': {'code': 'operationRecoveryRequired'},
           'toolName': call.name,
-          if (operationId is String) 'operationId': operationId,
-          if (args['planId'] is String) 'planId': args['planId'],
+          'operationId': ?operationId,
+          if (binding == null)
+            'recoveryError': {'code': 'missingOperationBinding'},
+          'recoveryError': ?recoveryError,
           'recovery':
               'Only a host-verified durable receipt can allow further writes. '
               'Do not replay this operation or replace it with a new operation ID.',
         };
-    var encoded = jsonEncode(payload);
-    if (maxResultCharacters != null && encoded.length > maxResultCharacters) {
-      encoded = jsonEncode({
-        for (final key in const [
-          'status',
-          'kind',
-          'operationId',
-          'generation',
-          'sequence',
-          'effectStatus',
-          'dataStatus',
-          'recoveryRequired',
-          'receiptFinalized',
-          'recoveredFromOperationReceipt',
-        ])
-          if (payload.containsKey(key)) key: payload[key],
-        'detailsOmitted': true,
-      });
-    }
+    final encoded = jsonEncode(payload);
     if (existing != null && existing.text == encoded) return existing;
     changed = true;
     return ConversationMessage(
@@ -199,7 +133,7 @@ recoverAgentOperationHistory(
 }
 
 /// Recovery reads may inspect history, sources and authoritative receipts.
-/// Preparation, credentials, model probes and commits remain unavailable.
+/// Business actions, credentials and model probes remain unavailable.
 bool isAgentRecoveryRead(String name) => const {
   'ask_user',
   'update_plan',

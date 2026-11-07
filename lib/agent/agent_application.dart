@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -23,6 +24,7 @@ import 'attachments/attachment_repository.dart';
 import 'attachments/conversation_attachments.dart';
 import 'conversations/conversation_repository.dart';
 import 'history/conversation_history_service.dart';
+import 'interactions/agent_question.dart';
 import 'knowledge/knowledge_service.dart';
 import 'provider/provider.dart';
 import 'imports/school_import_tool_adapter.dart';
@@ -36,6 +38,11 @@ import 'tools/workflow_tool_adapters.dart';
 import 'tools/conversation_tool_adapters.dart';
 import 'tools/agent_control_tool_adapters.dart';
 import 'tools/knowledge_tool_adapters.dart';
+import 'context/context_service.dart';
+import 'store/agent_store.dart';
+import 'store/sqlite_context_checkpoint_store.dart';
+import 'store/legacy_operation_reconciliation.dart';
+import '../utils/unique_id.dart';
 
 export 'connection/agent_credential_action.dart';
 
@@ -66,16 +73,25 @@ class AgentApplication extends ChangeNotifier {
     SchoolSiteService? schoolSites,
     AppBackupController? backups,
     WorkspaceCommands? workspaces,
+    AgentStore? agentStore,
   }) : _session = session,
        _persistence = persistence,
        _maintenance = maintenance,
        _publishViews = publishViews,
        _provider = provider ?? ProviderClient(),
-       conversations = ConversationRepository(storage: conversationStorage),
-       attachmentStore = AttachmentRepository(storage: attachmentStorage),
-       knowledgeRepository = AgentKnowledgeRepository(
-         storage: knowledgeStorage,
-       ) {
+       _ownsStore = agentStore == null,
+       store =
+           agentStore ??
+           (conversationStorage == null || knowledgeStorage == null
+               ? AgentStore.open()
+               : null),
+       attachmentStore = AttachmentRepository(storage: attachmentStorage) {
+    conversations = ConversationRepository(
+      storage: conversationStorage ?? store!.conversations,
+    );
+    knowledgeRepository = AgentKnowledgeRepository(
+      storage: knowledgeStorage ?? store!.knowledge,
+    );
     mutations = MutationCoordinator(
       session: session,
       settlePendingChanges: persistence.flushPendingUiStateSaves,
@@ -124,6 +140,16 @@ class AgentApplication extends ChangeNotifier {
     platformTools = registerPlatformTools(
       tools,
       external: external,
+      readLegacyEffect: (operation) async {
+        final evidence = await store?.readLegacyOperationEvidence(
+          operation.operationId,
+        );
+        if (evidence == null) return null;
+        return legacyAgentEffectReader(
+          evidence,
+          operation.action,
+        )?.call(operation);
+      },
       schoolSites: schoolSites,
       schoolWebSession: SchoolWebSessionService.instance,
       schoolWebSessionSupported:
@@ -158,15 +184,29 @@ class AgentApplication extends ChangeNotifier {
       readEnvironment: _readEnvironment,
       validateReferences: validateComposerReferences,
       prepareReferenceContext: _prepareComposerReferenceContext,
-      readApiKey: (snapshot) async {
-        // Side-store loading is initiated by an actual run. Opening the
-        // default-on entry or editing its connection need not read knowledge.
-        await knowledge.initialize();
-        return connections.readKeyFor(snapshot);
+      readApiKey: connections.readKeyFor,
+      contextService: store == null
+          ? null
+          : ContextService(
+              store: SqliteContextCheckpointStore(store!),
+              provider: _provider,
+            ),
+      persistOperation: (conversationId, runId, update) async {
+        // Clearing Agent data ends this transcript. A late terminal update
+        // must not reopen the database after its files were removed.
+        if (_clearSuspended) return;
+        await store?.putRecord('operation', conversationId, update.callId, {
+          'toolCallId': update.callId,
+          'toolName': update.toolName,
+          'runId': runId,
+          'phase': update.phase.name,
+          'details': update.details,
+        });
       },
       additionalSystemInstructions: AgentKnowledgeService.modelGuidance,
       readTools: tools.toolsFor,
       executeTool: tools.execute,
+      isReadOnlyTool: tools.isReadOnlyTool,
       readOperationReceipt: (toolName, operationId) async {
         final receipt = toolName == 'mutation.commit'
             ? mutations.status(operationId)
@@ -174,13 +214,6 @@ class AgentApplication extends ChangeNotifier {
         return receipt == null
             ? {'status': 'notRecorded', 'operationId': operationId}
             : tools.describeCommitResult(receipt.result);
-      },
-      readPreparedOperation: (call) {
-        final id = call.decodedArguments['planId'];
-        if (id is! String) return null;
-        return call.name == 'mutation.commit'
-            ? mutations.plan(id)
-            : external.plan(id);
       },
       onOpenSettings: () => onOpenSettings?.call(),
       readMaintenance: () => maintenance.isReserved || !_session.canWrite,
@@ -193,6 +226,8 @@ class AgentApplication extends ChangeNotifier {
         if (_attachmentCleanupError) _scheduleAttachmentCollection();
       },
     );
+    tools.onOperationPrepared = runtime.recordToolOperation;
+    tools.onOperationUpdate = runtime.updateToolOperation;
     history = ConversationHistoryService(
       conversations: conversations,
       runtime: runtime,
@@ -231,12 +266,14 @@ class AgentApplication extends ChangeNotifier {
   final AppDataMaintenance _maintenance;
   final VoidCallback _publishViews;
   final ProviderClient _provider;
+  final AgentStore? store;
+  final bool _ownsStore;
   late final diagnostics = AgentConnectionDiagnostics(provider: _provider);
   final _diagnosticTokens = <ProviderCancellationToken>{};
-  final ConversationRepository conversations;
+  late final ConversationRepository conversations;
   final AttachmentRepository attachmentStore;
   late final ConversationAttachments binaryAttachments;
-  final AgentKnowledgeRepository knowledgeRepository;
+  late final AgentKnowledgeRepository knowledgeRepository;
   late final AgentKnowledgeService knowledge;
   late final KnowledgeToolAdapters knowledgeTools;
   late final MutationCoordinator mutations;
@@ -325,11 +362,68 @@ class AgentApplication extends ChangeNotifier {
   bool get initializationError => _initializationError;
   AgentInitializationFailure? get initializationFailure =>
       _initializationFailure;
-  Future<void> recoverHistoryBeforeWrites() => history.recoverBeforeWrites();
+  Future<void> recoverHistoryBeforeWrites() async {
+    await _finishStoreCutover();
+    await history.recoverBeforeWrites();
+  }
+
+  Future<void>? _cutover;
+  Future<void> _finishStoreCutover() =>
+      _cutover ??= _retireLegacyStore().whenComplete(() => _cutover = null);
+
+  Future<void> _retireLegacyStore() async {
+    final owner = store;
+    if (owner == null) return;
+    await owner.finishLegacyCutover(
+      reconcilePendingWrites: (evidence) async {
+        await _session.repository.waitForPendingWrites(propagateErrors: true);
+        return reconcileLegacyAgentOperations(
+          evidence: evidence,
+          mutations: mutations,
+          readCommittedData: () => _session.committedData,
+          reconcileExternal: (operationId) async {
+            final receipt = external.status(operationId)!;
+            final legacyReader = legacyAgentEffectReader(
+              evidence,
+              receipt.result['action'] as String,
+            );
+            if (legacyReader != null) {
+              return (await external.reconcile(
+                operationId: operationId,
+                readBack: legacyReader,
+              )).toJson();
+            }
+            final scope = OperationScope(
+              id: generateUuidV4(),
+              policy: OperationPolicy(
+                enabled: true,
+                mode: AgentPermissionMode.full,
+              ),
+            );
+            try {
+              return await tools.execute(
+                ProviderToolCall(
+                  id: generateUuidV4(),
+                  name: 'external.reconcile',
+                  arguments: jsonEncode({'operationId': operationId}),
+                ),
+                scope,
+                (_) async => null,
+              );
+            } finally {
+              tools.finishScope(scope);
+              scope.cancel();
+            }
+          },
+        );
+      },
+    );
+  }
+
   int get navigationRevision => _navigationRevision;
 
   Future<Map<String, Object?>> _requestUserInput(
-    Map<String, Object?> arguments,
+    List<AgentQuestionPrompt> questions,
     OperationScope scope,
   ) async {
     scope.checkActive();
@@ -361,7 +455,7 @@ class AgentApplication extends ChangeNotifier {
       validateOwner: validateOwner,
     );
     validateOwner();
-    return runtime.requestUserInput(arguments, scope);
+    return runtime.requestUserInput(questions, scope);
   }
 
   bool _knowledgeAvailable() =>
@@ -447,7 +541,8 @@ class AgentApplication extends ChangeNotifier {
     }
   }
 
-  Future<void> _loadConversations() {
+  Future<void> _loadConversations() async {
+    await _finishStoreCutover();
     if (conversations.isLoaded && !conversations.blocked) return Future.value();
     return _loadingConversations ??= conversations.load().whenComplete(
       () => _loadingConversations = null,
@@ -708,6 +803,8 @@ class AgentApplication extends ChangeNotifier {
     await _freezeAttachments();
     await conversations.waitForPendingWrites();
     await knowledge.waitForPendingOperations();
+    await runtime.waitForIdle(except: _maintenanceScope);
+    await store?.suspendForDataClear();
     runtime.refreshSettings();
   }
 
@@ -940,6 +1037,7 @@ class AgentApplication extends ChangeNotifier {
         conversations.dispose();
         knowledge.dispose();
         knowledgeRepository.dispose();
+        if (_ownsStore) await store?.close();
         _provider.close();
       }),
     );

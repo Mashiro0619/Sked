@@ -5,9 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/agent/attachments/attachment_storage_io.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
 import 'package:sked/agent/conversations/conversation_models.dart';
-import 'package:sked/agent/conversations/conversation_storage_io.dart';
 import 'package:sked/agent/knowledge/knowledge_models.dart';
-import 'package:sked/agent/knowledge/knowledge_storage_io.dart';
+import 'package:sked/agent/store/agent_store.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/backup/selective_backup_app_data.dart';
 import 'package:sked/backup/selective_backup_models.dart';
@@ -79,17 +78,22 @@ void main() {
       ]),
     );
 
+    final stores = <AppRuntime, AgentStore>{};
     Future<AppRuntime> open(SelectiveRestoreJournal progress) async {
+      final agentStore = AgentStore.open(
+        filePath: '${directory.path}/Sked_agent.sqlite',
+      );
       final runtime = AppRuntime(
+        agentStore: agentStore,
         storage: IoTimetableStorage(layout: layout),
         schoolSiteService: SchoolSiteService(
           store: PlatformSchoolSiteStore(layout: layout),
         ),
         secretStore: _Secrets(),
         backupRestoreJournal: FileAppBackupRestoreJournal(layout: layout),
-        agentConversationStorage: PlatformConversationStorage(layout: layout),
+        agentConversationStorage: agentStore.conversations,
         agentAttachmentStorage: PlatformAttachmentStorage(layout: layout),
-        agentKnowledgeStorage: PlatformKnowledgeStorage(layout: layout),
+        agentKnowledgeStorage: agentStore.knowledge,
         agentCredentialStore: MemoryAgentCredentialStore(),
         selectiveRestoreJournal: progress,
         backupStagingStorage: PlatformAttachmentStorage(layout: stageLayout),
@@ -97,6 +101,7 @@ void main() {
         workspaceMutationLock: (action) => action(),
         systemLocaleCodeResolver: () => 'en',
       );
+      stores[runtime] = agentStore;
       await runtime.lifecycle.load();
       return runtime;
     }
@@ -106,6 +111,7 @@ void main() {
       runtime.dispose();
       await runtime.backups.selective.close();
       await runtime.session.close();
+      await stores.remove(runtime)!.close();
     }
 
     final first = await open(interrupted);

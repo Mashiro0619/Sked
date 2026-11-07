@@ -1,3 +1,5 @@
+import 'package:sked/agent/operations/tool_outcome.dart';
+
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -27,7 +29,7 @@ void main() {
         tester,
         SingleChildScrollView(
           child: AgentOperationCard(
-            receipt: receipt,
+            outcome: ToolOutcome.fromResult(receipt),
             onUndo: () => undone = true,
           ),
         ),
@@ -76,7 +78,7 @@ void main() {
       await mountAgentUi(
         tester,
         AgentOperationCard(
-          receipt: const {
+          outcome: ToolOutcome.fromResult(const {
             'status': 'committed',
             'operationId': 'data/1/action',
             'changeCount': 1,
@@ -91,7 +93,7 @@ void main() {
                 },
               },
             ],
-          },
+          }),
           onUndo: () => undone = true,
           onOpenResource: (ref) => opened = ref,
         ),
@@ -114,13 +116,13 @@ void main() {
     await mountAgentUi(
       tester,
       AgentOperationCard(
-        receipt: const {
+        outcome: ToolOutcome.fromResult(const {
           'kind': 'external',
           'operationId': 'data/2/permission',
           'status': 'partial',
           'effectStatus': 'unknown',
           'dataStatus': 'committed',
-        },
+        }),
         onUndo: () {},
       ),
     );
@@ -134,20 +136,20 @@ void main() {
   ) async {
     await mountAgentUi(
       tester,
-      const Column(
+      Column(
         children: [
           AgentOperationCard(
-            receipt: {
+            outcome: ToolOutcome.fromResult({
               'planId': 'plan',
               'operationId': 'data/1/plan',
               'changeCount': 2,
-            },
+            }),
           ),
           AgentOperationCard(
-            receipt: {
+            outcome: ToolOutcome.fromResult({
               'status': 'error',
               'error': {'code': 'readOnly'},
-            },
+            }),
           ),
         ],
       ),
@@ -159,23 +161,18 @@ void main() {
     expect(find.text('Changes saved'), findsNothing);
   });
 
-  test('assistant prose is not parsed as an operation receipt', () {
-    expect(AgentOperationCard.parse('Everything was saved.'), isNull);
-    expect(AgentOperationCard.parse('{"text":"Saved"}'), isNull);
-  });
-
   testWidgets('pending reminders do not hide a confirmed business save', (
     tester,
   ) async {
     await mountAgentUi(
       tester,
-      const AgentOperationCard(
-        receipt: {
+      AgentOperationCard(
+        outcome: ToolOutcome.fromResult({
           'status': 'committed',
           'operationId': 'data/1/action',
           'changeCount': 1,
           'notificationEffect': {'state': 'pending'},
-        },
+        }),
       ),
     );
     expect(find.text('Changes saved'), findsOneWidget);
@@ -210,7 +207,7 @@ void main() {
         await mountAgentUi(
           tester,
           AgentOperationCard(
-            receipt: receipt,
+            outcome: ToolOutcome.fromResult(receipt),
             onUndo: () => undone = true,
             onOpenResource: (ref) => opened = ref,
           ),
@@ -283,7 +280,10 @@ void main() {
         final before = jsonEncode(receipt);
         await mountAgentUi(
           tester,
-          AgentOperationCard(receipt: receipt, onUndo: () {}),
+          AgentOperationCard(
+            outcome: ToolOutcome.fromResult(receipt),
+            onUndo: () {},
+          ),
         );
         final l = AppLocalizations.of(
           tester.element(find.byType(AgentOperationCard)),
@@ -313,7 +313,10 @@ void main() {
         };
         await mountAgentUi(
           tester,
-          AgentOperationCard(receipt: receipt, onUndo: () {}),
+          AgentOperationCard(
+            outcome: ToolOutcome.fromResult(receipt),
+            onUndo: () {},
+          ),
         );
         final l = AppLocalizations.of(
           tester.element(find.byType(AgentOperationCard)),
@@ -344,7 +347,7 @@ void main() {
       await mountAgentUi(
         tester,
         AgentOperationCard(
-          receipt: const {
+          outcome: ToolOutcome.fromResult(const {
             'kind': 'external',
             'operationId': 'data/external/applied',
             'status': 'applied',
@@ -352,7 +355,7 @@ void main() {
             'dataStatus': 'unchanged',
             'receiptFinalized': true,
             'recoveryRequired': false,
-          },
+          }),
           onUndo: () {},
         ),
       );

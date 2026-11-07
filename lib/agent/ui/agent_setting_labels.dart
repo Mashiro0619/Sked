@@ -36,9 +36,6 @@ String? agentSettingLabel(Map change, AppLocalizations l) {
       l.notificationRemindHiddenGeneralCalendars,
     'agent.enabled' => l.agentTitle,
     'agent.systemInstructions' => l.agentSystemInstructions,
-    'agent.maxModelRounds' => l.agentMaxModelRounds,
-    'agent.maxToolCalls' => l.agentMaxToolCalls,
-    'agent.maxTotalTokens' => l.agentMaxTotalTokens,
     'agent.historyRetentionDays' => l.agentHistoryRetentionDays,
     'agent.protocol' => l.agentProtocol,
     'agent.endpoint' => l.agentEndpoint,
@@ -97,8 +94,7 @@ String? agentSettingLabel(Map change, AppLocalizations l) {
       '${l.timetable} · ${l.liveCourseOutlineTarget}',
     'student.liveCourseOutlineWidth' =>
       '${l.timetable} · ${l.liveCourseOutlineWidth}',
-    'student.activeTimetableId' =>
-      '${l.timetable} · ${l.toolbarNavigationTimetable}',
+    'student.activeTimetableId' => l.agentUseCurrentTimetable,
     'student.conflictDisplayCourseIds' =>
       '${l.timetable} · ${l.conflictCourses}',
     'student.toolbarNavigationOrder' =>
@@ -140,8 +136,7 @@ String? agentSettingLabel(Map change, AppLocalizations l) {
       '${l.themeWorkspaceSchedule} · ${l.timeGridDensity}',
     'general.timeGridHourHeight' =>
       '${l.themeWorkspaceSchedule} · ${l.timeGridHourHeight}',
-    'general.activeScheduleId' =>
-      '${l.themeWorkspaceSchedule} · ${l.toolbarNavigationCategory}',
+    'general.activeScheduleId' => l.agentUseCurrentCalendar,
     'general.selectedDateIso' => '${l.themeWorkspaceSchedule} · ${l.eventDate}',
     'general.customDateRange' =>
       '${l.themeWorkspaceSchedule} · ${l.dateRangeTitle}',

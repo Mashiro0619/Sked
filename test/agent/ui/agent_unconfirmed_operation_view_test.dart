@@ -1,3 +1,5 @@
+import 'package:sked/agent/operations/tool_outcome.dart';
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -48,40 +50,39 @@ void main() {
           final runtime = h.app.agent.runtime;
           await runtime.setMode(h.conversationId, AgentPermissionMode.ask);
           final announced = Completer<AgentUiApproval>();
+          final execution = runtime.watchConversation(h.conversationId);
           void captureApproval() {
-            final pending = runtime.state.value
-                .runFor(h.conversationId)
-                .pendingApproval;
+            final pending = execution.value.pendingApproval;
             if (pending != null && !announced.isCompleted) {
+              prepared = h.app.agent.mutations.plan(pending.id)!.summary();
               announced.complete(pending);
             }
           }
 
-          runtime.state.addListener(captureApproval);
+          execution.addListener(captureApproval);
           try {
             final running = h.run(() async {
-              prepared = await h.call('mutation.prepare', {
-                'commands': [
-                  {
-                    'kind': 'calendar',
-                    'action': 'create',
-                    'values': {'name': 'Uncommitted calendar'},
-                  },
-                  {
-                    'kind': 'calendar',
-                    'action': 'patch',
-                    'target': {'id': 'visible'},
-                    'values': {'name': 'Planned studies'},
-                  },
-                  {
-                    'kind': 'calendar',
-                    'action': 'delete',
-                    'target': {'id': 'remove-me'},
-                  },
-                ],
-              });
               await expectLater(
-                h.call('mutation.commit', {'planId': prepared['planId']}),
+                h.call('mutation.apply', {
+                  'commands': [
+                    {
+                      'kind': 'calendar',
+                      'action': 'create',
+                      'values': {'name': 'Uncommitted calendar'},
+                    },
+                    {
+                      'kind': 'calendar',
+                      'action': 'patch',
+                      'target': {'id': 'visible'},
+                      'values': {'name': 'Planned studies'},
+                    },
+                    {
+                      'kind': 'calendar',
+                      'action': 'delete',
+                      'target': {'id': 'remove-me'},
+                    },
+                  ],
+                }),
                 throwsA(
                   isA<OperationProblem>().having(
                     (error) => error.code,
@@ -100,7 +101,7 @@ void main() {
             await runtime.reject(h.conversationId, approval.id);
             await running;
           } finally {
-            runtime.state.removeListener(captureApproval);
+            execution.removeListener(captureApproval);
           }
         });
         expect(prepared['status'], isNull);
@@ -222,7 +223,7 @@ void main() {
         late Map<String, Object?> receipt;
         await _realAsync(tester, () async {
           await h.run(() async {
-            final prepared = await h.call('mutation.prepare', {
+            final prepared = await h.call('mutation.apply', {
               'commands': [
                 {
                   'kind': 'calendar',
@@ -231,7 +232,7 @@ void main() {
                 },
               ],
             });
-            receipt = await h.commit(prepared);
+            receipt = prepared;
           });
         });
         expect(receipt['status'], 'committed');
@@ -252,7 +253,7 @@ void main() {
         );
         expect(find.text(l.agentChangesSaved), findsOneWidget);
         expect(find.text(l.agentActionUncertain), findsNothing);
-        expect(find.text(l.agentNotificationEffect('unknown')), findsOneWidget);
+        expect(find.text(l.agentNotificationEffect('unknown')), findsNothing);
         expect(
           find.text('${l.agentChangeCreated} · Saved calendar'),
           findsOneWidget,
@@ -302,14 +303,14 @@ void main() {
           },
         );
         await h.run(() async {
-          final artifact = await h.call('exports.prepare', {
+          final artifact = await h.call('exports.generate', {
             'format': 'schedules_json',
             'ids': ['visible'],
           });
           final prepared = await h.call('exports.write', {
             'artifactId': artifact['artifactId'],
           });
-          receipt = await h.externalCommit(prepared);
+          receipt = prepared;
         });
       });
       expect(receipt['status'], 'partial');
@@ -338,7 +339,13 @@ void main() {
         tester.element(find.byType(AgentOperationCard)),
       );
       expect(find.text(l.agentActionUncertain), findsOneWidget);
-      expect(_completedRows(l), findsOneWidget);
+      expect(_completedRows(l), findsNothing);
+      expect(
+        tester
+            .widget<AgentOperationCard>(find.byType(AgentOperationCard))
+            .receipt['effectStatus'],
+        'applied',
+      );
       expect(opened, isEmpty);
       expect(jsonEncode(receipt), originalReceipt);
       expect(h.saved.encode(), originalData);
@@ -387,7 +394,9 @@ Future<void> _mountCard(
     child: Builder(
       builder: (context) => SingleChildScrollView(
         child: AgentOperationCard(
-          receipt: h.app.agent.tools.describeCommitResult(receipt),
+          outcome: ToolOutcome.fromResult(
+            h.app.agent.tools.describeCommitResult(receipt),
+          ),
           onOpenResource: (ref) {
             opened.add(ref);
             unawaited(AgentResourceView.open(context, ref));

@@ -12,6 +12,7 @@ import '../connection/agent_endpoint.dart';
 import '../provider/provider.dart';
 import 'application_tool_host.dart';
 import 'platform_tool_adapters.dart';
+import 'model_configuration.dart';
 
 /// Host-only input. It has no JSON representation and clears its reference
 /// after consumption or cancellation; only the connection writer sees its key.
@@ -174,12 +175,6 @@ class AgentControlToolAdapters {
           );
         }
         _pruneInputs();
-        if (_inputs.length + _pendingInputs.length >= 4) {
-          throw const OperationProblem(
-            OperationErrorCode.busy,
-            'Finish or discard a pending credential change first.',
-          );
-        }
         final binding = _binding;
         final cancellation = ProviderCancellationToken();
         _pendingInputs[cancellation] = scope;
@@ -240,7 +235,7 @@ class AgentControlToolAdapters {
     );
     _add(
       'connection.prepare',
-      'Prepare updating or resetting the shared connection; commit with external.commit. The model field is the default ID; models enables IDs with explicit supported reasoning levels and a default level. Replacement requires a credential handle from this run and endpoint. Keeping a credential while changing destination is rejected. Model-list edits apply to future runs; changing the endpoint or credential stops old requests.',
+      'Update or reset the shared connection. The model field is the default ID; models enables IDs with explicit supported reasoning levels and a default level. Replacement requires a credential handle from this run and endpoint. Keeping a credential while changing destination is rejected. Model-list edits apply to future runs; changing the endpoint or credential stops old requests.',
       {
         'action': {
           'type': 'string',
@@ -254,33 +249,7 @@ class AgentControlToolAdapters {
         'model': _string,
         'models': {
           'type': 'array',
-          'maxItems': 256,
-          'items': {
-            'type': 'object',
-            'properties': {
-              'id': {'type': 'string', 'minLength': 1, 'maxLength': 256},
-              'reasoningEfforts': {
-                'type': 'array',
-                'minItems': 1,
-                'uniqueItems': true,
-                'items': {
-                  'type': 'string',
-                  'enum': AgentReasoningEffort.values
-                      .map((value) => value.name)
-                      .toList(),
-                },
-                'description': 'Enable only explicit levels supported by the service; defaults must be included.',
-              },
-              'defaultReasoningEffort': {
-                'type': 'string',
-                'enum': AgentReasoningEffort.values
-                    .map((value) => value.name)
-                    .toList(),
-              },
-            },
-            'required': ['id', 'reasoningEfforts', 'defaultReasoningEffort'],
-            'additionalProperties': false,
-          },
+          'items': AgentModelToolConfiguration.schema,
         },
         'credentialAction': {
           'type': 'string',
@@ -343,14 +312,22 @@ class AgentControlToolAdapters {
           models = const [];
         } else if (args.containsKey('models')) {
           final raw = args['models'];
-          if (raw is! List || raw.length > 256) {
+          if (raw is! List) {
             _invalid('Invalid enabled model list.');
           }
           try {
-            models = raw.map(AgentModelConfig.fromJson).toList();
+            models = [
+              for (final value in raw)
+                AgentModelToolConfiguration.decode(
+                  value,
+                  previous: value is Map && value['id'] is String
+                      ? before.modelConfig(value['id'] as String)
+                      : null,
+                ),
+            ];
           } on FormatException {
             _invalid(
-              'Model IDs, reasoning levels, or their defaults are invalid.',
+              'Model IDs, reasoning levels, context settings, or writable fields are invalid.',
             );
           }
         }
@@ -492,8 +469,8 @@ class AgentControlToolAdapters {
       _add(
         'connection.$kind.prepare',
         kind == 'test'
-            ? 'Prepare a tiny synthetic connection and tool-call test. No conversation or business data is sent. Commit with external.commit under the current permission mode.'
-            : 'Prepare fetching model IDs once from the configured API. A custom catalog URL must have the same origin. Commit with external.commit, then page the saved result with connection.models.get.',
+            ? 'Run a tiny synthetic connection and tool-call test. No conversation or business data is sent.'
+            : 'Fetch model IDs once from the configured API. A custom catalog URL must have the same origin. Page the saved result with connection.models.get.',
         {
           'operationId': _string,
           if (kind == 'models') 'modelsEndpoint': _string,
@@ -701,6 +678,11 @@ class AgentControlToolAdapters {
         }
         return {
           'models': models.skip(offset).take(limit).toList(),
+          if (result['contextTokens'] case final Map contexts)
+            'contextTokens': {
+              for (final id in models.skip(offset).take(limit))
+                if (contexts.containsKey(id)) id as String: contexts[id],
+            },
           'count': models.length,
           'hasMore': offset + limit < models.length,
           'nextOffset': offset + limit < models.length ? offset + limit : null,

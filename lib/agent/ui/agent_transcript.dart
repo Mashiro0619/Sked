@@ -68,7 +68,7 @@ class AgentTranscriptState extends State<AgentTranscript> {
   @override
   void initState() {
     super.initState();
-    _center = widget.position.anchor;
+    _center = widget.position.followLatest ? null : widget.position.anchor;
     _restoreFraction = widget.position.followLatest
         ? null
         : widget.position.fraction;
@@ -129,7 +129,7 @@ class AgentTranscriptState extends State<AgentTranscript> {
   void _recenter() {
     final previous = _controller;
     _controller = _newController();
-    _center = widget.position.anchor;
+    _center = widget.position.followLatest ? null : widget.position.anchor;
     _restoreFraction = widget.position.followLatest
         ? null
         : widget.position.fraction;

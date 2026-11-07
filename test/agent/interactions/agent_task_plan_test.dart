@@ -47,34 +47,20 @@ void main() {
     expect(schema['additionalProperties'], false);
   });
 
-  test(
-    'empty steps explicitly clear a plan and twenty steps are supported',
-    () {
-      expect(parseAgentTaskPlanSteps({'steps': []}), isEmpty);
-      expect(
-        AgentTaskPlan(runId: 'run-1', revision: 2, steps: []).steps,
-        isEmpty,
-      );
-      final steps = [
-        for (var index = 0; index < 20; index++) _step(id: '$index'),
-      ];
-      expect(
-        AgentTaskPlan(runId: 'run-1', revision: 1, steps: steps).steps,
-        hasLength(20),
-      );
-      expect(
-        () => AgentTaskPlan(
-          runId: 'run-1',
-          revision: 1,
-          steps: [
-            ...steps,
-            _step(id: 'extra'),
-          ],
-        ),
-        throwsFormatException,
-      );
-    },
-  );
+  test('empty steps clear a plan and larger plans preserve every step', () {
+    expect(parseAgentTaskPlanSteps({'steps': []}), isEmpty);
+    expect(
+      AgentTaskPlan(runId: 'run-1', revision: 2, steps: []).steps,
+      isEmpty,
+    );
+    final steps = [
+      for (var index = 0; index < 100; index++) _step(id: '$index'),
+    ];
+    expect(
+      AgentTaskPlan(runId: 'run-1', revision: 1, steps: steps).steps,
+      hasLength(100),
+    );
+  });
 
   test('step identities and the in progress position are unique', () {
     expect(
@@ -95,40 +81,50 @@ void main() {
     );
   });
 
-  test(
-    'step and operation fields are bounded with exact optional semantics',
-    () {
-      final base = _step().toJson();
+  test('step and operation fields retain exact optional semantics', () {
+    final base = _step().toJson();
+    expect(
+      AgentTaskPlanStep.fromJson({...base, 'detail': null}).detail,
+      isNull,
+    );
+    for (final change in <Map<String, Object?>>[
+      {'id': ''},
+      {'detail': ''},
+      {'status': 'done'},
+      {'extra': null},
+      {'operationIds': null},
+      {
+        'operationIds': ['', 'operation'],
+      },
+      {
+        'operationIds': ['same', 'same'],
+      },
+    ]) {
       expect(
-        AgentTaskPlanStep.fromJson({...base, 'detail': null}).detail,
-        isNull,
+        () => AgentTaskPlanStep.fromJson({...base, ...change}),
+        throwsFormatException,
+        reason: change.keys.join(),
       );
-      for (final change in <Map<String, Object?>>[
-        {'id': ''},
-        {'title': 'x' * 241},
-        {'detail': ''},
-        {'detail': 'x' * 2001},
-        {'status': 'done'},
-        {'extra': null},
-        {'operationIds': null},
-        {
-          'operationIds': ['', 'operation'],
-        },
-        {
-          'operationIds': ['same', 'same'],
-        },
-        {
-          'operationIds': [
-            for (var index = 0; index < 33; index++) 'operation-$index',
-          ],
-        },
-      ]) {
-        expect(
-          () => AgentTaskPlanStep.fromJson({...base, ...change}),
-          throwsFormatException,
-          reason: change.keys.join(),
-        );
-      }
+    }
+  });
+
+  test(
+    'plan text, operation links and revisions retain large valid values',
+    () {
+      final plan = AgentTaskPlan(
+        runId: 'run',
+        revision: 1000000,
+        steps: [
+          AgentTaskPlanStep(
+            id: 'step',
+            title: '标题' * 300,
+            status: AgentTaskStepStatus.pending,
+            detail: '说明' * 3000,
+            operationIds: List.generate(100, (index) => 'operation-$index'),
+          ),
+        ],
+      );
+      expect(AgentTaskPlan.fromJson(plan.toJson()).toJson(), plan.toJson());
     },
   );
 
@@ -138,7 +134,6 @@ void main() {
       {'runId': null},
       {'revision': 0},
       {'revision': 1.0},
-      {'revision': AgentTaskPlan.maxRevision + 1},
       {'steps': null},
       {'extra': true},
     ]) {

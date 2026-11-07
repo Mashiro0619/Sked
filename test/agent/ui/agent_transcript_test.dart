@@ -94,6 +94,26 @@ void main() {
     expect(actual.$2 * actual.$3, closeTo(expected.$2 * actual.$3, 4));
   }
 
+  testWidgets(
+    'returning to latest clears a late reading origin and aligns the actual end',
+    (tester) async {
+      final position = AgentReadingPosition();
+      await tester.pumpWidget(host(position, full: true));
+      await tester.pumpAndSettle();
+      final state = tester.state<AgentTranscriptState>(find.byKey(fullKey));
+      expect(state.reveal(const ValueKey('message-510')), isTrue);
+      await tester.pumpAndSettle();
+      position.followLatest = true;
+      state.restore();
+      await tester.pumpAndSettle();
+      final viewport = tester.getRect(find.byKey(fullScrollKey));
+      final last = tester.getRect(find.byKey(const ValueKey('message-511')));
+      expect(last.bottom, closeTo(viewport.bottom - 24, 1));
+      expect(position.followLatest, isTrue);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('retained pane restores a distant lazy message after returning', (
     tester,
   ) async {

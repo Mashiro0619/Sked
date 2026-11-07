@@ -320,7 +320,7 @@ class _AgentConnectionSettingsPageState
                 enabled: !_saving,
                 keyboardType: TextInputType.url,
                 autocorrect: false,
-                maxLength: 4096,
+
                 decoration: InputDecoration(
                   labelText: l.agentEndpoint,
                   counterText: '',
@@ -579,6 +579,7 @@ class _AgentModelCatalogPageState extends State<_AgentModelCatalogPage> {
             child: AgentModelSettingsPage(
               model: application.settings.modelConfig(id),
               suggestedId: id,
+              reportedContextTokens: widget.catalog.contextTokens[id],
             ),
           ),
         ),

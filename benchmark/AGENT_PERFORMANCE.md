@@ -1,7 +1,7 @@
 # Offline Agent host benchmarks
 
 `agent_performance_benchmark_test.dart` measures application-owned Agent loading,
-bounded read tools, context compaction and durable main-store batches in the
+paged read tools, saved context assembly and durable main-store batches in the
 already-running Flutter test host. It uses production implementations with
 synthetic data and isolated storage. No model or external network is involved.
 
@@ -17,14 +17,14 @@ only establish the recorded host behavior.
 | --- | --- | --- |
 | `load-agent-disabled` | Construct AppRuntime, load the main archive, drain accepted startup work with the Agent disabled in the seed | Exact main snapshot; no chat, knowledge or credential load; storage counters |
 | `load-entry-enabled-unopened` | Same lifecycle with the Agent entry enabled in the seed, without calling initialize | Exact main snapshot; chat/knowledge/credential stores remain dormant |
-| `load-chat-opened` | Same lifecycle plus the production Agent initialize path and its accepted attachment collection | All 32 conversations decoded unchanged; one chat archive load; knowledge remains dormant |
-| `long-context-compaction` | Production `boundConversationContext` over 514 provider messages | Complete ordered user requirements, unchanged system/newest group, intact tool-call/result groups, size limits and full output digest |
+| `load-chat-opened` | Same lifecycle plus the production Agent initialize path and its accepted attachment collection | 32 conversation metadata records and selected/pending transcripts loaded; full content checked outside timing; one chat index load; knowledge remains dormant |
+| `long-context-compaction` | `ContextService.workingRequest` and `measure` over 514 provider messages with a fixed persisted SQLite checkpoint | Exact saved summary and source range, unchanged system/recent messages, intact tool-call/result groups, complete request estimate and output digest |
 | `long-history-all-pages` | Every 50-message page of the 512-message conversation through `conversation.history` | Every message ID, role, timestamp, tool identity, page boundary and result order |
 | `long-message-all-slices` | Every 512-Unicode-character slice of the first long reply through `conversation.read` | Full original message JSON reassembled exactly, including non-BMP characters |
 | `all-timetable-pages` | All five timetables, two records per tool page | Complete selected fields and order, including noncurrent tables in a disabled student workspace |
 | `all-course-pages` | All 5,000 courses, at most 100 per tool page | Every stable parent/child reference and selected field; no omitted pages or duplicate cursors |
 | `complete-tool-catalog` | All application-registered capabilities, eight definitions per page | Exact registry membership, every description/schema, page boundaries and frozen full output digest |
-| `rename-one-timetable` | `mutation.prepare` and awaited `mutation.commit` for the first existing timetable's name | Exactly one main save; the other four complete timetables and every course remain unchanged; full expected business snapshot, actual receipt and independent physical readback |
+| `rename-one-timetable` | One `mutation.apply` for the first existing timetable's name, awaited through the business save | Exactly one main save; the other four complete timetables and every course remain unchanged; full expected business snapshot, actual receipt and independent physical readback |
 | `batch-one-hundred-course-locations` | Same path for 20 existing courses in each of five timetables | All 100 changes, all untouched fields, one main save and full durable readback |
 
 The read cases reuse a loaded, immutable snapshot and a primed Skill loader.
@@ -36,32 +36,30 @@ This measures these production tool implementations, not model round latency.
 
 Bulk operations run inside the production `runtime.runHostAction` scope, with its
 ordinary permission and lifetime gates. The timer begins immediately before
-preparation and stops only after the main-store commit future completes.
+the business tool invocation and stops after its save future completes.
 Enclosing host-run chat bookkeeping, fixture creation, Skill preparation,
 checksums, full independent readback and cleanup are outside that interval.
 The actual save retains production codecs, flush, verification and rename.
 Notification delivery and UI response are not part of the measured interval.
 
-The original `batch-five-timetable-names` draft produced 3,707,556 bytes of
-undo change JSON and was rejected by the then-current 1 MiB / 100,000-node
-receipt limits. The v1 manifest retains those historical values as literals.
-The runtime no longer imposes those limits. The fixed v1 write workloads remain
-one timetable name and 100 course locations; measuring the former five-table
-draft requires its own verification contract and result.
+The mutation comparison keeps the established one-timetable rename and the
+100-course batch. The fixture retains all 5,000 courses; every untouched record
+is compared after saving. Former receipt capacity thresholds are removed from
+production behavior and are not part of the v2 contract.
 
 ## Fixed data and output contract
 
-The main fixture derives from performance dataset 10: five timetables with 1,000
+The main fixture derives from performance dataset 11: five timetables with 1,000
 courses each and 5,000 events. Course/event records are preserved. The Agent
 fixture explicitly sets the local feature flag, English locale, general active
 workspace, a disabled student workspace and a fixed empty ledger generation.
 Both enabled and disabled complete snapshot hashes are recorded. Each mutation
-case uses sequence 1 and its own fixed UUID nonce within this generation.
+case uses sequence 1 and a host-generated operation identity within this generation.
 Before seeding disk, the production normalizer resolves synthetic conflict
 choices and fills deterministic course-color preferences. Complete timetable
-and calendar records must remain identical to performance dataset 10. This
+and calendar records retain the dataset 10 workload unchanged in dataset 11. This
 preparation stays outside timing and prevents a migration save during loading.
-The storage decoder also validates acknowledgement ownership: dataset 10 has
+The storage decoder also validates acknowledgement ownership: dataset 11 has
 256 synthetic reminder acknowledgements, of which 86 reference the owning
 calendar/event correctly. Only those 86 enter the stored fixture. The manifest
 records both counts and this reason; complete stored acknowledgements remain
@@ -74,8 +72,25 @@ conversation, 30 short conversations with eight messages each, and one explicit
 host-command request. The long transcript contains 128 synthetic read-only
 query groups and fixed Unicode text. It contains no manufactured write receipt
 or undo ownership. Knowledge and binary attachments are empty. Dates, IDs,
-commands, paging limits and context limits are fixed in
+commands, page sizes, summary text and the 384-message summarized source range are fixed in
 `src/agent_performance_fixtures.dart`.
+
+Protocol `agent-host-jit-v2-sqlite` stores each message, call and history item as
+an independent row in one shared SQLite database. Chat load counters now count
+the metadata index read; chat writes count committed repository transactions.
+Fixture seeding closes its database and background isolate. Every load sample
+receives a new unopened owner for that same file, so database opening is included
+when the measured production path first accesses Agent storage.
+`loadedMessages` records how much transcript content startup actually loaded.
+Full transcript hydration used for correctness checks occurs after the timer
+and RSS sample. Main-store load/write counters and mutation workloads retain
+their original meaning. Compare v1 and v2 raw load/write observations with
+their protocol identifiers; each version needs its own verified contract.
+
+The context case prepares its database checkpoint outside timing, then measures
+the production working-request assembly and complete-request token estimate.
+It performs no summarization request. Real model summarization time and usage
+are recorded by the model acceptance scenario, separately from this host test.
 
 The first verification-only run writes a contract report. A timed run requires
 that report through `SKED_AGENT_BENCHMARK_CONTRACT`. It verifies the complete
@@ -89,11 +104,12 @@ Only declared volatile metadata is excluded from semantic hashes:
 - Catalog `now` must remain a valid timestamp, then is omitted. All descriptions,
   parameters, tool ordering and page boundaries remain in the fixed hash. The
   verification report retains the complete normalized catalog for inspection.
-- Bulk receipt completion time is absent from the fixed business-result hash.
-  The fixed operation ID, generation, sequence, command digest and full business
-  snapshot remain. The exact complete main snapshot, including the actual
-  receipt and its timestamp, must match independent disk readback. Each raw
-  physical readback hash and receipt time is retained with its observation.
+- The generated operation ID and receipt completion time are absent from the
+  fixed business-result hash. Generation, sequence, command digest and full
+  business snapshot remain. The exact complete main snapshot, including the
+  actual receipt identity and timestamp, must match independent disk readback.
+  Each operation ID, physical readback hash and receipt time is retained with
+  its observation.
 
 Neither exclusion removes business records, user messages, result pages or
 unknown outcomes. A failed assertion aborts the run and writes a failed report;
@@ -106,7 +122,7 @@ Only a report marked `complete` can become a frozen verification contract.
 ## Isolation and memory scope
 
 Each load/batch observation creates its own `Directory.systemTemp` root. The
-main archive, native two-slot chat archive, native knowledge archive, school-site
+main archive, native SQLite Agent database, school-site
 store and legacy restore journal resolve only beneath that root. The benchmark
 waits for Agent, selective-backup and session shutdown, then drains the main
 repository before deleting its own directory. Cleanup also awaits these owners

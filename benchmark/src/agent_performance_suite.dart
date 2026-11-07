@@ -1,7 +1,12 @@
 import 'dart:convert';
 
 import 'package:sked/agent/provider/provider_models.dart';
-import 'package:sked/agent/runtime/conversation_context.dart';
+import 'package:drift/native.dart';
+import 'package:sked/agent/context/context_checkpoint.dart';
+import 'package:sked/agent/context/context_service.dart';
+import 'package:sked/agent/store/agent_store.dart';
+import 'package:sked/agent/store/sqlite_context_checkpoint_store.dart';
+import 'package:sked/models/agent_settings.dart';
 import 'package:sked/agent/tools/application_tool_host.dart';
 import 'package:sked/application/operation_contracts.dart';
 
@@ -228,25 +233,7 @@ Future<Map<String, Object?>> runAgentPerformanceBenchmarks({
             () => _loadSample(name, fixtures, network, protocolClock),
           );
         } else if (name == 'long-context-compaction') {
-          await recorder.record(name, () async {
-            final timer = Stopwatch()..start();
-            final result = boundConversationContext(
-              fixtures.context,
-              maxMessages: agentPerformanceContextMessages,
-              maxCharacters: agentPerformanceContextCharacters,
-            );
-            timer.stop();
-            verifyAgentPerformanceContext(result, fixtures.context);
-            final records = providerMessageRecords(result!);
-            return _AgentSample(
-              elapsedUs: _microseconds(timer),
-              result: records,
-              details: {
-                'inputMessages': fixtures.context.length,
-                'outputMessages': result.length,
-              },
-            );
-          });
+          await recorder.record(name, () => _contextSample(fixtures, network));
         } else if (name == 'rename-one-timetable' ||
             name == 'batch-one-hundred-course-locations') {
           await recorder.record(
@@ -288,11 +275,12 @@ Future<Map<String, Object?>> runAgentPerformanceBenchmarks({
       'calibration':
           'none; one complete declared async/IO workload per observation',
       'stateLoads': 'new AppRuntime per observation; fixture and disk preparation excluded; initialize only in the opened case',
+      'context': 'ContextService.workingRequest and measure from a fixed persisted checkpoint; model summarization excluded',
       'readTools': 'warm caller-owned snapshots; full bounded pages through production tool implementations',
-      'bulkTiming': 'mutation.prepare through awaited mutation.commit; enclosing host-run chat persistence excluded',
+      'bulkTiming': 'one mutation.apply through awaited business save; enclosing host-run chat persistence excluded',
       'bulkValidation': 'full expected business snapshot and complete independent physical readback after timing',
       'memory': 'whole-process RSS endpoints and process-lifetime max; flutter_tester already running; no heap or phase-peak claim',
-      'normalization': 'catalog now omitted; bulk receipt wall time omitted from semantic digest and checked in exact disk readback',
+      'normalization': 'catalog now omitted; generated operation ID and receipt wall time retained in details and exact disk readback, omitted from semantic digest',
       'nativeEvidence':
           'none; use the independent STARTUP and UI_PERFORMANCE protocols',
     },
@@ -309,6 +297,75 @@ Future<Map<String, Object?>> runAgentPerformanceBenchmarks({
     );
   }
   return report;
+}
+
+Future<_AgentSample> _contextSample(
+  AgentPerformanceFixtures fixtures,
+  AgentPerformanceNetworkGuard network,
+) async {
+  final store = AgentStore(AgentDatabase(NativeDatabase.memory()));
+  final checkpoints = SqliteContextCheckpointStore(store);
+  final provider = createAgentPerformanceProvider(network);
+  try {
+    final entries = [
+      for (var i = 1; i < fixtures.context.length; i++)
+        ContextEntry('source-$i', fixtures.context[i]),
+    ];
+    final summarized = entries
+        .take(agentPerformanceSummarySourceMessages)
+        .toList();
+    final request = ProviderRequest(
+      endpoint: Uri.parse('https://benchmark.example.test/v1/chat/completions'),
+      model: 'benchmark-model',
+      messages: fixtures.context,
+    );
+    await checkpoints.append(
+      ContextCheckpoint(
+        id: 'fixed-summary',
+        conversationId: agentPerformanceLongConversationId,
+        modelId: request.model,
+        protocol: request.protocol.name,
+        sourceDigest: contextSourceDigest(summarized),
+        sourceMessageIds: summarized.map((entry) => entry.id).toList(),
+        summary: agentPerformanceSummary,
+        createdAt: DateTime.utc(2026, 11, 7),
+        tokensBefore: 0,
+        estimatedTokensAfter: 0,
+      ),
+    );
+    final context = ContextService(store: checkpoints, provider: provider);
+    final snapshot = ContextSnapshot(
+      conversationId: agentPerformanceLongConversationId,
+      request: request,
+      entries: entries,
+      model: const AgentModelConfig(
+        id: 'benchmark-model',
+        reasoningEfforts: [AgentReasoningEffort.medium],
+        defaultReasoningEffort: AgentReasoningEffort.medium,
+      ),
+    );
+    final timer = Stopwatch()..start();
+    final result = await context.workingRequest(snapshot);
+    final measurement = context.measure(result);
+    timer.stop();
+    verifyAgentPerformanceContext(result.messages, fixtures.context);
+    return _AgentSample(
+      elapsedUs: _microseconds(timer),
+      result: {
+        'messages': providerMessageRecords(result.messages),
+        'estimatedTokens': measurement.estimatedTokens,
+      },
+      details: {
+        'inputMessages': fixtures.context.length,
+        'outputMessages': result.messages.length,
+        'summarySourceMessages': summarized.length,
+        'estimatedTokens': measurement.estimatedTokens,
+      },
+    );
+  } finally {
+    provider.close();
+    await store.close();
+  }
 }
 
 Future<_AgentSample> _loadSample(
@@ -332,6 +389,8 @@ Future<_AgentSample> _loadSample(
     timer.stop();
     final after = observeAgentPerformanceMemory(protocolClock);
     final counters = session.counters;
+    final loadedMessages = session.app.agent.conversations.conversations
+        .fold<int>(0, (sum, item) => sum + item.messages.length);
     sameAgentPerformance(
       session.app.session.committedData.toJson(),
       fixtures.dataWithAgent(enabled).toJson(),
@@ -358,10 +417,9 @@ Future<_AgentSample> _loadSample(
       'Agent initialization did not match the declared state.',
     );
     if (opened) {
+      final full = await session.app.agent.conversations.readAll();
       sameAgentPerformance(
-        session.app.agent.conversations.conversations
-            .map((value) => value.toJson())
-            .toList(),
+        full.map((value) => value.toJson()).toList(),
         fixtures.archive.conversations.map((value) => value.toJson()).toList(),
         'The complete loaded conversation archive',
       );
@@ -375,6 +433,7 @@ Future<_AgentSample> _loadSample(
           session.app.session.committedData.toJson(),
         ),
         'conversations': session.app.agent.conversations.conversations.length,
+        'loadedMessages': loadedMessages,
         'counters': counters,
       },
       details: {'storage': counters},
@@ -410,9 +469,9 @@ Future<void> _recordReadCase(
     await readAgentPerformanceTool(host, scope, 'capabilities.describe', {
       'names': <String>[],
     });
-    final long = session.app.agent.conversations.find(
+    final long = await session.app.agent.conversations.read(
       agentPerformanceLongConversationId,
-    )!;
+    );
     historyHost = ApplicationToolHost(
       session: session.app.session,
       mutations: session.app.agent.mutations,
@@ -520,9 +579,6 @@ Future<_AgentSample> _bulkSample(
     commands.length == (courses ? 100 : 1),
     'The declared mutation workload changed its command count.',
   );
-  final operationId = courses
-      ? '$agentPerformanceGeneration/1/00000000-0000-4000-8000-000000000002'
-      : '$agentPerformanceGeneration/1/00000000-0000-4000-8000-000000000003';
   final session = await AgentPerformanceDiskSession.prepare(
     fixtures,
     agentEnabled: true,
@@ -541,29 +597,17 @@ Future<_AgentSample> _bulkSample(
       (scope, approval) async {
         final host = session.app.agent.tools;
         await readAgentPerformanceTool(host, scope, 'capabilities.describe', {
-          'names': ['mutation.prepare', 'mutation.commit'],
+          'names': ['mutation.apply'],
         });
         session.storage.writes = 0;
         final before = observeAgentPerformanceMemory(protocolClock);
         final timer = Stopwatch()..start();
         try {
-          final prepared = await host.execute(
-            ProviderToolCall(
-              id: 'benchmark-prepare',
-              name: 'mutation.prepare',
-              arguments: jsonEncode({
-                'commands': commands,
-                'operationId': operationId,
-              }),
-            ),
-            scope,
-            approval,
-          );
           commit = await host.execute(
             ProviderToolCall(
-              id: 'benchmark-commit',
-              name: 'mutation.commit',
-              arguments: jsonEncode({'planId': prepared['planId']}),
+              id: 'benchmark-apply',
+              name: 'mutation.apply',
+              arguments: jsonEncode({'commands': commands}),
             ),
             scope,
             approval,
@@ -581,7 +625,7 @@ Future<_AgentSample> _bulkSample(
         }
         return {
           'status': failure == null ? 'complete' : 'failed',
-          'operationId': operationId,
+          if (commit != null) 'operationId': commit!['operationId'],
         };
       },
     );
@@ -591,8 +635,11 @@ Future<_AgentSample> _bulkSample(
       'The host action did not execute the fixed batch.',
     );
     await session.app.agent.quiesce();
+    final operationId = commit!['operationId'];
     requireAgentPerformance(
-      commit!['status'] == 'committed' && commit!['operationId'] == operationId,
+      commit!['status'] == 'committed' &&
+          operationId is String &&
+          operationId.isNotEmpty,
       'The batch did not return a confirmed main-store receipt.',
     );
     requireAgentPerformance(
@@ -630,7 +677,6 @@ Future<_AgentSample> _bulkSample(
       result: {
         'domain': agentPerformanceDomain(actual),
         'generation': ledger.generation,
-        'operationId': receipt.operationId,
         'sequence': receipt.sequence,
         'commandDigest': receipt.commandDigest,
         'status': commit!['status'],
@@ -638,6 +684,7 @@ Future<_AgentSample> _bulkSample(
         'writes': session.storage.writes,
       },
       details: {
+        'operationId': receipt.operationId,
         'commands': commands.length,
         'mainWrites': session.storage.writes,
         'physicalReadbackSha256': agentPerformanceDigest(readback.toJson()),

@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/runtime/agent_runtime_controller.dart';
-import 'package:sked/agent/runtime/repeated_tool_failure.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/models/agent_settings.dart';
 
@@ -58,12 +57,7 @@ void main() {
         outcomes.take(4).map((result) => result['status']),
         everyElement('failed'),
       );
-      expect(outcomes[3]['recovery']['consecutiveFailures'], 4);
-      expect(outcomes[3]['recovery'].containsKey('limit'), isFalse);
-      expect(
-        outcomes[3]['recovery']['message'],
-        contains('correct the arguments'),
-      );
+      expect(outcomes[3]['error'], invalid.toJson());
       expect(saved.runs.single.status, ConversationRunStatus.completed);
       expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
     },
@@ -89,7 +83,7 @@ void main() {
     },
   );
 
-  test('a successful query resets the consecutive failure sequence', () async {
+  test('successful queries and later corrected failures keep their individual outcomes', () async {
     final h = await _Harness.create(
       script: (round) => round < 5
           ? [
@@ -145,81 +139,6 @@ void main() {
       expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
     },
   );
-
-  test(
-    'a small result budget keeps repeated known failures classified as failed',
-    () async {
-      final h = await _Harness.create(
-        script: (round) => round < 4 ? [_call(round)] : [],
-        execute: (_) async => throw invalid,
-        limits: const AgentRuntimeLimits(maxToolResultCharacters: 150),
-      );
-      addTearDown(h.close);
-      await h.runtime.send(h.id, 'Read');
-      expect(h.executed, hasLength(4));
-      expect(
-        h.repository.find(h.id)!.runs.single.tools.map((tool) => tool.outcome),
-        everyElement(ConversationAttemptOutcome.failed),
-      );
-      expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
-      expect(h.runtime.state.value.runFor(h.id).recoveryRequired, false);
-    },
-  );
-
-  test('failure fingerprint distinguishes fields, codes and tools and excludes conflicts', () {
-    final tracker = RepeatedToolFailureTracker();
-    expect(tracker.record(_call(0), invalid), 1);
-    expect(tracker.record(_call(1), invalid), 2);
-    const otherField = OperationProblem(
-      OperationErrorCode.invalidArgument,
-      'Another field',
-      field: 'id',
-    );
-    expect(tracker.record(_call(2), otherField), 1);
-    const notFound = OperationProblem(
-      OperationErrorCode.notFound,
-      'Missing',
-      field: 'id',
-    );
-    expect(tracker.record(_call(3), notFound), 1);
-    expect(tracker.record(_call(4, name: 'fixture.other'), notFound), 1);
-    expect(tracker.record(_call(5, name: 'fixture.other'), notFound), 2);
-    expect(
-      tracker.record(
-        _call(6),
-        const OperationProblem(OperationErrorCode.conflict, 'Refresh'),
-      ),
-      0,
-    );
-    expect(tracker.record(_call(7, name: 'fixture.other'), notFound), 1);
-    expect(tracker.record(_call(8), null), 0);
-    expect(tracker.record(_call(9), invalid), 1);
-  });
-
-  test('deep arguments keep their original failure path when fingerprinting is unavailable', () {
-    Object? value = 'leaf';
-    for (var depth = 0; depth < 70; depth++) {
-      value = {'next': value};
-    }
-    final tracker = RepeatedToolFailureTracker();
-    expect(
-      tracker.record(
-        _call(0, arguments: jsonEncode({'value': value})),
-        invalid,
-      ),
-      0,
-    );
-  });
-
-  test('malformed or non-object arguments reset tracking without replacing the original failure', () {
-    for (final arguments in ['{', '[]', 'null', '42']) {
-      final tracker = RepeatedToolFailureTracker();
-      expect(tracker.record(_call(0), invalid), 1);
-      expect(tracker.record(_call(1), invalid), 2);
-      expect(tracker.record(_call(2, arguments: arguments), invalid), 0);
-      expect(tracker.record(_call(3), invalid), 1);
-    }
-  });
 }
 
 class _Memory extends ConversationStorage {
@@ -269,7 +188,6 @@ class _Harness {
     required List<ProviderToolCall> Function(int round) script,
     required Future<Map<String, Object?>> Function(ProviderToolCall call)
     execute,
-    AgentRuntimeLimits limits = const AgentRuntimeLimits(),
   }) async {
     final h = _Harness();
     h.repository = ConversationRepository(storage: _Memory());
@@ -307,7 +225,6 @@ class _Harness {
         return execute(call);
       },
       onOpenSettings: () {},
-      limits: limits,
     );
     return h;
   }

@@ -4,6 +4,7 @@ import 'dart:ui' show PlatformDispatcher;
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import 'agent/agent_application.dart';
+import 'agent/store/agent_store.dart';
 import 'agent/attachments/attachment_storage.dart';
 import 'backup/selective_restore_coordinator.dart';
 import 'agent/connection/agent_credential_store.dart';
@@ -63,6 +64,7 @@ final class AppRuntime {
     @visibleForTesting
     Future<void> Function(Future<void> Function())? workspaceMutationLock,
     @visibleForTesting ConversationStorage? agentConversationStorage,
+    @visibleForTesting AgentStore? agentStore,
     @visibleForTesting AttachmentStorage? agentAttachmentStorage,
     @visibleForTesting SelectiveRestoreJournal? selectiveRestoreJournal,
     @visibleForTesting AttachmentStorage? backupStagingStorage,
@@ -203,6 +205,7 @@ final class AppRuntime {
       legacyStore: secrets,
       publishViews: publishViews,
       conversationStorage: agentConversationStorage,
+      agentStore: agentStore,
       attachmentStorage: agentAttachmentStorage,
       knowledgeStorage: agentKnowledgeStorage,
       credentialStore: agentCredentialStore,

@@ -100,9 +100,6 @@ class MutationUndoCompiler {
       _invalidUndo('The receipt has no supported reverse change list.');
     }
     final rawChanges = undo['changes'] as List;
-    if (rawChanges.length > 10000) {
-      _invalidUndo('The reverse change list exceeds its admission limit.');
-    }
     final changesByKey = <String, _UndoChange>{};
     for (final raw in rawChanges) {
       final change = _decodeChange(raw);

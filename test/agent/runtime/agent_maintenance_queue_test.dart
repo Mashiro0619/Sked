@@ -211,7 +211,7 @@ void main() {
             final results = await Future.wait([firstRun, secondRun])
                 .timeout(const Duration(seconds: 5));
             expect(drained, isTrue);
-            expect(results.last['status'], 'not_executed');
+            expect(results.last['status'], 'cancelled');
             expect((results.last['error'] as Map)['code'], 'cancelled');
             expect(queuedEffects, 0);
             expect(readBacks, 0);
@@ -220,10 +220,7 @@ void main() {
                 .singleWhere(
                   (conversation) => conversation.id == secondConversation.id,
                 );
-            expect(
-              jsonDecode(saved.messages.last.text)['status'],
-              'not_executed',
-            );
+            expect(jsonDecode(saved.messages.last.text)['status'], 'cancelled');
             expect(app.agent.conversations.canWrite, isFalse);
             await expectLater(
               app.agent.conversations.update(

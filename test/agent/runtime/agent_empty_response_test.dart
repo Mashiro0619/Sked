@@ -86,11 +86,11 @@ void main() {
             0 => _Reply(
               tool: 'capabilities.describe',
               arguments: {
-                'names': ['settings.prepare', 'mutation.commit'],
+                'names': ['settings.update'],
               },
             ),
             1 => _Reply(
-              tool: 'settings.prepare',
+              tool: 'settings.update',
               arguments: {
                 'edits': [
                   {
@@ -101,11 +101,7 @@ void main() {
                 ],
               },
             ),
-            2 => _Reply(
-              tool: 'mutation.commit',
-              arguments: {'planId': _lastToolResult(wire, protocol)['planId']},
-            ),
-            3 => const _Reply(text: ''),
+            2 => const _Reply(text: ''),
             _ => const _Reply(text: 'The setting was already saved.'),
           },
           app: app,
@@ -139,11 +135,7 @@ void main() {
           'provider.incompleteResponse',
         );
         expect(h.runtime.state.value.runFor(h.id).recoveryRequired, false);
-        expect(calls, [
-          'capabilities.describe',
-          'settings.prepare',
-          'mutation.commit',
-        ]);
+        expect(calls, ['capabilities.describe', 'settings.update']);
         final sequence =
             app.session.committedData.applicationLedger!.nextSequence;
         await h.runtime.continueConversation(h.id);
@@ -151,11 +143,7 @@ void main() {
           app.session.committedData.applicationLedger!.nextSequence,
           sequence,
         );
-        expect(calls, [
-          'capabilities.describe',
-          'settings.prepare',
-          'mutation.commit',
-        ]);
+        expect(calls, ['capabilities.describe', 'settings.update']);
         expect(
           h.repository
               .find(h.id)!
@@ -194,19 +182,6 @@ void main() {
       },
     );
   }
-}
-
-Map _lastToolResult(Map<String, dynamic> wire, AgentModelProtocol protocol) {
-  final messages =
-      (wire[protocol == AgentModelProtocol.responses ? 'input' : 'messages']
-              as List)
-          .cast<Map>();
-  final result = protocol == AgentModelProtocol.responses
-      ? messages.lastWhere(
-          (message) => message['type'] == 'function_call_output',
-        )['output']
-      : messages.lastWhere((message) => message['role'] == 'tool')['content'];
-  return jsonDecode(result as String) as Map;
 }
 
 class _Reply {
@@ -367,14 +342,12 @@ class _Harness {
         executed?.add(call.name);
         return app!.tools.execute(call, scope, approval);
       },
-      readPreparedOperation: app == null
-          ? null
-          : (call) => call.name == 'mutation.commit'
-                ? app.mutations.plan(call.decodedArguments['planId'] as String)
-                : null,
       onRunSettled: app?.tools.finishScope,
       onOpenSettings: () {},
     );
+    if (app != null) {
+      app.tools.onOperationPrepared = h.runtime.recordToolOperation;
+    }
     return h;
   }
 

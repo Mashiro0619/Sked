@@ -35,6 +35,8 @@ const _sources = [
   'lib/agent/agent_application.dart',
   'lib/agent/conversations/conversation_models.dart',
   'lib/agent/conversations/conversation_repository.dart',
+  'lib/agent/store/agent_store.dart',
+  'lib/agent/store/agent_database.dart',
   'lib/agent/ui/agent_conversation_view.dart',
   'lib/agent/ui/agent_transcript.dart',
 ];
@@ -72,7 +74,7 @@ Future<void> main() => integrationDriver(
       );
       await _writeNew(assessment, {
         'status': 'passed',
-        'protocol': 'agent-ui-frames-v2',
+        'protocol': 'agent-ui-frames-v3',
         'rawReport': raw.absolute.path,
         'scope': 'one independent Profile process; comparisons require three matched processes per side/platform/configuration',
         'nativeLogs': 'review full stdout/stderr separately; AXTree/fatal errors invalidate the run',
@@ -128,7 +130,7 @@ int _integer(Object? value, String name) {
 bool _sha256(Object? value) =>
     value is String && RegExp(r'^[0-9a-f]{64}$').hasMatch(value);
 
-/// Validates the v2 population before accepting native frame evidence.
+/// Validates the v3 population and real storage before accepting frame evidence.
 List<String> validateAgentUiPerformancePopulation({
   required Map protocol,
   required Object? expectedActions,
@@ -139,9 +141,15 @@ List<String> validateAgentUiPerformancePopulation({
     'Unknown Agent frame population platform.',
   );
   final scroll = _map(protocol['scrollTargeting'], 'Scroll protocol');
+  final storage = _map(protocol['storage'], 'Storage protocol');
   _require(
-    protocol['id'] == 'agent-ui-frames-v2' &&
-        protocol['version'] == 2 &&
+    protocol['id'] == 'agent-ui-frames-v3' &&
+        protocol['version'] == 3 &&
+        storage['id'] == 'isolated-production-store-v1' &&
+        const ['legacy-json', 'drift-sqlite'].contains(storage['backend']) &&
+        storage['fixturePersistence'] == 'before-home-mount' &&
+        storage['inspection'] == 'outside-action-windows' &&
+        storage['fullArchiveReadBeforeFirstEntry'] == false &&
         protocol['nativeSemanticsHarnessVersion'] == 2 &&
         protocol['iterations'] == 2 &&
         protocol['requiredIndependentProcesses'] == 3 &&
@@ -277,8 +285,12 @@ void _validate(Object? value) {
   final afterStore = _map(report['storageAfterActions'], 'Final storage');
   _require(
     beforeStore['conversationLoads'] == 0 &&
+        beforeStore['archiveReadForReport'] == false &&
+        beforeStore['backend'] ==
+            _map(protocol['storage'], 'Storage protocol')['backend'] &&
+        afterStore['backend'] == beforeStore['backend'] &&
         afterStore['conversationLoads'] == 1,
-    'The first/warm sequence did not share a single archive load.',
+    'The first/warm sequence changed its real storage owner or preloaded history for reporting.',
   );
   final actions = validateAgentUiPerformancePopulation(
     protocol: protocol,

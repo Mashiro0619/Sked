@@ -148,42 +148,44 @@ void main() {
     expect(projectAgentTaskPlan(h.conversation), isNull);
   });
 
-  test('oversized output and revision overflow fail without advancing stored progress', () async {
-    final oversized = List.generate(
-      20,
-      (index) => {
-        'id': 'step-$index',
-        'title': 'Step $index',
-        'status': 'pending',
-        'detail': '中' * 2000,
-      },
-    );
-    await expectLater(
-      h.call('too-large', oversized),
-      throwsA(_error(OperationErrorCode.invalidArgument)),
-    );
-    expect(
-      AgentTaskPlan.fromToolResult(await h.call('valid', _steps())).revision,
-      1,
-    );
-    h.persist(
-      'maximum',
-      _steps(),
-      AgentTaskPlan(
-        runId: h.scope.id,
-        revision: AgentTaskPlan.maxRevision,
-        steps: parseAgentTaskPlanSteps({'steps': _steps()}),
-      ).toToolResult(),
-    );
-    await expectLater(
-      h.call('overflow', _steps()),
-      throwsA(_error(OperationErrorCode.invalidArgument)),
-    );
-    expect(
-      projectAgentTaskPlan(h.conversation)!.revision,
-      AgentTaskPlan.maxRevision,
-    );
-  });
+  test(
+    'large plans and revisions remain complete and advance after persistence',
+    () async {
+      final oversized = List.generate(
+        20,
+        (index) => {
+          'id': 'step-$index',
+          'title': 'Step $index',
+          'status': 'pending',
+          'detail': '中' * 2000,
+        },
+      );
+      final large = await h.call('large', oversized);
+      expect(AgentTaskPlan.fromToolResult(large).steps, hasLength(20));
+      expect(
+        AgentTaskPlan.fromToolResult(large).steps.first.detail,
+        '中' * 2000,
+      );
+      expect(
+        AgentTaskPlan.fromToolResult(await h.call('valid', _steps())).revision,
+        1,
+      );
+      h.persist(
+        'maximum',
+        _steps(),
+        AgentTaskPlan(
+          runId: h.scope.id,
+          revision: 1000000,
+          steps: parseAgentTaskPlanSteps({'steps': _steps()}),
+        ).toToolResult(),
+      );
+      expect(
+        AgentTaskPlan.fromToolResult(await h.call('next', _steps())).revision,
+        1000001,
+      );
+      expect(projectAgentTaskPlan(h.conversation)!.revision, 1000000);
+    },
+  );
 }
 
 final _now = DateTime.utc(2026, 11, 7);

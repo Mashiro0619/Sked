@@ -112,7 +112,6 @@ ConversationHistoryException _mapError(KnowledgeException error) =>
       KnowledgeError.conflict ||
       KnowledgeError.duplicate => ConversationHistoryError.conflict,
       KnowledgeError.invalid => ConversationHistoryError.invalidSelection,
-      KnowledgeError.limit => ConversationHistoryError.budgetExceeded,
       KnowledgeError.unknown => ConversationHistoryError.outcomeUnknown,
       KnowledgeError.unavailable => ConversationHistoryError.storageUnavailable,
     });

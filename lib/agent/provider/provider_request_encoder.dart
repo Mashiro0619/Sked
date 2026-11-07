@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 
@@ -17,12 +16,14 @@ measureProviderRequestSize(ProviderRequest request) =>
 ) {
   var rawBytes = 0;
   var encodedBytes = 0;
-  int measure(Object? value) {
+  var textBytes = 0;
+  final pending = <Object?>[value];
+  while (pending.isNotEmpty) {
+    final value = pending.removeLast();
     if (value is ProviderBinaryEncoding) {
       final a = value.attachment;
       if (a.byteLength < 0 ||
           a.filename.isEmpty ||
-          a.filename.length > 256 ||
           a.filename.contains(RegExp(r'[\x00-\x1f/\\]')) ||
           !RegExp(r'^[a-f0-9]{64}$').hasMatch(a.digest) ||
           !RegExp(r'^[a-z0-9!#$&^_.+-]+/[a-z0-9!#$&^_.+-]+$')
@@ -31,29 +32,20 @@ measureProviderRequestSize(ProviderRequest request) =>
       }
       rawBytes += a.byteLength;
       encodedBytes += value.encodedLength;
-      return 2;
+      textBytes += 2;
+    } else if (value is List) {
+      textBytes += 2 + (value.isEmpty ? 0 : value.length - 1);
+      pending.addAll(value);
+    } else if (value is Map) {
+      textBytes += 2 + (value.isEmpty ? 0 : value.length - 1);
+      for (final entry in value.entries) {
+        textBytes += utf8.encode(jsonEncode(entry.key)).length + 1;
+        pending.add(entry.value);
+      }
+    } else {
+      textBytes += utf8.encode(jsonEncode(value)).length;
     }
-    if (value is List) {
-      return 2 +
-          (value.isEmpty ? 0 : value.length - 1) +
-          value.fold<int>(0, (sum, item) => sum + measure(item));
-    }
-    if (value is Map) {
-      return 2 +
-          (value.isEmpty ? 0 : value.length - 1) +
-          value.entries.fold<int>(
-            0,
-            (sum, entry) =>
-                sum +
-                utf8.encode(jsonEncode(entry.key)).length +
-                1 +
-                measure(entry.value),
-          );
-    }
-    return utf8.encode(jsonEncode(value)).length;
   }
-
-  final textBytes = measure(value);
   return (
     textBytes: textBytes,
     attachmentBytes: rawBytes,
@@ -61,44 +53,30 @@ measureProviderRequestSize(ProviderRequest request) =>
   );
 }
 
-/// Encodes cooperatively, keeping text and binary budgets separate. No bytes
-/// reach HTTP until every attachment's actual length and digest are verified.
-Future<Uint8List> encodeProviderRequestBody(
+/// Streams JSON and base64 directly to the HTTP request with backpressure.
+/// Attachment identity is checked as its bytes pass through the stream.
+Stream<List<int>> encodeProviderRequestBody(
   ProviderRequest request, {
   required Future<void> abortSignal,
   required void Function() checkCancelled,
   void Function(int completed, int total)? onProgress,
-}) async {
+}) async* {
   checkCancelled();
   final value = encodeProviderRequest(request);
   final size = _measureRequestValue(value);
-  final textLimit = request.limits.maxRequestBytes;
-  final attachmentLimit = request.limits.maxAttachmentBytes;
-  if ((textLimit != null && size.textBytes > textLimit) ||
-      (attachmentLimit != null && size.attachmentBytes > attachmentLimit)) {
-    throw const ProviderException(ProviderError.requestBudgetExceeded);
-  }
-  final expectedBytes = size.textBytes + size.encodedBytes;
-  final output = BytesBuilder(copy: false);
   var completedBytes = 0;
-  void append(String text) {
-    checkCancelled();
-    final bytes = utf8.encode(text);
-    if (output.length + bytes.length > expectedBytes) {
-      throw const ProviderException(ProviderError.requestBudgetExceeded);
-    }
-    output.add(bytes);
-  }
 
-  Future<void> binary(ProviderBinaryEncoding value) async {
-    append('"${value.prefix}');
+  Stream<List<int>> binary(ProviderBinaryEncoding value) async* {
+    yield utf8.encode('"${value.prefix}');
     final attachment = value.attachment;
     final digest = _DigestSink();
     final hash = sha256.startChunkedConversion(digest);
     var read = 0;
     final iterator = StreamIterator(attachment.openRead());
-    final strings = _StringSink(append);
-    final encoder = base64.encoder.startChunkedConversion(strings);
+    final encoded = <String>[];
+    final encoder = base64.encoder.startChunkedConversion(
+      _StringSink(encoded.add),
+    );
     try {
       while (await Future.any([
         iterator.moveNext(),
@@ -113,13 +91,13 @@ Future<Uint8List> encodeProviderRequestBody(
           throw const ProviderException(ProviderError.attachmentChanged);
         }
         hash.add(chunk);
-        // Bound a platform's large chunk before encoding so Stop can be handled
-        // even when the picker/browser produced a single large byte buffer.
         for (var offset = 0; offset < chunk.length; offset += 49152) {
-          final end = offset + 49152 < chunk.length
-              ? offset + 49152
-              : chunk.length;
+          final end = (offset + 49152).clamp(0, chunk.length);
           encoder.add(chunk.sublist(offset, end));
+          for (final text in encoded) {
+            yield utf8.encode(text);
+          }
+          encoded.clear();
           completedBytes += end - offset;
           onProgress?.call(completedBytes, size.attachmentBytes);
           await Future<void>.delayed(Duration.zero);
@@ -132,46 +110,45 @@ Future<Uint8List> encodeProviderRequestBody(
         throw const ProviderException(ProviderError.attachmentChanged);
       }
       encoder.close();
-      append('"');
+      for (final text in encoded) {
+        yield utf8.encode(text);
+      }
+      yield const [34];
     } finally {
       await iterator.cancel();
     }
   }
 
-  Future<void> encode(Object? value) async {
+  final pending = <Object?>[value];
+  while (pending.isNotEmpty) {
     checkCancelled();
-    if (value is ProviderBinaryEncoding) {
-      await binary(value);
-      return;
-    }
-    if (value is List) {
-      append('[');
-      for (var i = 0; i < value.length; i++) {
-        if (i > 0) append(',');
-        await encode(value[i]);
+    final current = pending.removeLast();
+    if (current is _JsonToken) {
+      yield current.bytes;
+    } else if (current is ProviderBinaryEncoding) {
+      yield* binary(current);
+    } else if (current is List) {
+      yield const [91];
+      pending.add(const _JsonToken([93]));
+      for (var i = current.length - 1; i >= 0; i--) {
+        pending.add(current[i]);
+        if (i > 0) pending.add(const _JsonToken([44]));
       }
-      append(']');
-    } else if (value is Map) {
-      append('{');
-      var first = true;
-      for (final entry in value.entries) {
-        if (!first) append(',');
-        first = false;
-        append('${jsonEncode(entry.key)}:');
-        await encode(entry.value);
+    } else if (current is Map) {
+      yield const [123];
+      pending.add(const _JsonToken([125]));
+      final entries = current.entries.toList();
+      for (var i = entries.length - 1; i >= 0; i--) {
+        final entry = entries[i];
+        pending.add(entry.value);
+        pending.add(_JsonToken(utf8.encode('${jsonEncode(entry.key)}:')));
+        if (i > 0) pending.add(const _JsonToken([44]));
       }
-      append('}');
     } else {
-      append(jsonEncode(value));
+      yield utf8.encode(jsonEncode(current));
     }
   }
-
-  await encode(value);
   checkCancelled();
-  if (output.length != expectedBytes) {
-    throw const ProviderException(ProviderError.attachmentChanged);
-  }
-  return output.takeBytes();
 }
 
 class _DigestSink implements Sink<Digest> {
@@ -189,4 +166,9 @@ class _StringSink implements Sink<String> {
   void add(String data) => write(data);
   @override
   void close() {}
+}
+
+class _JsonToken {
+  const _JsonToken(this.bytes);
+  final List<int> bytes;
 }

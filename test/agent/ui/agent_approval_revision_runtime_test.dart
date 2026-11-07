@@ -78,7 +78,6 @@ void main() {
         }());
       });
 
-      late Map<String, Object?> prepared;
       late OperationScope originalScope;
       late AgentUiApproval approval;
       await tester.runAsync(() async {
@@ -97,21 +96,21 @@ void main() {
           }
         }
 
-        runtime.state.addListener(captureApproval);
+        final execution = runtime.watchConversation(h.conversationId);
+        execution.addListener(captureApproval);
         try {
           running = h.run(() async {
             originalScope = h.scope;
-            prepared = await h.call('mutation.prepare', {
-              'commands': [
-                {
-                  'kind': 'calendar',
-                  'action': 'create',
-                  'values': {'name': 'This calendar must not be saved'},
-                },
-              ],
-            });
             await expectLater(
-              h.call('mutation.commit', {'planId': prepared['planId']}),
+              h.call('mutation.apply', {
+                'commands': [
+                  {
+                    'kind': 'calendar',
+                    'action': 'create',
+                    'values': {'name': 'This calendar must not be saved'},
+                  },
+                ],
+              }),
               throwsA(_problem(OperationErrorCode.cancelled)),
             );
           });
@@ -122,12 +121,12 @@ void main() {
             ),
           ]);
         } finally {
-          runtime.state.removeListener(captureApproval);
+          execution.removeListener(captureApproval);
         }
       });
       final originalData = h.saved.encode();
       final originalRunId = runtime.state.value.runFor(h.conversationId).runId;
-      expect(approval.id, prepared['planId']);
+      expect(approval.details['operationId'], isNotEmpty);
       await mountAgentUi(
         tester,
         AgentConversationView(repository: repository, delegate: runtime),
@@ -185,7 +184,10 @@ void main() {
         await runtime.setMode(h.conversationId, AgentPermissionMode.full);
         await h.run(() async {
           try {
-            await h.call('mutation.commit', {'planId': prepared['planId']});
+            await h.app.agent.mutations.commit(
+              planId: approval.id,
+              scope: h.scope,
+            );
           } catch (error) {
             replayError = error;
           }

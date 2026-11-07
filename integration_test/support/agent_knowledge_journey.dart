@@ -268,7 +268,9 @@ class AgentKnowledgeJourney implements AgentNativeFeature {
     AgentFeatureJourney journey,
   ) async {
     _assertOffline();
-    final archive = ConversationArchive.decode(journey.session.chatSource);
+    final archive = ConversationArchive.decode(
+      await journey.session.readChatSource(),
+    );
     final short = archive.conversations.singleWhere(
       (item) => item.id == agentNativeShortId,
     );
@@ -276,7 +278,9 @@ class AgentKnowledgeJourney implements AgentNativeFeature {
       short.messages,
     );
     await journey.enterDraft(_draft);
-    final persisted = ConversationArchive.decode(journey.session.chatSource);
+    final persisted = ConversationArchive.decode(
+      await journey.session.readChatSource(),
+    );
     requireAgentFeature(
       persisted.conversations
               .singleWhere((item) => item.id == agentNativeLongId)
@@ -615,7 +619,7 @@ class AgentKnowledgeJourney implements AgentNativeFeature {
     await session.app.session.repository
         .waitForPendingWrites(propagateErrors: true)
         .timeout(const Duration(seconds: 20));
-    final saved = ConversationArchive.decode(session.chatSource);
+    final saved = ConversationArchive.decode(await session.readChatSource());
     final long = saved.conversations.singleWhere(
       (item) => item.id == agentNativeLongId,
     );
@@ -670,7 +674,7 @@ class AgentKnowledgeJourney implements AgentNativeFeature {
       'mainSha256': agentNativeDigest(session.mainSource),
       'knowledge': _knowledgeState(journey),
       'provider': providerReport(),
-      'storage': session.storageReport(),
+      'storage': await session.storageReport(),
     };
   }
 }

@@ -12,6 +12,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:sked/agent/agent_application.dart';
+import 'package:sked/agent/store/agent_store.dart';
 import 'package:sked/agent/attachments/attachment_storage.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
 import 'package:sked/agent/conversations/conversation_storage.dart';
@@ -99,6 +100,7 @@ Future<AppRuntime> workspaceProvider({
   Future<void> Function(Future<void> Function())? workspaceMutationLock,
   DataTransferCodec codec = inlineDataTransferCodec,
   ConversationStorage? agentConversationStorage,
+  AgentStore? agentStore,
   AttachmentStorage? agentAttachmentStorage,
   SelectiveRestoreJournal? selectiveRestoreJournal,
   AttachmentStorage? backupStagingStorage,
@@ -119,12 +121,18 @@ Future<AppRuntime> workspaceProvider({
     // Native integration entries do not inherit test/flutter_test_config.
     // Each runtime owns separate side stores unless its caller supplies one.
     agentConversationStorage:
-        agentConversationStorage ?? MemoryConversationStorage(),
+        agentConversationStorage ??
+        agentStore?.conversations ??
+        MemoryConversationStorage(),
+    agentStore: agentStore,
     agentAttachmentStorage: agentAttachmentStorage ?? MemoryAttachmentStorage(),
     selectiveRestoreJournal:
         selectiveRestoreJournal ?? MemorySelectiveRestoreJournal(),
     backupStagingStorage: backupStagingStorage ?? MemoryAttachmentStorage(),
-    agentKnowledgeStorage: agentKnowledgeStorage ?? MemoryKnowledgeStorage(),
+    agentKnowledgeStorage:
+        agentKnowledgeStorage ??
+        agentStore?.knowledge ??
+        MemoryKnowledgeStorage(),
     agentCredentialStore: agentCredentialStore ?? MemoryAgentCredentialStore(),
     agentProvider: agentProvider,
     devicePreferences: devicePreferences ?? DevicePreferencesStore.memory(),

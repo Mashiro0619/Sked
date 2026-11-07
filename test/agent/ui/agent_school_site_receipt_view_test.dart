@@ -1,9 +1,12 @@
+import 'package:sked/agent/operations/tool_outcome.dart';
+
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/knowledge/knowledge_storage.dart';
 import 'package:sked/agent/ui/agent_operation_card.dart';
+import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/school_site_models.dart';
 
@@ -69,12 +72,16 @@ void main() {
           late Map<String, Object?> receipt;
           await _realAsync(tester, () async {
             await h.run(() async {
-              final plan = await _prepareSites(h, _after);
-              receipt = applied ? await h.externalCommit(plan) : plan;
+              h.scope.policy.update(
+                mode: applied
+                    ? AgentPermissionMode.full
+                    : AgentPermissionMode.plan,
+              );
+              receipt = await _applySites(h, _after);
               if (applied) {
                 expect(receipt['effectStatus'], 'applied');
               } else {
-                expect(receipt['status'], isNull);
+                expect(receipt['status'], 'preview');
                 expect(receipt['effectStatus'], isNull);
               }
               expect(await _readSites(h), _json(applied ? _after : _before));
@@ -174,8 +181,8 @@ void main() {
                   'site': {'loginUrl': 'https://temporary-revised.invalid'},
               };
             }
-            final prepared = await h.call('school_sites.prepare', arguments);
-            receipt = await h.externalCommit(prepared);
+            final prepared = await h.call('school_sites.apply', arguments);
+            receipt = prepared;
             expect(receipt['effectStatus'], 'applied');
             final stored = await _readSites(h);
             final originalIds = _before.map((site) => site.id).toSet();
@@ -256,7 +263,7 @@ void main() {
         final target = reorder ? [_before[2], _before[0], _before[1]] : _before;
         await _realAsync(tester, () async {
           await h.run(() async {
-            receipt = await h.externalCommit(await _prepareSites(h, target));
+            receipt = await _applySites(h, target);
             expect(receipt['effectStatus'], 'applied');
             expect(await _readSites(h), _json(target));
           });
@@ -301,17 +308,17 @@ void main() {
 List<Map<String, dynamic>> _json(List<SchoolSite> sites) =>
     sites.map((site) => site.toJson()).toList();
 
-Future<Map<String, Object?>> _prepareSites(
+Future<Map<String, Object?>> _applySites(
   AcceptanceHarness h,
   List<SchoolSite> sites,
-) => h.call('school_sites.prepare', {
+) => h.call('school_sites.apply', {
   'action': 'import',
   'mode': 'replace',
   'source': jsonEncode(_json(sites)),
 });
 
 Future<void> _replaceSites(AcceptanceHarness h, List<SchoolSite> sites) async {
-  final result = await h.externalCommit(await _prepareSites(h, sites));
+  final result = await _applySites(h, sites);
   expect(result['effectStatus'], 'applied');
   expect(await _readSites(h), _json(sites));
 }
@@ -340,7 +347,9 @@ Future<void> _mountCard(
   tester,
   SingleChildScrollView(
     child: AgentOperationCard(
-      receipt: h.app.agent.tools.describeCommitResult(receipt),
+      outcome: ToolOutcome.fromResult(
+        h.app.agent.tools.describeCommitResult(receipt),
+      ),
       onOpenResource: opened.add,
     ),
   ),

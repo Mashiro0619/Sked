@@ -1,16 +1,11 @@
 part of 'agent_conversation_view.dart';
 
 extension _AgentTaskPlanPanel on _AgentConversationViewState {
-  List<Widget> _taskPlanWidgets(
-    AgentConversation conversation,
-    AppLocalizations l,
-  ) {
-    final plan = projectAgentTaskPlan(conversation);
-    if (plan == null || plan.steps.isEmpty) return const [];
-    return [
+  Widget _taskPlanWidget(AgentTimelinePlan entry, AppLocalizations l) =>
       AgentTaskPlanView(
-        key: ValueKey((_repository, conversation.id, plan.runId, 'task-plan')),
-        plan: plan,
+        key: ValueKey((_repository, _repository.selectedId, entry.id)),
+        plan: entry.plan,
+        identity: entry.id,
         labels: AgentTaskPlanLabels(
           title: l.agentTaskPlanTitle,
           pending: l.agentTaskPlanPending,
@@ -19,7 +14,5 @@ extension _AgentTaskPlanPanel on _AgentConversationViewState {
           blocked: l.agentTaskPlanBlocked,
           agentReported: l.agentTaskPlanReported,
         ),
-      ),
-    ];
-  }
+      );
 }

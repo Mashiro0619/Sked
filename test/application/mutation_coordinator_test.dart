@@ -203,6 +203,41 @@ void main() {
     );
   }
 
+  test('a long imported resource identity can be updated and undone', () async {
+    final id = 'event-${'x' * 4096}';
+    await seedEvents([event(id)]);
+    final plan = coordinator.prepare(
+      scope: scope,
+      resources: [
+        ResourceMutation(
+          kind: ResourceKind.event,
+          action: ResourceMutationAction.patch,
+          target: ResourceRef(
+            kind: ResourceKind.event,
+            id: id,
+            parentId: 'calendar',
+          ),
+          values: const {'title': 'Changed'},
+        ),
+      ],
+    );
+    await coordinator.commit(planId: plan.id, scope: scope);
+    expect(
+      session.committedData.generalMode.schedules.single.events.single.title,
+      'Changed',
+    );
+    final reverse = coordinator.prepareUndoMany(
+      scope: scope,
+      batchId: 'batch-${'x' * 1024}',
+      operationIds: [plan.operationId],
+    );
+    await coordinator.commit(planId: reverse.id, scope: scope);
+    expect(
+      session.committedData.generalMode.schedules.single.events.single.title,
+      'Existing',
+    );
+  });
+
   test('batch undo follows actual save sequence when prepared identities share an old hint', () async {
     await seedEvents([event('first'), event('second'), event('third')]);
     ResourceMutation remove(String id) => ResourceMutation(
@@ -1413,6 +1448,39 @@ void main() {
       expect(
         () => mutationDigest({1: 'invalid'}),
         throwsA(problem(OperationErrorCode.invalidArgument)),
+      );
+    },
+  );
+  test(
+    'fingerprints handle deep JSON and reject cycles and non-finite values',
+    () {
+      Object? value = {'second': 2, 'first': 1};
+      Object? same = {'first': 1, 'second': 2};
+      for (var index = 0; index < 2048; index++) {
+        value = [value];
+        same = [same];
+      }
+      expect(mutationDigest(value), mutationDigest(same));
+      final cycle = <Object?>[];
+      cycle.add(cycle);
+      for (final invalid in [
+        cycle,
+        double.infinity,
+        double.nan,
+        DateTime(2026),
+      ]) {
+        expect(
+          () => mutationDigest(invalid),
+          throwsA(problem(OperationErrorCode.invalidArgument)),
+        );
+      }
+      final shared = {'valid': 1};
+      expect(
+        mutationDigest([shared, shared]),
+        mutationDigest([
+          {'valid': 1},
+          {'valid': 1},
+        ]),
       );
     },
   );

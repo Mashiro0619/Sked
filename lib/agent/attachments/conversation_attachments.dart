@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
@@ -57,10 +56,7 @@ class ConversationAttachments extends ChangeNotifier {
       throw const AttachmentException(AttachmentError.conflict);
     }
     final conversation = conversations.find(conversationId);
-    if (conversation == null ||
-        conversation.archived ||
-        conversation.draftAttachmentIds.length >=
-            ConversationAttachment.maxPerMessage) {
+    if (conversation == null || conversation.archived) {
       throw const AttachmentException(AttachmentError.conflict);
     }
     final cancellation = AttachmentCancellation();
@@ -72,8 +68,8 @@ class ConversationAttachments extends ChangeNotifier {
     final name = file.name.split(RegExp(r'[/\\]')).last;
     try {
       final length = await cancellation.guard(file.length());
-      if (length < 0 || length > ConversationAttachment.maxFileBytes) {
-        throw const AttachmentException(AttachmentError.tooLarge);
+      if (length < 0) {
+        throw const AttachmentException(AttachmentError.invalidMetadata);
       }
       final attachment = await repository.put(
         id: id,
@@ -218,9 +214,7 @@ class ConversationAttachments extends ChangeNotifier {
       }
       if (current.archived ||
           current.runId != pending.afterRunId ||
-          _inputBoundary(current) != pending.afterMessageId ||
-          current.draftAttachmentIds.length >=
-              ConversationAttachment.maxPerMessage) {
+          _inputBoundary(current) != pending.afterMessageId) {
         throw const AttachmentException(AttachmentError.conflict);
       }
       return current.copyWith(
@@ -276,9 +270,7 @@ class ConversationAttachments extends ChangeNotifier {
     await repository.verify(attachment);
     await conversations.update(conversationId, (current) {
       _check(canModify);
-      if (current.archived ||
-          current.draftAttachmentIds.length >=
-              ConversationAttachment.maxPerMessage) {
+      if (current.archived) {
         throw const AttachmentException(AttachmentError.conflict);
       }
       return current.copyWith(
@@ -291,8 +283,7 @@ class ConversationAttachments extends ChangeNotifier {
     if (_frozen || !conversations.canWrite) return;
     _pending.removeWhere((id, _) => conversations.find(id) == null);
     final references = <String>{
-      for (final conversation in conversations.ownedConversations)
-        ...conversationAttachmentIds(conversation),
+      ...await conversations.referencedAttachmentIds(),
       for (final pending in _pending.values) pending.attachment.id,
     };
     // Remove stale metadata before deleting its bytes. A failed archive save
@@ -397,18 +388,9 @@ class _PendingAttachment {
   final int epoch;
 }
 
-String? _inputBoundary(AgentConversation conversation) {
-  for (final message in conversation.messages.reversed) {
-    if (message.role == ConversationRole.user) return message.id;
-    if (message.role != ConversationRole.notice) continue;
-    try {
-      final value = jsonDecode(message.text);
-      if (value is Map && value['kind'] == 'agent_pending_input') {
-        return message.id;
-      }
-    } on FormatException {
-      // Ordinary notices do not define a queued-input boundary.
-    }
-  }
-  return null;
-}
+String? _inputBoundary(AgentConversation conversation) =>
+    conversation.queuedInputs.lastOrNull?.id ??
+    conversation.messages
+        .where((message) => message.role == ConversationRole.user)
+        .lastOrNull
+        ?.id;

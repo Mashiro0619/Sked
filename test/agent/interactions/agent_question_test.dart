@@ -33,30 +33,33 @@ void main() {
         questions: questions ?? [prompt()],
       );
 
-  test('question tool exposes bounded optional choices and free text', () {
-    expect(agentAskUserTool.name, 'ask_user');
-    final parameters = agentAskUserTool.parameters;
-    expect(parameters['additionalProperties'], isFalse);
-    final properties = parameters['properties'] as Map;
-    final questions = properties['questions'] as Map;
-    expect(questions['minItems'], 1);
-    expect(questions['maxItems'], AgentQuestionRequest.maxQuestions);
-    final item = questions['items'] as Map;
-    expect(item['required'], ['id', 'question']);
-    final question = parseAgentQuestionPrompts({
-      'questions': [
-        {'id': 'text', 'question': 'What date should be used?'},
-      ],
-    }).single;
-    expect(question.options, isEmpty);
-    expect(question.multiple, isFalse);
-    expect(
-      request(questions: [question]).withAnswers([
-        AgentQuestionAnswer(questionId: 'text', text: '2026-11-09'),
-      ]).isResolved,
-      isTrue,
-    );
-  });
+  test(
+    'question tool exposes optional choices and free text without fixed counts',
+    () {
+      expect(agentAskUserTool.name, 'ask_user');
+      final parameters = agentAskUserTool.parameters;
+      expect(parameters['additionalProperties'], isFalse);
+      final properties = parameters['properties'] as Map;
+      final questions = properties['questions'] as Map;
+      expect(questions['minItems'], 1);
+      expect(questions.containsKey('maxItems'), isFalse);
+      final item = questions['items'] as Map;
+      expect(item['required'], ['id', 'question']);
+      final question = parseAgentQuestionPrompts({
+        'questions': [
+          {'id': 'text', 'question': 'What date should be used?'},
+        ],
+      }).single;
+      expect(question.options, isEmpty);
+      expect(question.multiple, isFalse);
+      expect(
+        request(questions: [question]).withAnswers([
+          AgentQuestionAnswer(questionId: 'text', text: '2026-11-09'),
+        ]).isResolved,
+        isTrue,
+      );
+    },
+  );
 
   test(
     'optional reference digests survive resolution and reject malformed values',
@@ -293,77 +296,41 @@ void main() {
   });
 
   test(
-    'question and answer budgets reject overflow without truncating input',
+    'large question sets, choices and answers round trip without truncation',
     () {
-      final maximum = AgentQuestionPrompt(
-        id: 'q',
-        question: 'q' * AgentQuestionPrompt.maxQuestionLength,
-        options: List.generate(
-          AgentQuestionPrompt.maxOptions,
-          (index) => AgentQuestionOption(id: '$index', label: 'Option $index'),
-        ),
-        multiple: true,
-      );
-      final answer = AgentQuestionAnswer(
-        questionId: 'q',
-        text: 'a' * AgentQuestionAnswer.maxTextLength,
-      );
-      expect(
-        request(questions: [maximum])
-            .withAnswers([answer])
-            .answers!
-            .single
-            .text,
-        answer.text,
-      );
-      expect(
-        () => AgentQuestionPrompt(id: 'q', question: '${maximum.question}q'),
-        throwsFormatException,
-      );
-      expect(
-        () => AgentQuestionAnswer(questionId: 'q', text: '${answer.text}a'),
-        throwsFormatException,
-      );
-      expect(
-        () => AgentQuestionAnswer(questionId: 'q', text: '😀' * 2001),
-        throwsFormatException,
-      );
-      expect(
-        () => AgentQuestionPrompt(
-          id: 'q',
-          question: 'Question',
-          options: [
-            ...maximum.options,
-            AgentQuestionOption(id: 'extra', label: 'Extra'),
-          ],
-        ),
-        throwsFormatException,
-      );
-      expect(
-        () => request(
-          questions: List.generate(
-            AgentQuestionRequest.maxQuestions + 1,
-            (index) => prompt(id: '$index'),
+      final questions = List.generate(
+        30,
+        (index) => AgentQuestionPrompt(
+          id: 'question-$index',
+          question: 'Question $index ${'问' * 5000}',
+          options: List.generate(
+            40,
+            (option) => AgentQuestionOption(
+              id: 'option-$option',
+              label: '选项' * 300,
+              description: '说明' * 1200,
+            ),
           ),
+          multiple: true,
         ),
-        throwsFormatException,
       );
-      expect(
-        () => AgentQuestionOption(id: 'id', label: 'l' * 241),
-        throwsFormatException,
+      final answers = questions
+          .map(
+            (question) => AgentQuestionAnswer(
+              questionId: question.id,
+              text: '回答🌸' * 5000,
+              optionIds: question.options.map((option) => option.id),
+            ),
+          )
+          .toList();
+      final resolved = request(questions: questions).withAnswers(answers);
+      final decoded = AgentQuestionRequest.fromJson(
+        jsonDecode(jsonEncode(resolved.toJson())) as Map<String, Object?>,
       );
-      expect(
-        () => AgentQuestionOption(
-          id: 'id',
-          label: 'Label',
-          description: 'd' * 1001,
-        ),
-        throwsFormatException,
-      );
-      expect(
-        () => AgentQuestionPrompt(id: 'i' * 129, question: 'Question'),
-        throwsFormatException,
-      );
+      expect(decoded.questions, hasLength(30));
+      expect(decoded.questions.first.options, hasLength(40));
+      expect(decoded.answers!.last.text, answers.last.text);
+      expect(decoded.toJson(), resolved.toJson());
     },
   );
 }

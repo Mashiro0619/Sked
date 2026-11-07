@@ -59,7 +59,7 @@ void main() {
           request,
           abortSignal: Completer<void>().future,
           checkCancelled: () {},
-        );
+        ).fold<List<int>>([], (all, chunk) => all..addAll(chunk));
         expect(opens, 1);
         expect(body.length, size.textBytes + size.encodedBytes);
         expect(
@@ -70,50 +70,43 @@ void main() {
     );
   }
 
-  test(
-    'oversized declared attachment is rejected without opening its stream',
-    () async {
-      var opens = 0;
-      final request = ProviderRequest(
-        endpoint: Uri.parse('https://fixture.example/v1'),
-        model: 'fixture',
-        limits: const ProviderLimits(maxAttachmentBytes: 10),
-        messages: [
-          ProviderMessage(
-            role: ProviderRole.user,
-            attachments: [
-              ProviderAttachment(
-                id: 'file',
-                filename: 'report.pdf',
-                mediaType: 'application/pdf',
-                byteLength: 11,
-                digest: '0' * 64,
-                openRead: () {
-                  opens++;
-                  return const Stream.empty();
-                },
-              ),
-            ],
-          ),
-        ],
-      );
-      expect(measureProviderRequestSize(request).attachmentBytes, 11);
-      expect(opens, 0);
-      await expectLater(
-        encodeProviderRequestBody(
-          request,
-          abortSignal: Completer<void>().future,
-          checkCancelled: () {},
+  test('encoding emits its prefix before reading a large attachment and supports cancellation', () async {
+    var opens = 0;
+    final request = ProviderRequest(
+      endpoint: Uri.parse('https://fixture.example/v1'),
+      model: 'fixture',
+      messages: [
+        ProviderMessage(
+          role: ProviderRole.user,
+          attachments: [
+            ProviderAttachment(
+              id: 'file',
+              filename: 'report.pdf',
+              mediaType: 'application/pdf',
+              byteLength: 48 * 1024 * 1024,
+              digest: '0' * 64,
+              openRead: () {
+                opens++;
+                return const Stream.empty();
+              },
+            ),
+          ],
         ),
-        throwsA(
-          isA<ProviderException>().having(
-            (error) => error.code,
-            'code',
-            ProviderError.requestBudgetExceeded,
-          ),
-        ),
-      );
-      expect(opens, 0);
-    },
-  );
+      ],
+    );
+    final size = measureProviderRequestSize(request);
+    expect(size.attachmentBytes, 48 * 1024 * 1024);
+    expect(opens, 0);
+    final stream = StreamIterator(
+      encodeProviderRequestBody(
+        request,
+        abortSignal: Completer<void>().future,
+        checkCancelled: () {},
+      ),
+    );
+    expect(await stream.moveNext(), isTrue);
+    expect(opens, 0);
+    await stream.cancel();
+    expect(opens, 0);
+  });
 }

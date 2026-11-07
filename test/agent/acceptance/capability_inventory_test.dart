@@ -22,54 +22,54 @@ import 'acceptance_harness.dart';
 ) => switch (destination) {
   SettingsDestination.appearance => (
     settings: {'student.themeMode', 'general.themeMode'},
-    tools: {'settings.prepare', 'device.layout.prepare'},
+    tools: {'settings.update', 'device.layout.apply'},
   ),
   SettingsDestination.notifications => (
     settings: {'app.notifications.enabled'},
-    tools: {'notifications.status', 'settings.prepare'},
+    tools: {'notifications.status', 'settings.update'},
   ),
   SettingsDestination.language => (
     settings: {'app.localeCode'},
-    tools: {'settings.prepare'},
+    tools: {'settings.update'},
   ),
   SettingsDestination.data => (
     settings: {},
     tools: {
-      'file_imports.prepare',
-      'exports.prepare',
-      'backups.prepare_restore',
-      'maintenance.prepare_clear',
+      'file_imports.apply',
+      'exports.generate',
+      'backups.restore',
+      'maintenance.clear',
     },
   ),
   SettingsDestination.features => (
     settings: {'agent.enabled'},
-    tools: {'workspaces.prepare', 'settings.prepare'},
+    tools: {'workspaces.apply', 'settings.update'},
   ),
   SettingsDestination.agent => (
     settings: {'agent.protocol', 'agent.endpoint', 'agent.model'},
-    tools: {'connection.prepare', 'credentials.request_input'},
+    tools: {'connection.apply', 'credentials.request_input'},
   ),
   SettingsDestination.about => (
     settings: {'app.includePrereleaseUpdates', 'app.ignoredUpdateVersion'},
-    tools: {'settings.get', 'settings.prepare'},
+    tools: {'settings.get', 'settings.update'},
   ),
   SettingsDestination.student || SettingsDestination.studentPreferences => (
     settings: {'student.showFutureCourses', 'student.toolbarNavigationOrder'},
-    tools: {'settings.prepare', 'courses.display.prepare'},
+    tools: {'settings.update', 'courses.display.apply'},
   ),
   SettingsDestination.general || SettingsDestination.generalPreferences => (
     settings: {'general.showWeekends', 'general.toolbarNavigationOrder'},
-    tools: {'settings.prepare', 'navigation.range.prepare'},
+    tools: {'settings.update', 'navigation.range.apply'},
   ),
   SettingsDestination.schoolImport => (
     settings: {'agent.protocol', 'agent.endpoint', 'agent.model'},
-    tools: {'connection.prepare', 'credentials.request_input'},
+    tools: {'connection.apply', 'credentials.request_input'},
   ),
   SettingsDestination.notificationPermissions => (
     settings: {},
     tools: {
-      'notifications.permission.prepare',
-      'notifications.exact_alarm.prepare',
+      'notifications.permission.apply',
+      'notifications.exact_alarm.apply',
       'platform.request_action',
     },
   ),
@@ -120,7 +120,7 @@ void main() {
           DesktopLayoutRegion.values.map((role) => role.name).toSet(),
         );
         final schema = await h.call('capabilities.describe', {
-          'names': ['device.layout.prepare'],
+          'names': ['device.layout.apply'],
         });
         final properties =
             (schema['tools'] as List).single['parameters']['properties'] as Map;
@@ -137,23 +137,23 @@ void main() {
             final descriptor = registry.descriptor(
               'device.layout.${role.name}.$dimension',
             );
-            expect(descriptor.adapterTool, 'device.layout.prepare');
+            expect(descriptor.adapterTool, 'device.layout.apply');
             expect(descriptor.nullable, isTrue);
           }
-          final plan = await h.call('device.layout.prepare', {
+          final plan = await h.call('device.layout.apply', {
             'region': role.name,
             'action': 'set',
             'values': size.toJson(),
           });
-          expect((await h.externalCommit(plan))['effectStatus'], 'applied');
+          expect(plan['effectStatus'], 'applied');
           expect(h.layout.preferenceFor(role), size, reason: role.name);
           expect(h.layout.hasUnsavedChanges, isFalse);
         }
-        final reset = await h.call('device.layout.prepare', {
+        final reset = await h.call('device.layout.apply', {
           'region': 'all',
           'action': 'reset',
         });
-        expect((await h.externalCommit(reset))['effectStatus'], 'applied');
+        expect(reset['effectStatus'], 'applied');
         for (final role in DesktopLayoutRegion.values) {
           expect(h.layout.preferenceFor(role), isNull, reason: role.name);
         }
@@ -171,7 +171,7 @@ void main() {
           loginUrl: 'https://campus.invalid',
         );
         final schema = await h.call('capabilities.describe', {
-          'names': ['school_sites.prepare'],
+          'names': ['school_sites.apply'],
         });
         final properties =
             (schema['tools'] as List).single['parameters']['properties'] as Map;
@@ -182,13 +182,13 @@ void main() {
         expect(site.toJson().keys.toSet(), {'id', 'name', 'loginUrl'});
         expect(
           SettingRegistry().descriptor('device.schoolSites').adapterTool,
-          'school_sites.prepare',
+          'school_sites.apply',
         );
-        final plan = await h.call('school_sites.prepare', {
+        final plan = await h.call('school_sites.apply', {
           'action': 'create',
           'site': site.toJson()..remove('id'),
         });
-        expect((await h.externalCommit(plan))['effectStatus'], 'applied');
+        expect(plan['effectStatus'], 'applied');
         final exported = await h.call('school_sites.export');
         final actual =
             (jsonDecode(exported['text'] as String) as List).single as Map;
@@ -209,14 +209,14 @@ void main() {
       expect(description['key'], 'device.assistantPreviewEnabled');
       expect(
         SettingRegistry().descriptor(description['key'] as String).adapterTool,
-        'device.preferences.prepare',
+        'device.preferences.apply',
       );
       for (final args in [
         {'action': 'set', 'value': true},
         {'action': 'reset'},
       ]) {
-        final plan = await h.call('device.preferences.prepare', args);
-        expect((await h.externalCommit(plan))['effectStatus'], 'applied');
+        final plan = await h.call('device.preferences.apply', args);
+        expect(plan['effectStatus'], 'applied');
         expect(h.developer.assistantVisible, args['action'] == 'set');
         expect(h.developer.busy, isFalse);
         expect(h.saved.agentSettings.enabled, enabled);
@@ -272,7 +272,7 @@ void main() {
         (d) => d.readOnly,
       )) {
         await expectLater(
-          h.call('settings.prepare', {
+          h.call('settings.update', {
             'edits': [
               {'key': field.key, 'action': 'reset'},
             ],
@@ -289,7 +289,7 @@ void main() {
       }
       for (final key in owners.keys) {
         await expectLater(
-          h.call('settings.prepare', {
+          h.call('settings.update', {
             'edits': [
               {'key': 'conversations.$key', 'action': 'set', 'value': 'forged'},
             ],

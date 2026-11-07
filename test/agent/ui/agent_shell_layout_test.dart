@@ -441,7 +441,7 @@ Future<void> _newDraftFromResources(
   expect(fixture.storage.source, isNot(contains(draftId)));
   for (final key in [
     'workspace-main-navigation',
-    'agent-attach-file',
+    'agent-composer-more',
     'agent-mode-picker',
     'agent-model-picker',
     'agent-send',

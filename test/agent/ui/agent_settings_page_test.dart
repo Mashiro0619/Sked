@@ -168,6 +168,68 @@ void main() {
   }
 
   testWidgets(
+    'formal model editor preserves context metadata and saves user overrides',
+    (tester) async {
+      await mount(tester);
+      await tester.runAsync(
+        () => app.agent.configure(
+          settings.copyWith(
+            models: const [
+              AgentModelConfig(
+                id: 'model-a',
+                reasoningEfforts: [AgentReasoningEffort.low],
+                defaultReasoningEffort: AgentReasoningEffort.low,
+                maxContextTokens: 32000,
+                reportedContextTokens: 64000,
+                autoCompactAtTokens: 20000,
+                autoCompact: false,
+              ),
+            ],
+          ),
+        ),
+      );
+      await settleUi(tester);
+      await tap(tester, key('agent-settings-connection'));
+      await tap(tester, key('agent-configured-model-model-a'));
+      await tap(tester, key('agent-save-model'));
+      final retained = app.agent.settings.modelConfig('model-a')!;
+      expect(retained.maxContextTokens, 32000);
+      expect(retained.reportedContextTokens, 64000);
+      expect(retained.autoCompactAtTokens, 20000);
+      expect(retained.autoCompact, isFalse);
+      await tap(tester, key('agent-configured-model-model-a'));
+      await reveal(tester, key('agent-model-context-window'));
+      await tester.enterText(key('agent-model-context-window'), '48000');
+      await reveal(tester, key('agent-model-context-threshold'));
+      await tester.enterText(key('agent-model-context-threshold'), '');
+      await tap(tester, key('agent-model-auto-compact'));
+      await tap(tester, key('agent-save-model'));
+      final changed = app.agent.settings.modelConfig('model-a')!;
+      expect(changed.maxContextTokens, 48000);
+      expect(changed.reportedContextTokens, 64000);
+      expect(changed.autoCompactAtTokens, isNull);
+      expect(changed.effectiveCompactAtTokens, 38400);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'formal preferences save instructions and retention beyond removed thresholds',
+    (tester) async {
+      await mount(tester);
+      await tap(tester, key('agent-settings-preferences'));
+      final instructions = 'User guidance ' * 1300;
+      await tester.enterText(key('agent-system-instructions'), instructions);
+      await reveal(tester, key('agent-history-retention'));
+      await tester.enterText(key('agent-history-retention'), '3651');
+      await tap(tester, key('agent-save-preferences'));
+      expect(app.agent.settings.systemInstructions, instructions);
+      expect(app.agent.settings.historyRetentionDays, 3651);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'Agent settings use named page destinations instead of tabs',
     (tester) async {
       await mount(tester, height: 560);

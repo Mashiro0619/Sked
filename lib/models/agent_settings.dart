@@ -185,8 +185,7 @@ class AgentModelConfig {
   );
 }
 
-bool _validModelId(String value) =>
-    value.isNotEmpty && value == value.trim() && value.length <= 256;
+bool _validModelId(String value) => value.isNotEmpty && value == value.trim();
 
 const _keepCredential = Object();
 
@@ -265,8 +264,7 @@ class AgentSettings {
   }
 
   void validate() {
-    if (models.length > 256 ||
-        models.map((value) => value.id).toSet().length != models.length ||
+    if (models.map((value) => value.id).toSet().length != models.length ||
         (models.isEmpty
             ? model.isNotEmpty
             : !models.any((value) => value.id == model)) ||
@@ -278,19 +276,9 @@ class AgentSettings {
     for (final value in models) {
       value.validate();
     }
-    if (systemInstructions.length > 16000 ||
-        historyRetentionDays < 0 ||
-        historyRetentionDays > 3650 ||
-        (historyRetentionDays > 0 && historyRetentionDays < 7)) {
+    if (historyRetentionDays < 0) {
       throw const FormatException(
-        'Agent preferences are outside their supported limits.',
-      );
-    }
-    if (endpoint.length > 4096 ||
-        model.length > 256 ||
-        (credentialRef?.length ?? 0) > 256) {
-      throw const FormatException(
-        'Agent connection fields exceed their size limits.',
+        'History retention days must be nonnegative.',
       );
     }
     if (endpoint.isNotEmpty) {

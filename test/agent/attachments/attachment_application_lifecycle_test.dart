@@ -276,10 +276,13 @@ void main() {
       );
       final generation = h.app.agent.mutations.generation;
       await tester.ensureVisible(
-        find.byKey(const ValueKey('agent-attach-file')),
+        find.byKey(const ValueKey('agent-composer-more')),
       );
+      await tester.tap(find.byKey(const ValueKey('agent-composer-more')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('agent-attach-file')));
+      await tester.pump();
       await tester.runAsync(() async {
-        await tester.tap(find.byKey(const ValueKey('agent-attach-file')));
         await pickerOpened.future;
         await h.restore();
       });

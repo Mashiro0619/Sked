@@ -100,10 +100,14 @@ void main() {
     expect(repository.find(id)!.messages.single.text, 'Earlier request');
   });
 
-  test('byte limits reject content without silently truncating or accepting binary formats', () async {
-    await expectLater(
-      attach('中' * (ConversationFileAttachments.maxBytes ~/ 3 + 1)),
-      throwsA(isA<TextFileTooLargeException>()),
+  test('large text stays complete and binary formats use the binary attachment path', () async {
+    final text = '中' * (512 * 1024 ~/ 3 + 1);
+    await attach(text);
+    expect(repository.find(id)!.sources.single.text, text);
+    await attachments.remove(
+      id,
+      repository.find(id)!.sources.single.id,
+      canModify: () => true,
     );
     await expectLater(
       attach('text', name: 'document.pdf'),

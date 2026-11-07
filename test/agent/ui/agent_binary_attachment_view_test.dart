@@ -24,7 +24,7 @@ void main() {
         fixture.pick = () => picker.future;
         await mountAgentUi(tester, fixture.view());
         final retainedState = tester.state(find.byType(AgentConversationView));
-        await tester.tap(find.byKey(const ValueKey('agent-attach-file')));
+        await openAgentAttachmentPicker(tester);
         await tester.pump();
         await mountAgentUi(
           tester,
@@ -60,7 +60,7 @@ void main() {
         final picker = Completer<XFile?>();
         fixture.pick = () => picker.future;
         await mountAgentUi(tester, fixture.view());
-        await tester.tap(find.byKey(const ValueKey('agent-attach-file')));
+        await openAgentAttachmentPicker(tester);
         await tester.pump();
         await mountAgentUi(
           tester,
@@ -89,8 +89,8 @@ void main() {
         name: 'payload.custom',
       );
       await mountAgentUi(tester, fixture.view());
-      expect(find.byTooltip('Attach a file'), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('agent-attach-file')));
+      expect(find.byKey(const ValueKey('agent-composer-more')), findsOneWidget);
+      await openAgentAttachmentPicker(tester);
       await _pumpUntil(
         tester,
         () =>
@@ -126,7 +126,7 @@ void main() {
       );
       await mountAgentUi(tester, fixture.view());
       fixture.chatStorage.fail = true;
-      await tester.tap(find.byKey(const ValueKey('agent-attach-file')));
+      await openAgentAttachmentPicker(tester);
       await _pumpUntil(
         tester,
         () =>
@@ -165,7 +165,7 @@ void main() {
       final stalled = (await tester.runAsync(() async => _StalledFile()))!;
       fixture.selected = stalled;
       await mountAgentUi(tester, fixture.view());
-      await tester.tap(find.byKey(const ValueKey('agent-attach-file')));
+      await openAgentAttachmentPicker(tester);
       await _pumpUntil(
         tester,
         () => stalled.entered.isCompleted,
@@ -198,7 +198,7 @@ void main() {
       final picker = Completer<XFile?>();
       fixture.pick = () => picker.future;
       await mountAgentUi(tester, fixture.view());
-      await tester.tap(find.byKey(const ValueKey('agent-attach-file')));
+      await openAgentAttachmentPicker(tester);
       await tester.pump();
       fixture.generation = 'new-data';
       picker.complete(

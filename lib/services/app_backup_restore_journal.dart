@@ -5,10 +5,12 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../application/data_restore_receipt.dart';
 import '../data/migrations/migration.dart';
 import '../l10n/app_locale.dart';
 import '../models/app_backup.dart';
 import '../models/app_data.dart';
+import '../models/application_ledger.dart';
 import '../utils/constants.dart';
 import '../utils/app_storage_keys.dart';
 import '../utils/shared_preferences_recovery.dart';
@@ -55,6 +57,7 @@ class AppBackupRestoreJournalLoadResult {
     this.source,
     this.backupSource,
     this.backup,
+    this.completionLedger,
     this.apiKeyPolicy = AppBackupRestoreApiKeyPolicy.clear,
     this.phase = AppBackupRestoreJournalPhase.prepared,
     this.journalRecoveryArtifacts = const [],
@@ -66,6 +69,7 @@ class AppBackupRestoreJournalLoadResult {
   final String? source;
   final String? backupSource;
   final AppBackupData? backup;
+  final ApplicationLedger? completionLedger;
   final AppBackupRestoreApiKeyPolicy apiKeyPolicy;
   final AppBackupRestoreJournalPhase phase;
   final List<String> journalRecoveryArtifacts;
@@ -223,6 +227,7 @@ abstract class AppBackupRestoreJournal {
 
   Future<AppBackupRestoreJournalLoadResult> writePrepared(
     String appBackupSource, {
+    ApplicationLedger? completionLedger,
     AppBackupRestoreApiKeyPolicy apiKeyPolicy =
         AppBackupRestoreApiKeyPolicy.clear,
     List<String> recoveryArtifacts = const [],
@@ -230,6 +235,7 @@ abstract class AppBackupRestoreJournal {
   }) {
     return _writeStateConfirmed(
       appBackupSource,
+      completionLedger: completionLedger,
       apiKeyPolicy: apiKeyPolicy,
       phase: AppBackupRestoreJournalPhase.prepared,
       recoveryArtifacts: recoveryArtifacts,
@@ -255,6 +261,7 @@ abstract class AppBackupRestoreJournal {
     }
     return _writeStateConfirmed(
       appBackupSource,
+      completionLedger: current.completionLedger,
       apiKeyPolicy: current.apiKeyPolicy,
       phase: nextPhase,
       recoveryArtifacts: current.journalRecoveryArtifacts,
@@ -277,6 +284,7 @@ abstract class AppBackupRestoreJournal {
 
   Future<AppBackupRestoreJournalLoadResult> _writeStateConfirmed(
     String appBackupSource, {
+    ApplicationLedger? completionLedger,
     required AppBackupRestoreApiKeyPolicy apiKeyPolicy,
     required AppBackupRestoreJournalPhase phase,
     required List<String> recoveryArtifacts,
@@ -284,6 +292,7 @@ abstract class AppBackupRestoreJournal {
   }) async {
     final source = _encodeJournalSource(
       appBackupSource,
+      completionLedger: completionLedger,
       apiKeyPolicy: apiKeyPolicy,
       phase: phase,
       recoveryArtifacts: recoveryArtifacts,
@@ -609,7 +618,7 @@ class StoredAppBackupRestoreJournalValueCorruptException
 }
 
 const _journalSchema = 'app-backup-restore-journal';
-const _journalVersion = 2;
+const _journalVersion = 3;
 const _legacyJournalVersion = 1;
 const _clearApiKeyPolicy = 'clear';
 const _preserveApiKeyPolicy = 'preserve';
@@ -626,6 +635,7 @@ AppBackupRestoreJournalLoadResult withAppBackupRestoreJournalRecoveryArtifacts(
     source: result.source,
     backupSource: result.backupSource,
     backup: result.backup,
+    completionLedger: result.completionLedger,
     apiKeyPolicy: result.apiKeyPolicy,
     phase: result.phase,
     journalRecoveryArtifacts: result.journalRecoveryArtifacts,
@@ -653,6 +663,7 @@ AppBackupRestoreJournalLoadResult decodeAppBackupRestoreJournalSource(
   var apiKeyPolicy = AppBackupRestoreApiKeyPolicy.clear;
   var phase = AppBackupRestoreJournalPhase.prepared;
   var recoveryArtifacts = const <String>[];
+  ApplicationLedger? completionLedger;
   late final ImportExportEnvelope backupEnvelope;
 
   if (envelope.schema.trim() == _journalSchema) {
@@ -674,6 +685,13 @@ AppBackupRestoreJournalLoadResult decodeAppBackupRestoreJournalSource(
     }
     backupSource = rawBackupSource;
     recoveryArtifacts = List<String>.unmodifiable(rawArtifacts.cast<String>());
+    final rawCompletion = envelope.data['completionLedger'];
+    if (rawCompletion != null) {
+      if (envelope.version < 3) {
+        throw const FormatException('Legacy restore completion is invalid.');
+      }
+      completionLedger = ApplicationLedger.fromJson(rawCompletion);
+    }
     if (envelope.version == _legacyJournalVersion) {
       if (rawApiKeyPolicy != _preserveApiKeyPolicy) {
         throw const FormatException('Restore journal format is invalid.');
@@ -711,11 +729,27 @@ AppBackupRestoreJournalLoadResult decodeAppBackupRestoreJournalSource(
       'Pending app-backup restore journal does not include school sites.',
     );
   }
+  if (completionLedger != null) {
+    final target = backup.appData.applicationLedger;
+    final receipt = completionLedger.receipts.singleOrNull;
+    if (target == null ||
+        target.receipts.isNotEmpty ||
+        target.generation != completionLedger.generation ||
+        receipt == null ||
+        receipt.result['action'] != 'backups.restore' ||
+        completedDataRestoreReceipt(completionLedger, receipt.operationId) ==
+            null ||
+        (receipt.result['effectResult'] as Map)['restoredTimetables'] !=
+            backup.appData.studentMode.timetables.length) {
+      throw const FormatException('The restore completion target is invalid.');
+    }
+  }
   return AppBackupRestoreJournalLoadResult(
     status: AppBackupRestoreJournalLoadStatus.valid,
     source: source,
     backupSource: backupSource,
     backup: backup,
+    completionLedger: completionLedger,
     apiKeyPolicy: apiKeyPolicy,
     phase: phase,
     journalRecoveryArtifacts: recoveryArtifacts,
@@ -780,6 +814,7 @@ void _ensureSupportedAppBackupRestoreVersion({
 
 String _encodeJournalSource(
   String appBackupSource, {
+  ApplicationLedger? completionLedger,
   required AppBackupRestoreApiKeyPolicy apiKeyPolicy,
   required AppBackupRestoreJournalPhase phase,
   required List<String> recoveryArtifacts,
@@ -789,6 +824,7 @@ String _encodeJournalSource(
     version: _journalVersion,
     data: {
       'backupSource': appBackupSource,
+      'completionLedger': ?completionLedger?.toJson(),
       'apiKeyPolicy': switch (apiKeyPolicy) {
         AppBackupRestoreApiKeyPolicy.clear => _clearApiKeyPolicy,
         AppBackupRestoreApiKeyPolicy.preserve => _preserveApiKeyPolicy,

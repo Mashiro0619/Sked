@@ -431,12 +431,6 @@ class SettingRegistry {
     }
     if (descriptor.type == SettingValueType.string) {
       if (descriptor.key == 'agent.systemInstructions') {
-        if ((value as String).length > 16000) {
-          fail(
-            SettingValidationCode.invalidValue,
-            'Agent instructions exceed the supported length.',
-          );
-        }
         return value;
       }
       final normalized = (value as String).trim();

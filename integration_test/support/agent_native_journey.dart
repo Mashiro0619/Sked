@@ -170,7 +170,7 @@ Future<Map<String, Object?>> runAgentNativeJourney(
 
     late _Journey journey;
     await checkpoint('runtime-loaded', () async {
-      final native = session = AgentNativeSession();
+      final native = session = await AgentNativeSession.create();
       journey = _Journey(tester, native, config);
       activeJourney = journey;
       report['fixture'] = native.fixtureReport();
@@ -189,7 +189,7 @@ Future<Map<String, Object?>> runAgentNativeJourney(
       );
       return {
         'agentInitialized': native.app.agent.isInitialized,
-        'storage': native.storageReport(),
+        'storage': await native.storageReport(),
         'applicationOwner': native.app.runtimeType.toString(),
       };
     });
@@ -207,7 +207,7 @@ Future<Map<String, Object?>> runAgentNativeJourney(
     );
     final native = session!;
     report['providerBeforeCleanup'] = native.controlledProvider.toJson();
-    report['storageBeforeCleanup'] = native.storageReport();
+    report['storageBeforeCleanup'] = await native.storageReport();
   } catch (error, stack) {
     primaryError = error;
     primaryStack = stack;
@@ -232,7 +232,7 @@ Future<Map<String, Object?>> runAgentNativeJourney(
         if (cleanupSession != null) {
           cleanup['owners'] = await cleanupSession.close();
           cleanup['provider'] = cleanupSession.providerReport();
-          cleanup['storage'] = cleanupSession.storageReport();
+          cleanup['storage'] = await cleanupSession.storageReport();
         }
         try {
           httpGuard.restore();
@@ -473,10 +473,14 @@ class _Journey {
     );
     _mainBefore = session.mainSource;
     await openFromHome();
+    final repository = session.app.agent.conversations;
+    final statistics = await repository.statistics(agentNativeLongId);
     _require(
-      session.app.agent.conversations.selected!.messages.length ==
-          agentNativeMessageCount,
-      'The full 512-message archive was not loaded.',
+      statistics.messageCount == agentNativeMessageCount &&
+          repository.visibleMessages(agentNativeLongId).isNotEmpty &&
+          repository.selected!.messages.length < agentNativeMessageCount &&
+          repository.hasEarlierMessages(agentNativeLongId),
+      'The 512-message fixture did not open through its latest SQLite page.',
     );
     _require(
       field.controller!.text == agentNativeInitialDraft,
@@ -487,10 +491,11 @@ class _Journey {
       ...state(),
       'entry': _homeEntry,
       'host': 'AgentPage',
-      'historyMessageCount':
-          session.app.agent.conversations.selected!.messages.length,
+      'historyMessageCount': statistics.messageCount,
+      'loadedMessageCount': repository.selected!.messages.length,
+      'hasEarlierMessages': repository.hasEarlierMessages(agentNativeLongId),
       'anchor': anchor.toJson(),
-      'storage': session.storageReport(),
+      'storage': await session.storageReport(),
       'sameApplicationAndRepository': true,
     };
   }
@@ -916,7 +921,7 @@ class _Journey {
     await session.app.agent.conversations.waitForPendingWrites().timeout(
       const Duration(seconds: 20),
     );
-    final saved = ConversationArchive.decode(session.chatSource);
+    final saved = ConversationArchive.decode(await session.readChatSource());
     final savedLong = saved.conversations.singleWhere(
       (item) => item.id == agentNativeLongId,
     );
@@ -968,7 +973,7 @@ class _Journey {
       ),
       'independentDrafts': true,
       'mainSnapshotUnchanged': true,
-      'storage': session.storageReport(),
+      'storage': await session.storageReport(),
     };
   }
 }

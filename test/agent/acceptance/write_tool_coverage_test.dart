@@ -30,6 +30,12 @@ void main() {
       ...readOnlyToolInventory,
       ...writeToolCoverage.keys,
     }, reason: 'Classify new tools and connect their domain failure suite.');
+    expect(
+      h.app.agent.tools.registeredNames
+          .where(h.app.agent.tools.isReadOnlyTool)
+          .toSet(),
+      readOnlyToolInventory,
+    );
     for (final coverage in writeToolCoverage.values) {
       expect(sharedFailureSuites[coverage.boundary], isNotEmpty);
       expect(coverage.domainSuite, startsWith('test/'));
@@ -52,7 +58,6 @@ void main() {
       expect(knowledgeStorage.writeCount, greaterThan(0));
       expect(knowledgeStorage.source, contains('Keep this memory'));
       final before = h.saved.encode();
-      final beforeConversations = h.conversations.source;
       final beforeKnowledge = knowledgeStorage.source;
       final beforeKnowledgeWrites = knowledgeStorage.writeCount;
       final beforeKnowledgeSnapshot = knowledge.repository.snapshot.encode();
@@ -74,7 +79,6 @@ void main() {
           reason: '$name must reject unknown tool fields before starting work.',
         );
         expect(h.saved.encode(), before, reason: name);
-        expect(h.conversations.source, beforeConversations, reason: name);
         expect(knowledgeStorage.source, beforeKnowledge, reason: name);
         expect(
           knowledgeStorage.writeCount,

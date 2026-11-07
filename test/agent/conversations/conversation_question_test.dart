@@ -1,10 +1,8 @@
 import 'dart:convert';
 
-import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/agent/conversations/conversation_portable_history.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
-import 'package:sked/agent/conversations/conversation_storage_codec.dart';
 import 'package:sked/agent/interactions/agent_question.dart';
 
 void main() {
@@ -112,36 +110,30 @@ void main() {
     },
   );
 
-  test(
-    'versions one through five decode without manufacturing a question wait',
-    () {
-      final legacy = conversation().copyWith(
-        clearPendingQuestion: true,
-        status: ConversationStatus.idle,
+  test('retired archives cannot manufacture a question wait', () {
+    final legacy = conversation().copyWith(
+      clearPendingQuestion: true,
+      status: ConversationStatus.idle,
+    );
+    for (var version = 1; version <= 5; version++) {
+      final json = jsonDecode(
+        ConversationArchive(conversations: [legacy]).encode(),
+      ) as Map<String, dynamic>;
+      json['version'] = version;
+      expect(
+        () => ConversationArchive.decode(jsonEncode(json)),
+        throwsFormatException,
       );
-      for (var version = 1; version <= 5; version++) {
-        final json = jsonDecode(
-          ConversationArchive(conversations: [legacy]).encode(),
-        ) as Map<String, dynamic>;
-        json['version'] = version;
-        expect(
-          ConversationArchive.decode(jsonEncode(json))
-              .conversations
-              .single
-              .pendingQuestion,
-          isNull,
-        );
-        final pendingJson = jsonDecode(
-          ConversationArchive(conversations: [conversation()]).encode(),
-        ) as Map<String, dynamic>;
-        pendingJson['version'] = version;
-        expect(
-          () => ConversationArchive.decode(jsonEncode(pendingJson)),
-          throwsFormatException,
-        );
-      }
-    },
-  );
+      final pendingJson = jsonDecode(
+        ConversationArchive(conversations: [conversation()]).encode(),
+      ) as Map<String, dynamic>;
+      pendingJson['version'] = version;
+      expect(
+        () => ConversationArchive.decode(jsonEncode(pendingJson)),
+        throwsFormatException,
+      );
+    }
+  });
 
   test(
     'pending questions require the original executable assistant call and run',
@@ -301,27 +293,6 @@ void main() {
       expect(repository.find('conversation')!.pendingQuestion, isNotNull);
     },
   );
-
-  test('future question archive blocks fallback to an older readable slot', () {
-    final archive = ConversationArchive(conversations: [conversation()])
-        .encode();
-    final future = jsonDecode(archive) as Map<String, dynamic>;
-    future['version'] = ConversationArchive.currentVersion + 1;
-    final futureSource = jsonEncode(future);
-    final futureSlot = jsonEncode({
-      'version': 1,
-      'revision': 0,
-      'checksum': sha256.convert(utf8.encode(futureSource)).toString(),
-      'source': futureSource,
-    });
-    expect(
-      () => decodeConversationSlots([
-        futureSlot,
-        encodeConversationSlot(archive, 0),
-      ]),
-      throwsA(isA<ConversationStorageException>()),
-    );
-  });
 }
 
 class _QuestionStorage extends ConversationStorage {

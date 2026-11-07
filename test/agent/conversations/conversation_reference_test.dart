@@ -39,7 +39,7 @@ void main() {
     expect(draft.draftReferences, hasLength(1));
   });
 
-  test('legacy archives default references to empty and reject new fields even when empty', () {
+  test('retired archives cannot manufacture new composer references', () {
     final legacy = _bareConversation().copyWith(
       messages: [_message(references: const [], attachmentIds: const [])],
     );
@@ -48,11 +48,10 @@ void main() {
           (jsonDecode(ConversationArchive(conversations: [legacy]).encode())
                 as Map<String, dynamic>)
             ..['version'] = version;
-      final restored = ConversationArchive.decode(jsonEncode(archive()))
-          .conversations
-          .single;
-      expect(restored.draftReferences, isEmpty);
-      expect(restored.messages.single.contextReferences, isEmpty);
+      expect(
+        () => ConversationArchive.decode(jsonEncode(archive())),
+        throwsFormatException,
+      );
       final draftField = archive();
       ((draftField['conversations'] as List).single as Map)['draftReferences'] =
           [];
@@ -86,7 +85,7 @@ void main() {
   });
 
   test(
-    'v6 question waits remain readable after the reference format upgrade',
+    'retired v6 questions cannot restore executable waits in the new archive',
     () {
       final pending = AgentQuestionRequest(
         id: 'question',
@@ -134,12 +133,8 @@ void main() {
       ) as Map<String, dynamic>;
       json['version'] = 6;
       expect(
-        ConversationArchive.decode(jsonEncode(json))
-            .conversations
-            .single
-            .pendingQuestion!
-            .id,
-        pending.id,
+        () => ConversationArchive.decode(jsonEncode(json)),
+        throwsFormatException,
       );
     },
   );
@@ -213,10 +208,15 @@ void main() {
       throwsFormatException,
     );
     expect(
-      () => _bareConversation().copyWith(
-        draftReferences: List.generate(21, (index) => _resource(id: '$index')),
-      ),
-      throwsFormatException,
+      _bareConversation()
+          .copyWith(
+            draftReferences: List.generate(
+              21,
+              (index) => _resource(id: '$index'),
+            ),
+          )
+          .draftReferences,
+      hasLength(21),
     );
   });
 

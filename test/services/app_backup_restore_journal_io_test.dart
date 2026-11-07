@@ -12,6 +12,8 @@ import 'package:sked/services/app_backup_restore_journal_factory_io.dart';
 import 'package:sked/services/app_backup_restore_journal_io.dart';
 import 'package:sked/services/app_storage_layout_io.dart';
 
+import '../support/data_restore_receipt_fixture.dart';
+
 AppData _appData(String localeCode) {
   return buildInitialAppData(buildDefaultPeriodTimes())
       .copyWith(localeCode: localeCode);
@@ -242,9 +244,16 @@ void main() {
   test(
     'persists every phase and terminal phase remains terminal after restart',
     () async {
-      final source = _backupSource('zh');
+      final fixture = dataRestoreReceiptFixture();
+      final source = encodeAppBackupForRecovery(
+        fixture.data.copyWith(localeCode: 'zh'),
+        const [],
+      );
       final first = journal();
-      final prepared = await first.writePrepared(source);
+      final prepared = await first.writePrepared(
+        source,
+        completionLedger: fixture.completion,
+      );
       final dataCommitted = await first.advancePhase(
         prepared,
         AppBackupRestoreJournalPhase.dataCommitted,
@@ -261,6 +270,7 @@ void main() {
       expect(loaded.status, AppBackupRestoreJournalLoadStatus.valid);
       expect(loaded.phase, AppBackupRestoreJournalPhase.secretPolicyApplied);
       expect(loaded.backupSource, source);
+      expect(loaded.completionLedger, fixture.completion);
 
       final backup = await _journalFile(
         supportDirectory,
@@ -272,6 +282,7 @@ void main() {
         pendingArtifactPath: restarted.pendingArtifactPath,
       );
       expect(backupResult.phase, AppBackupRestoreJournalPhase.dataCommitted);
+      expect(backupResult.completionLedger, fixture.completion);
     },
   );
 
@@ -390,7 +401,7 @@ void main() {
   test(
     'future journal versions remain blocked and active tmp is readable',
     () async {
-      final source = _journalSource(_backupSource('en'), version: 3);
+      final source = _journalSource(_backupSource('en'), version: 4);
       await supportDirectory.create(recursive: true);
       final temporary = _journalFile(
         supportDirectory,

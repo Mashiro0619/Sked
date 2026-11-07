@@ -1,7 +1,8 @@
-import 'dart:convert';
-
 import '../conversations/conversation_models.dart';
-import '../runtime/operation_outcome.dart';
+import '../history/conversation_history.dart';
+import '../interactions/agent_task_plan.dart';
+import '../operations/operation_executor.dart';
+import '../operations/tool_outcome.dart';
 
 /// A presentation projection only. Grouping never changes the executable
 /// message sequence, operation ownership, or stored conversation history.
@@ -10,10 +11,21 @@ sealed class AgentTimelineEntry {
 }
 
 class AgentTimelineMessage extends AgentTimelineEntry {
-  const AgentTimelineMessage(this.message, {this.isFinalResponse = false});
+  const AgentTimelineMessage(
+    this.message, {
+    this.isFinalResponse = false,
+    this.turnId,
+  });
 
   final ConversationMessage message;
   final bool isFinalResponse;
+  final String? turnId;
+}
+
+class AgentTimelineQueuedInput extends AgentTimelineEntry {
+  const AgentTimelineQueuedInput(this.message, this.text);
+  final ConversationMessage message;
+  final String text;
 }
 
 enum AgentToolActivityStatus {
@@ -22,10 +34,31 @@ enum AgentToolActivityStatus {
   failed,
   uncertain,
   notStarted,
+  corrected,
 }
 
 class AgentToolActivity {
-  const AgentToolActivity({
+  factory AgentToolActivity({
+    required String id,
+    required String name,
+    required String arguments,
+    required AgentToolActivityStatus status,
+    String? result,
+    String? resultMessageId,
+    bool receipt = false,
+  }) => AgentToolActivity._(
+    id: id,
+    name: name,
+    arguments: arguments,
+    status: status,
+    result: result,
+    resultMessageId: resultMessageId,
+    receipt: receipt,
+    argumentsObject: decodeConversationToolObject(arguments),
+    outcome: result == null ? null : conversationToolOutcome(result),
+  );
+
+  AgentToolActivity._({
     required this.id,
     required this.name,
     required this.arguments,
@@ -33,6 +66,8 @@ class AgentToolActivity {
     this.result,
     this.resultMessageId,
     this.receipt = false,
+    required this.argumentsObject,
+    required this.outcome,
   });
 
   final String id;
@@ -41,6 +76,8 @@ class AgentToolActivity {
   final AgentToolActivityStatus status;
   final String? result;
   final String? resultMessageId;
+  final Map<String, Object?>? argumentsObject;
+  final ToolOutcome? outcome;
 
   /// Such results also remain visible as host-owned operation cards.
   final bool receipt;
@@ -51,10 +88,12 @@ class AgentTimelineActivity extends AgentTimelineEntry {
     required this.id,
     required this.anchorMessageId,
     required Iterable<AgentToolActivity> tools,
+    this.turnId,
   }) : tools = List.unmodifiable(tools);
 
   final String id;
   final String anchorMessageId;
+  final String? turnId;
   final List<AgentToolActivity> tools;
 
   AgentToolActivityStatus get status {
@@ -76,43 +115,88 @@ class AgentTimelineActivity extends AgentTimelineEntry {
   }
 }
 
-/// Matches the host receipt view's boundary. A receipt, failure, or uncertain
-/// external result never disappears into a collapsed activity group.
-bool isAgentVisibleToolResult(ConversationMessage message) {
-  if (message.role != ConversationRole.tool) return false;
-  try {
-    final value = jsonDecode(message.text);
-    return value is Map<String, dynamic> &&
-        (value.containsKey('operationId') ||
-            value.containsKey('planId') ||
-            value.containsKey('error'));
-  } on FormatException {
-    return false;
+/// One business operation keeps the first call's reading anchor while its
+/// receipt and interaction advance. Protocol messages remain unchanged.
+class AgentTimelineOperation extends AgentTimelineEntry {
+  AgentTimelineOperation({
+    required this.id,
+    required this.anchorMessageId,
+    required this.turnId,
+    required Iterable<AgentToolActivity> tools,
+    this.operationId,
+    this.outcome,
+    this.waitingApproval = false,
+    this.phase,
+  }) : tools = List.unmodifiable(tools);
+
+  final String id;
+  final String anchorMessageId;
+  final String turnId;
+  final String? operationId;
+  final List<AgentToolActivity> tools;
+  final ToolOutcome? outcome;
+  Map<String, Object?>? get receipt => outcome?.payload;
+  final bool waitingApproval;
+  final AgentOperationPhase? phase;
+
+  bool get reminderSchedulingFailed {
+    final effect = receipt?['notificationEffect'];
+    return effect is Map && effect['state'] == 'failed';
   }
+
+  AgentTimelineOperation withOutcome(ToolOutcome value) =>
+      AgentTimelineOperation(
+        id: id,
+        anchorMessageId: anchorMessageId,
+        turnId: turnId,
+        operationId: operationId,
+        tools: tools,
+        outcome: value,
+        waitingApproval: waitingApproval,
+        phase: phase,
+      );
+
+  AgentToolActivityStatus get status => switch (phase) {
+    AgentOperationPhase.preparing ||
+    AgentOperationPhase.executing ||
+    AgentOperationPhase.waitingApproval => AgentToolActivityStatus.running,
+    AgentOperationPhase.previewed ||
+    AgentOperationPhase.completed => AgentToolActivityStatus.completed,
+    AgentOperationPhase.cancelled => AgentToolActivityStatus.notStarted,
+    AgentOperationPhase.failed => AgentToolActivityStatus.failed,
+    AgentOperationPhase.unresolved => AgentToolActivityStatus.uncertain,
+    null => tools.last.status,
+  };
 }
 
-AgentToolActivityStatus? _resultStatus(ConversationMessage? message) {
-  if (message == null) return null;
-  try {
-    final value = jsonDecode(message.text);
-    if (value is! Map<String, dynamic>) return null;
-    if (requiresAgentOutcomeReview(value) ||
-        value['effectStatus'] == 'unknown' ||
-        value['effectStatus'] == 'pending' ||
-        value['status'] == 'partial') {
-      return AgentToolActivityStatus.uncertain;
-    }
-    if (value['status'] == 'not_executed') {
-      return AgentToolActivityStatus.notStarted;
-    }
-    if (value['error'] != null || value['status'] == 'failed') {
-      return AgentToolActivityStatus.failed;
-    }
-  } on FormatException {
-    // Plain historical text cannot establish an operation outcome.
-  }
-  return null;
+class AgentTimelinePlan extends AgentTimelineEntry {
+  const AgentTimelinePlan({
+    required this.id,
+    required this.anchorMessageId,
+    required this.plan,
+    this.turnId,
+  });
+  final String id;
+  final String anchorMessageId;
+  final AgentTaskPlan plan;
+  final String? turnId;
 }
+
+/// Matches the host receipt view's boundary. A receipt, failure, or uncertain
+/// external result never disappears into a collapsed activity group.
+bool isAgentVisibleToolResult(ConversationMessage message) =>
+    message.toolOutcome?.operationId != null;
+
+AgentToolActivityStatus? _resultStatus(ConversationMessage? message) =>
+    switch (message?.toolOutcome?.kind) {
+      ToolOutcomeKind.needsReconciliation => AgentToolActivityStatus.uncertain,
+      ToolOutcomeKind.cancelled => AgentToolActivityStatus.notStarted,
+      ToolOutcomeKind.correctableError => AgentToolActivityStatus.failed,
+      ToolOutcomeKind.query ||
+      ToolOutcomeKind.preview ||
+      ToolOutcomeKind.saved => AgentToolActivityStatus.completed,
+      null => null,
+    };
 
 class _ActivitySource {
   _ActivitySource({
@@ -152,13 +236,23 @@ List<AgentTimelineEntry> projectAgentConversationTimeline(
   String? activeRunId,
   bool currentRunActive = false,
   String? replyTargetMessageId,
+  Map<String, Object?>? pendingOperation,
+  Iterable<AgentOperationUpdate> operationUpdates = const [],
+  List<ConversationMessage>? visibleMessages,
+  List<ConversationTurn>? visibleTurns,
 }) {
-  final messages = conversation.messages;
-  if (messages.isEmpty) return const [];
+  final messages = visibleMessages ?? conversation.messages;
+  final turns = visibleTurns ?? conversation.turns;
+  if (messages.isEmpty) {
+    return [
+      for (final input in conversation.queuedInputs)
+        AgentTimelineQueuedInput(input.asUserMessage(), input.text),
+    ];
+  }
   final turnsByMessage = <String, String>{};
   final turnsByRun = <String, String>{};
   final requestByTurn = <String, String>{};
-  for (final turn in conversation.turns) {
+  for (final turn in turns) {
     requestByTurn[turn.id] = turn.requestMessageId;
     for (final id in turn.messageIds) {
       turnsByMessage[id] = turn.id;
@@ -353,7 +447,7 @@ List<AgentTimelineEntry> projectAgentConversationTimeline(
   }
   final runsById = {for (final run in conversation.runs) run.id: run};
   final completedTurns = {
-    for (final turn in conversation.turns)
+    for (final turn in turns)
       if (runsById[turn.runIds.lastOrNull]?.status ==
           ConversationRunStatus.completed)
         turn.id,
@@ -400,6 +494,7 @@ List<AgentTimelineEntry> projectAgentConversationTimeline(
       AgentTimelineActivity(
         id: id,
         anchorMessageId: first.anchor,
+        turnId: first.group,
         tools: segment.map((source) {
           final call = source.call;
           final result = source.result;
@@ -427,17 +522,13 @@ List<AgentTimelineEntry> projectAgentConversationTimeline(
                   : AgentToolActivityStatus.uncertain,
           };
           final resultStatus = _resultStatus(result);
-          return AgentToolActivity(
+          return AgentToolActivity._(
             id: source.id,
             name: call?.name ?? usage?.name ?? '',
             arguments: call?.arguments ?? '',
-            status:
-                accountedStatus == AgentToolActivityStatus.uncertain ||
-                    resultStatus == AgentToolActivityStatus.uncertain
-                ? AgentToolActivityStatus.uncertain
-                : accountedStatus == AgentToolActivityStatus.notStarted
-                ? accountedStatus
-                : resultStatus ?? accountedStatus,
+            argumentsObject: call?.argumentsObject,
+            outcome: result?.toolOutcome,
+            status: resultStatus ?? accountedStatus,
             result: result?.text,
             resultMessageId: result?.id,
             receipt: result != null && isAgentVisibleToolResult(result),
@@ -461,22 +552,266 @@ List<AgentTimelineEntry> projectAgentConversationTimeline(
     // Orphan results precede their independently visible receipt. Calls in an
     // assistant message follow that message's explanatory text.
     if (message.role == ConversationRole.tool) appendSources(message.id);
-    final visible = message.role == ConversationRole.tool
-        ? isAgentVisibleToolResult(message)
-        : message.role != ConversationRole.assistant ||
-              message.text.isNotEmpty ||
-              message.toolCalls.isEmpty;
+    final visible =
+        message.role != ConversationRole.tool &&
+        (message.role != ConversationRole.assistant ||
+            message.text.isNotEmpty ||
+            message.toolCalls.isEmpty);
     if (visible) {
       flushActivity();
       timeline.add(
         AgentTimelineMessage(
           message,
           isFinalResponse: finalResponseIds.contains(message.id),
+          turnId: groupByMessage[message.id],
         ),
       );
     }
     if (message.role != ConversationRole.tool) appendSources(message.id);
   }
   flushActivity();
-  return List.unmodifiable(timeline);
+  timeline.addAll([
+    for (final input in conversation.queuedInputs)
+      AgentTimelineQueuedInput(input.asUserMessage(), input.text),
+  ]);
+  return _projectPlans(
+    _projectOperations(
+      timeline,
+      pendingOperation: pendingOperation,
+      operationUpdates: operationUpdates,
+    ),
+    conversation,
+    turns,
+  );
 }
+
+List<AgentTimelineEntry> _projectPlans(
+  List<AgentTimelineEntry> source,
+  AgentConversation conversation,
+  List<ConversationTurn> turns,
+) {
+  final plans = <String, AgentTaskPlan>{};
+  final planKeys = <String, String>{};
+  final runs = conversation.runs.map((run) => run.id).toSet();
+  for (final activity in source.whereType<AgentTimelineActivity>()) {
+    for (final tool in activity.tools) {
+      if (tool.name != 'update_plan' || tool.result == null) continue;
+      try {
+        final result = tool.outcome?.payload;
+        if (result == null) continue;
+        final plan = AgentTaskPlan.fromToolResult(result);
+        if (!runs.contains(plan.runId)) continue;
+        final turn = turns
+            .where((turn) => turn.runIds.contains(plan.runId))
+            .firstOrNull;
+        if (turn != null && activity.turnId != turn.id) continue;
+        final group = activity.turnId ?? activity.id;
+        if (plans[group] == null ||
+            plans[group]!.runId != plan.runId ||
+            plans[group]!.revision < plan.revision) {
+          plans[group] = plan;
+        }
+        planKeys[tool.id] = group;
+      } on FormatException {
+        // Invalid tool output stays available as an ordinary activity.
+      }
+    }
+  }
+  final emitted = <String>{};
+  final result = <AgentTimelineEntry>[];
+  for (final entry in source) {
+    if (entry is! AgentTimelineActivity) {
+      result.add(entry);
+      continue;
+    }
+    final remaining = <AgentToolActivity>[];
+    void flush() {
+      if (remaining.isEmpty) return;
+      result.add(
+        AgentTimelineActivity(
+          id: remaining.first.id == entry.tools.first.id
+              ? entry.id
+              : '${entry.id}-${remaining.first.id}',
+          anchorMessageId: entry.anchorMessageId,
+          turnId: entry.turnId,
+          tools: remaining,
+        ),
+      );
+      remaining.clear();
+    }
+
+    for (final tool in entry.tools) {
+      final group = planKeys[tool.id];
+      if (group == null) {
+        remaining.add(tool);
+        continue;
+      }
+      flush();
+      if (emitted.add(group) && plans[group]!.steps.isNotEmpty) {
+        result.add(
+          AgentTimelinePlan(
+            id: 'plan-$group',
+            anchorMessageId: entry.anchorMessageId,
+            plan: plans[group]!,
+            turnId: group,
+          ),
+        );
+      }
+    }
+    flush();
+  }
+  return List.unmodifiable(result);
+}
+
+bool _isBusinessTool(String name) =>
+    name.endsWith('.apply') ||
+    name == 'settings.update' ||
+    name == 'agent_settings.update' ||
+    name == 'operations.undo' ||
+    const {
+      'backups.restore',
+      'maintenance.clear',
+      'exports.write',
+      'conversations.create',
+      'conversations.rename',
+      'conversations.delete',
+      'conversations.archive',
+      'conversations.export',
+      'runs.stop',
+      'runs.resume',
+      'navigation.open',
+      'platform.request_action',
+    }.contains(name);
+
+List<AgentTimelineEntry> _projectOperations(
+  List<AgentTimelineEntry> source, {
+  Map<String, Object?>? pendingOperation,
+  Iterable<AgentOperationUpdate> operationUpdates = const [],
+}) {
+  final updates = {
+    for (final update in operationUpdates) update.callId: update,
+  };
+  final results = <String, ToolOutcome>{};
+  for (final activity in source.whereType<AgentTimelineActivity>()) {
+    for (final tool in activity.tools) {
+      final update = updates[tool.id];
+      final result =
+          tool.outcome ?? (update == null ? null : _updateOutcome(update));
+      if (result == null) continue;
+      results[tool.id] = result;
+    }
+  }
+  final pendingCallId = pendingOperation?['toolCallId'];
+  final groups = <(String, String), List<AgentToolActivity>>{};
+  final keyByTool = <String, (String, String)>{};
+  for (final activity in source.whereType<AgentTimelineActivity>()) {
+    final turn = activity.turnId ?? activity.id;
+    for (final tool in activity.tools) {
+      final result = results[tool.id];
+      // A rejected invocation has not become a business operation. Keep its
+      // actual error in the activity trail without creating a failed save row.
+      if (result?.kind == ToolOutcomeKind.correctableError &&
+          result?.operationId == null) {
+        continue;
+      }
+      if (!_isBusinessTool(tool.name) &&
+          !updates.containsKey(tool.id) &&
+          result?.operationId == null) {
+        continue;
+      }
+      final operationId =
+          result?.operationId ??
+          (pendingCallId == tool.id
+              ? (pendingOperation?['operationId'])
+              : null);
+      final identity = operationId is String ? operationId : tool.id;
+      final key = (turn, identity);
+      keyByTool[tool.id] = key;
+      groups.putIfAbsent(key, () => []).add(tool);
+    }
+  }
+  final emitted = <(String, String)>{};
+  final projected = <AgentTimelineEntry>[];
+  for (final entry in source) {
+    if (entry is! AgentTimelineActivity) {
+      projected.add(entry);
+      continue;
+    }
+    final ordinary = <AgentToolActivity>[];
+    void flush() {
+      if (ordinary.isEmpty) return;
+      projected.add(
+        AgentTimelineActivity(
+          id: ordinary.first.id == entry.tools.first.id
+              ? entry.id
+              : '${entry.id}-${ordinary.first.id}',
+          anchorMessageId: entry.anchorMessageId,
+          turnId: entry.turnId,
+          tools: ordinary,
+        ),
+      );
+      ordinary.clear();
+    }
+
+    for (final tool in entry.tools) {
+      final key = keyByTool[tool.id];
+      if (key == null) {
+        ordinary.add(tool);
+        continue;
+      }
+      flush();
+      if (!emitted.add(key)) continue;
+      final stages = groups[key]!;
+      ToolOutcome? outcome;
+      for (final stage in stages) {
+        outcome = results[stage.id] ?? outcome;
+      }
+      final waiting =
+          stages.any((stage) => stage.id == pendingCallId) ||
+          (pendingOperation?['operationId'] != null &&
+              pendingOperation?['operationId'] == outcome?.operationId);
+      projected.add(
+        AgentTimelineOperation(
+          id: stages.first.id,
+          anchorMessageId: entry.anchorMessageId,
+          turnId: key.$1,
+          operationId:
+              outcome?.operationId ??
+              (waiting ? (pendingOperation?['operationId'] as String?) : null),
+          tools: [
+            for (final stage in stages)
+              if (outcome?.kind == ToolOutcomeKind.saved &&
+                  outcome?.operationId != null &&
+                  stage.status == AgentToolActivityStatus.failed)
+                AgentToolActivity._(
+                  id: stage.id,
+                  name: stage.name,
+                  arguments: stage.arguments,
+                  status: AgentToolActivityStatus.corrected,
+                  result: stage.result,
+                  resultMessageId: stage.resultMessageId,
+                  argumentsObject: stage.argumentsObject,
+                  outcome: stage.outcome,
+                )
+              else
+                stage,
+          ],
+          outcome: waiting ? _pendingOutcome(pendingOperation!) : outcome,
+          waitingApproval: waiting,
+          phase: stages.last.result == null
+              ? updates[stages.last.id]?.phase
+              : null,
+        ),
+      );
+    }
+    flush();
+  }
+  return List.unmodifiable(projected);
+}
+
+final _updateOutcomes = Expando<ToolOutcome>();
+ToolOutcome _updateOutcome(AgentOperationUpdate update) =>
+    _updateOutcomes[update] ??= ToolOutcome.fromResult(update.details);
+
+ToolOutcome _pendingOutcome(Map<String, Object?> pending) =>
+    ToolOutcome(ToolOutcomeKind.preview, pending);

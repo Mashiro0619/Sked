@@ -2,7 +2,7 @@ import '../../application/operation_contracts.dart';
 import '../history/conversation_history.dart';
 import 'conversation_models.dart';
 
-/// Restores readable content without any executable run, queue, permission,
+/// Restores readable content without any executable run, input/control queue, permission,
 /// pending question or opaque provider continuation. Question calls and their
 /// answer messages remain readable history. Attachment definitions remain even
 /// when their bytes were not selected; the attachment owner reports missing content.
@@ -10,6 +10,7 @@ AgentConversation conversationAsPortableHistory(AgentConversation source) =>
     AgentConversation(
       id: source.id,
       title: source.title,
+      titleWasEdited: source.titleWasEdited,
       createdAt: source.createdAt,
       updatedAt: source.updatedAt,
       mode: AgentPermissionMode.ask,

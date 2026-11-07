@@ -190,7 +190,7 @@ void main() {
             await app.agent.runtime.queueFollowUp(id, 'Queued workflows');
           }
           expect(app.agent.runtime.pendingInputCount(id), 1);
-          expect(saved().messages.last.contextReferences, hasLength(9));
+          expect(saved().queuedInputs.single.contextReferences, hasLength(9));
           expect(provider.requests, hasLength(1));
         } finally {
           provider.respond = (_) => _done();

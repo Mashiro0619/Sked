@@ -42,24 +42,31 @@ class AgentConnectionProbeResult {
 }
 
 class AgentModelCatalog {
-  AgentModelCatalog({required List<String> models, required this.complete})
-    : models = List.unmodifiable(models);
+  AgentModelCatalog({
+    required List<String> models,
+    required this.complete,
+    Map<String, int> contextTokens = const {},
+  }) : models = List.unmodifiable(models),
+       contextTokens = Map.unmodifiable(contextTokens);
   final List<String> models;
   final bool complete;
-  Map<String, Object?> toJson() => {'models': models, 'complete': complete};
+  final Map<String, int> contextTokens;
+  Map<String, Object?> toJson() => {
+    'models': models,
+    'complete': complete,
+    if (contextTokens.isNotEmpty) 'contextTokens': contextTokens,
+  };
 }
 
 /// Explicit, synthetic connection diagnostics. Constructing this service never
 /// starts a request. Callers own user intent, policy, and the connection/key
-/// snapshot; responses are bounded and no redirect is followed.
+/// snapshot. Diagnostic requests use an explicit connection timeout.
 class AgentConnectionDiagnostics {
   AgentConnectionDiagnostics({
     http.Client? client,
     ProviderClient? provider,
     this.timeout = const Duration(seconds: 20),
     this.idleTimeout = const Duration(seconds: 10),
-    this.maxCatalogBytes = 2 * 1024 * 1024,
-    this.maxModels = 2000,
   }) : _client = client ?? http.Client(),
        _ownsClient = client == null,
        _providedProvider = provider;
@@ -69,8 +76,6 @@ class AgentConnectionDiagnostics {
   final ProviderClient? _providedProvider;
   final Duration timeout;
   final Duration idleTimeout;
-  final int maxCatalogBytes;
-  final int maxModels;
 
   Future<AgentConnectionProbeResult> probe(
     AgentSettings settings, {
@@ -85,51 +90,63 @@ class AgentConnectionDiagnostics {
       );
     }
     final provider = _providedProvider ?? ProviderClient(client: _client);
-    final response = await provider.collect(
-      ProviderRequest(
-        endpoint: resolveConfiguredAgentEndpoint(settings),
-        model: settings.model,
-        reasoningEffort: selection.wireReasoningEffort,
-        protocol: settings.protocol == AgentModelProtocol.responses
-            ? ProviderProtocol.responses
-            : ProviderProtocol.chatCompletions,
-        allowInsecureHttp: allowInsecureHttp,
-        limits: ProviderLimits(
-          totalTimeout: timeout,
-          idleTimeout: idleTimeout,
-          maxRequestBytes: 16 * 1024,
-          maxResponseBytes: 256 * 1024,
-          maxEventBytes: 64 * 1024,
-          maxToolArgumentBytes: 1024,
-          maxToolCalls: 1,
-          maxOutputTokens: 128,
-          maxTotalTokens: 4096,
-        ),
-        messages: [
-          ProviderMessage(
-            role: ProviderRole.user,
-            text: 'This is a synthetic connection test. Call connection.probe once with {"ok":true}. No real application data or business tool is available.',
-          ),
-        ],
-        tools: [
-          ToolDefinition(
-            name: 'connection.probe',
-            description:
-                'Report that function calling works for this synthetic test.',
-            parameters: {
-              'type': 'object',
-              'properties': {
-                'ok': {'type': 'boolean'},
-              },
-              'required': ['ok'],
-              'additionalProperties': false,
-            },
-          ),
-        ],
-      ),
-      apiKey: apiKey,
-      cancellation: cancellation,
+    if (cancellation?.isCancelled ?? false) {
+      throw const ProviderException(ProviderError.cancelled);
+    }
+    final probeCancellation = ProviderCancellationToken();
+    var timedOut = false;
+    final timer = Timer(timeout, () {
+      timedOut = true;
+      probeCancellation.cancel();
+    });
+    unawaited(
+      cancellation?.whenCancelled.then((_) => probeCancellation.cancel()),
     );
+    late ProviderResponse response;
+    try {
+      response = await provider.collect(
+        ProviderRequest(
+          endpoint: resolveConfiguredAgentEndpoint(settings),
+          model: settings.model,
+          reasoningEffort: selection.wireReasoningEffort,
+          protocol: settings.protocol == AgentModelProtocol.responses
+              ? ProviderProtocol.responses
+              : ProviderProtocol.chatCompletions,
+          allowInsecureHttp: allowInsecureHttp,
+          maxOutputTokens: 128,
+          messages: [
+            ProviderMessage(
+              role: ProviderRole.user,
+              text: 'This is a synthetic connection test. Call connection.probe once with {"ok":true}. No real application data or business tool is available.',
+            ),
+          ],
+          tools: [
+            ToolDefinition(
+              name: 'connection.probe',
+              description:
+                  'Report that function calling works for this synthetic test.',
+              parameters: {
+                'type': 'object',
+                'properties': {
+                  'ok': {'type': 'boolean'},
+                },
+                'required': ['ok'],
+                'additionalProperties': false,
+              },
+            ),
+          ],
+        ),
+        apiKey: apiKey,
+        cancellation: probeCancellation,
+      );
+    } on ProviderException catch (error) {
+      if (timedOut && error.code == ProviderError.cancelled) {
+        throw const ProviderException(ProviderError.timeout);
+      }
+      rethrow;
+    } finally {
+      timer.cancel();
+    }
     final observed =
         response.toolCalls.length == 1 &&
         response.toolCalls.single.name == 'connection.probe' &&
@@ -184,8 +201,6 @@ class AgentConnectionDiagnostics {
     }
     if (timeout <= Duration.zero ||
         idleTimeout <= Duration.zero ||
-        maxCatalogBytes <= 0 ||
-        maxModels <= 0 ||
         apiKey.contains('\r') ||
         apiKey.contains('\n')) {
       throw const ProviderException(ProviderError.invalidRequest);
@@ -241,9 +256,6 @@ class AgentConnectionDiagnostics {
           _ => ProviderError.httpFailure,
         }, statusCode: response.statusCode);
       }
-      if ((response.contentLength ?? 0) > maxCatalogBytes) {
-        throw const ProviderException(ProviderError.responseBudgetExceeded);
-      }
       final bytes = <int>[];
       while (await guarded(
         iterator.moveNext().timeout(
@@ -251,9 +263,6 @@ class AgentConnectionDiagnostics {
           onTimeout: () => throw const ProviderException(ProviderError.timeout),
         ),
       )) {
-        if (bytes.length + iterator.current.length > maxCatalogBytes) {
-          throw const ProviderException(ProviderError.responseBudgetExceeded);
-        }
         bytes.addAll(iterator.current);
       }
       return _decodeCatalog(utf8.decode(bytes));
@@ -286,10 +295,8 @@ class AgentConnectionDiagnostics {
       );
     }
     final data = json['data'] as List;
-    if (data.length > maxModels) {
-      throw const ProviderException(ProviderError.responseBudgetExceeded);
-    }
     final ids = <String>{};
+    final contextTokens = <String, int>{};
     for (final item in data) {
       if (item is! Map<String, Object?> || item['id'] is! String) {
         throw const AgentConnectionDiagnosticException(
@@ -297,24 +304,30 @@ class AgentConnectionDiagnostics {
         );
       }
       final id = item['id'] as String;
-      if (id.trim().isEmpty ||
-          id.length > 256 ||
-          id.codeUnits.any((unit) => unit < 32)) {
+      if (id.trim().isEmpty || id.codeUnits.any((unit) => unit < 32)) {
         throw const AgentConnectionDiagnosticException(
           AgentConnectionDiagnosticError.invalidModelsResponse,
         );
       }
       ids.add(id);
+      for (final key in ['context_length', 'context_window']) {
+        final value = item[key];
+        if (value == null) continue;
+        if (value is! int ||
+            value <= 0 ||
+            (contextTokens[id] != null && contextTokens[id] != value)) {
+          throw const AgentConnectionDiagnosticException(
+            AgentConnectionDiagnosticError.invalidModelsResponse,
+          );
+        }
+        contextTokens[id] = value;
+      }
     }
     final models = ids.toList()..sort();
-    // A completed catalog also fits the durable external receipt admission
-    // limit, so callers can page it without repeating a network request.
-    if (utf8.encode(jsonEncode(models)).length > 512 * 1024) {
-      throw const ProviderException(ProviderError.responseBudgetExceeded);
-    }
     return AgentModelCatalog(
       models: models,
       complete: json['has_more'] != true,
+      contextTokens: contextTokens,
     );
   }
 

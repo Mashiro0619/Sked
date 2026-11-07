@@ -6,6 +6,7 @@ import 'package:sked/agent/connection/agent_connection_manager.dart';
 import 'package:sked/agent/connection/agent_connection_diagnostics.dart';
 import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/tools/agent_control_tool_adapters.dart';
+import 'package:sked/agent/tools/model_configuration.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/models/agent_settings.dart';
 import 'package:sked/models/timetable_models.dart';
@@ -16,11 +17,13 @@ Matcher _problem(OperationErrorCode code) =>
     isA<OperationProblem>().having((error) => error.code, 'code', code);
 
 List<Map<String, Object?>> _configuredModels(String id) => [
-  AgentModelConfig(
-    id: id,
-    reasoningEfforts: const [AgentReasoningEffort.medium],
-    defaultReasoningEffort: AgentReasoningEffort.medium,
-  ).toJson(),
+  AgentModelToolConfiguration.arguments(
+    AgentModelConfig(
+      id: id,
+      reasoningEfforts: const [AgentReasoningEffort.medium],
+      defaultReasoningEffort: AgentReasoningEffort.medium,
+    ),
+  ),
 ];
 
 class _Diagnostics extends AgentConnectionDiagnostics {
@@ -135,7 +138,10 @@ void main() {
     final catalog = await h.call('connection.models.prepare');
     final fetched = await h.externalCommit(catalog);
     expect(fetched['effectStatus'], 'applied');
-    expect(fetched['detailsOmitted'], isTrue);
+    final details = fetched['effectResult'] as Map;
+    expect(details['models'], hasLength(1800));
+    expect(details['count'], 1800);
+    expect(details['pageTool'], 'connection.models.get');
     final retry = await h.call('connection.models.prepare', {
       'operationId': catalog['operationId'],
     });
@@ -193,19 +199,23 @@ void main() {
 
   test('model-list changes retain all enabled choices and their reasoning defaults', () async {
     final models = [
-      const AgentModelConfig(
-        id: 'model-a',
-        reasoningEfforts: [AgentReasoningEffort.medium],
-        defaultReasoningEffort: AgentReasoningEffort.medium,
-      ).toJson(),
-      const AgentModelConfig(
-        id: 'model-b',
-        reasoningEfforts: [
-          AgentReasoningEffort.medium,
-          AgentReasoningEffort.high,
-        ],
-        defaultReasoningEffort: AgentReasoningEffort.high,
-      ).toJson(),
+      AgentModelToolConfiguration.arguments(
+        const AgentModelConfig(
+          id: 'model-a',
+          reasoningEfforts: [AgentReasoningEffort.medium],
+          defaultReasoningEffort: AgentReasoningEffort.medium,
+        ),
+      ),
+      AgentModelToolConfiguration.arguments(
+        const AgentModelConfig(
+          id: 'model-b',
+          reasoningEfforts: [
+            AgentReasoningEffort.medium,
+            AgentReasoningEffort.high,
+          ],
+          defaultReasoningEffort: AgentReasoningEffort.high,
+        ),
+      ),
     ];
     final plan = await h.call('connection.prepare', {
       'action': 'set',
@@ -218,7 +228,16 @@ void main() {
     expect(actual.model, 'model-b');
     expect(actual.defaultModelSelection!.wireReasoningEffort, 'high');
     final described = await h.call('connection.describe');
-    expect(described['models'], models);
+    expect(
+      (described['models'] as List)
+          .map(
+            (value) => AgentModelToolConfiguration.arguments(
+              AgentModelConfig.fromJson(value),
+            ),
+          )
+          .toList(),
+      models,
+    );
     expect(described['writableFields'], contains('models'));
     expect(actual.credentialRef, isNull);
   });
@@ -363,7 +382,7 @@ void main() {
         policy: OperationPolicy(enabled: true, mode: AgentPermissionMode.full),
       );
       await expectLater(
-        h.host.execute(
+        h.host.executeInternal(
           ProviderToolCall(
             id: 'cross',
             name: 'connection.prepare',

@@ -1,10 +1,7 @@
 import 'dart:convert';
 
-import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/agent/conversations/conversation_models.dart';
-import 'package:sked/agent/conversations/conversation_storage.dart';
-import 'package:sked/agent/conversations/conversation_storage_codec.dart';
 import 'package:sked/agent/history/conversation_history.dart';
 
 void main() {
@@ -39,32 +36,28 @@ void main() {
         ],
       );
 
-  test(
-    'v8 preserves ended redo as a terminal state without claiming completion',
-    () {
-      final source = archive(ConversationRedoPhase.abandoned).encode();
-      expect(jsonDecode(source)['version'], 8);
-      final restored = ConversationArchive.decode(source).conversations.single;
-      expect(restored.pendingRedo, isNull);
-      expect(restored.redoBatches.single.isComplete, isFalse);
-      expect(restored.redoBatches.single.isTerminal, isTrue);
-      expect(
-        restored.redoBatches.single.lastError,
-        'provider.incompleteResponse',
-      );
-    },
-  );
+  test('current archive preserves ended redo as a terminal state without claiming completion', () {
+    final source = archive(ConversationRedoPhase.abandoned).encode();
+    expect(jsonDecode(source)['version'], ConversationArchive.currentVersion);
+    final restored = ConversationArchive.decode(source).conversations.single;
+    expect(restored.pendingRedo, isNull);
+    expect(restored.redoBatches.single.isComplete, isFalse);
+    expect(restored.redoBatches.single.isTerminal, isTrue);
+    expect(
+      restored.redoBatches.single.lastError,
+      'provider.incompleteResponse',
+    );
+  });
 
-  test('v7 completed redo remains readable without adding an ended state', () {
+  test('retired redo archives are not loaded by the new store', () {
     final old = jsonDecode(
       archive(ConversationRedoPhase.completed).encode(),
     ) as Map<String, dynamic>;
     old['version'] = 7;
-    final restored = ConversationArchive.decode(jsonEncode(old))
-        .conversations
-        .single;
-    expect(restored.redoBatches.single.isComplete, isTrue);
-    expect(restored.pendingRedo, isNull);
+    expect(
+      () => ConversationArchive.decode(jsonEncode(old)),
+      throwsFormatException,
+    );
   });
 
   test('legacy version numbers cannot disguise the new terminal state', () {
@@ -81,35 +74,9 @@ void main() {
           jsonDecode(ConversationArchive().encode()) as Map<String, dynamic>;
       empty['version'] = version;
       expect(
-        ConversationArchive.decode(jsonEncode(empty)).conversations,
-        isEmpty,
+        () => ConversationArchive.decode(jsonEncode(empty)),
+        throwsFormatException,
       );
     }
-  });
-
-  test('a newer terminal-state archive blocks fallback to an older slot', () {
-    final old = encodeConversationSlot(
-      archive(ConversationRedoPhase.completed).encode(),
-      1,
-    );
-    final next = jsonDecode(
-      archive(ConversationRedoPhase.abandoned).encode(),
-    ) as Map<String, dynamic>;
-    next['version'] = ConversationArchive.currentVersion + 1;
-    final source = jsonEncode(next);
-    final future = jsonEncode({
-      'version': 1,
-      'revision': 1,
-      'checksum': sha256.convert(utf8.encode(source)).toString(),
-      'source': source,
-    });
-    expect(
-      () => decodeConversationSlots([old, future]),
-      throwsA(isA<ConversationStorageException>()),
-    );
-    expect(
-      () => decodeConversationSlots([future, old]),
-      throwsA(isA<ConversationStorageException>()),
-    );
   });
 }

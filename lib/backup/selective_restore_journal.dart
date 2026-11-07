@@ -78,9 +78,6 @@ class PersistentSelectiveRestoreJournal implements SelectiveRestoreJournal {
       'payload': payload,
       'digest': backupDigest(utf8.encode(payload ?? 'null')),
     });
-    if (utf8.encode(encoded).length > SelectiveBackupLimits.journalBytes) {
-      backupLimit('The restore journal exceeds its byte budget.');
-    }
     try {
       for (final slot in [(current.revision + 1) % 2, current.revision % 2]) {
         await _storage.writeSlot(slot, encoded);
@@ -120,9 +117,6 @@ class PersistentSelectiveRestoreJournal implements SelectiveRestoreJournal {
   for (final source in slots) {
     if (source == null) continue;
     try {
-      if (utf8.encode(source).length > SelectiveBackupLimits.journalBytes) {
-        backupLimit('The restore journal exceeds its byte budget.');
-      }
       final decoded = jsonDecode(source);
       if (decoded is Map &&
           decoded['version'] is int &&

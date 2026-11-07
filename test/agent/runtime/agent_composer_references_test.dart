@@ -322,75 +322,67 @@ void main() {
     expect(chats.saved.mode, AgentPermissionMode.plan);
   });
 
-  test('selected skill instructions remain in compacted requests after tool round trips', () async {
-    final conversation = await ready();
-    final reference = await createSkill(conversation.id);
-    final skill = await app.agent.knowledge.read(
-      KnowledgeKind.skill,
-      reference.skillId!,
-    );
-    await app.agent.updateComposerReferences(conversation.id, [reference]);
-    final owner = app.agent.runtime;
-    final runtime = AgentRuntimeController(
-      repository: app.agent.conversations,
-      provider: provider,
-      readSettings: () => app.agent.settings,
-      readApiKey: owner.readApiKey,
-      readTools: app.agent.tools.toolsFor,
-      executeTool: (call, scope, _) async {
-        scope.checkActive();
-        return {
-          'items': <Object?>[],
-          'detail': 'Discardable old query payload. ' * 50,
-        };
-      },
-      validateReferences: app.agent.validateComposerReferences,
-      prepareReferenceContext: owner.prepareReferenceContext,
-      readEnvironment: owner.readEnvironment,
-      readMaintenance: owner.readMaintenance,
-      onRunSettled: owner.onRunSettled,
-      onOpenSettings: () {},
-      limits: const AgentRuntimeLimits(
-        maxContextMessages: 6,
-        maxContextCharacters: 20000,
-      ),
-    );
-    addTearDown(runtime.dispose);
-    provider.respond = (_) => provider.requests.length <= 3
-        ? ProviderResponse(
-            text: '',
-            finishReason: 'tool_calls',
-            toolCalls: [
-              ProviderToolCall(
-                id: 'query-${provider.requests.length}',
-                name: 'events.list',
-                arguments: '{}',
-              ),
-            ],
-          )
-        : _done('The selected workflow remains available.');
-    await runtime.send(
-      conversation.id,
-      'Follow the selected workflow through all queries.',
-    );
-    expect(provider.requests, hasLength(4));
-    final checkpoint = provider.requests.last.messages.singleWhere(
-      (message) => message.text.startsWith('Earlier conversation checkpoint'),
-    );
-    expect(checkpoint.role, ProviderRole.user);
-    expect(checkpoint.text, contains(skill.body));
-    expect(checkpoint.text, contains(reference.skillVersion!));
-    expect(checkpoint.text, contains(reference.skillSha256!));
-    for (final request in provider.requests) {
-      expect(
-        request.messages.map((message) => message.text).join('\n'),
-        contains(skill.body),
+  test(
+    'selected skill instructions remain available after tool round trips',
+    () async {
+      final conversation = await ready();
+      final reference = await createSkill(conversation.id);
+      final skill = await app.agent.knowledge.read(
+        KnowledgeKind.skill,
+        reference.skillId!,
       );
-      expect(request.tools.map((tool) => tool.name), contains('events.list'));
-    }
-    expect(chats.saved.runs.single.tools, hasLength(3));
-    expect(runtime.state.value.runFor(conversation.id).errorMessage, isNull);
-  });
+      await app.agent.updateComposerReferences(conversation.id, [reference]);
+      final owner = app.agent.runtime;
+      final runtime = AgentRuntimeController(
+        repository: app.agent.conversations,
+        provider: provider,
+        readSettings: () => app.agent.settings,
+        readApiKey: owner.readApiKey,
+        readTools: app.agent.tools.toolsFor,
+        executeTool: (call, scope, _) async {
+          scope.checkActive();
+          return {
+            'items': <Object?>[],
+            'detail': 'Discardable old query payload. ' * 50,
+          };
+        },
+        validateReferences: app.agent.validateComposerReferences,
+        prepareReferenceContext: owner.prepareReferenceContext,
+        readEnvironment: owner.readEnvironment,
+        readMaintenance: owner.readMaintenance,
+        onRunSettled: owner.onRunSettled,
+        onOpenSettings: () {},
+      );
+      addTearDown(runtime.dispose);
+      provider.respond = (_) => provider.requests.length <= 3
+          ? ProviderResponse(
+              text: '',
+              finishReason: 'tool_calls',
+              toolCalls: [
+                ProviderToolCall(
+                  id: 'query-${provider.requests.length}',
+                  name: 'events.list',
+                  arguments: '{}',
+                ),
+              ],
+            )
+          : _done('The selected workflow remains available.');
+      await runtime.send(
+        conversation.id,
+        'Follow the selected workflow through all queries.',
+      );
+      expect(provider.requests, hasLength(4));
+      for (final request in provider.requests) {
+        expect(
+          request.messages.map((message) => message.text).join('\n'),
+          contains(skill.body),
+        );
+        expect(request.tools.map((tool) => tool.name), contains('events.list'));
+      }
+      expect(chats.saved.runs.single.tools, hasLength(3));
+      expect(runtime.state.value.runFor(conversation.id).errorMessage, isNull);
+    },
+  );
 
   test('same-generation renaming resolves the current label while retaining the resource identity', () async {
     final conversation = await ready();
@@ -505,13 +497,12 @@ void main() {
         } else {
           await app.agent.runtime.queueFollowUp(conversation.id, '');
         }
-        final queued = chats.saved.messages.singleWhere(
-          (message) => message.role == ConversationRole.notice,
-        );
-        expect(jsonDecode(queued.text)['kind'], 'agent_pending_input');
+        final queued = chats.saved.queuedInputs.single;
         expect(
-          jsonDecode(queued.text)['mode'],
-          steering ? 'steering' : 'followUp',
+          queued.mode,
+          steering
+              ? ConversationQueuedInputMode.steering
+              : ConversationQueuedInputMode.followUp,
         );
         expect(queued.contextReferences.single.toJson(), reference.toJson());
         expect(chats.saved.draftReferences, isEmpty);

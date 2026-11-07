@@ -31,6 +31,9 @@ const _ownerCleanup = [
   'drain-main-writes',
   'flush-layout',
   'release-owned-preferences',
+  'snapshot-agent-storage',
+  'close-agent-store',
+  'remove-agent-data',
 ];
 const _relevantSources = [
   'integration_test/agent_feature_journeys_test.dart',
@@ -51,6 +54,8 @@ const _relevantSources = [
   'lib/agent/agent_application.dart',
   'lib/agent/conversations/conversation_repository.dart',
   'lib/agent/conversations/conversation_models.dart',
+  'lib/agent/store/agent_store.dart',
+  'lib/agent/store/agent_database.dart',
   'lib/agent/ui/agent_conversation_view.dart',
   'lib/agent/ui/agent_knowledge_view.dart',
   'lib/agent/knowledge/knowledge_service.dart',
@@ -299,18 +304,22 @@ void _knowledgeState(Object? value, {required int revision}) {
   );
 }
 
-void _tab(Object? value, {required String kind, required bool accessible}) {
-  final tab = _map(value, '$kind tab');
+void _knowledgePage(
+  Object? value, {
+  required String kind,
+  required bool accessible,
+}) {
+  final tab = _map(value, '$kind child page');
   _require(
     tab['kind'] == kind &&
-        tab['tabIndex'] == (kind == 'memory' ? 3 : 2) &&
+        tab['childPage'] == true &&
         tab['addAction'] == 'knowledge-add-$kind' &&
         tab['addActionReachable'] == true &&
         tab['sameKnowledgeService'] == true,
-    'The actual $kind settings tab and enabled Add action were not reached.',
+    'The actual $kind settings child page and enabled Add action were not reached.',
   );
   _configuration(
-    _map(tab['configuration'], '$kind tab configuration'),
+    _map(tab['configuration'], '$kind child page configuration'),
     accessible,
     observed: true,
   );
@@ -352,16 +361,21 @@ void _settings(Object? value, bool accessible) {
   final settings = _map(value, 'Standalone settings');
   _require(
     settings['openedFrom'] == 'agent-conversation-menu / agent-settings' &&
-        settings['standaloneRoute'] == true &&
+        settings['overviewRoute'] == true &&
+        settings['pageHierarchy'] == 'overview / knowledge / record' &&
         settings['sameApplication'] == true,
-    'Settings were not opened through the actual Agent menu and standalone route.',
+    'Settings were not opened through the actual Agent menu and overview route.',
   );
   _configuration(
     _map(settings['configuration'], 'Settings configuration'),
     accessible,
     observed: true,
   );
-  _tab(settings['memoryTab'], kind: 'memory', accessible: accessible);
+  _knowledgePage(
+    settings['memoryPage'],
+    kind: 'memory',
+    accessible: accessible,
+  );
 }
 
 Map<String, Object?> _runtimeCleanup(Object? value) {
@@ -484,8 +498,12 @@ void _validateKnowledge(Object? value) {
         entry['initialDraft'] == 'Long conversation initial draft' &&
         entry['sameApplicationAndRepository'] == true &&
         entry['selectedId'] == 'native-long-history' &&
-        entry['host'] == 'AgentPage' &&
-        entry['entry'] == 'home side navigation / Agent',
+        entry['host'] == 'main shell / embedded AgentPage / shared resources' &&
+        entry['entry'] == 'main shell navigation / Agent' &&
+        entry['hasEarlierMessages'] == true &&
+        entry['loadedMessageCount'] is int &&
+        (entry['loadedMessageCount'] as int) > 0 &&
+        (entry['loadedMessageCount'] as int) < 512,
     'The actual product entry did not retain the expected host, owner, archive and draft.',
   );
   _digest(entry['mainSha256'], 'Workspace at product entry');
@@ -564,7 +582,7 @@ void _validateKnowledge(Object? value) {
     accessible,
     observed: true,
   );
-  _tab(reopened['skillsTab'], kind: 'skill', accessible: accessible);
+  _knowledgePage(reopened['skillsPage'], kind: 'skill', accessible: accessible);
   _require(
     reopened['skillCount'] is int && (reopened['skillCount'] as int) > 0,
     'The Skills catalog was not available.',
@@ -690,8 +708,12 @@ void _validateFeatureBase(
         entry['initialDraft'] == 'Long conversation initial draft' &&
         entry['sameApplicationAndRepository'] == true &&
         entry['selectedId'] == 'native-long-history' &&
-        entry['host'] == 'AgentPage' &&
-        entry['entry'] == 'home side navigation / Agent',
+        entry['host'] == 'main shell / embedded AgentPage / shared resources' &&
+        entry['entry'] == 'main shell navigation / Agent' &&
+        entry['hasEarlierMessages'] == true &&
+        entry['loadedMessageCount'] is int &&
+        (entry['loadedMessageCount'] as int) > 0 &&
+        (entry['loadedMessageCount'] as int) < 512,
     'The formal native entry did not retain its expected host, owners, archive and draft.',
   );
   _digest(entry['mainSha256'], 'Workspace at product entry');
