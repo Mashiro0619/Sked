@@ -105,13 +105,13 @@ OpenHands 将可调用技能的紧凑名称和用途放进模型上下文，正�
 
 Sked 应保证目录完整可遍历、缺失或截断可见，统一技能加载的成功与失败结果。现有 24 项内置技能适合评估在初始上下文提供紧凑目录，由模型按任务选择，再按需披露正文和工具。动态工具集需要考虑发现结果重复、曝光上限及已使用工具的续传兼容。
 
-#### 在发送前规划完整请求预算，并保留收尾空间
+#### 历史参考：请求预算与收尾空间（Sked 已撤销此方案）
 
 OpenCode 每轮发送前估算并按需压缩，计量结合最近实际 usage、新增消息、系统提示、工具定义和 schema，阈值关联模型上下文窗口。Cherry Studio 进一步将请求实际声明的输出预留扣除后，作为输入、附件和工具输出预算的共同基准。[OpenCode 请求循环](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/core/src/session/runner/llm.ts#L232-L313)、[完整输入计量](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/core/src/session/compaction.ts#L1129-L1243)、[Cherry 输入空间](https://github.com/CherryHQ/cherry-studio/blob/87d4851181ed801cde36cceb7aea4f7b5cc4ee3b/src/main/ai/contextBuild/resolveInputRoom.ts)
 
-初次研究时，Sked 的字符检查、UTF-8 请求上限、单请求 32768 token 限制和累计运行预算分别处理，部分拒绝发生在远端响应之后。2026-11-07 已取消普通 Agent 的 Token 硬限制及默认输出上限，实际用量继续统计，工具发现结果按当前公开定义去重。请求字节计量与完整工具组压缩继续沿传输边界执行。
+初次研究时，Sked 的字符检查、UTF-8 请求上限、单请求 32768 token 限制和累计运行预算分别处理，部分拒绝发生在远端响应之后。2026-11-07 已取消普通 Agent 的 Token 硬限制及默认输出上限，实际用量继续统计，工具发现结果按当前公开定义去重。随后按用户要求撤销普通请求的次数、时限、固定请求字节门槛与机械压缩；当前活动历史和已确认决定完整传递。
 
-OpenCode 在配置的最后一步要求总结并禁用工具，其测试验证模型继续请求工具也不会执行。Sked 应在总额度内预留只读收尾轮，预算已耗尽时从已保存回执生成确定性阶段结果。[收尾控制](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/core/src/session/runner/llm.ts#L252-L273)、[最后一步回归](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/core/test/session-runner.test.ts#L5717-L5747)、[上下文 GUI](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/gui-plugins/src/context/indicator.tsx#L47-L74)
+OpenCode 在配置的最后一步要求总结并禁用工具，其测试验证模型继续请求工具也不会执行。曾建议 Sked 在总额度内预留只读收尾轮；该建议已于 2026-11-07 按用户要求撤销，普通请求不预留禁用工具的强制收尾轮。[收尾控制](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/core/src/session/runner/llm.ts#L252-L273)、[最后一步回归](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/core/test/session-runner.test.ts#L5717-L5747)、[上下文 GUI](https://github.com/anomalyco/opencode/blob/a7515ce7e6cb67043e335b80f140c3bb241439dc/packages/gui-plugins/src/context/indicator.tsx#L47-L74)
 
 #### 压缩后仍应保有可继续的任务状态
 
@@ -125,8 +125,8 @@ OpenCode 的 checkpoint 明确保留目标、约束、决定、工作状态和�
 
 1. **固定失败轨迹。** 收录技能漏项、自然语言零命中、技能失败显示完成、重复无效调用、日期筛选契约、附件压缩与请求字节超限。覆盖正确后继请求以及取消、保存失败和未知写入结果。
 2. **补齐发现和结果契约。** 完整技能目录、准确成功/失败状态、按资源类型公开参数，以及结构化字段错误。预先定义工具结果的宿主计量和 GUI 映射。
-3. **接入有限纠错和停滞检测。** 区分相同错误、真实修正进展、正常查询、成功操作和用户新输入，恢复次数独立计量，等待期间阻止后续动作。
-4. **统一预算与任务 checkpoint。** 发请求前统计全部输入，附件与历史工具组可分别保留或压缩，保存已确认决定，收尾输出纳入总预算。
+3. **保留纠错和停滞提示。** 区分相同错误、真实修正进展、正常查询、成功操作和用户新输入，不按固定错误次数终止普通任务。
+4. **历史预算与压缩建议已撤销。** 当前普通任务完整保留活动上下文、附件和已确认决定，不按固定额度强制压缩或收尾。
 5. **补任务质量验收。** 保存自然语言任务、合成初始数据、期待终态和失败轨迹，记录完成率、无效调用数、发现轮数、token 与中断原因。真实模型执行继续遵循 R6 的独立授权与验收安排。
 
 研究时同时核对参考实现的适用边界。Cherry 的通用 `onError` 返回 retry 目前只记录日志后终止，Cline 的 smoke CI 正在迁移，参考仓库中的评测指标也需独立核算。采用上述机制时，以实际调用链和能捕获反例的测试作为依据。[Cherry 错误终态](https://github.com/CherryHQ/cherry-studio/blob/87d4851181ed801cde36cceb7aea4f7b5cc4ee3b/src/main/ai/runtime/aiSdk/Agent.ts#L414-L429)、[Cline 评测状态](https://github.com/cline/cline/blob/ea16751d6ae3ae1e443681994906bf29cbc45039/evals/README.md#L103-L109)
@@ -276,9 +276,9 @@ provider 层独立：[models.ts](https://github.com/earendil-works/pi/blob/e7a0d
 
 以概念接口表述，不宣称已有代码：
 
-1. 单例 `AgentSettings`：内置 Agent 的启用/显示开关、公共 instructions、模型连接配置引用、三选一的权限模式和运行预算。模型连接可配置，工具与 Skills 由这一内置 Agent 共享。
+1. 单例 `AgentSettings`：内置 Agent 的启用/显示开关、公共 instructions、模型连接配置引用、三选一的权限模式和历史保留偏好。模型连接可配置，工具与 Skills 由这一内置 Agent 共享。
 2. `Conversation` / `Thread`：同一 Agent 下的会话，保存 messages、inputQueue、run 状态、简洁 summary 与工具回执索引；支持新建、切换、重命名和删除会话。历史记录保留每次运行使用的配置版本，恢复时以用户当前选择的权限模式控制后续操作。手机端在独立完整页面组织会话与执行过程。
-3. `ModelProvider.stream(request)`：统一 text/tool-call/usage/error/finish 事件；仅完整 tool-call 才执行；支持 abort、超时、有限重试。
+3. `ModelProvider.stream(request)`：统一 text/tool-call/usage/error/finish 事件；仅完整且通过宿主校验的 tool-call 才执行；支持 abort。普通请求不设默认时限，独立诊断可显式设置期限。
 4. `ToolRegistry`：稳定 name+version、输入/输出 schema、操作类型、目标资源、并发属性、执行函数与 result UI。模型只能调用本次明确暴露的工具。
 5. `CommandGateway`：查询、校验/预览 change set、应用、按 commandId 获取结果、撤销。所有手工 UI 与 agent 写入最终走同一层。
 6. `RunJournal`：accepted→validated→executing→committed/failed/cancelled/unknown；记录 conversationId、配置版本、权限模式、询问模式下的确认回执、domain revision 和 effect 状态，不将“模型说完成”视为保存成功。

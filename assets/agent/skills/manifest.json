@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "packVersion": "1.0.2",
+  "packVersion": "1.0.3",
   "runtimeContractVersion": 1,
   "toolApiCompatibility": ">=1.0.0 <2.0.0",
   "skills": [
@@ -575,18 +575,18 @@
     },
     {
       "id": "configure-agent-connection",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "title": "配置内置Agent",
-      "summary": "管理共享连接与预算并由宿主安全处理凭据和执行模式。",
+      "summary": "管理共享连接、指令与历史保留，并由宿主安全处理凭据和执行模式。",
       "triggers": [
         "API连接",
         "选择模型",
-        "Agent预算",
+        "Agent指令",
         "模型密钥",
         "配置Agent"
       ],
       "asset": "configure-agent-connection/SKILL.md",
-      "contentSha256": "e134b8ac8027bbe10054c585823a550df8a7e13b14518397dddea95744fd36d9",
+      "contentSha256": "c86e886d5785a06af5c26bd8d73a3d7fb45f3363b2f967725291e4b9542891ac",
       "sourceKinds": [],
       "requiredTools": [
         "connection.describe",

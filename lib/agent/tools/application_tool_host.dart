@@ -820,7 +820,7 @@ class ApplicationToolHost {
     );
     _add(
       'agent_settings.prepare',
-      'Prepare shared Agent instruction, budget or retention preferences. Uses agent.* keys and the ordinary mutation.commit permission gate; cannot change credentials or permission mode.',
+      'Prepare shared Agent instructions or history retention preferences. Uses agent.* keys and the ordinary mutation.commit permission gate; cannot change credentials or permission mode.',
       {'edits': _settingEditsSchema, 'operationId': _stringSchema},
       (args, scope, _) async {
         _keys(args, {'edits', 'operationId'});

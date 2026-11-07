@@ -1,14 +1,14 @@
 ---
 id: configure-agent-connection
-version: 1.0.2
-summary: 管理共享连接与预算并由宿主安全处理凭据和执行模式。
+version: 1.0.3
+summary: 管理共享连接、指令与历史保留，并由宿主安全处理凭据和执行模式。
 ---
 
 # 配置内置Agent
 
 ## 适用任务
 
-管理共享连接与预算并由宿主安全处理凭据和执行模式。 触发示例：API连接、选择模型、Agent预算、模型密钥、配置Agent。
+管理共享连接、指令与历史保留，并由宿主安全处理凭据和执行模式。 触发示例：API连接、选择模型、Agent指令、模型密钥、配置Agent。
 
 ## 何时不使用
 
@@ -24,9 +24,9 @@ summary: 管理共享连接与预算并由宿主安全处理凭据和执行模�
 
 ## 操作步骤
 
-1. 读取单个Agent的共享连接、协议、能力和预算描述，不创建新的Agent身份。
+1. 读取单个Agent的共享连接、协议、能力、指令与历史保留设置，不创建新的Agent身份。
 2. 明确模型、服务支持的具体思考档位、默认档位与目的地。启用新模型时提供完整 `models` 目录，包含非空 `reasoningEfforts` 和其中一个 `defaultReasoningEffort`，不能只提供模型 ID；没有自动档位，不猜测模型能力。获取模型列表只得到名称，不能据此推断档位。密钥通过宿主安全输入handle提供；连接与凭据引用绑定，不从会话索取明文密钥。
-3. 连接计划通过 external.commit 提交，共享指令与预算计划通过 mutation.commit 提交；按各自回执核对。配置在运行安全边界生效，模型不能修改自身权限；接口保存不等于连接或工具调用测试已通过。明确要求诊断时用 connection.test.prepare 或 connection.models.prepare，再经 external.commit 发送合成请求；模型列表分页通过 connection.models.get 读取原回执，不重复联网。只有收到有效合成工具调用才说明本次观察到工具能力。
+3. 连接计划通过 external.commit 提交，共享指令与历史保留计划通过 mutation.commit 提交；按各自回执核对。配置在运行安全边界生效，模型不能修改自身权限；接口保存不等于连接或工具调用测试已通过。明确要求诊断时用 connection.test.prepare 或 connection.models.prepare，再经 external.commit 发送合成请求；模型列表分页通过 connection.models.get 读取原回执，不重复联网。只有收到有效合成工具调用才说明本次观察到工具能力。
 4. 只读计划模式仅查询、分析与准备；每次修改前询问模式由宿主对本次完整计划询问；完全权限按有效授权连续执行。技能不自设权限，也不加固定额外审批。
 
 ## 业务注意事项
