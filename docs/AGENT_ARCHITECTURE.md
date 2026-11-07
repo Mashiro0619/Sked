@@ -200,6 +200,10 @@ Future<PreparedMutation> prepareUndo(ReceiptId receiptId);
 
 `AppData` v8 为每个已启用模型保存最大上下文 Token 数、服务明确报告的窗口、自动压缩触发 Token 数和开关。用户窗口优先于服务元数据；窗口未知时保持未设置。自动触发默认取已知窗口的 80%，显式阈值可在未知窗口时单独填写；关闭自动压缩保留配置值。旧模型记录升级时不补猜测值，连接、凭据引用和思考档位保持原值。
 
+单次业务调用由 [OperationExecutor](../lib/agent/operations/operation_executor.dart) 组织领域准备、用户决定、保存和结果。准备完成后先保存模型调用与宿主操作身份的关联，再接受业务写入；关联保存失败或准备期间取消时，不执行修改。计划模式只返回预览，确认模式在原调用中等待批准，完全权限直接保存。各阶段沿用同一模型调用身份。
+
+[ToolOutcome](../lib/agent/operations/tool_outcome.dart) 区分查询、预览、已保存、取消、可纠正错误与待核对结果。回执尚未确认时优先报告待核对，不能被副作用的失败标签覆盖；主库已保存而通知投递无法观测时，业务结果仍为已保存。
+
 ### 6.3 跨存储及平台副作用
 
 学校站点、凭据、设备偏好、学校网页会话、系统通知有各自存储与生命周期。普通主库批事务不覆盖它们。复用现有备份恢复 journal、维护预约和 quiescence；新增步骤状态及可恢复 effect 记录，按实际结果标记 `dataCommitted`、`effectsPending`、`partial` 或 `outcomeUnknown`。
