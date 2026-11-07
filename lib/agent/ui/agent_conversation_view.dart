@@ -2112,6 +2112,15 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                     text,
                     key: ValueKey('agent-message-${message.id}'),
                   ),
+                  if (message.contextReferences.isNotEmpty)
+                    _readonlyReferences(
+                      message.contextReferences,
+                      key: ValueKey((
+                        'queued-references',
+                        conversation.id,
+                        message.id,
+                      )),
+                    ),
                   if (message.attachmentIds.isNotEmpty &&
                       widget.binaryAttachments != null)
                     _messageAttachments(conversation, message),
