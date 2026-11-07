@@ -161,8 +161,6 @@ class ExternalOperationCoordinator {
     _localGeneration = _id();
   }
 
-  static const planLifetime = Duration(minutes: 30);
-  static const maxPlans = 32;
   final AppSession _session;
   final Future<void> Function() _settlePendingChanges;
   final int Function() _dataSessionRevision;
@@ -270,15 +268,6 @@ class ExternalOperationCoordinator {
       validate();
     }
     final now = _clock().toUtc();
-    _plans.removeWhere(
-      (_, plan) => now.difference(plan.createdAt) > planLifetime,
-    );
-    if (_plans.length >= maxPlans) {
-      throw const OperationProblem(
-        OperationErrorCode.busy,
-        'Too many pending plans; finish or discard one first.',
-      );
-    }
     final operation = ExternalOperationContext._(
       operationId: resolvedId,
       action: action,
@@ -360,8 +349,7 @@ class ExternalOperationCoordinator {
     }
     void checkPlan() {
       scope.checkMutation(planId: planId, approval: approval);
-      if (_clock().toUtc().difference(prepared.createdAt) > planLifetime ||
-          generation != prepared.generation ||
+      if (generation != prepared.generation ||
           _dataSessionRevision() != prepared._sessionRevision) {
         _expired();
       }
@@ -677,13 +665,6 @@ class ExternalOperationCoordinator {
 
   Never _saveProblem(Object error) {
     if (error is OperationProblem) throw error;
-    if (error is ApplicationLedgerRecoveryRequiredException) {
-      throw const OperationProblem(
-        OperationErrorCode.busy,
-        'The operation ledger is full; recover unresolved external operations before adding another receipt.',
-        field: 'applicationLedger',
-      );
-    }
     if (error is AppMutationConflictException) _conflict();
     if (error is AppMutationBusyException ||
         error is AppBackupRestoreInProgressException) {

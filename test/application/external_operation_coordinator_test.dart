@@ -782,25 +782,29 @@ void main() {
     );
   });
 
-  test('expired and discarded handles cannot commit an effect', () async {
-    final expired = h.prepare();
-    h.clock = h.clock.add(const Duration(hours: 1));
-    await expectLater(
-      h.commit(expired),
-      throwsA(_problem(OperationErrorCode.expired)),
-    );
-    final discarded = h.prepare();
-    h.coordinator.discard(discarded.id);
-    await expectLater(
-      h.commit(discarded),
-      throwsA(_problem(OperationErrorCode.expired)),
-    );
-    final invalidated = h.prepare();
-    h.coordinator.invalidate();
-    await expectLater(
-      h.commit(invalidated),
-      throwsA(_problem(OperationErrorCode.expired)),
-    );
-    expect(h.storage.saves, 0);
-  });
+  test(
+    'discarded handles cannot commit and elapsed time preserves a valid effect',
+    () async {
+      final expired = h.prepare();
+      h.clock = h.clock.add(const Duration(hours: 1));
+      expect(
+        (await h.commit(expired)).effect.state,
+        ExternalEffectState.applied,
+      );
+      h.externalVersion = 0;
+      final discarded = h.prepare();
+      h.coordinator.discard(discarded.id);
+      await expectLater(
+        h.commit(discarded),
+        throwsA(_problem(OperationErrorCode.expired)),
+      );
+      final invalidated = h.prepare();
+      h.coordinator.invalidate();
+      await expectLater(
+        h.commit(invalidated),
+        throwsA(_problem(OperationErrorCode.expired)),
+      );
+      expect(h.effects, 1);
+    },
+  );
 }

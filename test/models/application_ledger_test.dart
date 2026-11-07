@@ -43,100 +43,46 @@ void main() {
   });
 
   for (final state in ['pending', 'unknown']) {
-    test(
-      'unresolved external $state receipt blocks capacity eviction until recovered',
-      () {
-        var ledger = ApplicationLedger(generation: _generation).append(
-          _receipt(1, result: {'kind': 'external', 'effectStatus': state}),
-        );
-        for (var i = 2; i <= 128; i++) {
-          ledger = ledger.append(_receipt(i));
-        }
-        expect(
-          () => ledger.append(_receipt(129)),
-          throwsA(isA<ApplicationLedgerRecoveryRequiredException>()),
-        );
-        final recovered = ledger.updateReceipt(
-          _receipt(1, result: {'kind': 'external', 'effectStatus': 'applied'}),
-        );
-        final appended = recovered.append(_receipt(129));
-        expect(appended.receipts.first.sequence, 2);
-        expect(appended.nextSequence, 130);
-        expect(ledger.receipts.first.result['effectStatus'], state);
-      },
-    );
+    test('unresolved $state receipt remains readable beyond old capacity', () {
+      var ledger = ApplicationLedger(generation: _generation).append(
+        _receipt(1, result: {'kind': 'external', 'effectStatus': state}),
+      );
+      for (var i = 2; i <= 130; i++) {
+        ledger = ledger.append(_receipt(i));
+      }
+      expect(ledger.receipts, hasLength(130));
+      expect(ledger.receiptFor('op-1')!.result['effectStatus'], state);
+      expect(ledger.nextSequence, 131);
+      final recovered = ledger.updateReceipt(
+        _receipt(1, result: {'kind': 'external', 'effectStatus': 'applied'}),
+      );
+      expect(recovered.receipts, hasLength(130));
+      expect(recovered.receiptFor('op-1')!.result['effectStatus'], 'applied');
+      expect(
+        ApplicationLedger.fromJson(jsonDecode(jsonEncode(recovered.toJson()))),
+        recovered,
+      );
+    });
   }
 
-  test('byte budget cannot evict an unresolved external receipt', () {
-    var ledger = ApplicationLedger(generation: _generation).append(
-      _receipt(1, result: {'kind': 'external', 'effectStatus': 'pending'}),
-    );
-    final payload = 'x' * (900 * 1024);
-    for (var i = 2; i <= 5; i++) {
-      ledger = ledger.append(_receipt(i, result: {'payload': payload}));
-    }
-    expect(
-      () => ledger.append(_receipt(6, result: {'payload': payload})),
-      throwsA(isA<ApplicationLedgerRecoveryRequiredException>()),
-    );
-    expect(
-      () => ledger.updateReceipt(_receipt(1, result: {'payload': payload})),
-      throwsFormatException,
-    );
-    final recovered = ledger.updateReceipt(
-      _receipt(1, result: {'kind': 'external', 'effectStatus': 'failed'}),
-    );
-    final appended = recovered.append(
-      _receipt(6, result: {'payload': payload}),
-    );
-    expect(appended.receipts.first.sequence, 3);
-    expect(appended.nextSequence, 7);
-  });
-
-  test('receipt history also obeys a byte budget without truncating retained records', () {
-    final payload = 'x' * (900 * 1024);
+  test('large receipts and the complete history survive storage roundtrip', () {
+    final payload = 'x' * (1100 * 1024);
     var ledger = ApplicationLedger(generation: _generation);
     for (var i = 1; i <= 6; i++) {
       ledger = ledger.append(_receipt(i, result: {'payload': payload}));
     }
+    expect(ledger.receipts, hasLength(6));
+    expect(ledger.receipts.first.sequence, 1);
     expect(ledger.nextSequence, 7);
-    expect(ledger.receipts, hasLength(4));
-    expect(ledger.receipts.first.sequence, 3);
-    expect(ledger.receipts.last.result['payload'], payload);
+    final decoded = ApplicationLedger.fromJson(
+      jsonDecode(jsonEncode(ledger.toJson())),
+    );
+    expect(decoded, ledger);
     expect(
-      () => ApplicationLedger(
-        generation: _generation,
-        nextSequence: 7,
-        receipts: [
-          for (var i = 1; i <= 6; i++)
-            _receipt(i, result: {'payload': payload}),
-        ],
-      ),
-      throwsFormatException,
+      decoded.receipts.every((item) => item.result['payload'] == payload),
+      isTrue,
     );
   });
-
-  test(
-    'append preserves generation and retains exactly the latest 128 receipts',
-    () {
-      var ledger = ApplicationLedger(generation: _generation);
-      expect(ledger.nextSequence, 1);
-      for (var i = 1; i <= 130; i++) {
-        ledger = ledger.append(_receipt(i));
-      }
-      expect(ledger.generation, _generation);
-      expect(ledger.nextSequence, 131);
-      expect(ledger.receipts.length, 128);
-      expect(ledger.receipts.first.sequence, 3);
-      expect(ledger.receiptFor('op-1'), isNull);
-      expect(ledger.receiptFor('op-130')?.sequence, 130);
-      final decoded = ApplicationLedger.fromJson(
-        jsonDecode(jsonEncode(ledger.toJson())),
-      );
-      expect(decoded, ledger);
-      expect(decoded.hashCode, ledger.hashCode);
-    },
-  );
 
   test('append rejects duplicate ids and out of order sequences', () {
     final ledger = ApplicationLedger(generation: _generation)
@@ -146,12 +92,11 @@ void main() {
     expect(() => ledger.receipts.clear(), throwsUnsupportedError);
   });
 
-  test('decode rejects duplicate ids, gaps, unordered or excess receipts', () {
+  test('decode rejects duplicate ids, gaps and unordered receipts', () {
     for (final receipts in [
       [_receipt(1).toJson(), _receipt(2, id: 'op-1').toJson()],
       [_receipt(2).toJson(), _receipt(1).toJson()],
       [_receipt(1).toJson(), _receipt(3).toJson()],
-      [for (var i = 1; i <= 129; i++) _receipt(i).toJson()],
     ]) {
       expect(
         () => ApplicationLedger.fromJson({
@@ -248,28 +193,22 @@ void main() {
     );
   });
 
-  test(
-    'oversized and deeply nested JSON is rejected without truncating undo',
-    () {
-      expect(
-        () => _receipt(1, result: {'text': 'x' * operationReceiptMaxJsonBytes}),
-        throwsFormatException,
-      );
-      Object? value;
-      for (var i = 0; i <= operationReceiptMaxJsonDepth; i++) {
-        value = [value];
-      }
-      expect(
-        () => _receipt(1, result: {'nested': value}),
-        throwsFormatException,
-      );
-      expect(
-        () => _receipt(
-          1,
-          result: {'values': List.filled(operationReceiptMaxJsonNodes, null)},
-        ),
-        throwsFormatException,
-      );
-    },
-  );
+  test('large and nested JSON retains all result and undo content', () {
+    Object? nested = 'leaf';
+    for (var i = 0; i < 64; i++) {
+      nested = [nested];
+    }
+    final receipt = _receipt(
+      1,
+      result: {
+        'text': 'x' * (1024 * 1024 + 1),
+        'nested': nested,
+        'values': List.filled(100001, null),
+      },
+    );
+    expect((receipt.result['text'] as String).length, 1024 * 1024 + 1);
+    expect(receipt.result['nested'], nested);
+    expect(receipt.result['values'], hasLength(100001));
+    expect(receipt.undo, {'type': 'restore', 'id': 'calendar'});
+  });
 }

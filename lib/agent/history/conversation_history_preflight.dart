@@ -253,11 +253,6 @@ class ConversationHistoryPreflight {
       throw const ConversationHistoryException(ConversationHistoryError.busy);
     }
     final bindings = [for (final turn in affectedTurns) ...turn.operations];
-    if (bindings.length > applicationLedgerMaxReceipts) {
-      throw const ConversationHistoryException(
-        ConversationHistoryError.budgetExceeded,
-      );
-    }
     final bindingKeys = {
       for (final binding in bindings) (binding.runId, binding.toolCallId),
     };

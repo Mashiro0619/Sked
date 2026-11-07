@@ -115,7 +115,7 @@ void main() {
         'maxTotalTokens': 100000,
       });
       expect(first['applicationLedger'], isNull);
-      expect(first['schemaVersion'], 6);
+      expect(first['schemaVersion'], 7);
       expect(appDataMigrationRunner.run(first), first);
       final decoded = AppData.decodeStorageSnapshot(jsonEncode(old));
       expect(decoded.agentSettings, const AgentSettings());

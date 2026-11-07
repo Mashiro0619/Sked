@@ -141,8 +141,6 @@ class MutationCoordinator {
     _localGeneration = _id();
   }
 
-  static const planLifetime = Duration(minutes: 30);
-  static const maxPlans = 32;
   final AppSession _session;
   final Future<void> Function() _settlePendingChanges;
   final int Function() _dataSessionRevision;
@@ -323,13 +321,6 @@ class MutationCoordinator {
     scope.checkActive();
     _requireKnownStorage();
     final immutableCommand = immutableMutationJson(command);
-    if (utf8.encode(jsonEncode(immutableCommand)).length >
-        ResourceMutationCompiler.maxInputBytes) {
-      throw const OperationProblem(
-        OperationErrorCode.invalidArgument,
-        'Mutation arguments exceed the byte budget.',
-      );
-    }
     final commandDigest = mutationDigest(immutableCommand);
     final baseline = _session.data;
     final ledger = baseline.applicationLedger;
@@ -494,7 +485,6 @@ class MutationCoordinator {
     if (batchId.isEmpty ||
         batchId.length > 256 ||
         ids.isEmpty ||
-        ids.length > applicationLedgerMaxReceipts ||
         ids.toSet().length != ids.length) {
       throw const OperationProblem(
         OperationErrorCode.invalidArgument,
@@ -592,15 +582,6 @@ class MutationCoordinator {
     _MutationRebase? rebase,
   }) {
     final now = _clock().toUtc();
-    _plans.removeWhere(
-      (_, plan) => now.difference(plan.createdAt) > planLifetime,
-    );
-    if (_plans.length >= maxPlans) {
-      throw const OperationProblem(
-        OperationErrorCode.busy,
-        'Too many pending plans; finish or discard one first.',
-      );
-    }
     final identity = _operationIdentity(receipt.operationId);
     final plan = PreparedMutation._(
       id: _id(),
@@ -655,8 +636,7 @@ class MutationCoordinator {
     }
     void checkPlan() {
       scope.checkMutation(planId: planId, approval: approval);
-      if (_clock().toUtc().difference(prepared.createdAt) > planLifetime ||
-          generation != prepared.generation ||
+      if (generation != prepared.generation ||
           _dataSessionRevision() != prepared._sessionRevision) {
         _expired();
       }
@@ -737,11 +717,6 @@ class MutationCoordinator {
       throw const OperationProblem(
         OperationErrorCode.conflict,
         'Finish or save the current editor, then prepare this change again.',
-      );
-    } on ApplicationLedgerRecoveryRequiredException {
-      throw const OperationProblem(
-        OperationErrorCode.busy,
-        'Resolve pending external operations before adding more receipts.',
       );
     } on AppMutationBusyException {
       throw const OperationProblem(

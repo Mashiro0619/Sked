@@ -1160,27 +1160,31 @@ void main() {
     );
   });
 
-  test('maintenance reservations and expired plans cannot reuse prior authorization', () async {
-    final first = coordinator.prepare(scope: scope, resources: [createEvent()]);
-    sessionRevision++;
-    await expectLater(
-      coordinator.commit(planId: first.id, scope: scope),
-      throwsA(problem(OperationErrorCode.expired)),
-    );
-    final second = coordinator.prepare(
-      scope: scope,
-      resources: [createEvent()],
-    );
-    clock = clock.add(const Duration(hours: 1));
-    await expectLater(
-      coordinator.commit(planId: second.id, scope: scope),
-      throwsA(problem(OperationErrorCode.expired)),
-    );
-    expect(storage.saves, 0);
-  });
+  test(
+    'maintenance changes invalidate candidates while elapsed time does not',
+    () async {
+      final first = coordinator.prepare(
+        scope: scope,
+        resources: [createEvent()],
+      );
+      sessionRevision++;
+      await expectLater(
+        coordinator.commit(planId: first.id, scope: scope),
+        throwsA(problem(OperationErrorCode.expired)),
+      );
+      final second = coordinator.prepare(
+        scope: scope,
+        resources: [createEvent()],
+      );
+      clock = clock.add(const Duration(hours: 1));
+      final result = await coordinator.commit(planId: second.id, scope: scope);
+      expect(result.receipt.operationId, second.operationId);
+      expect(storage.saves, 1);
+    },
+  );
 
   test(
-    'evicted operation IDs are expired and cannot be replayed as new creates',
+    'old operation identities remain recorded and reject changed commands',
     () {
       final generation = coordinator.generation;
       final oldId = '$generation/1/${id()}';
@@ -1207,7 +1211,7 @@ void main() {
           resources: [createEvent()],
           operationId: oldId,
         ),
-        throwsA(problem(OperationErrorCode.expired)),
+        throwsA(problem(OperationErrorCode.duplicateMismatch)),
       );
       expect(storage.saves, 0);
     },

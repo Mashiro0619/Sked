@@ -8,7 +8,7 @@ import 'migration_runner.dart';
 /// 1. 把这里的常量 +1。
 /// 2. 在 [appDataMigrations] 注册新的 `from: 旧版本, to: 新版本` 实现。
 /// 3. 编写对应的单元测试，确认旧数据能升级、新数据 round-trip 保版本号。
-const int appDataCurrentSchemaVersion = 6;
+const int appDataCurrentSchemaVersion = 7;
 
 const _legacyThemeFieldKeys = <String>{
   'themeMode',
@@ -190,12 +190,26 @@ class AppDataMigrationV5ToV6 extends Migration {
   }
 }
 
+/// Version 7 keeps every business receipt. Older readers enforce an obsolete
+/// ledger capacity, so the format version prevents them reopening a larger
+/// ledger as if it were a corrupt v6 snapshot.
+class AppDataMigrationV6ToV7 extends Migration {
+  const AppDataMigrationV6ToV7();
+  @override
+  int get from => 6;
+  @override
+  int get to => 7;
+  @override
+  Map<String, dynamic> apply(Map<String, dynamic> json) => {...json};
+}
+
 const List<Migration> appDataMigrations = <Migration>[
   AppDataMigrationV1ToV2(),
   AppDataMigrationV2ToV3(),
   AppDataMigrationV3ToV4(),
   AppDataMigrationV4ToV5(),
   AppDataMigrationV5ToV6(),
+  AppDataMigrationV6ToV7(),
 ];
 
 /// AppData 加载路径统一使用的 runner。

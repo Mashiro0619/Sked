@@ -1,24 +1,8 @@
 import 'dart:collection';
-import 'dart:convert';
 
 import '../utils/time_utils.dart';
 
-/// These are admission limits, never truncation limits. An oversized result or
-/// undo is rejected before the command's durable snapshot is written.
-const operationReceiptMaxJsonBytes = 1024 * 1024;
-const operationReceiptMaxJsonDepth = 32;
-const operationReceiptMaxJsonNodes = 100000;
-const applicationLedgerMaxReceipts = 128;
-const applicationLedgerMaxBytes = 4 * 1024 * 1024;
 const _maxSafeSequence = 9007199254740991;
-
-class ApplicationLedgerRecoveryRequiredException implements Exception {
-  const ApplicationLedgerRecoveryRequiredException();
-
-  @override
-  String toString() =>
-      'Application ledger capacity requires recovery of an unresolved external operation.';
-}
 
 class OperationReceipt {
   factory OperationReceipt({
@@ -50,15 +34,9 @@ class OperationReceipt {
         'Operation receipt completion time is invalid.',
       );
     }
-    final budget = _JsonBudget();
-    final frozenResult = budget.freezeObject(result);
-    final frozenUndo = undo == null ? null : budget.freezeObject(undo);
-    if (utf8
-            .encode(jsonEncode({'result': frozenResult, 'undo': frozenUndo}))
-            .length >
-        operationReceiptMaxJsonBytes) {
-      throw const FormatException('Operation receipt JSON is too large.');
-    }
+    final json = _ImmutableJson();
+    final frozenResult = json.freezeObject(result);
+    final frozenUndo = undo == null ? null : json.freezeObject(undo);
     return OperationReceipt._(
       operationId: operationId,
       sequence: sequence,
@@ -153,9 +131,7 @@ class ApplicationLedger {
     ).hasMatch(generation)) {
       throw const FormatException('Application ledger generation is invalid.');
     }
-    if (nextSequence < 1 ||
-        nextSequence > _maxSafeSequence ||
-        receipts.length > applicationLedgerMaxReceipts) {
+    if (nextSequence < 1 || nextSequence > _maxSafeSequence) {
       throw const FormatException('Application ledger bounds are invalid.');
     }
     final ids = <String>{};
@@ -170,11 +146,6 @@ class ApplicationLedger {
         );
       }
       expected++;
-    }
-    if (_receiptsByteLength(receipts) > applicationLedgerMaxBytes) {
-      throw const FormatException(
-        'Application ledger exceeds its byte budget.',
-      );
     }
     return ApplicationLedger._(
       generation: generation,
@@ -206,16 +177,6 @@ class ApplicationLedger {
       throw const FormatException('Operation receipt cannot be appended.');
     }
     final next = [...receipts, receipt];
-    while (next.length > applicationLedgerMaxReceipts ||
-        _receiptsByteLength(next) > applicationLedgerMaxBytes) {
-      final oldest = next.first.result;
-      if (oldest['kind'] == 'external' &&
-          (oldest['effectStatus'] == 'pending' ||
-              oldest['effectStatus'] == 'unknown')) {
-        throw const ApplicationLedgerRecoveryRequiredException();
-      }
-      next.removeAt(0);
-    }
     return ApplicationLedger(
       generation: generation,
       nextSequence: nextSequence + 1,
@@ -224,7 +185,7 @@ class ApplicationLedger {
   }
 
   /// Finalizes an existing operation without allocating another sequence or
-  /// changing its identity. Admission limits still apply to the whole ledger.
+  /// changing its identity.
   ApplicationLedger updateReceipt(OperationReceipt receipt) {
     final index = receipts.indexWhere(
       (existing) => existing.operationId == receipt.operationId,
@@ -252,8 +213,7 @@ class ApplicationLedger {
     });
     if (json['generation'] is! String ||
         json['nextSequence'] is! int ||
-        json['receipts'] is! List ||
-        (json['receipts'] as List).length > applicationLedgerMaxReceipts) {
+        json['receipts'] is! List) {
       throw const FormatException('Application ledger is invalid.');
     }
     return ApplicationLedger(
@@ -283,10 +243,6 @@ class ApplicationLedger {
       Object.hash(generation, nextSequence, Object.hashAll(receipts));
 }
 
-int _receiptsByteLength(List<OperationReceipt> receipts) => utf8
-    .encode(jsonEncode([for (final item in receipts) item.toJson()]))
-    .length;
-
 Map<String, Object?> _stringObject(Object? value) {
   if (value is! Map || value.keys.any((key) => key is! String)) {
     throw const FormatException('Expected a JSON object with string keys.');
@@ -303,20 +259,13 @@ Map<String, Object?> _exactObject(Object? value, Set<String> keys) {
   return json;
 }
 
-class _JsonBudget {
+class _ImmutableJson {
   final active = HashSet<Object>.identity();
-  int nodes = 0;
 
   Map<String, Object?> freezeObject(Map<String, Object?> value) =>
-      freeze(value, 0) as Map<String, Object?>;
+      freeze(value) as Map<String, Object?>;
 
-  Object? freeze(Object? value, int depth) {
-    if (++nodes > operationReceiptMaxJsonNodes ||
-        depth > operationReceiptMaxJsonDepth) {
-      throw const FormatException(
-        'Operation receipt JSON exceeds structural limits.',
-      );
-    }
+  Object? freeze(Object? value) {
     if (value == null || value is bool || value is String || value is int) {
       return value;
     }
@@ -331,14 +280,11 @@ class _JsonBudget {
     }
     try {
       if (value is List) {
-        return List<Object?>.unmodifiable(
-          value.map((entry) => freeze(entry, depth + 1)),
-        );
+        return List<Object?>.unmodifiable(value.map((entry) => freeze(entry)));
       }
       final map = _stringObject(value);
       return Map<String, Object?>.unmodifiable({
-        for (final entry in map.entries)
-          entry.key: freeze(entry.value, depth + 1),
+        for (final entry in map.entries) entry.key: freeze(entry.value),
       });
     } finally {
       active.remove(value);
