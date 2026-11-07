@@ -62,9 +62,9 @@ void main() {
     }
   }
 
-  for (final width in [640.0, 1440.0]) {
+  for (final (width, scale) in [(640.0, 1.0), (1440.0, 1.0), (640.0, 2.0)]) {
     testWidgets(
-      'desktop destinations at $width wait for input through consecutive workspace transitions',
+      'desktop destinations at $width and ${scale}x wait for input through consecutive workspace transitions',
       (tester) async {
         tester.view.devicePixelRatio = 1;
         tester.view.physicalSize = Size(width, 900);
@@ -74,14 +74,16 @@ void main() {
           await tester.pumpWidget(const SizedBox.shrink());
           app.dispose();
         });
-        await tester.pumpWidget(WorkspaceHarness(provider: app));
+        await tester.pumpWidget(
+          WorkspaceHarness(provider: app, textScale: scale),
+        );
         await tester.pumpAndSettle();
         await selectAgentShellDestination(tester, 'agent');
         await tester.pumpAndSettle();
 
         await selectAgentShellDestination(tester, 'general');
         final agentEntry = find.byKey(const ValueKey('workspace-agent-entry'));
-        expect(agentEntry, findsOneWidget);
+        expect(agentEntry, scale == 2 ? findsNothing : findsOneWidget);
         expect(agentEntry.hitTestable(), findsNothing);
         await selectAgentShellDestination(tester, 'agent');
         await tester.pumpAndSettle();

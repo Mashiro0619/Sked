@@ -32,24 +32,34 @@ Future<void> _until(WidgetTester tester, bool Function() ready) async {
 }
 
 Future<void> _openShellResources(WidgetTester tester) async {
-  final direct = _firstControl([
+  const directKeys = [
     'workspace-main-navigation',
     'workspace-resource-open',
     'workspace-resource-collapse',
     'student-timetable-picker-button',
     'student-empty-resources',
     'general-calendar-selector',
-  ]);
+  ];
+  const moreKeys = [
+    'student-desktop-toolbar-more',
+    'general-desktop-toolbar-more',
+  ];
+  // Closing the outgoing drawer can precede the incoming toolbar's paint.
+  // Resolve the current host's control after input becomes available.
+  await _until(
+    tester,
+    () =>
+        _firstControl(directKeys).evaluate().isNotEmpty ||
+        _firstControl(moreKeys).evaluate().isNotEmpty,
+  );
+  final direct = _firstControl(directKeys);
   if (direct.evaluate().isNotEmpty) {
     await tester.tap(direct);
     await tester.pump();
     return;
   }
   // Narrow desktop command bars move their existing resource action into More.
-  final more = _firstControl([
-    'student-desktop-toolbar-more',
-    'general-desktop-toolbar-more',
-  ]);
+  final more = _firstControl(moreKeys);
   expect(more, findsOneWidget);
   await tester.tap(more);
   await tester.pumpAndSettle();
