@@ -55,6 +55,7 @@ extension _AgentComposerReferences on _AgentConversationViewState {
         _repository.selectedId == id &&
         _runtime.enabled &&
         !_runtime.maintenance &&
+        !_busy.contains('restore-queued-$id') &&
         conversation != null &&
         !conversation.archived &&
         (conversation.pendingRedo == null ||
@@ -70,7 +71,7 @@ extension _AgentComposerReferences on _AgentConversationViewState {
   void _referenceInputChanged() {
     final session = _referenceSession;
     if (session != null &&
-        (!_composerFocus.hasFocus || session.value != _composer.value)) {
+        (!_composerRegionFocus.hasFocus || session.value != _composer.value)) {
       _referenceSession = null;
     }
     _scheduleReferenceRefresh();
@@ -110,7 +111,8 @@ extension _AgentComposerReferences on _AgentConversationViewState {
     final value = _composer.value;
     final range = _referenceRange(value);
     if (conversation == null ||
-        !_composerFocus.hasFocus ||
+        (!_composerFocus.hasFocus &&
+            (_referenceSession == null || !_composerRegionFocus.hasFocus)) ||
         !_canEditReferences(conversation.id) ||
         range == null ||
         value == _dismissedReferenceValue ||
@@ -140,7 +142,7 @@ extension _AgentComposerReferences on _AgentConversationViewState {
       _uiSessionCurrent(session.uiGeneration, session.conversationId) &&
       identical(_repository, session.repository) &&
       identical(widget.delegate, session.delegate) &&
-      _composerFocus.hasFocus &&
+      _composerRegionFocus.hasFocus &&
       _composer.value == session.value &&
       _referenceRange(_composer.value) != null &&
       _canEditReferences(session.conversationId) &&
@@ -148,11 +150,35 @@ extension _AgentComposerReferences on _AgentConversationViewState {
       _referenceTarget(_repository.find(session.conversationId)!) ==
           session.target;
 
+  KeyEventResult _referenceKeyEvent(FocusNode node, KeyEvent event) {
+    final session = _referenceSession;
+    if (event is! KeyDownEvent ||
+        event.logicalKey != LogicalKeyboardKey.escape ||
+        session == null ||
+        !_referenceCurrent(session)) {
+      return KeyEventResult.ignored;
+    }
+    _dismissReferences(session);
+    return KeyEventResult.handled;
+  }
+
+  void _dismissReferences(_AgentReferenceSession session) {
+    if (!_referenceCurrent(session)) return;
+    _updateReferenceState(() {
+      _dismissedReferenceValue = _composer.value;
+      _referenceSession = null;
+    });
+    _composerFocus.requestFocus();
+  }
+
   Future<void> _loadReferences(
     _AgentReferenceSession session, {
     bool more = false,
   }) async {
     if (!_referenceCurrent(session) || session.saving) return;
+    // Loading disables the focused picker action. Keep the text-input client
+    // and its selection active while that action waits for its result.
+    _composerFocus.requestFocus();
     _updateReferenceState(() {
       session.loading = true;
       session.failed = false;
@@ -229,6 +255,7 @@ extension _AgentComposerReferences on _AgentConversationViewState {
     AgentReferenceChoice choice,
   ) async {
     if (!_referenceCurrent(session) || session.saving) return;
+    _composerFocus.requestFocus();
     final references = _effectiveReferences(
       session.repository.find(session.conversationId)!,
     );
@@ -278,6 +305,7 @@ extension _AgentComposerReferences on _AgentConversationViewState {
       });
       _composer.value = value;
       _draftChanged(session.conversationId, value.text);
+      _composerFocus.requestFocus();
     } catch (_) {
       if (_referenceCurrent(session)) {
         _updateReferenceState(() => session.failed = true);
@@ -424,13 +452,7 @@ extension _AgentComposerReferences on _AgentConversationViewState {
                 session.search = null;
                 return _loadReferences(session);
               },
-              onDismiss: () {
-                if (!_referenceCurrent(session)) return;
-                _updateReferenceState(() {
-                  _dismissedReferenceValue = _composer.value;
-                  _referenceSession = null;
-                });
-              },
+              onDismiss: () => _dismissReferences(session),
             ),
           ),
         ),

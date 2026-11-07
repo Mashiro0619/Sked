@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
@@ -45,6 +46,20 @@ void main() {
         (choice) => choice.value.resourceRef?.kind == ResourceKind.calendar,
       );
 
+  Future<void> tab(WidgetTester tester, {bool reverse = false}) async {
+    if (reverse) {
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    }
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    if (reverse) {
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    }
+    await tester.pumpAndSettle();
+  }
+
+  ListTile? focusedChoice() => FocusManager.instance.primaryFocus?.context
+      ?.findAncestorWidgetOfExactType<ListTile>();
+
   testWidgets(
     'typing at opens search and selecting persists a stable reference without replacing the editor',
     (tester) async {
@@ -87,6 +102,206 @@ void main() {
             .stableKey,
         choice.key,
       );
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets(
+    'Shift+Tab enters the reference choice and Enter selects it then returns to the editor',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      final app = await fixture();
+      await mountAgentUi(tester, app.view());
+      final editor = tester.widget<TextField>(composer);
+      await type(tester, '@${app.calendarReference.label}');
+      final choice = calendar(tester);
+
+      await tab(tester, reverse: true);
+      expect(picker, findsOneWidget);
+      expect(editor.focusNode!.hasFocus, false);
+      expect(
+        focusedChoice()?.key,
+        ValueKey('agent-reference-choice-${choice.key}'),
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      await app.repository.waitForPendingWrites();
+
+      expect(
+        app.repository.selected!.draftReferences.single.toJson(),
+        choice.value.toJson(),
+      );
+      expect(app.repository.selected!.draft, choice.label);
+      expect(
+        tester.widget<TextField>(composer).focusNode,
+        same(editor.focusNode),
+      );
+      expect(editor.focusNode!.hasFocus, true);
+      expect(editor.controller!.selection.extentOffset, choice.label.length);
+      expect(picker, findsNothing);
+      expect(app.validations, 1);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets(
+    'Tab and Shift+Tab navigate the same reference search without resetting it',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      final app = await fixture(customSkills: 3);
+      await mountAgentUi(tester, app.view());
+      await type(tester, '@Custom');
+      final choices = tester
+          .widget<AgentReferencePicker>(picker)
+          .result
+          .choices;
+      expect(choices, hasLength(3));
+
+      await tab(tester, reverse: true);
+      expect(
+        focusedChoice()?.key,
+        ValueKey('agent-reference-choice-${choices[2].key}'),
+      );
+      await tab(tester, reverse: true);
+      expect(
+        focusedChoice()?.key,
+        ValueKey('agent-reference-choice-${choices[1].key}'),
+      );
+      await tab(tester);
+      expect(
+        focusedChoice()?.key,
+        ValueKey('agent-reference-choice-${choices[2].key}'),
+      );
+      expect(picker, findsOneWidget);
+      expect(app.searches, 1);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+
+      expect(
+        app.repository.selected!.draftReferences.single.stableKey,
+        choices[2].key,
+      );
+      expect(tester.widget<TextField>(composer).focusNode!.hasFocus, true);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets(
+    'keyboard pagination returns focus to the same editor without losing its selection',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      final app = await fixture(customSkills: 12);
+      await mountAgentUi(tester, app.view());
+      await type(tester, '@custom');
+      final editor = tester.widget<TextField>(composer);
+      final value = editor.controller!.value;
+      final more = find.byKey(const ValueKey('agent-reference-more'));
+      await tester.scrollUntilVisible(
+        more,
+        160,
+        scrollable: find
+            .descendant(of: picker, matching: find.byType(Scrollable))
+            .first,
+      );
+      await tab(tester, reverse: true);
+      expect(
+        FocusManager.instance.primaryFocus?.context
+            ?.findAncestorWidgetOfExactType<TextButton>()
+            ?.key,
+        const ValueKey('agent-reference-more'),
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+
+      expect(picker, findsOneWidget);
+      expect(
+        tester.widget<AgentReferencePicker>(picker).result.choices,
+        hasLength(12),
+      );
+      expect(editor.focusNode!.hasFocus, true);
+      expect(editor.controller!.value, value);
+      expect(app.searches, 1);
+      expect(app.validations, 0);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  for (final fromChoice in [false, true]) {
+    testWidgets(
+      'Escape dismisses references from ${fromChoice ? 'the focused choice' : 'the editor'} and retires its callbacks',
+      (tester) async {
+        addTearDown(tester.view.reset);
+        final app = await fixture();
+        await mountAgentUi(tester, app.view());
+        final query = '@${app.calendarReference.label}';
+        await type(tester, query);
+        final oldPicker = tester.widget<AgentReferencePicker>(picker);
+        final choice = calendar(tester);
+        if (fromChoice) {
+          await tab(tester, reverse: true);
+        }
+
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+        expect(picker, findsNothing);
+        expect(tester.widget<TextField>(composer).focusNode!.hasFocus, true);
+        expect(tester.widget<TextField>(composer).controller!.text, query);
+        await oldPicker.onSelect(choice);
+        await tester.pumpAndSettle();
+        expect(app.validations, 0);
+        expect(app.repository.selected!.draftReferences, isEmpty);
+
+        await type(tester, '@');
+        expect(picker, findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.windows),
+    );
+  }
+
+  testWidgets(
+    'leaving the complete composer region retires a keyboard selection waiting for validation',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      final app = await fixture();
+      final outsideFocus = FocusNode();
+      addTearDown(outsideFocus.dispose);
+      final validation = Completer<void>();
+      app.beforeValidation = () => validation.future;
+      await mountAgentUi(
+        tester,
+        Column(
+          children: [
+            TextButton(
+              focusNode: outsideFocus,
+              onPressed: () {},
+              child: const Text('Outside composer'),
+            ),
+            Expanded(child: app.view()),
+          ],
+        ),
+      );
+      final query = '@${app.calendarReference.label}';
+      await type(tester, query);
+      await tab(tester, reverse: true);
+      expect(focusedChoice(), isNotNull);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      expect(app.validations, 1);
+
+      outsideFocus.requestFocus();
+      await tester.pumpAndSettle();
+      expect(outsideFocus.hasFocus, true);
+      expect(picker, findsNothing);
+      validation.complete();
+      await tester.pumpAndSettle();
+      expect(app.repository.selected!.draftReferences, isEmpty);
+      expect(app.updates, 0);
+      expect(tester.widget<TextField>(composer).controller!.text, query);
+      expect(tester.takeException(), isNull);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
   );

@@ -203,6 +203,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   // Reparent the editor without replacing its platform text-input client.
   final _composerField = GlobalKey();
   final _composerFocus = FocusNode();
+  final _composerRegionFocus = FocusNode(skipTraversal: true);
   _AgentReferenceSession? _referenceSession;
   TextEditingValue? _dismissedReferenceValue;
   bool _referenceRefreshScheduled = false;
@@ -439,6 +440,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     super.initState();
     _composer.addListener(_referenceInputChanged);
     _composerFocus.addListener(_referenceInputChanged);
+    _composerRegionFocus.addListener(_referenceInputChanged);
     _repository.addListener(_changed);
     widget.delegate.state.addListener(_changed);
     widget.binaryAttachments?.addListener(_changed);
@@ -513,8 +515,10 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     widget.binaryAttachments?.removeListener(_changed);
     _composer.removeListener(_referenceInputChanged);
     _composerFocus.removeListener(_referenceInputChanged);
+    _composerRegionFocus.removeListener(_referenceInputChanged);
     _composer.dispose();
     _composerFocus.dispose();
+    _composerRegionFocus.dispose();
     super.dispose();
   }
 
@@ -2805,7 +2809,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         ),
       );
     }
-    return Padding(
+    final composerRegion = Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: Shortcuts(
         shortcuts: const {
@@ -3216,6 +3220,12 @@ class _AgentConversationViewState extends State<AgentConversationView> {
           ),
         ),
       ),
+    );
+    return Focus(
+      focusNode: _composerRegionFocus,
+      canRequestFocus: false,
+      onKeyEvent: _referenceKeyEvent,
+      child: composerRegion,
     );
   }
 }
