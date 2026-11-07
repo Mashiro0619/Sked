@@ -106,6 +106,7 @@ void main() {
             ? 'Android IME and native View.viewInsets'
             : 'none',
         'captures': <Map<String, Object?>>[],
+        'diagnostics': <Map<String, Object?>>[],
         'status': 'running',
       };
       AppRuntime? app;
@@ -158,6 +159,10 @@ void main() {
           app: app,
           store: store,
           provider: provider,
+          recordDiagnostic: (diagnostic) =>
+              (report['diagnostics']! as List<Map<String, Object?>>).add(
+                diagnostic,
+              ),
           capture: (name, settle) async {
             if (_keyboard) {
               final composer = find.byKey(const ValueKey('agent-composer'));

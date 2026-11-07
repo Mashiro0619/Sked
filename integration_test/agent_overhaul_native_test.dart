@@ -153,6 +153,7 @@ class _Captures {
     'fixture':
         'synthetic main data and credentials; isolated Agent SQLite file',
     'status': 'running',
+    'diagnostics': <Map<String, Object?>>[],
     'scenes': <Map<String, Object?>>[],
     'captures': <Map<String, Object?>>[],
   };
@@ -793,6 +794,10 @@ void main() {
               app: app,
               store: store,
               provider: provider,
+              recordDiagnostic: (diagnostic) =>
+                  (captures.report['diagnostics']!
+                          as List<Map<String, Object?>>)
+                      .add({'scene': scene.name, ...diagnostic}),
               capture: (name, settle) =>
                   captures.capture(tester, scene, name, settle: settle),
             );

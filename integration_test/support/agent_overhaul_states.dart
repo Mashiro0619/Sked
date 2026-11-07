@@ -141,23 +141,13 @@ Future<List<Map<String, Object?>>> exerciseAgentOverhaulStates({
   required AgentStore store,
   required AgentOverhaulStateProvider provider,
   required Future<void> Function(String name, bool settle) capture,
+  required void Function(Map<String, Object?> diagnostic) recordDiagnostic,
 }) async {
   final reports = <Map<String, Object?>>[];
   final repository = app.agent.conversations;
   final runtime = app.agent.runtime;
   final calendarId = app.session.committedData.generalMode.schedules.first.id;
   var businessBefore = app.session.committedData.encode();
-  Future<void> until(bool Function() ready, String description) async {
-    final elapsed = Stopwatch()..start();
-    while (!ready()) {
-      if (elapsed.elapsed > const Duration(seconds: 20)) {
-        fail('Timed out waiting for native state: $description.');
-      }
-      await tester.pump(const Duration(milliseconds: 16));
-    }
-    await tester.pump();
-  }
-
   for (final scenario in _Scenario.values) {
     provider._select(scenario, calendarId);
     final conversation = await repository.create(
@@ -249,7 +239,17 @@ Future<List<Map<String, Object?>>> exerciseAgentOverhaulStates({
             _Scenario.error => '请读取当前课程。',
             _Scenario.recovery => throw StateError('Handled above.'),
           });
-    execution.ignore();
+    ({Object error, StackTrace stack})? executionFailure;
+    var executionSettled = false;
+    unawaited(
+      execution.then<void>(
+        (_) => executionSettled = true,
+        onError: (Object error, StackTrace stack) {
+          executionFailure = (error: error, stack: stack);
+          executionSettled = true;
+        },
+      ),
+    );
     final expectedPhase = switch (scenario) {
       _Scenario.running => AgentUiPhase.running,
       _Scenario.approval => AgentUiPhase.waitingApproval,
@@ -258,6 +258,56 @@ Future<List<Map<String, Object?>>> exerciseAgentOverhaulStates({
       _Scenario.error => AgentUiPhase.failed,
       _Scenario.recovery => AgentUiPhase.idle,
     };
+    Future<void> until(
+      bool Function() ready,
+      String description, {
+      bool observeOriginalExecution = true,
+    }) async {
+      final elapsed = Stopwatch()..start();
+      while (!ready()) {
+        final current = runtime.state.value.runFor(id);
+        final failure = observeOriginalExecution ? executionFailure : null;
+        final failed =
+            failure != null ||
+            (scenario != _Scenario.error &&
+                current.phase == AgentUiPhase.failed);
+        final timedOut = elapsed.elapsed > const Duration(seconds: 20);
+        if (failed || timedOut) {
+          final diagnostic = <String, Object?>{
+            'scenario': scenario.name,
+            'waitingFor': description,
+            'reason': failed ? 'executionFailed' : 'timeout',
+            'conversationId': id,
+            'expectedPhase': expectedPhase.name,
+            'phase': current.phase.name,
+            'runtimeError': current.errorMessage,
+            'providerErrorDetails': current.providerErrorDetails,
+            'providerErrorResponseBody': current.providerErrorResponseBody,
+            'providerErrorMetadata': current.providerErrorMetadata,
+            'providerRequests': provider.requests,
+            'scenarioProviderRequests': provider.requests - beforeRequests,
+            'isRunning': runtime.isRunning(id),
+            'streamingTextLength': current.streamingText.length,
+            'originalExecutionObserved': observeOriginalExecution,
+            'originalExecutionSettled': executionSettled,
+            if (failure != null)
+              'executionErrorType': failure.error.runtimeType.toString(),
+            if (failure != null) 'executionStack': failure.stack.toString(),
+          };
+          recordDiagnostic(diagnostic);
+          if (failure != null) {
+            Error.throwWithStackTrace(failure.error, failure.stack);
+          }
+          fail(
+            '${failed ? 'Failed' : 'Timed out'} waiting for native state: '
+            '$description. ${jsonEncode(diagnostic)}',
+          );
+        }
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      await tester.pump();
+    }
+
     await until(() {
       final state = runtime.state.value.runFor(id);
       return provider.requests > beforeRequests &&
@@ -306,6 +356,7 @@ Future<List<Map<String, Object?>>> exerciseAgentOverhaulStates({
             runtime.state.value.runFor(id).isActive &&
             runtime.state.value.runFor(id).streamingText.isNotEmpty,
         'the immediate supplement to replace the active model request',
+        observeOriginalExecution: false,
       );
       expect(
         repository.find(id)!.queuedInputs.single.mode,
