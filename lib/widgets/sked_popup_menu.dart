@@ -141,6 +141,7 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
     this.position = PopupMenuPosition.under,
     this.constraints,
     this.style,
+    this.triggerStyle,
     this.iconSize,
   });
 
@@ -159,6 +160,10 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
   final PopupMenuPosition position;
   final BoxConstraints? constraints;
   final ButtonStyle? style;
+
+  /// Opts a custom child into ButtonStyle-based interaction and geometry.
+  /// Ordinary child triggers retain their existing InkWell when this is null.
+  final ButtonStyle? triggerStyle;
   final double? iconSize;
 
   @override
@@ -179,6 +184,7 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
       // safe area and keyboard geometry when the menu actually opens.
       constraints: constraints,
       style: style,
+      triggerStyle: triggerStyle,
       iconSize: iconSize,
       itemBuilder: itemBuilder,
       child: child,
@@ -191,6 +197,7 @@ class SkedPopupMenuButton<T> extends StatelessWidget {
 class _SkedPopupMenuButton<T> extends PopupMenuButton<T> {
   const _SkedPopupMenuButton({
     this.focusNode,
+    this.triggerStyle,
     required super.itemBuilder,
     super.initialValue,
     super.onOpened,
@@ -209,6 +216,7 @@ class _SkedPopupMenuButton<T> extends PopupMenuButton<T> {
     super.child,
   });
   final FocusNode? focusNode;
+  final ButtonStyle? triggerStyle;
   @override
   PopupMenuButtonState<T> createState() => _SkedPopupMenuButtonState<T>();
 }
@@ -295,23 +303,33 @@ class _SkedPopupMenuButtonState<T> extends PopupMenuButtonState<T> {
     final button = widget as _SkedPopupMenuButton<T>;
     final Widget trigger;
     if (button.child != null) {
+      final content = Semantics(
+        // TextButton already supplies its role and enabled state. Repeating
+        // either here would split the role from the inherited tap action.
+        button: button.triggerStyle == null ? true : null,
+        enabled: button.triggerStyle == null ? button.enabled : null,
+        expanded: _expanded,
+        child: button.child,
+      );
       final child = SkedTooltip(
         message:
             button.tooltip ?? MaterialLocalizations.of(context).showMenuTooltip,
-        child: InkWell(
-          focusNode: button.focusNode,
-          onTap: button.enabled ? showButtonMenu : null,
-          customBorder: skedShapeSchemeOf(context).selection,
-          // Keep the role and state below SkedTooltip's semantic boundary so
-          // they merge with InkWell's tap action instead of making a second,
-          // unactionable button above the tooltip.
-          child: Semantics(
-            button: true,
-            enabled: button.enabled,
-            expanded: _expanded,
-            child: button.child,
-          ),
-        ),
+        child: button.triggerStyle != null
+            ? TextButton(
+                focusNode: button.focusNode,
+                style: button.triggerStyle,
+                onPressed: button.enabled ? showButtonMenu : null,
+                child: content,
+              )
+            : InkWell(
+                focusNode: button.focusNode,
+                onTap: button.enabled ? showButtonMenu : null,
+                customBorder: skedShapeSchemeOf(context).selection,
+                // Keep the role and state below SkedTooltip's semantic boundary so
+                // they merge with InkWell's tap action instead of making a second,
+                // unactionable button above the tooltip.
+                child: content,
+              ),
       );
       trigger = button.style?.tapTargetSize == MaterialTapTargetSize.padded
           ? ConstrainedBox(

@@ -35,15 +35,17 @@ class SkedMenuSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final menu = SkedMenuStyle.of(context);
-    final effective = menu.menuStyle.merge(style);
+    final effective = (style ?? const MenuStyle()).merge(menu.menuStyle);
     const states = <WidgetState>{};
+    final shape = effective.shape?.resolve(states) ?? menu.shape;
+    final side = effective.side?.resolve(states);
     final surface = Material(
       type: MaterialType.card,
       color: effective.backgroundColor?.resolve(states) ?? menu.surface,
       elevation: effective.elevation?.resolve(states) ?? menu.elevation,
       shadowColor: effective.shadowColor?.resolve(states) ?? menu.shadow,
       surfaceTintColor: Colors.transparent,
-      shape: effective.shape?.resolve(states) ?? menu.shape,
+      shape: side == null ? shape : shape.copyWith(side: side),
       clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: effective.padding?.resolve(states) ?? menu.padding,
