@@ -85,7 +85,7 @@ void main() {
       );
       final leading = find.descendant(
         of: toggle,
-        matching: find.byIcon(Icons.check_rounded),
+        matching: find.byIcon(Icons.list_alt_rounded),
       );
       final branchEdge = direction == TextDirection.ltr
           ? tester.getRect(branch).left
@@ -105,7 +105,7 @@ void main() {
       expect(childDecoration.border, isNull);
       final childLeading = find.descendant(
         of: childToggle,
-        matching: find.byIcon(Icons.check_rounded),
+        matching: find.byIcon(Icons.notifications_none_rounded),
       );
       final childBranchEdge = direction == TextDirection.ltr
           ? tester.getRect(childBranch).left
@@ -155,6 +155,7 @@ void main() {
     await tester.tap(key('agent-activity-toggle-tool-0'));
     await tester.pumpAndSettle();
     expect(find.text('notifications.reminders'), findsOneWidget);
+    expect(find.text(l.agentTechnicalDetails), findsNothing);
     expect(key('agent-activity-detail-tool-0'), findsOneWidget);
     final branch = tester.widget<DecoratedBox>(
       key('agent-activity-branch-tool-0'),

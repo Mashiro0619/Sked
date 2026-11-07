@@ -91,12 +91,14 @@ void main() {
         ),
         findsOneWidget,
       );
+      final waiting = find.descendant(
+        of: planView,
+        matching: find.byIcon(Icons.pause_circle_outline_rounded),
+      );
+      expect(waiting, findsOneWidget);
       expect(
-        find.descendant(
-          of: planView,
-          matching: find.byIcon(Icons.error_outline),
-        ),
-        findsOneWidget,
+        tester.widget<Icon>(waiting).color,
+        isNot(Theme.of(tester.element(waiting)).colorScheme.error),
       );
       expect(
         find.text('Waiting for the user to provide the missing information'),

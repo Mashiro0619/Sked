@@ -10,6 +10,7 @@ import '../../l10n/app_localizations.dart';
 import '../../theme/sked_expressive_theme.dart';
 import '../../widgets/expressive_motion.dart';
 import 'agent_selectable_text.dart';
+import 'agent_ui_style.dart';
 
 /// Message presentation never interprets a reply as an application operation.
 /// Persisted operation receipts have their own host-owned cards.
@@ -92,10 +93,11 @@ class _AgentMessageContentState extends State<AgentMessageContent> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final visual = AgentUiStyle.of(context);
     final colors = theme.colorScheme;
     final l = AppLocalizations.of(context);
     final epoch = _interactionEpoch;
-    final bodyStyle = theme.textTheme.bodyLarge?.copyWith(height: 1.55);
+    final bodyStyle = visual.body;
     final body = widget.isUser || widget.isNotice
         ? AgentSelectableText(widget.text, style: bodyStyle)
         : MarkdownBody(
@@ -113,9 +115,9 @@ class _AgentMessageContentState extends State<AgentMessageContent> {
               p: bodyStyle,
               h1: theme.textTheme.headlineSmall,
               h2: theme.textTheme.titleLarge,
-              h3: theme.textTheme.titleMedium,
+              h3: visual.title,
               h4: theme.textTheme.titleSmall,
-              h5: bodyStyle?.copyWith(fontWeight: FontWeight.w600),
+              h5: bodyStyle.copyWith(fontWeight: FontWeight.w600),
               h6: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -124,10 +126,10 @@ class _AgentMessageContentState extends State<AgentMessageContent> {
               del: const TextStyle(decoration: TextDecoration.lineThrough),
               blockquote: bodyStyle,
               listBullet: bodyStyle,
-              tableHead: bodyStyle?.copyWith(fontWeight: FontWeight.w600),
+              tableHead: bodyStyle.copyWith(fontWeight: FontWeight.w600),
               tableBody: bodyStyle,
               tableBorder: TableBorder.all(color: colors.outlineVariant),
-              checkbox: bodyStyle?.copyWith(color: colors.primary),
+              checkbox: bodyStyle.copyWith(color: colors.primary),
               horizontalRuleDecoration: BoxDecoration(
                 border: Border(top: BorderSide(color: colors.outlineVariant)),
               ),
@@ -160,7 +162,7 @@ class _AgentMessageContentState extends State<AgentMessageContent> {
       interactive: widget.interactive,
       revision: epoch,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.only(top: 10, bottom: 4),
         child: Align(
           alignment: widget.isUser
               ? AlignmentDirectional.centerEnd
@@ -186,7 +188,7 @@ class _AgentMessageContentState extends State<AgentMessageContent> {
                   ],
                   if (widget.isUser)
                     Material(
-                      color: colors.surfaceContainerHigh,
+                      color: visual.subtleSurface,
                       shape: skedShapeSchemeOf(context).container,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(

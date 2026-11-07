@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../theme/sked_menu_style.dart';
+import 'agent_ui_style.dart';
 
 /// A disclosure whose hover and tap surface follows its visible content.
 class AgentInlineDisclosureHeader extends StatelessWidget {
@@ -31,14 +32,11 @@ class AgentInlineDisclosureHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
+    final style = AgentUiStyle.of(context);
     final disclosure = expanded != null;
     final desktop = SkedMenuStyle.of(context).desktop;
     final extent = disclosure ? (desktop ? 32.0 : 48.0) : 24.0;
-    final style =
-        titleStyle ??
-        theme.textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant);
+    final textStyle = titleStyle ?? style.label.copyWith(color: style.muted);
     final content = ConstrainedBox(
       constraints: BoxConstraints(minHeight: extent),
       child: Padding(
@@ -54,16 +52,16 @@ class AgentInlineDisclosureHeader extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: style,
+                    style: textStyle,
                     maxLines: maxLines,
-                    overflow: TextOverflow.ellipsis,
+                    overflow: maxLines == null
+                        ? TextOverflow.clip
+                        : TextOverflow.ellipsis,
                   ),
                   if (subtitle case final detail?)
                     Text(
                       detail,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
+                      style: style.caption.copyWith(color: style.muted),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -78,8 +76,8 @@ class AgentInlineDisclosureHeader extends StatelessWidget {
                     : Directionality.of(context) == TextDirection.rtl
                     ? Icons.chevron_left_rounded
                     : Icons.chevron_right_rounded,
-                size: 18,
-                color: colors.onSurfaceVariant,
+                size: 16,
+                color: style.muted,
               ),
             ],
           ],
@@ -103,6 +101,10 @@ class AgentInlineDisclosureHeader extends StatelessWidget {
                   child: InkWell(
                     key: toggleKey,
                     borderRadius: BorderRadius.circular(8),
+                    hoverColor: style.hover,
+                    focusColor: style.selected,
+                    highlightColor: style.selected,
+                    splashFactory: NoSplash.splashFactory,
                     onTap: onTap,
                     child: content,
                   ),

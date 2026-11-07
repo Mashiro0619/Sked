@@ -4,6 +4,7 @@ import '../interactions/agent_task_plan.dart';
 import 'agent_conversation_timeline.dart';
 import 'agent_inline_disclosure_header.dart';
 import 'agent_turn_activity.dart';
+import 'agent_ui_style.dart';
 
 class AgentTaskPlanLabels {
   const AgentTaskPlanLabels({
@@ -30,12 +31,16 @@ class AgentTaskPlanView extends StatelessWidget {
     required this.labels,
     this.initiallyExpanded = false,
     this.identity,
+    this.active = true,
+    this.interactive = true,
   });
 
   final AgentTaskPlan plan;
   final AgentTaskPlanLabels labels;
   final bool initiallyExpanded;
   final String? identity;
+  final bool active;
+  final bool interactive;
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +55,10 @@ class AgentTaskPlanView extends StatelessWidget {
       status: completed == plan.steps.length
           ? AgentToolActivityStatus.completed
           : AgentToolActivityStatus.running,
+      statusIcon: Icons.checklist_rounded,
       initiallyExpanded: initiallyExpanded,
+      active: active,
+      interactive: interactive,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [for (final step in plan.steps) _step(context, step)],
@@ -59,7 +67,8 @@ class AgentTaskPlanView extends StatelessWidget {
   }
 
   Widget _step(BuildContext context, AgentTaskPlanStep step) {
-    final colors = Theme.of(context).colorScheme;
+    final style = AgentUiStyle.of(context);
+    final colors = style.colors;
     final (label, icon, status) = switch (step.status) {
       AgentTaskStepStatus.pending => (
         labels.pending,
@@ -78,8 +87,8 @@ class AgentTaskPlanView extends StatelessWidget {
       ),
       AgentTaskStepStatus.blocked => (
         labels.blocked,
-        Icons.error_outline,
-        AgentToolActivityStatus.failed,
+        Icons.pause_circle_outline_rounded,
+        AgentToolActivityStatus.notStarted,
       ),
     };
     final semantics = '${step.title} · $label';
@@ -94,17 +103,19 @@ class AgentTaskPlanView extends StatelessWidget {
               status: status,
               statusIcon: icon,
               semanticsLabel: semantics,
+              active: active,
+              interactive: interactive,
               child: Text(
                 detail,
-                style: Theme.of(context).textTheme.bodySmall
-                    ?.copyWith(color: colors.onSurfaceVariant),
+                style: style.label.copyWith(color: style.muted),
               ),
             )
           : AgentInlineDisclosureHeader(
               title: step.title,
               semanticsLabel: semantics,
-              titleStyle: Theme.of(context).textTheme.bodySmall
-                  ?.copyWith(color: agentActivityStatusColor(status, colors)),
+              titleStyle: style.label.copyWith(
+                color: agentActivityStatusColor(status, colors),
+              ),
               leading: Icon(
                 icon,
                 size: 16,

@@ -244,6 +244,8 @@ void main() {
       final renderedTitle = tester.widget<Text>(find.text(title));
       expect(renderedTitle.maxLines, 1);
       expect(renderedTitle.overflow, TextOverflow.ellipsis);
+      expect(renderedTitle.style?.fontSize, 14);
+      expect(renderedTitle.style?.fontWeight, FontWeight.w400);
       expect(_tooltip(title), findsOneWidget);
       expect(_key('agent-pin-chat-0').hitTestable(), findsNothing);
       expect(_key('agent-archive-chat-0').hitTestable(), findsNothing);
@@ -461,6 +463,23 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       expect(_key('agent-history-status-chat-0'), findsOneWidget);
       expect(_key('agent-history-status-chat-1'), findsNothing);
+      final paintedRing = find.descendant(
+        of: _key('agent-history-status-chat-0'),
+        matching: find.byType(CustomPaint),
+      );
+      expect(paintedRing, findsOneWidget);
+      expect(tester.getSize(paintedRing), const Size.square(14));
+      expect(
+        tester
+            .widget<CircularProgressIndicator>(
+              find.descendant(
+                of: _key('agent-history-status-chat-0'),
+                matching: find.byType(CircularProgressIndicator),
+              ),
+            )
+            .trackGap,
+        0,
+      );
       expect(repository.find('chat-0')!.status, ConversationStatus.idle);
       delegate.state.value = AgentUiState(
         enabled: true,

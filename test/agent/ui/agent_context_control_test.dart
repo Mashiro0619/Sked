@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/ui/agent_context_control.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
+import 'package:sked/agent/ui/agent_ui_style.dart';
 import 'package:sked/l10n/app_localizations.dart';
 
 import 'agent_ui_test_support.dart';
@@ -22,7 +23,7 @@ Future<TestGesture> _mouse(WidgetTester tester) async {
 
 Future<void> _showCard(WidgetTester tester, TestGesture mouse) async {
   await mouse.moveTo(tester.getCenter(_indicator()));
-  await tester.pump(const Duration(milliseconds: 300));
+  await tester.pump(const Duration(milliseconds: 600));
   await tester.pump(const Duration(milliseconds: 250));
   expect(_card(), findsOneWidget);
   expect(tester.widget(_card()), isA<Material>());
@@ -73,7 +74,31 @@ void main() {
       );
       expect(progress.value, closeTo(1200 / 32000, .0001));
       final mouse = await _mouse(tester);
-      await _showCard(tester, mouse);
+      await mouse.moveTo(tester.getCenter(indicator));
+      await tester.pump(const Duration(milliseconds: 599));
+      expect(_card(), findsNothing);
+      await tester.pump(const Duration(milliseconds: 1));
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(_card(), findsOneWidget);
+      final ui = AgentUiStyle.of(tester.element(indicator));
+      final surface = tester.widget<Material>(_card());
+      expect(surface.color, ui.popover);
+      expect(surface.shape, ui.popoverShape);
+      expect(surface.elevation, 2);
+      final title = _inCard(find.text(l.agentContextTitle));
+      final utilization = _inCard(
+        find.text(l.agentContextUtilization('4', '96')),
+      );
+      expect(tester.widget<Text>(title).textAlign, TextAlign.center);
+      expect(tester.widget<Text>(utilization).textAlign, TextAlign.center);
+      expect(
+        tester.getCenter(title).dx,
+        closeTo(tester.getCenter(_card()).dx, .1),
+      );
+      expect(
+        tester.getCenter(utilization).dx,
+        closeTo(tester.getCenter(_card()).dx, .1),
+      );
       expect(_inCard(find.text(l.agentContextTitle)), findsOneWidget);
       expect(
         _inCard(find.text(l.agentContextUtilization('4', '96'))),

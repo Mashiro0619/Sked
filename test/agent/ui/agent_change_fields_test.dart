@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/ui/agent_change_fields.dart';
@@ -10,6 +11,46 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'agent_ui_test_support.dart';
 
 void main() {
+  testWidgets('long preview object names stay fully visible at 320dp and 2x', (
+    tester,
+  ) async {
+    addTearDown(tester.view.reset);
+    const name = '2026 年秋季学期课程与复习安排：高等数学、大学英语和程序设计的周计划及考试准备';
+    const details = <String, Object?>{
+      'planId': 'long-name-preview',
+      'changes': [
+        {
+          'key': 'calendar:long-name',
+          'before': null,
+          'after': {'name': name},
+        },
+      ],
+    };
+    await mountAgentUi(
+      tester,
+      const SingleChildScrollView(child: AgentPlanPreview(details: details)),
+      size: const Size(320, 740),
+      scale: 2,
+      locale: const Locale('zh'),
+    );
+    final title = find.text(name);
+    expect(title, findsOneWidget);
+    final paragraph = tester.renderObject<RenderParagraph>(title);
+    expect(paragraph.didExceedMaxLines, isFalse);
+    final visibleLines = paragraph
+        .getBoxesForSelection(
+          TextSelection(baseOffset: 0, extentOffset: name.length),
+        )
+        .map((box) => box.top)
+        .toSet();
+    expect(visibleLines.length, greaterThan(2));
+    expect(title.hitTestable(), findsOneWidget);
+    await tester.tap(title);
+    await tester.pumpAndSettle();
+    expect(find.byType(AgentChangeFields), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
   testWidgets('imported timetable exposes native fields and nested courses', (
     tester,
   ) async {

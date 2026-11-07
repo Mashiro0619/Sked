@@ -69,6 +69,9 @@ class AgentOperationActivity extends StatelessWidget {
           ? null
           : labels.join(' · '),
       status: operation.status,
+      statusIcon: operation.waitingApproval || interaction != null
+          ? Icons.help_outline_rounded
+          : Icons.edit_note_rounded,
       initiallyExpanded: interaction != null,
       active: active,
       interactive: interactive,
@@ -83,6 +86,7 @@ class AgentOperationActivity extends StatelessWidget {
                   id: 'operation-technical-${tool.id}',
                   title: l.agentTechnicalDetails,
                   status: tool.status,
+                  statusIcon: Icons.code_rounded,
                   active: active,
                   interactive: interactive,
                   child: AgentToolActivityDetails(

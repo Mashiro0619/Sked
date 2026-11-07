@@ -1,6 +1,8 @@
 import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:material_ui/material_ui.dart';
 
+import 'agent_ui_style.dart';
+
 /// A repository-scoped reading anchor, shared by the panel and full workspace.
 /// The fraction belongs to a message, rather than the total transcript height.
 class AgentReadingPosition {
@@ -225,7 +227,7 @@ class AgentTranscriptState extends State<AgentTranscript> {
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
       final layout = (
-        constraints.maxWidth.clamp(0.0, 812.0),
+        constraints.maxWidth.clamp(0.0, AgentUiStyle.contentWidth),
         MediaQuery.textScalerOf(context).scale(14),
       );
       if (_layout != null && _layout != layout) {
@@ -248,9 +250,13 @@ class AgentTranscriptState extends State<AgentTranscript> {
         child: Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 812),
+            constraints: const BoxConstraints(
+              maxWidth: AgentUiStyle.contentWidth,
+            ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AgentUiStyle.contentInset,
+              ),
               child: widget.children[index],
             ),
           ),
@@ -302,11 +308,10 @@ class AgentTranscriptState extends State<AgentTranscript> {
                       child: Align(
                         alignment: Alignment.topCenter,
                         child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 812),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: footer,
+                          constraints: const BoxConstraints(
+                            maxWidth: AgentUiStyle.contentWidth,
                           ),
+                          child: footer,
                         ),
                       ),
                     ),

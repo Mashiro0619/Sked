@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
-import '../../theme/sked_menu_style.dart';
 import '../interactions/agent_question.dart';
 import 'agent_selectable_text.dart';
+import 'agent_ui_style.dart';
 
 class AgentQuestionView extends StatefulWidget {
   const AgentQuestionView({
@@ -14,10 +14,12 @@ class AgentQuestionView extends StatefulWidget {
     required this.enabled,
     required this.onAnswer,
     required this.onDismiss,
+    this.docked = false,
   });
 
   final AgentQuestionRequest request;
   final bool enabled;
+  final bool docked;
   final Future<void> Function(List<AgentQuestionAnswer>) onAnswer;
   final Future<void> Function() onDismiss;
 
@@ -147,25 +149,29 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
+    final style = AgentUiStyle.of(context);
     final generation = _generation;
     final question = widget.request.questions[_page];
     final count = widget.request.questions.length;
-    final target = SkedMenuStyle.of(context).desktop ? 32.0 : 48.0;
+    final target = style.desktop ? 32.0 : 48.0;
     return Material(
       key: const ValueKey('agent-question-card'),
-      color: colors.surfaceContainerHigh,
-      borderRadius: BorderRadius.circular(16),
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
+      color: widget.docked ? Colors.transparent : style.popover,
+      shape: widget.docked ? null : style.popoverShape,
+      clipBehavior: widget.docked ? Clip.none : Clip.antiAlias,
+      child: Container(
+        decoration: widget.docked
+            ? BoxDecoration(
+                border: Border(bottom: BorderSide(color: style.border)),
+              )
+            : const BoxDecoration(),
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
             if (_skipped)
-              Text(l.agentQuestionSkipped)
+              Text(l.agentQuestionSkipped, style: style.label)
             else ...[
               _header(question, count, generation, target),
               const SizedBox(height: 6),
@@ -179,8 +185,10 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
                   enabled: _editable,
                   minLines: 1,
                   maxLines: 4,
+                  style: style.label,
                   decoration: InputDecoration(
                     hintText: l.agentQuestionAnswer,
+                    hintStyle: style.label.copyWith(color: style.muted),
                     isDense: true,
                     filled: false,
                     border: InputBorder.none,
@@ -188,9 +196,17 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
                     focusedBorder: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 8,
-                      vertical: 12,
+                      vertical: 10,
                     ),
-                    prefixIcon: const Icon(Icons.edit_outlined, size: 18),
+                    prefixIconConstraints: BoxConstraints(
+                      minWidth: 32,
+                      minHeight: target,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.edit_outlined,
+                      size: 16,
+                      color: style.muted,
+                    ),
                   ),
                   onChanged: (_) {
                     if (generation != _generation || !_editable) return;
@@ -205,12 +221,15 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
                 liveRegion: true,
                 child: Text(
                   l.agentOperationFailed,
-                  style: TextStyle(color: colors.error),
+                  style: style.label.copyWith(color: style.colors.error),
                 ),
               ),
             ],
             if (_pending != null)
-              Semantics(liveRegion: true, child: Text(l.agentSaving)),
+              Semantics(
+                liveRegion: true,
+                child: Text(l.agentSaving, style: style.caption),
+              ),
             if (!_resolved) ...[
               const SizedBox(height: 4),
               Row(
@@ -218,6 +237,7 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
                 children: [
                   TextButton(
                     key: const ValueKey('agent-question-skip'),
+                    style: style.controlStyle,
                     onPressed: _editable
                         ? () => _finish(generation: generation, dismiss: true)
                         : null,
@@ -227,6 +247,7 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
                   Flexible(
                     child: FilledButton(
                       key: const ValueKey('agent-question-submit'),
+                      style: style.filledControlStyle,
                       onPressed: _editable && _complete
                           ? () =>
                                 _finish(generation: generation, dismiss: false)
@@ -252,12 +273,12 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
     int generation,
     double target,
   ) {
-    final theme = Theme.of(context);
+    final style = AgentUiStyle.of(context);
     final title = Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Semantics(
         header: true,
-        child: Text(question.question, style: theme.textTheme.titleSmall),
+        child: Text(question.question, style: style.title),
       ),
     );
     if (count == 1) return title;
@@ -271,6 +292,9 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
               ? () => _showPage(_page - 1, generation)
               : null,
           icon: const Icon(Icons.chevron_left, size: 18),
+          style: style.controlStyle.copyWith(
+            padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+          ),
           constraints: BoxConstraints.tightFor(width: target, height: target),
           padding: EdgeInsets.zero,
           visualDensity: VisualDensity.standard,
@@ -282,9 +306,7 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
             key: const ValueKey('agent-question-page'),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+            style: style.caption,
           ),
         ),
         IconButton(
@@ -294,6 +316,9 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
               ? () => _showPage(_page + 1, generation)
               : null,
           icon: const Icon(Icons.chevron_right, size: 18),
+          style: style.controlStyle.copyWith(
+            padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+          ),
           constraints: BoxConstraints.tightFor(width: target, height: target),
           padding: EdgeInsets.zero,
           visualDensity: VisualDensity.standard,
@@ -329,30 +354,44 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
     );
   }
 
-  Widget _answer(AgentQuestionPrompt question) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      for (final option in question.options)
-        if (_selected[question.id]!.contains(option.id))
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.check),
-            title: Text(option.label),
-            subtitle: option.description == null
-                ? null
-                : Text(option.description!),
-          ),
-      if (_text[question.id]!.text.isNotEmpty)
-        AgentSelectableText(_text[question.id]!.text),
-    ],
-  );
+  Widget _answer(AgentQuestionPrompt question) {
+    final style = AgentUiStyle.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final option in question.options)
+          if (_selected[question.id]!.contains(option.id))
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.check, size: 18, color: style.muted),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(option.label, style: style.label),
+                        if (option.description case final description?)
+                          Text(description, style: style.caption),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        if (_text[question.id]!.text.isNotEmpty)
+          AgentSelectableText(_text[question.id]!.text, style: style.label),
+      ],
+    );
+  }
 
   Widget _options(AgentQuestionPrompt question) {
     final selected = _selected[question.id]!;
     final generation = _generation;
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
+    final style = AgentUiStyle.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -362,7 +401,7 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
             padding: const EdgeInsets.only(bottom: 4),
             child: Text(
               AppLocalizations.of(context).agentQuestionMultiple,
-              style: theme.textTheme.labelSmall,
+              style: style.caption,
             ),
           ),
         for (var index = 0; index < question.options.length; index++)
@@ -377,15 +416,15 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
                   inMutuallyExclusiveGroup: !question.multiple,
                   enabled: _editable,
                   child: Material(
-                    color: checked
-                        ? colors.secondaryContainer
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(10),
+                    color: checked ? style.selected : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
                     child: InkWell(
                       key: ValueKey(
                         'agent-question-option-${question.id}-${option.id}',
                       ),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(8),
+                      hoverColor: style.hover,
+                      focusColor: style.hover,
                       onTap: !_editable
                           ? null
                           : () {
@@ -404,13 +443,11 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
                             },
                       child: Container(
                         constraints: BoxConstraints(
-                          minHeight: SkedMenuStyle.of(context).desktop
-                              ? 32
-                              : 48,
+                          minHeight: style.desktop ? 32 : 48,
                         ),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
-                          vertical: 8,
+                          vertical: 6,
                         ),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -426,21 +463,17 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
                               ),
                               decoration: BoxDecoration(
                                 color: checked
-                                    ? colors.onSecondaryContainer
-                                    : colors.surfaceContainerHighest,
+                                    ? style.foreground
+                                    : style.subtleSurface,
                                 borderRadius: BorderRadius.circular(5),
                               ),
-                              child: checked
-                                  ? Icon(
-                                      Icons.check,
-                                      size: 16,
-                                      color: colors.secondaryContainer,
-                                    )
-                                  : Text(
-                                      '${index + 1}',
-                                      textAlign: TextAlign.center,
-                                      style: theme.textTheme.labelSmall,
-                                    ),
+                              child: Text(
+                                '${index + 1}',
+                                textAlign: TextAlign.center,
+                                style: style.caption.copyWith(
+                                  color: checked ? style.canvas : style.muted,
+                                ),
+                              ),
                             ),
                             const SizedBox(width: 10),
                             Expanded(
@@ -449,25 +482,23 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
                                 children: [
                                   Text(
                                     option.label,
-                                    style: theme.textTheme.labelLarge,
+                                    style: style.label.copyWith(fontSize: 14),
                                   ),
                                   if (option.description
                                       case final description?) ...[
                                     const SizedBox(height: 2),
-                                    Text(
-                                      description,
-                                      style: theme.textTheme.bodySmall
-                                          ?.copyWith(
-                                            color: colors.onSurfaceVariant,
-                                          ),
-                                    ),
+                                    Text(description, style: style.caption),
                                   ],
                                 ],
                               ),
                             ),
                             if (checked) ...[
                               const SizedBox(width: 6),
-                              const Icon(Icons.arrow_forward_rounded, size: 16),
+                              Icon(
+                                Icons.check,
+                                size: 16,
+                                color: style.foreground,
+                              ),
                             ],
                           ],
                         ),

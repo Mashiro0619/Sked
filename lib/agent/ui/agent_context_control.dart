@@ -7,6 +7,7 @@ import '../../theme/sked_expressive_theme.dart';
 import '../../widgets/sked_popup_menu.dart';
 import '../../theme/sked_menu_style.dart';
 import 'agent_ui_delegate.dart';
+import 'agent_ui_style.dart';
 
 class AgentContextControl extends StatelessWidget {
   const AgentContextControl({
@@ -32,6 +33,7 @@ class AgentContextControl extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final ui = AgentUiStyle.of(context);
     final estimated = usage?.estimatedTokens;
     final window = usage?.maxContextTokens;
     final compacting = usage?.isCompacting == true;
@@ -43,6 +45,7 @@ class AgentContextControl extends StatelessWidget {
     return SkedPopupMenuButton<String>(
       key: ValueKey(moreMenu ? 'agent-composer-more' : 'agent-context-control'),
       padding: EdgeInsets.all(SkedMenuStyle.of(context).desktop ? 6 : 8),
+      style: ui.controlStyle,
       enabled: enabled && (moreMenu || onCompact != null),
       tooltip: moreMenu
           ? l.more
@@ -184,7 +187,7 @@ class AgentContextIndicator extends StatelessWidget {
     ].join('\n');
     final desktop = SkedMenuStyle.of(context).desktop;
     final motion = SkedMotionPolicy.of(context);
-    final theme = Theme.of(context);
+    final ui = AgentUiStyle.of(context);
     final bounds = SkedMenuStyle.availableRectOf(context);
     final indicator = SizedBox(
       width: desktop ? 24 : 32,
@@ -198,7 +201,7 @@ class AgentContextIndicator extends StatelessWidget {
                 ? Icon(
                     Icons.error_outline_rounded,
                     size: 14,
-                    color: Theme.of(context).colorScheme.error,
+                    color: ui.colors.error,
                   )
                 : CircularProgressIndicator(
                     value: compacting
@@ -207,11 +210,8 @@ class AgentContextIndicator extends StatelessWidget {
                     strokeWidth: 2,
                     padding: EdgeInsets.zero,
                     trackGap: 0,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    backgroundColor: Theme.of(context)
-                        .colorScheme
-                        .onSurfaceVariant
-                        .withValues(alpha: .45),
+                    color: ui.muted,
+                    backgroundColor: ui.muted.withValues(alpha: .45),
                   ),
           ),
         ),
@@ -229,7 +229,7 @@ class AgentContextIndicator extends StatelessWidget {
           ? indicator
           : RawTooltip(
               semanticsTooltip: description,
-              hoverDelay: const Duration(milliseconds: 250),
+              hoverDelay: const Duration(milliseconds: 600),
               dismissDelay: const Duration(milliseconds: 200),
               touchDelay: const Duration(seconds: 4),
               triggerMode: TooltipTriggerMode.tap,
@@ -268,57 +268,55 @@ class AgentContextIndicator extends StatelessWidget {
                     ),
                     child: Material(
                       key: const ValueKey('agent-context-card'),
-                      color: theme.colorScheme.surfaceContainerHigh,
-                      elevation: 3,
-                      shadowColor: theme.colorScheme.shadow.withValues(
-                        alpha: .16,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(
-                          color: theme.colorScheme.outlineVariant,
-                        ),
-                      ),
+                      color: ui.popover,
+                      elevation: 2,
+                      shadowColor: ui.colors.shadow.withValues(alpha: .14),
+                      surfaceTintColor: Colors.transparent,
+                      shape: ui.popoverShape,
                       clipBehavior: Clip.antiAlias,
                       child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(14),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Text(
                               l.agentContextTitle,
-                              style: theme.textTheme.titleSmall,
+                              textAlign: TextAlign.center,
+                              style: ui.caption.copyWith(color: ui.muted),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 4),
                             if (utilization != null) ...[
                               Text(
                                 utilization,
-                                style: theme.textTheme.bodyMedium,
+                                textAlign: TextAlign.center,
+                                style: ui.label.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 2),
                             ],
                             Text(
                               tokenUsage,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
+                              textAlign: TextAlign.center,
+                              style: ui.caption.copyWith(color: ui.muted),
                             ),
                             if (capacity != null)
                               Text(
                                 capacity,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
+                                textAlign: TextAlign.center,
+                                style: ui.caption.copyWith(color: ui.muted),
                               ),
                             if (status != null) ...[
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 6),
                               Text(
                                 status,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: failed
-                                      ? theme.colorScheme.error
-                                      : theme.colorScheme.onSurfaceVariant,
+                                textAlign: TextAlign.center,
+                                style: ui.caption.copyWith(
+                                  color: failed ? ui.colors.error : ui.muted,
                                 ),
                               ),
                             ],

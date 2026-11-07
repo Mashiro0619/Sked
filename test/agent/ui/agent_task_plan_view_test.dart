@@ -41,7 +41,12 @@ void main() {
     expect(find.byIcon(Icons.radio_button_unchecked), findsOneWidget);
     expect(find.byIcon(Icons.timelapse), findsOneWidget);
     expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
-    expect(find.byIcon(Icons.error_outline), findsOneWidget);
+    final waiting = find.byIcon(Icons.pause_circle_outline_rounded);
+    expect(waiting, findsOneWidget);
+    expect(
+      tester.widget<Icon>(waiting).color,
+      isNot(Theme.of(tester.element(waiting)).colorScheme.error),
+    );
     expect(find.text('Waiting for the required information'), findsNothing);
     await tester.tap(find.text('Review the result'));
     await tester.pumpAndSettle();

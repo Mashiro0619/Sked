@@ -13,6 +13,7 @@ void main() {
     WidgetTester tester,
     AgentQuestionRequest request, {
     bool enabled = true,
+    bool docked = false,
     Future<void> Function(List<AgentQuestionAnswer>)? onAnswer,
     Future<void> Function()? onDismiss,
     Size size = const Size(460, 820),
@@ -25,6 +26,7 @@ void main() {
         child: AgentQuestionView(
           request: request,
           enabled: enabled,
+          docked: docked,
           onAnswer: onAnswer ?? (_) async {},
           onDismiss: onDismiss ?? () async {},
         ),
@@ -82,6 +84,67 @@ void main() {
       expect(tester.getRect(submit).right, closeTo(end, 1));
       expect(tester.takeException(), isNull);
     }
+  });
+
+  testWidgets(
+    'docked question keeps the numbered selection and shared surface',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      await mount(
+        tester,
+        _request(questions: [_questions().first]),
+        docked: true,
+      );
+      final surface = tester.widget<Material>(
+        find.byKey(const ValueKey('agent-question-card')),
+      );
+      expect(surface.color, Colors.transparent);
+      expect(surface.shape, isNull);
+      await tap(tester, option('one', 'a'));
+      expect(
+        find.descendant(of: option('one', 'a'), matching: find.text('1')),
+        findsOneWidget,
+      );
+      expect(selectedMark('one', 'a'), findsOneWidget);
+      expect(find.byIcon(Icons.arrow_forward_rounded), findsNothing);
+      expect(tester.widget<TextField>(field('one')).enabled, isTrue);
+      expect(canSubmit(tester), isTrue);
+    },
+  );
+
+  testWidgets('changing the question surface preserves an active text draft', (
+    tester,
+  ) async {
+    addTearDown(tester.view.reset);
+    final request = _request(questions: _questions());
+    await mount(tester, request);
+    await tap(tester, option('one', 'b'));
+    await tap(tester, next);
+    await tester.showKeyboard(field('many'));
+    const draft = TextEditingValue(
+      text: 'Example draft',
+      selection: TextSelection.collapsed(offset: 7),
+      composing: TextRange(start: 0, end: 7),
+    );
+    tester.testTextInput.updateEditingValue(draft);
+    await tester.pump();
+    final controller = tester.widget<TextField>(field('many')).controller!;
+    final editable = find.descendant(
+      of: field('many'),
+      matching: find.byType(EditableText),
+    );
+    final editor = tester.state<EditableTextState>(editable);
+    await mount(tester, request, docked: true);
+    expect(
+      tester.widget<TextField>(field('many')).controller,
+      same(controller),
+    );
+    expect(tester.state<EditableTextState>(editable), same(editor));
+    expect(editor.widget.focusNode.hasFocus, isTrue);
+    expect(controller.value, draft);
+    await tap(tester, previous);
+    expect(selectedMark('one', 'b'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('all prompts require a deliberate selection or text answer', (

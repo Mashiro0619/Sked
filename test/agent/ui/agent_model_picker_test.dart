@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:ui' show Tristate;
+import 'dart:ui' show PointerDeviceKind, Tristate;
 
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/ui/agent_model_picker.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
+import 'package:sked/agent/ui/agent_ui_style.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/agent_settings.dart';
 import 'package:sked/theme/sked_expressive_theme.dart';
@@ -161,6 +162,116 @@ void main() {
       child = parent;
     }
     return bounds;
+  }
+
+  for (final brightness in Brightness.values) {
+    testWidgets(
+      'model trigger resolves one compact hover and focus surface in $brightness',
+      (tester) async {
+        await initialize(tester);
+        await mountAgentUi(tester, view(), brightness: brightness);
+        final trigger = find.byKey(const ValueKey('agent-model-picker'));
+        final ui = AgentUiStyle.of(tester.element(trigger));
+        final button = tester.widget<TextButton>(trigger);
+        final l = AppLocalizations.of(tester.element(trigger));
+        final expectedLabel = '${l.agentModelSelection}: model-a · Low';
+        List<SemanticsNode> buttons() {
+          final result = <SemanticsNode>[];
+          void visit(SemanticsNode node) {
+            if (node.getSemanticsData().flagsCollection.isButton) {
+              result.add(node);
+            }
+            node.visitChildren((child) {
+              visit(child);
+              return true;
+            });
+          }
+
+          visit(tester.getSemantics(trigger));
+          return result;
+        }
+
+        final closed = buttons();
+        expect(closed, hasLength(1));
+        final closedData = closed.single.getSemanticsData();
+        expect(closedData.flagsCollection.isEnabled, Tristate.isTrue);
+        expect(closedData.flagsCollection.isExpanded, Tristate.isFalse);
+        expect(closedData.label, expectedLabel);
+        expect(closedData.hasAction(SemanticsAction.tap), isTrue);
+        final painted = find
+            .descendant(of: trigger, matching: find.byType(Material))
+            .first;
+        final shape =
+            tester.widget<Material>(painted).shape! as RoundedRectangleBorder;
+        expect(shape.borderRadius, BorderRadius.circular(8));
+        expect(tester.getSize(trigger).height, closeTo(32, .1));
+        expect(tester.widget<Material>(painted).color, Colors.transparent);
+        final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+        await mouse.addPointer(location: const Offset(1, 500));
+        addTearDown(mouse.removePointer);
+        await mouse.moveTo(tester.getCenter(trigger));
+        await tester.pumpAndSettle();
+        expect(tester.widget<Material>(painted).color, ui.hover);
+        button.focusNode!.requestFocus();
+        await tester.pumpAndSettle();
+        expect(tester.widget<Material>(painted).color, ui.hover);
+        expect(
+          (tester.widget<Material>(painted).shape! as OutlinedBorder).side,
+          BorderSide(color: ui.muted),
+        );
+        await mouse.moveTo(const Offset(1, 500));
+        await tester.pumpAndSettle();
+        expect(tester.widget<Material>(painted).color, ui.hover);
+        button.focusNode!.unfocus();
+        await tester.pumpAndSettle();
+        expect(tester.widget<Material>(painted).color, Colors.transparent);
+        closed.single.owner!.performAction(
+          closed.single.id,
+          SemanticsAction.tap,
+        );
+        await tester.pumpAndSettle();
+        final panel = find.byKey(const ValueKey('agent-model-panel'));
+        final popover = tester.widget<Material>(
+          find.ancestor(of: panel, matching: find.byType(Material)).first,
+        );
+        expect(popover.color, ui.popover);
+        expect(popover.shape, ui.popoverShape);
+        expect(popover.elevation, 2);
+        await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+        await tester.pumpAndSettle();
+        expect(buttons(), hasLength(1));
+        expect(
+          buttons().single.getSemanticsData().flagsCollection.isExpanded,
+          Tristate.isFalse,
+        );
+        delegate.state.value = AgentUiState(
+          enabled: false,
+          configured: true,
+          availableModels: const [modelA, modelB],
+          defaultModelSelection: low,
+          modelSelections: {id: low},
+        );
+        await tester.pumpAndSettle();
+        expect(tester.widget<TextButton>(trigger).onPressed, isNull);
+        final disabled = buttons();
+        expect(disabled, hasLength(1));
+        final disabledData = disabled.single.getSemanticsData();
+        expect(disabledData.flagsCollection.isEnabled, Tristate.isFalse);
+        expect(disabledData.flagsCollection.isExpanded, Tristate.isFalse);
+        expect(disabledData.label, expectedLabel);
+        expect(disabledData.hasAction(SemanticsAction.tap), isFalse);
+        final modelText = find.descendant(
+          of: trigger,
+          matching: find.text('model-a'),
+        );
+        expect(
+          tester.renderObject<RenderParagraph>(modelText).text.style?.color,
+          ui.foreground.withValues(alpha: .38),
+        );
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.windows),
+    );
   }
 
   for (final scene in [
@@ -1033,7 +1144,7 @@ void main() {
           expect(effortText.data, 'Minimal');
           expect(
             effortText.style?.fontSize,
-            Theme.of(tester.element(effort)).textTheme.titleMedium?.fontSize,
+            AgentUiStyle.of(tester.element(effort)).title.fontSize,
           );
           expect(MediaQuery.textScalerOf(tester.element(effort)).scale(16), 32);
           final paragraph = tester.renderObject<RenderParagraph>(effort);

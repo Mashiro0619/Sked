@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/ui/agent_operation_card.dart';
+import 'package:sked/agent/ui/agent_inline_disclosure_header.dart';
 import 'package:sked/agent/ui/agent_plan_preview.dart';
 import 'package:sked/agent/ui/agent_setting_labels.dart';
 import 'package:sked/application/operation_contracts.dart';
@@ -265,7 +266,10 @@ void main() {
               tester.element(find.byType(AgentPlanPreview)),
             );
             for (final label in _labels(kind, l)) {
-              expect(find.widgetWithText(ExpansionTile, label), findsOneWidget);
+              expect(
+                find.widgetWithText(AgentInlineDisclosureHeader, label),
+                findsOneWidget,
+              );
             }
             expect(jsonEncode(approval), originalApproval);
             expect(h.saved.encode(), saved);

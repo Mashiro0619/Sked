@@ -6,6 +6,8 @@ extension _AgentTaskPlanPanel on _AgentConversationViewState {
         key: ValueKey((_repository, _repository.selectedId, entry.id)),
         plan: entry.plan,
         identity: entry.id,
+        active: widget.active,
+        interactive: _uiActive,
         labels: AgentTaskPlanLabels(
           title: l.agentTaskPlanTitle,
           pending: l.agentTaskPlanPending,

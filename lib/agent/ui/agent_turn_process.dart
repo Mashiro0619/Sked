@@ -128,28 +128,26 @@ extension _AgentTurnProcess on _AgentConversationViewState {
     final reading = _activityReading(conversation.id);
     final key = ValueKey(('agent-process', conversation.id, turn));
     final generation = _uiGeneration;
-    return Align(
+    return AgentInlineDisclosureHeader(
       key: key,
-      alignment: AlignmentDirectional.centerStart,
-      child: Semantics(
-        expanded: expanded,
-        child: TextButton.icon(
-          key: ValueKey('agent-process-toggle-$turn'),
-          onPressed: !_uiActive
-              ? null
-              : () {
-                  if (!_uiSessionCurrent(generation, conversation.id)) return;
-                  _updateProcessState(
-                    () => reading.processes[turn] = !expanded,
-                  );
-                  if (expanded && !_reading(conversation.id).followLatest) {
-                    _transcripts[conversation.id]?.currentState?.reveal(key);
-                  }
-                },
-          icon: Icon(expanded ? Icons.expand_less : Icons.expand_more),
-          label: Text(l.agentActivityDetails),
-        ),
+      title: l.agentActivityDetails,
+      expanded: expanded,
+      toggleKey: ValueKey('agent-process-toggle-$turn'),
+      controlsKey: ValueKey(('process-controls', generation)),
+      leading: Icon(
+        Icons.list_alt_rounded,
+        size: 16,
+        color: AgentUiStyle.of(context).muted,
       ),
+      onTap: !_uiActive
+          ? null
+          : () {
+              if (!_uiSessionCurrent(generation, conversation.id)) return;
+              _updateProcessState(() => reading.processes[turn] = !expanded);
+              if (expanded && !_reading(conversation.id).followLatest) {
+                _transcripts[conversation.id]?.currentState?.reveal(key);
+              }
+            },
     );
   }
 

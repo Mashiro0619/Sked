@@ -161,7 +161,13 @@ void main() {
       final l = AppLocalizations.of(
         tester.element(find.byType(AgentConversationView)),
       );
-      expect(find.byIcon(Icons.hourglass_top_rounded), findsOneWidget);
+      expect(
+        find.descendant(
+          of: _key('agent-activity-toggle-call-0-0'),
+          matching: find.byIcon(Icons.notifications_none_rounded),
+        ),
+        findsOneWidget,
+      );
       expect(find.byType(ExpansionTile), findsNothing);
       expect(find.byType(AgentOperationCard), findsNothing);
       await _tap(tester, _key('agent-activity-toggle-call-0-0'));
@@ -363,6 +369,18 @@ void main() {
             _key('agent-activity-branch-operation-technical-${tool.id}'),
           );
           expect((technicalDetails.decoration as BoxDecoration).border, isNull);
+          final toolDetails = find.descendant(
+            of: _key('agent-activity-branch-operation-technical-${tool.id}'),
+            matching: find.byType(AgentToolActivityDetails),
+          );
+          final labels = AppLocalizations.of(tester.element(toolDetails));
+          expect(
+            find.descendant(
+              of: toolDetails,
+              matching: find.text(labels.agentTechnicalDetails),
+            ),
+            findsNothing,
+          );
           await _tap(
             tester,
             _key('agent-activity-toggle-operation-technical-${tool.id}'),

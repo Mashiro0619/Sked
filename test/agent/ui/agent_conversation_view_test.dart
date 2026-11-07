@@ -725,6 +725,39 @@ void main() {
       } else {
         expect(continuation, findsNothing);
       }
+      if (phase == AgentUiPhase.running) {
+        for (final brightness in Brightness.values) {
+          await mountAgentUi(
+            tester,
+            composerView(),
+            size: const Size(1000, 900),
+            brightness: brightness,
+          );
+          final stop = find.byKey(const ValueKey('agent-stop'));
+          final icon = find
+              .descendant(of: stop, matching: find.byType(Icon))
+              .last;
+          final foreground = IconTheme.of(tester.element(icon)).color!;
+          final surface = tester
+              .widget<Material>(
+                find
+                    .descendant(of: stop, matching: find.byType(Material))
+                    .first,
+              )
+              .color!;
+          final lighter =
+              foreground.computeLuminance() > surface.computeLuminance()
+              ? foreground
+              : surface;
+          final darker = lighter == foreground ? surface : foreground;
+          expect(
+            (lighter.computeLuminance() + .05) /
+                (darker.computeLuminance() + .05),
+            greaterThanOrEqualTo(4.5),
+            reason: 'The running stop icon stays readable in $brightness',
+          );
+        }
+      }
       expect(tester.takeException(), isNull);
     }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
   }

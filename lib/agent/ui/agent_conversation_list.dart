@@ -10,6 +10,7 @@ import '../../widgets/workbench_chrome_metrics.dart';
 import '../conversations/conversation_repository.dart';
 import 'agent_conversation_row.dart';
 import 'agent_ui_delegate.dart';
+import 'agent_ui_style.dart';
 
 /// The same local history is used by the full workspace and compact picker.
 class AgentConversationList extends StatefulWidget {
@@ -356,7 +357,7 @@ class _AgentConversationListState extends State<AgentConversationList> {
 
   Widget _actions(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final colors = Theme.of(context).colorScheme;
+    final style = AgentUiStyle.of(context);
     final metrics = WorkbenchChromeMetrics.of(context);
     final generation = _generation;
     final repository = widget.repository;
@@ -364,9 +365,9 @@ class _AgentConversationListState extends State<AgentConversationList> {
     final newGeneration = _newActionGeneration;
     final extent = metrics.iconTarget;
     final iconSize = metrics.desktop ? 18.0 : 20.0;
-    final iconStyle = metrics.iconStyle.copyWith(
-      padding: const WidgetStatePropertyAll(EdgeInsets.zero),
-    );
+    final iconStyle = metrics.iconStyle
+        .merge(style.controlStyle)
+        .copyWith(padding: const WidgetStatePropertyAll(EdgeInsets.zero));
     void newConversation() {
       if (_current(generation, repository) &&
           widget.onNewConversation != null &&
@@ -381,9 +382,11 @@ class _AgentConversationListState extends State<AgentConversationList> {
             child: TextButton.icon(
               key: const ValueKey('agent-history-new'),
               onPressed: _enabled ? newConversation : null,
-              style: TextButton.styleFrom(
-                minimumSize: Size(extent, extent),
-                padding: const EdgeInsets.symmetric(horizontal: 10),
+              style: style.controlStyle.copyWith(
+                minimumSize: WidgetStatePropertyAll(Size(extent, extent)),
+                padding: const WidgetStatePropertyAll(
+                  EdgeInsets.symmetric(horizontal: 10),
+                ),
               ),
               icon: Icon(Icons.add_comment_outlined, size: iconSize),
               label: Text(l.agentNewConversation, maxLines: 1),
@@ -402,7 +405,14 @@ class _AgentConversationListState extends State<AgentConversationList> {
           );
     final search = IconButton(
       key: const ValueKey('agent-history-search-toggle'),
-      style: iconStyle,
+      style: iconStyle.copyWith(
+        backgroundColor: _searchOpen || _query.isNotEmpty
+            ? WidgetStatePropertyAll(style.selected)
+            : null,
+        foregroundColor: _searchOpen || _query.isNotEmpty
+            ? WidgetStatePropertyAll(style.foreground)
+            : null,
+      ),
       tooltip: _searchOpen
           ? MaterialLocalizations.of(context).closeButtonTooltip
           : _query.isEmpty
@@ -423,14 +433,12 @@ class _AgentConversationListState extends State<AgentConversationList> {
             ? '${l.more}: ${l.agentArchivedConversations}'
             : l.more,
         enabled: _enabled,
-        style: iconStyle.copyWith(
-          backgroundColor: WidgetStatePropertyAll(
-            _archived ? colors.secondaryContainer : null,
-          ),
-          foregroundColor: WidgetStatePropertyAll(
-            _archived ? colors.onSecondaryContainer : null,
-          ),
-        ),
+        style: _archived
+            ? iconStyle.copyWith(
+                backgroundColor: WidgetStatePropertyAll(style.selected),
+                foregroundColor: WidgetStatePropertyAll(style.foreground),
+              )
+            : iconStyle,
         icon: Icon(Icons.more_horiz, size: iconSize),
         itemBuilder: _archiveItems,
         onSelected: _chooseArchive,
@@ -480,7 +488,9 @@ class _AgentConversationListState extends State<AgentConversationList> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
+    final style = AgentUiStyle.of(context);
     final metrics = WorkbenchChromeMetrics.of(context);
+    final iconStyle = metrics.iconStyle.merge(style.controlStyle);
     return FocusScope(
       canRequestFocus: _enabled,
       descendantsAreFocusable: _enabled,
@@ -690,7 +700,7 @@ class _AgentConversationListState extends State<AgentConversationList> {
                                         tooltip: conversation.pinned
                                             ? l.agentUnpinConversation
                                             : l.agentPinConversation,
-                                        style: metrics.iconStyle,
+                                        style: iconStyle,
                                         onPressed:
                                             !_enabled ||
                                                 (!repository.canWrite &&
@@ -713,6 +723,9 @@ class _AgentConversationListState extends State<AgentConversationList> {
                                                 child:
                                                     CircularProgressIndicator(
                                                       strokeWidth: 1.6,
+                                                      padding: EdgeInsets.zero,
+                                                      trackGap: 0,
+                                                      color: style.muted,
                                                       semanticsLabel:
                                                           l.agentSaving,
                                                     ),
@@ -757,12 +770,15 @@ class _AgentConversationListState extends State<AgentConversationList> {
                                                   repository,
                                                 ),
                                               ),
-                                        style: metrics.iconStyle,
+                                        style: iconStyle,
                                         icon: _restoringId == conversation.id
                                             ? SizedBox.square(
                                                 dimension: 20,
                                                 child: CircularProgressIndicator(
                                                   strokeWidth: 2,
+                                                  padding: EdgeInsets.zero,
+                                                  trackGap: 0,
+                                                  color: style.muted,
                                                   semanticsLabel:
                                                       conversation.archived
                                                       ? l.agentRestoreConversation

@@ -14,6 +14,7 @@ import '../../widgets/expressive_motion.dart';
 import 'agent_effort_slider.dart';
 import 'agent_model_labels.dart';
 import 'agent_ui_delegate.dart';
+import 'agent_ui_style.dart';
 
 typedef AgentModelPickerLayoutBuilder = Widget Function(
   Widget control,
@@ -358,6 +359,7 @@ class _AgentModelPickerState extends State<AgentModelPicker>
     builder: (context, state, _) {
       final anchorScope = AgentModelPickerAnchorScope.maybeOf(context);
       final l = AppLocalizations.of(context);
+      final ui = AgentUiStyle.of(context);
       final selection = state.selectionFor(widget.conversationId);
       final defaultSelection = state.defaultModelSelection;
       final model = state.availableModels
@@ -395,10 +397,7 @@ class _AgentModelPickerState extends State<AgentModelPicker>
       final triggerLabel = selection == null
           ? modelLabel
           : '$modelLabel · $effortLabel';
-      final effortStyle = Theme.of(context).textTheme.titleMedium?.copyWith(
-        color: menuStyle.selectedForeground,
-        fontWeight: FontWeight.w600,
-      );
+      final effortStyle = ui.title.copyWith(color: ui.foreground);
       final modelHeading = Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -423,16 +422,10 @@ class _AgentModelPickerState extends State<AgentModelPicker>
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                  style: ui.label.copyWith(color: ui.muted),
                 ),
               ),
-              Icon(
-                Icons.chevron_right_rounded,
-                size: 16,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+              Icon(Icons.chevron_right_rounded, size: 16, color: ui.muted),
             ],
           ),
         ],
@@ -443,6 +436,13 @@ class _AgentModelPickerState extends State<AgentModelPicker>
         anchorRectBuilder: anchorScope?._anchorRect,
         manageRouteHistory: false,
         style: menuStyle.compactPanelStyle.copyWith(
+          backgroundColor: WidgetStatePropertyAll(ui.popover),
+          shape: WidgetStatePropertyAll(ui.popoverShape),
+          side: WidgetStatePropertyAll(ui.popoverShape.side),
+          elevation: const WidgetStatePropertyAll(2),
+          shadowColor: WidgetStatePropertyAll(
+            ui.colors.shadow.withValues(alpha: .14),
+          ),
           alignment: AlignmentDirectional.bottomEnd,
           maximumSize: WidgetStatePropertyAll(Size(width, height)),
         ),
@@ -501,14 +501,9 @@ class _AgentModelPickerState extends State<AgentModelPicker>
                                       key: const ValueKey(
                                         'agent-model-list-title',
                                       ),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .labelMedium
-                                          ?.copyWith(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurfaceVariant,
-                                          ),
+                                      style: ui.caption.copyWith(
+                                        color: ui.muted,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -518,8 +513,38 @@ class _AgentModelPickerState extends State<AgentModelPicker>
                               MenuItemButton(
                                 overflowAxis: Axis.vertical,
                                 key: ValueKey('agent-model-choice-${item.id}'),
-                                style: menuStyle.itemStyle(
-                                  selected: item.id == selection?.modelId,
+                                style: ui.controlStyle.copyWith(
+                                  minimumSize: WidgetStatePropertyAll(
+                                    Size.fromHeight(
+                                      menuStyle.desktop ? 32 : 48,
+                                    ),
+                                  ),
+                                  padding: WidgetStatePropertyAll(
+                                    menuStyle.itemPadding,
+                                  ),
+                                  backgroundColor:
+                                      WidgetStateProperty.resolveWith((states) {
+                                        if (states.contains(
+                                          WidgetState.disabled,
+                                        )) {
+                                          return Colors.transparent;
+                                        }
+                                        if (states.contains(
+                                              WidgetState.hovered,
+                                            ) ||
+                                            states.contains(
+                                              WidgetState.focused,
+                                            ) ||
+                                            states.contains(
+                                              WidgetState.pressed,
+                                            )) {
+                                          return ui.controlStyle.backgroundColor
+                                              ?.resolve(states);
+                                        }
+                                        return item.id == selection?.modelId
+                                            ? ui.selected
+                                            : Colors.transparent;
+                                      }),
                                 ),
                                 closeOnActivate: false,
                                 onPressed: enabled
@@ -593,7 +618,7 @@ class _AgentModelPickerState extends State<AgentModelPicker>
                                   message: '${l.agentModel}: $modelLabel',
                                   child: TextButton(
                                     key: const ValueKey('agent-model-switch'),
-                                    style: menuStyle.itemStyle().copyWith(
+                                    style: ui.controlStyle.copyWith(
                                       minimumSize: const WidgetStatePropertyAll(
                                         Size(0, 48),
                                       ),
@@ -627,9 +652,12 @@ class _AgentModelPickerState extends State<AgentModelPicker>
                                   ),
                                   padding: EdgeInsets.zero,
                                   iconSize: 20,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
+                                  style: ui.controlStyle.copyWith(
+                                    padding: const WidgetStatePropertyAll(
+                                      EdgeInsets.zero,
+                                    ),
+                                  ),
+                                  color: ui.muted,
                                   onPressed:
                                       enabled &&
                                           defaultSelection != null &&
@@ -774,108 +802,99 @@ class _AgentModelPickerState extends State<AgentModelPicker>
         ],
         builder: (context, controller, _) => Tooltip(
           message: triggerLabel,
-          child: Semantics(
-            button: true,
-            enabled: enabled && state.availableModels.isNotEmpty,
-            label: '${l.agentModelSelection}: $triggerLabel',
-            expanded: controller.isOpen,
-            child: Material(
-              type: MaterialType.transparency,
-              child: InkWell(
-                key: const ValueKey('agent-model-picker'),
-                focusNode: _focus,
-                customBorder: skedShapeSchemeOf(context).selection,
-                onTap: enabled && state.availableModels.isNotEmpty
-                    ? () {
-                        if (controller.isOpen) {
-                          _dismissMenu();
-                          return;
-                        }
-                        _menuGeneration++;
-                        _openGeneration = _generation;
-                        final token = _openToken = Object();
-                        _openModels = List.of(state.availableModels);
-                        _menuGeometry = _readGeometry();
-                        _registerMenuHistory(token);
-                        setState(() {
-                          _showModels(model == null);
-                          _preview = null;
-                        });
-                        controller.open();
-                      }
-                    : null,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minWidth: menuStyle.desktop ? 32 : 48,
-                    maxWidth: 320,
-                    minHeight: menuStyle.desktop ? 32 : 48,
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 6,
-                    ),
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final style = Theme.of(context).textTheme.labelLarge;
-                        final textScaler = MediaQuery.textScalerOf(context);
-                        double labelWidth(String label) {
-                          final measure = TextPainter(
-                            text: TextSpan(text: label, style: style),
-                            textDirection: Directionality.of(context),
-                            textScaler: textScaler,
-                          )..layout();
-                          final width = measure.width;
-                          measure.dispose();
-                          return width;
-                        }
+          child: TextButton(
+            key: const ValueKey('agent-model-picker'),
+            focusNode: _focus,
+            style: ui.controlStyle.copyWith(
+              minimumSize: WidgetStatePropertyAll(
+                Size.square(menuStyle.desktop ? 32 : 48),
+              ),
+              maximumSize: const WidgetStatePropertyAll(
+                Size(320, double.infinity),
+              ),
+              padding: const WidgetStatePropertyAll(
+                EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              ),
+            ),
+            onPressed: enabled && state.availableModels.isNotEmpty
+                ? () {
+                    if (controller.isOpen) {
+                      _dismissMenu();
+                      return;
+                    }
+                    _menuGeneration++;
+                    _openGeneration = _generation;
+                    final token = _openToken = Object();
+                    _openModels = List.of(state.availableModels);
+                    _menuGeometry = _readGeometry();
+                    _registerMenuHistory(token);
+                    setState(() {
+                      _showModels(model == null);
+                      _preview = null;
+                    });
+                    controller.open();
+                  }
+                : null,
+            child: Semantics(
+              label: '${l.agentModelSelection}: $triggerLabel',
+              expanded: controller.isOpen,
+              excludeSemantics: true,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final style = ui.label;
+                  final textScaler = MediaQuery.textScalerOf(context);
+                  double labelWidth(String label) {
+                    final measure = TextPainter(
+                      text: TextSpan(text: label, style: style),
+                      textDirection: Directionality.of(context),
+                      textScaler: textScaler,
+                    )..layout();
+                    final width = measure.width;
+                    measure.dispose();
+                    return width;
+                  }
 
-                        final effortWidth = labelWidth(effortLabel);
-                        final minimumModelWidth = math.min(
-                          labelWidth(modelLabel),
-                          textScaler.scale(32),
-                        );
-                        // Reserve a readable part of the model before retaining
-                        // the inline effort. The full choice stays in the menu,
-                        // tooltip and semantic label when this row is narrow.
-                        final showEffort =
-                            selection != null &&
-                            constraints.maxWidth >=
-                                minimumModelWidth + effortWidth + 11 + 4 + 16;
-                        return Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Flexible(
-                              fit: FlexFit.loose,
-                              child: Text(
-                                modelLabel,
-                                style: style,
-                                textDirection: selection == null
-                                    ? Directionality.of(context)
-                                    : TextDirection.ltr,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (showEffort) ...[
-                              const SizedBox(width: 4),
-                              const Icon(Icons.circle, size: 3),
-                              const SizedBox(width: 4),
-                              Text(
-                                effortLabel,
-                                key: const ValueKey('agent-model-effort-label'),
-                                style: style,
-                                maxLines: 1,
-                              ),
-                            ],
-                            const SizedBox(width: 4),
-                            const Icon(Icons.expand_more_rounded, size: 16),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-                ),
+                  final effortWidth = labelWidth(effortLabel);
+                  final minimumModelWidth = math.min(
+                    labelWidth(modelLabel),
+                    textScaler.scale(32),
+                  );
+                  // Reserve a readable part of the model before retaining
+                  // the inline effort. The full choice stays in the menu,
+                  // tooltip and semantic label when this row is narrow.
+                  final showEffort =
+                      selection != null &&
+                      constraints.maxWidth >=
+                          minimumModelWidth + effortWidth + 11 + 4 + 16;
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        fit: FlexFit.loose,
+                        child: Text(
+                          modelLabel,
+                          textDirection: selection == null
+                              ? Directionality.of(context)
+                              : TextDirection.ltr,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (showEffort) ...[
+                        const SizedBox(width: 4),
+                        const Icon(Icons.circle, size: 3),
+                        const SizedBox(width: 4),
+                        Text(
+                          effortLabel,
+                          key: const ValueKey('agent-model-effort-label'),
+                          maxLines: 1,
+                        ),
+                      ],
+                      const SizedBox(width: 4),
+                      const Icon(Icons.expand_more_rounded, size: 16),
+                    ],
+                  );
+                },
               ),
             ),
           ),

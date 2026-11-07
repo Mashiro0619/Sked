@@ -326,7 +326,7 @@ void main() {
   });
 
   testWidgets(
-    'pending questions stay usable in the small 2x conversation layout',
+    'dragging the small 2x question dock preserves drafts and the fixed stop action',
     (tester) async {
       addTearDown(tester.view.reset);
       final app = await fixture();
@@ -341,36 +341,84 @@ void main() {
         find.descendant(of: key('agent-question-dock'), matching: question),
         findsOneWidget,
       );
-      await tap(tester, key('agent-question-option-style-detailed'));
-      await tap(tester, next);
-      await tester.ensureVisible(key('agent-question-text-details'));
-      await tester.enterText(
-        key('agent-question-text-details'),
-        'Keep both pages reachable',
-      );
-      await tester.pump();
-      await tap(tester, previous);
+      final body = key('agent-composer-body-scroll');
+      final stop = key('agent-stop');
+      final submit = key('agent-question-submit');
+      final styleField = key('agent-question-text-style');
+      final detailsField = key('agent-question-text-details');
+      final detailedOption = key('agent-question-option-style-detailed');
+      expect(body, findsOneWidget);
+      expect(stop.hitTestable(), findsOneWidget);
+      expect(submit.hitTestable(), findsNothing);
+      final stopRect = tester.getRect(stop);
+      var drags = 0;
+
+      Future<void> revealByDragging(Finder target) async {
+        for (
+          var attempt = 0;
+          attempt < 20 && target.hitTestable().evaluate().isEmpty;
+          attempt++
+        ) {
+          final viewport = tester.getRect(body);
+          final direction = tester.getCenter(target).dy < viewport.top ? 1 : -1;
+          await tester.dragFrom(
+            Offset(viewport.left + 6, viewport.center.dy),
+            Offset(0, direction * viewport.height * .65),
+          );
+          await tester.pumpAndSettle();
+          drags++;
+          expect(tester.getRect(stop), stopRect);
+          expect(stop.hitTestable(), findsOneWidget);
+        }
+        expect(target.hitTestable(), findsOneWidget);
+      }
+
+      Future<void> tapVisible(Finder target) async {
+        await revealByDragging(target);
+        await tester.tap(target.hitTestable());
+        await tester.pumpAndSettle();
+      }
+
+      await tapVisible(detailedOption);
+      expect(drags, greaterThan(0));
+      await tapVisible(styleField);
+      await tester.enterText(styleField, 'Keep the selected format');
+      await tester.pumpAndSettle();
+      await tapVisible(next);
+      await tapVisible(detailsField);
+      await tester.enterText(detailsField, 'Keep both pages reachable');
+      await tester.pumpAndSettle();
+      await tapVisible(previous);
       expect(
-        find.descendant(
-          of: key('agent-question-option-style-detailed'),
-          matching: find.byIcon(Icons.check),
-        ),
+        find.descendant(of: detailedOption, matching: find.byIcon(Icons.check)),
         findsOneWidget,
       );
-      await tap(tester, next);
       expect(
-        tester
-            .widget<TextField>(key('agent-question-text-details'))
-            .controller!
-            .text,
+        tester.widget<TextField>(styleField).controller!.text,
+        'Keep the selected format',
+      );
+      await tapVisible(next);
+      expect(
+        tester.widget<TextField>(detailsField).controller!.text,
         'Keep both pages reachable',
       );
-      await tap(tester, key('agent-question-skip'));
-      expect(app.delegate.calls, [
-        'dismiss:conversation:question-conversation',
-      ]);
+      await revealByDragging(submit);
+      expect(tester.widget<FilledButton>(submit).onPressed, isNotNull);
+      expect(tester.getRect(stop), stopRect);
+      expect(stop.hitTestable(), findsOneWidget);
+      await tester.tap(submit.hitTestable());
+      await tester.pumpAndSettle();
+      final submission = app.delegate.answers.single;
+      expect(submission.conversationId, 'conversation');
+      expect(submission.questionId, 'question-conversation');
+      expect(submission.answers[0].optionIds, ['detailed']);
+      expect(submission.answers[0].text, 'Keep the selected format');
+      expect(submission.answers[1].text, 'Keep both pages reachable');
+      expect(app.delegate.calls, isEmpty);
+      expect(question, findsNothing);
       expect(tester.takeException(), isNull);
     },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
 }
 

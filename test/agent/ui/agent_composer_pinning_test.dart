@@ -208,6 +208,15 @@ void main() {
         baseOffset: 2,
         extentOffset: 5,
       );
+      Rect inputSurface() => tester.getRect(
+        find
+            .ancestor(
+              of: key('agent-composer'),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+      final pinnedSurface = inputSurface();
       await mountAgentUi(
         tester,
         view(),
@@ -216,6 +225,8 @@ void main() {
         locale: const Locale('zh'),
       );
       expect(key('agent-composer-body-scroll'), findsNothing);
+      expect(inputSurface().left, pinnedSurface.left);
+      expect(inputSurface().right, pinnedSurface.right);
       await tester.ensureVisible(key('agent-send'));
       await settle(tester);
       expect(key('agent-send').hitTestable(), findsOneWidget);

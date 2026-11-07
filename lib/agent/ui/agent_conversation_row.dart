@@ -7,6 +7,7 @@ import '../../theme/sked_expressive_theme.dart';
 import '../../widgets/workbench_chrome_metrics.dart';
 import '../conversations/conversation_models.dart';
 import 'agent_ui_delegate.dart';
+import 'agent_ui_style.dart';
 
 class AgentConversationRow extends StatefulWidget {
   const AgentConversationRow({
@@ -154,6 +155,8 @@ class _AgentConversationRowState extends State<AgentConversationRow> {
                     ? CircularProgressIndicator(
                         value: motion.spatialAnimationsEnabled ? null : 0.75,
                         strokeWidth: 1.6,
+                        padding: EdgeInsets.zero,
+                        trackGap: 0,
                         color: color,
                       )
                     : DecoratedBox(
@@ -181,7 +184,7 @@ class _AgentConversationRowState extends State<AgentConversationRow> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final style = AgentUiStyle.of(context);
     final metrics = WorkbenchChromeMetrics.of(context);
     final visible =
         widget.enabled &&
@@ -215,15 +218,17 @@ class _AgentConversationRowState extends State<AgentConversationRow> {
           shape: metrics.desktop
               ? skedShapeSchemeOf(context).compact
               : skedShapeSchemeOf(context).control,
-          selectedTileColor: colors.secondaryContainer,
-          selectedColor: colors.onSecondaryContainer,
+          selectedTileColor: style.selected,
+          selectedColor: style.foreground,
+          hoverColor: style.hover,
+          focusColor: style.hover,
           minTileHeight: metrics.resourceRowHeight,
           minVerticalPadding: metrics.desktop ? 4 : null,
           contentPadding: const EdgeInsetsDirectional.fromSTEB(12, 0, 4, 0),
           title: Row(
             children: [
               if (widget.conversation.pinned) ...[
-                Icon(Icons.push_pin, size: 12, color: colors.onSurfaceVariant),
+                Icon(Icons.push_pin, size: 12, color: style.muted),
                 const SizedBox(width: 6),
               ],
               Expanded(
@@ -234,6 +239,10 @@ class _AgentConversationRowState extends State<AgentConversationRow> {
                     widget.conversation.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    style: style.label.copyWith(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
                 ),
               ),

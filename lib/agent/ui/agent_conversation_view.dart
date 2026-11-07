@@ -42,10 +42,12 @@ import '../imports/conversation_file_attachments.dart';
 import '../references/agent_composer_reference.dart';
 import '../references/agent_composer_reference_search.dart';
 import 'agent_ui_delegate.dart';
+import 'agent_ui_style.dart';
 import 'agent_operation_card.dart';
 import 'agent_operation_activity.dart';
 import '../operations/tool_outcome.dart';
 import 'agent_context_control.dart';
+import 'agent_inline_disclosure_header.dart';
 import 'agent_plan_preview.dart';
 import 'agent_question_view.dart';
 import 'agent_reference_picker.dart';
@@ -215,6 +217,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   final _composerSurface = GlobalKey();
   final _composerFocus = FocusNode();
   final _composerRegionFocus = FocusNode(skipTraversal: true);
+  final _composerBodyScroll = ScrollController();
   _AgentReferenceSession? _referenceSession;
   TextEditingValue? _dismissedReferenceValue;
   bool _referenceRefreshScheduled = false;
@@ -589,6 +592,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     _composer.dispose();
     _composerFocus.dispose();
     _composerRegionFocus.dispose();
+    _composerBodyScroll.dispose();
     super.dispose();
   }
 
@@ -1751,7 +1755,9 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                         alignment: Alignment.topCenter,
                         heightFactor: 1,
                         child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 812),
+                          constraints: const BoxConstraints(
+                            maxWidth: AgentUiStyle.contentWidth,
+                          ),
                           child: composer(scrollWithTranscript: false),
                         ),
                       ),
@@ -1930,7 +1936,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       title,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
-      style: Theme.of(headerContext).textTheme.titleMedium,
+      style: AgentUiStyle.of(headerContext).title,
     );
     final heading = metrics.desktop
         ? DesktopDragRegion(child: IgnorePointer(child: titleText))
@@ -2066,9 +2072,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     return SkedSurface(
       role: SkedSurfaceRole.frame,
       shape: Border(
-        bottom: BorderSide(
-          color: Theme.of(headerContext).colorScheme.outlineVariant,
-        ),
+        bottom: BorderSide(color: AgentUiStyle.of(headerContext).border),
       ),
       child: SizedBox(
         height: metrics.toolbarHeight,
@@ -2104,6 +2108,8 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       key: ValueKey(('agent-mode-session', uiGeneration)),
       child: SkedPopupMenuButton<AgentPermissionMode>(
         key: const ValueKey('agent-mode-picker'),
+        triggerStyle: AgentUiStyle.of(context).controlStyle
+            .copyWith(padding: const WidgetStatePropertyAll(EdgeInsets.zero)),
         tooltip:
             "${l.agentPermissionMode}: ${_modeLabel(l, conversation.mode)}",
         enabled:
@@ -2150,11 +2156,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                 }, size: 18),
                 if (!compact) ...[
                   const SizedBox(width: 6),
-                  Text(
-                    _modeLabel(l, conversation.mode),
-                    style: Theme.of(context).textTheme.labelLarge,
-                    maxLines: 1,
-                  ),
+                  Text(_modeLabel(l, conversation.mode), maxLines: 1),
                   const Icon(Icons.expand_more_rounded, size: 18),
                 ],
               ],
@@ -2294,7 +2296,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                 conversation.pendingQuestion?.isResolved == false
             ? Text(
                 l.agentWaitingForAnswer,
-                style: Theme.of(context).textTheme.bodySmall,
+                style: AgentUiStyle.of(context).caption,
               )
             : null,
       ),
@@ -2437,7 +2439,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     AgentConversation? conversation,
     AppLocalizations l,
   ) => [
-    if (state.phase == AgentUiPhase.running)
+    if (state.phase == AgentUiPhase.running && state.streamingText.isEmpty)
       Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
@@ -2445,10 +2447,15 @@ class _AgentConversationViewState extends State<AgentConversationView> {
             Icon(
               Icons.auto_awesome_outlined,
               size: 18,
-              color: Theme.of(context).colorScheme.primary,
+              color: AgentUiStyle.of(context).muted,
             ),
             const SizedBox(width: 8),
-            Flexible(child: Text(l.agentRunning)),
+            Flexible(
+              child: Text(
+                l.agentRunning,
+                style: AgentUiStyle.of(context).label,
+              ),
+            ),
           ],
         ),
       ),
@@ -2781,6 +2788,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         _runFor(conversation.id).phase == AgentUiPhase.waitingUser;
     return AgentQuestionView(
       key: ValueKey((repository, delegate, conversation.id, request.id)),
+      docked: true,
       request: request,
       enabled: writable && !conversation.archived && current(),
       onAnswer: (answers) async {
@@ -2810,7 +2818,8 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final delegate = widget.delegate;
     final runId = _runFor(id).runId;
     final clearsLocalData = agentPlanClearsLocalData(plan.details);
-    final colors = Theme.of(context).colorScheme;
+    final visual = AgentUiStyle.of(context);
+    final colors = visual.colors;
     bool isCurrent() =>
         _uiSessionCurrent(generation, id) &&
         identical(delegate, widget.delegate) &&
@@ -2851,8 +2860,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                       : plan.details['kind'] == 'httpTransport'
                       ? l.agentHttpTransportApproval
                       : l.agentApprovalRequired,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+                  style: visual.title.copyWith(
                     color: clearsLocalData
                         ? colors.onErrorContainer
                         : colors.onSurface,
@@ -2871,7 +2879,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                             backgroundColor: colors.error,
                             foregroundColor: colors.onError,
                           )
-                        : null,
+                        : visual.filledControlStyle,
                     onPressed: writable && !_busy.contains('approval-$id')
                         ? () => decide(() => delegate.approve(id, plan.id))
                         : null,
@@ -2879,6 +2887,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                   ),
                   OutlinedButton(
                     key: const ValueKey('agent-reject'),
+                    style: visual.controlStyle,
                     onPressed: writable && !_busy.contains('approval-$id')
                         ? () => decide(() => delegate.reject(id, plan.id))
                         : null,
@@ -2896,7 +2905,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   ({double minimumComposer, double minimumTranscript}) _composerBudget(
     BuildContext context,
   ) {
-    final theme = Theme.of(context);
+    final visual = AgentUiStyle.of(context);
     Size measureText(String text, TextStyle? style) {
       final painter = TextPainter(
         text: TextSpan(text: text, style: style),
@@ -2912,9 +2921,9 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final button = desktop ? 32.0 : 48.0;
     final controlHeight = math.max(
       button,
-      measureText('M', theme.textTheme.labelLarge).height + (desktop ? 12 : 24),
+      measureText('M', visual.label).height + (desktop ? 12 : 24),
     );
-    final inputLine = measureText('M', theme.textTheme.bodyLarge).height;
+    final inputLine = measureText('M', visual.body).height;
     return (
       minimumComposer:
           (desktop ? 40 : 44) + controlHeight + inputLine + (desktop ? 16 : 44),
@@ -2968,7 +2977,12 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       );
     }
     final composerRegion = Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+      padding: const EdgeInsets.fromLTRB(
+        AgentUiStyle.contentInset,
+        8,
+        AgentUiStyle.contentInset,
+        12,
+      ),
       child: Shortcuts(
         shortcuts: const {
           SingleActivator(LogicalKeyboardKey.enter, control: true):
@@ -2995,12 +3009,13 @@ class _AgentConversationViewState extends State<AgentConversationView> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final desktop = SkedMenuStyle.of(context).desktop;
+              final visual = AgentUiStyle.of(context);
               final padding = desktop ? 8.0 : 10.0;
               final availableWidth = math.max(
                 0.0,
                 constraints.maxWidth - padding * 2,
               );
-              final style = Theme.of(context).textTheme.labelLarge;
+              final style = visual.label;
               double labelWidth(String label) {
                 final measure = TextPainter(
                   text: TextSpan(text: label, style: style),
@@ -3072,7 +3087,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                     if (conversation.pendingQuestion?.isResolved == false)
                       Padding(
                         key: const ValueKey('agent-question-dock'),
-                        padding: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.only(bottom: 4),
                         child: _question(conversation, enabled),
                       ),
                     if (widget.binaryAttachments case final service?) ...[
@@ -3145,11 +3160,12 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                         minLines: 1,
                         maxLines: 5,
                         textInputAction: TextInputAction.newline,
-                        style: Theme.of(context).textTheme.bodyLarge,
+                        style: visual.body,
                         decoration: InputDecoration(
                           isDense: desktop,
                           filled: false,
                           hintText: l.agentMessageHint,
+                          hintStyle: visual.body.copyWith(color: visual.muted),
                           counterText: '',
                           border: InputBorder.none,
                           enabledBorder: InputBorder.none,
@@ -3176,6 +3192,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                         children: [
                           TextButton.icon(
                             key: const ValueKey('agent-queue'),
+                            style: visual.controlStyle,
                             onPressed: canSend && !sending
                                 ? () => _queue(conversation, steering: false)
                                 : null,
@@ -3184,6 +3201,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                           ),
                           TextButton(
                             key: const ValueKey('agent-steer'),
+                            style: visual.controlStyle,
                             onPressed: canSend && !sending
                                 ? () => _queue(conversation, steering: true)
                                 : null,
@@ -3200,13 +3218,13 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                     key: _composerSurface,
                     animationDuration: SkedMotionPolicy.of(context)
                         .effects(SkedMotionSpeed.fast),
-                    color: Theme.of(context).colorScheme.surfaceContainer,
+                    color: visual.composer,
                     shape: skedShapeSchemeOf(context).container.copyWith(
                       side: BorderSide(
                         color: _composerFocus.hasFocus
-                            ? Theme.of(context).colorScheme.primary
-                            : Colors.transparent,
-                        width: 1.5,
+                            ? visual.muted
+                            : visual.border,
+                        width: 1,
                       ),
                     ),
                     clipBehavior: Clip.antiAlias,
@@ -3222,10 +3240,17 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                           body
                         else
                           Flexible(
-                            child: SingleChildScrollView(
-                              key: const ValueKey('agent-composer-body-scroll'),
-                              primary: false,
-                              child: body,
+                            child: Scrollbar(
+                              controller: _composerBodyScroll,
+                              thumbVisibility: true,
+                              child: SingleChildScrollView(
+                                key: const ValueKey(
+                                  'agent-composer-body-scroll',
+                                ),
+                                controller: _composerBodyScroll,
+                                primary: false,
+                                child: body,
+                              ),
                             ),
                           ),
                         const SizedBox(height: 4),
@@ -3290,6 +3315,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                           ),
                           send: IconButton.filled(
                             key: ValueKey(active ? 'agent-stop' : 'agent-send'),
+                            style: visual.primaryActionStyle,
                             tooltip: active ? l.agentStop : l.agentSend,
                             onPressed: active
                                 ? (_busy.contains('stop-${conversation.id}') ||

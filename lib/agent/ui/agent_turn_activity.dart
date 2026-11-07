@@ -4,11 +4,12 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
-import '../../theme/sked_surface.dart';
+import '../../theme/sked_menu_style.dart';
 import 'agent_activity_summary.dart';
 import 'agent_conversation_timeline.dart';
 import 'agent_inline_disclosure_header.dart';
 import 'agent_selectable_text.dart';
+import 'agent_ui_style.dart';
 
 String agentToolActivityLabel(AgentToolActivity tool, AppLocalizations l) =>
     summarizeAgentToolActivity(tool, l).title;
@@ -27,21 +28,47 @@ String agentToolActivityStatusLabel(
 
 IconData agentActivityStatusIcon(AgentToolActivityStatus status) =>
     switch (status) {
-      AgentToolActivityStatus.running => Icons.hourglass_top_rounded,
-      AgentToolActivityStatus.completed => Icons.check_rounded,
       AgentToolActivityStatus.failed => Icons.error_outline_rounded,
       AgentToolActivityStatus.uncertain => Icons.pending_outlined,
-      AgentToolActivityStatus.notStarted => Icons.remove_rounded,
-      AgentToolActivityStatus.corrected => Icons.check_rounded,
+      AgentToolActivityStatus.notStarted => Icons.pause_circle_outline_rounded,
+      _ => Icons.terminal_rounded,
     };
+
+IconData agentToolActivityIcon(String name) {
+  if (name == 'ask_user') return Icons.chat_bubble_outline_rounded;
+  if (name == 'update_plan') return Icons.checklist_rounded;
+  if (name.startsWith('notifications.')) {
+    return Icons.notifications_none_rounded;
+  }
+  if (name.startsWith('skills.') || name.startsWith('memories.')) {
+    return Icons.description_outlined;
+  }
+  if (name.endsWith('.apply') ||
+      name.endsWith('.update') ||
+      name.endsWith('.undo') ||
+      name.endsWith('.restore') ||
+      name == 'maintenance.clear') {
+    return Icons.edit_note_rounded;
+  }
+  if (name.endsWith('.list') ||
+      name.endsWith('.get') ||
+      name.endsWith('.read') ||
+      name.endsWith('.search') ||
+      name.endsWith('.describe') ||
+      name.endsWith('.query') ||
+      name.endsWith('.free_slots') ||
+      name.endsWith('.conflicts')) {
+    return Icons.search_rounded;
+  }
+  return Icons.terminal_rounded;
+}
 
 Color agentActivityStatusColor(
   AgentToolActivityStatus status,
   ColorScheme colors,
 ) => switch (status) {
   AgentToolActivityStatus.failed => colors.error,
-  AgentToolActivityStatus.uncertain => colors.tertiary,
-  AgentToolActivityStatus.running => skedReadableAccent(colors),
+  AgentToolActivityStatus.running => colors.onSurface,
   _ => colors.onSurfaceVariant,
 };
 
@@ -128,8 +155,8 @@ class _AgentActivityDisclosureState extends State<AgentActivityDisclosure> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
+    final style = AgentUiStyle.of(context);
+    final colors = style.colors;
     final enabled = widget.active && widget.interactive;
     final status = widget.statusLabel;
     final label = [widget.title, ?status].join(' · ');
@@ -157,12 +184,21 @@ class _AgentActivityDisclosureState extends State<AgentActivityDisclosure> {
           title: label,
           subtitle: widget.subtitle,
           semanticsLabel:
-              widget.semanticsLabel ?? [label, ?widget.subtitle].join(' · '),
+              widget.semanticsLabel ??
+              [
+                label,
+                ?widget.subtitle,
+                if (status == null)
+                  agentToolActivityStatusLabel(
+                    widget.status,
+                    AppLocalizations.of(context),
+                  ),
+              ].join(' · '),
           expanded: _expanded,
           onTap: enabled ? toggle : null,
           toggleKey: ValueKey('agent-activity-toggle-${widget.id}'),
           controlsKey: ValueKey(('activity-controls', revision)),
-          titleStyle: theme.textTheme.bodySmall?.copyWith(
+          titleStyle: style.label.copyWith(
             color: agentActivityStatusColor(widget.status, colors),
           ),
           leading: Icon(
@@ -225,6 +261,7 @@ class AgentTurnActivity extends StatelessWidget {
         title: summary.title,
         subtitle: summary.detail,
         status: tool.status,
+        statusIcon: agentToolActivityIcon(tool.name),
         initiallyExpanded: interaction != null,
         statusLabel: switch (tool.status) {
           AgentToolActivityStatus.failed ||
@@ -253,6 +290,7 @@ class AgentTurnActivity extends StatelessWidget {
       id: activity.id,
       title: l.agentActivitySummary(tools.length),
       status: activity.status,
+      statusIcon: Icons.list_alt_rounded,
       statusLabel:
           activity.status == AgentToolActivityStatus.failed ||
               activity.status == AgentToolActivityStatus.uncertain
@@ -338,60 +376,88 @@ class _AgentToolActivityDetailsState extends State<AgentToolActivityDetails> {
     final l = AppLocalizations.of(context);
     final tool = widget.tool;
     final revision = _revision;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                l.agentTechnicalDetails,
-                style: Theme.of(context).textTheme.labelMedium,
-              ),
+    final style = AgentUiStyle.of(context);
+    final desktop = SkedMenuStyle.of(context).desktop;
+    final target = desktop ? 32.0 : 48.0;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: style.subtleSurface,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(12, 4, 4, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: AgentSelectableText(
+                    tool.name,
+                    style: style.caption.copyWith(
+                      fontFamily: 'monospace',
+                      color: style.muted,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  key: ValueKey('agent-activity-copy-${tool.id}'),
+                  tooltip: _copied ? l.agentCopied : l.agentCopyActivity,
+                  style: style.controlStyle,
+                  constraints: BoxConstraints.tightFor(
+                    width: target,
+                    height: target,
+                  ),
+                  visualDensity: VisualDensity.standard,
+                  padding: EdgeInsets.zero,
+                  onPressed: widget.enabled
+                      ? () => _copy(tool, revision)
+                      : null,
+                  icon: Icon(
+                    _copied ? Icons.check_rounded : Icons.copy_outlined,
+                    size: 16,
+                  ),
+                ),
+              ],
             ),
-            IconButton(
-              key: ValueKey('agent-activity-copy-${tool.id}'),
-              tooltip: _copied ? l.agentCopied : l.agentCopyActivity,
-              onPressed: widget.enabled ? () => _copy(tool, revision) : null,
-              icon: Icon(
-                _copied ? Icons.check_rounded : Icons.copy_outlined,
-                size: 18,
-              ),
-            ),
-          ],
-        ),
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 360),
-          child: Scrollbar(
-            controller: _scroll,
-            child: SingleChildScrollView(
-              key: ValueKey('agent-activity-detail-${tool.id}'),
+          ),
+          ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: desktop ? 280 : 320),
+            child: Scrollbar(
               controller: _scroll,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  AgentSelectableText(tool.name),
-                  const SizedBox(height: 8),
-                  Text(
-                    l.agentToolArguments,
-                    style: Theme.of(context).textTheme.labelLarge,
-                  ),
-                  _ActivityPayload(tool.arguments),
-                  const SizedBox(height: 8),
-                  Text(
-                    l.agentToolResponse,
-                    style: Theme.of(context).textTheme.labelLarge,
-                  ),
-                  if (tool.result case final result?)
-                    _ActivityPayload(result)
-                  else
-                    Text(agentToolActivityStatusLabel(tool.status, l)),
-                ],
+              child: SingleChildScrollView(
+                key: ValueKey('agent-activity-detail-${tool.id}'),
+                controller: _scroll,
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      l.agentToolArguments,
+                      style: style.caption.copyWith(color: style.muted),
+                    ),
+                    _ActivityPayload(tool.arguments),
+                    const SizedBox(height: 8),
+                    Text(
+                      l.agentToolResponse,
+                      style: style.caption.copyWith(color: style.muted),
+                    ),
+                    if (tool.result case final result?)
+                      _ActivityPayload(result)
+                    else
+                      Text(
+                        agentToolActivityStatusLabel(tool.status, l),
+                        style: style.caption,
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -407,14 +473,18 @@ class _ActivityPayload extends StatelessWidget {
     } on FormatException {
       // Plain text remains readable and copyable.
     }
+    final style = AgentUiStyle.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: AgentSelectableText(
         pretty.isEmpty
             ? AppLocalizations.of(context).agentActivityEmptyOutput
             : pretty,
-        style: Theme.of(context).textTheme.bodySmall
-            ?.copyWith(fontFamily: 'monospace'),
+        style: style.caption.copyWith(
+          fontFamily: 'monospace',
+          color: style.foreground,
+          height: 1.5,
+        ),
       ),
     );
   }

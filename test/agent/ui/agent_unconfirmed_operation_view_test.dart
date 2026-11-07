@@ -155,12 +155,20 @@ void main() {
         ]) {
           expect(find.text(completed), findsNothing);
         }
+        final previewChanges = (approval.details['changes'] as List)
+            .cast<Map>();
         for (final item in [
           (name: 'Uncommitted calendar', verb: l.agentKnowledgeAdd),
           (name: 'Planned studies', verb: l.agentKnowledgeEdit),
           (name: 'Remove calendar', verb: l.delete),
         ]) {
-          final tile = find.widgetWithText(ExpansionTile, item.name);
+          final original = previewChanges.singleWhere((change) {
+            final after = change['after'], before = change['before'];
+            return (after is Map && after['name'] == item.name) ||
+                (before is Map && before['name'] == item.name);
+          });
+          final index = previewChanges.indexOf(original);
+          final tile = find.byKey(ValueKey('agent-plan-preview-change-$index'));
           expect(
             find.descendant(of: tile, matching: find.text(item.verb)),
             findsOneWidget,
@@ -183,13 +191,6 @@ void main() {
           final displayed = tester.widget<SelectableText>(
             find.descendant(of: details, matching: find.byType(SelectableText)),
           );
-          final original = (approval.details['changes'] as List)
-              .cast<Map>()
-              .singleWhere((change) {
-                final after = change['after'], before = change['before'];
-                return (after is Map && after['name'] == item.name) ||
-                    (before is Map && before['name'] == item.name);
-              });
           expect(jsonDecode(displayed.data!), {
             l.agentValueBefore: original['before'],
             l.agentValueAfter: original['after'],
