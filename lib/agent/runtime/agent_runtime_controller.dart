@@ -31,6 +31,7 @@ import 'conversation_task_checkpoint.dart';
 import 'operation_outcome.dart';
 import 'operation_recovery.dart';
 import 'repeated_tool_failure.dart';
+import 'secret_content.dart';
 
 part 'agent_user_questions.dart';
 part 'agent_reference_context.dart';
@@ -3279,26 +3280,14 @@ String _defaultInstructions(AgentConversation conversation) =>
     ])}';
 
 void _rejectSecret(String text, String apiKey) {
-  if (apiKey.isNotEmpty && text.contains(apiKey)) {
+  if (containsAgentCredentialText(text, apiKey)) {
     throw const AgentRuntimeException(AgentRuntimeError.sensitiveContent);
   }
 }
 
 void _rejectSecretValues(Object? value, String apiKey) {
-  if (apiKey.isEmpty) return;
-  final pending = <Object?>[value];
-  while (pending.isNotEmpty) {
-    final current = pending.removeLast();
-    if (current is String) {
-      _rejectSecret(current, apiKey);
-    } else if (current is Map<Object?, Object?>) {
-      for (final entry in current.entries) {
-        if (entry.key case final String key) _rejectSecret(key, apiKey);
-        pending.add(entry.value);
-      }
-    } else if (current is List<Object?>) {
-      pending.addAll(current);
-    }
+  if (containsAgentCredentialValue(value, apiKey)) {
+    throw const AgentRuntimeException(AgentRuntimeError.sensitiveContent);
   }
 }
 
