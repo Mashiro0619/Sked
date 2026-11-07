@@ -654,7 +654,6 @@ String _normalizeKey(String? value) {
   final key = value?.trim();
   if (key == null ||
       key.isEmpty ||
-      key.length > 16384 ||
       key.codeUnits.any((unit) => unit < 32 || unit == 127)) {
     throw const AgentConnectionException(
       AgentConnectionErrorCode.invalidConfiguration,
@@ -781,9 +780,6 @@ class _CredentialRecord {
     'legacyRetirement': legacyRetirement?.toJson(),
   });
   factory _CredentialRecord.decode(String source) {
-    if (source.length > 40000) {
-      throw const FormatException('Credential record is too large.');
-    }
     final raw = jsonDecode(source);
     const fields = {
       'version',

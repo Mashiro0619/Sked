@@ -162,6 +162,23 @@ void main() {
     );
   });
 
+  test(
+    'credentials exceeding previous local size thresholds survive reload',
+    () async {
+      final connection = await seeded();
+      final key = 'synthetic-key-' * 4000;
+      await connection.save(
+        configured,
+        credentialAction: AgentCredentialAction.replace,
+        rawKey: key,
+      );
+      final reopened = manager();
+      await reopened.initialize(migrateLegacy: false);
+      expect(await reopened.readKeyFor(current), key);
+      expect(current.toJson().toString(), isNot(contains(key)));
+    },
+  );
+
   test('guarded saves recheck the snapshot after credential IO', () async {
     final connection = await seeded();
     final baseline = current;
