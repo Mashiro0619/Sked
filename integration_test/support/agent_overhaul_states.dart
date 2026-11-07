@@ -262,15 +262,61 @@ Future<List<Map<String, Object?>>> exerciseAgentOverhaulStates({
       bool Function() ready,
       String description, {
       bool observeOriginalExecution = true,
+      String? supersededRunId,
+      List<Map<String, Object?>>? handoffObservations,
     }) async {
       final elapsed = Stopwatch()..start();
+      Object? lastObservation;
+      void observe(AgentUiRunState current) {
+        if (handoffObservations == null) return;
+        final running = runtime.isRunning(id);
+        final continueVisible = find
+            .byKey(const ValueKey('agent-continue'))
+            .hitTestable()
+            .evaluate()
+            .isNotEmpty;
+        final stopVisible = find
+            .byKey(const ValueKey('agent-stop'))
+            .hitTestable()
+            .evaluate()
+            .isNotEmpty;
+        final observation = (
+          current.runId,
+          current.phase,
+          current.errorMessage,
+          running,
+          provider.requests,
+          continueVisible,
+          stopVisible,
+        );
+        if (observation == lastObservation) return;
+        lastObservation = observation;
+        handoffObservations.add({
+          'elapsedMicroseconds': elapsed.elapsedMicroseconds,
+          'runId': current.runId,
+          'phase': current.phase.name,
+          'runtimeError': current.errorMessage,
+          'isRunning': running,
+          'providerRequests': provider.requests - beforeRequests,
+          'continueHitTestable': continueVisible,
+          'stopHitTestable': stopVisible,
+        });
+      }
+
       while (!ready()) {
         final current = runtime.state.value.runFor(id);
+        observe(current);
         final failure = observeOriginalExecution ? executionFailure : null;
+        final supersededCancellation =
+            supersededRunId != null &&
+            current.runId == supersededRunId &&
+            current.errorMessage == 'provider.cancelled' &&
+            runtime.isRunning(id);
         final failed =
             failure != null ||
             (scenario != _Scenario.error &&
-                current.phase == AgentUiPhase.failed);
+                current.phase == AgentUiPhase.failed &&
+                !supersededCancellation);
         final timedOut = elapsed.elapsed > const Duration(seconds: 20);
         if (failed || timedOut) {
           final diagnostic = <String, Object?>{
@@ -278,6 +324,8 @@ Future<List<Map<String, Object?>>> exerciseAgentOverhaulStates({
             'waitingFor': description,
             'reason': failed ? 'executionFailed' : 'timeout',
             'conversationId': id,
+            'runId': current.runId,
+            'supersededRunId': supersededRunId,
             'expectedPhase': expectedPhase.name,
             'phase': current.phase.name,
             'runtimeError': current.errorMessage,
@@ -290,6 +338,7 @@ Future<List<Map<String, Object?>>> exerciseAgentOverhaulStates({
             'streamingTextLength': current.streamingText.length,
             'originalExecutionObserved': observeOriginalExecution,
             'originalExecutionSettled': executionSettled,
+            'handoffObservations': ?handoffObservations,
             if (failure != null)
               'executionErrorType': failure.error.runtimeType.toString(),
             if (failure != null) 'executionStack': failure.stack.toString(),
@@ -305,7 +354,9 @@ Future<List<Map<String, Object?>>> exerciseAgentOverhaulStates({
         }
         await tester.pump(const Duration(milliseconds: 16));
       }
+      observe(runtime.state.value.runFor(id));
       await tester.pump();
+      observe(runtime.state.value.runFor(id));
     }
 
     await until(() {
@@ -349,14 +400,20 @@ Future<List<Map<String, Object?>>> exerciseAgentOverhaulStates({
       await runtime.queueFollowUp(id, '上一项结束后再核对课程。');
       expect(runtime.pendingInputCount(id), 1);
       await capture('state-running-queued', false);
+      final supersededRunId = runtime.state.value.runFor(id).runId;
+      expect(supersededRunId, isNotNull);
+      final handoffObservations = <Map<String, Object?>>[];
       await runtime.steer(id, '立即补充：暂时只整理，不保存。');
       await until(
         () =>
             provider.requests == beforeRequests + 2 &&
+            runtime.state.value.runFor(id).runId != supersededRunId &&
             runtime.state.value.runFor(id).isActive &&
             runtime.state.value.runFor(id).streamingText.isNotEmpty,
         'the immediate supplement to replace the active model request',
         observeOriginalExecution: false,
+        supersededRunId: supersededRunId,
+        handoffObservations: handoffObservations,
       );
       expect(
         repository.find(id)!.queuedInputs.single.mode,
@@ -379,6 +436,10 @@ Future<List<Map<String, Object?>>> exerciseAgentOverhaulStates({
       expect(runtime.state.value.runFor(id).isActive, isTrue);
       await capture('state-running-reopened', false);
       queueAndSteering = {
+        'supersededRunId': supersededRunId,
+        'replacementRunId': runtime.state.value.runFor(id).runId,
+        'handoffObservationScope': 'runtime and hit-testable controls while awaiting native frames after durable steering acceptance',
+        'handoffObservations': handoffObservations,
         'deferredInputCount': runtime.pendingInputCount(id),
         'supplementStartedNewRequest': true,
         'providerRequestsAfterReopen': provider.requests - beforeRequests,
