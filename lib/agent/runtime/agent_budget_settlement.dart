@@ -11,21 +11,41 @@ const _budgetFinalInstructions =
 AgentRuntimeException _budgetFailure(AgentRequestBudgetReason reason) =>
     AgentRuntimeException(switch (reason) {
       AgentRequestBudgetReason.tokens => AgentRuntimeError.tokenBudgetExceeded,
+      AgentRequestBudgetReason.requestTokens =>
+        AgentRuntimeError.requestTokenBudgetExceeded,
       AgentRequestBudgetReason.rounds => AgentRuntimeError.roundBudgetExceeded,
       AgentRequestBudgetReason.tools => AgentRuntimeError.toolBudgetExceeded,
     });
 
-AgentRequestBudgetReason? _budgetReason(Object error) => switch (error) {
-  AgentRuntimeException(code: AgentRuntimeError.tokenBudgetExceeded) ||
-  ProviderException(
-    code: ProviderError.tokenBudgetExceeded,
-  ) => AgentRequestBudgetReason.tokens,
-  AgentRuntimeException(code: AgentRuntimeError.roundBudgetExceeded) =>
-    AgentRequestBudgetReason.rounds,
-  AgentRuntimeException(code: AgentRuntimeError.toolBudgetExceeded) =>
-    AgentRequestBudgetReason.tools,
-  _ => null,
-};
+AgentRequestBudgetReason? _budgetReason(Object error, _Run run) {
+  final reason = switch (error) {
+    AgentRuntimeException(code: AgentRuntimeError.tokenBudgetExceeded) ||
+    ProviderException(
+      code: ProviderError.tokenBudgetExceeded,
+    ) => AgentRequestBudgetReason.tokens,
+    AgentRuntimeException(code: AgentRuntimeError.roundBudgetExceeded) =>
+      AgentRequestBudgetReason.rounds,
+    AgentRuntimeException(code: AgentRuntimeError.toolBudgetExceeded) =>
+      AgentRequestBudgetReason.tools,
+    _ => null,
+  };
+  if (reason != AgentRequestBudgetReason.tokens) return reason;
+  final budget = run.requestBudget;
+  if (budget == null) return reason;
+  final allowance =
+      budget.remainingTokens -
+      (budget.finalStep ? 0 : budget.reservedFinalOutputTokens);
+  final actual = run.usage.requests.lastOrNull?.usage?.totalTokens;
+  final requestLimit = budget.requestLimits?.maxTotalTokens;
+  if (requestLimit != null &&
+      requestLimit < allowance &&
+      actual != null &&
+      actual > requestLimit &&
+      actual < budget.remainingTokens) {
+    return AgentRequestBudgetReason.requestTokens;
+  }
+  return reason;
+}
 
 extension _AgentBudgetSettlement on AgentRuntimeController {
   AgentRequestBudget _freezeRequestBudget(_Run run) {
@@ -101,6 +121,11 @@ extension _AgentBudgetSettlement on AgentRuntimeController {
       'runId': run.id,
       'reason': reason.name,
       'errorCode': _budgetFailure(reason).code.name,
+      if (reason == AgentRequestBudgetReason.requestTokens)
+        'requestTokens': {
+          'reported': run.usage.requests.last.usage!.totalTokens,
+          'limit': run.requestBudget!.requestLimits!.maxTotalTokens,
+        },
       'counts': counts,
       'requests': {
         'attempted': run.usage.requests.length,

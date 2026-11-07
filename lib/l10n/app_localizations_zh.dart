@@ -4166,7 +4166,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get agentBudgetSummaryTitle => '本轮执行结果';
 
   @override
-  String get agentBudgetSummaryTokenLimit => '已达到 Token 预算上限。';
+  String get agentBudgetSummaryTokenLimit => '本轮 Token 额度不足，已保留进度。';
 
   @override
   String get agentBudgetSummaryRoundLimit => '已达到模型请求轮次上限。';
@@ -4252,6 +4252,14 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentQueuedRestoreDraftBusy => '请先发送或清空当前草稿，再移回这条输入。';
+
+  @override
+  String get agentBudgetSummaryRequestTokenLimit => '已达到单次请求的 Token 上限，已保留进度。';
+
+  @override
+  String agentBudgetSummaryRequestTokenUsage(int reported, int limit) {
+    return '本次请求 · 已报告用量 $reported/$limit Token';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -8418,7 +8426,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get agentBudgetSummaryTitle => '本輪執行結果';
 
   @override
-  String get agentBudgetSummaryTokenLimit => '已達到 Token 預算上限。';
+  String get agentBudgetSummaryTokenLimit => '本輪 Token 額度不足，已保留進度。';
 
   @override
   String get agentBudgetSummaryRoundLimit => '已達到模型請求輪次上限。';
@@ -8504,4 +8512,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentQueuedRestoreDraftBusy => '請先傳送或清空目前草稿，再移回這則輸入。';
+
+  @override
+  String get agentBudgetSummaryRequestTokenLimit => '已達到單次請求的 Token 上限，已保留進度。';
+
+  @override
+  String agentBudgetSummaryRequestTokenUsage(int reported, int limit) {
+    return '本次請求 · 已報告用量 $reported/$limit Token';
+  }
 }

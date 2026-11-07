@@ -6,12 +6,21 @@ import '../../l10n/app_localizations.dart';
 import '../conversations/conversation_models.dart';
 
 class AgentBudgetSummary {
-  AgentBudgetSummary._(this.reason, this.counts, this.requests, this.tokens);
+  AgentBudgetSummary._(
+    this.reason,
+    this.counts,
+    this.requests,
+    this.tokens, {
+    this.runId,
+    this.requestTokens,
+  });
 
   final String reason;
+  final String? runId;
   final Map<String, int> counts;
   final Map<String, int> requests;
   final Map<String, int> tokens;
+  final Map<String, int>? requestTokens;
 
   static AgentBudgetSummary? parse(ConversationMessage message) {
     if (message.role != ConversationRole.notice) return null;
@@ -21,7 +30,17 @@ class AgentBudgetSummary {
           value['kind'] != 'agent_budget_summary' ||
           value['version'] is! int ||
           value['version'] != 1 ||
-          !const {'tokens', 'rounds', 'tools'}.contains(value['reason'])) {
+          !const {
+            'tokens',
+            'requestTokens',
+            'rounds',
+            'tools',
+          }.contains(value['reason'])) {
+        return null;
+      }
+      final runId = value['runId'];
+      if (runId != null &&
+          (runId is! String || runId.isEmpty || runId.length > 256)) {
         return null;
       }
       Map<String, int> counts(String key, List<String> fields) {
@@ -41,6 +60,10 @@ class AgentBudgetSummary {
         counts('counts', ['completed', 'failed', 'notStarted', 'unknown']),
         counts('requests', ['attempted', 'limit']),
         counts('tokens', ['reported', 'unreportedRequests', 'limit']),
+        runId: runId as String?,
+        requestTokens: value.containsKey('requestTokens')
+            ? counts('requestTokens', ['reported', 'limit'])
+            : null,
       );
     } on FormatException {
       return null;
@@ -66,9 +89,18 @@ class AgentBudgetSummaryView extends StatelessWidget {
             Text(l.agentBudgetSummaryTitle, style: textTheme.titleSmall),
             Text(switch (summary.reason) {
               'tokens' => l.agentBudgetSummaryTokenLimit,
+              'requestTokens' => l.agentBudgetSummaryRequestTokenLimit,
               'rounds' => l.agentBudgetSummaryRoundLimit,
               _ => l.agentBudgetSummaryToolLimit,
             }),
+            if (summary.requestTokens case final requestTokens?)
+              Text(
+                l.agentBudgetSummaryRequestTokenUsage(
+                  requestTokens['reported']!,
+                  requestTokens['limit']!,
+                ),
+                style: textTheme.bodySmall,
+              ),
             Text(
               l.agentBudgetSummaryTools(
                 summary.counts['completed']!,

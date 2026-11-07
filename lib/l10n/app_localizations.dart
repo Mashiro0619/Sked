@@ -7893,7 +7893,7 @@ abstract class AppLocalizations {
   /// No description provided for @agentBudgetSummaryTokenLimit.
   ///
   /// In en, this message translates to:
-  /// **'The token budget has been reached.'**
+  /// **'This run has insufficient token budget to continue. Progress has been saved.'**
   String get agentBudgetSummaryTokenLimit;
 
   /// No description provided for @agentBudgetSummaryRoundLimit.
@@ -8043,6 +8043,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Send or clear the current draft before moving this input back.'**
   String get agentQueuedRestoreDraftBusy;
+
+  /// No description provided for @agentBudgetSummaryRequestTokenLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'The per-request token limit was reached. Progress has been saved.'**
+  String get agentBudgetSummaryRequestTokenLimit;
+
+  /// No description provided for @agentBudgetSummaryRequestTokenUsage.
+  ///
+  /// In en, this message translates to:
+  /// **'This request · {reported}/{limit} reported tokens'**
+  String agentBudgetSummaryRequestTokenUsage(int reported, int limit);
 }
 
 class _AppLocalizationsDelegate

@@ -4435,7 +4435,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get agentBudgetSummaryTokenLimit =>
-      'The token budget has been reached.';
+      'This run has insufficient token budget to continue. Progress has been saved.';
 
   @override
   String get agentBudgetSummaryRoundLimit =>
@@ -4526,4 +4526,13 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get agentQueuedRestoreDraftBusy =>
       'Send or clear the current draft before moving this input back.';
+
+  @override
+  String get agentBudgetSummaryRequestTokenLimit =>
+      'The per-request token limit was reached. Progress has been saved.';
+
+  @override
+  String agentBudgetSummaryRequestTokenUsage(int reported, int limit) {
+    return 'This request · $reported/$limit reported tokens';
+  }
 }

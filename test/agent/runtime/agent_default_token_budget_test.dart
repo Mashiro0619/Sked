@@ -110,6 +110,12 @@ void main() {
         await h.runtime.send(h.id, 'Continue this task after its budget stop.');
         expect(h.saved.status, ConversationStatus.interrupted);
         expect(h.saved.runs.single.requests.single.usage!.totalTokens, 100001);
+        final interrupted = h.runtime.state.value.runFor(h.id);
+        expect(interrupted.errorMessage, 'tokenBudgetExceeded');
+        expect(interrupted.providerErrorResponseBody, isNull);
+        expect(interrupted.providerErrorDetails, isNull);
+        expect(h.summary['reason'], 'tokens');
+        expect(h.summary.containsKey('requestTokens'), isFalse);
         final originalRun = h.saved.runs.single.id;
 
         await h.runtime.continueConversation(h.id);
@@ -150,6 +156,49 @@ void main() {
         expect(request.usage!.totalTokens, 33999);
         expect(request.errorCode, isNotNull);
         expect(h.executed, isEmpty);
+        final state = h.runtime.state.value.runFor(h.id);
+        expect(state.errorMessage, 'requestTokenBudgetExceeded');
+        expect(state.providerErrorResponseBody, isNull);
+        expect(state.providerErrorDetails, isNull);
+        expect(h.summary['reason'], 'requestTokens');
+        expect(h.summary['runId'], h.saved.runs.single.id);
+        expect(h.summary['requestTokens'], {'reported': 33999, 'limit': 32768});
+        expect((h.summary['tokens'] as Map)['limit'], 100000);
+      },
+    );
+    test(
+      '$transport distinguishes the request cap from the screenshot cumulative total',
+      () async {
+        const totals = [6000, 9000, 13000, 21517, 33999];
+        final h = await _Harness.create(
+          streaming: streaming,
+          limits: const AgentRuntimeLimits(
+            providerLimits: ProviderLimits(maxTotalTokens: 32768),
+          ),
+          respond: (index) => _Reply(
+            totalTokens: totals[index],
+            outputTokens: index == 4 ? 515 : 100,
+            toolCount: index < 3
+                ? 4
+                : index == 3
+                ? 3
+                : 1,
+          ),
+        );
+        addTearDown(h.close);
+        await h.runtime.send(h.id, 'Inspect the state and finish the task.');
+        expect(h.requests, hasLength(5));
+        expect(h.executed, hasLength(15));
+        expect(h.saved.status, ConversationStatus.interrupted);
+        expect(h.summary['reason'], 'requestTokens');
+        expect(h.summary['requestTokens'], {'reported': 33999, 'limit': 32768});
+        expect((h.summary['tokens'] as Map)['reported'], 83516);
+        expect((h.summary['tokens'] as Map)['limit'], 100000);
+        final state = h.runtime.state.value.runFor(h.id);
+        expect(state.errorMessage, 'requestTokenBudgetExceeded');
+        expect(state.providerErrorResponseBody, isNull);
+        expect(state.providerErrorDetails, isNull);
+        expect(state.providerErrorMetadata, isNull);
       },
     );
   }
@@ -284,6 +333,16 @@ class _Harness {
 
   AgentConversation get saved =>
       ConversationArchive.decode(storage.source!).conversations.single;
+
+  Map<String, dynamic> get summary => jsonDecode(
+    saved.messages
+        .singleWhere(
+          (message) =>
+              message.role == ConversationRole.notice &&
+              message.text.contains('agent_budget_summary'),
+        )
+        .text,
+  ) as Map<String, dynamic>;
 
   void close() {
     runtime.dispose();

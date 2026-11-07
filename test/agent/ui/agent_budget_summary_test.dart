@@ -6,17 +6,20 @@ import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/ui/agent_budget_summary.dart';
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_message_content.dart';
+import 'package:sked/agent/ui/agent_selectable_text.dart';
+import 'package:sked/agent/ui/agent_ui_delegate.dart';
 import 'package:sked/l10n/app_localizations.dart';
 
 import 'agent_ui_test_support.dart';
 
 void main() {
-  for (final reason in ['tokens', 'rounds', 'tools']) {
+  for (final reason in ['tokens', 'requestTokens', 'rounds', 'tools']) {
     test('parser retains $reason and all reported outcome categories', () {
       final summary = AgentBudgetSummary.parse(
         _notice(_payload(reason: reason)),
       )!;
       expect(summary.reason, reason);
+      expect(summary.runId, 'run');
       expect(summary.counts, {
         'completed': 1,
         'failed': 2,
@@ -54,6 +57,215 @@ void main() {
         findsOneWidget,
       );
       expect(find.text(l.agentBudgetSummaryMissingUsage(1)), findsOneWidget);
+    });
+  }
+
+  test(
+    'legacy summaries remain readable without run identity or request tokens',
+    () {
+      final payload = _payload()..remove('runId');
+      final summary = AgentBudgetSummary.parse(_notice(payload))!;
+      expect(summary.runId, isNull);
+      expect(summary.requestTokens, isNull);
+      expect(summary.tokens['reported'], 1200);
+    },
+  );
+
+  test('request tokens are optional immutable nonnegative counters', () {
+    final payload = _payload(reason: 'requestTokens')
+      ..['requestTokens'] = {'reported': 33999, 'limit': 32768};
+    final summary = AgentBudgetSummary.parse(_notice(payload))!;
+    expect(summary.requestTokens, {'reported': 33999, 'limit': 32768});
+    expect(() => summary.requestTokens!.clear(), throwsUnsupportedError);
+    for (final field in ['reported', 'limit']) {
+      for (final invalid in [null, -1, 1.0, false, '1']) {
+        expect(
+          AgentBudgetSummary.parse(
+            _notice({
+              ...payload,
+              'requestTokens': {
+                'reported': 33999,
+                'limit': 32768,
+                field: invalid,
+              },
+            }),
+          ),
+          isNull,
+        );
+      }
+      expect(
+        AgentBudgetSummary.parse(
+          _notice({
+            ...payload,
+            'requestTokens': {'reported': 33999, 'limit': 32768}..remove(field),
+          }),
+        ),
+        isNull,
+      );
+    }
+    for (final invalid in [null, 1, '33999', <Object?>[]]) {
+      expect(
+        AgentBudgetSummary.parse(
+          _notice({...payload, 'requestTokens': invalid}),
+        ),
+        isNull,
+      );
+    }
+    for (final invalid in ['', 1, false, 'x' * 257]) {
+      expect(
+        AgentBudgetSummary.parse(_notice({...payload, 'runId': invalid})),
+        isNull,
+      );
+    }
+  });
+
+  testWidgets('request and accumulated token limits are displayed separately', (
+    tester,
+  ) async {
+    addTearDown(tester.view.reset);
+    final payload =
+        _payload(reason: 'requestTokens', reported: 83516, unreported: 0)
+          ..['tokens'] = {
+            'reported': 83516,
+            'unreportedRequests': 0,
+            'limit': 100000,
+          }
+          ..['requestTokens'] = {'reported': 33999, 'limit': 32768};
+    await mountAgentUi(
+      tester,
+      AgentBudgetSummaryView(
+        summary: AgentBudgetSummary.parse(_notice(payload))!,
+      ),
+    );
+    final l = AppLocalizations.of(
+      tester.element(find.byType(AgentBudgetSummaryView)),
+    );
+    expect(find.text(l.agentBudgetSummaryRequestTokenLimit), findsOneWidget);
+    expect(
+      find.text(l.agentBudgetSummaryRequestTokenUsage(33999, 32768)),
+      findsOneWidget,
+    );
+    expect(
+      find.text(l.agentBudgetSummaryUsage(3, 4, 83516, 100000)),
+      findsOneWidget,
+    );
+    expect(find.text(l.agentBudgetSummaryTokenLimit), findsNothing);
+  });
+
+  for (final (reason, error) in const [
+    ('tokens', 'tokenBudgetExceeded'),
+    ('tokens', 'provider.tokenBudgetExceeded'),
+    ('requestTokens', 'requestTokenBudgetExceeded'),
+    ('requestTokens', 'provider.tokenBudgetExceeded'),
+    ('rounds', 'roundBudgetExceeded'),
+    ('tools', 'toolBudgetExceeded'),
+  ]) {
+    testWidgets(
+      '$error uses the matching run summary and retains explicit Continue',
+      (tester) async {
+        addTearDown(tester.view.reset);
+        final app = await _fixture(_payload(reason: reason));
+        _setFailure(app, error);
+        await mountAgentUi(tester, app.view());
+        expect(find.byType(AgentBudgetSummaryView), findsOneWidget);
+        expect(find.byKey(const ValueKey('agent-request-error')), findsNothing);
+        final continuation = find.byKey(const ValueKey('agent-continue'));
+        expect(tester.widget<TextButton>(continuation).onPressed, isNotNull);
+        await tester.tap(continuation);
+        await tester.pumpAndSettle();
+        expect(app.delegate.calls, ['continue:conversation']);
+      },
+    );
+  }
+
+  testWidgets(
+    'regeneration keeps a short budget message beside its original reply',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      final app = await _fixture(_payload());
+      await app.repository.update(
+        'conversation',
+        (current) => current.copyWith(
+          messages: [
+            ...current.messages.take(current.messages.length - 1),
+            ConversationMessage(
+              id: 'old-reply',
+              role: ConversationRole.assistant,
+              text: 'Original reply',
+              createdAt: _now,
+            ),
+            current.messages.last,
+          ],
+        ),
+      );
+      app.delegate.state.value = AgentUiState(
+        enabled: true,
+        configured: true,
+        runs: {
+          'conversation': AgentUiRunState(
+            runId: 'run',
+            replyTargetMessageId: 'old-reply',
+            phase: AgentUiPhase.failed,
+            errorMessage: 'tokenBudgetExceeded',
+          ),
+        },
+      );
+      await mountAgentUi(tester, app.view());
+      final failure = find.descendant(
+        of: find.byKey(const ValueKey('agent-message-group-old-reply')),
+        matching: find.byKey(const ValueKey('agent-request-error')),
+      );
+      expect(failure, findsOneWidget);
+      final l = AppLocalizations.of(tester.element(failure));
+      expect(
+        tester.widget<AgentSelectableText>(failure).data,
+        l.agentLimitsReached,
+      );
+      expect(find.byType(AgentBudgetSummaryView), findsOneWidget);
+    },
+  );
+
+  for (final mismatch in [
+    'oldRun',
+    'missingRun',
+    'differentReason',
+    'importedHistory',
+  ]) {
+    testWidgets('$mismatch summaries cannot suppress a current budget error', (
+      tester,
+    ) async {
+      addTearDown(tester.view.reset);
+      final payload = _payload(
+        reason: mismatch == 'differentReason' ? 'tools' : 'tokens',
+      );
+      if (mismatch == 'oldRun') payload['runId'] = 'old-run';
+      if (mismatch == 'missingRun') payload.remove('runId');
+      final app = await _fixture(payload);
+      if (mismatch == 'importedHistory') {
+        await app.repository.update(
+          'conversation',
+          (current) =>
+              current.copyWith(executionHistoryStart: current.messages.length),
+        );
+      }
+      _setFailure(app, 'tokenBudgetExceeded');
+      await mountAgentUi(tester, app.view());
+      expect(find.byKey(const ValueKey('agent-request-error')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  for (final error in ['provider.authentication', 'provider.invalidResponse']) {
+    testWidgets('a same-run budget notice preserves $error diagnostics', (
+      tester,
+    ) async {
+      addTearDown(tester.view.reset);
+      final app = await _fixture(_payload());
+      _setFailure(app, error);
+      await mountAgentUi(tester, app.view());
+      final failure = find.byKey(const ValueKey('agent-request-error'));
+      expect(failure, findsOneWidget);
+      expect(tester.widget<AgentSelectableText>(failure).data, _rawFailure);
     });
   }
 
@@ -367,6 +579,7 @@ Map<String, Object?> _payload({
   'runId': 'run',
   'reason': reason,
   'errorCode': switch (reason) {
+    'requestTokens' => 'requestTokenBudgetExceeded',
     'rounds' => 'roundBudgetExceeded',
     'tools' => 'toolBudgetExceeded',
     _ => 'tokenBudgetExceeded',
@@ -484,6 +697,24 @@ class _BudgetFixture {
 
 String _reasonLabel(AppLocalizations l, String reason) => switch (reason) {
   'tokens' => l.agentBudgetSummaryTokenLimit,
+  'requestTokens' => l.agentBudgetSummaryRequestTokenLimit,
   'rounds' => l.agentBudgetSummaryRoundLimit,
   _ => l.agentBudgetSummaryToolLimit,
 };
+
+const _rawFailure = 'Synthetic provider response body';
+
+void _setFailure(_BudgetFixture app, String error) {
+  app.delegate.state.value = AgentUiState(
+    enabled: true,
+    configured: true,
+    runs: {
+      'conversation': AgentUiRunState(
+        runId: 'run',
+        phase: AgentUiPhase.failed,
+        errorMessage: error,
+        providerErrorResponseBody: _rawFailure,
+      ),
+    },
+  );
+}

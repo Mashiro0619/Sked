@@ -2231,9 +2231,36 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       _notice(l.agentStopped),
     if (state.phase == AgentUiPhase.waitingUser)
       _notice(l.agentWaitingForAnswer),
-    if (state.phase == AgentUiPhase.failed || state.errorMessage != null)
+    if ((state.phase == AgentUiPhase.failed || state.errorMessage != null) &&
+        !_hasCurrentBudgetSummary(state, conversation))
       _requestFailure(state, l),
   ];
+
+  bool _hasCurrentBudgetSummary(
+    AgentUiRunState state,
+    AgentConversation? conversation,
+  ) {
+    // Regeneration status belongs beside the original reply; the summary is
+    // appended at the end of the conversation and may be outside the viewport.
+    if (state.replyTargetMessageId != null ||
+        state.runId == null ||
+        conversation == null) {
+      return false;
+    }
+    final reasons = switch (state.errorMessage) {
+      'tokenBudgetExceeded' => const {'tokens'},
+      'requestTokenBudgetExceeded' => const {'requestTokens'},
+      'provider.tokenBudgetExceeded' => const {'tokens', 'requestTokens'},
+      'roundBudgetExceeded' => const {'rounds'},
+      'toolBudgetExceeded' => const {'tools'},
+      _ => const <String>{},
+    };
+    if (reasons.isEmpty) return false;
+    return conversation.executionMessages.any((message) {
+      final summary = AgentBudgetSummary.parse(message);
+      return summary?.runId == state.runId && reasons.contains(summary?.reason);
+    });
+  }
 
   Future<void> _regenerateReply(
     AgentConversation conversation,
@@ -2502,6 +2529,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       'roundBudgetExceeded',
       'toolBudgetExceeded',
       'tokenBudgetExceeded',
+      'requestTokenBudgetExceeded',
       'resultBudgetExceeded',
       'repeatedToolFailure',
       'timeout',

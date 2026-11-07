@@ -2959,7 +2959,7 @@
   },
   "agentBudgetSummaryTitle": "本輪執行結果",
   "@agentBudgetSummaryTitle": {},
-  "agentBudgetSummaryTokenLimit": "已達到 Token 預算上限。",
+  "agentBudgetSummaryTokenLimit": "本輪 Token 額度不足，已保留進度。",
   "@agentBudgetSummaryTokenLimit": {},
   "agentBudgetSummaryRoundLimit": "已達到模型請求輪次上限。",
   "@agentBudgetSummaryRoundLimit": {},
@@ -3042,5 +3042,18 @@
   "agentQueuedCancel": "取消排隊",
   "@agentQueuedCancel": {},
   "agentQueuedRestoreDraftBusy": "請先傳送或清空目前草稿，再移回這則輸入。",
-  "@agentQueuedRestoreDraftBusy": {}
+  "@agentQueuedRestoreDraftBusy": {},
+  "agentBudgetSummaryRequestTokenLimit": "已達到單次請求的 Token 上限，已保留進度。",
+  "@agentBudgetSummaryRequestTokenLimit": {},
+  "agentBudgetSummaryRequestTokenUsage": "本次請求 · 已報告用量 {reported}/{limit} Token",
+  "@agentBudgetSummaryRequestTokenUsage": {
+    "placeholders": {
+      "reported": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -63,6 +63,7 @@ enum AgentRuntimeError {
   roundBudgetExceeded,
   toolBudgetExceeded,
   tokenBudgetExceeded,
+  requestTokenBudgetExceeded,
   resultBudgetExceeded,
   repeatedToolFailure,
   invalidReference,
@@ -1582,11 +1583,13 @@ class AgentRuntimeController implements AgentUiDelegate {
       );
     } catch (error) {
       failure = error;
+      final budgetReason = _budgetReason(error, run);
       final reason =
-          _budgetReason(error) ??
+          budgetReason ??
           (run.requestBudget?.finalStep == true
               ? run.requestBudget?.reason
               : null);
+      if (budgetReason != null) failure = _budgetFailure(budgetReason);
       if (reason != null && !run.scope.isCancelled) {
         try {
           await _recordBudgetSummary(run, reason);

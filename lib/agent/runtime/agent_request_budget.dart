@@ -3,7 +3,7 @@ import 'dart:math' show max, min;
 import '../conversations/conversation_usage.dart';
 import '../provider/provider_models.dart';
 
-enum AgentRequestBudgetReason { tokens, rounds, tools }
+enum AgentRequestBudgetReason { tokens, requestTokens, rounds, tools }
 
 /// Planning values for the next request in one runtime-owned attempt.
 /// Missing service usage remains unknown. The remaining count is based on

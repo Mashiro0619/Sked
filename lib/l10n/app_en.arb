@@ -3027,7 +3027,7 @@
   },
   "agentBudgetSummaryTitle": "Run summary",
   "@agentBudgetSummaryTitle": {},
-  "agentBudgetSummaryTokenLimit": "The token budget has been reached.",
+  "agentBudgetSummaryTokenLimit": "This run has insufficient token budget to continue. Progress has been saved.",
   "@agentBudgetSummaryTokenLimit": {},
   "agentBudgetSummaryRoundLimit": "The model request limit has been reached.",
   "@agentBudgetSummaryRoundLimit": {},
@@ -3110,5 +3110,18 @@
   "agentQueuedCancel": "Cancel queued input",
   "@agentQueuedCancel": {},
   "agentQueuedRestoreDraftBusy": "Send or clear the current draft before moving this input back.",
-  "@agentQueuedRestoreDraftBusy": {}
+  "@agentQueuedRestoreDraftBusy": {},
+  "agentBudgetSummaryRequestTokenLimit": "The per-request token limit was reached. Progress has been saved.",
+  "@agentBudgetSummaryRequestTokenLimit": {},
+  "agentBudgetSummaryRequestTokenUsage": "This request · {reported}/{limit} reported tokens",
+  "@agentBudgetSummaryRequestTokenUsage": {
+    "placeholders": {
+      "reported": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  }
 }
