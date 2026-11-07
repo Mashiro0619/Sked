@@ -11,6 +11,7 @@ import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/ui/agent_attachment_view.dart';
 import 'package:sked/l10n/app_localizations.dart';
 
+import '../../test/support/agent_workspace_navigation.dart';
 import 'agent_feature_journey.dart';
 import 'agent_native_session.dart';
 
@@ -730,10 +731,7 @@ class AgentAttachmentJourney implements AgentNativeFeature {
     AgentFeatureJourney journey,
     String id,
   ) async {
-    await journey.tap(
-      journey.key('agent-history'),
-      'the real conversation list action',
-    );
+    await openAgentShellHistory(journey.tester);
     final list = find
         .byKey(const PageStorageKey('agent-conversation-list'))
         .hitTestable();
@@ -747,8 +745,12 @@ class AgentAttachmentJourney implements AgentNativeFeature {
     await journey.until(
       () =>
           journey.session.app.agent.conversations.selectedId == id &&
-          journey.key('agent-history-drawer').evaluate().isEmpty &&
-          journey.composer.evaluate().length == 1,
+          journey
+              .key('workspace-resource-scrim')
+              .hitTestable()
+              .evaluate()
+              .isEmpty &&
+          journey.composer.hitTestable().evaluate().length == 1,
       'the selected conversation after its list closes',
     );
   }
