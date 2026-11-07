@@ -146,8 +146,34 @@ Future<List<Map<String, Object?>>> exerciseAgentOverhaulStates({
   final reports = <Map<String, Object?>>[];
   final repository = app.agent.conversations;
   final runtime = app.agent.runtime;
+  final beforeNamespace = app.session.committedData;
+  final generation = app.agent.mutations.generation;
+  await app.agent.mutations.ensurePersistentGeneration(
+    expectedGeneration: generation,
+    validateOwner: () {},
+  );
+  final initialized = app.session.committedData;
+  final ledger = initialized.applicationLedger!;
+  expect(ledger.generation, generation);
+  if (beforeNamespace.applicationLedger == null) {
+    expect(ledger.receipts, isEmpty);
+    expect(ledger.nextSequence, 1);
+    expect(
+      initialized.encode(),
+      beforeNamespace.copyWith(applicationLedger: ledger).encode(),
+    );
+  } else {
+    expect(initialized.encode(), beforeNamespace.encode());
+  }
+  recordDiagnostic({
+    'kind': 'initializedBusinessBaseline',
+    'generation': generation,
+    'createdEmptyLedger': beforeNamespace.applicationLedger == null,
+    'receiptCount': ledger.receipts.length,
+    'nextSequence': ledger.nextSequence,
+  });
   final calendarId = app.session.committedData.generalMode.schedules.first.id;
-  var businessBefore = app.session.committedData.encode();
+  var businessBefore = initialized.encode();
   for (final scenario in _Scenario.values) {
     provider._select(scenario, calendarId);
     final conversation = await repository.create(
