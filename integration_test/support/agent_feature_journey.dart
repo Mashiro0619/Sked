@@ -502,18 +502,10 @@ class AgentFeatureJourney {
 
   Future<Map<String, Object?>> openProduct() async {
     await tester.pumpWidget(AgentNativeApp(session: session, config: config));
-    const homeControls = [
-      'adaptive-shell-agent-destination',
-      'adaptive-shell-agent-entry',
-      'workspace-agent-entry',
-      'workspace-main-navigation',
-    ];
     await until(
       () =>
           find.byType(AppHomeScreen).evaluate().length == 1 &&
-          homeControls.any(
-            (id) => key(id).hitTestable().evaluate().length == 1,
-          ),
+          agentShellEntryControl() != null,
       'the actual home Agent entry',
     );
     requireAgentFeature(
@@ -521,9 +513,7 @@ class AgentFeatureJourney {
       'Mounting the home page eagerly opened Agent history.',
     );
     mainAtEntry = session.mainSource;
-    final homeControl = homeControls.firstWhere(
-      (id) => key(id).hitTestable().evaluate().length == 1,
-    );
+    final homeControl = agentShellEntryControl()!;
     await selectAgentShellDestination(tester, 'agent');
     await until(
       () => composer.evaluate().length == 1 && session.app.agent.isInitialized,

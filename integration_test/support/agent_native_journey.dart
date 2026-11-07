@@ -347,9 +347,7 @@ class _Journey {
   Finder key(String value) => find.byKey(ValueKey(value));
   Finder get composer => key('agent-composer').hitTestable();
   Finder get homeNavigation => key('workspace-main-navigation');
-  bool get homeEntryVisible =>
-      key('workspace-agent-entry').hitTestable().evaluate().length == 1 ||
-      homeNavigation.hitTestable().evaluate().length == 1;
+  bool get homeEntryVisible => agentShellEntryControl() != null;
   Finder transcript([String id = agentNativeLongId]) =>
       key('agent-transcript-$id').hitTestable();
   TextField get field => tester.widget<TextField>(composer);

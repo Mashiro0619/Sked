@@ -20,6 +20,7 @@ import 'package:sked/widgets/sked_confirmation_dialog.dart';
 
 import 'agent_feature_journey.dart';
 import 'agent_native_session.dart';
+import '../../test/support/agent_workspace_navigation.dart';
 
 const _calendarId = 'native-calendar';
 const _calendarKey = BackupObjectKey(BackupObjectKind.calendar, _calendarId);
@@ -357,53 +358,30 @@ class AgentSelectiveBackupJourney implements AgentNativeFeature {
       'The unselected archive fixture must differ from the local timetable.',
     );
     _picker.configure(encodeAppBackup(incoming, const []));
-    final back = find.descendant(
-      of: find.byType(AgentPage),
-      matching: find.byType(BackButton),
-    );
-    await journey.tap(back, 'the actual Agent page Back button');
+    final returnedWorkspace = journey.session.app.workspaceView.activeMode.name;
+    await selectAgentShellDestination(journey.tester, returnedWorkspace);
     await journey.until(
-      () => find.byType(AgentPage).evaluate().isEmpty,
-      'the general home after leaving Agent',
+      () => find.byType(AgentPage).hitTestable().evaluate().isEmpty,
+      'the main business destination after leaving Agent',
     );
-    const settingsControls = [
-      'workspace-resource-settings',
-      'general-settings-button',
-      'general-desktop-toolbar-more',
-      'general-toolbar-more-button',
-    ];
-    await journey.until(
-      () => settingsControls.any(
-        (id) => journey.key(id).hitTestable().evaluate().length == 1,
-      ),
-      'the visible home Settings control',
+    final retainedAgent = find.byType(AgentPage, skipOffstage: false);
+    requireAgentFeature(
+      retainedAgent.evaluate().length == 1 &&
+          journey.tester.widget<AgentPage>(retainedAgent).embedded,
+      'Leaving Agent replaced its retained main-shell host.',
     );
-    final settingsControl = settingsControls.firstWhere(
-      (id) => journey.key(id).hitTestable().evaluate().length == 1,
-    );
-    final settingsEntry = settingsControl == 'workspace-resource-settings'
-        ? settingsControl
-        : 'general-settings-button';
-    final settings = journey.key(settingsEntry);
-    if (settingsControl != settingsEntry) {
-      await journey.tap(
-        journey.key(settingsControl),
-        'the visible home More menu for settings',
-      );
-      await journey.reveal(settings, 'the actual home Settings menu item');
-    }
-    await journey.tap(settings, 'the actual general workspace Settings entry');
+    final settingsRoute = await openWorkspaceShellSettings(journey.tester);
     await journey.until(
       () => _settings.evaluate().length == 1,
       'the actual application Settings route',
     );
     _assertOffline();
     return {
-      'settingsEntry': settingsEntry,
-      'settingsControl': settingsControl == settingsEntry
-          ? settingsControl
-          : '$settingsControl / $settingsEntry',
-      'sourceHost': 'AgentPage / BackButton',
+      'settingsEntry': settingsRoute.entry,
+      'settingsControl': settingsRoute.control,
+      'sourceHost': 'embedded Agent / main business destination / Settings',
+      'returnedWorkspace': returnedWorkspace,
+      'retainedAgentHost': true,
       'sameMainSessionAndBackupOwner': true,
       'configuration': _settingsOwner(journey),
       'before': _initial,

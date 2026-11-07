@@ -279,25 +279,29 @@ void validateAgentSelectiveBackupJourney(Map<String, Object?> report) {
   final entry = observations['product-entry']!;
   _provider(entry['provider'], closed: false);
   final settings = observations['backup-settings-open']!;
-  final platform = _map(
-    report['environment'],
-    'Native backup environment',
-  )['platform'];
   final settingsEntry = settings['settingsEntry'];
   final settingsControl = settings['settingsControl'];
   final validSettingsRoute =
-      (platform == 'windows' &&
-          settingsEntry == 'workspace-resource-settings' &&
-          settingsControl == settingsEntry) ||
-      (settingsEntry == 'general-settings-button' &&
-          const [
+      (const [
+            'workspace-resource-settings',
+            'adaptive-shell-settings-action',
             'general-settings-button',
-            'general-desktop-toolbar-more / general-settings-button',
-            'general-toolbar-more-button / general-settings-button',
-          ].contains(settingsControl));
+          ].contains(settingsEntry) &&
+          settingsControl == settingsEntry) ||
+      (settingsEntry == 'workspace-resource-settings' &&
+          const [
+            'workspace-main-navigation',
+            'workspace-resource-open',
+            'workspace-resource-collapse',
+            'general-calendar-selector',
+            'general-desktop-toolbar-more / general-calendar-selector',
+          ].any((path) => settingsControl == '$path / $settingsEntry'));
   _require(
     validSettingsRoute &&
-        settings['sourceHost'] == 'AgentPage / BackButton' &&
+        settings['sourceHost'] ==
+            'embedded Agent / main business destination / Settings' &&
+        settings['returnedWorkspace'] == 'general' &&
+        settings['retainedAgentHost'] == true &&
         settings['sameMainSessionAndBackupOwner'] == true,
     'The backup flow did not enter the real global Settings route from Agent.',
   );
