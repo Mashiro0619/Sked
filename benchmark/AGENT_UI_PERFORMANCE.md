@@ -2,12 +2,14 @@
 
 `integration_test/agent_ui_performance_benchmark_test.dart` records native
 Profile engine frames for the actual Agent entry, long-history scrolling,
-full-page close/reopen transitions and return to the latest message. It reuses
+main-shell close/reopen transitions and return to the latest message. It reuses
 the [native functional host](../integration_test/README.md), including its real
 `AppRuntime`, `AppHomeScreen`, production codecs and normal save scheduling.
 The fixture has 512 deterministic Markdown/code messages in the selected
-conversation and two messages in an independent conversation. Every store and
-credential owner is explicitly synthetic and isolated in memory.
+conversation and two messages in an independent conversation. The current
+Agent owner uses a test-owned background SQLite file; business data and
+credentials are synthetic. A legacy baseline uses its production JSON file
+storage in a separate temporary directory.
 
 This is an idle transcript population. Every action starts and ends with zero
 provider requests, and the final report requires no provider activity or HTTP
@@ -17,29 +19,32 @@ artificial provider wait in these frame samples.
 
 ## Fixed population
 
-Protocol `agent-ui-frames-v2` fixes **three independent native processes per
+Protocol `agent-ui-frames-v3` fixes **three independent native processes per
 revision, platform and configuration**. Each process creates one session and
 performs one `cold` sequence followed by one `warm` sequence in that same
 runtime and conversation repository.
 
-Version 2 follows the full Agent page on both platforms. Historical v1 reports
-retain their original pane/workspace population and must not be merged with or
-directly compared against v2 results. Keep those raw reports unchanged; a new
-v2 before/after comparison needs fresh evidence for each source revision.
+Version 3 requires real production storage, identical input and action steps,
+and no full-archive report read before first entry. Its `storage` object names
+`isolated-production-store-v1`, the actual `legacy-json` or `drift-sqlite`
+backend, fixture persistence before home mount and inspection outside measured
+windows. Historical v1/v2 reports use different hosts or memory storage and
+remain separate; both sides need fresh v3 samples.
 
 `cold` means the first Agent open and first action sequence in that process,
 after the main snapshot and actual home page have been prepared outside action
 timing. It does not mean an operating-system cold start, a cold Flutter engine,
 or cold global font/shader caches. Home preparation must leave Agent dormant
 and conversation loads at zero. The measured first entry performs the first
-archive load. `warm` opens Agent again with that same loaded repository; the
-archive load count must remain one. No second session replaces the warm input.
+storage index/page load. SQLite starts with the latest page of the 512-message
+fixture; legacy JSON loads through its existing file owner. `warm` opens Agent
+again with the same repository, whose initial-load count remains one.
 
 Each action below has its own nonoverlapping timing window:
 
 | Order | Windows | Android |
 | --- | --- | --- |
-| 1 | Sidebar Agent entry → full Agent page | Main navigation drawer Agent entry → full Agent page |
+| 1 | Sidebar Agent entry → main-shell Agent content | Main navigation drawer Agent entry → main-shell Agent content |
 | 2 | Page transcript: three older-history drags | Page transcript: three older-history drags |
 | 3 | Close page while reading earlier history | Close page while reading earlier history |
 | 4 | Reopen from side navigation, preserving the anchor | Reopen from main navigation, preserving the anchor |
@@ -49,7 +54,7 @@ Each action below has its own nonoverlapping timing window:
 Home actions use `workspace-agent-entry` in the sidebar or open the mobile
 `workspace-main-navigation` drawer first. An entry is brought into view before
 it is tapped. Reopening repeats the actual home entry; closing uses the full
-page Back control. The chosen path is recorded in `entry`, and drawer opening
+main business destination. The chosen path is recorded in `entry`, and drawer opening
 or entry scrolling remains inside the action window.
 
 There are 12 action windows per process on each platform. Returning home
@@ -202,9 +207,9 @@ ordered cold/warm actions, transcript text hashes, reading continuity, one
 archive load, stable semantics and complete cleanup.
 
 The [population contract regression](../test/agent_ui_performance_protocol_test.dart)
-checks the benchmark and driver together, including rejection of v1 reports,
-legacy pane actions and incomplete cold/warm requirements. It does not collect
-native frames or replace a v2 process run.
+checks the benchmark and driver together, including rejection of v1/v2 reports,
+memory storage, report prewarming, unrelated scroll targets and incomplete
+cold/warm requirements. It does not collect native frames.
 
 The frame budget uses the reported native refresh rate; a missing/invalid
 engine rate explicitly records a 60 Hz fallback. Over-budget stages are
@@ -224,3 +229,47 @@ These native Agent reports are separate from host JIT benchmarks, the original
 workspace UI66/workspace60 matrix, functional test counts, Windows mobile-size
 simulations and physical-device evidence. Historical reports cannot acquire
 this protocol's missing metadata or be relabeled as Agent transcript samples.
+
+## Controlled streaming
+
+`integration_test/agent_stream_performance_benchmark_test.dart` and
+`test_driver/agent_stream_performance_driver.dart` implement
+`agent-stream-frames-v1`. Each independent Profile process opens the same
+512/2-message fixture through the native home, then runs one text request.
+The provider emits 96 fixed Markdown fragments at 16 ms intervals and a final
+complete response. It records actual emission timestamps, runtime text
+publication timestamps and lengths, engine frames, wall time and process RSS.
+The original history and final reply are read back from real storage after the
+measurement; the full reply digest must match the emitted content.
+
+The measured interval starts when the request is submitted and ends after its
+runtime, persistence and visible-frame settlement. Delayed frame callbacks use
+their vsync timestamps for attribution. A 1200 ms delivery wait follows owner
+cleanup outside the interval. Empty frame sets, changed native semantics,
+unexpected requests, network access or incomplete cleanup fail the sample.
+
+Run three independent processes for each source/platform/configuration using
+the same `SKED_AGENT_UI_PERF_CONFIG`, `SKED_AGENT_UI_PERF_REVISION`,
+`SKED_AGENT_UI_PERF_LABEL` and `SKED_AGENT_UI_PERF_SOURCE_NOTE` parameters as the
+idle entry. Replace the target and driver in the existing Profile command with
+the streaming files above. Keep the 96 fragments, interval, first-entry timing,
+frame attribution and statistics identical on both sides; baseline adapters
+may only bridge the old public storage, host and notification APIs.
+
+## Matching the storage baseline
+
+For the JSON-to-SQLite comparison, select the last source revision whose
+production application still constructs `PlatformConversationStorage` and
+`PlatformKnowledgeStorage`. Adding database dependencies alone does not change
+the active backend. Record that source SHA, the candidate SHA and the complete
+test-harness overlay separately. The legacy adapter must use the real JSON
+owners with an explicit temporary `AppStorageLayout`, including their normal
+codec, atomic file writes and completion waits.
+
+Complete performance acceptance covers four populations: first native message
+load and idle scrolling from v3, controlled stream updates from stream v1, and
+matched durable-write samples using the same fixed history and update sequence.
+Each side runs its own production backend. Storage write timings wait for real
+completion and include every sample; host JIT write results remain labeled as
+host measurements rather than native frame samples. Keep source, fixture,
+update sequence, command, platform and statistics fixed within each comparison.
