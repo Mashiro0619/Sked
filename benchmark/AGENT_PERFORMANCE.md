@@ -42,17 +42,12 @@ checksums, full independent readback and cleanup are outside that interval.
 The actual save retains production codecs, flush, verification and rename.
 Notification delivery and UI response are not part of the measured interval.
 
-The initial `batch-five-timetable-names` draft did not complete. Renaming all
-five 1,000-course timetables produced 3,707,556 bytes of undo change JSON alone.
-The production receipt admits at most 1 MiB and 100,000 JSON nodes, so
-preparation rejected that workload before any main save. The full reversible
-snapshots and admission limits remain in force. `rename-one-timetable` measures
-the first timetable only, retaining all 5,000 courses in the fixture and checking
-that the other four complete timetables stay unchanged. Its admitted undo change
-JSON is 741,512 bytes. This single-table measurement does not establish that the
-original five-table operation succeeds. The manifest and frozen contract retain
-the original unfinished workload and its capacity boundary explicitly. The
-100-course batch still changes 20 courses in each of all five timetables.
+The original `batch-five-timetable-names` draft produced 3,707,556 bytes of
+undo change JSON and was rejected by the then-current 1 MiB / 100,000-node
+receipt limits. The v1 manifest retains those historical values as literals.
+The runtime no longer imposes those limits. The fixed v1 write workloads remain
+one timetable name and 100 course locations; measuring the former five-table
+draft requires its own verification contract and result.
 
 ## Fixed data and output contract
 

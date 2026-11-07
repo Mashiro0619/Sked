@@ -285,13 +285,14 @@ class AgentPerformanceFixtures {
         'timetablesTouched': 5,
       },
     },
+    // Historical limits captured by the original v1 workload.
     'capacityBoundary': {
       'originalDraftCase': 'batch-five-timetable-names',
       'originalDraftCompleted': false,
       'originalDraftFailure': 'receipt structural and byte admission limits',
       'originalDraftUndoChangesJsonBytes': 3707556,
-      'receiptMaxJsonBytes': operationReceiptMaxJsonBytes,
-      'receiptMaxJsonNodes': operationReceiptMaxJsonNodes,
+      'receiptMaxJsonBytes': 1024 * 1024,
+      'receiptMaxJsonNodes': 100000,
       'singleTimetableMeasurementValidatesOriginalDraft': false,
     },
   };
