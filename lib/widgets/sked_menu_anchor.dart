@@ -8,6 +8,11 @@ import '../theme/sked_expressive_theme.dart';
 import '../theme/sked_menu_style.dart';
 import 'sked_menu_surface.dart';
 
+typedef SkedMenuAnchorRectBuilder = Rect? Function(
+  BuildContext overlayContext,
+  Rect anchorRect,
+);
+
 /// An anchored menu with one interruptible transition for its entire surface.
 class SkedMenuAnchor extends StatefulWidget {
   const SkedMenuAnchor({
@@ -18,6 +23,7 @@ class SkedMenuAnchor extends StatefulWidget {
     this.onClose,
     this.onAnimationStatusChanged,
     this.style,
+    this.anchorRectBuilder,
     this.alignmentOffset = Offset.zero,
     this.crossAxisUnconstrained = true,
     this.clipBehavior = Clip.antiAlias,
@@ -33,6 +39,10 @@ class SkedMenuAnchor extends StatefulWidget {
   final VoidCallback? onClose;
   final ValueChanged<AnimationStatus>? onAnimationStatusChanged;
   final MenuStyle? style;
+
+  /// Overrides the anchor in the nearest Overlay's coordinates. Returning null
+  /// retains the trigger bounds; alignmentOffset is applied afterwards.
+  final SkedMenuAnchorRectBuilder? anchorRectBuilder;
   final Offset alignmentOffset;
   final bool crossAxisUnconstrained;
   final Clip clipBehavior;
@@ -270,7 +280,10 @@ class _SkedMenuAnchorState extends State<SkedMenuAnchor>
   Widget _overlay(BuildContext context, RawMenuOverlayInfo info) {
     final generation = _generation;
     final offset = widget.alignmentOffset + (info.position ?? Offset.zero);
-    final anchor = info.anchorRect.shift(offset);
+    final anchor =
+        (widget.anchorRectBuilder?.call(context, info.anchorRect) ??
+                info.anchorRect)
+            .shift(offset);
     final body = SingleChildScrollView(
       primary: false,
       clipBehavior: widget.clipBehavior,

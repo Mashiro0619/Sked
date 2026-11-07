@@ -27,6 +27,62 @@ typedef _ModelMenuGeometry = ({
   EdgeInsets insets,
 });
 
+/// Keeps horizontal menu placement tied to the composer surface while the
+/// trigger's label and width change. Vertical placement still uses the trigger.
+class AgentModelPickerAnchorScope extends InheritedWidget {
+  const AgentModelPickerAnchorScope({
+    super.key,
+    required this.composerKey,
+    required super.child,
+  });
+
+  final GlobalKey composerKey;
+
+  static AgentModelPickerAnchorScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<AgentModelPickerAnchorScope>();
+
+  Rect? _anchorRect(BuildContext context, Rect triggerRect) {
+    final composer = composerKey.currentContext?.findRenderObject();
+    final overlay = Overlay.maybeOf(context)?.context.findRenderObject();
+    if (composer is! RenderBox ||
+        overlay is! RenderBox ||
+        !overlay.attached ||
+        !overlay.hasSize) {
+      return null;
+    }
+    var reachesOverlay = false;
+    for (
+      RenderObject? current = composer;
+      current != null;
+      current = current.parent
+    ) {
+      if (!current.attached || current is RenderBox && !current.hasSize) {
+        return null;
+      }
+      if (identical(current, overlay)) {
+        reachesOverlay = true;
+        break;
+      }
+    }
+    if (!reachesOverlay) return null;
+    final bounds = MatrixUtils.transformRect(
+      composer.getTransformTo(overlay),
+      Offset.zero & composer.size,
+    );
+    if (!bounds.isFinite || bounds.isEmpty) return null;
+    return Rect.fromLTRB(
+      bounds.left - 16,
+      triggerRect.top,
+      bounds.right + 16,
+      triggerRect.bottom,
+    );
+  }
+
+  @override
+  bool updateShouldNotify(AgentModelPickerAnchorScope oldWidget) =>
+      oldWidget.composerKey != composerKey;
+}
+
 bool agentConversationModelReady(AgentUiState state, String conversationId) {
   final selection = state.selectionFor(conversationId);
   return selection != null &&
@@ -300,6 +356,7 @@ class _AgentModelPickerState extends State<AgentModelPicker>
   Widget build(BuildContext context) => ValueListenableBuilder<AgentUiState>(
     valueListenable: widget.delegate.state,
     builder: (context, state, _) {
+      final anchorScope = AgentModelPickerAnchorScope.maybeOf(context);
       final l = AppLocalizations.of(context);
       final selection = state.selectionFor(widget.conversationId);
       final defaultSelection = state.defaultModelSelection;
@@ -383,6 +440,7 @@ class _AgentModelPickerState extends State<AgentModelPicker>
       final control = SkedMenuAnchor(
         controller: _menu,
         childFocusNode: _focus,
+        anchorRectBuilder: anchorScope?._anchorRect,
         manageRouteHistory: false,
         style: menuStyle.compactPanelStyle.copyWith(
           alignment: AlignmentDirectional.bottomEnd,

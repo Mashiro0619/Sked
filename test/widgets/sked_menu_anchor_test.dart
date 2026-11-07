@@ -5,6 +5,71 @@ import 'package:sked/widgets/sked_menu_anchor.dart';
 import 'package:sked/widgets/sked_menu_surface.dart';
 
 void main() {
+  testWidgets(
+    'custom anchor geometry preserves offsets and supports fallback',
+    (tester) async {
+      final menu = MenuController();
+      final triggerKey = GlobalKey();
+      const target = Rect.fromLTWH(80, 280, 420, 40);
+      var customAnchor = true;
+      late StateSetter update;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: StatefulBuilder(
+            builder: (context, setState) {
+              update = setState;
+              return Scaffold(
+                body: Center(
+                  child: SkedMenuAnchor(
+                    controller: menu,
+                    anchorRectBuilder: (_, anchor) => customAnchor
+                        ? Rect.fromLTRB(
+                            target.left,
+                            anchor.top,
+                            target.right,
+                            anchor.bottom,
+                          )
+                        : null,
+                    alignmentOffset: const Offset(7, 0),
+                    style: const MenuStyle(
+                      alignment: AlignmentDirectional.bottomEnd,
+                    ),
+                    menuChildren: const [MenuItemButton(child: Text('Item'))],
+                    child: SizedBox(
+                      key: triggerKey,
+                      width: 100,
+                      height: 40,
+                      child: TextButton(
+                        onPressed: menu.open,
+                        child: const Text('Open'),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+      menu.open();
+      await tester.pumpAndSettle();
+      final surface = find.byType(SkedMenuSurface);
+      final customRect = tester.getRect(surface);
+      final triggerRect = tester.getRect(find.byKey(triggerKey));
+      expect(customRect.right, closeTo(target.right + 7, .1));
+      expect(customRect.top, closeTo(triggerRect.bottom, .1));
+      update(() => customAnchor = false);
+      await tester.pumpAndSettle();
+      final fallbackRect = tester.getRect(surface);
+      expect(fallbackRect.right, closeTo(triggerRect.right + 7, .1));
+      expect(fallbackRect.top, closeTo(customRect.top, .1));
+      expect(fallbackRect.size, customRect.size);
+      expect(tester.takeException(), isNull);
+      menu.close();
+      await tester.pumpAndSettle();
+    },
+  );
+
   testWidgets('close and reopen retain progress and retire closing input', (
     tester,
   ) async {

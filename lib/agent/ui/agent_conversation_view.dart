@@ -212,6 +212,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   final _composer = TextEditingController();
   // Reparent the editor without replacing its platform text-input client.
   final _composerField = GlobalKey();
+  final _composerSurface = GlobalKey();
   final _composerFocus = FocusNode();
   final _composerRegionFocus = FocusNode(skipTraversal: true);
   _AgentReferenceSession? _referenceSession;
@@ -3196,6 +3197,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                 return ListenableBuilder(
                   listenable: _composerFocus,
                   builder: (context, child) => Material(
+                    key: _composerSurface,
                     animationDuration: SkedMotionPolicy.of(context)
                         .effects(SkedMotionSpeed.fast),
                     color: Theme.of(context).colorScheme.surfaceContainer,
@@ -3318,12 +3320,16 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                 );
               }
 
-              return widget.modelPickerBuilder?.call(
-                    conversation,
-                    state,
-                    layout,
-                  ) ??
-                  layout(null, const SizedBox.shrink());
+              return AgentModelPickerAnchorScope(
+                composerKey: _composerSurface,
+                child:
+                    widget.modelPickerBuilder?.call(
+                      conversation,
+                      state,
+                      layout,
+                    ) ??
+                    layout(null, const SizedBox.shrink()),
+              );
             },
           ),
         ),

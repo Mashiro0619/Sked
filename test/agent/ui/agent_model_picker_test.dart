@@ -424,6 +424,197 @@ void main() {
     expect(find.byKey(const ValueKey('agent-model-panel')), findsOneWidget);
   });
 
+  for (final scene in [
+    (
+      name: 'roomy composer',
+      size: const Size(900, 600),
+      composerWidth: 440.0,
+      scale: 1.0,
+      padding: EdgeInsets.zero,
+      platform: TargetPlatform.windows,
+    ),
+    (
+      name: 'safe-area edge',
+      size: const Size(320, 740),
+      composerWidth: 300.0,
+      scale: 2.0,
+      padding: const EdgeInsets.only(left: 20, right: 24),
+      platform: TargetPlatform.android,
+    ),
+  ]) {
+    for (final direction in TextDirection.values) {
+      testWidgets(
+        'composer anchors model pages independently of labels at ${scene.name} $direction',
+        (tester) async {
+          const shortModel = AgentModelConfig(
+            id: 'm',
+            reasoningEfforts: [
+              AgentReasoningEffort.minimal,
+              AgentReasoningEffort.max,
+            ],
+            defaultReasoningEffort: AgentReasoningEffort.max,
+          );
+          const longModel = AgentModelConfig(
+            id: 'deepseek-v4.1-flash-with-a-long-display-name',
+            reasoningEfforts: [AgentReasoningEffort.minimal],
+            defaultReasoningEffort: AgentReasoningEffort.minimal,
+          );
+          await initialize(
+            tester,
+            models: const [shortModel, longModel],
+            currentSelection: shortModel.defaultSelection,
+          );
+          tester.view.padding = FakeViewPadding(
+            left: scene.padding.left,
+            right: scene.padding.right,
+          );
+          final composerKey = GlobalKey();
+          final sendExtent = scene.platform == TargetPlatform.windows
+              ? 32.0
+              : 48.0;
+          await mountAgentUi(
+            tester,
+            Directionality(
+              textDirection: direction,
+              child: AgentModelPickerAnchorScope(
+                composerKey: composerKey,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: SizedBox(
+                      width: scene.composerWidth,
+                      child: Material(
+                        key: composerKey,
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Align(
+                                  alignment: AlignmentDirectional.centerEnd,
+                                  heightFactor: 1,
+                                  child: AgentModelPicker(
+                                    conversationId: id,
+                                    delegate: delegate,
+                                    layoutBuilder: (control, _) => control,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              SizedBox(width: sendExtent, height: sendExtent),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            size: scene.size,
+            scale: scene.scale,
+          );
+          await open(tester);
+          final trigger = find.byKey(const ValueKey('agent-model-picker'));
+          final panel = find.byKey(const ValueKey('agent-model-panel'));
+          final firstTrigger = tester.getRect(trigger);
+          final composerRect = tester.getRect(find.byKey(composerKey));
+          double trailing(Rect rect) =>
+              direction == TextDirection.ltr ? rect.right : rect.left;
+          final expectedTrailing = scene.name == 'roomy composer'
+              ? trailing(composerRect) +
+                    (direction == TextDirection.ltr ? 16 : -16)
+              : direction == TextDirection.ltr
+              ? scene.size.width - scene.padding.right - 8
+              : scene.padding.left + 8;
+          Rect checkPlacement(Finder page) {
+            final surface = expectMenuSurfaceVisible(tester, page);
+            expect(surface.width, closeTo(244, .1));
+            expect(trailing(surface), closeTo(expectedTrailing, .1));
+            expect(surface.bottom, closeTo(tester.getRect(trigger).top, .1));
+            return surface;
+          }
+
+          checkPlacement(panel);
+          expect(
+            (expectedTrailing - trailing(firstTrigger)).abs(),
+            greaterThan(32),
+          );
+          for (final selection in [
+            longModel.defaultSelection,
+            const AgentModelSelection(
+              modelId: 'm',
+              reasoningEffort: AgentReasoningEffort.minimal,
+            ),
+            shortModel.defaultSelection,
+          ]) {
+            await delegate.setModelSelection(id, selection);
+            await tester.pumpAndSettle();
+            checkPlacement(panel);
+            if (selection == longModel.defaultSelection) {
+              expect(
+                tester.getRect(trigger).width,
+                isNot(closeTo(firstTrigger.width, .1)),
+              );
+            }
+          }
+          await tester.tap(find.byKey(const ValueKey('agent-model-switch')));
+          await tester.pumpAndSettle();
+          checkPlacement(find.byKey(const ValueKey('agent-model-list')));
+          await tester.tap(
+            find.byKey(ValueKey('agent-model-choice-${longModel.id}')),
+          );
+          await tester.pumpAndSettle();
+          await delegate.selectionWrite;
+          checkPlacement(panel);
+          expect(
+            repository.selected!.modelSelection,
+            longModel.defaultSelection,
+          );
+          expect(tester.takeException(), isNull);
+        },
+        variant: TargetPlatformVariant.only(scene.platform),
+      );
+    }
+  }
+
+  testWidgets('an unavailable composer anchor retains the trigger placement', (
+    tester,
+  ) async {
+    await initialize(tester);
+    await mountAgentUi(
+      tester,
+      Padding(
+        padding: const EdgeInsets.all(16),
+        child: Align(
+          alignment: Alignment.centerRight,
+          child: AgentModelPickerAnchorScope(
+            composerKey: GlobalKey(),
+            child: AgentModelPicker(
+              conversationId: id,
+              delegate: delegate,
+              layoutBuilder: (control, _) => control,
+            ),
+          ),
+        ),
+      ),
+    );
+    await open(tester);
+    final surface = expectMenuSurfaceVisible(
+      tester,
+      find.byKey(const ValueKey('agent-model-panel')),
+    );
+    expect(
+      surface.right,
+      closeTo(
+        tester.getRect(find.byKey(const ValueKey('agent-model-picker'))).right,
+        .1,
+      ),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   for (final platform in [TargetPlatform.windows, TargetPlatform.android]) {
     for (final direction in TextDirection.values) {
       testWidgets(
