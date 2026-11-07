@@ -30,7 +30,23 @@ class MutationUndoCompiler {
       final draft = prepare(candidate, receipt);
       candidate = draft.candidate;
       for (final change in draft.changes) {
-        touched[change.key] = change;
+        final prior = touched[change.key];
+        if (_retiredAgentPreferenceRanges.containsKey(change.key) &&
+            prior != null) {
+          if (!_sameUndoJson(prior.after, change.before)) {
+            _undoConflict(
+              'The retired preference receipts do not form one continuous history.',
+              change.key,
+            );
+          }
+          touched[change.key] = ResourceChange(
+            key: change.key,
+            before: prior.before,
+            after: change.after,
+          );
+        } else {
+          touched[change.key] = change;
+        }
       }
     }
     final before = base.toJson();
@@ -40,8 +56,9 @@ class MutationUndoCompiler {
       final change = entry.value;
       final lookup = _UndoChange(change.key, change.ref, null, null, null);
       final ref = change.ref;
-      final oldValue = _read(base, before, lookup);
-      final newValue = _read(candidate, after, lookup);
+      final retired = _retiredAgentPreferenceRanges.containsKey(change.key);
+      final oldValue = retired ? change.before : _read(base, before, lookup);
+      final newValue = retired ? change.after : _read(candidate, after, lookup);
       if (_sameUndoJson(oldValue, newValue)) continue;
       final index = ref == null || oldValue == null
           ? null
@@ -104,8 +121,16 @@ class MutationUndoCompiler {
     if (changes.isEmpty) {
       return MutationDraft(candidate: base, changes: const []);
     }
+    // Keep retired fields in the inverse receipt projection so an admitted
+    // history ticket retains its digest across upgrades. They have no active
+    // setting or stored value to restore; only live changes touch AppData.
+    final liveChanges = changes
+        .where(
+          (change) => !_retiredAgentPreferenceRanges.containsKey(change.key),
+        )
+        .toList();
     final original = _mutableUndoJson(base.toJson()) as Map<String, dynamic>;
-    for (final change in changes) {
+    for (final change in liveChanges) {
       if (!_sameUndoJson(_read(base, original, change), change.after)) {
         _undoConflict(
           'A changed object no longer matches the committed result.',
@@ -115,7 +140,9 @@ class MutationUndoCompiler {
     }
 
     final rawCandidate = _mutableUndoJson(original) as Map<String, dynamic>;
-    final resources = changes.where((change) => change.ref != null).toList();
+    final resources = liveChanges
+        .where((change) => change.ref != null)
+        .toList();
     // Restore owners before touching child lists. A complete owner snapshot
     // already includes every covered child, which was checked and removed.
     _restoreResources(
@@ -133,7 +160,7 @@ class MutationUndoCompiler {
         _undoObject(calendars[index])['sortOrder'] = index;
       }
     }
-    for (final change in changes.where((change) => change.ref == null)) {
+    for (final change in liveChanges.where((change) => change.ref == null)) {
       _writeSettingOrAuxiliary(rawCandidate, change.key, change.before);
     }
     try {
@@ -156,7 +183,7 @@ class MutationUndoCompiler {
     if (!_sameUndoJson(candidate.toJson(), rawCandidate)) {
       _undoConflict('The reverse changes require an unrelated data repair.');
     }
-    final pureSettings = changes
+    final pureSettings = liveChanges
         .where(
           (change) =>
               change.ref == null && !_undoAuxiliaryKeys.contains(change.key),
@@ -174,7 +201,7 @@ class MutationUndoCompiler {
       _invalidUndo('A reverse setting is outside its registered contract.');
     }
     final restored = candidate.toJson();
-    for (final change in changes) {
+    for (final change in liveChanges) {
       if (!_sameUndoJson(_read(candidate, restored, change), change.before)) {
         _undoConflict(
           'The recorded object cannot be restored exactly.',
@@ -285,7 +312,18 @@ class MutationUndoCompiler {
       if (json.containsKey('beforeIndex')) {
         _invalidUndo('Only resource changes have list positions.');
       }
-      if (!_undoAuxiliaryKeys.contains(key)) {
+      final retiredRange = _retiredAgentPreferenceRanges[key];
+      if (retiredRange != null) {
+        for (final value in [json['before'], json['after']]) {
+          if (value is! int ||
+              value < retiredRange.$1 ||
+              value > retiredRange.$2) {
+            _invalidUndo(
+              'The retired preference has an invalid recorded value.',
+            );
+          }
+        }
+      } else if (!_undoAuxiliaryKeys.contains(key)) {
         try {
           final descriptor = _settings.descriptor(key);
           if (!descriptor.canPrepare || descriptor.sensitive) {
@@ -319,6 +357,14 @@ class MutationUndoCompiler {
     return _settings.read(data, change.key);
   }
 }
+
+// Historical value validation for receipts only. These keys stay absent from
+// the live settings catalog and are never written back into AgentSettings.
+const _retiredAgentPreferenceRanges = {
+  'agent.maxModelRounds': (1, 100),
+  'agent.maxToolCalls': (1, 500),
+  'agent.maxTotalTokens': (1024, 1000000),
+};
 
 const _undoAuxiliaryKeys = {
   'general.customDateRange',

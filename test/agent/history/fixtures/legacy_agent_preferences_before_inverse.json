@@ -1,0 +1,514 @@
+{
+  "sourceCommit": "f28cf82d44ce9feac909fdb6c4c600d6dbba3b71",
+  "conversationId": "19ddc953bc1ee09e111df73935c09bbb",
+  "main": {
+    "schemaVersion": 6,
+    "activeMode": "student",
+    "enabledWorkspaces": [
+      "general",
+      "student"
+    ],
+    "studentMode": {
+      "activeTimetableId": "",
+      "timetables": [],
+      "periodTimeSets": [
+        {
+          "id": "period_set_default",
+          "name": "Default periods",
+          "periodTimes": [
+            {
+              "index": 1,
+              "startMinutes": 480,
+              "endMinutes": 525
+            },
+            {
+              "index": 2,
+              "startMinutes": 535,
+              "endMinutes": 580
+            },
+            {
+              "index": 3,
+              "startMinutes": 600,
+              "endMinutes": 645
+            },
+            {
+              "index": 4,
+              "startMinutes": 655,
+              "endMinutes": 700
+            },
+            {
+              "index": 5,
+              "startMinutes": 840,
+              "endMinutes": 885
+            },
+            {
+              "index": 6,
+              "startMinutes": 895,
+              "endMinutes": 940
+            },
+            {
+              "index": 7,
+              "startMinutes": 960,
+              "endMinutes": 1005
+            },
+            {
+              "index": 8,
+              "startMinutes": 1015,
+              "endMinutes": 1060
+            },
+            {
+              "index": 9,
+              "startMinutes": 1140,
+              "endMinutes": 1185
+            },
+            {
+              "index": 10,
+              "startMinutes": 1195,
+              "endMinutes": 1240
+            },
+            {
+              "index": 11,
+              "startMinutes": 1250,
+              "endMinutes": 1295
+            },
+            {
+              "index": 12,
+              "startMinutes": 1300,
+              "endMinutes": 1345
+            }
+          ]
+        }
+      ],
+      "conflictDisplayCourseIds": {},
+      "closeCoursePopupOnOutsideTap": true,
+      "preserveTimetableGaps": false,
+      "showPastEndedCourses": false,
+      "showFutureCourses": true,
+      "showTimetableGridLines": true,
+      "showAddCourseFab": true,
+      "enableLongPressAddCourse": true,
+      "fitDaySelectorToWidth": true,
+      "fitWeekColumnsToWidth": true,
+      "enableWeekSwipeNavigation": true,
+      "toolbarNavigationOrder": [
+        "timetable",
+        "week",
+        "view",
+        "workspace",
+        "settings",
+        "more"
+      ],
+      "hiddenToolbarNavigationIds": [
+        "workspace",
+        "settings"
+      ],
+      "toolbarHiddenItemsBehavior": "remove",
+      "themeMode": "system",
+      "themeColorMode": "single",
+      "themeSeedColorValue": 4281558681,
+      "colorfulUiColorValues": {},
+      "colorfulCourseTextColorMode": "auto",
+      "courseNameColorValues": {},
+      "liveCourseOutlineColorValue": 4293880832,
+      "liveCourseOutlineEnabled": true,
+      "liveCourseOutlineFollowTheme": true,
+      "liveCourseOutlineCustomColorInitialized": false,
+      "liveCourseOutlineMode": "current_or_next",
+      "liveCourseOutlineWidth": 2.5
+    },
+    "generalMode": {
+      "schemaVersion": 6,
+      "activeScheduleId": "calendar_1794033594972266",
+      "schedules": [
+        {
+          "id": "calendar_1794033594972266",
+          "name": "My calendar",
+          "colorValue": 4283283116,
+          "isVisible": true,
+          "sortOrder": 0,
+          "events": []
+        }
+      ],
+      "selectedDateIso": "2026-11-07",
+      "defaultView": "week",
+      "viewSwitchBehavior": "menu",
+      "toolbarWidthPolicy": "content",
+      "dateLabelFormat": "slash",
+      "fitWeekColumnsToWidth": true,
+      "showWeekends": true,
+      "showLunarCalendar": true,
+      "dayStartHour": 6,
+      "dayEndHour": 23,
+      "timeGridMinutes": 60,
+      "timeGridHourHeight": 72,
+      "closeEventPopupOnOutsideTap": true,
+      "showAddEventFab": true,
+      "enableLongPressAddEvent": true,
+      "allDayTimelineCollapsed": false,
+      "toolbarNavigationOrder": [
+        "category",
+        "date",
+        "view",
+        "workspace",
+        "settings",
+        "more"
+      ],
+      "hiddenToolbarNavigationIds": [
+        "workspace",
+        "settings"
+      ],
+      "toolbarHiddenItemsBehavior": "remove",
+      "themeMode": "system",
+      "themeColorMode": "single",
+      "themeSeedColorValue": 4281558681,
+      "colorfulUiColorValues": {},
+      "reminderAcknowledgements": []
+    },
+    "localeCode": "en",
+    "hideHomeBottomNavigationBar": false,
+    "homeWorkspaceNavigationCollapsed": false,
+    "aiApiSettings": {
+      "source": "custom_openai",
+      "customBaseUrl": "",
+      "customModel": "",
+      "customPrompt": ""
+    },
+    "agentSettings": {
+      "enabled": true,
+      "permissionMode": "ask",
+      "protocol": "chatCompletions",
+      "endpoint": "https://fixture.example/v1",
+      "model": "fixture",
+      "models": [
+        {
+          "id": "fixture",
+          "reasoningEfforts": [
+            "medium"
+          ],
+          "defaultReasoningEffort": "medium"
+        }
+      ],
+      "credentialRef": null,
+      "systemInstructions": "Updated workflow guidance.",
+      "maxModelRounds": 36,
+      "maxToolCalls": 160,
+      "maxTotalTokens": 200000,
+      "historyRetentionDays": 60
+    },
+    "applicationLedger": {
+      "generation": "55dbb421-b83e-4983-a6b6-75455ae2dbaf",
+      "nextSequence": 2,
+      "receipts": [
+        {
+          "operationId": "55dbb421-b83e-4983-a6b6-75455ae2dbaf/1/70e3d472-2937-404f-8506-49ed16614914",
+          "sequence": 1,
+          "commandDigest": "63f658a150dd19f7a49944a8b84542c0d88132513fb452e7a8084ada4c87bcab",
+          "completedAtIso": "2026-11-07T06:39:55.218445Z",
+          "result": {
+            "status": "committed",
+            "operationId": "55dbb421-b83e-4983-a6b6-75455ae2dbaf/1/70e3d472-2937-404f-8506-49ed16614914",
+            "generation": "55dbb421-b83e-4983-a6b6-75455ae2dbaf",
+            "sequence": 1,
+            "changeCount": 5,
+            "changes": [
+              {
+                "key": "agent.systemInstructions",
+                "action": "updated"
+              },
+              {
+                "key": "agent.maxModelRounds",
+                "action": "updated"
+              },
+              {
+                "key": "agent.maxToolCalls",
+                "action": "updated"
+              },
+              {
+                "key": "agent.maxTotalTokens",
+                "action": "updated"
+              },
+              {
+                "key": "agent.historyRetentionDays",
+                "action": "updated"
+              }
+            ]
+          },
+          "undo": {
+            "changes": [
+              {
+                "key": "agent.systemInstructions",
+                "before": "Original workflow guidance.",
+                "after": "Updated workflow guidance."
+              },
+              {
+                "key": "agent.maxModelRounds",
+                "before": 24,
+                "after": 36
+              },
+              {
+                "key": "agent.maxToolCalls",
+                "before": 128,
+                "after": 160
+              },
+              {
+                "key": "agent.maxTotalTokens",
+                "before": 100000,
+                "after": 200000
+              },
+              {
+                "key": "agent.historyRetentionDays",
+                "before": 30,
+                "after": 60
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "includePrereleaseUpdates": true
+  },
+  "conversations": {
+    "version": 7,
+    "revision": 22,
+    "selectedId": "19ddc953bc1ee09e111df73935c09bbb",
+    "conversations": [
+      {
+        "id": "19ddc953bc1ee09e111df73935c09bbb",
+        "title": "Legacy Agent preferences",
+        "createdAt": "2026-11-07T06:39:55.098532Z",
+        "updatedAt": "2026-11-07T06:39:55.293154Z",
+        "mode": "full",
+        "status": "interrupted",
+        "archived": false,
+        "draft": "",
+        "connectionFingerprint": "aedff0639a51974f664e0b43951adf21f3b87785b09f0e8a983e6ef9b62d763a",
+        "runId": "28dfd77f-1b2c-4ba4-866d-1bd159cf04d5",
+        "modelSelection": {
+          "modelId": "fixture",
+          "reasoningEffort": "medium"
+        },
+        "executionHistoryStart": 0,
+        "messages": [
+          {
+            "id": "806bab6d-7658-4500-a7f6-d9d8dbb91ffe",
+            "role": "user",
+            "text": "Update shared Agent preferences.",
+            "createdAt": "2026-11-07T06:39:55.131877Z",
+            "modelSelection": {
+              "modelId": "fixture",
+              "reasoningEffort": "medium"
+            }
+          },
+          {
+            "id": "b3fdfa78-7807-496c-b21c-4e2ae3bff00e",
+            "role": "assistant",
+            "text": "",
+            "createdAt": "2026-11-07T06:39:55.162337Z",
+            "toolCalls": [
+              {
+                "id": "call-capabilities.describe",
+                "name": "capabilities.describe",
+                "arguments": "{\"names\":[\"agent_settings.prepare\",\"mutation.commit\"]}"
+              }
+            ],
+            "modelSelection": {
+              "modelId": "fixture",
+              "reasoningEffort": "medium"
+            },
+            "providerProtocol": "chatCompletions"
+          },
+          {
+            "id": "91abe3d3-c157-4d32-b956-b03e0fccb09b",
+            "role": "tool",
+            "text": "{\"toolApiVersion\":\"1.0.0\",\"permissionMode\":\"full\",\"now\":\"2026-11-07T14:39:55.107670+08:00\",\"workspace\":\"student\",\"tools\":[{\"name\":\"agent_settings.prepare\",\"description\":\"Prepare shared Agent instruction, budget or retention preferences. Uses agent.* keys and the ordinary mutation.commit permission gate; cannot change credentials or permission mode.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"edits\":{\"type\":\"array\",\"maxItems\":100,\"items\":{\"type\":\"object\",\"properties\":{\"key\":{\"type\":\"string\"},\"action\":{\"type\":\"string\",\"enum\":[\"keep\",\"set\",\"reset\"]},\"value\":{}},\"required\":[\"key\",\"action\"],\"additionalProperties\":false}},\"operationId\":{\"type\":\"string\",\"description\":\"Omit for a new operation so the host generates its identity. For a retry, copy the exact operationId previously returned by the host and keep the original arguments.\"}},\"required\":[\"edits\"],\"additionalProperties\":false}},{\"name\":\"mutation.commit\",\"description\":\"Apply the exact prepared plan. Planning mode refuses writes; ask mode waits for the user; full mode commits directly.\",\"parameters\":{\"type\":\"object\",\"properties\":{\"planId\":{\"type\":\"string\"}},\"required\":[\"planId\"],\"additionalProperties\":false}}],\"totalMatches\":2,\"hasMore\":false,\"nextOffset\":null}",
+            "createdAt": "2026-11-07T06:39:55.171519Z",
+            "toolCallId": "call-capabilities.describe"
+          },
+          {
+            "id": "b78de8fb-d0a2-4d76-9905-8ad124cc714d",
+            "role": "assistant",
+            "text": "",
+            "createdAt": "2026-11-07T06:39:55.178398Z",
+            "toolCalls": [
+              {
+                "id": "call-agent_settings.prepare",
+                "name": "agent_settings.prepare",
+                "arguments": "{\"edits\":[{\"key\":\"agent.systemInstructions\",\"action\":\"set\",\"value\":\"Updated workflow guidance.\"},{\"key\":\"agent.historyRetentionDays\",\"action\":\"set\",\"value\":60},{\"key\":\"agent.maxModelRounds\",\"action\":\"set\",\"value\":36},{\"key\":\"agent.maxToolCalls\",\"action\":\"set\",\"value\":160},{\"key\":\"agent.maxTotalTokens\",\"action\":\"set\",\"value\":200000}]}"
+              }
+            ],
+            "modelSelection": {
+              "modelId": "fixture",
+              "reasoningEffort": "medium"
+            },
+            "providerProtocol": "chatCompletions"
+          },
+          {
+            "id": "3be90cb4-bfd9-4b2f-913a-7e7acdade0ba",
+            "role": "tool",
+            "text": "{\"planId\":\"d7a1b01b-ca86-493a-a7cf-5b7d971994c9\",\"operationId\":\"55dbb421-b83e-4983-a6b6-75455ae2dbaf/1/70e3d472-2937-404f-8506-49ed16614914\",\"generation\":\"55dbb421-b83e-4983-a6b6-75455ae2dbaf\",\"sequence\":1,\"alreadyCommitted\":false,\"changeCount\":5,\"changes\":[{\"key\":\"agent.systemInstructions\",\"action\":\"updated\"},{\"key\":\"agent.maxModelRounds\",\"action\":\"updated\"},{\"key\":\"agent.maxToolCalls\",\"action\":\"updated\"},{\"key\":\"agent.maxTotalTokens\",\"action\":\"updated\"},{\"key\":\"agent.historyRetentionDays\",\"action\":\"updated\"}],\"hasMoreChanges\":false,\"hasMore\":false,\"nextOffset\":null}",
+            "createdAt": "2026-11-07T06:39:55.199434Z",
+            "toolCallId": "call-agent_settings.prepare"
+          },
+          {
+            "id": "6348b643-5fdc-4840-b197-260c62460cb9",
+            "role": "assistant",
+            "text": "",
+            "createdAt": "2026-11-07T06:39:55.205129Z",
+            "toolCalls": [
+              {
+                "id": "call-mutation.commit",
+                "name": "mutation.commit",
+                "arguments": "{\"planId\":\"d7a1b01b-ca86-493a-a7cf-5b7d971994c9\"}"
+              }
+            ],
+            "modelSelection": {
+              "modelId": "fixture",
+              "reasoningEffort": "medium"
+            },
+            "providerProtocol": "chatCompletions"
+          },
+          {
+            "id": "86fbe740-aa8f-435e-9a83-4a4d32668b71",
+            "role": "tool",
+            "text": "{\"status\":\"committed\",\"operationId\":\"55dbb421-b83e-4983-a6b6-75455ae2dbaf/1/70e3d472-2937-404f-8506-49ed16614914\",\"generation\":\"55dbb421-b83e-4983-a6b6-75455ae2dbaf\",\"sequence\":1,\"changeCount\":5,\"changes\":[{\"key\":\"agent.systemInstructions\",\"action\":\"updated\"},{\"key\":\"agent.maxModelRounds\",\"action\":\"updated\"},{\"key\":\"agent.maxToolCalls\",\"action\":\"updated\"},{\"key\":\"agent.maxTotalTokens\",\"action\":\"updated\"},{\"key\":\"agent.historyRetentionDays\",\"action\":\"updated\"}],\"replayed\":false,\"stoppedAfterCommit\":false,\"notificationEffect\":{\"id\":\"55dbb421-b83e-4983-a6b6-75455ae2dbaf/1/70e3d472-2937-404f-8506-49ed16614914/notifications\",\"operationId\":\"55dbb421-b83e-4983-a6b6-75455ae2dbaf/1/70e3d472-2937-404f-8506-49ed16614914\",\"kind\":\"notifications\",\"generation\":\"55dbb421-b83e-4983-a6b6-75455ae2dbaf\",\"commitSequence\":1,\"state\":\"unknown\",\"deliveryObserved\":false},\"hasMoreChanges\":false,\"hasMore\":false,\"nextOffset\":null}",
+            "createdAt": "2026-11-07T06:39:55.222037Z",
+            "toolCallId": "call-mutation.commit"
+          },
+          {
+            "id": "04da6689-b4f4-4ed8-8560-30659403a062",
+            "role": "assistant",
+            "text": "Preference changes saved.",
+            "createdAt": "2026-11-07T06:39:55.228301Z",
+            "modelSelection": {
+              "modelId": "fixture",
+              "reasoningEffort": "medium"
+            },
+            "providerProtocol": "chatCompletions"
+          }
+        ],
+        "sources": [],
+        "runs": [
+          {
+            "id": "28dfd77f-1b2c-4ba4-866d-1bd159cf04d5",
+            "startedAt": "2026-11-07T06:39:55.107670Z",
+            "kind": "model",
+            "protocol": "chatCompletions",
+            "model": "fixture",
+            "reasoningEffort": "medium",
+            "status": "completed",
+            "settledAt": "2026-11-07T06:39:55.230289Z",
+            "requests": [
+              {
+                "id": "8eb47097-54d6-4592-bc87-cf0e18371441",
+                "startedAt": "2026-11-07T06:39:55.154348Z",
+                "outcome": "completed",
+                "usage": null
+              },
+              {
+                "id": "8e9bd1e6-7b8f-4750-8ef6-cc811c00aedc",
+                "startedAt": "2026-11-07T06:39:55.175552Z",
+                "outcome": "completed",
+                "usage": null
+              },
+              {
+                "id": "ed48f143-00d9-44bd-ac17-99bd35beca8b",
+                "startedAt": "2026-11-07T06:39:55.203677Z",
+                "outcome": "completed",
+                "usage": null
+              },
+              {
+                "id": "05576ed3-2436-4018-be89-7606a4c7d03d",
+                "startedAt": "2026-11-07T06:39:55.226245Z",
+                "outcome": "completed",
+                "usage": null
+              }
+            ],
+            "tools": [
+              {
+                "id": "call-capabilities.describe",
+                "name": "capabilities.describe",
+                "outcome": "completed"
+              },
+              {
+                "id": "call-agent_settings.prepare",
+                "name": "agent_settings.prepare",
+                "outcome": "completed"
+              },
+              {
+                "id": "call-mutation.commit",
+                "name": "mutation.commit",
+                "outcome": "completed"
+              }
+            ]
+          }
+        ],
+        "turns": [
+          {
+            "id": "28dfd77f-1b2c-4ba4-866d-1bd159cf04d5",
+            "requestMessageId": "806bab6d-7658-4500-a7f6-d9d8dbb91ffe",
+            "ownershipComplete": true,
+            "messageIds": [
+              "806bab6d-7658-4500-a7f6-d9d8dbb91ffe",
+              "b3fdfa78-7807-496c-b21c-4e2ae3bff00e",
+              "91abe3d3-c157-4d32-b956-b03e0fccb09b",
+              "b78de8fb-d0a2-4d76-9905-8ad124cc714d",
+              "3be90cb4-bfd9-4b2f-913a-7e7acdade0ba",
+              "6348b643-5fdc-4840-b197-260c62460cb9",
+              "86fbe740-aa8f-435e-9a83-4a4d32668b71",
+              "04da6689-b4f4-4ed8-8560-30659403a062"
+            ],
+            "runIds": [
+              "28dfd77f-1b2c-4ba4-866d-1bd159cf04d5"
+            ],
+            "operations": [
+              {
+                "operationId": "55dbb421-b83e-4983-a6b6-75455ae2dbaf/1/70e3d472-2937-404f-8506-49ed16614914",
+                "store": "main",
+                "runId": "28dfd77f-1b2c-4ba4-866d-1bd159cf04d5",
+                "toolCallId": "call-mutation.commit"
+              }
+            ]
+          }
+        ],
+        "historyVersions": [],
+        "replyRevisions": [],
+        "redoBatches": [
+          {
+            "id": "96853c76-fadc-46bd-adaf-10cfe02c8ecd",
+            "conversationId": "19ddc953bc1ee09e111df73935c09bbb",
+            "sourceTurnId": "28dfd77f-1b2c-4ba4-866d-1bd159cf04d5",
+            "sourceMessageId": "806bab6d-7658-4500-a7f6-d9d8dbb91ffe",
+            "historyVersionId": "d872f261-06b2-402c-8b63-0367fe1c1789",
+            "replayRunId": "64d01e4f-3670-47ae-a162-6c66dc5016ba",
+            "createdAt": "2026-11-07T06:39:55.236191Z",
+            "text": "Explain the settings instead.",
+            "attachmentIds": [],
+            "modelSelection": {
+              "modelId": "fixture",
+              "reasoningEffort": "medium"
+            },
+            "contextDigest": "83bef08fb3db68bc6aaeb6f7a3ace447e6aaf063b8a3a483d1b9e7fc1571ce20",
+            "turnIds": [
+              "28dfd77f-1b2c-4ba4-866d-1bd159cf04d5"
+            ],
+            "tickets": [
+              {
+                "owner": "main",
+                "token": "96853c76-fadc-46bd-adaf-10cfe02c8ecd",
+                "digest": "e629a709b4afed0151c86c0d4f8fa62cdc32f05f05f6d0e637cb41393a8541d2",
+                "operationIds": [
+                  "55dbb421-b83e-4983-a6b6-75455ae2dbaf/1/70e3d472-2937-404f-8506-49ed16614914"
+                ]
+              }
+            ],
+            "completedOwners": [],
+            "phase": "undoing"
+          }
+        ]
+      }
+    ],
+    "handoffs": [],
+    "terminatedIds": []
+  },
+  "pendingHistoryBatch": "96853c76-fadc-46bd-adaf-10cfe02c8ecd"
+}
