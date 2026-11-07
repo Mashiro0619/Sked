@@ -204,6 +204,8 @@ Future<PreparedMutation> prepareUndo(ReceiptId receiptId);
 
 [ToolOutcome](../lib/agent/operations/tool_outcome.dart) 区分查询、预览、已保存、取消、可纠正错误与待核对结果。回执尚未确认时优先报告待核对，不能被副作用的失败标签覆盖；主库已保存而通知投递无法观测时，业务结果仍为已保存。
 
+审批期间其他会话可以保存无关对象。主库在实际事务内分配回执序号，操作身份保持不变；准备时的序号片段不再决定是否允许保存。标准命令核对领域读取依赖，并在当前快照重编译后比较完整变更；宿主专用草稿和撤销也按实际变更合并。外部操作由适配器核对实际对象和版本，无关账本变化不会让它失效。批量撤销按回执的实际保存序号逆序执行。
+
 ### 6.3 跨存储及平台副作用
 
 学校站点、凭据、设备偏好、学校网页会话、系统通知有各自存储与生命周期。普通主库批事务不覆盖它们。复用现有备份恢复 journal、维护预约和 quiescence；新增步骤状态及可恢复 effect 记录，按实际结果标记 `dataCommitted`、`effectsPending`、`partial` 或 `outcomeUnknown`。

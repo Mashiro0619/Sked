@@ -129,6 +129,166 @@ void main() {
     );
   });
 
+  for (final customDraft in [false, true]) {
+    test(
+      'approved ${customDraft ? 'host draft' : 'resource command'} merges an unrelated conversation commit with a new receipt sequence',
+      () async {
+        await seedEvents([event('first'), event('second')]);
+        final waiting = OperationScope(
+          id: 'waiting',
+          policy: OperationPolicy(enabled: true, mode: AgentPermissionMode.ask),
+        );
+        final commands = [
+          ResourceMutation(
+            kind: ResourceKind.event,
+            action: ResourceMutationAction.patch,
+            target: const ResourceRef(
+              kind: ResourceKind.event,
+              id: 'first',
+              parentId: 'calendar',
+            ),
+            values: const {'title': 'Approved first'},
+          ),
+        ];
+        final plan = customDraft
+            ? coordinator.prepareDraft(
+                scope: waiting,
+                command: const {'custom': 'first'},
+                compile: (current, context) => const ResourceMutationCompiler()
+                    .compile(current, commands, context: context),
+              )
+            : coordinator.prepare(scope: waiting, resources: commands);
+        final approval = waiting.approve(plan.id);
+        final other = coordinator.prepare(
+          scope: scope,
+          resources: [
+            ResourceMutation(
+              kind: ResourceKind.event,
+              action: ResourceMutationAction.patch,
+              target: const ResourceRef(
+                kind: ResourceKind.event,
+                id: 'second',
+                parentId: 'calendar',
+              ),
+              values: const {'title': 'Saved second'},
+            ),
+          ],
+        );
+        final firstSaved = await coordinator.commit(
+          planId: other.id,
+          scope: scope,
+        );
+        expect(firstSaved.receipt.sequence, 1);
+        expect(coordinator.status(plan.operationId), isNull);
+        final saved = await coordinator.commit(
+          planId: plan.id,
+          scope: waiting,
+          approval: approval,
+        );
+        expect(saved.receipt.operationId, plan.operationId);
+        expect(saved.receipt.sequence, 2);
+        expect(saved.toJson()['sequence'], 2);
+        expect(
+          {
+            for (final item
+                in session.committedData.generalMode.schedules.single.events)
+              item.id: item.title,
+          },
+          {'first': 'Approved first', 'second': 'Saved second'},
+        );
+        final restarted = newCoordinator(await newSession());
+        expect(restarted.status(plan.operationId), saved.receipt);
+        expect(restarted.status(other.operationId), firstSaved.receipt);
+      },
+    );
+  }
+
+  test('batch undo follows actual save sequence when prepared identities share an old hint', () async {
+    await seedEvents([event('first'), event('second'), event('third')]);
+    ResourceMutation remove(String id) => ResourceMutation(
+      kind: ResourceKind.event,
+      action: ResourceMutationAction.delete,
+      target: ResourceRef(
+        kind: ResourceKind.event,
+        id: id,
+        parentId: 'calendar',
+      ),
+    );
+    final first = coordinator.prepare(
+      scope: scope,
+      resources: [remove('first')],
+    );
+    final second = coordinator.prepare(
+      scope: scope,
+      resources: [remove('second')],
+    );
+    expect(first.sequence, second.sequence);
+    final savedSecond = await coordinator.commit(
+      planId: second.id,
+      scope: scope,
+    );
+    final savedFirst = await coordinator.commit(planId: first.id, scope: scope);
+    expect(
+      savedFirst.receipt.sequence,
+      greaterThan(savedSecond.receipt.sequence),
+    );
+    final undo = coordinator.prepareUndoMany(
+      scope: scope,
+      batchId: 'concurrent-undo',
+      operationIds: [first.operationId, second.operationId],
+    );
+    await coordinator.commit(planId: undo.id, scope: scope);
+    expect(
+      session.committedData.generalMode.schedules.single.events.map(
+        (event) => event.id,
+      ),
+      ['first', 'second', 'third'],
+    );
+  });
+
+  test(
+    'another conversation changing the approved target prevents the old write',
+    () async {
+      await seedEvents([event('target')]);
+      final waiting = OperationScope(
+        id: 'waiting',
+        policy: OperationPolicy(enabled: true, mode: AgentPermissionMode.ask),
+      );
+      ResourceMutation patch(String title) => ResourceMutation(
+        kind: ResourceKind.event,
+        action: ResourceMutationAction.patch,
+        target: const ResourceRef(
+          kind: ResourceKind.event,
+          id: 'target',
+          parentId: 'calendar',
+        ),
+        values: {'title': title},
+      );
+      final plan = coordinator.prepare(
+        scope: waiting,
+        resources: [patch('Old decision')],
+      );
+      final other = coordinator.prepare(
+        scope: scope,
+        resources: [patch('New decision')],
+      );
+      await coordinator.commit(planId: other.id, scope: scope);
+      await expectLater(
+        coordinator.commit(
+          planId: plan.id,
+          scope: waiting,
+          approval: waiting.approve(plan.id),
+        ),
+        throwsA(problem(OperationErrorCode.conflict)),
+      );
+      expect(
+        session.committedData.generalMode.schedules.single.events.single.title,
+        'New decision',
+      );
+      expect(session.committedData.applicationLedger!.receipts, hasLength(1));
+    },
+  );
+
   test(
     'resource namespace survives reopen without allocating receipts',
     () async {
@@ -1045,27 +1205,46 @@ void main() {
   );
 
   test(
-    'host drafts keep their snapshot gate and do not rerun arbitrary compilers',
+    'host drafts recompile and reject changed target dependencies',
     () async {
+      await seedEvents([event('target')]);
       var compilations = 0;
+      ResourceMutation patch(String title) => ResourceMutation(
+        kind: ResourceKind.event,
+        action: ResourceMutationAction.patch,
+        target: const ResourceRef(
+          kind: ResourceKind.event,
+          id: 'target',
+          parentId: 'calendar',
+        ),
+        values: {'title': title},
+      );
       final plan = coordinator.prepareDraft(
         scope: scope,
         command: const {'hostDraft': true},
         compile: (baseline, context) {
           compilations++;
           return const ResourceMutationCompiler().compile(baseline, [
-            createEvent(),
+            patch('Approved title'),
           ], context: context);
         },
       );
-      expect(plan.readSet, ['snapshot']);
-      await saveUiData(session.data.copyWith(localeCode: 'zh'));
+      expect(plan.readSet, ['compiledChanges']);
+      final changed = coordinator.prepare(
+        scope: scope,
+        resources: [patch('Changed title')],
+      );
+      await coordinator.commit(planId: changed.id, scope: scope);
       await expectLater(
         coordinator.commit(planId: plan.id, scope: scope),
         throwsA(problem(OperationErrorCode.conflict)),
       );
-      expect(compilations, 1);
-      expect(storage.data.generalMode.schedules.single.events, isEmpty);
+      expect(compilations, 2);
+      expect(
+        storage.data.generalMode.schedules.single.events.single.title,
+        'Changed title',
+      );
+      expect(storage.data.applicationLedger!.receipts, hasLength(1));
     },
   );
 

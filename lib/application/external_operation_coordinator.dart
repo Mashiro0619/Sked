@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart' show debugPrint;
 
 import '../controllers/app_data_maintenance.dart';
 import '../controllers/app_session.dart';
-import '../models/app_data.dart';
 import '../models/application_ledger.dart';
 import '../utils/unique_id.dart';
 import 'approval_plan.dart';
@@ -37,6 +36,7 @@ class ExternalEffectResult {
 class ExternalOperationContext {
   ExternalOperationContext._({
     required this.operationId,
+    required this.sequence,
     required this.action,
     required this.arguments,
     required this.version,
@@ -44,7 +44,7 @@ class ExternalOperationContext {
 
   final String operationId;
   String get generation => _identity(operationId).generation;
-  int get sequence => _identity(operationId).sequence;
+  final int sequence;
   final String action;
   final Map<String, Object?> arguments;
   final Object? version;
@@ -65,9 +65,7 @@ class PreparedExternalMutation implements ApprovalPlan {
     required this.changes,
     required this.alreadyRecorded,
     required this._scope,
-    required this._epoch,
     required this._sessionRevision,
-    required this._baselineDigest,
     required this._validate,
     required this._execute,
     required this._readBack,
@@ -86,9 +84,7 @@ class PreparedExternalMutation implements ApprovalPlan {
   final List<ResourceChange> changes;
   final bool alreadyRecorded;
   final OperationScope _scope;
-  final int _epoch;
   final int _sessionRevision;
-  final String _baselineDigest;
   final void Function() _validate;
   final ExternalEffect _execute;
   final ExternalEffect? _readBack;
@@ -252,7 +248,6 @@ class ExternalOperationCoordinator {
       'arguments': frozenArguments,
       'version': frozenVersion,
     });
-    final baseline = _session.data;
     final ledger = _session.committedData.applicationLedger;
     final currentGeneration = generation;
     final sequence = ledger?.nextSequence ?? 1;
@@ -264,12 +259,12 @@ class ExternalOperationCoordinator {
       if (existing.commandDigest != digest) _mismatch();
       _externalReceipt(existing);
     } else {
-      if (identity.sequence != sequence) _expired();
       validate();
     }
     final now = _clock().toUtc();
     final operation = ExternalOperationContext._(
       operationId: resolvedId,
+      sequence: existing?.sequence ?? sequence,
       action: action,
       arguments: frozenArguments,
       version: frozenVersion,
@@ -310,9 +305,7 @@ class ExternalOperationCoordinator {
       ),
       alreadyRecorded: existing != null,
       scope: scope,
-      epoch: _session.mutationEpoch,
       sessionRevision: _dataSessionRevision(),
-      baselineDigest: mutationDigest(baseline.toJson()),
       validate: validate,
       execute: execute,
       readBack: readBack,
@@ -353,27 +346,34 @@ class ExternalOperationCoordinator {
           _dataSessionRevision() != prepared._sessionRevision) {
         _expired();
       }
-      if (mutationDigest(_session.data.toJson()) != prepared._baselineDigest) {
-        _conflict();
-      }
       prepared._validate();
     }
 
     checkPlan();
-    late AppData pendingSnapshot;
+    var pendingReceipt = prepared._receipt;
     try {
-      pendingSnapshot = await _session.commitMutation(
+      await _session.commitMutation(
         (current) {
           checkPlan();
           final ledger =
               current.applicationLedger ??
               ApplicationLedger(generation: prepared.generation);
-          if (ledger.nextSequence != prepared.sequence) _expired();
+          pendingReceipt = OperationReceipt(
+            operationId: prepared.operationId,
+            sequence: ledger.nextSequence,
+            commandDigest: prepared.commandDigest,
+            completedAtIso: _clock().toUtc().toIso8601String(),
+            result: {
+              ...prepared._receipt.result,
+              'sequence': ledger.nextSequence,
+            },
+            undo: prepared._receipt.undo,
+          );
           return current.copyWith(
-            applicationLedger: ledger.append(prepared._receipt),
+            applicationLedger: ledger.append(pendingReceipt),
           );
         },
-        expectedEpoch: prepared._epoch,
+        expectedEpoch: null,
         settlePendingChanges: _settlePendingChanges,
         dataSessionRevision: prepared._sessionRevision,
         beforeCommit: checkPlan,
@@ -393,10 +393,6 @@ class ExternalOperationCoordinator {
         _expired();
       }
       _session.ensureMutationAllowed();
-      if (mutationDigest(_session.data.toJson()) !=
-          mutationDigest(pendingSnapshot.toJson())) {
-        _conflict();
-      }
       prepared._validate();
       scope.checkMutation(
         planId: planId,
@@ -409,7 +405,7 @@ class ExternalOperationCoordinator {
         details: {'code': error.code.name, 'effectStarted': false},
       );
       return _finalize(
-        prepared._receipt,
+        pendingReceipt,
         observed,
         sessionRevision: prepared._sessionRevision,
         scope: scope,
@@ -420,14 +416,14 @@ class ExternalOperationCoordinator {
         details: const {'code': 'preconditionFailed', 'effectStarted': false},
       );
       return _finalize(
-        prepared._receipt,
+        pendingReceipt,
         observed,
         sessionRevision: prepared._sessionRevision,
         scope: scope,
       );
     }
     try {
-      observed = await prepared._execute(prepared.operation);
+      observed = await prepared._execute(_context(pendingReceipt));
     } catch (_) {
       observed = _unknown();
     }
@@ -436,12 +432,12 @@ class ExternalOperationCoordinator {
         prepared._readBack != null &&
         generation == prepared.generation &&
         _dataSessionRevision() == prepared._sessionRevision) {
-      observed = await _observe(prepared._readBack, prepared.operation);
+      observed = await _observe(prepared._readBack, _context(pendingReceipt));
     }
     // This metadata finalization belongs to the already accepted operation.
     // Cancellation cannot erase an actual effect or authorize a new one.
     return _finalize(
-      prepared._receipt,
+      pendingReceipt,
       observed,
       sessionRevision: prepared._sessionRevision,
       scope: scope,
@@ -558,7 +554,7 @@ class ExternalOperationCoordinator {
             applicationLedger: ledger.updateReceipt(finalized),
           );
         },
-        expectedEpoch: _session.mutationEpoch,
+        expectedEpoch: null,
         settlePendingChanges: _settlePendingChanges,
         dataSessionRevision: revision,
       );
@@ -590,9 +586,6 @@ class ExternalOperationCoordinator {
     final ledger = _session.committedData.applicationLedger;
     if (identity.generation != (ledger?.generation ?? generation)) _expired();
     final receipt = ledger?.receiptFor(operationId);
-    if (receipt == null && identity.sequence < (ledger?.nextSequence ?? 1)) {
-      _expired();
-    }
     if (receipt != null) _externalReceipt(receipt);
     return receipt;
   }
@@ -707,6 +700,7 @@ ExternalEffectResult _externalReceipt(OperationReceipt receipt) {
 ExternalOperationContext _context(OperationReceipt receipt) =>
     ExternalOperationContext._(
       operationId: receipt.operationId,
+      sequence: receipt.sequence,
       action: receipt.result['action']! as String,
       arguments: receipt.result['arguments']! as Map<String, Object?>,
       version: receipt.result['version'],

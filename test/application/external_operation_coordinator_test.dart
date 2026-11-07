@@ -135,6 +135,84 @@ void main() {
     await h.initialize();
   });
 
+  test('an external approval survives unrelated saved data and receipts while using the actual sequence', () async {
+    final waiting = OperationScope(
+      id: 'waiting',
+      policy: OperationPolicy(enabled: true, mode: AgentPermissionMode.ask),
+    );
+    var firstVersion = 0;
+    var firstEffects = 0;
+    PreparedExternalMutation first({
+      String? operationId,
+      Map<String, Object?> args = const {'value': true},
+    }) => h.coordinator.prepare(
+      scope: waiting,
+      action: 'independent.first',
+      arguments: args,
+      version: 0,
+      operationId: operationId,
+      changes: [ResourceChange(key: 'first', before: false, after: true)],
+      validate: () {
+        if (firstVersion != 0) {
+          throw const OperationProblem(
+            OperationErrorCode.conflict,
+            'First changed.',
+          );
+        }
+      },
+      execute: (operation) async {
+        firstEffects++;
+        firstVersion++;
+        expect(operation.sequence, 2);
+        expect(
+          h.storage.data.applicationLedger!
+              .receiptFor(operation.operationId)!
+              .sequence,
+          2,
+        );
+        return ExternalEffectResult(state: ExternalEffectState.applied);
+      },
+    );
+    final plan = first();
+    final approval = waiting.approve(plan.id);
+    final other = h.prepare();
+    final otherResult = await h.commit(other);
+    await h.session.commitMutation(
+      (current) => current.copyWith(localeCode: 'zh'),
+      expectedEpoch: null,
+    );
+    expect(h.coordinator.status(plan.operationId), isNull);
+    final saved = await h.coordinator.commit(
+      planId: plan.id,
+      scope: waiting,
+      approval: approval,
+    );
+    expect(saved.receipt.operationId, plan.operationId);
+    expect(saved.receipt.sequence, 2);
+    expect(saved.toJson()['sequence'], 2);
+    expect(saved.receiptFinalized, isTrue);
+    expect(h.storage.data.localeCode, 'zh');
+    expect(firstEffects, 1);
+    final replay = first(operationId: plan.operationId);
+    expect(
+      (await h.coordinator.commit(planId: replay.id, scope: waiting)).replayed,
+      isTrue,
+    );
+    expect(firstEffects, 1);
+    expect(
+      () => first(operationId: plan.operationId, args: const {'value': false}),
+      throwsA(_problem(OperationErrorCode.duplicateMismatch)),
+    );
+    final restarted = _Harness(h.storage);
+    await restarted.initialize();
+    expect(restarted.coordinator.status(plan.operationId), saved.receipt);
+    expect(
+      restarted.coordinator.status(other.operationId),
+      otherResult.receipt,
+    );
+    expect(restarted.effects, 0);
+  });
+
   test(
     'approval can show owner content without persisting it in the ledger',
     () async {

@@ -26,9 +26,7 @@ class PreparedMutation implements ApprovalPlan, ApprovalReferencePreview {
     required this.createdAt,
     required this.changes,
     required this._scope,
-    required this._epoch,
     required this._sessionRevision,
-    required this._baselineDigest,
     required this._candidate,
     required this._candidateDigest,
     required this._receipt,
@@ -47,17 +45,15 @@ class PreparedMutation implements ApprovalPlan, ApprovalReferencePreview {
   final List<ResourceChange> changes;
   final bool alreadyCommitted;
   final OperationScope _scope;
-  final int _epoch;
   final int _sessionRevision;
-  final String _baselineDigest;
   final AppData _candidate;
   final String _candidateDigest;
   final OperationReceipt _receipt;
   final _MutationRebase? _rebase;
 
-  /// Standard commands name their semantic dependencies. Host-specific drafts
-  /// retain the complete-snapshot check until their compilers opt in explicitly.
-  List<String> get readSet => _rebase?.reads.keys ?? const ['snapshot'];
+  /// Standard commands name semantic dependencies; host drafts are checked by
+  /// recompiling their complete change set against the current snapshot.
+  List<String> get readSet => _rebase?.reads?.keys ?? const ['compiledChanges'];
   List<String> get writeSet =>
       List.unmodifiable(changes.map((item) => item.key));
 
@@ -341,7 +337,6 @@ class MutationCoordinator {
         replay: true,
       );
     }
-    if (identity.sequence != sequence) _expired();
     final now = _clock().toUtc();
     final allocatedIds = <({ResourceKind kind, String id})>[];
     final draft = compile(
@@ -387,15 +382,15 @@ class MutationCoordinator {
       changes,
       commandDigest,
       receipt,
-      rebase: reads == null
-          ? null
-          : _MutationRebase(
-              reads: reads,
-              readDigest: mutationDigest(reads.snapshot(baseline)),
-              compile: compile,
-              now: now,
-              allocatedIds: allocatedIds,
-            ),
+      rebase: _MutationRebase(
+        reads: reads,
+        readDigest: reads == null
+            ? null
+            : mutationDigest(reads.snapshot(baseline)),
+        compile: compile,
+        now: now,
+        allocatedIds: allocatedIds,
+      ),
     );
   }
 
@@ -469,7 +464,20 @@ class MutationCoordinator {
         ],
       },
     );
-    return _register(scope, draft.candidate, draft.changes, digest, receipt);
+    return _register(
+      scope,
+      draft.candidate,
+      draft.changes,
+      digest,
+      receipt,
+      rebase: _MutationRebase(
+        compile: (current, _) =>
+            MutationUndoCompiler(settings: _settings)
+                .prepare(current, original),
+        now: now,
+        allocatedIds: const [],
+      ),
+    );
   }
 
   /// Reverses every selected operation as one application-data write. The
@@ -482,20 +490,13 @@ class MutationCoordinator {
     scope.checkActive();
     _requireKnownStorage();
     final ids = operationIds.toList();
-    if (batchId.isEmpty ||
-        batchId.length > 256 ||
-        ids.isEmpty ||
-        ids.toSet().length != ids.length) {
+    if (batchId.isEmpty || ids.isEmpty || ids.toSet().length != ids.length) {
       throw const OperationProblem(
         OperationErrorCode.invalidArgument,
-        'Select a bounded, unique set of operations and one batch identity.',
+        'Select a unique set of operations and one batch identity.',
       );
     }
-    ids.sort(
-      (a, b) =>
-          _operationIdentity(a).sequence
-              .compareTo(_operationIdentity(b).sequence),
-    );
+    ids.sort();
     final digest = mutationDigest({'undoBatchId': batchId, 'operations': ids});
     final baseline = _session.data;
     final ledger = _session.committedData.applicationLedger;
@@ -569,7 +570,20 @@ class MutationCoordinator {
     );
     // Admission is checked for the whole range before any inverse is saved.
     ledger.append(receipt);
-    return _register(scope, draft.candidate, draft.changes, digest, receipt);
+    return _register(
+      scope,
+      draft.candidate,
+      draft.changes,
+      digest,
+      receipt,
+      rebase: _MutationRebase(
+        compile: (current, _) =>
+            MutationUndoCompiler(settings: _settings)
+                .prepareSequence(current, originals),
+        now: _clock().toUtc(),
+        allocatedIds: const [],
+      ),
+    );
   }
 
   PreparedMutation _register(
@@ -592,9 +606,7 @@ class MutationCoordinator {
       createdAt: now,
       changes: List.unmodifiable(changes),
       scope: scope,
-      epoch: _session.mutationEpoch,
       sessionRevision: _dataSessionRevision(),
-      baselineDigest: mutationDigest(_session.data.toJson()),
       candidate: candidate,
       candidateDigest: mutationDigest(candidate.toJson()),
       receipt: receipt,
@@ -640,14 +652,11 @@ class MutationCoordinator {
           _dataSessionRevision() != prepared._sessionRevision) {
         _expired();
       }
-      if ((prepared._rebase == null &&
-              mutationDigest(_session.data.toJson()) !=
-                  prepared._baselineDigest) ||
-          mutationDigest(prepared._candidate.toJson()) !=
-              prepared._candidateDigest) {
+      if (mutationDigest(prepared._candidate.toJson()) !=
+          prepared._candidateDigest) {
         throw const OperationProblem(
           OperationErrorCode.conflict,
-          'The data or prepared candidate changed; prepare a new plan.',
+          'The prepared candidate changed; create the operation again.',
         );
       }
     }
@@ -658,15 +667,14 @@ class MutationCoordinator {
       await _session.commitMutation(
         (current) {
           checkPlan();
-          final rebased = prepared._rebase?.compileOn(current);
-          if (rebased != null &&
+          final rebased = prepared._rebase!.compileOn(current);
+          if (mutationDigest([
+                for (final change in _mergeChanges(rebased.changes))
+                  change.toJson(),
+              ]) !=
               mutationDigest([
-                    for (final change in _mergeChanges(rebased.changes))
-                      change.toJson(),
-                  ]) !=
-                  mutationDigest([
-                    for (final change in prepared.changes) change.toJson(),
-                  ])) {
+                for (final change in prepared.changes) change.toJson(),
+              ])) {
             throw const OperationProblem(
               OperationErrorCode.conflict,
               'The complete prepared changes are no longer the same. Prepare a new plan.',
@@ -675,17 +683,19 @@ class MutationCoordinator {
           final ledger =
               current.applicationLedger ??
               ApplicationLedger(generation: prepared.generation);
-          if (ledger.nextSequence != prepared.sequence) _expired();
-          if (rebased != null) {
+          {
             // Object order may change independently of the edited object.
             // Reverse receipts must restore its position at the actual commit,
             // not the position captured while the model was preparing it.
             committedReceipt = OperationReceipt(
               operationId: prepared.operationId,
-              sequence: prepared.sequence,
+              sequence: ledger.nextSequence,
               commandDigest: prepared.commandDigest,
               completedAtIso: _clock().toUtc().toIso8601String(),
-              result: prepared._receipt.result,
+              result: {
+                ...prepared._receipt.result,
+                'sequence': ledger.nextSequence,
+              },
               undo: {
                 'changes': [
                   for (final change in prepared.changes)
@@ -698,11 +708,11 @@ class MutationCoordinator {
               },
             );
           }
-          return (rebased?.candidate ?? prepared._candidate).copyWith(
+          return rebased.candidate.copyWith(
             applicationLedger: ledger.append(committedReceipt),
           );
         },
-        expectedEpoch: prepared._rebase == null ? prepared._epoch : null,
+        expectedEpoch: null,
         settlePendingChanges: _settlePendingChanges,
         dataSessionRevision: prepared._sessionRevision,
         beforeCommit: () => scope.checkMutation(
@@ -753,9 +763,6 @@ class MutationCoordinator {
     final ledger = _session.committedData.applicationLedger;
     if (identity.generation != (ledger?.generation ?? generation)) _expired();
     final receipt = ledger?.receiptFor(operationId);
-    if (receipt == null && identity.sequence < (ledger?.nextSequence ?? 1)) {
-      _expired();
-    }
     return receipt;
   }
 
@@ -774,25 +781,28 @@ class MutationCoordinator {
   }
 }
 
-/// Only standard, deterministic command compilers use this path. Source-file
-/// imports and other host drafts retain their complete-snapshot admission gate.
+/// Rebuilds the approved change on the current snapshot. Standard commands also
+/// verify their explicit read set; all compilers must reproduce the exact changes.
 class _MutationRebase {
   _MutationRebase({
-    required this.reads,
-    required this.readDigest,
+    this.reads,
+    this.readDigest,
     required this.compile,
     required this.now,
     required List<({ResourceKind kind, String id})> allocatedIds,
   }) : allocatedIds = List.unmodifiable(allocatedIds);
 
-  final MutationReadSet reads;
-  final String readDigest;
+  final MutationReadSet? reads;
+  final String? readDigest;
   final MutationDraft Function(AppData, MutationContext) compile;
   final DateTime now;
   final List<({ResourceKind kind, String id})> allocatedIds;
 
   MutationDraft compileOn(AppData current) {
-    if (mutationDigest(reads.snapshot(current)) != readDigest) _conflict();
+    if (reads != null &&
+        mutationDigest(reads!.snapshot(current)) != readDigest) {
+      _conflict();
+    }
     var index = 0;
     try {
       final result = compile(
