@@ -59,15 +59,14 @@ class ConversationTurn {
     required Iterable<String> messageIds,
     required Iterable<String> runIds,
     Iterable<ConversationOperationBinding> operations = const [],
-  }) : messageIds = historyIds(messageIds, max: 1000),
-       runIds = historyIds(runIds, max: 1000),
+  }) : messageIds = historyIds(messageIds),
+       runIds = historyIds(runIds),
        operations = List.unmodifiable(operations) {
     historyText(id);
     historyText(requestMessageId);
     if (this.messageIds.isEmpty ||
         this.messageIds.first != requestMessageId ||
         this.runIds.isEmpty ||
-        this.operations.length > 128 ||
         this.operations.any((item) => !this.runIds.contains(item.runId)) ||
         this.operations.map((item) => item.operationId).toSet().length !=
             this.operations.length) {
@@ -121,12 +120,10 @@ class ConversationTurn {
       id: historyText(json['id']),
       requestMessageId: historyText(json['requestMessageId']),
       ownershipComplete: json['ownershipComplete'] as bool,
-      messageIds: historyIdList(json['messageIds'], max: 1000),
-      runIds: historyIdList(json['runIds'], max: 1000),
-      operations: historyList(
-        json['operations'],
-        max: 128,
-      ).map(ConversationOperationBinding.fromJson),
+      messageIds: historyIdList(json['messageIds']),
+      runIds: historyIdList(json['runIds']),
+      operations: historyList(json['operations'])
+          .map(ConversationOperationBinding.fromJson),
     );
   }
 }
@@ -148,11 +145,10 @@ class ConversationHistoryVersion {
     historyText(id);
     historyText(batchId);
     historyDate(createdAt.toUtc().toIso8601String());
-    if (this.messages.isEmpty ||
-        this.messages.length > 1000 ||
-        this.runs.length > 1000 ||
-        this.turns.length > 1000) {
-      throw const FormatException('Conversation history exceeds its budget.');
+    if (this.messages.isEmpty) {
+      throw const FormatException(
+        'Conversation history must contain messages.',
+      );
     }
     validateConversationTurns(this.messages, this.runs, this.turns);
   }
@@ -186,20 +182,17 @@ class ConversationHistoryVersion {
       id: historyText(json['id']),
       batchId: historyText(json['batchId']),
       createdAt: historyDate(json['createdAt']),
-      messages: historyList(json['messages'], max: 1000).map(
+      messages: historyList(json['messages']).map(
         (item) => ConversationMessage.fromJson(
           Map<String, dynamic>.from(historyObject(item)),
         ),
       ),
-      runs: historyList(json['runs'], max: 1000).map(
+      runs: historyList(json['runs']).map(
         (item) => ConversationRunUsage.fromJson(
           Map<String, dynamic>.from(historyObject(item)),
         ),
       ),
-      turns: historyList(
-        json['turns'],
-        max: 1000,
-      ).map(ConversationTurn.fromJson),
+      turns: historyList(json['turns']).map(ConversationTurn.fromJson),
     );
   }
 }
@@ -221,7 +214,7 @@ class ConversationReplyRevision {
       historyText(value);
     }
     historyDate(createdAt.toUtc().toIso8601String());
-    historyText(text, max: 512 * 1024, empty: true);
+    historyText(text, max: null, empty: true);
   }
 
   final String id;
@@ -257,7 +250,7 @@ class ConversationReplyRevision {
       messageId: historyText(json['messageId']),
       runId: historyText(json['runId']),
       createdAt: historyDate(json['createdAt']),
-      text: historyText(json['text'], max: 512 * 1024, empty: true),
+      text: historyText(json['text'], max: null, empty: true),
       modelSelection: AgentModelSelection.fromJson(json['modelSelection']),
       providerProtocol: historyEnum(
         AgentModelProtocol.values,
@@ -342,7 +335,7 @@ class ConversationRedoBatch {
     this.lastError,
     Iterable<ConversationUndoTicket> tickets = const [],
     Iterable<ConversationUndoOwner> completedOwners = const [],
-  }) : turnIds = historyIds(turnIds, max: 1000),
+  }) : turnIds = historyIds(turnIds),
        attachmentIds = historyIds(attachmentIds, max: 20),
        tickets = List.unmodifiable(tickets),
        completedOwners = List.unmodifiable(completedOwners) {
@@ -357,7 +350,7 @@ class ConversationRedoBatch {
       historyText(value);
     }
     historyDate(createdAt.toUtc().toIso8601String());
-    historyText(text, max: 128 * 1024, empty: true);
+    historyText(text, max: null, empty: true);
     if (lastError != null) historyText(lastError, max: 128);
     if (this.turnIds.isEmpty ||
         this.turnIds.first != sourceTurnId ||
@@ -470,13 +463,13 @@ class ConversationRedoBatch {
       historyVersionId: historyText(json['historyVersionId']),
       replayRunId: historyText(json['replayRunId']),
       createdAt: historyDate(json['createdAt']),
-      text: historyText(json['text'], max: 128 * 1024, empty: true),
+      text: historyText(json['text'], max: null, empty: true),
       attachmentIds: historyIdList(json['attachmentIds'], max: 20),
       modelSelection: json['modelSelection'] == null
           ? null
           : AgentModelSelection.fromJson(json['modelSelection']),
       contextDigest: historyText(json['contextDigest'], max: 64),
-      turnIds: historyIdList(json['turnIds'], max: 1000),
+      turnIds: historyIdList(json['turnIds']),
       tickets: historyList(
         json['tickets'],
         max: 2,
@@ -551,28 +544,29 @@ Map<String, Object?> historyObject(Object? value, [Set<String>? fields]) {
   return Map<String, Object?>.from(value);
 }
 
-String historyText(Object? value, {int max = 256, bool empty = false}) {
+String historyText(Object? value, {int? max = 256, bool empty = false}) {
   if (value is! String ||
-      value.length > max ||
+      (max != null && value.length > max) ||
       !empty && value.trim().isEmpty) {
     throw const FormatException('Invalid history text.');
   }
   return value;
 }
 
-List<Object?> historyList(Object? value, {required int max}) {
-  if (value is! List || value.length > max) {
+List<Object?> historyList(Object? value, {int? max}) {
+  if (value is! List || (max != null && value.length > max)) {
     throw const FormatException('Invalid history list.');
   }
   return List<Object?>.from(value);
 }
 
-List<String> historyIdList(Object? value, {required int max}) =>
+List<String> historyIdList(Object? value, {int? max}) =>
     historyIds(historyList(value, max: max).map(historyText), max: max);
 
-List<String> historyIds(Iterable<String> value, {required int max}) {
+List<String> historyIds(Iterable<String> value, {int? max}) {
   final items = List<String>.unmodifiable(value);
-  if (items.length > max || items.toSet().length != items.length) {
+  if ((max != null && items.length > max) ||
+      items.toSet().length != items.length) {
     throw const FormatException('Invalid history identities.');
   }
   for (final item in items) {

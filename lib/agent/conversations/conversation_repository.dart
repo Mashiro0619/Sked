@@ -742,7 +742,7 @@ class ConversationRepository extends ChangeNotifier {
     bool reconcileDraft = true,
   }) async {
     final source = candidate.encode();
-    // Every writer observes the same strict quotas and relationship checks as
+    // Every writer observes the same data shape and relationship checks as
     // restart decoding, before any persistent state is modified.
     ConversationArchive.decode(source);
     try {

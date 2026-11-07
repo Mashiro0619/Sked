@@ -4,7 +4,6 @@ import 'dart:io';
 import 'package:path/path.dart' as path;
 
 import '../../services/app_storage_layout_io.dart';
-import 'conversation_models.dart';
 import 'conversation_storage.dart';
 import 'conversation_storage_codec.dart';
 
@@ -62,11 +61,6 @@ class PlatformConversationStorage extends ConversationStorage {
 
   Future<String?> _read(File file) async {
     if (!await file.exists()) return null;
-    if (await file.length() > ConversationArchive.maxBytes * 2 + 1024) {
-      throw const ConversationStorageException(
-        'Conversation storage exceeds its size budget.',
-      );
-    }
     try {
       return utf8.decode(await file.readAsBytes(), allowMalformed: false);
     } on FormatException {

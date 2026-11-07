@@ -166,7 +166,6 @@ class ConversationMessage {
     final calls = _objects(
       json,
       'toolCalls',
-      max: 32,
     ).map(ConversationToolCall.fromJson).toList();
     final toolCallId = _optionalString(json, 'toolCallId', max: 256);
     if ((role == ConversationRole.tool) != (toolCallId != null) ||
@@ -177,11 +176,11 @@ class ConversationMessage {
     return ConversationMessage(
       id: _string(json, 'id', max: 256),
       role: role,
-      text: _string(json, 'text', max: 512 * 1024, empty: true),
+      text: _string(json, 'text', empty: true),
       createdAt: _date(json, 'createdAt'),
       toolCalls: calls,
       toolCallId: toolCallId,
-      responseItems: _objects(json, 'responseItems', max: 64),
+      responseItems: _objects(json, 'responseItems'),
       modelSelection: json['modelSelection'] == null
           ? null
           : AgentModelSelection.fromJson(json['modelSelection']),
@@ -203,9 +202,6 @@ List<Map<String, Object?>> _freezeResponseItems(
   Iterable<Map<String, Object?>> source,
 ) {
   final items = source.toList();
-  if (items.length > 64) {
-    throw const FormatException('Provider continuation has too many items.');
-  }
   var nodes = 0;
   Object? freeze(Object? value, int depth) {
     if (depth > 20 || ++nodes > 20000) {
@@ -324,7 +320,7 @@ class ConversationSource {
     return ConversationSource(
       id: _string(json, 'id', max: 256),
       kind: _string(json, 'kind', max: 64),
-      text: _string(json, 'text', max: 512 * 1024, empty: true),
+      text: _string(json, 'text', empty: true),
       url: url,
       targetId: _optionalString(json, 'targetId', max: 256),
       truncated: json['truncated'] as bool,
@@ -564,43 +560,35 @@ class AgentConversation {
     final messages = _objects(
       json,
       'messages',
-      max: 1000,
     ).map(ConversationMessage.fromJson).toList();
     final sources = _objects(
       json,
       'sources',
-      max: 20,
     ).map(ConversationSource.fromJson).toList();
     final runs = _objects(
       json,
       'runs',
-      max: 1000,
     ).map(ConversationRunUsage.fromJson).toList();
     final attachments = _objects(
       json,
       'attachments',
-      max: 1000,
     ).map(ConversationAttachment.fromJson).toList();
     final draftAttachmentIds = _attachmentIds(json['draftAttachmentIds']);
     final turns = _objects(
       json,
       'turns',
-      max: 1000,
     ).map(ConversationTurn.fromJson).toList();
     final historyVersions = _objects(
       json,
       'historyVersions',
-      max: 32,
     ).map(ConversationHistoryVersion.fromJson).toList();
     final replyRevisions = _objects(
       json,
       'replyRevisions',
-      max: 1000,
     ).map(ConversationReplyRevision.fromJson).toList();
     final redoBatches = _objects(
       json,
       'redoBatches',
-      max: 32,
     ).map(ConversationRedoBatch.fromJson).toList();
     final executionHistoryStart = json['executionHistoryStart'] ?? 0;
     if (executionHistoryStart is! int ||
@@ -650,7 +638,7 @@ class AgentConversation {
       mode: _enumValue(AgentPermissionMode.values, json['mode']),
       status: _enumValue(ConversationStatus.values, json['status']),
       archived: json['archived'] as bool? ?? false,
-      draft: _string(json, 'draft', max: 128 * 1024, empty: true),
+      draft: _string(json, 'draft', empty: true),
       connectionFingerprint: _optionalString(
         json,
         'connectionFingerprint',
@@ -787,7 +775,6 @@ class ConversationArchive {
        handoffs = List.unmodifiable(handoffs),
        terminatedIds = Set.unmodifiable(terminatedIds);
 
-  static const maxBytes = 16 * 1024 * 1024;
   static const currentVersion = 7;
   final int revision;
   final String? selectedId;
@@ -804,27 +791,17 @@ class ConversationArchive {
       'handoffs': handoffs.map((item) => item.toJson()).toList(),
       'terminatedIds': terminatedIds.toList(),
     });
-    if (utf8.encode(encoded).length > maxBytes) {
-      throw const FormatException(
-        'Conversation archive exceeds its size budget.',
-      );
-    }
     return encoded;
   }
 
   factory ConversationArchive.decode(String source) {
-    if (utf8.encode(source).length > maxBytes) {
-      throw const FormatException(
-        'Conversation archive exceeds its size budget.',
-      );
-    }
     final json = _object(jsonDecode(source));
     if ((!const [1, 2, 3, 4, 5, 6, currentVersion].contains(json['version'])) ||
         json['revision'] is! int ||
         (json['revision'] as int) < 0) {
       throw const FormatException('Unsupported conversation archive version.');
     }
-    final rawConversations = _objects(json, 'conversations', max: 200);
+    final rawConversations = _objects(json, 'conversations');
     if ((json['version'] as int) < 6 &&
         rawConversations.any(
           (item) =>
@@ -856,11 +833,9 @@ class ConversationArchive {
     final handoffs = _objects(
       json,
       'handoffs',
-      max: 10000,
     ).map(ConversationHandoff.fromJson).toList();
     final rawTerminated = json['terminatedIds'];
     if (rawTerminated is! List ||
-        rawTerminated.length > 10000 ||
         rawTerminated.any(
           (id) => id is! String || id.isEmpty || id.length > 256,
         )) {
@@ -943,9 +918,9 @@ Iterable<AgentComposerReference> _referencesForAttachments(
 bool _hasComposerReferenceFields(Map<String, dynamic> conversation) {
   if (conversation.containsKey('draftReferences')) return true;
   final messages = [
-    ..._objects(conversation, 'messages', max: 1000),
-    for (final version in _objects(conversation, 'historyVersions', max: 32))
-      ..._objects(version, 'messages', max: 1000),
+    ..._objects(conversation, 'messages'),
+    for (final version in _objects(conversation, 'historyVersions'))
+      ..._objects(version, 'messages'),
   ];
   return messages.any((message) => message.containsKey('contextReferences'));
 }
@@ -960,10 +935,10 @@ Map<String, dynamic> _object(Object? value) {
 List<Map<String, dynamic>> _objects(
   Map<String, dynamic> json,
   String key, {
-  required int max,
+  int? max,
 }) {
   final raw = json.containsKey(key) ? json[key] : const [];
-  if (raw is! List || raw.length > max) {
+  if (raw is! List || (max != null && raw.length > max)) {
     throw FormatException('Invalid $key list.');
   }
   return raw.map(_object).toList();
@@ -972,11 +947,13 @@ List<Map<String, dynamic>> _objects(
 String _string(
   Map<String, dynamic> json,
   String key, {
-  required int max,
+  int? max,
   bool empty = false,
 }) {
   final raw = json[key];
-  if (raw is! String || raw.length > max || (!empty && raw.trim().isEmpty)) {
+  if (raw is! String ||
+      (max != null && raw.length > max) ||
+      (!empty && raw.trim().isEmpty)) {
     throw FormatException('Invalid $key string.');
   }
   return raw;

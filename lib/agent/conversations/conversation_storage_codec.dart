@@ -29,9 +29,6 @@ ConversationStorageLoad decodeConversationSlots(List<String?> slots) {
     if (slot == null) continue;
     Object? envelope;
     try {
-      if (utf8.encode(slot).length > ConversationArchive.maxBytes * 2 + 1024) {
-        throw const FormatException('Conversation slot is too large.');
-      }
       envelope = jsonDecode(slot);
     } on FormatException {
       damaged = true;

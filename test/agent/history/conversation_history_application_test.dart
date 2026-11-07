@@ -1181,7 +1181,7 @@ void main() {
   );
 
   test(
-    'chat history budget rejection clears unstarted owner tickets',
+    'history redo keeps more than thirty-two versions and completes',
     () async {
       final conversation = await ready();
       createBothScript();
@@ -1206,23 +1206,25 @@ void main() {
           ],
         ),
       );
-      final before = app.session.committedData.encode();
-      await expectLater(
-        app.agent.history.editAndRedo(
-          conversation.id,
-          original.messages.first.id,
-          'Explain instead',
-        ),
-        throwsA(anything),
+      provider.respond = (_) => _done('Edited request completed');
+      await app.agent.history.editAndRedo(
+        conversation.id,
+        original.messages.first.id,
+        'Explain instead',
       );
-      expect(knowledge.archive.undoBatches, isEmpty);
-      expect(knowledge.archive.records, hasLength(1));
-      expect(
-        app.agent.conversations.find(conversation.id)!.pendingRedo,
-        isNull,
-      );
+      final changed = app.agent.conversations.find(conversation.id)!;
+      expect(changed.historyVersions, hasLength(33));
+      expect(changed.redoBatches.single.isComplete, isTrue);
+      expect(changed.pendingRedo, isNull);
+      expect(changed.messages.last.text, 'Edited request completed');
+      expect(knowledge.archive.records, isEmpty);
       expect(app.agent.history.ownsMaintenance, isFalse);
-      expect(app.session.committedData.encode(), before);
+      expect(
+        app.session.committedData.generalMode.schedules.any(
+          (item) => item.name == 'History calendar',
+        ),
+        isFalse,
+      );
     },
   );
 

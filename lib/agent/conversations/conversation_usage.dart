@@ -240,12 +240,10 @@ class ConversationRunUsage {
     final requests = _list(
       json,
       'requests',
-      100,
     ).map(ConversationRequestUsage.fromJson).toList();
     final tools = _list(
       json,
       'tools',
-      500,
     ).map(ConversationToolUsage.fromJson).toList();
     final kind = _enum(ConversationRunKind.values, json['kind']);
     final status = _enum(ConversationRunStatus.values, json['status']);
@@ -365,13 +363,9 @@ Map<String, dynamic> _map(Object? value) {
   return value;
 }
 
-List<Map<String, dynamic>> _list(
-  Map<String, dynamic> json,
-  String key,
-  int max,
-) {
+List<Map<String, dynamic>> _list(Map<String, dynamic> json, String key) {
   final raw = json[key];
-  if (raw is! List || raw.length > max) {
+  if (raw is! List) {
     throw const FormatException('Invalid usage record list.');
   }
   return raw.map(_map).toList();
