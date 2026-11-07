@@ -72,8 +72,10 @@ Future<Uint8List> encodeProviderRequestBody(
   checkCancelled();
   final value = encodeProviderRequest(request);
   final size = _measureRequestValue(value);
-  if (size.textBytes > request.limits.maxRequestBytes ||
-      size.attachmentBytes > request.limits.maxAttachmentBytes) {
+  final textLimit = request.limits.maxRequestBytes;
+  final attachmentLimit = request.limits.maxAttachmentBytes;
+  if ((textLimit != null && size.textBytes > textLimit) ||
+      (attachmentLimit != null && size.attachmentBytes > attachmentLimit)) {
     throw const ProviderException(ProviderError.requestBudgetExceeded);
   }
   final expectedBytes = size.textBytes + size.encodedBytes;

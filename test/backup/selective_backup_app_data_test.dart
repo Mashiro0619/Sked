@@ -58,6 +58,8 @@ void main() {
               ...preferences.data,
               'systemInstructions': 'Restored guidance.',
               'maxTotalTokens': legacy,
+              'maxModelRounds': legacy,
+              'maxToolCalls': legacy,
             },
           ),
         ],
@@ -202,7 +204,7 @@ void main() {
       final incoming = _base().copyWith(
         agentSettings: const AgentSettings(
           systemInstructions: 'New preference',
-          maxModelRounds: 12,
+          historyRetentionDays: 12,
         ),
       );
       final plan = _prepare(incoming, current, const [
@@ -210,7 +212,7 @@ void main() {
       ]);
       final result = prepareMainBackupRestore(current, plan);
       expect(result.target.agentSettings.systemInstructions, 'New preference');
-      expect(result.target.agentSettings.maxModelRounds, 12);
+      expect(result.target.agentSettings.historyRetentionDays, 12);
       expect(
         result.target.agentSettings.endpoint,
         current.agentSettings.endpoint,

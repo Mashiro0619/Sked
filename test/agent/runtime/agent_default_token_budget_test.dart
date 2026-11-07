@@ -15,6 +15,57 @@ void main() {
     final transport = streaming ? 'SSE' : 'JSON';
 
     test(
+      '$transport completes 102 rounds and 505 tools without automatic settlement',
+      () async {
+        final h = await _Harness.create(
+          streaming: streaming,
+          respond: (index) => _Reply(
+            totalTokens: 10,
+            outputTokens: 1,
+            toolCount: index < 101 ? 5 : 0,
+          ),
+        );
+        addTearDown(h.close);
+        await h.runtime.send(h.id, 'Complete every requested step.');
+        expect(h.requests, hasLength(102));
+        expect(h.executed, hasLength(505));
+        expect(h.saved.runs.single.requests, hasLength(102));
+        expect(h.saved.runs.single.tools, hasLength(505));
+        expect(h.saved.runs.single.status, ConversationRunStatus.completed);
+        expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
+        expect(
+          h.requests.every((wire) => (wire['tools'] as List).isNotEmpty),
+          isTrue,
+        );
+        expect(
+          h.saved.messages.where(
+            (message) => message.role == ConversationRole.notice,
+          ),
+          isEmpty,
+        );
+      },
+    );
+
+    test(
+      '$transport accepts more than 32 tool calls in one response',
+      () async {
+        final h = await _Harness.create(
+          streaming: streaming,
+          respond: (index) => _Reply(
+            totalTokens: 10,
+            outputTokens: 1,
+            toolCount: index == 0 ? 40 : 0,
+          ),
+        );
+        addTearDown(h.close);
+        await h.runtime.send(h.id, 'Read all forty items.');
+        expect(h.executed, hasLength(40));
+        expect(h.saved.runs.single.status, ConversationRunStatus.completed);
+        expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
+      },
+    );
+
+    test(
       '$transport accepts the screenshot request and retains all reported usage',
       () async {
         final h = await _Harness.create(

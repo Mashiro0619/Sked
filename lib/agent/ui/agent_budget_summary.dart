@@ -29,7 +29,7 @@ class AgentBudgetSummary {
       if (value is! Map<String, dynamic> ||
           value['kind'] != 'agent_budget_summary' ||
           value['version'] is! int ||
-          !const {1, 2}.contains(value['version']) ||
+          !const {1, 2, 3}.contains(value['version']) ||
           !const {
             'tokens',
             'requestTokens',
@@ -49,11 +49,19 @@ class AgentBudgetSummary {
           (runId is! String || runId.isEmpty || runId.length > 256)) {
         return null;
       }
-      Map<String, int> counts(String key, List<String> fields) {
+      Map<String, int> counts(
+        String key,
+        List<String> fields, {
+        List<String> optional = const [],
+      }) {
         final data = value[key];
         if (data is! Map<String, dynamic>) throw const FormatException();
         return Map.unmodifiable({
-          for (final field in fields)
+          for (final field in [
+            ...fields,
+            for (final name in optional)
+              if (data.containsKey(name)) name,
+          ])
             field: switch (data[field]) {
               final int count when count >= 0 => count,
               _ => throw const FormatException(),
@@ -64,7 +72,9 @@ class AgentBudgetSummary {
       return AgentBudgetSummary._(
         value['reason'] as String,
         counts('counts', ['completed', 'failed', 'notStarted', 'unknown']),
-        counts('requests', ['attempted', 'limit']),
+        value['version'] == 3
+            ? counts('requests', ['attempted'], optional: ['limit'])
+            : counts('requests', ['attempted', 'limit']),
         counts('tokens', [
           'reported',
           'unreportedRequests',
@@ -126,11 +136,17 @@ class AgentBudgetSummaryView extends StatelessWidget {
                 summary.tokens['reported']!,
                 tokenLimit,
               ),
-              null => l.agentBudgetSummaryReportedUsage(
-                summary.requests['attempted']!,
-                summary.requests['limit']!,
-                summary.tokens['reported']!,
-              ),
+              null => switch (summary.requests['limit']) {
+                final requestLimit? => l.agentBudgetSummaryReportedUsage(
+                  summary.requests['attempted']!,
+                  requestLimit,
+                  summary.tokens['reported']!,
+                ),
+                null => l.agentBudgetSummaryRecordedUsage(
+                  summary.requests['attempted']!,
+                  summary.tokens['reported']!,
+                ),
+              },
             }, style: textTheme.bodySmall),
             if (summary.tokens['unreportedRequests']! > 0)
               Text(

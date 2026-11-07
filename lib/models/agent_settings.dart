@@ -140,8 +140,6 @@ class AgentSettings {
     this.models = const [],
     this.credentialRef,
     this.systemInstructions = '',
-    this.maxModelRounds = 24,
-    this.maxToolCalls = 128,
     this.historyRetentionDays = 0,
   });
 
@@ -167,8 +165,6 @@ class AgentSettings {
       false;
   final String? credentialRef;
   final String systemInstructions;
-  final int maxModelRounds;
-  final int maxToolCalls;
 
   /// Zero retains conversations until the user deletes them explicitly.
   final int historyRetentionDays;
@@ -182,8 +178,6 @@ class AgentSettings {
     List<AgentModelConfig>? models,
     Object? credentialRef = _keepCredential,
     String? systemInstructions,
-    int? maxModelRounds,
-    int? maxToolCalls,
     int? historyRetentionDays,
   }) {
     if (models != null && models.isEmpty && model != null && model.isNotEmpty) {
@@ -202,8 +196,6 @@ class AgentSettings {
           ? this.credentialRef
           : credentialRef as String?,
       systemInstructions: systemInstructions ?? this.systemInstructions,
-      maxModelRounds: maxModelRounds ?? this.maxModelRounds,
-      maxToolCalls: maxToolCalls ?? this.maxToolCalls,
       historyRetentionDays: historyRetentionDays ?? this.historyRetentionDays,
     );
     result.validate();
@@ -225,10 +217,6 @@ class AgentSettings {
       value.validate();
     }
     if (systemInstructions.length > 16000 ||
-        maxModelRounds < 1 ||
-        maxModelRounds > 100 ||
-        maxToolCalls < 1 ||
-        maxToolCalls > 500 ||
         historyRetentionDays < 0 ||
         historyRetentionDays > 3650 ||
         (historyRetentionDays > 0 && historyRetentionDays < 7)) {
@@ -270,8 +258,6 @@ class AgentSettings {
       'models': availableModels.map((value) => value.toJson()).toList(),
       'credentialRef': credentialRef,
       'systemInstructions': systemInstructions,
-      'maxModelRounds': maxModelRounds,
-      'maxToolCalls': maxToolCalls,
       'historyRetentionDays': historyRetentionDays,
     };
   }
@@ -279,13 +265,15 @@ class AgentSettings {
   factory AgentSettings.fromJson(Object? value) {
     const preferenceKeys = {
       'systemInstructions',
-      'maxModelRounds',
-      'maxToolCalls',
       'historyRetentionDays',
       'models',
     };
     // Legacy token budgets no longer affect loading, equality or execution.
-    const ignoredLegacyKeys = {'maxTotalTokens'};
+    const ignoredLegacyKeys = {
+      'maxTotalTokens',
+      'maxModelRounds',
+      'maxToolCalls',
+    };
     const keys = {
       'enabled',
       'permissionMode',
@@ -346,8 +334,6 @@ class AgentSettings {
       ),
       credentialRef: value['credentialRef'] as String?,
       systemInstructions: value['systemInstructions'] as String? ?? '',
-      maxModelRounds: value['maxModelRounds'] as int? ?? 24,
-      maxToolCalls: value['maxToolCalls'] as int? ?? 128,
       historyRetentionDays: value['historyRetentionDays'] as int? ?? 0,
     );
     result.validate();
@@ -365,8 +351,6 @@ class AgentSettings {
       listEquals(availableModels, other.availableModels) &&
       credentialRef == other.credentialRef &&
       systemInstructions == other.systemInstructions &&
-      maxModelRounds == other.maxModelRounds &&
-      maxToolCalls == other.maxToolCalls &&
       historyRetentionDays == other.historyRetentionDays;
 
   @override
@@ -379,8 +363,6 @@ class AgentSettings {
     Object.hashAll(availableModels),
     credentialRef,
     systemInstructions,
-    maxModelRounds,
-    maxToolCalls,
     historyRetentionDays,
   );
 }

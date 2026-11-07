@@ -166,7 +166,8 @@ extension _AgentUserQuestions on AgentRuntimeController {
       }
       _rejectSecretValues(resolved!.toJson(), run.apiKey);
       final encoded = jsonEncode(_userQuestionResult(resolved!));
-      if (encoded.length > limits.maxToolResultCharacters ||
+      if ((limits.maxToolResultCharacters != null &&
+              encoded.length > limits.maxToolResultCharacters!) ||
           utf8.encode(encoded).length > 48 * 1024) {
         throw const OperationProblem(
           OperationErrorCode.invalidArgument,

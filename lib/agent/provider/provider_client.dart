@@ -59,10 +59,9 @@ class ProviderClient {
 
     void resetIdle() {
       idleTimer?.cancel();
-      idleTimer = Timer(
-        request.limits.idleTimeout,
-        () => stop(ProviderError.timeout),
-      );
+      final timeout = request.limits.idleTimeout;
+      if (timeout == null) return;
+      idleTimer = Timer(timeout, () => stop(ProviderError.timeout));
     }
 
     Future<T> guarded<T>(Future<T> work) =>
@@ -83,10 +82,9 @@ class ProviderClient {
         if (cancellation?.isCancelled ?? false) {
           throw const ProviderException(ProviderError.cancelled);
         }
-        totalTimer = Timer(
-          request.limits.totalTimeout,
-          () => stop(ProviderError.timeout),
-        );
+        if (request.limits.totalTimeout case final timeout?) {
+          totalTimer = Timer(timeout, () => stop(ProviderError.timeout));
+        }
         if (cancellation != null) {
           unawaited(
             cancellation.whenCancelled.then(
@@ -379,15 +377,15 @@ void _validate(ProviderRequest request, String apiKey) {
     throw const ProviderException(ProviderError.insecureEndpoint);
   }
   final limits = request.limits;
-  if (limits.totalTimeout <= Duration.zero ||
-      limits.idleTimeout <= Duration.zero ||
+  if ((limits.totalTimeout != null && limits.totalTimeout! <= Duration.zero) ||
+      (limits.idleTimeout != null && limits.idleTimeout! <= Duration.zero) ||
       [
-        limits.maxRequestBytes,
-        limits.maxAttachmentBytes,
+        ?limits.maxRequestBytes,
+        ?limits.maxAttachmentBytes,
         limits.maxResponseBytes,
         limits.maxEventBytes,
         limits.maxToolArgumentBytes,
-        limits.maxToolCalls,
+        ?limits.maxToolCalls,
         ?limits.maxOutputTokens,
         ?limits.maxTotalTokens,
       ].any((value) => value <= 0)) {

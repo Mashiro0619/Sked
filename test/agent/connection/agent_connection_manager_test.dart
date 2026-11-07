@@ -267,8 +267,6 @@ void main() {
       enabled: true,
       permissionMode: AgentPermissionMode.plan,
       systemInstructions: 'Latest instructions',
-      maxModelRounds: 9,
-      maxToolCalls: 27,
       historyRetentionDays: 14,
     );
     release.complete();
@@ -278,8 +276,6 @@ void main() {
     expect(current.enabled, isTrue);
     expect(current.permissionMode, AgentPermissionMode.plan);
     expect(current.systemInstructions, 'Latest instructions');
-    expect(current.maxModelRounds, 9);
-    expect(current.maxToolCalls, 27);
     expect(current.historyRetentionDays, 14);
   });
 
@@ -290,8 +286,6 @@ void main() {
         enabled: true,
         permissionMode: AgentPermissionMode.plan,
         systemInstructions: 'Keep guidance',
-        maxModelRounds: 8,
-        maxToolCalls: 25,
         historyRetentionDays: 30,
       );
       legacy = const AiApiSettings(
@@ -309,8 +303,6 @@ void main() {
       expect(current.enabled, isTrue);
       expect(current.permissionMode, AgentPermissionMode.plan);
       expect(current.systemInstructions, 'Keep guidance');
-      expect(current.maxModelRounds, 8);
-      expect(current.maxToolCalls, 25);
       expect(current.historyRetentionDays, 30);
       expect(legacySecrets.key, isEmpty);
     },

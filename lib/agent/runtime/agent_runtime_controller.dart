@@ -84,24 +84,24 @@ class AgentRuntimeException implements Exception {
 
 class AgentRuntimeLimits {
   const AgentRuntimeLimits({
-    this.maxModelRounds = 100,
-    this.maxToolCalls = 500,
+    this.maxModelRounds,
+    this.maxToolCalls,
     this.maxContextMessages = 200,
     this.maxContextCharacters = 512 * 1024,
-    this.maxUserMessageCharacters = 128 * 1024,
-    this.maxToolResultCharacters = 512 * 1024,
-    this.totalTimeout = const Duration(minutes: 10),
-    this.toolTimeout = const Duration(minutes: 1),
+    this.maxUserMessageCharacters,
+    this.maxToolResultCharacters,
+    this.totalTimeout,
+    this.toolTimeout,
     this.providerLimits = const ProviderLimits(),
   });
-  final int maxModelRounds;
-  final int maxToolCalls;
+  final int? maxModelRounds;
+  final int? maxToolCalls;
   final int maxContextMessages;
   final int maxContextCharacters;
-  final int maxUserMessageCharacters;
-  final int maxToolResultCharacters;
-  final Duration totalTimeout;
-  final Duration toolTimeout;
+  final int? maxUserMessageCharacters;
+  final int? maxToolResultCharacters;
+  final Duration? totalTimeout;
+  final Duration? toolTimeout;
   final ProviderLimits providerLimits;
 }
 
@@ -137,15 +137,16 @@ class AgentRuntimeController implements AgentUiDelegate {
        _newStopwatch = stopwatchFactory ?? Stopwatch.new,
        _id = idGenerator ?? generateUuidV4 {
     if ([
-          limits.maxModelRounds,
-          limits.maxToolCalls,
+          ?limits.maxModelRounds,
+          ?limits.maxToolCalls,
           limits.maxContextMessages,
           limits.maxContextCharacters,
-          limits.maxUserMessageCharacters,
-          limits.maxToolResultCharacters,
+          ?limits.maxUserMessageCharacters,
+          ?limits.maxToolResultCharacters,
         ].any((value) => value <= 0) ||
-        limits.totalTimeout <= Duration.zero ||
-        limits.toolTimeout <= Duration.zero) {
+        (limits.totalTimeout != null &&
+            limits.totalTimeout! <= Duration.zero) ||
+        (limits.toolTimeout != null && limits.toolTimeout! <= Duration.zero)) {
       throw const AgentRuntimeException(AgentRuntimeError.invalidMessage);
     }
     repository.addListener(_repositoryChanged);
@@ -239,7 +240,8 @@ class AgentRuntimeController implements AgentUiDelegate {
                 true) &&
             (repository.find(conversationId)?.draftReferences.isEmpty ??
                 true)) ||
-        text.length > limits.maxUserMessageCharacters) {
+        (limits.maxUserMessageCharacters != null &&
+            text.length > limits.maxUserMessageCharacters!)) {
       return Future.error(
         const AgentRuntimeException(AgentRuntimeError.invalidMessage),
       );
@@ -508,7 +510,8 @@ class AgentRuntimeController implements AgentUiDelegate {
                 true) &&
             (repository.find(conversationId)?.draftReferences.isEmpty ??
                 true)) ||
-        text.length > limits.maxUserMessageCharacters) {
+        (limits.maxUserMessageCharacters != null &&
+            text.length > limits.maxUserMessageCharacters!)) {
       throw const AgentRuntimeException(AgentRuntimeError.invalidMessage);
     }
     final run = _runs[conversationId];
@@ -757,7 +760,8 @@ class AgentRuntimeController implements AgentUiDelegate {
         result = _toolFailureResult(error, '');
       }
       var encoded = jsonEncode(result);
-      if (encoded.length > limits.maxToolResultCharacters) {
+      if (limits.maxToolResultCharacters != null &&
+          encoded.length > limits.maxToolResultCharacters!) {
         result = {
           'status': 'outcome_unknown',
           'error': {'code': 'result_budget_exceeded'},
@@ -1311,14 +1315,14 @@ class AgentRuntimeController implements AgentUiDelegate {
       }
       await _resumeUserQuestion(run);
       await _prepareInputReferenceContext(run);
-      final maxRounds = run.settings.maxModelRounds < limits.maxModelRounds
-          ? run.settings.maxModelRounds
-          : limits.maxModelRounds;
-      final maxCalls = run.settings.maxToolCalls < limits.maxToolCalls
-          ? run.settings.maxToolCalls
-          : limits.maxToolCalls;
+      final maxRounds = limits.maxModelRounds;
+      final maxCalls = limits.maxToolCalls;
       final repeatedFailures = RepeatedToolFailureTracker();
-      for (var round = run.usage.requests.length; round < maxRounds; round++) {
+      for (
+        var round = run.usage.requests.length;
+        maxRounds == null || round < maxRounds;
+        round++
+      ) {
         _checkRun(run);
         if (run.recoveryRequired) await _recoverHistory(run);
         final budget = _freezeRequestBudget(run);
@@ -1363,7 +1367,7 @@ class AgentRuntimeController implements AgentUiDelegate {
             );
             _checkRun(run);
           }
-          if (run.toolCalls >= maxCalls) {
+          if (maxCalls != null && run.toolCalls >= maxCalls) {
             await _recordUnexecuted(
               run,
               response.toolCalls.skip(index),
@@ -1458,15 +1462,13 @@ class AgentRuntimeController implements AgentUiDelegate {
               'recovery': {
                 'code': 'repeated_tool_failure',
                 'consecutiveFailures': repeatedCount,
-                'limit': 3,
-                'message': repeatedCount == 2
-                    ? 'This tool and its arguments failed twice with the same error. Inspect the schema and returned field, correct the arguments, or choose a supported tool. A third identical failure stops this run.'
-                    : 'The same tool and arguments failed three times with the same error. This run stopped. Review the schema and error before explicitly continuing.',
+                'message': 'This tool and its arguments repeatedly failed with the same error. Inspect the schema and returned field, correct the arguments, or choose a supported tool.',
               },
             };
             // Guidance must not turn a small, known failure into a result-size
             // failure when a caller deliberately uses a very small budget.
-            if (jsonEncode(guided).length <= limits.maxToolResultCharacters) {
+            if (limits.maxToolResultCharacters == null ||
+                jsonEncode(guided).length <= limits.maxToolResultCharacters!) {
               result = guided;
             }
           }
@@ -1490,7 +1492,8 @@ class AgentRuntimeController implements AgentUiDelegate {
             });
             toolFailure = error;
           }
-          if (encoded.length > limits.maxToolResultCharacters) {
+          if (limits.maxToolResultCharacters != null &&
+              encoded.length > limits.maxToolResultCharacters!) {
             run.outcomeUnknown = true;
             encoded = jsonEncode({
               'status': 'outcome_unknown',
@@ -1541,20 +1544,10 @@ class AgentRuntimeController implements AgentUiDelegate {
                   AgentRuntimeError.interruptedRunNeedsReview,
                 );
           }
-          if (repeatedCount >= 3) {
-            await _recordUnexecuted(
-              run,
-              response.toolCalls.skip(index + 1),
-              'repeated_tool_failure',
-            );
-            throw const AgentRuntimeException(
-              AgentRuntimeError.repeatedToolFailure,
-            );
-          }
         }
       }
       throw _budgetFailure(
-        run.toolCalls >= maxCalls
+        maxCalls != null && run.toolCalls >= maxCalls
             ? AgentRequestBudgetReason.tools
             : AgentRequestBudgetReason.rounds,
       );
@@ -2935,8 +2928,11 @@ class AgentRuntimeController implements AgentUiDelegate {
         final size = measureProviderRequestSize(
           _providerRequest(run, candidate),
         );
-        return size.textBytes <= limits.providerLimits.maxRequestBytes &&
-            size.attachmentBytes <= limits.providerLimits.maxAttachmentBytes;
+        return (limits.providerLimits.maxRequestBytes == null ||
+                size.textBytes <= limits.providerLimits.maxRequestBytes!) &&
+            (limits.providerLimits.maxAttachmentBytes == null ||
+                size.attachmentBytes <=
+                    limits.providerLimits.maxAttachmentBytes!);
       } on ProviderException {
         // Keep protocol/media validation and its delivery status at the normal
         // provider entry point. This preflight coordinates only size limits.
@@ -3142,7 +3138,7 @@ class _ExecutionDeadline {
     resume();
   }
 
-  final Duration limit;
+  final Duration? limit;
   final void Function() onTimeout;
   final Stopwatch elapsed;
   Timer? _timer;
@@ -3155,8 +3151,9 @@ class _ExecutionDeadline {
   }
 
   void resume() {
-    if (_cancelled || _timer != null) return;
-    final remaining = limit - elapsed.elapsed;
+    final duration = limit;
+    if (_cancelled || _timer != null || duration == null) return;
+    final remaining = duration - elapsed.elapsed;
     elapsed.start();
     _timer = Timer(remaining > Duration.zero ? remaining : Duration.zero, () {
       cancel();

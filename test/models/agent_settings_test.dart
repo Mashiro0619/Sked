@@ -178,8 +178,6 @@ void main() {
       ],
       credentialRef: 'agent-key-1',
       systemInstructions: 'Keep responses concise.',
-      maxModelRounds: 10,
-      maxToolCalls: 25,
       historyRetentionDays: 30,
     );
     final decoded = AgentSettings.fromJson(settings.toJson());
@@ -246,8 +244,6 @@ void main() {
   test('preference limits and persisted types reject malformed values', () {
     for (final entry in <String, Object?>{
       'systemInstructions': 1,
-      'maxModelRounds': 0,
-      'maxToolCalls': 501,
       'historyRetentionDays': 1,
     }.entries) {
       final json = const AgentSettings().toJson()..[entry.key] = entry.value;
@@ -261,23 +257,19 @@ void main() {
       () => AgentSettings(systemInstructions: 'x' * 16001).validate(),
       throwsFormatException,
     );
-    expect(
-      () => const AgentSettings(maxModelRounds: 101).validate(),
-      throwsFormatException,
-    );
   });
 
   test('legacy token budgets are ignored while other preferences survive', () {
     const settings = AgentSettings(
       systemInstructions: 'Keep this guidance.',
-      maxModelRounds: 9,
-      maxToolCalls: 27,
       historyRetentionDays: 30,
     );
     for (final legacy in <Object?>[100000, 0, -1, 1000001, null, 'obsolete']) {
       final decoded = AgentSettings.fromJson({
         ...settings.toJson(),
         'maxTotalTokens': legacy,
+        'maxModelRounds': legacy,
+        'maxToolCalls': legacy,
       });
       expect(decoded, settings);
       expect(decoded.hashCode, settings.hashCode);

@@ -21,12 +21,7 @@ class _AgentPreferencesFormState extends State<AgentPreferencesForm> {
   late final _instructions = TextEditingController(
     text: widget.settings.systemInstructions,
   );
-  late final _rounds = TextEditingController(
-    text: '${widget.settings.maxModelRounds}',
-  );
-  late final _calls = TextEditingController(
-    text: '${widget.settings.maxToolCalls}',
-  );
+
   late final _retention = TextEditingController(
     text: '${widget.settings.historyRetentionDays}',
   );
@@ -36,7 +31,7 @@ class _AgentPreferencesFormState extends State<AgentPreferencesForm> {
 
   @override
   void dispose() {
-    for (final controller in [_instructions, _rounds, _calls, _retention]) {
+    for (final controller in [_instructions, _retention]) {
       controller.dispose();
     }
     super.dispose();
@@ -53,8 +48,6 @@ class _AgentPreferencesFormState extends State<AgentPreferencesForm> {
       await widget.onSave(
         widget.settings.copyWith(
           systemInstructions: _instructions.text,
-          maxModelRounds: int.parse(_rounds.text),
-          maxToolCalls: int.parse(_calls.text),
           historyRetentionDays: int.parse(_retention.text),
         ),
       );
@@ -115,8 +108,6 @@ class _AgentPreferencesFormState extends State<AgentPreferencesForm> {
               maxLength: 16000,
               decoration: InputDecoration(labelText: l.agentSystemInstructions),
             ),
-            number('agent-max-rounds', l.agentMaxModelRounds, _rounds, 1, 100),
-            number('agent-max-calls', l.agentMaxToolCalls, _calls, 1, 500),
             number(
               'agent-history-retention',
               l.agentHistoryRetentionDays,

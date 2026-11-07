@@ -46,6 +46,22 @@ void main() {
     providerLimits: limits,
   );
 
+  test('ordinary requests do not gain hidden round tool time or text caps', () {
+    final result = planAgentRequestBudget(
+      run(),
+      providerLimits: const ProviderLimits(),
+    );
+    expect(result.remainingRounds, isNull);
+    expect(result.remainingToolCalls, isNull);
+    expect(result.finalStep, isFalse);
+    expect(result.reason, isNull);
+    expect(result.requestLimits!.totalTimeout, isNull);
+    expect(result.requestLimits!.idleTimeout, isNull);
+    expect(result.requestLimits!.maxToolCalls, isNull);
+    expect(result.requestLimits!.maxRequestBytes, isNull);
+    expect(result.requestLimits!.maxAttachmentBytes, isNull);
+  });
+
   test(
     'reported tokens do not constrain the next request or force settlement',
     () {

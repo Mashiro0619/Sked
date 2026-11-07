@@ -23,8 +23,6 @@ class _AgentPreferencesSettingsPageState
     with AgentSettingsExitGuard<AgentPreferencesSettingsPage> {
   final _form = GlobalKey<FormState>();
   final _instructions = TextEditingController();
-  final _rounds = TextEditingController();
-  final _calls = TextEditingController();
   final _retention = TextEditingController();
   late AgentSettings _baseline;
   bool _initialized = false;
@@ -32,8 +30,7 @@ class _AgentPreferencesSettingsPageState
   String? _error;
 
   @override
-  Object get settingsDraftFingerprint =>
-      (_instructions.text, _rounds.text, _calls.text, _retention.text);
+  Object get settingsDraftFingerprint => (_instructions.text, _retention.text);
   @override
   bool get settingsExitBlocked => _saving;
 
@@ -44,16 +41,12 @@ class _AgentPreferencesSettingsPageState
     _initialized = true;
     _baseline = context.read<AgentApplication>().settings;
     _instructions.text = _baseline.systemInstructions;
-    _rounds.text = '${_baseline.maxModelRounds}';
-    _calls.text = '${_baseline.maxToolCalls}';
     _retention.text = '${_baseline.historyRetentionDays}';
     initializeSettingsDraftGuard();
   }
 
   bool _unchanged(AgentSettings current) =>
       current.systemInstructions == _baseline.systemInstructions &&
-      current.maxModelRounds == _baseline.maxModelRounds &&
-      current.maxToolCalls == _baseline.maxToolCalls &&
       current.historyRetentionDays == _baseline.historyRetentionDays;
 
   Future<void> _save() async {
@@ -77,8 +70,6 @@ class _AgentPreferencesSettingsPageState
       await application.configurePreferences(
         current.copyWith(
           systemInstructions: _instructions.text,
-          maxModelRounds: int.parse(_rounds.text),
-          maxToolCalls: int.parse(_calls.text),
           historyRetentionDays: int.parse(_retention.text),
         ),
         expectedSettings: current,
@@ -104,7 +95,7 @@ class _AgentPreferencesSettingsPageState
 
   @override
   void dispose() {
-    for (final controller in [_instructions, _rounds, _calls, _retention]) {
+    for (final controller in [_instructions, _retention]) {
       controller.dispose();
     }
     super.dispose();
@@ -203,48 +194,6 @@ class _AgentPreferencesSettingsPageState
                     maxLength: 16000,
                     onChanged: (_) => setState(() {}),
                   ),
-                ),
-              ),
-              section(
-                'agent-preferences-limits',
-                l.agentRunLimitsTitle,
-                l.agentRunLimitsHint,
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final textScale =
-                        MediaQuery.textScalerOf(context).scale(14) / 14;
-                    final columns = constraints.maxWidth >= 400 * textScale + 16
-                        ? 2
-                        : 1;
-                    final width =
-                        (constraints.maxWidth - (columns - 1) * 16) / columns;
-                    return Wrap(
-                      spacing: 16,
-                      runSpacing: 16,
-                      children: [
-                        SizedBox(
-                          width: width,
-                          child: number(
-                            'agent-max-rounds',
-                            l.agentMaxModelRounds,
-                            _rounds,
-                            1,
-                            100,
-                          ),
-                        ),
-                        SizedBox(
-                          width: width,
-                          child: number(
-                            'agent-max-calls',
-                            l.agentMaxToolCalls,
-                            _calls,
-                            1,
-                            500,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
                 ),
               ),
               section(

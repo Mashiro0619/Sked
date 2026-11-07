@@ -102,8 +102,6 @@ const _settingsFields = <BackupSettingsGroup, Set<String>>{
   },
   BackupSettingsGroup.agentPreferences: {
     'systemInstructions',
-    'maxModelRounds',
-    'maxToolCalls',
     'historyRetentionDays',
   },
 };
@@ -690,6 +688,8 @@ PreparedMainBackupRestore prepareMainBackupRestore(
         if (group == null) backupInvalid('Unknown settings group.');
         if (group == BackupSettingsGroup.agentPreferences) {
           data.remove('maxTotalTokens');
+          data.remove('maxModelRounds');
+          data.remove('maxToolCalls');
         }
         backupMap(data, _settingsFields[group]!);
         final Map<String, dynamic> target = switch (group) {

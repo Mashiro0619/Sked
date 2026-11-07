@@ -13,6 +13,42 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'agent_ui_test_support.dart';
 
 void main() {
+  testWidgets(
+    'version three records requests without inventing a request allowance',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      final payload = _payload(reason: 'tools')
+        ..['version'] = 3
+        ..['requests'] = {'attempted': 102}
+        ..['tokens'] = {'reported': 2400000, 'unreportedRequests': 0};
+      final summary = AgentBudgetSummary.parse(_notice(payload))!;
+      expect(summary.requests, {'attempted': 102});
+      await mountAgentUi(
+        tester,
+        SingleChildScrollView(child: AgentBudgetSummaryView(summary: summary)),
+      );
+      final l = AppLocalizations.of(
+        tester.element(find.byType(AgentBudgetSummaryView)),
+      );
+      expect(
+        find.text(l.agentBudgetSummaryRecordedUsage(102, 2400000)),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+      for (final invalid in [-1, '1', null]) {
+        expect(
+          AgentBudgetSummary.parse(
+            _notice({
+              ...payload,
+              'requests': {'attempted': 102, 'limit': invalid},
+            }),
+          ),
+          isNull,
+        );
+      }
+    },
+  );
+
   testWidgets('new summaries show actual usage without a token allowance', (
     tester,
   ) async {

@@ -486,8 +486,8 @@ class ProviderResponseDecoder {
   }
 
   _ToolBuffer _tool(int index) {
-    if (!_tools.containsKey(index) &&
-        _tools.length >= request.limits.maxToolCalls) {
+    final limit = request.limits.maxToolCalls;
+    if (limit != null && !_tools.containsKey(index) && _tools.length >= limit) {
       throw const ProviderException(ProviderError.toolBudgetExceeded);
     }
     return _tools.putIfAbsent(index, _ToolBuffer.new);
@@ -562,7 +562,8 @@ class ProviderResponseDecoder {
     if (_finishReason != 'stop' && _finishReason != 'tool_calls') {
       throw const ProviderException(ProviderError.incompleteResponse);
     }
-    if (_tools.length > request.limits.maxToolCalls) {
+    final limit = request.limits.maxToolCalls;
+    if (limit != null && _tools.length > limit) {
       throw const ProviderException(ProviderError.toolBudgetExceeded);
     }
     if ((_finishReason == 'tool_calls') != _tools.isNotEmpty) {

@@ -3069,5 +3069,16 @@
         "type": "int"
       }
     }
+  },
+  "agentBudgetSummaryRecordedUsage": "模型請求 {requests} 輪 · 已回報用量 {tokens} Token",
+  "@agentBudgetSummaryRecordedUsage": {
+    "placeholders": {
+      "requests": {
+        "type": "int"
+      },
+      "tokens": {
+        "type": "int"
+      }
+    }
   }
 }

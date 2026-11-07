@@ -4597,4 +4597,9 @@ class AppLocalizationsDe extends AppLocalizations {
   ) {
     return '$requests/$requestLimit model requests · $tokens reported tokens';
   }
+
+  @override
+  String agentBudgetSummaryRecordedUsage(int requests, int tokens) {
+    return 'Model requests $requests · $tokens reported tokens';
+  }
 }

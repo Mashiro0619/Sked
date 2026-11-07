@@ -109,6 +109,8 @@ void main() {
     for (final edit in const [
       SettingEdit.set('agent.maxTotalTokens', 100000),
       SettingEdit.reset('agent.maxTotalTokens'),
+      SettingEdit.set('agent.maxModelRounds', 8),
+      SettingEdit.reset('agent.maxToolCalls'),
     ]) {
       expect(
         () => registry.prepare(sample(), [edit]),
@@ -131,14 +133,12 @@ void main() {
     final before = sample();
     final edited = registry.prepare(before, const [
       SettingEdit.set('agent.systemInstructions', '  Preserve user wording.  '),
-      SettingEdit.set('agent.maxModelRounds', 8),
       SettingEdit.set('agent.historyRetentionDays', 30),
     ]);
     expect(
       edited.candidate.agentSettings.systemInstructions,
       '  Preserve user wording.  ',
     );
-    expect(edited.candidate.agentSettings.maxModelRounds, 8);
     expect(edited.candidate.agentSettings.historyRetentionDays, 30);
     expect(
       edited.candidate.agentSettings.permissionMode,
@@ -148,13 +148,11 @@ void main() {
       edited.changes.map((change) => change.key),
       unorderedEquals([
         'agent.systemInstructions',
-        'agent.maxModelRounds',
         'agent.historyRetentionDays',
       ]),
     );
     final reset = registry.prepare(edited.candidate, const [
       SettingEdit.reset('agent.systemInstructions'),
-      SettingEdit.reset('agent.maxModelRounds'),
       SettingEdit.reset('agent.historyRetentionDays'),
     ]);
     expect(reset.candidate.agentSettings, before.agentSettings);

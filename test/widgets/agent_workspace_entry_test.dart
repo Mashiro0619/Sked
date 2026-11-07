@@ -216,8 +216,6 @@ class _Application extends ChangeNotifier implements AgentApplication {
     await beforeConfigure?.call();
     settings = settings.copyWith(
       systemInstructions: value.systemInstructions,
-      maxModelRounds: value.maxModelRounds,
-      maxToolCalls: value.maxToolCalls,
       historyRetentionDays: value.historyRetentionDays,
     );
     runtime.refreshSettings();

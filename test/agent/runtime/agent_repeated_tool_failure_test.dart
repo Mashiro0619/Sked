@@ -5,7 +5,6 @@ import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/runtime/agent_runtime_controller.dart';
 import 'package:sked/agent/runtime/repeated_tool_failure.dart';
-import 'package:sked/agent/ui/agent_conversation_timeline.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/models/agent_settings.dart';
 
@@ -27,88 +26,48 @@ void main() {
     field: 'name',
   );
 
-  test('repeated failure feedback reaches the model and stops the remaining batch as not executed', () async {
-    final h = await _Harness.create(
-      script: (round) => switch (round) {
-        0 || 1 => [_call(round)],
-        2 => [
-          _call(round),
-          _call(round, name: 'fixture.write', suffix: '-write'),
-        ],
-        3 => [_call(round)],
-        4 => [_call(round, arguments: '{"name":"corrected"}')],
-        _ => [],
-      },
-      execute: (call) async {
-        if (call.decodedArguments['name'] == 'bad') throw invalid;
-        return {'status': 'read'};
-      },
-    );
-    addTearDown(h.close);
-    await h.runtime.send(h.id, 'Read a known resource');
-    expect(h.provider.requests, hasLength(3));
-    expect(h.executed.map((call) => call.name), everyElement('fixture.query'));
-    final saved = h.repository.find(h.id)!;
-    final toolMessages = saved.messages
-        .where((m) => m.role == ConversationRole.tool)
-        .toList();
-    expect(toolMessages, hasLength(4));
-    final outcomes = toolMessages
-        .map((m) => jsonDecode(m.text) as Map)
-        .toList();
-    expect(
-      outcomes.take(3).map((result) => result['status']),
-      everyElement('failed'),
-    );
-    expect(outcomes[1]['recovery']['consecutiveFailures'], 2);
-    expect(
-      outcomes[1]['recovery']['message'],
-      contains('correct the arguments'),
-    );
-    expect(outcomes[2]['recovery']['consecutiveFailures'], 3);
-    expect(outcomes[3]['status'], 'not_executed');
-    expect(outcomes[3]['error']['code'], 'repeated_tool_failure');
-    expect(
-      h.provider.requests.last.messages
-          .where((m) => m.role == ProviderRole.tool)
-          .last
-          .text,
-      toolMessages[1].text,
-    );
-    expect(saved.runs.single.tools.map((tool) => tool.outcome), [
-      ConversationAttemptOutcome.failed,
-      ConversationAttemptOutcome.failed,
-      ConversationAttemptOutcome.failed,
-    ]);
-    expect(saved.runs.single.summary()['toolAttempts'], 3);
-    final activities = projectAgentConversationTimeline(saved)
-        .whereType<AgentTimelineActivity>()
-        .expand((activity) => activity.tools);
-    expect(activities.map((activity) => activity.status), [
-      AgentToolActivityStatus.failed,
-      AgentToolActivityStatus.failed,
-      AgentToolActivityStatus.failed,
-      AgentToolActivityStatus.notStarted,
-    ]);
-    expect(
-      h.runtime.state.value.runFor(h.id).errorMessage,
-      'repeatedToolFailure',
-    );
-    expect(h.runtime.state.value.runFor(h.id).recoveryRequired, false);
-
-    // A new explicit continuation gets its own attempt sequence. The failed
-    // calls and the skipped write remain historical records.
-    await h.runtime.continueConversation(h.id);
-    expect(h.provider.requests, hasLength(6));
-    expect(h.executed, hasLength(5));
-    expect(h.executed.map((call) => call.name), everyElement('fixture.query'));
-    expect(h.repository.find(h.id)!.runs, hasLength(2));
-    expect(
-      h.repository.find(h.id)!.runs.last.status,
-      ConversationRunStatus.completed,
-    );
-    expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
-  });
+  test(
+    'repeated failure feedback supports correction without a three-error stop',
+    () async {
+      final h = await _Harness.create(
+        script: (round) => round < 5
+            ? [
+                _call(
+                  round,
+                  arguments: round == 4
+                      ? '{"name":"corrected"}'
+                      : '{"name":"bad"}',
+                ),
+              ]
+            : [],
+        execute: (call) async {
+          if (call.decodedArguments['name'] == 'bad') throw invalid;
+          return {'status': 'read'};
+        },
+      );
+      addTearDown(h.close);
+      await h.runtime.send(h.id, 'Read a known resource');
+      expect(h.provider.requests, hasLength(6));
+      expect(h.executed, hasLength(5));
+      final saved = h.repository.find(h.id)!;
+      final outcomes = saved.messages
+          .where((m) => m.role == ConversationRole.tool)
+          .map((m) => jsonDecode(m.text) as Map)
+          .toList();
+      expect(
+        outcomes.take(4).map((result) => result['status']),
+        everyElement('failed'),
+      );
+      expect(outcomes[3]['recovery']['consecutiveFailures'], 4);
+      expect(outcomes[3]['recovery'].containsKey('limit'), isFalse);
+      expect(
+        outcomes[3]['recovery']['message'],
+        contains('correct the arguments'),
+      );
+      expect(saved.runs.single.status, ConversationRunStatus.completed);
+      expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
+    },
+  );
 
   test(
     'nested JSON key order does not hide repeated invalid arguments',
@@ -119,16 +78,14 @@ void main() {
         '{ "filter": {"a":1,"b":2}, "name":"bad" }',
       ];
       final h = await _Harness.create(
-        script: (round) => [_call(round, arguments: arguments[round % 3])],
+        script: (round) =>
+            round < 4 ? [_call(round, arguments: arguments[round % 3])] : [],
         execute: (_) async => throw invalid,
       );
       addTearDown(h.close);
       await h.runtime.send(h.id, 'Read');
-      expect(h.provider.requests, hasLength(3));
-      expect(
-        h.runtime.state.value.runFor(h.id).errorMessage,
-        'repeatedToolFailure',
-      );
+      expect(h.provider.requests, hasLength(5));
+      expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
     },
   );
 
@@ -193,21 +150,18 @@ void main() {
     'a small result budget keeps repeated known failures classified as failed',
     () async {
       final h = await _Harness.create(
-        script: (round) => [_call(round)],
+        script: (round) => round < 4 ? [_call(round)] : [],
         execute: (_) async => throw invalid,
         limits: const AgentRuntimeLimits(maxToolResultCharacters: 150),
       );
       addTearDown(h.close);
       await h.runtime.send(h.id, 'Read');
-      expect(h.executed, hasLength(3));
+      expect(h.executed, hasLength(4));
       expect(
         h.repository.find(h.id)!.runs.single.tools.map((tool) => tool.outcome),
         everyElement(ConversationAttemptOutcome.failed),
       );
-      expect(
-        h.runtime.state.value.runFor(h.id).errorMessage,
-        'repeatedToolFailure',
-      );
+      expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
       expect(h.runtime.state.value.runFor(h.id).recoveryRequired, false);
     },
   );

@@ -500,3 +500,18 @@ the existing historical normalizations.
 Existing performance reports retain their original dataset versions. Fresh
 comparisons use dataset 9 on both sides; this serialization change adds no timing
 or memory observations.
+
+## Dataset version 10: remove the Agent request and tool count budgets
+
+Local Agent configuration no longer serializes `maxModelRounds` or
+`maxToolCalls`. Dataset version 10 changes only the two local AppData
+encode/decode checksums. The regression restores the former defaults of 24 and
+128 immediately after `systemInstructions`, in their original order, and
+requires all four dataset 9 serialization checksums. The dataset 9-to-8 and
+earlier exact normalizations remain in place. Portable backups omit this local
+configuration, and their checksums and the complete business workload remain
+unchanged.
+
+New performance comparisons use dataset 10 on both sides. Existing reports keep
+their original versions; this serialization update contains no performance
+sampling or new device measurements.

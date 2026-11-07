@@ -3137,5 +3137,16 @@
         "type": "int"
       }
     }
+  },
+  "agentBudgetSummaryRecordedUsage": "Model requests {requests} · {tokens} reported tokens",
+  "@agentBudgetSummaryRecordedUsage": {
+    "placeholders": {
+      "requests": {
+        "type": "int"
+      },
+      "tokens": {
+        "type": "int"
+      }
+    }
   }
 }

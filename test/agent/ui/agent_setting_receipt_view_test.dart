@@ -135,7 +135,7 @@ void main() {
                           'value': 'Use confirmed host receipts.',
                         },
                         {
-                          'key': 'agent.maxModelRounds',
+                          'key': 'agent.historyRetentionDays',
                           'action': 'set',
                           'value': 7,
                         },
@@ -209,7 +209,7 @@ void main() {
                   h.saved.agentSettings.systemInstructions,
                   'Use confirmed host receipts.',
                 );
-                expect(h.saved.agentSettings.maxModelRounds, 7);
+                expect(h.saved.agentSettings.historyRetentionDays, 7);
               case 'scheduleDisplay':
                 expect(h.saved.generalMode.dayStartHour, 7);
                 expect(h.saved.generalMode.showWeekends, weekendsTarget);
@@ -332,7 +332,10 @@ List<String> _labels(String kind, AppLocalizations l) => switch (kind) {
   'legacyPreview' => [l.assistantLayoutPreview],
   'connection' => [l.agentModelSettings],
   'appSettings' => [l.language, l.hideHomeWorkspaceNavigation],
-  'agentPreferences' => [l.agentSystemInstructions, l.agentMaxModelRounds],
+  'agentPreferences' => [
+    l.agentSystemInstructions,
+    l.agentHistoryRetentionDays,
+  ],
   _ => [
     '${l.themeWorkspaceSchedule} · ${l.startHour}',
     '${l.themeWorkspaceSchedule} · ${l.showWeekends}',

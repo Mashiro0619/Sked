@@ -26,12 +26,8 @@ extension _AgentBudgetSettlement on AgentRuntimeController {
   AgentRequestBudget _freezeRequestBudget(_Run run) {
     final budget = planAgentRequestBudget(
       run.usage,
-      maxModelRounds: run.settings.maxModelRounds < limits.maxModelRounds
-          ? run.settings.maxModelRounds
-          : limits.maxModelRounds,
-      maxToolCalls: run.settings.maxToolCalls < limits.maxToolCalls
-          ? run.settings.maxToolCalls
-          : limits.maxToolCalls,
+      maxModelRounds: limits.maxModelRounds,
+      maxToolCalls: limits.maxToolCalls,
       providerLimits: limits.providerLimits,
     );
     run.requestBudget = budget;
@@ -88,16 +84,14 @@ extension _AgentBudgetSettlement on AgentRuntimeController {
     }
     final summary = {
       'kind': 'agent_budget_summary',
-      'version': 2,
+      'version': 3,
       'runId': run.id,
       'reason': reason.name,
       'errorCode': _budgetFailure(reason).code.name,
       'counts': counts,
       'requests': {
         'attempted': run.usage.requests.length,
-        'limit': run.settings.maxModelRounds < limits.maxModelRounds
-            ? run.settings.maxModelRounds
-            : limits.maxModelRounds,
+        'limit': ?limits.maxModelRounds,
       },
       'tokens': {
         'reported': run.usage.requests.fold<int>(
@@ -114,9 +108,7 @@ extension _AgentBudgetSettlement on AgentRuntimeController {
       },
       'tools': {
         'attempted': run.usage.tools.length,
-        'limit': run.settings.maxToolCalls < limits.maxToolCalls
-            ? run.settings.maxToolCalls
-            : limits.maxToolCalls,
+        'limit': ?limits.maxToolCalls,
       },
     };
     _rejectSecretValues(summary, run.apiKey);

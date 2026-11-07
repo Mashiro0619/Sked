@@ -16,7 +16,7 @@ recoverAgentOperationHistory(
   required AgentOperationReceiptReader? readReceipt,
   required String Function() id,
   required DateTime Function() clock,
-  required int maxResultCharacters,
+  int? maxResultCharacters,
 }) async {
   final bindings = <String, ({String operationId, String toolName})>{};
   final hostBindings = <String, ({String operationId, String toolName})>{};
@@ -141,7 +141,7 @@ recoverAgentOperationHistory(
               'Do not replay this operation or replace it with a new operation ID.',
         };
     var encoded = jsonEncode(payload);
-    if (encoded.length > maxResultCharacters) {
+    if (maxResultCharacters != null && encoded.length > maxResultCharacters) {
       encoded = jsonEncode({
         for (final key in const [
           'status',

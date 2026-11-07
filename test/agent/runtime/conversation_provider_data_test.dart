@@ -63,10 +63,12 @@ void main() {
     );
   });
 
-  test('provider item count, byte size, depth and credentials are bounded', () {
+  test('provider item growth preserves byte, depth and credential checks', () {
+    final larger = message(List.generate(65, (_) => {'type': 'reasoning'}));
+    expect(larger.responseItems, hasLength(65));
     expect(
-      () => message(List.generate(65, (_) => {'type': 'reasoning'})),
-      throwsFormatException,
+      ConversationMessage.fromJson(larger.toJson()).responseItems,
+      larger.responseItems,
     );
     expect(
       () => message([

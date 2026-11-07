@@ -20,8 +20,8 @@ class AgentRequestBudget {
 
   final int reportedTokens;
   final int unreportedRequests;
-  final int remainingRounds;
-  final int remainingToolCalls;
+  final int? remainingRounds;
+  final int? remainingToolCalls;
   final bool finalStep;
   final AgentRequestBudgetReason? reason;
 
@@ -33,8 +33,8 @@ class AgentRequestBudget {
 /// The last available round is reserved for a response with tools disabled.
 AgentRequestBudget planAgentRequestBudget(
   ConversationRunUsage usage, {
-  required int maxModelRounds,
-  required int maxToolCalls,
+  int? maxModelRounds,
+  int? maxToolCalls,
   required ProviderLimits providerLimits,
 }) {
   final reported = usage.requests.fold<int>(
@@ -48,12 +48,17 @@ AgentRequestBudget planAgentRequestBudget(
             request.outcome != ConversationAttemptOutcome.notStarted,
       )
       .length;
-  final remainingRounds = max(0, maxModelRounds - usage.requests.length);
-  final remainingToolCalls = max(0, maxToolCalls - usage.tools.length);
-  final canRequest = remainingRounds > 0;
+  final remainingRounds = maxModelRounds == null
+      ? null
+      : max(0, maxModelRounds - usage.requests.length);
+  final remainingToolCalls = maxToolCalls == null
+      ? null
+      : max(0, maxToolCalls - usage.tools.length);
+  final canRequest = remainingRounds == null || remainingRounds > 0;
   final finalStep =
       canRequest &&
-      ((maxModelRounds > 1 && remainingRounds == 1) || remainingToolCalls == 0);
+      ((maxModelRounds != null && maxModelRounds > 1 && remainingRounds == 1) ||
+          remainingToolCalls == 0);
   final reason = remainingRounds == 0
       ? AgentRequestBudgetReason.rounds
       : remainingToolCalls == 0

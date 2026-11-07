@@ -8065,6 +8065,12 @@ abstract class AppLocalizations {
     int requestLimit,
     int tokens,
   );
+
+  /// No description provided for @agentBudgetSummaryRecordedUsage.
+  ///
+  /// In en, this message translates to:
+  /// **'Model requests {requests} · {tokens} reported tokens'**
+  String agentBudgetSummaryRecordedUsage(int requests, int tokens);
 }
 
 class _AppLocalizationsDelegate

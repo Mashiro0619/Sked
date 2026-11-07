@@ -46,6 +46,46 @@ void main() {
     ),
   ).collect(input ?? request(), apiKey: apiKey);
 
+  testWidgets(
+    'ordinary provider waits have no default total or idle deadline',
+    (tester) async {
+      final response = Completer<http.StreamedResponse>();
+      final cancellation = ProviderCancellationToken();
+      final client = ProviderClient(client: _Client((_) => response.future));
+      addTearDown(client.close);
+      var done = false;
+      Object? failure;
+      final requestFuture = client
+          .collect(request(), apiKey: '', cancellation: cancellation)
+          .then<void>(
+            (_) {
+              done = true;
+            },
+            onError: (Object error) {
+              failure = error;
+              done = true;
+            },
+          );
+      await tester.pump();
+      await tester.pump(const Duration(hours: 1));
+      expect(done, isFalse);
+      expect(failure, isNull);
+      cancellation.cancel();
+      await tester.pump();
+      await requestFuture;
+      expect(
+        failure,
+        isA<ProviderException>().having(
+          (error) => error.code,
+          'code',
+          ProviderError.cancelled,
+        ),
+      );
+      response.complete(http.StreamedResponse(const Stream.empty(), 200));
+      await tester.pump();
+    },
+  );
+
   for (final fixture in [
     (502, 'text/html', '<html>Upstream denied the tool call</html>'),
     (

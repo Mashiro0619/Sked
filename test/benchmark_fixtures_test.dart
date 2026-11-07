@@ -20,7 +20,7 @@ void main() {
   });
 
   test('fixture has the fixed large-data shape', () {
-    expect(performanceDatasetVersion, 9);
+    expect(performanceDatasetVersion, 10);
     expect(fixtures.generalData1000.schedules, hasLength(8));
     expect(
       fixtures.generalData1000.schedules.expand((schedule) => schedule.events),
@@ -103,6 +103,37 @@ void main() {
 
     expect(actual, expectedPerformanceFixtureChecksums);
   });
+
+  test(
+    'removing Agent count budgets accounts for the entire dataset 10 change',
+    () {
+      expect(
+        checksumString(_asDataset9(fixtures.appData.encode())),
+        'fnv1a64-utf16le:9947c8682f3b6b7e',
+      );
+      expect(
+        checksumString(
+          _asDataset9(
+            AppData.decodeStorageSnapshot(fixtures.appDataSnapshot).encode(),
+          ),
+        ),
+        'fnv1a64-utf16le:aed15f595fe8d3de',
+      );
+      expect(
+        checksumString(
+          _asDataset9(encodeAppBackup(fixtures.appData, fixtures.schoolSites)),
+        ),
+        'fnv1a64-utf16le:e5333b9b4bb7ed76',
+      );
+      final decoded = decodeAppBackup(fixtures.appBackupSnapshot);
+      final checksum = StableChecksum()
+        ..addBool(decoded.includesSchoolSites)
+        ..addString(
+          _asDataset9(encodeAppBackup(decoded.appData, decoded.schoolSites)),
+        );
+      expect(checksum.finish(), 'fnv1a64-utf16le:db3a0eb536199d79');
+    },
+  );
 
   test(
     'removing the Agent token budget accounts for the entire dataset 9 change',
@@ -284,10 +315,31 @@ void main() {
   );
 }
 
+/// Restore only the two retired count fields in their original position.
+/// The four dataset 9 checksums prove that no workload data changed with them.
+String _asDataset9(String source) {
+  final root = jsonDecode(source) as Map<String, dynamic>;
+  if (root.containsKey('data')) return source;
+  final agent = root['agentSettings'] as Map<String, dynamic>;
+  expect(agent, isNot(contains('maxModelRounds')));
+  expect(agent, isNot(contains('maxToolCalls')));
+  expect(agent['systemInstructions'], '');
+  root['agentSettings'] = {
+    for (final entry in agent.entries) ...{
+      entry.key: entry.value,
+      if (entry.key == 'systemInstructions') ...{
+        'maxModelRounds': 24,
+        'maxToolCalls': 128,
+      },
+    },
+  };
+  return jsonEncode(root);
+}
+
 /// Restore only the obsolete field, in its historical order, to verify that
 /// dataset 9 retains every other byte of the dataset 8 workload.
 String _asDataset8(String source) {
-  final root = jsonDecode(source) as Map<String, dynamic>;
+  final root = jsonDecode(_asDataset9(source)) as Map<String, dynamic>;
   if (root.containsKey('data')) return source;
   final agent = root['agentSettings'] as Map<String, dynamic>;
   expect(agent, isNot(contains('maxTotalTokens')));

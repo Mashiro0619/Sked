@@ -649,8 +649,6 @@ class AgentApplication extends ChangeNotifier {
     await _saveSettings(
       settings.copyWith(
         systemInstructions: value.systemInstructions,
-        maxModelRounds: value.maxModelRounds,
-        maxToolCalls: value.maxToolCalls,
         historyRetentionDays: value.historyRetentionDays,
       ),
       expectedSettings: expectedSettings,

@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/screens/agent_preferences_settings_page.dart';
 import 'package:sked/screens/agent_settings_page.dart';
 
@@ -47,45 +46,14 @@ void main() {
       await tester.tap(field('agent-settings-preferences'));
       await tester.pumpAndSettle();
       expect(field('agent-max-tokens'), findsNothing);
-      final semantics = tester.ensureSemantics();
-      try {
-        final labels = AppLocalizations.of(
-          tester.element(find.byType(AgentPreferencesSettingsPage)),
-        );
-        expect(
-          tester.getSemantics(field('agent-max-rounds')).label,
-          contains(labels.agentMaxModelRounds),
-        );
-      } finally {
-        semantics.dispose();
-      }
+      expect(field('agent-max-rounds'), findsNothing);
+      expect(field('agent-max-calls'), findsNothing);
       await tester.enterText(
         field('agent-system-instructions'),
         'Use concise replies.',
       );
-      final values = {'agent-max-rounds': '12', 'agent-max-calls': '36'};
-      for (final entry in values.entries) {
-        await reveal(field(entry.key));
-        await tester.enterText(field(entry.key), entry.value);
-      }
-      expect(
-        tester.getTopLeft(field('agent-max-rounds')).dy,
-        tester.getTopLeft(field('agent-max-calls')).dy,
-      );
-
       await mount(320, 2);
       expect(find.byType(AgentPreferencesSettingsPage), findsOneWidget);
-      for (final entry in values.entries) {
-        await reveal(field(entry.key));
-        expect(
-          tester.widget<TextFormField>(field(entry.key)).controller!.text,
-          entry.value,
-        );
-      }
-      expect(
-        tester.getTopLeft(field('agent-max-rounds')).dy,
-        lessThan(tester.getTopLeft(field('agent-max-calls')).dy),
-      );
       await reveal(field('agent-history-retention'));
       await tester.enterText(field('agent-history-retention'), '30');
       expect(tester.takeException(), isNull);
@@ -106,8 +74,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(AgentPreferencesSettingsPage), findsNothing);
       expect(app.agent.settings.systemInstructions, 'Use concise replies.');
-      expect(app.agent.settings.maxModelRounds, 12);
-      expect(app.agent.settings.maxToolCalls, 36);
       expect(app.agent.settings.historyRetentionDays, 30);
       expect(tester.takeException(), isNull);
     },

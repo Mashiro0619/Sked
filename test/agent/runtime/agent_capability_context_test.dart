@@ -249,7 +249,6 @@ class _Harness {
       endpoint: 'https://fixture.example/v1',
       model: 'fixture',
       protocol: protocol,
-      maxModelRounds: maxRounds,
       models: const [
         AgentModelConfig(
           id: 'fixture',
@@ -289,6 +288,7 @@ class _Harness {
       executeTool: h.core.tools.execute,
       onRunSettled: h.core.tools.finishScope,
       onOpenSettings: () {},
+      limits: AgentRuntimeLimits(maxModelRounds: maxRounds),
     );
     return h;
   }

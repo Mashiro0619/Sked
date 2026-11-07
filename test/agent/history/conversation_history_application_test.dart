@@ -17,7 +17,6 @@ import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/references/agent_composer_reference.dart';
 import 'package:sked/agent/skills/shared_skill_loader.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
-import 'package:sked/agent/runtime/agent_runtime_controller.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/application/resource_contracts.dart';
@@ -906,51 +905,38 @@ void main() {
   });
 
   for (final budget in [
-    AgentRuntimeError.roundBudgetExceeded,
-    AgentRuntimeError.toolBudgetExceeded,
+    ProviderError.timeout,
+    ProviderError.incompleteResponse,
   ]) {
     for (final restart in [false, true]) {
       test(
-        'redo ${budget.name} continues with a fresh budget after restart=$restart',
+        'redo provider ${budget.name} can continue after restart=$restart',
         () async {
           final conversation = await ready();
           createCalendarScript();
           await app.agent.runtime.send(conversation.id, 'Create a calendar');
           final original = app.agent.conversations.find(conversation.id)!;
-          await app.agent.configurePreferences(
-            app.agent.settings.copyWith(
-              maxModelRounds: budget == AgentRuntimeError.roundBudgetExceeded
-                  ? 1
-                  : 24,
-              maxToolCalls: budget == AgentRuntimeError.toolBudgetExceeded
-                  ? 1
-                  : 128,
-            ),
-          );
-          provider.respond = (request) => request.tools.isEmpty
-              ? _done('The recorded discovery completed. Further work remains.')
-              : ProviderResponse(
-                  text: '',
-                  finishReason: 'tool_calls',
-                  toolCalls: [
-                    ProviderToolCall(
-                      id: 'redo-discover',
-                      name: 'capabilities.describe',
-                      arguments: '{"names":["events.list"]}',
-                    ),
-                    if (budget == AgentRuntimeError.toolBudgetExceeded)
-                      ProviderToolCall(
-                        id: 'redo-skill',
-                        name: 'skills.search',
-                        arguments: '{}',
-                      ),
-                  ],
-                  usage: const ProviderUsage(
-                    inputTokens: 1200000,
-                    outputTokens: 10000,
-                    totalTokens: 1210000,
-                  ),
-                );
+          var discovered = false;
+          provider.respond = (_) {
+            if (discovered) throw ProviderException(budget);
+            discovered = true;
+            return ProviderResponse(
+              text: '',
+              finishReason: 'tool_calls',
+              toolCalls: [
+                ProviderToolCall(
+                  id: 'redo-discover',
+                  name: 'capabilities.describe',
+                  arguments: '{"names":["events.list"]}',
+                ),
+              ],
+              usage: const ProviderUsage(
+                inputTokens: 1200000,
+                outputTokens: 10000,
+                totalTokens: 1210000,
+              ),
+            );
+          };
           await app.agent.history.editAndRedo(
             conversation.id,
             original.messages.first.id,
@@ -959,7 +945,7 @@ void main() {
           final interrupted = app.agent.conversations.find(conversation.id)!;
           final batch = interrupted.pendingRedo!;
           expect(batch.phase, ConversationRedoPhase.running);
-          expect(batch.lastError, budget.name);
+          expect(batch.lastError, 'provider.${budget.name}');
           expect(interrupted.runs.single.id, batch.replayRunId);
           expect(
             interrupted.runs.single.requests.first.usage!.totalTokens,
@@ -969,29 +955,8 @@ void main() {
             interrupted.runs.single.status,
             ConversationRunStatus.interrupted,
           );
-          expect(
-            interrupted.runs.single.requests,
-            hasLength(budget == AgentRuntimeError.toolBudgetExceeded ? 2 : 1),
-          );
-          if (budget == AgentRuntimeError.toolBudgetExceeded) {
-            expect(provider.requests.last.tools, isEmpty);
-            expect(interrupted.runs.single.tools.single.id, 'redo-discover');
-            final skipped = interrupted.messages.singleWhere(
-              (message) =>
-                  message.role == ConversationRole.tool &&
-                  message.toolCallId == 'redo-skill',
-            );
-            expect(jsonDecode(skipped.text)['status'], 'not_executed');
-            expect(
-              interrupted.messages.any(
-                (message) =>
-                    message.text ==
-                    'The recorded discovery completed. Further work remains.',
-              ),
-              true,
-            );
-          }
-
+          expect(interrupted.runs.single.requests, hasLength(2));
+          expect(interrupted.runs.single.tools.single.id, 'redo-discover');
           if (restart) {
             final mainStorage = WorkspaceMemoryStorage(
               app.session.committedData,
@@ -1327,70 +1292,60 @@ void main() {
     },
   );
 
-  test(
-    'tool budget cancellation keeps the entire recorded turn editable',
-    () async {
-      final conversation = await ready();
-      await app.agent.configurePreferences(
-        app.agent.settings.copyWith(maxToolCalls: 1),
+  test('explicit stop keeps the entire completed tool turn editable', () async {
+    final conversation = await ready();
+    final waiting = Completer<void>();
+    final response = Completer<ProviderResponse>();
+    var requestCount = 0;
+    provider.respond = (_) {
+      if (requestCount++ > 0) {
+        waiting.complete();
+        return response.future;
+      }
+      return ProviderResponse(
+        text: '',
+        finishReason: 'tool_calls',
+        toolCalls: [
+          for (var index = 0; index < 2; index++)
+            ProviderToolCall(
+              id: 'read-call-$index',
+              name: 'capabilities.describe',
+              arguments: '{"names":["mutation.prepare"]}',
+            ),
+        ],
       );
-      expect(app.agent.settings.maxToolCalls, 1);
-      provider.respond = (request) => request.tools.isEmpty
-          ? _done('One discovery completed and one call was skipped.')
-          : ProviderResponse(
-              text: '',
-              toolCalls: [
-                for (var index = 0; index < 2; index++)
-                  ProviderToolCall(
-                    id: 'budget-call-$index',
-                    name: 'capabilities.describe',
-                    arguments: jsonEncode({
-                      'names': ['mutation.prepare'],
-                    }),
-                  ),
-              ],
-              finishReason: 'tool_calls',
-            );
-      await app.agent.runtime.send(conversation.id, 'Describe twice');
-      final stopped = app.agent.conversations.find(conversation.id)!;
-      expect(stopped.status, ConversationStatus.interrupted);
-      expect(
-        stopped.turns.single.messageIds,
-        stopped.messages.map((message) => message.id).toList(),
-      );
-      final skipped = stopped.messages.singleWhere(
-        (message) =>
-            message.role == ConversationRole.tool &&
-            message.toolCallId == 'budget-call-1',
-      );
-      expect(jsonDecode(skipped.text)['status'], 'not_executed');
-      final summary = jsonDecode(stopped.messages.last.text) as Map;
-      expect(summary['kind'], 'agent_budget_summary');
-      expect(summary['reason'], 'tools');
-      expect(summary['counts'], {
-        'completed': 1,
-        'failed': 0,
-        'notStarted': 1,
-        'unknown': 0,
-      });
-      expect(
-        app.agent.runtime.state.value.runFor(conversation.id).errorMessage,
-        'toolBudgetExceeded',
-      );
-      provider.respond = (_) => _done('Edited');
-      await app.agent.history.editAndRedo(
-        conversation.id,
-        stopped.messages.first.id,
-        'Describe only',
-      );
-      final edited = app.agent.conversations.find(conversation.id)!;
-      expect(edited.pendingRedo, isNull);
-      expect(
-        edited.historyVersions.single.messages,
-        hasLength(stopped.messages.length),
-      );
-    },
-  );
+    };
+    final sending = app.agent.runtime.send(conversation.id, 'Describe twice');
+    await waiting.future;
+    await app.agent.runtime.stop(conversation.id);
+    response.complete(_done('Late response'));
+    await sending;
+    final stopped = app.agent.conversations.find(conversation.id)!;
+    expect(stopped.status, ConversationStatus.interrupted);
+    expect(
+      stopped.turns.single.messageIds,
+      stopped.messages.map((message) => message.id).toList(),
+    );
+    expect(stopped.runs.single.tools, hasLength(2));
+    expect(
+      stopped.runs.single.tools.every(
+        (tool) => tool.outcome == ConversationAttemptOutcome.completed,
+      ),
+      isTrue,
+    );
+    provider.respond = (_) => _done('Edited');
+    await app.agent.history.editAndRedo(
+      conversation.id,
+      stopped.messages.first.id,
+      'Describe only',
+    );
+    final edited = app.agent.conversations.find(conversation.id)!;
+    expect(edited.pendingRedo, isNull);
+    expect(
+      edited.historyVersions.single.messages,
+      hasLength(stopped.messages.length),
+    );
+  });
 
   test('legacy ownership refuses undo without creating a batch', () async {
     final conversation = await ready();

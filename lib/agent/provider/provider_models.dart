@@ -34,28 +34,28 @@ class ProviderRequest {
 
 class ProviderLimits {
   const ProviderLimits({
-    this.totalTimeout = const Duration(minutes: 5),
-    this.idleTimeout = const Duration(minutes: 2),
-    this.maxRequestBytes = 1024 * 1024,
-    this.maxAttachmentBytes = 48 * 1000 * 1000,
+    this.totalTimeout,
+    this.idleTimeout,
+    this.maxRequestBytes,
+    this.maxAttachmentBytes,
     this.maxResponseBytes = 8 * 1024 * 1024,
     this.maxEventBytes = 512 * 1024,
     this.maxToolArgumentBytes = 128 * 1024,
-    this.maxToolCalls = 32,
+    this.maxToolCalls,
     this.maxOutputTokens,
     this.maxTotalTokens,
   });
 
-  final Duration totalTimeout;
-  final Duration idleTimeout;
-  final int maxRequestBytes;
+  final Duration? totalTimeout;
+  final Duration? idleTimeout;
+  final int? maxRequestBytes;
 
   /// Raw binary input budget, independent from the text/tool JSON budget.
-  final int maxAttachmentBytes;
+  final int? maxAttachmentBytes;
   final int maxResponseBytes;
   final int maxEventBytes;
   final int maxToolArgumentBytes;
-  final int maxToolCalls;
+  final int? maxToolCalls;
 
   /// Null leaves output length to the selected model/service.
   final int? maxOutputTokens;

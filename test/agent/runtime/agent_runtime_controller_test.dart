@@ -430,6 +430,47 @@ void main() {
     );
   }
 
+  testWidgets(
+    'ordinary tool and user-input waits have no elapsed-time deadline',
+    (tester) async {
+      final release = Completer<void>();
+      var entered = false;
+      var cancelled = false;
+      var rounds = 0;
+      final h = await _Harness.create(
+        stopwatchFactory: tester.binding.clock.stopwatch,
+        handler: (_, _) => _events(
+          rounds++ == 0
+              ? _response('', calls: [_call('input')])
+              : _response('done'),
+        ),
+        execute: (_, scope, _) async {
+          entered = true;
+          unawaited(scope.whenCancelled.then((_) => cancelled = true));
+          await release.future;
+          scope.checkActive();
+          return {'status': 'read'};
+        },
+      );
+      addTearDown(h.dispose);
+      final sending = h.runtime.send(h.id, 'Wait for the requested input.');
+      await tester.pump();
+      expect(entered, isTrue);
+      await tester.pump(const Duration(hours: 1));
+      expect(h.runtime.isRunning(h.id), isTrue);
+      expect(cancelled, isFalse);
+      expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
+      release.complete();
+      await tester.pump();
+      await sending;
+      expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
+      expect(
+        h.repository.find(h.id)!.runs.single.status,
+        ConversationRunStatus.completed,
+      );
+    },
+  );
+
   for (final budget in ['tool', 'total']) {
     testWidgets(
       '$budget deadline preserves execution time across a long approval',
@@ -4512,47 +4553,44 @@ void registerRecoveryTests() {
     },
   );
 
-  test(
-    'shared user instructions and run budgets use the saved settings snapshot',
-    () async {
-      final h = await _Harness.create(
-        handler: (request, _) {
-          expect(
-            request.messages.first.text,
-            contains('Prefer morning appointments.'),
-          );
-          return _events(_response('', calls: [_call('budget-call')]));
-        },
-      );
-      addTearDown(h.dispose);
-      h.settings = h.settings.copyWith(
-        systemInstructions: 'Prefer morning appointments.',
-        maxModelRounds: 1,
-      );
-      await h.runtime.send(h.id, 'check the agenda');
-      expect(h.provider.requests, hasLength(1));
-      expect(
-        h.runtime.state.value.runFor(h.id).errorMessage,
-        'roundBudgetExceeded',
-      );
-      final saved = h.repository.find(h.id)!;
-      final tool = saved.messages
-          .where((message) => message.role == ConversationRole.tool)
-          .single;
-      expect(tool.toolCallId, 'budget-call');
-      expect(jsonDecode(tool.text)['status'], 'read');
-      expect(
-        saved.runs.single.tools.single.outcome,
-        ConversationAttemptOutcome.completed,
-      );
-      expect(saved.messages.last.role, ConversationRole.notice);
-      final summary = jsonDecode(saved.messages.last.text) as Map;
-      expect(summary['kind'], 'agent_budget_summary');
-      expect(summary['reason'], 'rounds');
-      expect((summary['requests'] as Map)['limit'], 1);
-      expect((summary['counts'] as Map)['completed'], 1);
-    },
-  );
+  test('saved instructions accompany explicitly bounded host runs', () async {
+    final h = await _Harness.create(
+      limits: const AgentRuntimeLimits(maxModelRounds: 1),
+      handler: (request, _) {
+        expect(
+          request.messages.first.text,
+          contains('Prefer morning appointments.'),
+        );
+        return _events(_response('', calls: [_call('budget-call')]));
+      },
+    );
+    addTearDown(h.dispose);
+    h.settings = h.settings.copyWith(
+      systemInstructions: 'Prefer morning appointments.',
+    );
+    await h.runtime.send(h.id, 'check the agenda');
+    expect(h.provider.requests, hasLength(1));
+    expect(
+      h.runtime.state.value.runFor(h.id).errorMessage,
+      'roundBudgetExceeded',
+    );
+    final saved = h.repository.find(h.id)!;
+    final tool = saved.messages
+        .where((message) => message.role == ConversationRole.tool)
+        .single;
+    expect(tool.toolCallId, 'budget-call');
+    expect(jsonDecode(tool.text)['status'], 'read');
+    expect(
+      saved.runs.single.tools.single.outcome,
+      ConversationAttemptOutcome.completed,
+    );
+    expect(saved.messages.last.role, ConversationRole.notice);
+    final summary = jsonDecode(saved.messages.last.text) as Map;
+    expect(summary['kind'], 'agent_budget_summary');
+    expect(summary['reason'], 'rounds');
+    expect((summary['requests'] as Map)['limit'], 1);
+    expect((summary['counts'] as Map)['completed'], 1);
+  });
 }
 
 const _key = 'sk-runtime-fixture-key';

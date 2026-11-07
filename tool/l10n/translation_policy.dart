@@ -52,6 +52,7 @@ const commonEnglishFallbacks = <String>{
   'agentReferenceFiles',
   'agentBudgetSummaryTitle',
   'agentBudgetSummaryTokenLimit',
+  'agentBudgetSummaryRecordedUsage',
   'agentBudgetSummaryReportedUsage',
   'agentBudgetSummaryRequestTokenLimit',
   'agentBudgetSummaryRequestTokenUsage',

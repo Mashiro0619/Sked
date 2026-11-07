@@ -4269,6 +4269,11 @@ class AppLocalizationsZh extends AppLocalizations {
   ) {
     return '模型请求 $requests/$requestLimit 轮 · 已报告用量 $tokens Token';
   }
+
+  @override
+  String agentBudgetSummaryRecordedUsage(int requests, int tokens) {
+    return '模型请求 $requests 轮 · 已报告用量 $tokens Token';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -8537,5 +8542,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
     int tokens,
   ) {
     return '模型請求 $requests/$requestLimit 輪 · 已回報用量 $tokens Token';
+  }
+
+  @override
+  String agentBudgetSummaryRecordedUsage(int requests, int tokens) {
+    return '模型請求 $requests 輪 · 已回報用量 $tokens Token';
   }
 }

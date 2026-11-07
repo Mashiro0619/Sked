@@ -168,7 +168,7 @@ void main() {
           true,
         );
         expect(h.summary['reason'], 'rounds');
-        expect(h.summary['version'], 2);
+        expect(h.summary['version'], 3);
         expect(h.summary['tokens'], {
           'reported': 1940100,
           'unreportedRequests': 0,

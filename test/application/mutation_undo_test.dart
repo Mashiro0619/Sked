@@ -22,7 +22,7 @@ void main() {
             'agent.systemInstructions',
             'Use concise replies',
           ),
-          const SettingEdit.set('agent.maxModelRounds', 10),
+          const SettingEdit.set('agent.historyRetentionDays', 10),
         ],
       );
       final reversed = MutationUndoCompiler().prepare(
@@ -35,7 +35,7 @@ void main() {
         [],
         settings: [
           const SettingEdit.reset('agent.systemInstructions'),
-          const SettingEdit.reset('agent.maxModelRounds'),
+          const SettingEdit.reset('agent.historyRetentionDays'),
         ],
       );
       expect(

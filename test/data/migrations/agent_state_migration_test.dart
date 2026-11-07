@@ -110,6 +110,8 @@ void main() {
       expect(jsonEncode(old), before);
       expect(first['agentSettings'], {
         ...const AgentSettings().toJson(),
+        'maxModelRounds': 24,
+        'maxToolCalls': 128,
         'maxTotalTokens': 100000,
       });
       expect(first['applicationLedger'], isNull);
