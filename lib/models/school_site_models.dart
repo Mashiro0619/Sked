@@ -4,7 +4,6 @@ import 'dart:convert';
 
 import '../l10n/app_locale.dart';
 import '../utils/unique_id.dart';
-import 'import_count_limits.dart';
 
 const schoolSiteStorageSchema = 'school-site-storage';
 const schoolSiteStorageVersion = 2;
@@ -149,11 +148,6 @@ SchoolSiteImportPreview decodeSchoolSitesForImport(
   if (decoded is! List) {
     throw const FormatException('School site JSON format is invalid.');
   }
-  validateImportCounts(
-    decoded,
-    kind: ImportCountKind.schoolSites,
-    localeCode: localeCode,
-  );
 
   final sites = <SchoolSite>[];
   final issues = <SchoolSiteImportIssue>[];

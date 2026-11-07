@@ -6,7 +6,6 @@ import '../l10n/app_locale.dart';
 import '../utils/constants.dart';
 import '../utils/localized_names.dart';
 import 'app_data.dart';
-import 'import_count_limits.dart';
 import 'school_site_models.dart';
 
 class AppBackupData {
@@ -69,13 +68,6 @@ AppBackupData _decodeAppBackup(
         importFileVersionUnsupportedMessage(localeCode: localeCode),
       );
     }
-    if (externalImport) {
-      validateImportCounts(
-        envelope.data,
-        kind: ImportCountKind.backup,
-        localeCode: localeCode,
-      );
-    }
     final rawAppData = appDataStrictStringKeyedMap(envelope.data['appData']);
     final rawSchoolSites = envelope.data['schoolSites'];
     if (rawAppData == null || rawSchoolSites is! List) {
@@ -98,13 +90,6 @@ AppBackupData _decodeAppBackup(
     if (envelope.version > importExportVersion) {
       throw FormatException(
         importFileVersionUnsupportedMessage(localeCode: localeCode),
-      );
-    }
-    if (externalImport) {
-      validateImportCounts(
-        envelope.data,
-        kind: ImportCountKind.appData,
-        localeCode: localeCode,
       );
     }
     return AppBackupData(
