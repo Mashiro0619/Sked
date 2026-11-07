@@ -135,7 +135,7 @@ void main() {
         await _tap(tester, _key('agent-activity-toggle-turn-0'));
         expect(_key('agent-activity-list-turn-0'), findsOneWidget);
         expect(find.text('notifications.reminders'), findsNothing);
-        await _tap(tester, _key('agent-activity-tool-call-0-0'));
+        await _tap(tester, _key('agent-activity-toggle-call-0-0'));
         expect(_key('agent-activity-detail-call-0-0'), findsOneWidget);
         expect(find.text('notifications.reminders'), findsOneWidget);
         expect(find.textContaining('Stored output 0 / 0'), findsOneWidget);

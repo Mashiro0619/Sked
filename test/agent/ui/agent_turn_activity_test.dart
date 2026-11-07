@@ -33,6 +33,67 @@ void main() {
   );
   Finder key(String value) => find.byKey(ValueKey(value));
 
+  for (final direction in TextDirection.values) {
+    testWidgets('inline activity controls fit their text in $direction', (
+      tester,
+    ) async {
+      addTearDown(tester.view.reset);
+      await mountAgentUi(
+        tester,
+        Directionality(
+          textDirection: direction,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [AgentTurnActivity(activity: activity(count: 2))],
+          ),
+        ),
+        size: const Size(900, 700),
+      );
+      final toggle = key('agent-activity-toggle-turn');
+      final text = find.descendant(of: toggle, matching: find.byType(Text));
+      final arrow = find.descendant(
+        of: toggle,
+        matching: find.byIcon(
+          direction == TextDirection.ltr
+              ? Icons.chevron_right_rounded
+              : Icons.chevron_left_rounded,
+        ),
+      );
+      expect(tester.getSize(toggle).width, lessThan(300));
+      expect(tester.getSize(toggle).height, 32);
+      final textBounds = tester.getRect(text);
+      final arrowBounds = tester.getRect(arrow);
+      final gap = direction == TextDirection.ltr
+          ? arrowBounds.left - textBounds.right
+          : textBounds.left - arrowBounds.right;
+      expect(gap, closeTo(4, .01));
+      await tester.tapAt(
+        Offset(
+          direction == TextDirection.ltr ? 700 : 100,
+          tester.getCenter(toggle).dy,
+        ),
+      );
+      await tester.pump();
+      expect(key('agent-activity-list-turn'), findsNothing);
+      await tester.tap(toggle);
+      await tester.pumpAndSettle();
+      final branch = key('agent-activity-branch-turn');
+      final leading = find.descendant(
+        of: toggle,
+        matching: find.byIcon(Icons.check_rounded),
+      );
+      final borderEdge = direction == TextDirection.ltr
+          ? tester.getRect(branch).left
+          : tester.getRect(branch).right;
+      expect(borderEdge, closeTo(tester.getCenter(leading).dx, .01));
+      expect(
+        tester.getSize(key('agent-activity-toggle-tool-0')).width,
+        lessThan(600),
+      );
+      expect(tester.takeException(), isNull);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+  }
+
   testWidgets(
     'running activity text remains readable on a dark narrow surface',
     (tester) async {

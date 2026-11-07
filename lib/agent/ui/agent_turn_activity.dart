@@ -4,10 +4,10 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
-import '../../theme/sked_menu_style.dart';
 import '../../theme/sked_surface.dart';
 import 'agent_activity_summary.dart';
 import 'agent_conversation_timeline.dart';
+import 'agent_inline_disclosure_header.dart';
 import 'agent_selectable_text.dart';
 
 String agentToolActivityLabel(AgentToolActivity tool, AppLocalizations l) =>
@@ -81,6 +81,8 @@ class AgentActivityDisclosure extends StatefulWidget {
     required this.child,
     this.subtitle,
     this.statusLabel,
+    this.statusIcon,
+    this.semanticsLabel,
     this.initiallyExpanded = false,
     this.active = true,
     this.interactive = true,
@@ -90,6 +92,8 @@ class AgentActivityDisclosure extends StatefulWidget {
   final String title;
   final String? subtitle;
   final String? statusLabel;
+  final IconData? statusIcon;
+  final String? semanticsLabel;
   final AgentToolActivityStatus status;
   final Widget child;
   final bool initiallyExpanded;
@@ -127,7 +131,6 @@ class _AgentActivityDisclosureState extends State<AgentActivityDisclosure> {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final enabled = widget.active && widget.interactive;
-    final extent = SkedMenuStyle.of(context).desktop ? 32.0 : 48.0;
     final status = widget.statusLabel;
     final label = [widget.title, ?status].join(' · ');
     final revision = _revision;
@@ -150,98 +153,36 @@ class _AgentActivityDisclosureState extends State<AgentActivityDisclosure> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Semantics(
-          button: true,
-          enabled: enabled,
+        AgentInlineDisclosureHeader(
+          title: label,
+          subtitle: widget.subtitle,
+          semanticsLabel:
+              widget.semanticsLabel ?? [label, ?widget.subtitle].join(' · '),
           expanded: _expanded,
-          label: label,
-          excludeSemantics: true,
           onTap: enabled ? toggle : null,
-          child: KeyedSubtree(
-            key: ValueKey(('activity-controls', revision)),
-            child: Material(
-              type: MaterialType.transparency,
-              child: InkWell(
-                key: ValueKey('agent-activity-toggle-${widget.id}'),
-                borderRadius: BorderRadius.circular(8),
-                onTap: enabled ? toggle : null,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: extent),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          agentActivityStatusIcon(widget.status),
-                          size: 16,
-                          color: agentActivityStatusColor(
-                            widget.status,
-                            colors,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                label,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: agentActivityStatusColor(
-                                    widget.status,
-                                    colors,
-                                  ),
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              if (widget.subtitle case final subtitle?)
-                                Text(
-                                  subtitle,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: colors.onSurfaceVariant,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          _expanded
-                              ? Icons.expand_less_rounded
-                              : Icons.chevron_right_rounded,
-                          size: 18,
-                          color: colors.onSurfaceVariant,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          toggleKey: ValueKey('agent-activity-toggle-${widget.id}'),
+          controlsKey: ValueKey(('activity-controls', revision)),
+          titleStyle: theme.textTheme.bodySmall?.copyWith(
+            color: agentActivityStatusColor(widget.status, colors),
+          ),
+          leading: Icon(
+            widget.statusIcon ?? agentActivityStatusIcon(widget.status),
+            size: 16,
+            color: agentActivityStatusColor(widget.status, colors),
           ),
         ),
         if (_expanded)
           Padding(
-            padding: const EdgeInsetsDirectional.only(
-              start: 24,
-              top: 4,
-              bottom: 8,
-            ),
+            padding: const EdgeInsetsDirectional.only(start: 16, bottom: 4),
             child: DecoratedBox(
+              key: ValueKey('agent-activity-branch-${widget.id}'),
               decoration: BoxDecoration(
                 border: BorderDirectional(
-                  start: BorderSide(color: colors.outlineVariant),
+                  start: BorderSide(color: colors.outlineVariant, width: 1.5),
                 ),
               ),
               child: Padding(
-                padding: const EdgeInsetsDirectional.only(start: 12),
+                padding: const EdgeInsetsDirectional.only(start: 8),
                 child: ExcludeFocus(
                   excluding: !enabled,
                   child: ExcludeSemantics(

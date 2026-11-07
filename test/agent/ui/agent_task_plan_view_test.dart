@@ -22,7 +22,7 @@ void main() {
     ),
   );
 
-  testWidgets('a compact plan expands to show statuses and blocked detail', (
+  testWidgets('a compact plan shows status icons and expands blocked detail', (
     tester,
   ) async {
     addTearDown(tester.view.reset);
@@ -32,8 +32,15 @@ void main() {
     await tester.tap(find.text('Task plan · 1/4'));
     await tester.pumpAndSettle();
     for (final status in ['Pending', 'In progress', 'Completed', 'Blocked']) {
-      expect(find.text(status), findsOneWidget);
+      expect(find.text(status), findsNothing);
     }
+    expect(find.byIcon(Icons.radio_button_unchecked), findsOneWidget);
+    expect(find.byIcon(Icons.timelapse), findsOneWidget);
+    expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
+    expect(find.byIcon(Icons.error_outline), findsOneWidget);
+    expect(find.text('Waiting for the required information'), findsNothing);
+    await tester.tap(find.text('Review the result'));
+    await tester.pumpAndSettle();
     expect(find.text('Waiting for the required information'), findsOneWidget);
   });
 
@@ -44,9 +51,11 @@ void main() {
       await mountAgentUi(tester, view(_plan()));
       await tester.tap(find.text('Task plan · 1/4'));
       await tester.pumpAndSettle();
-      expect(find.text('Completed'), findsOneWidget);
+      expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
       expect(find.text('operation-1'), findsNothing);
       expect(find.text('Task plan · 1/4'), findsOneWidget);
+      await tester.tap(find.text('Review the result'));
+      await tester.pumpAndSettle();
       await mountAgentUi(tester, view(_plan(revision: 2)));
       expect(find.text('Task plan · 1/4'), findsOneWidget);
       expect(find.text('Waiting for the required information'), findsOneWidget);
@@ -95,9 +104,75 @@ void main() {
     );
     await tester.tap(find.text('Task plan · 0/1'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text(plan.steps.single.title));
+    await tester.pumpAndSettle();
     await tester.ensureVisible(find.text(plan.steps.single.detail!));
     await tester.pumpAndSettle();
     expect(find.text(plan.steps.single.detail!), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('step status remains available to semantics without extra rows', (
+    tester,
+  ) async {
+    addTearDown(tester.view.reset);
+    final semantics = tester.ensureSemantics();
+    try {
+      await mountAgentUi(tester, view(_plan()));
+      await tester.tap(find.text('Task plan · 1/4'));
+      await tester.pumpAndSettle();
+      for (final label in [
+        'Read the current information · Completed',
+        'Prepare a result · In progress',
+        'Save the result · Pending',
+        'Review the result · Blocked',
+      ]) {
+        expect(find.bySemanticsLabel(label), findsOneWidget);
+      }
+      final first = tester.getRect(
+        find.byKey(const ValueKey('agent-task-step-read')),
+      );
+      final second = tester.getRect(
+        find.byKey(const ValueKey('agent-task-step-prepare')),
+      );
+      expect(second.top - first.bottom, lessThanOrEqualTo(2));
+      expect(first.height, lessThanOrEqualTo(32));
+    } finally {
+      semantics.dispose();
+    }
+  }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+
+  testWidgets('an expanded step keeps its identity when plan steps reorder', (
+    tester,
+  ) async {
+    addTearDown(tester.view.reset);
+    var plan = _plan();
+    late StateSetter change;
+    await mountAgentUi(
+      tester,
+      StatefulBuilder(
+        builder: (context, update) {
+          change = update;
+          return view(plan);
+        },
+      ),
+    );
+    await tester.tap(find.text('Task plan · 1/4'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Review the result'));
+    await tester.pumpAndSettle();
+    final step = find.byKey(const ValueKey('agent-task-step-review'));
+    final element = tester.element(step);
+    change(() {
+      plan = AgentTaskPlan(
+        runId: plan.runId,
+        revision: 2,
+        steps: [plan.steps.last, ...plan.steps.take(3)],
+      );
+    });
+    await tester.pumpAndSettle();
+    expect(tester.element(step), same(element));
+    expect(find.text('Waiting for the required information'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

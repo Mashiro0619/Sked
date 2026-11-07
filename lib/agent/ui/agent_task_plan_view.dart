@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../interactions/agent_task_plan.dart';
 import 'agent_conversation_timeline.dart';
+import 'agent_inline_disclosure_header.dart';
 import 'agent_turn_activity.dart';
 
 class AgentTaskPlanLabels {
@@ -52,61 +53,64 @@ class AgentTaskPlanView extends StatelessWidget {
       initiallyExpanded: initiallyExpanded,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final step in plan.steps) ...[
-            if (step != plan.steps.first) const SizedBox(height: 16),
-            _step(context, step),
-          ],
-        ],
+        children: [for (final step in plan.steps) _step(context, step)],
       ),
     );
   }
 
   Widget _step(BuildContext context, AgentTaskPlanStep step) {
     final colors = Theme.of(context).colorScheme;
-    final (label, icon, color) = switch (step.status) {
+    final (label, icon, status) = switch (step.status) {
       AgentTaskStepStatus.pending => (
         labels.pending,
         Icons.radio_button_unchecked,
-        colors.onSurfaceVariant,
+        AgentToolActivityStatus.notStarted,
       ),
       AgentTaskStepStatus.inProgress => (
         labels.inProgress,
         Icons.timelapse,
-        colors.primary,
+        AgentToolActivityStatus.running,
       ),
       AgentTaskStepStatus.completed => (
         labels.completed,
         Icons.check_circle_outline,
-        colors.onSurfaceVariant,
+        AgentToolActivityStatus.completed,
       ),
       AgentTaskStepStatus.blocked => (
         labels.blocked,
         Icons.error_outline,
-        colors.error,
+        AgentToolActivityStatus.failed,
       ),
     };
-    return Row(
+    final semantics = '${step.title} · $label';
+    final detail = step.detail;
+    return Padding(
       key: ValueKey('agent-task-step-${step.id}'),
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ExcludeSemantics(child: Icon(icon, color: color, size: 20)),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(step.title, style: Theme.of(context).textTheme.titleSmall),
-              Text(label, style: TextStyle(color: color)),
-              if (step.detail != null) ...[
-                const SizedBox(height: 4),
-                Text(step.detail!),
-              ],
-            ],
-          ),
-        ),
-      ],
+      padding: const EdgeInsets.only(bottom: 2),
+      child: detail != null
+          ? AgentActivityDisclosure(
+              id: 'task-plan-${identity ?? plan.runId}-step-${step.id}',
+              title: step.title,
+              status: status,
+              statusIcon: icon,
+              semanticsLabel: semantics,
+              child: Text(
+                detail,
+                style: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(color: colors.onSurfaceVariant),
+              ),
+            )
+          : AgentInlineDisclosureHeader(
+              title: step.title,
+              semanticsLabel: semantics,
+              titleStyle: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(color: agentActivityStatusColor(status, colors)),
+              leading: Icon(
+                icon,
+                size: 16,
+                color: agentActivityStatusColor(status, colors),
+              ),
+            ),
     );
   }
 }

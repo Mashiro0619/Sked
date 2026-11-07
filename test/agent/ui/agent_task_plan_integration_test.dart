@@ -87,17 +87,23 @@ void main() {
       expect(
         find.descendant(
           of: planView,
-          matching: find.text(l.agentTaskPlanCompleted),
+          matching: find.byIcon(Icons.check_circle_outline),
         ),
         findsOneWidget,
       );
       expect(
         find.descendant(
           of: planView,
-          matching: find.text(l.agentTaskPlanBlocked),
+          matching: find.byIcon(Icons.error_outline),
         ),
         findsOneWidget,
       );
+      expect(
+        find.text('Waiting for the user to provide the missing information'),
+        findsNothing,
+      );
+      await tester.tap(find.text('Review the result'));
+      await tester.pumpAndSettle();
       expect(
         find.text('Waiting for the user to provide the missing information'),
         findsOneWidget,
@@ -251,6 +257,12 @@ void main() {
       scale: 2,
     );
     await expand(tester);
+    final step = find.text(
+      'Review the detailed information needed to finish this task',
+    );
+    await tester.ensureVisible(step);
+    await tester.tap(step);
+    await tester.pumpAndSettle();
     await tester.ensureVisible(
       find.text('Waiting for the user to provide the missing information'),
     );
