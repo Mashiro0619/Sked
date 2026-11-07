@@ -93,7 +93,7 @@ class AgentRuntimeLimits {
     this.maxToolResultCharacters = 512 * 1024,
     this.totalTimeout = const Duration(minutes: 10),
     this.toolTimeout = const Duration(minutes: 1),
-    this.providerLimits = const ProviderLimits(),
+    this.providerLimits = const ProviderLimits(maxTotalTokens: 1000000),
   });
   final int maxModelRounds;
   final int maxToolCalls;
