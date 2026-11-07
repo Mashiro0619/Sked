@@ -240,10 +240,12 @@ class AgentTranscriptState extends State<AgentTranscript> {
       if (ids.isNotEmpty) _center = ids[centerIndex];
       _itemKeys.removeWhere((id, _) => !idSet.contains(id));
 
+      // The semantic row and its content share one identity when recentering
+      // replaces the scrollable; retained descendants keep the same parent.
       Widget item(int index) => IndexedSemantics(
+        key: _itemKeys.putIfAbsent(ids[index], GlobalKey.new),
         index: index,
         child: Align(
-          key: _itemKeys.putIfAbsent(ids[index], GlobalKey.new),
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 812),

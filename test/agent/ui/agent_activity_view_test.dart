@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' as ui;
 
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -477,6 +479,114 @@ void main() {
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
   );
 
+  testWidgets(
+    'folding a read process preserves descendant semantic parents during recentering',
+    (tester) async {
+      final semantics = tester.ensureSemantics();
+      try {
+        final fixture = await _mountFixture(
+          tester,
+          tools: 2,
+          result: jsonEncode({
+            'items': List.filled(48, 'Complete query output'),
+          }),
+          size: const Size(1280, 820),
+          scale: 2,
+          brightness: Brightness.dark,
+        );
+        await _tap(tester, _key('agent-activity-toggle-turn-0'));
+        final query = _key('agent-activity-toggle-call-0-0');
+        await _tap(tester, query);
+        final detail = _key('agent-activity-detail-call-0-0');
+        await tester.ensureVisible(detail);
+        await tester.drag(detail, const Offset(0, -220));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(query);
+        await tester.pumpAndSettle();
+        await revealAgentTranscriptControl(tester, query);
+        await tester.tap(query.hitTestable());
+        await tester.pumpAndSettle();
+        await _tap(tester, _key('agent-activity-toggle-turn-0'));
+        final process = _key('agent-process-toggle-turn-0');
+        await tester.ensureVisible(process);
+        await tester.pumpAndSettle();
+        await revealAgentTranscriptControl(tester, process);
+        _expectTranscriptSemanticIndexes(tester, fixture.id);
+        final before = _semanticParents(tester);
+        final disclosure = find
+            .ancestor(
+              of: process,
+              matching: find.byWidgetPredicate(
+                (widget) =>
+                    widget is Semantics && widget.properties.expanded != null,
+              ),
+            )
+            .first;
+        final buttonId = tester.getSemantics(process).id;
+        final disclosureId = tester.getSemantics(disclosure).id;
+        final beforeData = tester.getSemantics(process).getSemanticsData();
+        expect(beforeData.flagsCollection.isButton, isTrue);
+        expect(
+          tester.getSemantics(disclosure).flagsCollection.isExpanded,
+          ui.Tristate.isTrue,
+        );
+        expect(beforeData.hasAction(ui.SemanticsAction.tap), isTrue);
+        final label = beforeData.label;
+        await tester.tap(process.hitTestable());
+        await tester.pumpAndSettle();
+        final after = _semanticParents(tester);
+        final moved = {
+          for (final id in before.keys)
+            if (after.containsKey(id) && before[id] != after[id]) id,
+        };
+        final nested = <String>[];
+        for (final id in moved) {
+          for (
+            var parent = before[id];
+            parent != null;
+            parent = before[parent]
+          ) {
+            if (moved.contains(parent)) nested.add('$parent -> $id');
+          }
+        }
+        expect(
+          moved,
+          isNotEmpty,
+          reason: 'The scroll origin must actually move.',
+        );
+        expect(
+          nested,
+          isEmpty,
+          reason: 'Retained descendants keep their semantic group.',
+        );
+        final afterData = tester.getSemantics(process).getSemanticsData();
+        expect(tester.getSemantics(process).id, buttonId);
+        expect(tester.getSemantics(disclosure).id, disclosureId);
+        expect(afterData.flagsCollection.isButton, isTrue);
+        expect(
+          tester.getSemantics(disclosure).flagsCollection.isExpanded,
+          ui.Tristate.isFalse,
+        );
+        expect(afterData.hasAction(ui.SemanticsAction.tap), isTrue);
+        expect(afterData.label, label);
+        expect(find.byType(AgentTurnActivity), findsNothing);
+        final position = tester
+            .widget<AgentTranscript>(find.byType(AgentTranscript))
+            .position;
+        expect(
+          position.anchor,
+          ValueKey(('agent-process', fixture.id, 'turn-0')),
+        );
+        expect(position.followLatest, isFalse);
+        _expectTranscriptSemanticIndexes(tester, fixture.id);
+        expect(tester.takeException(), isNull);
+      } finally {
+        semantics.dispose();
+      }
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
   for (final direction in TextDirection.values) {
     testWidgets(
       'the real narrow 2x $direction transcript reaches the final activity and complete copied output',
@@ -670,6 +780,56 @@ Future<void> _tap(WidgetTester tester, Finder target) async {
   expect(target.hitTestable(), findsOneWidget);
   await tester.tap(target.hitTestable());
   await tester.pumpAndSettle();
+}
+
+Map<int, int?> _semanticParents(WidgetTester tester) {
+  final result = <int, int?>{};
+  void visit(SemanticsNode node) {
+    result[node.id] = node.parent?.id;
+    node.visitChildren((child) {
+      visit(child);
+      return true;
+    });
+  }
+
+  for (final view in tester.binding.renderViews) {
+    final root = view.debugSemantics;
+    if (root != null) visit(root);
+  }
+  return result;
+}
+
+void _expectTranscriptSemanticIndexes(WidgetTester tester, String id) {
+  final transcript = tester.widget<AgentTranscript>(
+    find.byType(AgentTranscript),
+  );
+  final scrollNodes = <SemanticsNode>[];
+  void findScroll(SemanticsNode node) {
+    if (node.getSemanticsData().scrollChildCount != null) scrollNodes.add(node);
+    node.visitChildren((child) {
+      findScroll(child);
+      return true;
+    });
+  }
+
+  findScroll(tester.getSemantics(_key('agent-transcript-$id')));
+  expect(scrollNodes, hasLength(1));
+  final scroll = scrollNodes.single;
+  final data = scroll.getSemanticsData();
+  final indexedChildren = scroll
+      .debugListChildrenInOrder(DebugSemanticsDumpOrder.traversalOrder)
+      .where((child) => child.indexInParent != null)
+      .toList();
+  final indexes = [for (final child in indexedChildren) child.indexInParent!];
+  expect(data.scrollChildCount, transcript.children.length);
+  expect(indexes, isNotEmpty);
+  expect(indexes, orderedEquals([...indexes]..sort()));
+  expect(
+    data.scrollIndex,
+    indexedChildren
+        .firstWhere((child) => !child.flagsCollection.isHidden)
+        .indexInParent,
+  );
 }
 
 ConversationMessage _message(
