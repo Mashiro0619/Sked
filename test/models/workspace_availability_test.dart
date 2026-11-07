@@ -16,7 +16,7 @@ void main() {
       final migrated = AppData.decodeStorageSnapshot(jsonEncode(json));
       expect(migrated.enabledWorkspaces, AppMode.values.toSet());
       expect(migrated.hideHomeWorkspaceNavigation, isTrue);
-      expect(migrated.toJson()['schemaVersion'], 6);
+      expect(migrated.toJson()['schemaVersion'], 8);
     },
   );
   for (final active in [null, 'unknown', 'Student', 1]) {
