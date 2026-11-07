@@ -53,8 +53,8 @@ class _StreamProvider extends ProviderClient {
     required String apiKey,
     ProviderCancellationToken? cancellation,
   }) async* {
-    expect(apiKey, isEmpty);
-    expect(++requests, 1);
+    expectSync(apiKey, isEmpty);
+    expectSync(++requests, 1);
     for (final chunk in _chunks) {
       await Future<void>.delayed(const Duration(milliseconds: 16));
       if (cancellation!.isCancelled) {

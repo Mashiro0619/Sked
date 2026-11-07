@@ -192,7 +192,7 @@ class _WriteProvider extends ProviderClient {
     required String apiKey,
     ProviderCancellationToken? cancellation,
   }) async* {
-    expect(apiKey, isEmpty);
+    expectSync(apiKey, isEmpty);
     requests.add(request);
     final ProviderResponse response;
     switch (requests.length) {
@@ -201,7 +201,7 @@ class _WriteProvider extends ProviderClient {
           'names': ['mutation.apply'],
         });
       case 2:
-        expect(
+        expectSync(
           (_lastTool(request)['tools'] as List).map((tool) => tool['name']),
           contains('mutation.apply'),
         );
@@ -254,7 +254,7 @@ class _WaitingProvider extends ProviderClient {
     required String apiKey,
     ProviderCancellationToken? cancellation,
   }) {
-    expect(apiKey, isEmpty);
+    expectSync(apiKey, isEmpty);
     requests++;
     this.cancellation = cancellation;
     events.add(const ProviderTextDelta('Waiting for synthetic model output'));

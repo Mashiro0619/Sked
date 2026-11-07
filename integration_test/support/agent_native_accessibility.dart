@@ -95,17 +95,17 @@ class _PreviewProvider extends ProviderClient {
     required String apiKey,
     ProviderCancellationToken? cancellation,
   }) async* {
-    expect(closed, isFalse);
-    expect(apiKey, isEmpty);
-    expect(request.endpoint.host, 'native-ui.invalid');
-    expect(request.model, 'native-ui-fixture');
-    expect(cancellation, isNotNull);
-    expect(cancellation!.isCancelled, isFalse);
+    expectSync(closed, isFalse);
+    expectSync(apiKey, isEmpty);
+    expectSync(request.endpoint.host, 'native-ui.invalid');
+    expectSync(request.model, 'native-ui-fixture');
+    expectSync(cancellation, isNotNull);
+    expectSync(cancellation!.isCancelled, isFalse);
     requests++;
     final ProviderResponse response;
     switch (requests) {
       case 1:
-        expect(
+        expectSync(
           request.messages
               .lastWhere((item) => item.role == ProviderRole.user)
               .text,
@@ -115,7 +115,7 @@ class _PreviewProvider extends ProviderClient {
           'names': ['mutation.apply'],
         });
       case 2:
-        expect(
+        expectSync(
           (_lastTool(request)['tools'] as List).map((tool) => tool['name']),
           contains('mutation.apply'),
         );

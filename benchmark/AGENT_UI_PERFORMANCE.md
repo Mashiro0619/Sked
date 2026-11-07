@@ -239,6 +239,8 @@ this protocol's missing metadata or be relabeled as Agent transcript samples.
 The provider emits 96 fixed Markdown fragments at 16 ms intervals and a final
 complete response. It records actual emission timestamps, runtime text
 publication timestamps and lengths, engine frames, wall time and process RSS.
+The provider validates credentials and request count with `expectSync`, so its
+asynchronous events can run while the native frame pump is pending.
 The original history and final reply are read back from real storage after the
 measurement; the full reply digest must match the emitted content.
 
