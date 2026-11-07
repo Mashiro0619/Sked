@@ -2,6 +2,7 @@ import 'dart:async';
 
 import '../../application/operation_contracts.dart';
 import '../provider/provider_models.dart';
+import 'tool_outcome.dart';
 
 enum AgentOperationPhase {
   preparing,
@@ -49,10 +50,13 @@ class OperationExecutor {
       String planId,
     )
     commit,
+    void Function(String commitTool, String planId)? discardCandidate,
     OperationPrepared? onPrepared,
     FutureOr<void> Function(AgentOperationUpdate)? onUpdate,
   }) async {
     Map<String, Object?> prepared = const {};
+    String? ownedPlanId;
+    String? ownedCommitTool;
     Future<void> publish(
       AgentOperationPhase phase,
       Map<String, Object?> details,
@@ -80,6 +84,8 @@ class OperationExecutor {
       final commitTool = prepared['action'] is String
           ? 'external.commit'
           : 'mutation.commit';
+      ownedPlanId = planId;
+      ownedCommitTool = commitTool;
       scope.checkActive();
       if (scope.policy.mode == AgentPermissionMode.plan) {
         final result = {...prepared, 'status': 'preview'};
@@ -111,7 +117,19 @@ class OperationExecutor {
             entry.key: entry.value,
         ...await commit(commitTool, planId),
       };
-      await publish(_phase(result), result);
+      try {
+        await publish(_phase(result), result);
+      } catch (error) {
+        // The business receipt is authoritative once commit returns. A failed
+        // presentation write must never turn that completed action into a retry.
+        return {
+          ...result,
+          'recordingError': {
+            'code': 'operationProjectionWriteFailed',
+            'message': error.toString(),
+          },
+        };
+      }
       return result;
     } on OperationProblem catch (error) {
       await publish(
@@ -129,25 +147,23 @@ class OperationExecutor {
         'error': {'message': error.toString()},
       });
       rethrow;
+    } finally {
+      if (ownedPlanId != null) {
+        discardCandidate?.call(ownedCommitTool!, ownedPlanId);
+      }
     }
   }
 }
 
-AgentOperationPhase _phase(Map<String, Object?> result) {
-  if (result['status'] == 'outcome_unknown' ||
-      result['status'] == 'partial' ||
-      result['recoveryRequired'] == true ||
-      result['receiptFinalized'] == false) {
-    return AgentOperationPhase.unresolved;
-  }
-  if (result['status'] == 'cancelled' || result['status'] == 'not_executed') {
-    return AgentOperationPhase.cancelled;
-  }
-  if (result['status'] == 'failed' || result['error'] != null) {
-    return AgentOperationPhase.failed;
-  }
-  return AgentOperationPhase.completed;
-}
+AgentOperationPhase _phase(Map<String, Object?> result) =>
+    switch (ToolOutcome.fromResult(result).kind) {
+      ToolOutcomeKind.preview => AgentOperationPhase.previewed,
+      ToolOutcomeKind.cancelled => AgentOperationPhase.cancelled,
+      ToolOutcomeKind.correctableError => AgentOperationPhase.failed,
+      ToolOutcomeKind.needsReconciliation => AgentOperationPhase.unresolved,
+      ToolOutcomeKind.query ||
+      ToolOutcomeKind.saved => AgentOperationPhase.completed,
+    };
 
 String modelBusinessToolName(String name) => switch (name) {
   'mutation.prepare' => 'mutation.apply',

@@ -258,6 +258,8 @@ HTTP 传输许可与业务修改审批分别处理。只读计划和询问模式
 
 当前 `OperationErrorCode` 区分 `notFound`、`invalidArgument`、`conflict`、`approvalRequired`、`readOnly`、`busy`、`expired`、`storageFailure`、`outcomeUnknown`、`unsupported`、`cancelled` 等状态；外部回执另记录实际效果是否完成。成功回执包含实际对象 ID、世代/序号和结果；重复 operationId 的重试返回原回执，不能重新创建数据。
 
+`OperationExecutor` 使用 `ToolOutcome` 统一判定操作终态，待核对的持久结果优先于外部失败标签。业务保存完成后，展示记录写入失败保留已保存回执及具体记录错误；候选在调用结束时释放。验证见[操作终态与候选生命周期](../test/agent/operations/operation_executor_test.dart)。
+
 回执采用次要表面承载结果，状态与数量优先同排，对象、提醒和中止反馈仍直接可见；撤销与详情入口按可用宽度排列，窄窗或大字号可以换行并保留点击范围。完整详情按需展开。布局收紧不改变已保存、未完成与结果需核对的判定，也不隐藏尚未完成的外部效果。验证见[回执呈现](../test/agent/ui/agent_operation_card_test.dart)。
 
 当前 [AppDataVersions](../lib/models/app_data_commit.dart)是进程内域版本；跨重启幂等由 `ApplicationLedger` 与业务数据共同落盘的操作记录提供。`MutationCoordinator` 覆盖“业务保存成功、工具回复丢失、进程重启”的回执核对窗口，宿主操作也在提交前保存恢复身份。聊天日志不是业务成功或去重的唯一依据；本地回执不保证远端推理或计费 exactly-once。

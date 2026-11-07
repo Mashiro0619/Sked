@@ -16,15 +16,23 @@ class ToolOutcome {
     : payload = Map.unmodifiable(payload);
 
   factory ToolOutcome.fromResult(Map<String, Object?> result) {
-    if (result['recoveryRequired'] == true ||
-        result['receiptFinalized'] == false) {
+    final status = result['status'];
+    if (status == 'outcome_unknown' ||
+        status == 'outcomeUnknown' ||
+        status == 'partial' ||
+        result['recoveryRequired'] == true ||
+        result['receiptFinalized'] == false ||
+        (result['kind'] == 'external' &&
+            (status == 'effectsPending' ||
+                result['effectStatus'] == 'pending' ||
+                result['effectStatus'] == 'unknown' ||
+                result['dataStatus'] == 'unknown'))) {
       return ToolOutcome(ToolOutcomeKind.needsReconciliation, result);
     }
-    final status = result['status'];
     final kind = switch (status) {
       'preview' => ToolOutcomeKind.preview,
+      null when result['planId'] is String => ToolOutcomeKind.preview,
       'cancelled' || 'not_executed' => ToolOutcomeKind.cancelled,
-      'outcome_unknown' || 'partial' => ToolOutcomeKind.needsReconciliation,
       'failed' => ToolOutcomeKind.correctableError,
       _ when result['error'] != null => ToolOutcomeKind.correctableError,
       'committed' || 'applied' => ToolOutcomeKind.saved,
