@@ -382,6 +382,7 @@ class _AgentModelPickerState extends State<AgentModelPicker>
         childFocusNode: _focus,
         manageRouteHistory: false,
         style: menuStyle.compactPanelStyle.copyWith(
+          alignment: AlignmentDirectional.bottomEnd,
           maximumSize: WidgetStatePropertyAll(Size(width, height)),
         ),
         crossAxisUnconstrained: false,

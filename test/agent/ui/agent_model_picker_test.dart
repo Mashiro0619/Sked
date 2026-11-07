@@ -683,6 +683,82 @@ void main() {
     },
   );
 
+  for (final direction in TextDirection.values) {
+    testWidgets(
+      'model card keeps its trailing anchor as model and effort widths change in $direction',
+      (tester) async {
+        const shortModel = AgentModelConfig(
+          id: 'm',
+          reasoningEfforts: [
+            AgentReasoningEffort.minimal,
+            AgentReasoningEffort.max,
+          ],
+          defaultReasoningEffort: AgentReasoningEffort.max,
+        );
+        const longModel = AgentModelConfig(
+          id: 'a-very-long-model-name-with-a-different-control-width',
+          reasoningEfforts: [AgentReasoningEffort.minimal],
+          defaultReasoningEffort: AgentReasoningEffort.minimal,
+        );
+        await initialize(
+          tester,
+          models: const [shortModel, longModel],
+          currentSelection: shortModel.defaultSelection,
+        );
+        await mountAgentUi(
+          tester,
+          Directionality(
+            textDirection: direction,
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: SizedBox(
+                width: 440,
+                child: Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: AgentModelPicker(
+                    conversationId: id,
+                    delegate: delegate,
+                    layoutBuilder: (control, _) => control,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          size: const Size(900, 600),
+        );
+        await open(tester);
+        final trigger = find.byKey(const ValueKey('agent-model-picker'));
+        final panel = find.byKey(const ValueKey('agent-model-panel'));
+        final firstTrigger = tester.getRect(trigger);
+        final firstPanel = expectMenuSurfaceVisible(tester, panel);
+        double trailing(Rect rect) =>
+            direction == TextDirection.ltr ? rect.right : rect.left;
+        expect(trailing(firstPanel), closeTo(trailing(firstTrigger), .1));
+        for (final selection in [
+          const AgentModelSelection(
+            modelId: 'm',
+            reasoningEffort: AgentReasoningEffort.minimal,
+          ),
+          longModel.defaultSelection,
+          shortModel.defaultSelection,
+        ]) {
+          await delegate.setModelSelection(id, selection);
+          await tester.pumpAndSettle();
+          final nextTrigger = tester.getRect(trigger);
+          final nextPanel = expectMenuSurfaceVisible(tester, panel);
+          expect(trailing(nextTrigger), closeTo(trailing(firstTrigger), .1));
+          expect(trailing(nextPanel), closeTo(trailing(firstPanel), .1));
+          expect(nextPanel.width, closeTo(firstPanel.width, .1));
+          if (selection != shortModel.defaultSelection) {
+            expect(nextTrigger.width, isNot(closeTo(firstTrigger.width, .1)));
+          }
+        }
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.windows),
+    );
+  }
+
   testWidgets(
     'card and list keep their width and anchor edge during height interpolation',
     (tester) async {
