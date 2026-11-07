@@ -24,133 +24,72 @@ bool _hasTimetablePayload(Map<String, dynamic> json) {
       json.containsKey('courses');
 }
 
-/// Bounded JSON decoding shared by Agent imports and their previews.
+/// JSON decoding shared by Agent imports and their previews.
 /// This class performs no model or network request.
 class SchoolImportCandidateDecoder {
   const SchoolImportCandidateDecoder();
 
-  static const maxErrorMessageBytes = 4 * 1024;
-  static const int maxImportedCourseCount = 500;
-  static const int maxImportedPeriodTimeCount = 100;
-  static const int maxImportWarningCount = 100;
-  static const int maxImportedSemesterWeekCount = 100;
-  static const int maxImportedCoursePeriodCount = 100;
-  static const int maxImportedCustomFieldCount = 50;
-  static const int maxImportedTotalCustomFieldCount = 1000;
-  static const int maxImportedShortTextBytes = 2 * 1024;
-  static const int maxImportedLongTextBytes = 16 * 1024;
-  static const int maxImportedUrlBytes = 8 * 1024;
-  static const int maxImportedTotalStringBytes = 256 * 1024;
-  static void validateResponseBounds(Map<String, dynamic> responseJson) {
-    final budget = _ImportResponseBudget();
+  static void validateResponseFields(Map<String, dynamic> responseJson) {
     final timetable = _asStringKeyedMap(responseJson['timetable']);
-    if (timetable == null) {
-      return;
+    if (timetable == null) return;
+    void text(Object? value, String field, {bool required = false}) {
+      if (value == null && !required) return;
+      if (value is! String) {
+        throw FormatException('Import response $field is invalid.');
+      }
     }
-    budget.addString(
-      timetable['name'],
-      field: 'timetable name',
-      maxBytes: maxImportedShortTextBytes,
-    );
-    budget.addString(timetable['startDate'], field: 'start date', maxBytes: 64);
 
+    text(timetable['name'], 'timetable name');
+    text(timetable['startDate'], 'start date');
     final courses = timetable['courses'];
-    if (courses is List && courses.length > maxImportedCourseCount) {
-      throw const FormatException('Import response contains too many courses.');
-    }
     if (courses is List) {
-      for (final rawCourse in courses) {
-        final course = _asStringKeyedMap(rawCourse);
+      for (final raw in courses) {
+        final course = _asStringKeyedMap(raw);
         if (course == null) {
           throw const FormatException('Import response course is invalid.');
         }
-        for (final field in const ['name', 'teacher', 'location']) {
-          budget.addString(
-            course[field],
-            field: 'course $field',
-            maxBytes: maxImportedShortTextBytes,
-          );
+        for (final field in ['name', 'teacher', 'location', 'remarks']) {
+          text(course[field], 'course $field');
         }
-        budget.addString(
-          course['remarks'],
-          field: 'course remarks',
-          maxBytes: maxImportedLongTextBytes,
-        );
-        _validateRawListCount(
-          course['semesterWeeks'],
-          field: 'semester weeks',
-          maxCount: maxImportedSemesterWeekCount,
-        );
-        _validateRawListCount(
-          course['periods'],
-          field: 'periods',
-          maxCount: maxImportedCoursePeriodCount,
-        );
-        budget.addCustomFields(course['customFields']);
+        final custom = course['customFields'];
+        if (custom == null) continue;
+        if (custom is! Map) {
+          throw const FormatException('Import custom fields are invalid.');
+        }
+        for (final entry in custom.entries) {
+          text(entry.key, 'custom field key', required: true);
+          final value = entry.value;
+          if (value != null &&
+              value is! String &&
+              value is! bool &&
+              !(value is num && value.isFinite)) {
+            throw const FormatException(
+              'Import custom field value is invalid.',
+            );
+          }
+        }
       }
     }
-
-    final periodTimeSet = _asStringKeyedMap(timetable['periodTimeSet']);
-    budget.addString(
-      periodTimeSet?['name'],
-      field: 'period time set name',
-      maxBytes: maxImportedShortTextBytes,
+    text(
+      _asStringKeyedMap(timetable['periodTimeSet'])?['name'],
+      'period time set name',
     );
-    final periodTimes = periodTimeSet?['periodTimes'];
-    if (periodTimes is List &&
-        periodTimes.length > maxImportedPeriodTimeCount) {
-      throw const FormatException(
-        'Import response contains too many period times.',
-      );
-    }
     final meta = _asStringKeyedMap(responseJson['meta']);
-    budget.addString(
-      meta?['sourceUrl'],
-      field: 'source URL',
-      maxBytes: maxImportedUrlBytes,
-    );
-    budget.addString(
-      meta?['pageTitle'],
-      field: 'page title',
-      maxBytes: maxImportedShortTextBytes,
-    );
-    budget.addString(
-      meta?['parser'],
-      field: 'parser name',
-      maxBytes: maxImportedShortTextBytes,
-    );
-    final warnings = meta?['warnings'];
-    if (warnings is List && warnings.length > maxImportWarningCount) {
-      throw const FormatException(
-        'Import response contains too many warnings.',
-      );
+    for (final field in ['sourceUrl', 'pageTitle', 'parser']) {
+      text(meta?[field], field);
     }
+    final warnings = meta?['warnings'];
     if (warnings is List) {
       for (final warning in warnings) {
-        budget.addString(
-          warning,
-          field: 'warning',
-          maxBytes: maxImportedLongTextBytes,
-          mustBeString: true,
-        );
+        text(warning, 'warning', required: true);
       }
-    }
-  }
-
-  static void _validateRawListCount(
-    Object? value, {
-    required String field,
-    required int maxCount,
-  }) {
-    if (value is List && value.length > maxCount) {
-      throw FormatException('Import response contains too many $field.');
     }
   }
 
   static Map<String, dynamic>? _tryDecodeJson(String source) {
     try {
       return _asStringKeyedMap(jsonDecode(source));
-    } catch (_) {
+    } on FormatException {
       return null;
     }
   }
@@ -160,8 +99,6 @@ class SchoolImportCandidateDecoder {
       return _asStringKeyedMap(jsonDecode(source));
     } on FormatException {
       // Only invalid JSON can be a parser's object with surrounding text.
-    } catch (_) {
-      return null;
     }
 
     final trimmed = source.trim();
@@ -174,8 +111,6 @@ class SchoolImportCandidateDecoder {
         return _asStringKeyedMap(jsonDecode(fenceMatch.group(1) ?? ''));
       } on FormatException {
         // A fence body may itself contain explanatory text around an object.
-      } catch (_) {
-        return null;
       }
     }
 
@@ -192,7 +127,7 @@ class SchoolImportCandidateDecoder {
       final message = json['message'];
       return SchoolImportResponse.fromJson({
         'ok': false,
-        'message': message is String ? _boundedUtf8(message) : message,
+        'message': message,
         'meta': _asStringKeyedMap(json['meta']) ?? const {},
         'timetable': const {},
       });
@@ -219,134 +154,7 @@ class SchoolImportCandidateDecoder {
         'courses': rawTimetable['courses'] ?? const [],
       },
     };
-    validateResponseBounds(wrapped);
+    validateResponseFields(wrapped);
     return SchoolImportResponse.fromJson(wrapped);
-  }
-
-  static String _boundedUtf8(
-    String value, {
-    int maxBytes = maxErrorMessageBytes,
-  }) {
-    const marker = '\n\n[details truncated]';
-    if (maxBytes <= 0) {
-      return '';
-    }
-    final markerBytes = utf8.encode(marker).length;
-    if (maxBytes <= markerBytes) {
-      return '';
-    }
-
-    final contentBudget = maxBytes - markerBytes;
-    var totalBytes = 0;
-    var codeUnitOffset = 0;
-    var safeEnd = 0;
-    for (final rune in value.runes) {
-      totalBytes += switch (rune) {
-        <= 0x7f => 1,
-        <= 0x7ff => 2,
-        <= 0xffff => 3,
-        _ => 4,
-      };
-      codeUnitOffset += rune > 0xffff ? 2 : 1;
-      if (totalBytes <= contentBudget) {
-        safeEnd = codeUnitOffset;
-      }
-      if (totalBytes > maxBytes) {
-        return '${value.substring(0, safeEnd)}$marker';
-      }
-    }
-    return value;
-  }
-}
-
-class _ImportResponseBudget {
-  int _stringBytes = 0;
-  int _customFieldCount = 0;
-
-  void addString(
-    Object? value, {
-    required String field,
-    required int maxBytes,
-    bool mustBeString = false,
-  }) {
-    if (value == null) {
-      if (mustBeString) {
-        throw FormatException('Import response $field is invalid.');
-      }
-      return;
-    }
-    if (value is! String) {
-      throw FormatException('Import response $field is invalid.');
-    }
-    final bytes = _utf8Length(value);
-    if (bytes > maxBytes) {
-      throw FormatException('Import response $field is too long.');
-    }
-    _stringBytes += bytes;
-    if (_stringBytes >
-        SchoolImportCandidateDecoder.maxImportedTotalStringBytes) {
-      throw const FormatException('Import response contains too much text.');
-    }
-  }
-
-  void addCustomFields(Object? value) {
-    if (value == null) {
-      return;
-    }
-    if (value is! Map) {
-      throw const FormatException('Import response custom fields are invalid.');
-    }
-    if (value.length >
-        SchoolImportCandidateDecoder.maxImportedCustomFieldCount) {
-      throw const FormatException(
-        'Import response contains too many custom fields.',
-      );
-    }
-    _customFieldCount += value.length;
-    if (_customFieldCount >
-        SchoolImportCandidateDecoder.maxImportedTotalCustomFieldCount) {
-      throw const FormatException(
-        'Import response contains too many custom fields.',
-      );
-    }
-    for (final entry in value.entries) {
-      addString(
-        entry.key,
-        field: 'custom field key',
-        maxBytes: SchoolImportCandidateDecoder.maxImportedShortTextBytes,
-        mustBeString: true,
-      );
-      final customValue = entry.value;
-      if (customValue is String) {
-        addString(
-          customValue,
-          field: 'custom field value',
-          maxBytes: SchoolImportCandidateDecoder.maxImportedLongTextBytes,
-        );
-      } else if (customValue is num) {
-        if (!customValue.isFinite) {
-          throw const FormatException(
-            'Import response custom field value is invalid.',
-          );
-        }
-      } else if (customValue is! bool && customValue != null) {
-        throw const FormatException(
-          'Import response custom field value is invalid.',
-        );
-      }
-    }
-  }
-
-  int _utf8Length(String value) {
-    var result = 0;
-    for (final rune in value.runes) {
-      result += switch (rune) {
-        <= 0x7f => 1,
-        <= 0x7ff => 2,
-        <= 0xffff => 3,
-        _ => 4,
-      };
-    }
-    return result;
   }
 }

@@ -9,7 +9,6 @@ import '../../l10n/app_locale.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/agent_settings.dart';
 import '../../services/school_import_content_sanitizer.dart';
-import '../../utils/text_input_limits.dart';
 import '../../utils/unique_id.dart';
 import '../conversations/conversation_repository.dart';
 
@@ -140,13 +139,11 @@ class SchoolWebHandoffController {
       return pending;
     }
     if (_snapshot?.fingerprint != fingerprint) {
-      if (draft.content.trim().isEmpty ||
-          draft.content.length >
-              SchoolImportContentSanitizer.maxContentLength) {
+      if (draft.content.trim().isEmpty) {
         return Future.error(
           const OperationProblem(
             OperationErrorCode.invalidArgument,
-            'Review a non-empty bounded source before handing it off.',
+            'Review a non-empty source before handing it off.',
             field: 'content',
           ),
         );
@@ -162,7 +159,7 @@ class SchoolWebHandoffController {
         provenance: ConversationSourceProvenance(
           title: draft.title.trim().isEmpty
               ? l.schoolWebAgentSourceTitle
-              : truncateUtf16CodeUnits(draft.title, 256),
+              : draft.title,
           capturedAt: draft.capturedAt.toUtc(),
           reviewedAt: _clock().toUtc(),
           datasetGeneration: draft.datasetGeneration,

@@ -4,33 +4,19 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import '../models/school_import_models.dart';
-import 'school_import_content_sanitizer.dart';
+import '../utils/unique_id.dart';
 
 class SchoolWebImportPageService {
   const SchoolWebImportPageService();
 
-  static const int maxPlatformResultLength = 512 * 1024;
-  static const int maxDomNodeCount = 50000;
-  static const int maxDomDepth = 64;
-  static const int maxSourceOriginLength = 2048;
-  static const int maxSourceTitleLength = 512;
   static const String extractionProtocolPrefix = 'SKED_WEB_IMPORT_V1\n';
+  static const String extractionChunkPrefix = 'SKED_WEB_IMPORT_CHUNK_V1\n';
 
   static final String extractImportSourceScript =
       '''
 (() => {
-  const MAX_CONTENT = ${SchoolImportContentSanitizer.maxContentLength};
-  const MAX_NODES = $maxDomNodeCount;
-  const MAX_DEPTH = $maxDomDepth;
-  const MAX_SCANNED_TEXT = ${SchoolImportContentSanitizer.maxInputLength};
-  const MAX_ORIGIN = $maxSourceOriginLength;
-  const MAX_TITLE = $maxSourceTitleLength;
   const PROTOCOL = ${jsonEncode(extractionProtocolPrefix)};
   let output = '';
-  let reservedClosings = 0;
-  let visitedNodes = 0;
-  let scannedTextCharacters = 0;
-  let truncated = false;
 
   const elementKind = (tag) => {
     switch (tag) {
@@ -54,18 +40,6 @@ class SchoolWebImportPageService {
     }
   };
 
-  const canWrite = (length) =>
-    output.length + reservedClosings + length <= MAX_CONTENT;
-
-  const writeToken = (token) => {
-    if (!canWrite(token.length)) {
-      truncated = true;
-      return false;
-    }
-    output += token;
-    return true;
-  };
-
   const writeText = (value) => {
     if (typeof value !== 'string') return;
     let previousWasWhitespace = false;
@@ -84,11 +58,6 @@ class SchoolWebImportPageService {
           character >= '\\uD800' && character <= '\\uDFFF') {
         character = '\\uFFFD';
       }
-      if (scannedTextCharacters + characterLength > MAX_SCANNED_TEXT) {
-        truncated = true;
-        return;
-      }
-      scannedTextCharacters += characterLength;
       index += characterLength - 1;
       const isWhitespace =
         character === ' ' || character === '\\t' || character === '\\n' ||
@@ -105,10 +74,6 @@ class SchoolWebImportPageService {
         : character === '>'
         ? '&gt;'
         : character;
-      if (!canWrite(escaped.length)) {
-        truncated = true;
-        return;
-      }
       output += escaped;
     }
   };
@@ -158,92 +123,36 @@ class SchoolWebImportPageService {
     return attributes;
   };
 
-  let visit;
-  const visitChildren = (node, depth) => {
-    let children;
-    let length;
-    try {
-      children = node.childNodes;
-      length = children && children.length;
-    } catch (_) {
-      return;
+  const root = document.documentElement;
+  const pending = root ? [{node: root}] : [];
+  while (pending.length) {
+    const entry = pending.pop();
+    if (entry.closing) {
+      output += entry.closing;
+      continue;
     }
-    if (typeof length !== 'number' || !(length >= 0)) return;
-    if (length > MAX_NODES) length = MAX_NODES;
-    for (let index = 0; index < length; index += 1) {
-      let child;
-      try {
-        child = children[index];
-      } catch (_) {
-        continue;
-      }
-      if (child) visit(child, depth + 1);
-      if (truncated) break;
+    const node = entry.node;
+    if (node.nodeType === 3) {
+      writeText(node.nodeValue);
+      continue;
     }
-  };
-
-  visit = (node, depth) => {
-    if (truncated) return;
-    visitedNodes += 1;
-    if (visitedNodes > MAX_NODES || depth > MAX_DEPTH) {
-      truncated = true;
-      return;
-    }
-    let nodeType;
-    try {
-      nodeType = node.nodeType;
-    } catch (_) {
-      return;
-    }
-    if (nodeType === 3) {
-      let value;
-      try {
-        value = node.nodeValue;
-      } catch (_) {
-        return;
-      }
-      writeText(value);
-      return;
-    }
-    if (nodeType !== 1) return;
-    let tag;
-    try {
-      tag = node.localName;
-    } catch (_) {
-      return;
-    }
-    if (typeof tag !== 'string') return;
+    if (node.nodeType !== 1) continue;
+    const tag = node.localName;
+    if (typeof tag !== 'string') continue;
     const kind = elementKind(tag);
-    if (kind < 0) return;
-    if (kind === 0) {
-      visitChildren(node, depth);
-      return;
+    if (kind < 0) continue;
+    if (kind > 0) {
+      output += '<' + tag + safeAttributes(node, tag) + '>';
+      if (kind === 2) continue;
+      pending.push({closing: '</' + tag + '>'});
     }
-
-    const opening = '<' + tag + safeAttributes(node, tag) + '>';
-    if (kind === 2) {
-      writeToken(opening);
-      return;
+    const children = node.childNodes;
+    for (let index = children.length - 1; index >= 0; index -= 1) {
+      pending.push({node: children[index]});
     }
-    const closing = '</' + tag + '>';
-    if (!canWrite(opening.length + closing.length)) {
-      truncated = true;
-      return;
-    }
-    output += opening;
-    reservedClosings += closing.length;
-    visitChildren(node, depth);
-    reservedClosings -= closing.length;
-    output += closing;
-  };
+  }
 
-  let root;
-  try {
-    root = document.documentElement;
-  } catch (_) {}
-  if (root) visit(root, 0);
-
-  const copyBoundedPrimitive = (value, limit) => {
+  const copyPrimitive = (value) => {
     if (typeof value !== 'string') return '';
     let result = '';
     for (let index = 0; index < value.length; index += 1) {
@@ -261,7 +170,6 @@ class SchoolWebImportPageService {
           character >= '\\uD800' && character <= '\\uDFFF') {
         character = '\\uFFFD';
       }
-      if (result.length + character.length > limit) break;
       result += character;
       index += characterLength - 1;
     }
@@ -277,8 +185,8 @@ class SchoolWebImportPageService {
   } catch (_) {}
   const safeOrigin = rawOrigin === 'null'
     ? ''
-    : copyBoundedPrimitive(rawOrigin, MAX_ORIGIN);
-  const safeTitle = copyBoundedPrimitive(rawTitle, MAX_TITLE);
+    : copyPrimitive(rawOrigin);
+  const safeTitle = copyPrimitive(rawTitle);
 
   // A primitive, length-prefixed result prevents page-world serializers and
   // coercion hooks from expanding data before it crosses the platform bridge.
@@ -286,7 +194,7 @@ class SchoolWebImportPageService {
     output.length + '\\n' +
     safeOrigin.length + '\\n' +
     safeTitle.length + '\\n' +
-    (truncated ? '1' : '0') + '\\n' +
+    '0\\n' +
     output + safeOrigin + safeTitle;
 })()
 ''';
@@ -296,14 +204,72 @@ class SchoolWebImportPageService {
     required String fallbackUrl,
     required String fallbackTitle,
   }) async {
-    final result = await controller.evaluateJavascript(
-      source: extractImportSourceScript,
-    );
-    return decodeSchoolWebImportExtraction(
-      result,
+    return extractWithEvaluator(
+      (source) => controller.evaluateJavascript(source: source),
       fallbackUrl: fallbackUrl,
       fallbackTitle: fallbackTitle,
     );
+  }
+
+  @visibleForTesting
+  Future<SchoolImportSourcePayload> extractWithEvaluator(
+    Future<Object?> Function(String source) evaluate, {
+    required String fallbackUrl,
+    required String fallbackTitle,
+  }) async {
+    final key = jsonEncode('__skedImport_${generateUuidV4()}');
+    try {
+      final rawLength = await evaluate('''// sked-source-start
+(() => {
+  const captured = $extractImportSourceScript;
+  globalThis[$key] = captured;
+  return captured.length;
+})()
+''');
+      final length =
+          rawLength is num &&
+              rawLength.isFinite &&
+              rawLength == rawLength.truncateToDouble()
+          ? rawLength.toInt()
+          : int.tryParse(normalizeJavaScriptResult(rawLength));
+      if (length == null || length < 0) {
+        throw const FormatException('The captured source length is invalid.');
+      }
+      final output = StringBuffer();
+      var offset = 0;
+      while (offset < length) {
+        final end = (offset + 65536).clamp(0, length);
+        final raw = await evaluate('''// sked-source-chunk
+(() => {
+  const captured = globalThis[$key];
+  if (typeof captured !== 'string' || captured.length !== $length) throw new Error('Source changed');
+  let end = $end;
+  const last = captured.charCodeAt(end - 1);
+  if (end < captured.length && last >= 0xD800 && last <= 0xDBFF) end -= 1;
+  return ${jsonEncode(extractionChunkPrefix)} + captured.slice($offset, end);
+})()
+''');
+        final response = normalizeJavaScriptResult(raw);
+        if (!response.startsWith(extractionChunkPrefix)) {
+          throw const FormatException('The captured source chunk is invalid.');
+        }
+        final chunk = response.substring(extractionChunkPrefix.length);
+        if (chunk.isEmpty || offset + chunk.length > end) {
+          throw const FormatException(
+            'The captured source chunk length is invalid.',
+          );
+        }
+        output.write(chunk);
+        offset += chunk.length;
+      }
+      return decodeSchoolWebImportExtraction(
+        output.toString(),
+        fallbackUrl: fallbackUrl,
+        fallbackTitle: fallbackTitle,
+      );
+    } finally {
+      await evaluate('// sked-source-finish\ndelete globalThis[$key]');
+    }
   }
 }
 
@@ -314,9 +280,6 @@ SchoolImportSourcePayload decodeSchoolWebImportExtraction(
   required String fallbackTitle,
 }) {
   final normalized = normalizeJavaScriptResult(value);
-  if (normalized.length > SchoolWebImportPageService.maxPlatformResultLength) {
-    throw const FormatException('Import page result is too large.');
-  }
   final Object? decoded;
   if (normalized.startsWith(
     SchoolWebImportPageService.extractionProtocolPrefix,
@@ -337,9 +300,6 @@ SchoolImportSourcePayload decodeSchoolWebImportExtraction(
   if (content.isEmpty) {
     throw const FormatException('Import content is empty.');
   }
-  if (content.length > SchoolImportContentSanitizer.maxContentLength) {
-    throw const FormatException('Import page content is too large.');
-  }
   final rawUrl = decoded['url'] is String ? decoded['url'] as String : '';
   final hasAtomicTitle = decoded['title'] is String;
   final rawTitle = hasAtomicTitle ? decoded['title'] as String : fallbackTitle;
@@ -348,10 +308,7 @@ SchoolImportSourcePayload decodeSchoolWebImportExtraction(
     url: sanitizedUrl.isEmpty
         ? sanitizeSchoolImportSourceUrl(fallbackUrl)
         : sanitizedUrl,
-    title: _boundedText(
-      rawTitle,
-      SchoolWebImportPageService.maxSourceTitleLength,
-    ),
+    title: rawTitle.trim(),
     content: content,
     wasTruncated: decoded['truncated'] == true,
   );
@@ -360,9 +317,9 @@ SchoolImportSourcePayload decodeSchoolWebImportExtraction(
 Map<String, Object?> _decodeSchoolWebImportProtocol(String value) {
   var cursor = SchoolWebImportPageService.extractionProtocolPrefix.length;
 
-  String readLine({required int maxLength}) {
+  String readLine() {
     final end = value.indexOf('\n', cursor);
-    if (end < cursor || end - cursor > maxLength) {
+    if (end < cursor) {
       throw const FormatException('Import page result is invalid.');
     }
     final line = value.substring(cursor, end);
@@ -370,28 +327,22 @@ Map<String, Object?> _decodeSchoolWebImportProtocol(String value) {
     return line;
   }
 
-  int readLength(int maximum) {
-    final raw = readLine(maxLength: 10);
+  int readLength() {
+    final raw = readLine();
     if (!RegExp(r'^(0|[1-9]\d*)$').hasMatch(raw)) {
       throw const FormatException('Import page result is invalid.');
     }
     final parsed = int.tryParse(raw);
-    if (parsed == null || parsed > maximum) {
+    if (parsed == null) {
       throw const FormatException('Import page result is invalid.');
     }
     return parsed;
   }
 
-  final contentLength = readLength(
-    SchoolImportContentSanitizer.maxContentLength,
-  );
-  final originLength = readLength(
-    SchoolWebImportPageService.maxSourceOriginLength,
-  );
-  final titleLength = readLength(
-    SchoolWebImportPageService.maxSourceTitleLength,
-  );
-  final truncatedValue = readLine(maxLength: 1);
+  final contentLength = readLength();
+  final originLength = readLength();
+  final titleLength = readLength();
+  final truncatedValue = readLine();
   if (truncatedValue != '0' && truncatedValue != '1') {
     throw const FormatException('Import page result is invalid.');
   }
@@ -425,20 +376,6 @@ String sanitizeSchoolImportSourceUrl(String source) {
     host: uri.host,
     port: uri.hasPort && !isDefaultPort ? uri.port : null,
   ).toString();
-}
-
-String _boundedText(String source, int maxLength) {
-  final normalized = source.trim();
-  if (normalized.length <= maxLength) return normalized;
-  final buffer = StringBuffer();
-  var length = 0;
-  for (final rune in normalized.runes) {
-    final character = String.fromCharCode(rune);
-    if (length + character.length > maxLength) break;
-    buffer.write(character);
-    length += character.length;
-  }
-  return buffer.toString();
 }
 
 @visibleForTesting

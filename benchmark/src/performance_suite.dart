@@ -19,11 +19,11 @@ const _expectedChecksums = <String, String>{
   'occurrence.5000_180d_hot_cache': 'fnv1a64-utf16le:81ac72fd37e970c9',
   'cache.1000_churn': 'fnv1a64-utf16le:41afccfcf48cf9ee',
   'sanitizer.table_full': 'fnv1a64-utf16le:e8d76fa6544f75cd',
-  'sanitizer.table_240k': 'fnv1a64-utf16le:3f7220f07decc524',
-  'app_data.5000_encode': 'fnv1a64-utf16le:b6b197aba92d5aa5',
-  'app_data.5000_decode_storage': 'fnv1a64-utf16le:6dbf8a69ae2eaca4',
-  'app_backup.5000_encode': 'fnv1a64-utf16le:e5333b9b4bb7ed76',
-  'app_backup.5000_decode': 'fnv1a64-utf16le:db3a0eb536199d79',
+  'sanitizer.table_240k': 'fnv1a64-utf16le:a2470bde11181ada',
+  'app_data.5000_encode': 'fnv1a64-utf16le:25c53ee6f8ec98db',
+  'app_data.5000_decode_storage': 'fnv1a64-utf16le:2cf3aedf6e7b93ca',
+  'app_backup.5000_encode': 'fnv1a64-utf16le:73c9e318117b5b78',
+  'app_backup.5000_decode': 'fnv1a64-utf16le:7b9c190a8ab859b7',
 };
 
 List<PerformanceBenchmarkCase> buildPerformanceBenchmarkCases(

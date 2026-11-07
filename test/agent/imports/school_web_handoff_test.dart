@@ -5,7 +5,6 @@ import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/imports/school_web_handoff.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/models/agent_settings.dart';
-import 'package:sked/services/school_import_content_sanitizer.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/l10n/app_localizations.dart';
 
@@ -296,19 +295,28 @@ void main() {
     },
   );
 
-  test('source quotas and unsafe URLs stay outside model requests', () async {
-    expect(redactSchoolWebSourceUrl('javascript:alert(1)'), isNull);
-    expect(redactSchoolWebSourceUrl('file:///private'), isNull);
-    final oversized = SchoolWebReviewedDraft(
-      content: 'x' * (SchoolImportContentSanitizer.maxContentLength + 1),
-      datasetGeneration: generation,
-      capturedAt: draft.capturedAt,
-      localeCode: 'en',
-    );
-    await expectLater(
-      handoff.handoff(oversized, isCurrent: () => true),
-      throwsA(_problem(OperationErrorCode.invalidArgument)),
-    );
-    expect(starts, isEmpty);
-  });
+  test(
+    'large source handoff preserves text and unsafe URLs remain excluded',
+    () async {
+      expect(redactSchoolWebSourceUrl('javascript:alert(1)'), isNull);
+      expect(redactSchoolWebSourceUrl('file:///private'), isNull);
+      final oversized = SchoolWebReviewedDraft(
+        content: 'x' * (120001),
+        title: '课程来源🌸' * 100,
+        datasetGeneration: generation,
+        capturedAt: draft.capturedAt,
+        localeCode: 'en',
+      );
+      await handoff.handoff(oversized, isCurrent: () => true);
+      expect(
+        repository.conversations.single.sources.single.text,
+        oversized.content,
+      );
+      expect(starts, hasLength(1));
+      await repository.load();
+      final savedSource = repository.conversations.single.sources.single;
+      expect(savedSource.text, oversized.content);
+      expect(savedSource.provenance!.title, oversized.title);
+    },
+  );
 }

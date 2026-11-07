@@ -349,7 +349,7 @@ class ConversationSource {
   }
 }
 
-/// Bounded provenance for a reviewed source, separate from its data body.
+/// Provenance for a reviewed source, separate from its data body.
 /// Its absence preserves the exact JSON and digest of historical sources.
 class ConversationSourceProvenance {
   const ConversationSourceProvenance({
@@ -393,7 +393,7 @@ class ConversationSourceProvenance {
       throw const FormatException('Invalid source provenance.');
     }
     return ConversationSourceProvenance(
-      title: _string(json, 'title', max: 256, empty: true),
+      title: _string(json, 'title', empty: true),
       capturedAt: _date(json, 'capturedAt'),
       reviewedAt: _date(json, 'reviewedAt'),
       datasetGeneration: _string(json, 'datasetGeneration', max: 256),
@@ -644,7 +644,7 @@ class AgentConversation {
     }
     return AgentConversation(
       id: _string(json, 'id', max: 256),
-      title: _string(json, 'title', max: 256),
+      title: _string(json, 'title'),
       createdAt: _date(json, 'createdAt'),
       updatedAt: _date(json, 'updatedAt'),
       mode: _enumValue(AgentPermissionMode.values, json['mode']),

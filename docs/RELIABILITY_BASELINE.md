@@ -30,6 +30,8 @@
 
 Agent 请求使用已经确认的连接快照，禁止敏感请求自动跟随重定向；返回 3xx 时报告失败，不将密钥或内容转发到新地址。HTTPS 不需要明文传输确认，但使用相同的重定向保护。学校网页访问和内容压缩不请求模型；用户继续时先原子保存来源、首条消息与交接标识，再由统一运行时发起请求。见 [协议边界](../test/agent/provider/provider_client_test.dart)、[来源交接](../test/agent/imports/school_web_handoff_test.dart) 与 [来源页](../test/widgets/school_html_import_page_test.dart)。
 
+学校来源提取和手动粘贴保留完整正文，不按字符数、DOM 深度或节点数量截断。WebView 固定同一次页面快照，按完整 Unicode 分块读取并在结束后释放；分块大小只决定单次桥接传输量。清洗继续移除脚本、输入控件和敏感 URL 信息。学校候选按字段、日期和引用规则解码，完整保留课程、节次、自定义字段与警告。见[来源提取回归](../test/services/school_web_import_page_service_test.dart)、[清洗回归](../test/services/school_import_content_sanitizer_test.dart)与[候选解码回归](../test/agent/imports/school_import_candidate_bounds_test.dart)。
+
 Windows 学校页面清理需要等待锁定 WebView 插件 `dispose` 通道的原生回复，不能用一帧结束代替原生页面销毁。尚在创建的页面或销毁失败会阻止数据清理；失败后重试仍需完成销毁确认。清理期间新打开的学校页面保持挂起，新登记的浏览器必须纳入清理后才能报告成功。
 
 学校网页页头提供“退出登录”，确认后清理 Sked 内学校页面的 Cookie、站点存储与缓存，并重新建立网页；保留已经导入的课表、应用设置及 Agent 连接。取消确认不清理，清理失败不显示成功并保留重试入口。此动作只影响本机内嵌浏览器，不声称学校服务端的所有会话都已退出。

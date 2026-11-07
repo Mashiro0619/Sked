@@ -425,19 +425,13 @@ void main() {
     );
   });
 
-  testWidgets('bounded source input keeps surrogate pairs intact', (
+  testWidgets('large source input keeps its entire text and surrogate pairs', (
     tester,
   ) async {
     await _mount(tester, content: '');
-    await tester.enterText(
-      _editor,
-      '😀' * (SchoolImportContentSanitizer.maxInputLength ~/ 2 + 1),
-    );
+    await tester.enterText(_editor, '😀' * (120001));
     await tester.pump();
-    expect(
-      _text(tester).length,
-      lessThanOrEqualTo(SchoolImportContentSanitizer.maxInputLength),
-    );
+    expect(_text(tester).length, equals(240002));
     expect(
       _text(tester).runes.any((rune) => rune >= 0xd800 && rune <= 0xdfff),
       isFalse,

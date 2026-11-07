@@ -4,7 +4,6 @@ import '../../application/resource_contracts.dart';
 import '../../application/resource_mutation_schema.dart';
 import '../../application/resource_mutations.dart';
 import '../../models/timetable_models.dart';
-import '../../utils/text_input_limits.dart';
 import '../conversations/conversation_models.dart';
 import '../provider/provider.dart';
 import '../tools/application_tool_host.dart';
@@ -134,13 +133,8 @@ void registerSchoolImportTools(ApplicationToolHost host) {
         ...plan.summary(),
         'sourceTruncated': source?.truncated ?? false,
         'warningCount': warnings.length,
-        'warningsTruncated':
-            warnings.length > 8 ||
-            warnings.take(8).any((warning) => warning.length > 256),
-        'warnings': [
-          for (final warning in warnings.take(8))
-            truncateUtf16CodeUnits(warning, 256),
-        ],
+        'warningsTruncated': false,
+        'warnings': warnings,
       };
     },
   );
@@ -162,7 +156,6 @@ Map<String, Object?> get _timetableSchema => {
     'courses': {
       'type': 'array',
       'minItems': 1,
-      'maxItems': SchoolImportCandidateDecoder.maxImportedCourseCount,
       'items': {
         'type': 'object',
         'properties': {
@@ -173,8 +166,6 @@ Map<String, Object?> get _timetableSchema => {
                 )['semesterWeeks']
                 as Map<String, Object?>),
             'minItems': 1,
-            'maxItems':
-                SchoolImportCandidateDecoder.maxImportedSemesterWeekCount,
             'uniqueItems': true,
           },
           'periods': {
@@ -182,15 +173,11 @@ Map<String, Object?> get _timetableSchema => {
                   ResourceKind.course,
                 )['periods']
                 as Map<String, Object?>),
-            'maxItems':
-                SchoolImportCandidateDecoder.maxImportedCoursePeriodCount,
             'uniqueItems': true,
           },
           'endMinutes': {'type': 'integer', 'minimum': 0, 'maximum': 1439},
           'customFields': {
             'type': 'object',
-            'maxProperties':
-                SchoolImportCandidateDecoder.maxImportedCustomFieldCount,
             'additionalProperties': {
               'type': ['string', 'number', 'boolean', 'null'],
             },
@@ -222,7 +209,6 @@ Map<String, Object?> get _candidateSchema => {
             'warnings': {
               'type': 'array',
               'items': {'type': 'string'},
-              'maxItems': SchoolImportCandidateDecoder.maxImportWarningCount,
             },
           },
           'additionalProperties': false,
@@ -261,7 +247,7 @@ MutationDraft compileSchoolImport(
     'periodTimeSet',
     'courses',
   }, 'timetable');
-  SchoolImportCandidateDecoder.validateResponseBounds({
+  SchoolImportCandidateDecoder.validateResponseFields({
     'timetable': timetable,
     'meta': candidate['meta'],
   });
@@ -427,9 +413,7 @@ List<String> _importWarnings(Map<String, Object?> candidate) {
   final meta = candidate['meta'];
   if (meta is! Map) return const [];
   final warnings = meta['warnings'];
-  return warnings is List
-      ? warnings.whereType<String>().take(100).toList()
-      : const [];
+  return warnings is List ? warnings.whereType<String>().toList() : const [];
 }
 
 String? _optionalText(Map<String, Object?> source, String key) {

@@ -1,12 +1,12 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sked/services/school_import_content_sanitizer.dart';
 import 'package:sked/models/app_backup.dart';
 import 'package:sked/models/app_data.dart';
 import 'package:sked/models/general_event_occurrence.dart';
 import 'package:sked/models/general_schedule_data.dart';
 import 'package:sked/services/general_occurrence_service.dart';
-import 'package:sked/services/school_import_content_sanitizer.dart';
 
 import '../benchmark/src/benchmark_fixtures.dart';
 import '../benchmark/src/benchmark_runner.dart';
@@ -20,7 +20,7 @@ void main() {
   });
 
   test('fixture has the fixed large-data shape', () {
-    expect(performanceDatasetVersion, 10);
+    expect(performanceDatasetVersion, 11);
     expect(fixtures.generalData1000.schedules, hasLength(8));
     expect(
       fixtures.generalData1000.schedules.expand((schedule) => schedule.events),
@@ -38,35 +38,29 @@ void main() {
       hasLength(5000),
     );
     expect(fixtures.schoolSites, hasLength(128));
-    expect(
-      fixtures.sanitizerTableInput.length,
-      lessThan(SchoolImportContentSanitizer.maxInputLength),
-    );
-    expect(
-      fixtures.sanitizerNearLimitInput.length,
-      greaterThan(SchoolImportContentSanitizer.maxInputLength),
-    );
-    expect(
-      fixtures.sanitizerNearLimitInput.length,
-      lessThan(SchoolImportContentSanitizer.maxInputLength + 10000),
-    );
+    expect(fixtures.sanitizerTableInput.length, lessThan(240000));
+    expect(fixtures.sanitizerNearLimitInput.length, greaterThan(240000));
+    expect(fixtures.sanitizerNearLimitInput.length, lessThan(240000 + 10000));
     expect(fixtures.appDataSnapshot.length, greaterThan(500000));
     expect(fixtures.appBackupSnapshot.length, greaterThan(500000));
   });
 
-  test('fixture exercises full and bounded sanitizer paths', () {
-    final full = SchoolImportContentSanitizer.sanitizeWithResult(
-      fixtures.sanitizerTableInput,
-    );
-    final bounded = SchoolImportContentSanitizer.sanitizeWithResult(
-      fixtures.sanitizerNearLimitInput,
-    );
+  test(
+    'fixtures retain all sanitized data above the former capture thresholds',
+    () {
+      final full = SchoolImportContentSanitizer.sanitizeWithResult(
+        fixtures.sanitizerTableInput,
+      );
+      final bounded = SchoolImportContentSanitizer.sanitizeWithResult(
+        fixtures.sanitizerNearLimitInput,
+      );
 
-    expect(full.wasTruncated, isFalse);
-    expect(full.content.length, lessThan(120000));
-    expect(bounded.wasTruncated, isTrue);
-    expect(bounded.content.length, lessThanOrEqualTo(120000));
-  });
+      expect(full.wasTruncated, isFalse);
+      expect(full.content.length, lessThan(120000));
+      expect(bounded.wasTruncated, isFalse);
+      expect(bounded.content.length, greaterThan(120000));
+    },
+  );
 
   test('range fixtures exercise the 1k/5k and 7/42/180 day matrix', () {
     const service = GeneralOccurrenceService();
@@ -102,6 +96,34 @@ void main() {
     final actual = computePerformanceFixtureChecksums(fixtures);
 
     expect(actual, expectedPerformanceFixtureChecksums);
+  });
+
+  test('schema 8 accounts for the dataset 11 serialization change', () {
+    expect(
+      checksumString(_asDataset10(fixtures.appData.encode())),
+      'fnv1a64-utf16le:b6b197aba92d5aa5',
+    );
+    expect(
+      checksumString(
+        _asDataset10(
+          AppData.decodeStorageSnapshot(fixtures.appDataSnapshot).encode(),
+        ),
+      ),
+      'fnv1a64-utf16le:6dbf8a69ae2eaca4',
+    );
+    expect(
+      checksumString(
+        _asDataset10(encodeAppBackup(fixtures.appData, fixtures.schoolSites)),
+      ),
+      'fnv1a64-utf16le:e5333b9b4bb7ed76',
+    );
+    final decoded = decodeAppBackup(fixtures.appBackupSnapshot);
+    final checksum = StableChecksum()
+      ..addBool(decoded.includesSchoolSites)
+      ..addString(
+        _asDataset10(encodeAppBackup(decoded.appData, decoded.schoolSites)),
+      );
+    expect(checksum.finish(), 'fnv1a64-utf16le:db3a0eb536199d79');
   });
 
   test(
@@ -315,11 +337,24 @@ void main() {
   );
 }
 
+/// Dataset 11 changes the AppData format marker while preserving all workload
+/// bytes. Keep this projection separate from the older Agent-field changes.
+String _asDataset10(String source) {
+  final root = jsonDecode(source) as Map<String, dynamic>;
+  final app = root.containsKey('data')
+      ? (root['data'] as Map<String, dynamic>)['appData']
+            as Map<String, dynamic>
+      : root;
+  expect(app['schemaVersion'], 8);
+  app['schemaVersion'] = 6;
+  return jsonEncode(root);
+}
+
 /// Restore only the two retired count fields in their original position.
 /// The four dataset 9 checksums prove that no workload data changed with them.
 String _asDataset9(String source) {
-  final root = jsonDecode(source) as Map<String, dynamic>;
-  if (root.containsKey('data')) return source;
+  final root = jsonDecode(_asDataset10(source)) as Map<String, dynamic>;
+  if (root.containsKey('data')) return jsonEncode(root);
   final agent = root['agentSettings'] as Map<String, dynamic>;
   expect(agent, isNot(contains('maxModelRounds')));
   expect(agent, isNot(contains('maxToolCalls')));
@@ -340,7 +375,7 @@ String _asDataset9(String source) {
 /// dataset 9 retains every other byte of the dataset 8 workload.
 String _asDataset8(String source) {
   final root = jsonDecode(_asDataset9(source)) as Map<String, dynamic>;
-  if (root.containsKey('data')) return source;
+  if (root.containsKey('data')) return jsonEncode(root);
   final agent = root['agentSettings'] as Map<String, dynamic>;
   expect(agent, isNot(contains('maxTotalTokens')));
   expect(agent['maxToolCalls'], 128);

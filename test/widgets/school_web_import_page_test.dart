@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ui' show SemanticsAction;
 
 import 'package:flutter/foundation.dart';
@@ -103,6 +104,7 @@ class _FakeWebViewController extends Fake implements InAppWebViewController {
   bool failGoBack = false;
   bool failGetUrl = false;
   Object? javascriptResult;
+  String? capturedSource;
   Object? javascriptError;
   final List<String> loadedAddresses = <String>[];
   var getProgressCalls = 0;
@@ -173,6 +175,25 @@ class _FakeWebViewController extends Fake implements InAppWebViewController {
   }) async {
     if (javascriptError != null) {
       throw javascriptError!;
+    }
+    if (source.startsWith('// sked-source-start')) {
+      capturedSource = javascriptResult is String
+          ? javascriptResult as String
+          : jsonEncode(javascriptResult);
+      return capturedSource!.length;
+    }
+    if (source.startsWith('// sked-source-chunk')) {
+      final start = int.parse(
+        RegExp(r'captured.slice\((\d+), end\)').firstMatch(source)!.group(1)!,
+      );
+      final end = int.parse(
+        RegExp(r'let end = (\d+)').firstMatch(source)!.group(1)!,
+      );
+      return 'SKED_WEB_IMPORT_CHUNK_V1\n${capturedSource!.substring(start, end)}';
+    }
+    if (source.startsWith('// sked-source-finish')) {
+      capturedSource = null;
+      return null;
     }
     return javascriptResult;
   }

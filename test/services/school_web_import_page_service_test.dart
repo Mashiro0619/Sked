@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sked/services/school_import_content_sanitizer.dart';
 import 'package:sked/services/school_web_import_page_service.dart';
 
 void main() {
@@ -27,39 +26,77 @@ void main() {
   });
 
   group('webpage extraction boundary', () {
-    test(
-      'script traverses a bounded live DOM and captures fields atomically',
-      () {
-        final script = SchoolWebImportPageService.extractImportSourceScript;
+    test('large captured sources cross the native bridge in complete Unicode chunks', () async {
+      final content = '<p>${'课表🌸' * 100000}</p>';
+      final captured = _encodeExtractionProtocol(
+        content: content,
+        origin: 'https://school.test',
+        title: 'Term',
+        truncated: false,
+      );
+      var reads = 0;
+      var released = false;
+      final payload = await const SchoolWebImportPageService().extractWithEvaluator(
+        (script) async {
+          if (script.startsWith('// sked-source-start')) {
+            return captured.length.toDouble();
+          }
+          if (script.startsWith('// sked-source-finish')) {
+            released = true;
+            return null;
+          }
+          final start = int.parse(
+            RegExp(r'captured.slice\((\d+), end\)')
+                .firstMatch(script)!
+                .group(1)!,
+          );
+          var end = int.parse(
+            RegExp(r'let end = (\d+)').firstMatch(script)!.group(1)!,
+          );
+          final last = captured.codeUnitAt(end - 1);
+          if (end < captured.length && last >= 0xd800 && last <= 0xdbff) end--;
+          reads++;
+          return '${SchoolWebImportPageService.extractionChunkPrefix}${captured.substring(start, end)}';
+        },
+        fallbackUrl: '',
+        fallbackTitle: '',
+      );
+      expect(reads, greaterThan(4));
+      expect(payload.content, content);
+      expect(payload.wasTruncated, isFalse);
+      expect(released, isTrue);
+    });
 
-        expect(script, contains('MAX_CONTENT'));
-        expect(script, contains('MAX_NODES'));
-        expect(script, contains('MAX_SCANNED_TEXT'));
-        expect(script, contains('scannedTextCharacters'));
-        expect(
-          script,
-          contains(SchoolWebImportPageService.extractionProtocolPrefix.trim()),
-        );
-        expect(script, contains('return PROTOCOL +'));
-        expect(script, contains('safeOrigin.length'));
-        expect(script, contains("typeof value !== 'string'"));
-        expect(script, isNot(contains('String(')));
-        expect(script, isNot(contains('.replace(')));
-        expect(script, isNot(contains('new Set(')));
-        expect(script, isNot(contains('for (const character of')));
-        expect(script, contains(r"character >= '\uD800'"));
-        expect(script, contains(r"character = '\uFFFD'"));
-        expect(script, isNot(contains('return JSON.stringify(')));
-        expect(script, isNot(contains('output.trim()')));
-        expect(script, contains('truncated'));
-        expect(script, isNot(contains('cloneNode')));
-        expect(script, isNot(contains('outerHTML')));
-        expect(script, isNot(contains('location.search')));
-        expect(script, isNot(contains('location.hash')));
-        expect(script, isNot(contains('location.pathname')));
-        expect(script, isNot(contains('value.replace')));
-      },
-    );
+    test('script traverses the full DOM iteratively and captures fields atomically', () {
+      final script = SchoolWebImportPageService.extractImportSourceScript;
+
+      expect(script, isNot(contains('MAX_CONTENT')));
+      expect(script, isNot(contains('MAX_NODES')));
+      expect(script, isNot(contains('MAX_SCANNED_TEXT')));
+      expect(script, isNot(contains('scannedTextCharacters')));
+      expect(
+        script,
+        contains(SchoolWebImportPageService.extractionProtocolPrefix.trim()),
+      );
+      expect(script, contains('return PROTOCOL +'));
+      expect(script, contains('safeOrigin.length'));
+      expect(script, contains("typeof value !== 'string'"));
+      expect(script, isNot(contains('String(')));
+      expect(script, isNot(contains('.replace(')));
+      expect(script, isNot(contains('new Set(')));
+      expect(script, isNot(contains('for (const character of')));
+      expect(script, contains(r"character >= '\uD800'"));
+      expect(script, contains(r"character = '\uFFFD'"));
+      expect(script, isNot(contains('return JSON.stringify(')));
+      expect(script, isNot(contains('output.trim()')));
+      expect(script, contains('const pending ='));
+      expect(script, isNot(contains('cloneNode')));
+      expect(script, isNot(contains('outerHTML')));
+      expect(script, isNot(contains('location.search')));
+      expect(script, isNot(contains('location.hash')));
+      expect(script, isNot(contains('location.pathname')));
+      expect(script, isNot(contains('value.replace')));
+    });
 
     test('decodes the bounded primitive extraction protocol atomically', () {
       const content = '<table><tr><td>Math 😀</td></tr></table>';
@@ -86,7 +123,7 @@ void main() {
       }
     });
 
-    test('rejects malformed or over-limit primitive protocol fields', () {
+    test('rejects inconsistent primitive protocol lengths', () {
       final valid = _encodeExtractionProtocol(
         content: '<p>Schedule</p>',
         origin: 'https://school.test',
@@ -99,7 +136,7 @@ void main() {
       );
       final oversizedOriginLength =
           '${SchoolWebImportPageService.extractionProtocolPrefix}'
-          '1\n${SchoolWebImportPageService.maxSourceOriginLength + 1}\n'
+          '1\n${4096}\n'
           '0\n0\nx';
 
       for (final result in [wrongContentLength, oversizedOriginLength]) {
@@ -192,49 +229,41 @@ void main() {
       },
     );
 
-    test('rejects empty, malformed, and oversized platform results', () {
-      expect(
-        () => decodeSchoolWebImportExtraction(
-          jsonEncode({'content': '', 'url': '', 'title': ''}),
-          fallbackUrl: '',
-          fallbackTitle: '',
-        ),
-        throwsA(
-          isA<FormatException>().having(
-            (error) => error.message,
-            'message',
-            'Import content is empty.',
+    test(
+      'rejects empty and malformed results while preserving large sources',
+      () {
+        expect(
+          () => decodeSchoolWebImportExtraction(
+            jsonEncode({'content': '', 'url': '', 'title': ''}),
+            fallbackUrl: '',
+            fallbackTitle: '',
           ),
-        ),
-      );
-      expect(
-        () => decodeSchoolWebImportExtraction(
-          'not json',
-          fallbackUrl: '',
-          fallbackTitle: '',
-        ),
-        throwsA(isA<FormatException>()),
-      );
-      expect(
-        () => decodeSchoolWebImportExtraction(
-          jsonEncode({
-            'content':
-                'x' * (SchoolImportContentSanitizer.maxContentLength + 1),
-            'url': '',
-            'title': '',
-          }),
-          fallbackUrl: '',
-          fallbackTitle: '',
-        ),
-        throwsA(
-          isA<FormatException>().having(
-            (error) => error.message,
-            'message',
-            'Import page content is too large.',
+          throwsA(
+            isA<FormatException>().having(
+              (error) => error.message,
+              'message',
+              'Import content is empty.',
+            ),
           ),
-        ),
-      );
-    });
+        );
+        expect(
+          () => decodeSchoolWebImportExtraction(
+            'not json',
+            fallbackUrl: '',
+            fallbackTitle: '',
+          ),
+          throwsA(isA<FormatException>()),
+        );
+        final content = 'x' * 600000;
+        final payload = decodeSchoolWebImportExtraction(
+          {'content': content, 'url': '', 'title': 'title' * 300},
+          fallbackUrl: '',
+          fallbackTitle: '',
+        );
+        expect(payload.content, content);
+        expect(payload.title, 'title' * 300);
+      },
+    );
   });
 }
 

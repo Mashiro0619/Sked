@@ -512,6 +512,19 @@ earlier exact normalizations remain in place. Portable backups omit this local
 configuration, and their checksums and the complete business workload remain
 unchanged.
 
-New performance comparisons use dataset 10 on both sides. Existing reports keep
+Dataset 10 comparisons use dataset 10 on both sides. Existing reports keep
 their original versions; this serialization update contains no performance
 sampling or new device measurements.
+
+## Dataset version 11: current AppData format and complete captured content
+
+Dataset 11 records AppData schema 8 and the complete sanitized output of the
+existing 244k-character source fixture. The source text, 5,000 courses, 5,000
+events and school-site records remain unchanged. The regression changes only
+the serialized AppData format marker back to 6 and requires all four dataset 10
+serialization checksums; the older exact projections continue from that result.
+
+The sanitizer case now retains content past the former input/output cutoffs.
+Its complete-output checksum changes accordingly. Compare timings only when
+both sources use the same dataset and retained-output contract, and keep older
+reports associated with their original dataset versions.

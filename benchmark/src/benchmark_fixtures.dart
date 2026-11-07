@@ -9,11 +9,10 @@ import 'package:sked/models/general_schedule_data.dart';
 import 'package:sked/models/school_site_models.dart';
 import 'package:sked/models/student_mode_data.dart';
 import 'package:sked/models/timetable_data.dart';
-import 'package:sked/services/school_import_content_sanitizer.dart';
 
 // Increment when the serialized fixture contract changes, even if the
 // generated workload shape and record counts remain the same.
-const performanceDatasetVersion = 10;
+const performanceDatasetVersion = 11;
 const performanceCalendarCount = 8;
 const performanceSmallEventCount = 1000;
 const performanceLargeEventCount = 5000;
@@ -340,7 +339,7 @@ String _buildSanitizerTableInput() {
 String _buildNearLimitSanitizerInput() {
   final buffer = StringBuffer('<section><table>');
   var row = 0;
-  while (buffer.length < SchoolImportContentSanitizer.maxInputLength + 4096) {
+  while (buffer.length < 240000 + 4096) {
     buffer.write(
       '<tr><th colspan="2">Week $row</th>'
       '<td data-secret="token-$row" onclick="ignored()">'

@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../agent/agent_application.dart';
@@ -15,8 +14,6 @@ import '../controllers/workspace_view_state.dart';
 import '../l10n/app_localizations.dart';
 import '../models/app_mode.dart';
 import '../providers/app_scope.dart';
-import '../services/school_import_content_sanitizer.dart';
-import '../utils/text_input_limits.dart';
 import '../widgets/adaptive_form_columns.dart';
 import '../widgets/adaptive_navigation_scope.dart';
 import '../widgets/desktop_window_host.dart';
@@ -79,8 +76,6 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
       (_htmlController.text.trim().isEmpty ||
       await confirmWorkspaceDraftDiscard(context));
 
-  static const int _maxRememberedTruncatedContents = 8;
-
   SchoolWebHandoffController? _handoff;
   String? _datasetGeneration;
   late final DateTime _capturedAt;
@@ -91,36 +86,14 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
   bool _isContentPrepared = false;
   bool _returnToWebPagePopped = false;
   late bool _contentWasTruncated;
-  late final TextInputFormatter _boundedInputFormatter;
-  late final Utf16CodeUnitLimitingTextInputFormatter _codeUnitInputFormatter;
-  final List<String> _rememberedTruncatedContents = [];
-  bool _lastFormattedContentWasTruncated = false;
-  bool _truncationUpdateScheduled = false;
   int _submissionGeneration = 0;
 
   @override
   void initState() {
     super.initState();
     _capturedAt = widget.initialCapturedAt ?? DateTime.now().toUtc();
-    _codeUnitInputFormatter = const Utf16CodeUnitLimitingTextInputFormatter(
-      SchoolImportContentSanitizer.maxInputLength,
-    );
-    _boundedInputFormatter = TextInputFormatter.withFunction(
-      _formatBoundedInput,
-    );
     _contentWasTruncated = widget.initialContentTruncated;
-    if (widget.initialContent.isNotEmpty) {
-      final initialContent = widget.initialContent;
-      if (initialContent.length > SchoolImportContentSanitizer.maxInputLength) {
-        _htmlController.text = truncateUtf16CodeUnits(
-          initialContent,
-          SchoolImportContentSanitizer.maxInputLength,
-        );
-        _contentWasTruncated = true;
-      } else {
-        _htmlController.text = initialContent;
-      }
-    }
+    _htmlController.text = widget.initialContent;
   }
 
   @override
@@ -210,7 +183,6 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
                                 key: const ValueKey('school-web-source-editor'),
                                 controller: _htmlController,
                                 enabled: !_isSubmitting && !_isPreparingContent,
-                                inputFormatters: [_boundedInputFormatter],
                                 onChanged: _handleContentChanged,
                                 expands: true,
                                 maxLines: null,
@@ -489,78 +461,8 @@ class _SchoolHtmlImportPageState extends State<SchoolHtmlImportPage>
     }
   }
 
-  TextEditingValue _formatBoundedInput(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final limited = _codeUnitInputFormatter.formatEditUpdate(
-      oldValue,
-      newValue,
-    );
-    if (oldValue.text != newValue.text) {
-      final inputWasTruncated = limited.text.length != newValue.text.length;
-      final oldSelection = oldValue.selection;
-      final replacesAllExistingContent =
-          oldValue.text.isNotEmpty &&
-          oldSelection.isValid &&
-          oldSelection.start == 0 &&
-          oldSelection.end == oldValue.text.length;
-      final canClearTruncation =
-          newValue.text.isEmpty || replacesAllExistingContent;
-      if (_contentWasTruncated && canClearTruncation) {
-        _rememberTruncatedContent(oldValue.text);
-      }
-      if (inputWasTruncated) {
-        _rememberTruncatedContent(limited.text);
-      }
-      _lastFormattedContentWasTruncated =
-          inputWasTruncated ||
-          _isRememberedTruncatedContent(limited.text) ||
-          (_contentWasTruncated && !canClearTruncation);
-      if (inputWasTruncated) _scheduleTruncationIndicator();
-    }
-    return limited;
-  }
-
-  void _rememberTruncatedContent(String content) {
-    if (content.isEmpty) return;
-    _rememberedTruncatedContents.remove(content);
-    _rememberedTruncatedContents.add(content);
-    if (_rememberedTruncatedContents.length > _maxRememberedTruncatedContents) {
-      _rememberedTruncatedContents.removeAt(0);
-    }
-  }
-
-  bool _isRememberedTruncatedContent(String content) {
-    if (content.isEmpty) return false;
-    return _rememberedTruncatedContents.any(
-      (remembered) =>
-          remembered.length == content.length && remembered == content,
-    );
-  }
-
-  void _scheduleTruncationIndicator() {
-    if (_truncationUpdateScheduled) return;
-    _truncationUpdateScheduled = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _truncationUpdateScheduled = false;
-      if (mounted &&
-          _lastFormattedContentWasTruncated &&
-          !_contentWasTruncated) {
-        setState(() => _contentWasTruncated = true);
-      }
-    });
-  }
-
   void _handleContentChanged(String _) {
-    if (_isContentPrepared ||
-        _contentWasTruncated != _lastFormattedContentWasTruncated) {
-      setState(() {
-        _isContentPrepared = false;
-        _contentWasTruncated =
-            widget.initialContentTruncated || _lastFormattedContentWasTruncated;
-      });
-    }
+    if (_isContentPrepared) setState(() => _isContentPrepared = false);
   }
 
   void _returnToWebPageOnce() {

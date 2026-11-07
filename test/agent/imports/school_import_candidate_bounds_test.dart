@@ -25,121 +25,61 @@ Map<String, dynamic> _response({List<Object?>? courses}) => {
 };
 
 void main() {
-  test('raw course and period counts are bounded before filtering', () {
-    expect(
-      () => SchoolImportCandidateDecoder.decodeResponse(
-        _response(
-          courses: List.filled(
-            SchoolImportCandidateDecoder.maxImportedCourseCount + 1,
-            null,
-          ),
-        ),
+  test('course count and long text do not reject a valid candidate', () {
+    final longText = '中' * 17000;
+    final response = SchoolImportCandidateDecoder.decodeResponse(
+      _response(
+        courses: [
+          for (var i = 0; i < 501; i++)
+            {..._course(), 'name': 'Course $i', 'remarks': longText},
+        ],
       ),
-      throwsFormatException,
     );
-    final response = _response();
-    ((response['timetable'] as Map)['periodTimeSet']
-        as Map)['periodTimes'] = List.filled(
-      SchoolImportCandidateDecoder.maxImportedPeriodTimeCount + 1,
-      null,
-    );
-    expect(
-      () => SchoolImportCandidateDecoder.decodeResponse(response),
-      throwsFormatException,
-    );
+    expect(response.timetable.courses, hasLength(501));
+    expect(response.timetable.courses.first.remarks, longText);
   });
-  test(
-    'raw week and selected-period arrays cannot evade quotas by duplicates',
-    () {
-      for (final field in ['semesterWeeks', 'periods']) {
-        final course = _course()..[field] = List.filled(101, 1);
-        expect(
-          () => SchoolImportCandidateDecoder.decodeResponse(
-            _response(courses: [course]),
-          ),
-          throwsFormatException,
-        );
-      }
-    },
-  );
-  test('individual and aggregate UTF-8 string budgets are enforced', () {
-    expect(
-      () => SchoolImportCandidateDecoder.decodeResponse(
-        _response(
-          courses: [
-            {..._course(), 'teacher': '中' * 1000},
-          ],
-        ),
+  test('custom field collections preserve all valid scalar values', () {
+    final fields = {for (var i = 0; i < 51; i++) 'key$i': 'value'};
+    final response = SchoolImportCandidateDecoder.decodeResponse(
+      _response(
+        courses: [
+          {..._course(), 'customFields': fields},
+        ],
       ),
-      throwsFormatException,
     );
-    expect(
-      () => SchoolImportCandidateDecoder.decodeResponse(
-        _response(
-          courses: [
-            for (var i = 0; i < 17; i++)
-              {
-                ..._course(),
-                'remarks':
-                    'x' * SchoolImportCandidateDecoder.maxImportedLongTextBytes,
-              },
-          ],
-        ),
-      ),
-      throwsFormatException,
-    );
+    expect(response.timetable.courses.single.customFields, fields);
   });
-  test(
-    'custom field count, aggregate count and nested values remain bounded',
-    () {
-      for (final fields in [
-        {for (var i = 0; i < 51; i++) 'key$i': 'value'},
-        {
-          'nested': {'secret': 'value'},
-        },
-        {'nonFinite': double.infinity},
-      ]) {
-        expect(
-          () => SchoolImportCandidateDecoder.decodeResponse(
-            _response(
-              courses: [
-                {..._course(), 'customFields': fields},
-              ],
-            ),
-          ),
-          throwsFormatException,
-        );
-      }
+  test('custom field type rules reject nested and non-finite values', () {
+    for (final fields in [
+      {
+        'nested': {'value': 1},
+      },
+      {'nonFinite': double.infinity},
+    ]) {
       expect(
         () => SchoolImportCandidateDecoder.decodeResponse(
           _response(
             courses: [
-              for (var i = 0; i < 21; i++)
-                {
-                  ..._course(),
-                  'customFields': {
-                    for (var field = 0; field < 50; field++) 'key$field': field,
-                  },
-                },
+              {..._course(), 'customFields': fields},
             ],
           ),
         ),
         throwsFormatException,
       );
-    },
-  );
-  test('warnings cannot include non-text values or exceed their raw count', () {
-    for (final warnings in [
-      [null],
-      [
-        {'instruction': 'untrusted'},
-      ],
-      List.filled(101, 'warning'),
+    }
+  });
+  test('all text warnings survive while non-text warnings remain invalid', () {
+    final source = _response();
+    (source['meta'] as Map)['warnings'] = List.filled(101, 'warning');
+    final response = SchoolImportCandidateDecoder.decodeResponse(source);
+    expect(response.meta.warnings, hasLength(101));
+    for (final warning in [
+      null,
+      {'instruction': 'untrusted'},
     ]) {
-      final response = _response();
-      (response['meta'] as Map)['warnings'] = warnings;
+      (source['meta'] as Map)['warnings'] = [warning];
       expect(
-        () => SchoolImportCandidateDecoder.decodeResponse(response),
+        () => SchoolImportCandidateDecoder.decodeResponse(source),
         throwsFormatException,
       );
     }

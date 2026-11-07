@@ -20,18 +20,18 @@ void main() {
       expect(sanitized, isNot(contains('onclick=')));
     });
 
-    test('removes script blocks and caps very large content', () {
-      final oversizedText = List.filled(
-        SchoolImportContentSanitizer.maxContentLength + 10,
-        'A',
-      ).join();
-      final source = '<script>alert(1)</script>$oversizedText';
+    test(
+      'removes scripts while retaining every character of large content',
+      () {
+        final oversizedText = List.filled(120000 + 10, 'A').join();
+        final source = '<script>alert(1)</script>$oversizedText';
 
-      final sanitized = SchoolImportContentSanitizer.sanitize(source);
+        final sanitized = SchoolImportContentSanitizer.sanitize(source);
 
-      expect(sanitized, isNot(contains('alert')));
-      expect(sanitized.length, SchoolImportContentSanitizer.maxContentLength);
-    });
+        expect(sanitized, isNot(contains('alert')));
+        expect(sanitized, oversizedText);
+      },
+    );
 
     test('removes dangling unsafe block tags', () {
       const source = '''
@@ -85,7 +85,7 @@ void main() {
       expect(sanitized, isNot(contains('<form')));
     });
 
-    test('does not expose discarded content beyond the tree depth limit', () {
+    test('removes discarded descendants from arbitrarily deep trees', () {
       final source =
           '${List.filled(64, '<div>').join()}'
           '<section>visible<script>secret-script</script>'
@@ -97,11 +97,11 @@ void main() {
       expect(result.content, isNot(contains('secret-script')));
       expect(result.content, isNot(contains('secret-style')));
       expect(result.content, isNot(contains('secret-input')));
-      expect(result.wasTruncated, isTrue);
+      expect(result.wasTruncated, isFalse);
     });
 
     test(
-      'safely truncates extremely deep trees without overflowing the stack',
+      'iteratively retains extremely deep trees without overflowing the stack',
       () {
         final source =
             '${List.filled(5000, '<div>').join()}'
@@ -114,7 +114,8 @@ void main() {
               result = SchoolImportContentSanitizer.sanitizeWithResult(source),
           returnsNormally,
         );
-        expect(result.wasTruncated, isTrue);
+        expect(result.wasTruncated, isFalse);
+        expect(result.content, contains('deep content'));
         expect(
           RegExp('<div>').allMatches(result.content).length,
           RegExp('</div>').allMatches(result.content).length,
@@ -122,33 +123,26 @@ void main() {
       },
     );
 
-    test('bounded serialization keeps opened table elements balanced', () {
+    test('complete serialization keeps opened table elements balanced', () {
       final source =
-          '<table><tbody><tr><td>${'A' * (SchoolImportContentSanitizer.maxContentLength * 2)}</td></tr></tbody></table>';
+          '<table><tbody><tr><td>${'A' * (120000 * 2)}</td></tr></tbody></table>';
 
       final result = SchoolImportContentSanitizer.sanitizeWithResult(source);
       final sanitized = result.content;
 
-      expect(
-        sanitized.length,
-        lessThanOrEqualTo(SchoolImportContentSanitizer.maxContentLength),
-      );
+      expect(sanitized.length, greaterThan(120000));
       expect(sanitized, startsWith('<table><tbody><tr><td>'));
       expect(sanitized, endsWith('</td></tr></tbody></table>'));
-      expect(result.wasTruncated, isTrue);
+      expect(result.wasTruncated, isFalse);
     });
 
-    test('reports truncation even when the output stops below its limit', () {
-      final source =
-          '${'A' * (SchoolImportContentSanitizer.maxContentLength - 3)}<hr>rest';
+    test('content after the old limit remains available', () {
+      final source = '${'A' * (120000 - 3)}<hr>rest';
 
       final result = SchoolImportContentSanitizer.sanitizeWithResult(source);
 
-      expect(
-        result.content.length,
-        lessThan(SchoolImportContentSanitizer.maxContentLength),
-      );
-      expect(result.wasTruncated, isTrue);
+      expect(result.content.length, equals(source.length));
+      expect(result.wasTruncated, isFalse);
     });
   });
 }
