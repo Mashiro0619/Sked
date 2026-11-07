@@ -759,6 +759,144 @@ void main() {
     );
   }
 
+  for (final platform in [TargetPlatform.windows, TargetPlatform.android]) {
+    for (final direction in TextDirection.values) {
+      testWidgets(
+        'narrow 2x effort heading keeps one line and reset target in $platform $direction',
+        (tester) async {
+          const shortModel = AgentModelConfig(
+            id: 'm',
+            reasoningEfforts: [
+              AgentReasoningEffort.minimal,
+              AgentReasoningEffort.max,
+            ],
+            defaultReasoningEffort: AgentReasoningEffort.max,
+          );
+          const longModel = AgentModelConfig(
+            id: 'deepseek-v4.1-flash-with-a-long-display-name',
+            reasoningEfforts: [
+              AgentReasoningEffort.minimal,
+              AgentReasoningEffort.max,
+            ],
+            defaultReasoningEffort: AgentReasoningEffort.minimal,
+          );
+          await initialize(
+            tester,
+            models: const [shortModel, longModel],
+            currentSelection: longModel.defaultSelection,
+          );
+          await mountAgentUi(
+            tester,
+            Directionality(
+              textDirection: direction,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Align(
+                  alignment: AlignmentDirectional.bottomEnd,
+                  child: SizedBox(
+                    width: 180,
+                    child: Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      heightFactor: 1,
+                      child: AgentModelPicker(
+                        conversationId: id,
+                        delegate: delegate,
+                        layoutBuilder: (control, _) => control,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            size: const Size(320, 740),
+            scale: 2,
+          );
+          await open(tester);
+          final panel = find.byKey(const ValueKey('agent-model-panel'));
+          final modelSwitch = find.byKey(const ValueKey('agent-model-switch'));
+          final reset = find.byKey(const ValueKey('agent-effort-reset'));
+          final effort = find.byKey(const ValueKey('agent-effort-value'));
+          final surfaceBefore = expectMenuSurfaceVisible(tester, panel);
+          final panelRect = tester.getRect(panel);
+          final switchRect = tester.getRect(modelSwitch);
+          final resetRect = tester.getRect(reset);
+          final resetExtent = platform == TargetPlatform.windows ? 32.0 : 48.0;
+          expect(reset.hitTestable(), findsOneWidget);
+          expect(modelSwitch.hitTestable(), findsOneWidget);
+          expect(resetRect.width, closeTo(resetExtent, .1));
+          expect(resetRect.height, closeTo(resetExtent, .1));
+          expect(resetRect.bottom, lessThanOrEqualTo(switchRect.top));
+          expect(resetRect.overlaps(switchRect), isFalse);
+          expect(switchRect.left, closeTo(panelRect.left + 8, .1));
+          expect(switchRect.right, closeTo(panelRect.right - 8, .1));
+          expect(
+            direction == TextDirection.ltr ? resetRect.right : resetRect.left,
+            closeTo(
+              direction == TextDirection.ltr
+                  ? panelRect.right - 8
+                  : panelRect.left + 8,
+              .1,
+            ),
+          );
+          final effortText = tester.widget<Text>(effort);
+          expect(effortText.data, 'Minimal');
+          expect(
+            effortText.style?.fontSize,
+            Theme.of(tester.element(effort)).textTheme.titleMedium?.fontSize,
+          );
+          expect(MediaQuery.textScalerOf(tester.element(effort)).scale(16), 32);
+          final paragraph = tester.renderObject<RenderParagraph>(effort);
+          final lineBoxes = paragraph.getBoxesForSelection(
+            const TextSelection(baseOffset: 0, extentOffset: 7),
+          );
+          // Ahem can require ellipsis even at full width; it must not wrap.
+          expect(lineBoxes, isNotEmpty);
+          expect(lineBoxes.map((box) => box.top).toSet(), hasLength(1));
+          expect(
+            tester.getSemantics(effort).getSemanticsData().label,
+            contains('Minimal'),
+          );
+          final name = find.descendant(
+            of: find.byKey(const ValueKey('agent-model-name')),
+            matching: find.byType(Text),
+          );
+          final nameParagraph = tester.renderObject<RenderParagraph>(name);
+          final nameBoxes = nameParagraph.getBoxesForSelection(
+            TextSelection(baseOffset: 0, extentOffset: longModel.id.length),
+          );
+          expect(
+            nameBoxes.map((box) => box.top).toSet().length,
+            lessThanOrEqualTo(2),
+          );
+          await tester.tap(reset);
+          await tester.pumpAndSettle();
+          await delegate.selectionWrite;
+          expect(delegate.choices, [shortModel.defaultSelection]);
+          expect(tester.widget<Text>(effort).data, 'Max');
+          expect(
+            tester.getRect(reset).top,
+            closeTo(tester.getRect(modelSwitch).top, .1),
+          );
+          final surfaceAfter = expectMenuSurfaceVisible(tester, panel);
+          expect(surfaceAfter.width, closeTo(surfaceBefore.width, .1));
+          expect(
+            direction == TextDirection.ltr
+                ? surfaceAfter.right
+                : surfaceAfter.left,
+            closeTo(
+              direction == TextDirection.ltr
+                  ? surfaceBefore.right
+                  : surfaceBefore.left,
+              .1,
+            ),
+          );
+          expect(tester.takeException(), isNull);
+        },
+        variant: TargetPlatformVariant.only(platform),
+      );
+    }
+  }
+
   testWidgets(
     'card and list keep their width and anchor edge during height interpolation',
     (tester) async {
