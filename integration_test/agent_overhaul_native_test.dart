@@ -83,6 +83,12 @@ const _scenes = <_Scene>[
     scale: 1,
     requestedSize: Size(640, 900),
   ),
+  (
+    name: 'dark-narrow-2x',
+    brightness: Brightness.dark,
+    scale: 2,
+    requestedSize: Size(640, 900),
+  ),
 ];
 
 Finder _key(String value) => find.byKey(ValueKey(value));

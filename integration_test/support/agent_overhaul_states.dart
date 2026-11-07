@@ -70,8 +70,8 @@ class AgentOverhaulStateProvider extends ProviderClient {
         'No native state scenario has requested provider events.',
       );
     }
-    expect(apiKey, isEmpty);
-    expect(cancellation, isNotNull);
+    expectSync(apiKey, isEmpty);
+    expectSync(cancellation, isNotNull);
     requests++;
     _round++;
     switch (scenario) {
@@ -115,7 +115,7 @@ class AgentOverhaulStateProvider extends ProviderClient {
           throw StateError('The approval scene must stop before applying.');
         }
       case _Scenario.question:
-        expect(_round, 1);
+        expectSync(_round, 1);
         yield _call('ask_user', {
           'questions': [
             {'id': 'start-date', 'question': '这学期从哪一天开始？'},
