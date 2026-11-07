@@ -25,6 +25,7 @@ import '../interactions/agent_task_plan.dart';
 import '../references/agent_composer_reference.dart';
 import '../ui/agent_ui_delegate.dart';
 import 'agent_request_budget.dart';
+import 'capability_context.dart';
 import 'conversation_context.dart';
 import 'conversation_task_checkpoint.dart';
 import 'operation_outcome.dart';
@@ -2844,8 +2845,12 @@ class AgentRuntimeController implements AgentUiDelegate {
       sourceIds[message] = sourceId;
     }
 
-    final pending = <String>{};
+    final pending = <String, ConversationToolCall>{};
     final seen = <String>{};
+    final requestTools =
+        run.replyMessageId != null || run.requestBudget?.finalStep == true
+        ? const <ToolDefinition>[]
+        : run.tools;
     final handoffContext = schoolWebHandoffContext(
       conversation: conversation,
       handoff: repository.handoffForMessage(
@@ -2894,8 +2899,10 @@ class AgentRuntimeController implements AgentUiDelegate {
         continue;
       }
       if (message.role == ConversationRole.notice) continue;
+      ConversationToolCall? sourceCall;
       if (message.role == ConversationRole.tool) {
-        if (!pending.remove(message.toolCallId)) {
+        sourceCall = pending.remove(message.toolCallId);
+        if (sourceCall == null) {
           throw const AgentRuntimeException(
             AgentRuntimeError.unpairedToolHistory,
           );
@@ -2912,8 +2919,20 @@ class AgentRuntimeController implements AgentUiDelegate {
               AgentRuntimeError.duplicateToolCall,
             );
           }
-          pending.add(call.id);
+          pending[call.id] = call;
         }
+      }
+      var text = _referenceMessageText(message, run);
+      if (sourceCall?.name == 'capabilities.describe') {
+        _rejectSecretJson(message.text, run.apiKey);
+        text = projectCapabilityDiscoveryContext(
+          text,
+          requestTools: requestTools,
+        );
+      }
+      if (message.id != run.inputMessageId &&
+          message.attachmentIds.isNotEmpty) {
+        text += '\n[Earlier attachments are not included in this request. Ask the user to attach them again if needed.]';
       }
       addSource(
         ProviderMessage(
@@ -2923,11 +2942,7 @@ class AgentRuntimeController implements AgentUiDelegate {
             ConversationRole.tool => ProviderRole.tool,
             ConversationRole.notice => throw StateError('unreachable'),
           },
-          text:
-              message.id != run.inputMessageId &&
-                  message.attachmentIds.isNotEmpty
-              ? '${_referenceMessageText(message, run)}\n[Earlier attachments are not included in this request. Ask the user to attach them again if needed.]'
-              : _referenceMessageText(message, run),
+          text: text,
           attachments: message.id == run.inputMessageId
               ? _providerAttachments(conversation, message, run)
               : const [],
