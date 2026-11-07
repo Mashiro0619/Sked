@@ -18,6 +18,7 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/agent_settings.dart';
 
 import '../acceptance/acceptance_harness.dart';
+import '../../support/agent_transcript_navigation.dart';
 import 'agent_ui_test_support.dart';
 
 const _desktopSize = Size(1000, 1200);
@@ -422,6 +423,59 @@ void main() {
       },
     );
   }
+
+  testWidgets(
+    'outer transcript gestures restore a clipped 2x query header after detail scrolling',
+    (tester) async {
+      final output = jsonEncode({
+        'items': [
+          for (var index = 0; index < 48; index++)
+            {'title': '合成条目 $index', 'description': '用于核对完整工具输出的本地合成内容。'},
+        ],
+      });
+      await _mountFixture(
+        tester,
+        tools: 2,
+        result: output,
+        size: const Size(1280, 820),
+        scale: 2,
+        brightness: Brightness.dark,
+      );
+      await _tap(tester, _key('agent-activity-toggle-turn-0'));
+      final query = _key('agent-activity-toggle-call-0-0');
+      await _tap(tester, query);
+      final detail = _key('agent-activity-detail-call-0-0');
+      final detailScroll = find
+          .descendant(of: detail, matching: find.byType(Scrollable))
+          .first;
+      await tester.ensureVisible(detail);
+      await tester.drag(detail, const Offset(0, -220));
+      await tester.pumpAndSettle();
+      expect(
+        tester.state<ScrollableState>(detailScroll).position.pixels,
+        greaterThan(0),
+      );
+      await tester.ensureVisible(query);
+      await tester.pumpAndSettle();
+      expect(query.hitTestable(), findsNothing);
+
+      final reveal = await revealAgentTranscriptControl(tester, query);
+      expect(reveal, isNotNull);
+      expect(query.hitTestable(), findsOneWidget);
+      expect(
+        tester
+            .widget<AgentTranscript>(find.byType(AgentTranscript))
+            .position
+            .followLatest,
+        isFalse,
+      );
+      await tester.tap(query.hitTestable());
+      await tester.pumpAndSettle();
+      expect(detail, findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
 
   for (final direction in TextDirection.values) {
     testWidgets(

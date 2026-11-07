@@ -30,6 +30,7 @@ import 'package:sked/widgets/workbench_chrome_metrics.dart';
 import 'package:sked/widgets/workspace_frame.dart';
 
 import '../test/support/agent_workspace_navigation.dart';
+import '../test/support/agent_transcript_navigation.dart';
 import '../test/support/workspace_harness.dart';
 import 'support/agent_overhaul_states.dart';
 
@@ -112,6 +113,12 @@ Future<void> _tap(WidgetTester tester, Finder target) async {
   await _until(tester, () => target.evaluate().isNotEmpty, '$target');
   await tester.ensureVisible(target);
   await tester.pumpAndSettle();
+  if (target.hitTestable().evaluate().isEmpty) {
+    final reveal = await revealAgentTranscriptControl(tester, target);
+    if (reveal != null) {
+      debugPrint(jsonEncode({'agentTranscriptReveal': reveal}));
+    }
+  }
   expect(target.hitTestable(), findsOneWidget);
   await tester.tap(target.hitTestable());
   await tester.pumpAndSettle();
