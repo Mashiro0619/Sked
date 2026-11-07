@@ -4450,4 +4450,14 @@ class AppLocalizationsJa extends AppLocalizations {
   String agentBudgetSummaryRecordedUsage(int requests, int tokens) {
     return 'Model requests $requests · $tokens reported tokens';
   }
+
+  @override
+  String get agentEndRedo => 'End redo';
+
+  @override
+  String get agentEndRedoTitle => 'End this redo?';
+
+  @override
+  String get agentEndRedoDescription =>
+      'Keep the current data and conversation. The remaining redo will not run.';
 }

@@ -353,6 +353,99 @@ class AgentRuntimeController implements AgentUiDelegate {
     });
   }
 
+  /// Reconciles a stopped redo without another model request, then closes its
+  /// replay obligation while retaining its actual failure and write receipts.
+  Future<void> endHistoryRedo(
+    String conversationId, {
+    required String batchId,
+    void Function()? validate,
+  }) async {
+    void check() {
+      validate?.call();
+      final current = repository.find(conversationId);
+      final pending = current?.pendingRedo;
+      if (_disposed ||
+          !repository.canWrite ||
+          readMaintenance() ||
+          _runs.containsKey(conversationId) ||
+          _queueDrains.containsKey(conversationId) ||
+          current == null ||
+          current.archived ||
+          pending?.id != batchId ||
+          (pending?.phase != ConversationRedoPhase.ready &&
+              pending?.phase != ConversationRedoPhase.running)) {
+        throw const AgentRuntimeException(AgentRuntimeError.busy);
+      }
+    }
+
+    check();
+    if (!_editingQueuedInputs.add(conversationId)) {
+      throw const AgentRuntimeException(AgentRuntimeError.busy);
+    }
+    try {
+      _publish();
+      if (await repository.pendingHistoryBatch() != null) {
+        throw const AgentRuntimeException(AgentRuntimeError.busy);
+      }
+      check();
+      final original = repository.find(conversationId)!;
+      final expected = jsonEncode(original.toJson());
+      final question = original.pendingQuestion;
+      final settled = question != null && question.isResolved
+          ? _materializeUserQuestion(
+              original,
+              question,
+              jsonEncode(_userQuestionResult(question)),
+              outcome: ConversationAttemptOutcome.completed,
+            )
+          : original;
+      final recovered = await recoverAgentOperationHistory(
+        settled.executionMessages.toList(),
+        readReceipt: readOperationReceipt,
+        id: _id,
+        clock: _clock,
+        maxResultCharacters: limits.maxToolResultCharacters,
+      );
+      check();
+      if (recovered.blocked) {
+        throw const AgentRuntimeException(
+          AgentRuntimeError.interruptedRunNeedsReview,
+        );
+      }
+      await repository.update(conversationId, (current) {
+        check();
+        if (jsonEncode(current.toJson()) != expected) {
+          throw const AgentRuntimeException(AgentRuntimeError.busy);
+        }
+        final messages = [
+          ...settled.messages.take(settled.executionHistoryStart),
+          ...recovered.messages,
+        ];
+        return settled.copyWith(
+          messages: messages,
+          turns: _includeRecoveredMessages(settled, messages),
+          redoBatches: [
+            for (final batch in settled.redoBatches)
+              if (batch.id == batchId)
+                batch.copyWith(
+                  phase: ConversationRedoPhase.abandoned,
+                  lastError: batch.lastError,
+                )
+              else
+                batch,
+          ],
+          clearPendingQuestion: true,
+          status: ConversationStatus.idle,
+          clearRunId: true,
+        );
+      });
+      _display[conversationId] = const AgentUiRunState();
+    } finally {
+      _editingQueuedInputs.remove(conversationId);
+      _publish();
+    }
+  }
+
   Future<void> _resumeConversation(
     String conversationId, {
     String? reservedRunId,

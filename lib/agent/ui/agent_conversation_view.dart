@@ -34,6 +34,7 @@ import 'agent_attachment_view.dart';
 import '../attachments/conversation_attachments.dart';
 import '../conversations/conversation_repository.dart';
 import '../history/conversation_history.dart';
+import '../history/conversation_history_preflight.dart';
 import '../history/conversation_history_service.dart';
 import '../imports/conversation_file_attachments.dart';
 import '../interactions/agent_task_plan.dart';
@@ -1027,6 +1028,59 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     });
   }
 
+  Future<void> _endHistoryRedo(AgentConversation conversation) async {
+    if (!_uiActive) return;
+    final history = widget.history;
+    final repository = _repository;
+    final pending = conversation.pendingRedo;
+    if (history == null ||
+        pending == null ||
+        !history.canEndRedo(conversation.id)) {
+      return;
+    }
+    final generation = _uiGeneration;
+    final expected = jsonEncode(pending.toJson());
+    final l = AppLocalizations.of(context);
+    bool current() =>
+        _uiSessionCurrent(generation, conversation.id) &&
+        identical(repository, _repository) &&
+        identical(history, widget.history) &&
+        jsonEncode(repository.find(conversation.id)?.pendingRedo?.toJson()) ==
+            expected;
+    final confirmed = await showExpressiveDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l.agentEndRedoTitle),
+        content: Text(l.agentEndRedoDescription),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l.cancel),
+          ),
+          FilledButton(
+            key: const ValueKey('agent-confirm-end-history-redo'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l.agentEndRedo),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !current()) return;
+    await _perform('history-${conversation.id}', () async {
+      await history.endRedo(
+        conversation.id,
+        batchId: pending.id,
+        validate: () {
+          if (!current()) {
+            throw const ConversationHistoryException(
+              ConversationHistoryError.conflict,
+            );
+          }
+        },
+      );
+    });
+  }
+
   Future<void> _showMessageHistory(AgentConversation conversation) async {
     if (!_uiActive) return;
     final repository = _repository;
@@ -1534,6 +1588,17 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                         ),
                   icon: const Icon(Icons.replay),
                   label: Text(l.agentContinue),
+                ),
+                TextButton.icon(
+                  key: const ValueKey('agent-end-history-redo'),
+                  onPressed:
+                      conversation != null &&
+                          widget.history?.canEndRedo(conversation.id) == true &&
+                          !_busy.contains('history-${conversation.id}')
+                      ? () => _endHistoryRedo(conversation)
+                      : null,
+                  icon: const Icon(Icons.stop_circle_outlined),
+                  label: Text(l.agentEndRedo),
                 ),
               ],
               if (state.replyTargetMessageId == null &&

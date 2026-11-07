@@ -3080,5 +3080,11 @@
         "type": "int"
       }
     }
-  }
+  },
+  "agentEndRedo": "結束重做",
+  "@agentEndRedo": {},
+  "agentEndRedoTitle": "結束這次重做？",
+  "@agentEndRedoTitle": {},
+  "agentEndRedoDescription": "保留目前資料與對話，不再繼續這次重做。",
+  "@agentEndRedoDescription": {}
 }

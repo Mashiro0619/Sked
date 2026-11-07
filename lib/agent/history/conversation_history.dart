@@ -315,6 +315,7 @@ enum ConversationRedoPhase {
   ready,
   running,
   completed,
+  abandoned,
 }
 
 class ConversationRedoBatch {
@@ -393,6 +394,7 @@ class ConversationRedoBatch {
   final String? lastError;
 
   bool get isComplete => phase == ConversationRedoPhase.completed;
+  bool get isTerminal => isComplete || phase == ConversationRedoPhase.abandoned;
 
   ConversationRedoBatch copyWith({
     ConversationRedoPhase? phase,

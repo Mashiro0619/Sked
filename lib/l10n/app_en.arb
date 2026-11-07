@@ -3148,5 +3148,11 @@
         "type": "int"
       }
     }
-  }
+  },
+  "agentEndRedo": "End redo",
+  "@agentEndRedo": {},
+  "agentEndRedoTitle": "End this redo?",
+  "@agentEndRedoTitle": {},
+  "agentEndRedoDescription": "Keep the current data and conversation. The remaining redo will not run.",
+  "@agentEndRedoDescription": {}
 }

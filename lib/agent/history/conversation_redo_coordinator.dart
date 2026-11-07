@@ -295,7 +295,7 @@ class ConversationRedoCoordinator {
 
   Future<ConversationRedoBatch> _resume(String batchId) async {
     var batch = _required(batchId);
-    if (batch.isComplete) return batch;
+    if (batch.isTerminal) return batch;
     try {
       if (batch.phase.index < ConversationRedoPhase.ready.index) {
         await host.stopAndDiscardQueues(batch.conversationId);

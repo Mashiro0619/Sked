@@ -473,7 +473,7 @@ class AgentConversation {
   final List<ConversationReplyRevision> replyRevisions;
   final List<ConversationRedoBatch> redoBatches;
   ConversationRedoBatch? get pendingRedo =>
-      redoBatches.where((batch) => !batch.isComplete).firstOrNull;
+      redoBatches.where((batch) => !batch.isTerminal).firstOrNull;
 
   AgentConversation copyWith({
     String? title,
@@ -612,7 +612,7 @@ class AgentConversation {
             replyRevisions.length ||
         redoBatches.map((item) => item.id).toSet().length !=
             redoBatches.length ||
-        redoBatches.where((item) => !item.isComplete).length > 1 ||
+        redoBatches.where((item) => !item.isTerminal).length > 1 ||
         redoBatches.any((item) => item.conversationId != json['id'])) {
       throw const FormatException('Invalid conversation history references.');
     }
@@ -787,7 +787,7 @@ class ConversationArchive {
        handoffs = List.unmodifiable(handoffs),
        terminatedIds = Set.unmodifiable(terminatedIds);
 
-  static const currentVersion = 7;
+  static const currentVersion = 8;
   final int revision;
   final String? selectedId;
   final List<AgentConversation> conversations;
@@ -808,12 +808,32 @@ class ConversationArchive {
 
   factory ConversationArchive.decode(String source) {
     final json = _object(jsonDecode(source));
-    if ((!const [1, 2, 3, 4, 5, 6, currentVersion].contains(json['version'])) ||
+    if ((!const [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          currentVersion,
+        ].contains(json['version'])) ||
         json['revision'] is! int ||
         (json['revision'] as int) < 0) {
       throw const FormatException('Unsupported conversation archive version.');
     }
     final rawConversations = _objects(json, 'conversations');
+    if ((json['version'] as int) < 8 &&
+        rawConversations.any(
+          (conversation) => _objects(
+            conversation,
+            'redoBatches',
+          ).any((batch) => batch['phase'] == 'abandoned'),
+        )) {
+      throw const FormatException(
+        'Ending redo requires conversation archive version 8.',
+      );
+    }
     if ((json['version'] as int) < 6 &&
         rawConversations.any(
           (item) =>

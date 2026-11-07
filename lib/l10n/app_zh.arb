@@ -3078,5 +3078,11 @@
         "type": "int"
       }
     }
-  }
+  },
+  "agentEndRedo": "结束重做",
+  "@agentEndRedo": {},
+  "agentEndRedoTitle": "结束这次重做？",
+  "@agentEndRedoTitle": {},
+  "agentEndRedoDescription": "保留当前数据和对话，不再继续这次重做。",
+  "@agentEndRedoDescription": {}
 }

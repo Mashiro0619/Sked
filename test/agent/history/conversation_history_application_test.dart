@@ -17,6 +17,7 @@ import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/references/agent_composer_reference.dart';
 import 'package:sked/agent/skills/shared_skill_loader.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
+import 'package:sked/agent/runtime/agent_runtime_controller.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/application/resource_contracts.dart';
@@ -215,6 +216,276 @@ void main() {
       _ => _done(),
     };
   }
+
+  Future<AgentConversation> interruptedRedo() async {
+    final conversation = await ready();
+    createCalendarScript();
+    await app.agent.runtime.send(conversation.id, 'Create a calendar');
+    final original = app.agent.conversations.find(conversation.id)!;
+    provider.respond = (_) =>
+        throw const ProviderException(ProviderError.incompleteResponse);
+    await app.agent.history.editAndRedo(
+      conversation.id,
+      original.messages.first.id,
+      'Explain instead',
+    );
+    return app.agent.conversations.find(conversation.id)!;
+  }
+
+  test('ending a stopped redo preserves current data and failed attempts without replay', () async {
+    final interrupted = await interruptedRedo();
+    final id = interrupted.id;
+    final pending = interrupted.pendingRedo!;
+    final data = app.session.committedData.encode();
+    final calls = provider.requests.length;
+    final runs = jsonEncode(
+      interrupted.runs.map((run) => run.toJson()).toList(),
+    );
+    expect(app.agent.history.canEndRedo(id), isTrue);
+    await app.agent.history.endRedo(id, batchId: pending.id);
+    final ended = ConversationArchive.decode(chats.source!)
+        .conversations
+        .single;
+    expect(ended.pendingRedo, isNull);
+    expect(ended.redoBatches.single.phase, ConversationRedoPhase.abandoned);
+    expect(ended.redoBatches.single.isComplete, isFalse);
+    expect(ended.redoBatches.single.lastError, pending.lastError);
+    expect(ended.status, ConversationStatus.idle);
+    expect(jsonEncode(ended.runs.map((run) => run.toJson()).toList()), runs);
+    expect(
+      ended.historyVersions.single.toJson(),
+      interrupted.historyVersions.single.toJson(),
+    );
+    expect(app.session.committedData.encode(), data);
+    expect(provider.requests.length, calls);
+    await app.agent.history.coordinator.resume(pending.id);
+    expect(provider.requests.length, calls);
+    provider.respond = (_) => _done('New request completed.');
+    await app.agent.runtime.send(id, 'A new request');
+    expect(
+      app.agent.conversations.find(id)!.messages.last.text,
+      'New request completed.',
+    );
+    await app.agent.conversations.load();
+    expect(app.agent.conversations.find(id)!.pendingRedo, isNull);
+    await app.agent.conversations.delete(id);
+    expect(app.agent.conversations.find(id), isNull);
+  });
+
+  test(
+    'ending redo refuses an unresolved write and preserves its recovery state',
+    () async {
+      final interrupted = await interruptedRedo();
+      final id = interrupted.id;
+      final pending = interrupted.pendingRedo!;
+      final call = ConversationMessage(
+        id: 'unresolved-write',
+        role: ConversationRole.assistant,
+        text: '',
+        createdAt: DateTime.utc(2026),
+        toolCalls: [
+          ConversationToolCall(
+            id: 'lost-commit',
+            name: 'mutation.commit',
+            arguments: '{"operationId":"unknown-operation"}',
+          ),
+        ],
+      );
+      await app.agent.conversations.update(
+        id,
+        (current) => current.copyWith(
+          messages: [...current.messages, call],
+          turns: [
+            for (final turn in current.turns)
+              turn.copyWith(messageIds: [...turn.messageIds, call.id]),
+          ],
+        ),
+      );
+      final before = chats.source;
+      final calls = provider.requests.length;
+      await expectLater(
+        app.agent.history.endRedo(id, batchId: pending.id),
+        throwsA(
+          isA<AgentRuntimeException>().having(
+            (error) => error.code,
+            'code',
+            AgentRuntimeError.interruptedRunNeedsReview,
+          ),
+        ),
+      );
+      expect(chats.source, before);
+      expect(app.agent.conversations.find(id)!.pendingRedo!.id, pending.id);
+      expect(provider.requests.length, calls);
+    },
+  );
+
+  test(
+    'failed exit save retains pending redo until storage is recovered',
+    () async {
+      final interrupted = await interruptedRedo();
+      final pending = interrupted.pendingRedo!;
+      final before = chats.source;
+      chats.beforeSave = (archive) async {
+        if (archive.conversations.single.redoBatches.any(
+          (batch) => batch.phase == ConversationRedoPhase.abandoned,
+        )) {
+          throw const ConversationStorageException(
+            'Synthetic exit save failure.',
+          );
+        }
+      };
+      await expectLater(
+        app.agent.history.endRedo(interrupted.id, batchId: pending.id),
+        throwsA(isA<ConversationStorageException>()),
+      );
+      expect(chats.source, before);
+      expect(
+        app.agent.conversations.find(interrupted.id)!.pendingRedo!.id,
+        pending.id,
+      );
+      chats.beforeSave = null;
+      await app.agent.conversations.load();
+      await app.agent.history.endRedo(interrupted.id, batchId: pending.id);
+      expect(app.agent.conversations.find(interrupted.id)!.pendingRedo, isNull);
+    },
+  );
+
+  test('ending redo cannot race an active replay', () async {
+    final interrupted = await interruptedRedo();
+    final gate = Completer<ProviderResponse>();
+    final entered = Completer<void>();
+    provider.respond = (_) {
+      entered.complete();
+      return gate.future;
+    };
+    final resume = app.agent.history.continueRedo(interrupted.id);
+    await entered.future;
+    expect(app.agent.history.canEndRedo(interrupted.id), isFalse);
+    await expectLater(
+      app.agent.history.endRedo(
+        interrupted.id,
+        batchId: interrupted.pendingRedo!.id,
+      ),
+      throwsA(isA<ConversationHistoryException>()),
+    );
+    gate.complete(_done());
+    await resume;
+  });
+
+  test(
+    'a lost exit acknowledgement is reconciled from the saved terminal state',
+    () async {
+      final interrupted = await interruptedRedo();
+      final pending = interrupted.pendingRedo!;
+      chats.didSave = (archive) {
+        if (archive.conversations.single.redoBatches.any(
+          (batch) => batch.phase == ConversationRedoPhase.abandoned,
+        )) {
+          throw const ConversationStorageException(
+            'Synthetic lost exit acknowledgement.',
+            outcomeUnknown: true,
+          );
+        }
+      };
+      await expectLater(
+        app.agent.history.endRedo(interrupted.id, batchId: pending.id),
+        throwsA(isA<ConversationStorageException>()),
+      );
+      expect(app.agent.conversations.blocked, isTrue);
+      expect(
+        app.agent.conversations.find(interrupted.id)!.pendingRedo!.id,
+        pending.id,
+      );
+      expect(
+        ConversationArchive.decode(chats.source!)
+            .conversations
+            .single
+            .pendingRedo,
+        isNull,
+      );
+      chats.didSave = null;
+      await app.agent.conversations.load();
+      expect(app.agent.conversations.find(interrupted.id)!.pendingRedo, isNull);
+      expect(
+        app.agent.conversations.find(interrupted.id)!.redoBatches.single.phase,
+        ConversationRedoPhase.abandoned,
+      );
+    },
+  );
+
+  test(
+    'an undo recovery marker prevents closing even a published redo',
+    () async {
+      final interrupted = await interruptedRedo();
+      final pending = interrupted.pendingRedo!;
+      await chats.writePendingHistoryBatch(pending.id);
+      final before = chats.source;
+      await expectLater(
+        app.agent.history.endRedo(interrupted.id, batchId: pending.id),
+        throwsA(isA<ConversationHistoryException>()),
+      );
+      expect(chats.source, before);
+      expect(
+        app.agent.conversations.find(interrupted.id)!.pendingRedo!.id,
+        pending.id,
+      );
+      await chats.writePendingHistoryBatch(null);
+    },
+  );
+
+  testWidgets(
+    'redo exit requires confirmation and never starts a model request',
+    (tester) async {
+      tester.view.physicalSize = const Size(1200, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final interrupted = await tester.runAsync(interruptedRedo);
+      final id = interrupted!.id;
+      final calls = provider.requests.length;
+      await tester.pumpWidget(
+        WorkspaceHarness(provider: app, home: const AgentPage()),
+      );
+      await tester.pumpAndSettle();
+      final button = find.byKey(const ValueKey('agent-end-history-redo'));
+      await tester.ensureVisible(button);
+      await tester.runAsync(() => tester.tap(button));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Cancel'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(app.agent.conversations.find(id)!.pendingRedo, isNotNull);
+      await tester.runAsync(() => tester.tap(button));
+      await tester.pumpAndSettle();
+      await tester.tapAt(const Offset(5, 5));
+      await tester.pumpAndSettle();
+      expect(app.agent.conversations.find(id)!.pendingRedo, isNotNull);
+      await tester.runAsync(() => tester.tap(button));
+      await tester.pumpAndSettle();
+      await tester.runAsync(() async {
+        final saved = Completer<void>();
+        chats.didSave = (archive) {
+          if (archive.conversations.single.pendingRedo == null &&
+              !saved.isCompleted) {
+            saved.complete();
+          }
+        };
+        await tester.tap(
+          find.byKey(const ValueKey('agent-confirm-end-history-redo')),
+        );
+        await saved.future.timeout(const Duration(seconds: 10));
+      });
+      await tester.pumpAndSettle();
+      expect(app.agent.conversations.find(id)!.pendingRedo, isNull);
+      expect(provider.requests.length, calls);
+      expect(button, findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 
   test(
     'normal startup checks only recovery marker and keeps chats dormant',

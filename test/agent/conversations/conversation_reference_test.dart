@@ -13,31 +13,31 @@ import 'package:sked/application/resource_contracts.dart';
 final _now = DateTime.utc(2026, 11, 7);
 
 void main() {
-  test(
-    'message and draft references round trip as immutable archive v7 data',
-    () {
-      final source = _conversation();
-      final encoded = ConversationArchive(conversations: [source]).encode();
-      expect((jsonDecode(encoded) as Map)['version'], 7);
-      final restored = ConversationArchive.decode(encoded).conversations.single;
-      expect(
-        _json(restored.messages.single.contextReferences),
-        _json(source.messages.single.contextReferences),
-      );
-      expect(_json(restored.draftReferences), _json(source.draftReferences));
-      expect(
-        () => restored.messages.single.contextReferences.clear(),
-        throwsUnsupportedError,
-      );
-      expect(() => restored.draftReferences.clear(), throwsUnsupportedError);
-      final input = [_resource()];
-      final message = _message(references: input, attachmentIds: const []);
-      final draft = _bareConversation().copyWith(draftReferences: input);
-      input.clear();
-      expect(message.contextReferences, hasLength(1));
-      expect(draft.draftReferences, hasLength(1));
-    },
-  );
+  test('message and draft references round trip in the current archive', () {
+    final source = _conversation();
+    final encoded = ConversationArchive(conversations: [source]).encode();
+    expect(
+      (jsonDecode(encoded) as Map)['version'],
+      ConversationArchive.currentVersion,
+    );
+    final restored = ConversationArchive.decode(encoded).conversations.single;
+    expect(
+      _json(restored.messages.single.contextReferences),
+      _json(source.messages.single.contextReferences),
+    );
+    expect(_json(restored.draftReferences), _json(source.draftReferences));
+    expect(
+      () => restored.messages.single.contextReferences.clear(),
+      throwsUnsupportedError,
+    );
+    expect(() => restored.draftReferences.clear(), throwsUnsupportedError);
+    final input = [_resource()];
+    final message = _message(references: input, attachmentIds: const []);
+    final draft = _bareConversation().copyWith(draftReferences: input);
+    input.clear();
+    expect(message.contextReferences, hasLength(1));
+    expect(draft.draftReferences, hasLength(1));
+  });
 
   test('legacy archives default references to empty and reject new fields even when empty', () {
     final legacy = _bareConversation().copyWith(

@@ -251,6 +251,51 @@ class ConversationHistoryService implements ConversationRedoHost {
     );
   }
 
+  /// Ends only replay work after the admitted inverse is durably complete.
+  /// Existing data, receipts and failed attempts remain in their current state.
+  bool canEndRedo(String conversationId) {
+    final pending = conversations.find(conversationId)?.pendingRedo;
+    return conversations.canWrite &&
+        !_recovering &&
+        !_entering &&
+        !_activeBarrier &&
+        _owner == null &&
+        !_editing.contains(conversationId) &&
+        !_continuing.containsKey(conversationId) &&
+        !runtime.isRunning(conversationId) &&
+        (pending?.phase == ConversationRedoPhase.ready ||
+            pending?.phase == ConversationRedoPhase.running);
+  }
+
+  Future<void> endRedo(
+    String conversationId, {
+    required String batchId,
+    void Function()? validate,
+  }) async {
+    if (!_editing.add(conversationId)) _busy();
+    try {
+      _checkReferenceEdit(conversationId);
+      validate?.call();
+      final pending = conversations.find(conversationId)?.pendingRedo;
+      if (pending?.id != batchId ||
+          (pending?.phase != ConversationRedoPhase.ready &&
+              pending?.phase != ConversationRedoPhase.running)) {
+        _busy();
+      }
+      if (await conversations.pendingHistoryBatch() != null) _busy();
+      await runtime.endHistoryRedo(
+        conversationId,
+        batchId: batchId,
+        validate: () {
+          _checkReferenceEdit(conversationId);
+          validate?.call();
+        },
+      );
+    } finally {
+      _editing.remove(conversationId);
+    }
+  }
+
   Future<void> recoverBeforeWrites() async {
     if (_entering ||
         _activeBarrier ||

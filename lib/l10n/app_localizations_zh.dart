@@ -4274,6 +4274,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String agentBudgetSummaryRecordedUsage(int requests, int tokens) {
     return '模型请求 $requests 轮 · 已报告用量 $tokens Token';
   }
+
+  @override
+  String get agentEndRedo => '结束重做';
+
+  @override
+  String get agentEndRedoTitle => '结束这次重做？';
+
+  @override
+  String get agentEndRedoDescription => '保留当前数据和对话，不再继续这次重做。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -8548,4 +8557,13 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String agentBudgetSummaryRecordedUsage(int requests, int tokens) {
     return '模型請求 $requests 輪 · 已回報用量 $tokens Token';
   }
+
+  @override
+  String get agentEndRedo => '結束重做';
+
+  @override
+  String get agentEndRedoTitle => '結束這次重做？';
+
+  @override
+  String get agentEndRedoDescription => '保留目前資料與對話，不再繼續這次重做。';
 }

@@ -8071,6 +8071,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Model requests {requests} · {tokens} reported tokens'**
   String agentBudgetSummaryRecordedUsage(int requests, int tokens);
+
+  /// No description provided for @agentEndRedo.
+  ///
+  /// In en, this message translates to:
+  /// **'End redo'**
+  String get agentEndRedo;
+
+  /// No description provided for @agentEndRedoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'End this redo?'**
+  String get agentEndRedoTitle;
+
+  /// No description provided for @agentEndRedoDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the current data and conversation. The remaining redo will not run.'**
+  String get agentEndRedoDescription;
 }
 
 class _AppLocalizationsDelegate
