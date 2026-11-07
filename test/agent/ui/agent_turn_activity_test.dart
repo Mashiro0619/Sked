@@ -78,18 +78,41 @@ void main() {
       await tester.tap(toggle);
       await tester.pumpAndSettle();
       final branch = key('agent-activity-branch-turn');
+      expect(
+        (tester.widget<DecoratedBox>(branch).decoration as BoxDecoration)
+            .border,
+        isNull,
+      );
       final leading = find.descendant(
         of: toggle,
         matching: find.byIcon(Icons.check_rounded),
       );
-      final borderEdge = direction == TextDirection.ltr
+      final branchEdge = direction == TextDirection.ltr
           ? tester.getRect(branch).left
           : tester.getRect(branch).right;
-      expect(borderEdge, closeTo(tester.getCenter(leading).dx, .01));
-      expect(
-        tester.getSize(key('agent-activity-toggle-tool-0')).width,
-        lessThan(600),
+      expect(branchEdge, closeTo(tester.getCenter(leading).dx, .01));
+      final childToggle = key('agent-activity-toggle-tool-0');
+      expect(tester.getSize(childToggle).width, lessThan(600));
+      final indent = direction == TextDirection.ltr
+          ? tester.getRect(childToggle).left - tester.getRect(toggle).left
+          : tester.getRect(toggle).right - tester.getRect(childToggle).right;
+      expect(indent, closeTo(24, .01));
+      await tester.tap(childToggle);
+      await tester.pumpAndSettle();
+      final childBranch = key('agent-activity-branch-tool-0');
+      final childDecoration =
+          tester.widget<DecoratedBox>(childBranch).decoration as BoxDecoration;
+      final childBorder = childDecoration.border! as BorderDirectional;
+      expect(childBorder.start.width, 1.5);
+      expect(childBorder.start.style, BorderStyle.solid);
+      final childLeading = find.descendant(
+        of: childToggle,
+        matching: find.byIcon(Icons.check_rounded),
       );
+      final childBorderEdge = direction == TextDirection.ltr
+          ? tester.getRect(childBranch).left
+          : tester.getRect(childBranch).right;
+      expect(childBorderEdge, closeTo(tester.getCenter(childLeading).dx, .01));
       expect(tester.takeException(), isNull);
     }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
   }
@@ -135,6 +158,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('notifications.reminders'), findsOneWidget);
     expect(key('agent-activity-detail-tool-0'), findsOneWidget);
+    final branch = tester.widget<DecoratedBox>(
+      key('agent-activity-branch-tool-0'),
+    );
+    final decoration = branch.decoration as BoxDecoration;
+    final border = decoration.border! as BorderDirectional;
+    expect(border.start.width, 1.5);
+    expect(border.start.style, BorderStyle.solid);
     await tester.tap(key('agent-activity-toggle-tool-0'));
     await tester.pumpAndSettle();
     expect(find.byType(AgentSelectableText), findsNothing);
