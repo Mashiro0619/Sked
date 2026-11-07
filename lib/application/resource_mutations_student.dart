@@ -26,10 +26,8 @@ StudentModeData _timetableMutation(
   String Function(ResourceKind) nextId,
   Set<String> touched,
 ) {
-  _fields(
-    command.values,
-    ResourceMutationSchema.fields(ResourceKind.timetable),
-  );
+  ApplicationField field(String name) =>
+      ResourceMutationSchema.field(ResourceKind.timetable, name);
   if (command.destinationParentId != null ||
       command.action == ResourceMutationAction.move) {
     _invalid('Timetables do not have a parent.', 'destinationParentId');
@@ -50,25 +48,20 @@ StudentModeData _timetableMutation(
       command.action == ResourceMutationAction.copy;
   final values = command.values;
   final name = values.containsKey('name')
-      ? _string(values['name'], 'name', nonEmpty: true).trim()
+      ? field('name').string(values['name']).trim()
       : original?.config.name ?? _missing('name');
   final start = values.containsKey('startDate')
       ? _dateTime(
-          _string(values['startDate'], 'startDate'),
+          field('startDate').string(values['startDate']),
           'startDate',
           allDay: true,
         )
       : original?.config.startDate ?? _missing('startDate');
   final totalWeeks = values.containsKey('totalWeeks')
-      ? _integer(
-          values['totalWeeks'],
-          'totalWeeks',
-          min: 1,
-          max: maxTimetableWeeks,
-        )
+      ? field('totalWeeks').integer(values['totalWeeks'])
       : original?.config.totalWeeks ?? _missing('totalWeeks');
   final setId = values.containsKey('periodTimeSetId')
-      ? _string(values['periodTimeSetId'], 'periodTimeSetId', nonEmpty: true)
+      ? field('periodTimeSetId').string(values['periodTimeSetId'])
       : original?.config.periodTimeSetId ?? _missing('periodTimeSetId');
   _periodSet(data, setId);
   if (original != null && original.config.periodTimeSetId != setId) {
@@ -113,7 +106,6 @@ StudentModeData _courseMutation(
   ResourceMutation command,
   String Function(ResourceKind) nextId,
 ) {
-  _fields(command.values, ResourceMutationSchema.fields(ResourceKind.course));
   final original = command.action == ResourceMutationAction.create
       ? null
       : _courseByRef(data, command.target!);
@@ -200,22 +192,19 @@ CourseItem _courseValues(
   CourseItem? original, {
   required bool requireResolvableTime,
 }) {
+  ApplicationField field(String name) =>
+      ResourceMutationSchema.field(ResourceKind.course, name);
   final name = values.containsKey('name')
-      ? _string(values['name'], 'name', nonEmpty: true).trim()
+      ? field('name').string(values['name']).trim()
       : original?.name ?? _missing('name');
   final weekday = values.containsKey('dayOfWeek')
-      ? _integer(values['dayOfWeek'], 'dayOfWeek', min: 1, max: 7)
+      ? field('dayOfWeek').integer(values['dayOfWeek'])
       : original?.dayOfWeek ?? _missing('dayOfWeek');
   final weeks = values.containsKey('semesterWeeks')
-      ? _positiveIntegers(
-          values['semesterWeeks'],
-          'semesterWeeks',
-          max: maxTimetableWeeks,
-          nonEmpty: true,
-        )
+      ? _integerList(values['semesterWeeks'], field('semesterWeeks'))
       : original?.semesterWeeks ?? _missing('semesterWeeks');
   final periods = values.containsKey('periods')
-      ? _positiveIntegers(values['periods'], 'periods', max: 1440)
+      ? _integerList(values['periods'], field('periods'))
       : original?.periods ?? const <int>[];
   final changesTime =
       values.containsKey('startMinutes') || values.containsKey('endMinutes');
@@ -232,10 +221,10 @@ CourseItem _courseValues(
     );
   }
   final start = values.containsKey('startMinutes')
-      ? _integer(values['startMinutes'], 'startMinutes', max: 1439)
+      ? field('startMinutes').integer(values['startMinutes'])
       : original?.startMinutes ?? 0;
   final end = values.containsKey('endMinutes')
-      ? _integer(values['endMinutes'], 'endMinutes', max: 1439)
+      ? field('endMinutes').integer(values['endMinutes'])
       : original?.endMinutes ?? 0;
   final unknown = start == 0 && end == 0;
   if (!unknown && end <= start) {
@@ -252,22 +241,19 @@ CourseItem _courseValues(
     );
   }
   final creditValue = values.containsKey('credit')
-      ? values['credit']
+      ? field('credit').number(values['credit'])
       : original?.credit ?? 0;
-  if (creditValue is! num || !creditValue.isFinite) {
-    _invalid('Credit must be a finite number.', 'credit');
-  }
   final custom = values.containsKey('customFields')
-      ? _object(values['customFields'], 'customFields')
+      ? field('customFields').object(values['customFields'])
       : original?.customFields ?? const <String, Object?>{};
   final updated = CourseItem(
     id: original?.id ?? '',
     name: name,
     teacher: values.containsKey('teacher')
-        ? _string(values['teacher'], 'teacher')
+        ? field('teacher').string(values['teacher'])
         : original?.teacher ?? '',
     location: values.containsKey('location')
-        ? _string(values['location'], 'location')
+        ? field('location').string(values['location'])
         : original?.location ?? '',
     dayOfWeek: weekday,
     semesterWeeks: List.unmodifiable(weeks),
@@ -279,7 +265,7 @@ CourseItem _courseValues(
         : original.timeRange,
     credit: (creditValue).toDouble(),
     remarks: values.containsKey('remarks')
-        ? _string(values['remarks'], 'remarks')
+        ? field('remarks').string(values['remarks'])
         : original?.remarks ?? '',
     customFields: Map<String, dynamic>.unmodifiable(custom),
     reminderSettings: values.containsKey('reminderSettings')
@@ -298,20 +284,20 @@ CourseItem _courseValues(
 }
 
 CourseReminderSettings _courseReminder(Object? value) {
-  final fields = _object(value, 'reminderSettings');
-  _fields(fields, const {
-    'behavior',
-    'minutesBefore',
-  }, prefix: 'reminderSettings.');
+  final schema = ResourceMutationSchema.field(
+    ResourceKind.course,
+    'reminderSettings',
+  );
+  final fields = schema.object(value);
   final behavior = _enumValue(
     CourseReminderBehavior.values,
-    fields['behavior'],
+    schema.property('behavior').string(fields['behavior']),
     (item) => item.value,
     'reminderSettings.behavior',
   );
   final minutes = fields['minutesBefore'] == null
       ? null
-      : _integer(fields['minutesBefore'], 'reminderSettings.minutesBefore');
+      : schema.property('minutesBefore').integer(fields['minutesBefore']);
   if ((behavior == CourseReminderBehavior.custom) != (minutes != null)) {
     _invalid(
       'Only custom reminders require an explicit non-negative offset.',
@@ -326,10 +312,6 @@ StudentModeData _periodSetMutation(
   ResourceMutation command,
   String Function(ResourceKind) nextId,
 ) {
-  _fields(
-    command.values,
-    ResourceMutationSchema.fields(ResourceKind.periodTimeSet),
-  );
   if (command.destinationParentId != null ||
       command.action == ResourceMutationAction.move) {
     _invalid('Period time sets do not have a parent.', 'destinationParentId');
@@ -359,7 +341,10 @@ StudentModeData _periodSetMutation(
       command.action == ResourceMutationAction.create ||
       command.action == ResourceMutationAction.copy;
   final name = command.values.containsKey('name')
-      ? _string(command.values['name'], 'name', nonEmpty: true).trim()
+      ? ResourceMutationSchema.field(
+          ResourceKind.periodTimeSet,
+          'name',
+        ).string(command.values['name']).trim()
       : original?.name ?? _missing('name');
   final periods = command.values.containsKey('periodTimes')
       ? _periodTimes(command.values['periodTimes'])
@@ -391,33 +376,20 @@ StudentModeData _periodSetMutation(
 }
 
 List<CoursePeriodTime> _periodTimes(Object? value) {
-  if (value is! List || value.isEmpty || value.length > 1440) {
-    _invalid('Expected a non-empty bounded list of periods.', 'periodTimes');
-  }
+  final schema = ResourceMutationSchema.field(
+    ResourceKind.periodTimeSet,
+    'periodTimes',
+  );
   final periods = <CoursePeriodTime>[];
-  for (final item in value) {
-    final fields = _object(item, 'periodTimes');
-    _fields(fields, const {
-      'index',
-      'startMinutes',
-      'endMinutes',
-    }, prefix: 'periodTimes.');
-    final index = _integer(
-      fields['index'],
-      'periodTimes.index',
-      min: 1,
-      max: 1440,
-    );
-    final start = _integer(
-      fields['startMinutes'],
-      'periodTimes.startMinutes',
-      max: 1439,
-    );
-    final end = _integer(
-      fields['endMinutes'],
-      'periodTimes.endMinutes',
-      max: 1439,
-    );
+  for (final item in schema.list(value)) {
+    final fields = schema.item.object(item);
+    final index = schema.item.property('index').integer(fields['index']);
+    final start = schema.item
+        .property('startMinutes')
+        .integer(fields['startMinutes']);
+    final end = schema.item
+        .property('endMinutes')
+        .integer(fields['endMinutes']);
     if (index != periods.length + 1 ||
         end <= start ||
         (periods.isNotEmpty && start < periods.last.endMinutes)) {
@@ -454,19 +426,12 @@ void _requireRetainedPeriodBindings(
   }
 }
 
-List<int> _positiveIntegers(
-  Object? value,
-  String field, {
-  required int max,
-  bool nonEmpty = false,
-}) {
-  if (value is! List || value.length > max || (nonEmpty && value.isEmpty)) {
-    _invalid('Expected a bounded list of positive integers.', field);
-  }
+List<int> _integerList(Object? value, ApplicationField field) {
   final result = <int>{};
-  for (final item in value) {
-    if (!result.add(_integer(item, field, min: 1, max: max))) {
-      _invalid('Duplicate values are not allowed.', field);
+  for (final item in field.list(value)) {
+    if (!result.add(field.item.integer(item)) &&
+        field.schema['uniqueItems'] == true) {
+      _invalid('Duplicate values are not allowed.', field.name);
     }
   }
   return result.toList()..sort();

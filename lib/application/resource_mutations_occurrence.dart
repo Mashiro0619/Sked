@@ -82,10 +82,6 @@ extension _OccurrenceMutations on ResourceMutationCompiler {
       return _stampOccurrenceChanges(data, next, context.now);
     }
 
-    _fields(
-      command.values,
-      ResourceMutationSchema.fields(ResourceKind.occurrence),
-    );
     final parentId = command.destinationParentId ?? occurrence.calendar.id;
     _calendar(data, parentId);
     final copying = command.action == ResourceMutationAction.copy;

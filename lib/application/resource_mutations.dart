@@ -187,10 +187,8 @@ class ResourceMutationCompiler {
     Set<String> touched,
     String localeCode,
   ) {
-    _fields(
-      command.values,
-      ResourceMutationSchema.fields(ResourceKind.calendar),
-    );
+    ApplicationField field(String name) =>
+        ResourceMutationSchema.field(ResourceKind.calendar, name);
     if (command.destinationParentId != null ||
         command.action == ResourceMutationAction.move) {
       _invalid('Calendars do not have a parent.', 'destinationParentId');
@@ -230,24 +228,25 @@ class ResourceMutationCompiler {
         command.action == ResourceMutationAction.copy;
     final values = command.values;
     final name = values.containsKey('name')
-        ? _string(values['name'], 'name', nonEmpty: true).trim()
+        ? field('name').string(values['name']).trim()
         : original?.name ?? _missing('name');
     final color = values.containsKey('colorValue')
-        ? _color(values['colorValue'], 'colorValue')
+        ? field('colorValue').integer(values['colorValue'])
         : original?.colorValue ?? defaultGeneralCalendarColorValue;
     final visible = values.containsKey('isVisible')
-        ? _bool(values['isVisible'], 'isVisible')
+        ? field('isVisible').boolean(values['isVisible'])
         : original?.isVisible ?? true;
     final order = values.containsKey('sortOrder')
-        ? _integer(
-            values['sortOrder'],
-            'sortOrder',
-            min: 0,
-            max: isNew ? data.schedules.length : data.schedules.length - 1,
-          )
+        ? field('sortOrder').integer(values['sortOrder'])
         : isNew
         ? data.schedules.length
         : data.schedules.indexWhere((item) => item.id == original!.id);
+    if (order > (isNew ? data.schedules.length : data.schedules.length - 1)) {
+      _invalid(
+        'The sort position must exist in the calendar list.',
+        'sortOrder',
+      );
+    }
     final id = isNew ? nextId(ResourceKind.calendar) : original!.id;
     final events = command.action == ResourceMutationAction.copy
         ? [
@@ -286,7 +285,6 @@ class ResourceMutationCompiler {
     MutationContext context,
     String Function(ResourceKind) nextId,
   ) {
-    _fields(command.values, ResourceMutationSchema.fields(ResourceKind.event));
     final original = command.action == ResourceMutationAction.create
         ? null
         : _event(data, command.target!);
@@ -336,17 +334,19 @@ class ResourceMutationCompiler {
     String parentId, {
     bool preserveMonthlyAnchor = false,
   }) {
+    ApplicationField field(String name) =>
+        ResourceMutationSchema.field(ResourceKind.event, name);
     final title = values.containsKey('title')
-        ? _string(values['title'], 'title', nonEmpty: true).trim()
+        ? field('title').string(values['title']).trim()
         : original?.title ?? _missing('title');
     final startText = values.containsKey('start')
-        ? _string(values['start'], 'start')
+        ? field('start').string(values['start'])
         : original?.startDateTimeIso ?? _missing('start');
     final endText = values.containsKey('end')
-        ? _string(values['end'], 'end')
+        ? field('end').string(values['end'])
         : original?.endDateTimeIso ?? _missing('end');
     final isAllDay = values.containsKey('isAllDay')
-        ? _bool(values['isAllDay'], 'isAllDay')
+        ? field('isAllDay').boolean(values['isAllDay'])
         : original?.isAllDay ?? false;
     final start = _dateTime(startText, 'start', allDay: isAllDay);
     final end = _dateTime(endText, 'end', allDay: isAllDay);
@@ -397,20 +397,20 @@ class ResourceMutationCompiler {
       rule = rule.copyWith(monthlyAnchorDay: null);
     }
     final location = values.containsKey('location')
-        ? _string(values['location'], 'location')
+        ? field('location').string(values['location'])
         : original?.location ?? '';
     final notes = values.containsKey('notes')
-        ? _string(values['notes'], 'notes')
+        ? field('notes').string(values['notes'])
         : original?.notes ?? '';
     final color = values.containsKey('colorValue')
         ? values['colorValue'] == null
               ? null
-              : _color(values['colorValue'], 'colorValue', slots: false)
+              : field('colorValue').integer(values['colorValue'])
         : original?.colorValue;
     final behavior = values.containsKey('reminderBehavior')
         ? _enumValue(
             GeneralEventReminderBehavior.values,
-            values['reminderBehavior'],
+            field('reminderBehavior').string(values['reminderBehavior']),
             (item) => item.value,
             'reminderBehavior',
           )
@@ -465,6 +465,11 @@ class ResourceMutationCompiler {
 }
 
 void _validateEnvelope(ResourceMutation command) {
+  ResourceMutationSchema.readFields(
+    command.kind,
+    command.values,
+    creating: command.action == ResourceMutationAction.create,
+  );
   if (command.kind != ResourceKind.occurrence) {
     if (command.scope != null) {
       _invalid('Only occurrence commands accept a scope.', 'scope');
@@ -557,18 +562,14 @@ GeneralEvent _event(GeneralScheduleData data, ResourceRef ref) {
 }
 
 GeneralEventRecurrenceRule _rule(Object? value, DateTime start) {
-  final fields = _object(value, 'recurrenceRule');
-  _fields(fields, const {
-    'type',
-    'interval',
-    'unit',
-    'untilDate',
-    'count',
-    'monthlyAnchorDay',
-  }, prefix: 'recurrenceRule.');
+  final schema = ResourceMutationSchema.field(
+    ResourceKind.event,
+    'recurrenceRule',
+  );
+  final fields = schema.object(value);
   final type = _enumValue(
     GeneralEventRecurrence.values,
-    fields['type'],
+    schema.property('type').string(fields['type']),
     (item) => item.value,
     'recurrenceRule.type',
   );
@@ -580,7 +581,7 @@ GeneralEventRecurrenceRule _rule(Object? value, DateTime start) {
   final unit = fields.containsKey('unit')
       ? _enumValue(
           GeneralEventRecurrenceUnit.values,
-          fields['unit'],
+          schema.property('unit').string(fields['unit']),
           (item) => item.value,
           'recurrenceRule.unit',
         )
@@ -594,30 +595,20 @@ GeneralEventRecurrenceRule _rule(Object? value, DateTime start) {
     );
   }
   final interval = fields.containsKey('interval')
-      ? _integer(
-          fields['interval'],
-          'recurrenceRule.interval',
-          min: 1,
-          max: 999,
-        )
+      ? schema.property('interval').integer(fields['interval'])
       : 1;
   final count = fields['count'] == null
       ? null
-      : _integer(fields['count'], 'recurrenceRule.count', min: 1);
+      : schema.property('count').integer(fields['count']);
   final until = fields['untilDate'] == null
       ? null
       : _date(
-          _string(fields['untilDate'], 'recurrenceRule.untilDate'),
+          schema.property('untilDate').string(fields['untilDate']),
           'recurrenceRule.untilDate',
         );
   final anchor = fields['monthlyAnchorDay'] == null
       ? null
-      : _integer(
-          fields['monthlyAnchorDay'],
-          'recurrenceRule.monthlyAnchorDay',
-          min: 1,
-          max: 31,
-        );
+      : schema.property('monthlyAnchorDay').integer(fields['monthlyAnchorDay']);
   if (until != null && calendarDaysBetween(start, until) < 0) {
     _invalid(
       'The recurrence end precedes its start.',
@@ -654,12 +645,13 @@ List<String> _exceptions(
   DateTime start,
   GeneralEventRecurrenceRule rule,
 ) {
-  if (value is! List) {
-    _invalid('Expected a date list.', 'recurrenceExceptionDates');
-  }
+  final schema = ResourceMutationSchema.field(
+    ResourceKind.event,
+    'recurrenceExceptionDates',
+  );
   final result = <String>{};
-  for (final item in value) {
-    final text = _string(item, 'recurrenceExceptionDates');
+  for (final item in schema.list(value)) {
+    final text = schema.item.string(item);
     final date = _date(text, 'recurrenceExceptionDates');
     if (!rule.isRepeating ||
         generalRecurrenceSequenceForDate(start, rule, date) == null ||
@@ -674,18 +666,13 @@ List<String> _exceptions(
 }
 
 List<GeneralEventReminder> _reminders(Object? value) {
-  if (value is! List) {
-    _invalid('Expected reminder offsets.', 'reminders');
-  }
+  final schema = ResourceMutationSchema.field(ResourceKind.event, 'reminders');
   final offsets = <int>{};
-  for (final item in value) {
-    final fields = _object(item, 'reminders');
-    _fields(fields, const {'minutesBefore'}, prefix: 'reminders.');
-    final minutes = _integer(
-      fields['minutesBefore'],
-      'reminders.minutesBefore',
-      min: 0,
-    );
+  for (final item in schema.list(value)) {
+    final fields = schema.item.object(item);
+    final minutes = schema.item
+        .property('minutesBefore')
+        .integer(fields['minutesBefore']);
     if (!offsets.add(minutes)) {
       _invalid('Reminder offsets must be unique.', 'reminders');
     }
@@ -744,37 +731,6 @@ DateTime _date(String value, String field) {
 }
 
 String _dateIso(DateTime value) => value.toIso8601String().split('T').first;
-Map<String, Object?> _object(Object? value, String field) {
-  if (value is! Map<String, Object?>) _invalid('Expected an object.', field);
-  return value;
-}
-
-String _string(Object? value, String field, {bool nonEmpty = false}) {
-  if (value is! String || (nonEmpty && value.trim().isEmpty)) {
-    _invalid('Expected a valid string.', field);
-  }
-  return value;
-}
-
-bool _bool(Object? value, String field) {
-  if (value is! bool) _invalid('Expected a boolean.', field);
-  return value;
-}
-
-int _integer(Object? value, String field, {int min = 0, int max = 0x7fffffff}) {
-  if (value is! int || value < min || value > max) {
-    _invalid('Expected an integer within the supported range.', field);
-  }
-  return value;
-}
-
-int _color(Object? value, String field, {bool slots = true}) {
-  if (value is int && slots && generalCalendarSlotColorValues.contains(value)) {
-    return value;
-  }
-  return _integer(value, field, min: 0, max: 0xffffffff);
-}
-
 T _enumValue<T>(
   List<T> values,
   Object? value,
@@ -790,18 +746,6 @@ T _enumValue<T>(
 void _id(String id, String field) {
   if (id.trim().isEmpty || id != id.trim()) {
     _invalid('Expected a non-empty stable ID.', field);
-  }
-}
-
-void _fields(
-  Map<String, Object?> values,
-  Set<String> allowed, {
-  String prefix = '',
-}) {
-  for (final key in values.keys) {
-    if (!allowed.contains(key)) {
-      _invalid('Unknown or read-only field.', '$prefix$key');
-    }
   }
 }
 

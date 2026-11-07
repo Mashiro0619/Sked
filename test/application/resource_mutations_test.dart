@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/application/resource_contracts.dart';
+import 'package:sked/application/resource_mutation_schema.dart';
 import 'package:sked/application/resource_mutations.dart';
 import 'package:sked/models/timetable_models.dart';
 
@@ -16,6 +17,125 @@ Matcher problem(OperationErrorCode code, [String? field]) =>
         );
 
 void main() {
+  test('calendar field metadata accepts both slot and ARGB colors', () {
+    final base = fixture();
+    final colorField = ResourceMutationSchema.field(
+      ResourceKind.calendar,
+      'colorValue',
+    );
+    for (final color in [generalCalendarSlotColorValues.first, 0, 0xffffffff]) {
+      expect(colorField.integer(color), color);
+      final draft = Host().compile(base, [
+        ResourceMutation(
+          kind: ResourceKind.calendar,
+          action: ResourceMutationAction.patch,
+          target: const ResourceRef(kind: ResourceKind.calendar, id: 'active'),
+          values: {'colorValue': color},
+        ),
+      ]);
+      expect(draft.candidate.generalMode.schedules.first.colorValue, color);
+    }
+    expect(
+      () => Host().compile(base, [
+        ResourceMutation(
+          kind: ResourceKind.calendar,
+          action: ResourceMutationAction.patch,
+          target: const ResourceRef(kind: ResourceKind.calendar, id: 'active'),
+          values: {'colorValue': 0x100000000},
+        ),
+      ]),
+      throwsA(problem(OperationErrorCode.invalidArgument, 'colorValue')),
+    );
+  });
+
+  test('nested event fields reject unknown keys and retain large offsets', () {
+    final base = fixture(events: [event('a')]);
+    final draft = Host().compile(base, [
+      patch('a', {
+        'reminderBehavior': 'custom',
+        'reminders': [
+          {'minutesBefore': 0x80000000},
+        ],
+      }),
+    ]);
+    final restored = AppData.fromJson(draft.candidate.toJson());
+    expect(findEvent(restored, 'a').reminders.single.minutesBefore, 0x80000000);
+    for (final (values, field) in <(Map<String, Object?>, String)>[
+      ({'recurrenceRule': <String, Object?>{}}, 'recurrenceRule.type'),
+      (
+        {
+          'recurrenceRule': {'type': 'daily', 'typo': 1},
+        },
+        'recurrenceRule.typo',
+      ),
+      (
+        {
+          'recurrenceRule': {'type': 'unknown'},
+        },
+        'recurrenceRule.type',
+      ),
+      (
+        {
+          'recurrenceRule': {'type': 'daily', 'interval': 1000},
+        },
+        'recurrenceRule.interval',
+      ),
+      (
+        {
+          'reminders': [<String, Object?>{}],
+        },
+        'reminders.minutesBefore',
+      ),
+      (
+        {
+          'reminders': [
+            {'minutesBefore': -1},
+          ],
+        },
+        'reminders.minutesBefore',
+      ),
+    ]) {
+      expect(
+        () => Host().compile(base, [patch('a', values)]),
+        throwsA(problem(OperationErrorCode.invalidArgument, field)),
+      );
+    }
+  });
+
+  test(
+    'recurrence count accepts positive values beyond 32 bits as described',
+    () {
+      final properties = ResourceMutationSchema.properties(ResourceKind.event);
+      final recurrence = properties['recurrenceRule'] as Map;
+      final countSchema = (recurrence['properties'] as Map)['count'] as Map;
+      expect(countSchema['minimum'], 1);
+      expect(countSchema.containsKey('maximum'), isFalse);
+      final base = fixture(events: [event('a')]);
+      for (final count in [1, 0x80000000]) {
+        final draft = Host().compile(base, [
+          patch('a', {
+            'recurrenceRule': {'type': 'daily', 'count': count},
+          }),
+        ]);
+        expect(findEvent(draft.candidate, 'a').recurrenceRule.count, count);
+        expect(
+          (draft.changes.single.after as Map)['recurrenceRule'],
+          containsPair('count', count),
+        );
+      }
+      expect(
+        () => Host().compile(base, [
+          patch('a', {
+            'recurrenceRule': {'type': 'daily', 'count': 0},
+          }),
+        ]),
+        throwsA(
+          problem(OperationErrorCode.invalidArgument, 'recurrenceRule.count'),
+        ),
+      );
+    },
+  );
+
   test('resource import differences preserve complete owner child order', () {
     final base = fixture(events: [event('a'), event('b')]);
     final calendar = base.generalMode.schedules.first;

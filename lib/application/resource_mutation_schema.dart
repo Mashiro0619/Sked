@@ -1,9 +1,16 @@
 import '../models/timetable_models.dart';
+import 'mutation_draft.dart' show immutableMutationJson;
+import 'operation_contracts.dart';
 import 'resource_contracts.dart';
 
-/// The public value-field catalog is also the compiler's allowed-field source.
+/// The public field catalog drives the compiler's field readers.
 /// Semantic constraints still run against the actual destination and snapshot.
 abstract final class ResourceMutationSchema {
+  static final _properties = {
+    for (final kind in ResourceKind.values)
+      kind:
+          immutableMutationJson(_buildProperties(kind)) as Map<String, Object?>,
+  };
   static final _fields = {
     for (final kind in ResourceKind.values)
       kind: Set<String>.unmodifiable(properties(kind).keys),
@@ -11,15 +18,34 @@ abstract final class ResourceMutationSchema {
 
   static Set<String> fields(ResourceKind kind) => _fields[kind]!;
 
-  static Map<String, Object?> properties(ResourceKind kind) => switch (kind) {
+  static Map<String, Object?> properties(ResourceKind kind) =>
+      Map.of(_properties[kind]!);
+
+  static ApplicationField field(ResourceKind kind, String name) =>
+      ApplicationField(name, _properties[kind]![name] as Map<String, Object?>);
+
+  static void readFields(
+    ResourceKind kind,
+    Map<String, Object?> values, {
+    required bool creating,
+  }) {
+    ApplicationField(
+      '',
+      _object(_properties[kind]!, creating ? requiredOnCreate(kind) : const []),
+    ).object(values);
+  }
+
+  static Map<String, Object?> _buildProperties(
+    ResourceKind kind,
+  ) => switch (kind) {
     ResourceKind.calendar => {
-      'name': _text,
+      'name': _nonBlank,
       'colorValue': _color,
       'isVisible': {'type': 'boolean'},
       'sortOrder': {'type': 'integer', 'minimum': 0},
     },
     ResourceKind.timetable => {
-      'name': _text,
+      'name': _nonBlank,
       'startDate': {
         ..._text,
         'description':
@@ -31,18 +57,20 @@ abstract final class ResourceMutationSchema {
         'maximum': maxTimetableWeeks,
       },
       'periodTimeSetId': {
-        ..._text,
+        ..._nonBlank,
         'description':
             'An existing shared time-set ID. Query period_sets.list first.',
       },
     },
     ResourceKind.course => {
-      'name': _text,
+      'name': _nonBlank,
       'teacher': _text,
       'location': _text,
       'dayOfWeek': {'type': 'integer', 'minimum': 1, 'maximum': 7},
       'semesterWeeks': {
         'type': 'array',
+        'minItems': 1,
+        'uniqueItems': true,
         'items': {
           'type': 'integer',
           'minimum': 1,
@@ -51,10 +79,16 @@ abstract final class ResourceMutationSchema {
       },
       'periods': {
         'type': 'array',
+        'uniqueItems': true,
         'items': {'type': 'integer', 'minimum': 1},
       },
       'startMinutes': {'type': 'integer', 'minimum': 0, 'maximum': 1439},
-      'endMinutes': {'type': 'integer', 'minimum': 1, 'maximum': 1440},
+      'endMinutes': {
+        'type': 'integer',
+        'minimum': 0,
+        'maximum': 1439,
+        'description': 'Minutes within the day; 0 together with startMinutes 0 preserves an unknown raw time.',
+      },
       'credit': {'type': 'number'},
       'remarks': _text,
       'customFields': {
@@ -78,21 +112,22 @@ abstract final class ResourceMutationSchema {
       ),
     },
     ResourceKind.periodTimeSet => {
-      'name': _text,
+      'name': _nonBlank,
       'periodTimes': {
         'type': 'array',
+        'minItems': 1,
         'items': _object(
           {
             'index': {'type': 'integer', 'minimum': 1},
             'startMinutes': {'type': 'integer', 'minimum': 0, 'maximum': 1439},
-            'endMinutes': {'type': 'integer', 'minimum': 1, 'maximum': 1440},
+            'endMinutes': {'type': 'integer', 'minimum': 1, 'maximum': 1439},
           },
           ['index', 'startMinutes', 'endMinutes'],
         ),
       },
     },
     ResourceKind.event || ResourceKind.occurrence => {
-      'title': _text,
+      'title': _nonBlank,
       'start': {
         ..._text,
         'description':
@@ -203,10 +238,13 @@ abstract final class ResourceMutationSchema {
   };
 
   static const _text = {'type': 'string'};
-  static const _color = {
+  static const _nonBlank = {'type': 'string', 'pattern': r'\S'};
+  static final _color = {
     'type': 'integer',
-    'minimum': 0,
-    'maximum': 0xffffffff,
+    'anyOf': [
+      {'enum': generalCalendarSlotColorValues.toList()},
+      {'minimum': 0, 'maximum': 0xffffffff},
+    ],
   };
   static Map<String, Object?> _object(
     Map<String, Object?> fields,
@@ -217,4 +255,108 @@ abstract final class ResourceMutationSchema {
     'required': required,
     'additionalProperties': false,
   };
+}
+
+/// Reads only the requested value from the same field definition published to callers.
+/// Nested objects and array items are consumed by their domain parser.
+class ApplicationField {
+  const ApplicationField(this.name, this.schema);
+
+  final String name;
+  final Map<String, Object?> schema;
+
+  ApplicationField property(String key) => ApplicationField(
+    name.isEmpty ? key : '$name.$key',
+    (schema['properties'] as Map)[key] as Map<String, Object?>,
+  );
+  ApplicationField get item =>
+      ApplicationField(name, schema['items'] as Map<String, Object?>);
+
+  String string(Object? value) => _scalar(value) as String;
+  int integer(Object? value) => _scalar(value) as int;
+  num number(Object? value) => _scalar(value) as num;
+  bool boolean(Object? value) => _scalar(value) as bool;
+
+  Object? _scalar(Object? value) {
+    value ??= schema['default'];
+    if (!_matches(value, schema)) _invalid('Invalid value for $name.');
+    return value;
+  }
+
+  List<Object?> list(Object? value) {
+    final minimum = schema['minItems'] as int?;
+    final maximum = schema['maxItems'] as int?;
+    if (value is! List ||
+        (minimum != null && value.length < minimum) ||
+        (maximum != null && value.length > maximum)) {
+      _invalid('Invalid list for $name.');
+    }
+    return value;
+  }
+
+  Map<String, Object?> object(Object? value) {
+    if (value is! Map<String, Object?>) {
+      _invalid('Expected an object for $name.');
+    }
+    final properties = schema['properties'] as Map?;
+    if (schema['additionalProperties'] == false && properties != null) {
+      for (final key in value.keys) {
+        if (!properties.containsKey(key)) _invalid('Unknown field.', key);
+      }
+    }
+    for (final key in schema['required'] as List? ?? const []) {
+      if (!value.containsKey(key)) {
+        _invalid('Missing required field.', key as String);
+      }
+    }
+    return value;
+  }
+
+  static bool _matches(Object? value, Map schema) {
+    final types = schema['type'];
+    bool matchesType(Object? type) => switch (type) {
+      null => true,
+      'null' => value == null,
+      'string' => value is String,
+      'integer' => value is int,
+      'number' => value is num && value.isFinite,
+      'boolean' => value is bool,
+      _ => false,
+    };
+    if (types is List ? !types.any(matchesType) : !matchesType(types)) {
+      return false;
+    }
+    if (schema['enum'] case final List values when !values.contains(value)) {
+      return false;
+    }
+    if (value is num) {
+      final minimum = schema['minimum'] as num?;
+      final maximum = schema['maximum'] as num?;
+      if (!value.isFinite ||
+          (minimum != null && value < minimum) ||
+          (maximum != null && value > maximum)) {
+        return false;
+      }
+    }
+    final pattern = schema['pattern'] as String?;
+    if (value is String && pattern != null) {
+      if (!RegExp(pattern).hasMatch(value)) return false;
+    }
+    if (schema['anyOf'] case final List alternatives) {
+      if (!alternatives.cast<Map>().any((part) => _matches(value, part))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Never _invalid(String message, [String? child]) => throw OperationProblem(
+    OperationErrorCode.invalidArgument,
+    message,
+    field: child == null
+        ? name
+        : name.isEmpty
+        ? child
+        : '$name.$child',
+  );
 }

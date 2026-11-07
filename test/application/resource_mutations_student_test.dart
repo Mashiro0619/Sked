@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/application/resource_contracts.dart';
+import 'package:sked/application/resource_mutation_schema.dart';
 import 'package:sked/application/resource_mutations.dart';
 import 'package:sked/models/timetable_models.dart';
 
@@ -10,6 +11,167 @@ Matcher problem(OperationErrorCode code) =>
     isA<OperationProblem>().having((error) => error.code, 'code', code);
 
 void main() {
+  test('published course and period endpoints match saved minute bounds', () {
+    final base = fixture(courses: [course('c')]);
+    final endField = ResourceMutationSchema.field(
+      ResourceKind.course,
+      'endMinutes',
+    );
+    expect(endField.schema['minimum'], 0);
+    expect(endField.schema['maximum'], 1439);
+    final explicit = compile(base, [
+      coursePatch('c', {'startMinutes': 1438, 'endMinutes': 1439}),
+    ]);
+    expect(
+      courseById(AppData.fromJson(explicit.candidate.toJson()), 'c').endMinutes,
+      1439,
+    );
+    final preserved = compile(base, [
+      coursePatch('c', {'name': 'Renamed'}),
+    ]);
+    expect(courseById(preserved.candidate, 'c').startMinutes, 0);
+    expect(courseById(preserved.candidate, 'c').endMinutes, 0);
+    for (final end in [1439, 1440]) {
+      final command = ResourceMutation(
+        kind: ResourceKind.periodTimeSet,
+        action: ResourceMutationAction.create,
+        values: {
+          'name': 'Late',
+          'periodTimes': [
+            {'index': 1, 'startMinutes': 1438, 'endMinutes': end},
+          ],
+        },
+      );
+      if (end == 1439) {
+        final created = compile(base, [command]);
+        expect(
+          created
+              .candidate
+              .studentMode
+              .periodTimeSets
+              .last
+              .periodTimes
+              .single
+              .endMinutes,
+          end,
+        );
+      } else {
+        expect(
+          () => compile(base, [command]),
+          throwsA(problem(OperationErrorCode.invalidArgument)),
+        );
+      }
+    }
+  });
+
+  test(
+    'course reminder metadata retains nonnegative offsets beyond 32 bits',
+    () {
+      final base = fixture(courses: [course('c')]);
+      final draft = compile(base, [
+        coursePatch('c', {
+          'reminderSettings': {
+            'behavior': 'custom',
+            'minutesBefore': 0x80000000,
+          },
+        }),
+      ]);
+      expect(
+        courseById(
+          AppData.fromJson(draft.candidate.toJson()),
+          'c',
+        ).reminderSettings.minutesBefore,
+        0x80000000,
+      );
+      for (final value in <Map<String, Object?>>[
+        {'minutesBefore': 5},
+        {'behavior': 'custom', 'minutesBefore': -1},
+        {'behavior': 'custom', 'minutesBefore': 5, 'typo': true},
+      ]) {
+        expect(
+          () => compile(base, [
+            coursePatch('c', {'reminderSettings': value}),
+          ]),
+          throwsA(problem(OperationErrorCode.invalidArgument)),
+        );
+      }
+    },
+  );
+
+  test('create required fields and nonblank names come from the catalog', () {
+    final importFields = ResourceMutationSchema.properties(
+      ResourceKind.timetable,
+    )..remove('periodTimeSetId');
+    expect(importFields, isNot(contains('periodTimeSetId')));
+    expect(
+      ResourceMutationSchema.properties(ResourceKind.timetable),
+      contains('periodTimeSetId'),
+    );
+    final base = fixture();
+    final valuesByKind = <ResourceKind, Map<String, Object?>>{
+      ResourceKind.timetable: {
+        'name': 'New',
+        'startDate': '2026-11-07',
+        'totalWeeks': 2,
+        'periodTimeSetId': 'day',
+      },
+      ResourceKind.course: {
+        'name': 'New',
+        'dayOfWeek': 1,
+        'semesterWeeks': [1],
+        'periods': [1],
+      },
+      ResourceKind.periodTimeSet: {
+        'name': 'New',
+        'periodTimes': [
+          {'index': 1, 'startMinutes': 480, 'endMinutes': 525},
+        ],
+      },
+      ResourceKind.calendar: {'name': 'New'},
+      ResourceKind.event: {
+        'title': 'New',
+        'start': '2026-11-07T10:00:00',
+        'end': '2026-11-07T11:00:00',
+      },
+    };
+    for (final entry in valuesByKind.entries) {
+      ResourceMutation command(Map<String, Object?> values) => ResourceMutation(
+        kind: entry.key,
+        action: ResourceMutationAction.create,
+        destinationParentId: entry.key == ResourceKind.course
+            ? 'a'
+            : entry.key == ResourceKind.event
+            ? 'cal'
+            : null,
+        values: values,
+      );
+      expect(compile(base, [command(entry.value)]).isEmpty, isFalse);
+      for (final required in ResourceMutationSchema.requiredOnCreate(
+        entry.key,
+      )) {
+        expect(
+          () => compile(base, [command(Map.of(entry.value)..remove(required))]),
+          throwsA(
+            isA<OperationProblem>().having(
+              (error) => error.field,
+              'field',
+              required,
+            ),
+          ),
+        );
+      }
+      final name = entry.key == ResourceKind.event ? 'title' : 'name';
+      expect(
+        () => compile(base, [
+          command({...entry.value, name: ' \t'}),
+        ]),
+        throwsA(
+          isA<OperationProblem>().having((error) => error.field, 'field', name),
+        ),
+      );
+    }
+  });
+
   test(
     'shrinking or rebinding time sets cannot strand existing course periods',
     () {
