@@ -1,9 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../theme/sked_expressive_theme.dart';
 import '../../widgets/sked_popup_menu.dart';
-import '../../widgets/sked_tooltip.dart';
 import '../../theme/sked_menu_style.dart';
 import 'agent_ui_delegate.dart';
 
@@ -131,8 +132,13 @@ class AgentContextControl extends StatelessWidget {
 
 /// The current request estimate stays beside the model; its actions share More.
 class AgentContextIndicator extends StatelessWidget {
-  const AgentContextIndicator({super.key, required this.usage});
+  const AgentContextIndicator({
+    super.key,
+    required this.usage,
+    this.enabled = true,
+  });
   final AgentContextUsage? usage;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -153,55 +159,178 @@ class AgentContextIndicator extends StatelessWidget {
     final compacting = current?.isCompacting == true;
     final queued = current?.isCompactionQueued == true;
     final failed = current?.errorMessage != null;
-    final tooltip = [
+    final status = compacting
+        ? l.agentCompactingContext
+        : queued
+        ? l.agentCompactionQueued
+        : failed
+        ? l.agentOperationFailed
+        : null;
+    final utilization = usedPercent == null || remainingPercent == null
+        ? null
+        : l.agentContextUtilization('$usedPercent', '$remainingPercent');
+    final tokenUsage = knownWindow
+        ? '${l.agentContextEstimated}: ${l.agentContextTokenUsage(knownEstimate ? '$estimated' : l.agentContextUnset, '$window')}'
+        : '${l.agentContextEstimated}: ${knownEstimate ? '$estimated Token' : l.agentContextUnset}';
+    final capacity = knownWindow
+        ? null
+        : '${l.agentContextWindow}: ${l.agentContextUnset}';
+    final description = [
       l.agentContextTitle,
-      if (compacting)
-        l.agentCompactingContext
-      else if (queued)
-        l.agentCompactionQueued
-      else if (failed)
-        l.agentOperationFailed,
-      if (usedPercent != null && remainingPercent != null)
-        l.agentContextUtilization('$usedPercent', '$remainingPercent'),
-      '${l.agentContextEstimated}: '
-          '${l.agentContextTokenUsage(knownEstimate ? '$estimated' : l.agentContextUnset, knownWindow ? '$window' : l.agentContextUnset)}',
+      ?status,
+      ?utilization,
+      tokenUsage,
+      ?capacity,
     ].join('\n');
     final desktop = SkedMenuStyle.of(context).desktop;
     final motion = SkedMotionPolicy.of(context);
-    return SkedTooltip(
-      key: const ValueKey('agent-context-indicator'),
-      message: tooltip,
-      preferBelow: false,
-      verticalOffset: 8,
-      textAlign: TextAlign.center,
-      child: SizedBox(
-        width: desktop ? 24 : 32,
-        height: desktop ? 32 : 48,
-        child: Center(
-          child: ExcludeSemantics(
-            child: SizedBox.square(
-              key: const ValueKey('agent-context-ring'),
-              dimension: 14,
-              child: failed && !compacting
-                  ? Icon(
-                      Icons.error_outline_rounded,
-                      size: 14,
-                      color: Theme.of(context).colorScheme.error,
-                    )
-                  : CircularProgressIndicator(
-                      value: compacting
-                          ? (motion.spatialAnimationsEnabled ? null : 0.75)
-                          : (ratio ?? 0).clamp(0.0, 1.0),
-                      strokeWidth: 2,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      backgroundColor: Theme.of(context)
-                          .colorScheme
-                          .outlineVariant,
-                    ),
-            ),
+    final theme = Theme.of(context);
+    final bounds = SkedMenuStyle.availableRectOf(context);
+    final indicator = SizedBox(
+      width: desktop ? 24 : 32,
+      height: desktop ? 32 : 48,
+      child: Center(
+        child: ExcludeSemantics(
+          child: SizedBox.square(
+            key: const ValueKey('agent-context-ring'),
+            dimension: 14,
+            child: failed && !compacting
+                ? Icon(
+                    Icons.error_outline_rounded,
+                    size: 14,
+                    color: Theme.of(context).colorScheme.error,
+                  )
+                : CircularProgressIndicator(
+                    value: compacting
+                        ? (motion.spatialAnimationsEnabled ? null : 0.75)
+                        : (ratio ?? 0).clamp(0.0, 1.0),
+                    strokeWidth: 2,
+                    padding: EdgeInsets.zero,
+                    trackGap: 0,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    backgroundColor: Theme.of(context)
+                        .colorScheme
+                        .onSurfaceVariant
+                        .withValues(alpha: .45),
+                  ),
           ),
         ),
       ),
+    );
+    final active =
+        enabled &&
+        TickerMode.valuesOf(context).enabled &&
+        ModalRoute.isCurrentOf(context) != false;
+    // Keep the overlay traversal anchor in its own semantics container.
+    return Semantics(
+      key: const ValueKey('agent-context-indicator'),
+      container: true,
+      child: !active
+          ? indicator
+          : RawTooltip(
+              semanticsTooltip: description,
+              hoverDelay: const Duration(milliseconds: 250),
+              dismissDelay: const Duration(milliseconds: 200),
+              touchDelay: const Duration(seconds: 4),
+              triggerMode: TooltipTriggerMode.tap,
+              animationStyle: AnimationStyle(
+                duration: motion.effects(SkedMotionSpeed.fast),
+                reverseDuration: motion.effects(SkedMotionSpeed.fast),
+              ),
+              positionDelegate: (position) {
+                final size = position.tooltipSize;
+                final top =
+                    position.target.dy -
+                    position.targetSize.height / 2 -
+                    6 -
+                    size.height;
+                final y = top >= bounds.top
+                    ? top
+                    : position.target.dy + position.targetSize.height / 2 + 6;
+                return Offset(
+                  (position.target.dx - size.width / 2).clamp(
+                    bounds.left,
+                    math.max(bounds.left, bounds.right - size.width),
+                  ),
+                  y.clamp(
+                    bounds.top,
+                    math.max(bounds.top, bounds.bottom - size.height),
+                  ),
+                );
+              },
+              tooltipBuilder: (context, animation) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: math.min(272, bounds.width),
+                      maxHeight: bounds.height,
+                    ),
+                    child: Material(
+                      key: const ValueKey('agent-context-card'),
+                      color: theme.colorScheme.surfaceContainerHigh,
+                      elevation: 3,
+                      shadowColor: theme.colorScheme.shadow.withValues(
+                        alpha: .16,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(
+                          color: theme.colorScheme.outlineVariant,
+                        ),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l.agentContextTitle,
+                              style: theme.textTheme.titleSmall,
+                            ),
+                            const SizedBox(height: 8),
+                            if (utilization != null) ...[
+                              Text(
+                                utilization,
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                              const SizedBox(height: 4),
+                            ],
+                            Text(
+                              tokenUsage,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            if (capacity != null)
+                              Text(
+                                capacity,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            if (status != null) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                status,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: failed
+                                      ? theme.colorScheme.error
+                                      : theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+              child: indicator,
+            ),
     );
   }
 }

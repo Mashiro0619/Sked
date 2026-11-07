@@ -3232,6 +3232,12 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                           scrollLeading: scrollLeading,
                           picker: picker,
                           contextIndicator: AgentContextIndicator(
+                            key: ValueKey((
+                              'context-indicator',
+                              conversation.id,
+                              uiGeneration,
+                            )),
+                            enabled: _uiActive,
                             usage: state.contextUsage,
                           ),
                           permission: _permissionPicker(
