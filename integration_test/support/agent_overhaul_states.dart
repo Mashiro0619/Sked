@@ -415,6 +415,16 @@ Future<List<Map<String, Object?>>> exerciseAgentOverhaulStates({
         supersededRunId: supersededRunId,
         handoffObservations: handoffObservations,
       );
+      recordDiagnostic({
+        'kind': 'steeringHandoff',
+        'scenario': scenario.name,
+        'conversationId': id,
+        'supersededRunId': supersededRunId,
+        'replacementRunId': runtime.state.value.runFor(id).runId,
+        'providerRequests': provider.requests - beforeRequests,
+        'handoffObservationScope': 'runtime and hit-testable controls while awaiting native frames after durable steering acceptance',
+        'handoffObservations': handoffObservations,
+      });
       expect(
         repository.find(id)!.queuedInputs.single.mode,
         ConversationQueuedInputMode.followUp,
@@ -426,11 +436,30 @@ Future<List<Map<String, Object?>>> exerciseAgentOverhaulStates({
             .any((message) => message.text == '立即补充：暂时只整理，不保存。'),
         isTrue,
       );
+      await capture('state-running-steered', false);
       await selectAgentShellDestination(
         tester,
         app.workspaceView.activeMode.value,
       );
       await selectAgentShellDestination(tester, 'agent');
+      await until(
+        () =>
+            find
+                .byKey(const ValueKey('agent-composer'))
+                .hitTestable()
+                .evaluate()
+                .isNotEmpty &&
+            tester
+                    .widget<Opacity>(
+                      find.byKey(
+                        const ValueKey('adaptive-workspace-transition-opacity'),
+                      ),
+                    )
+                    .opacity ==
+                1,
+        'the running embedded chat after workspace return',
+        observeOriginalExecution: false,
+      );
       expect(provider.requests, beforeRequests + 2);
       expect(repository.selectedId, id);
       expect(runtime.state.value.runFor(id).isActive, isTrue);
@@ -447,7 +476,7 @@ Future<List<Map<String, Object?>>> exerciseAgentOverhaulStates({
       };
     }
     final stored = (await store.conversations.readConversation(id))!;
-    reports.add({
+    final stateReport = <String, Object?>{
       'state': scenario.name,
       'source': scenario == _Scenario.recovery
           ? 'synthetic unresolved tool result reloaded from SQLite; actual runtime recovery guard'
@@ -462,6 +491,12 @@ Future<List<Map<String, Object?>>> exerciseAgentOverhaulStates({
       'businessUnchanged': app.session.committedData.encode() == businessBefore,
       'expectedBusinessChangeCount': scenario == _Scenario.completed ? 1 : 0,
       'queueAndSteering': ?queueAndSteering,
+    };
+    reports.add(stateReport);
+    recordDiagnostic({
+      'kind': 'stateSnapshot',
+      'scenario': scenario.name,
+      'report': stateReport,
     });
     if (state.isActive) {
       final stop = find.byKey(const ValueKey('agent-stop'));

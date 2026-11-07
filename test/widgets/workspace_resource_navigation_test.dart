@@ -47,10 +47,8 @@ void main() {
                 .hitTestable(),
             findsOneWidget,
           );
-          if (!hidden) {
-            await tester.binding.handlePopRoute();
-            await tester.pumpAndSettle();
-          }
+          await tester.binding.handlePopRoute();
+          await tester.pumpAndSettle();
           await selectAgentShellDestination(tester, 'agent');
           await tester.pumpAndSettle();
           expect(
@@ -62,5 +60,40 @@ void main() {
         variant: TargetPlatformVariant.only(TargetPlatform.android),
       );
     }
+  }
+
+  for (final width in [640.0, 1440.0]) {
+    testWidgets(
+      'desktop destinations at $width wait for input through consecutive workspace transitions',
+      (tester) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = Size(width, 900);
+        addTearDown(tester.view.reset);
+        final app = await workspaceProvider(mode: AppMode.general);
+        addTearDown(() async {
+          await tester.pumpWidget(const SizedBox.shrink());
+          app.dispose();
+        });
+        await tester.pumpWidget(WorkspaceHarness(provider: app));
+        await tester.pumpAndSettle();
+        await selectAgentShellDestination(tester, 'agent');
+        await tester.pumpAndSettle();
+
+        await selectAgentShellDestination(tester, 'general');
+        final agentEntry = find.byKey(const ValueKey('workspace-agent-entry'));
+        expect(agentEntry, findsOneWidget);
+        expect(agentEntry.hitTestable(), findsNothing);
+        await selectAgentShellDestination(tester, 'agent');
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const ValueKey('agent-composer')).hitTestable(),
+          findsOneWidget,
+        );
+        expect(app.workspaceView.activeMode, AppMode.general);
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.windows),
+    );
   }
 }

@@ -80,7 +80,9 @@ Future<void> selectAgentShellDestination(
   WidgetTester tester,
   String name,
 ) async {
-  if (_destination(name).evaluate().isEmpty) {
+  // Fade-through temporarily blocks the still-painted destination's input.
+  // Keep that entry and wait below instead of opening another resource menu.
+  if (_destination(name, hitTestable: false).evaluate().isEmpty) {
     await _openShellResources(tester);
     await _until(
       tester,
