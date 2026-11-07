@@ -1,9 +1,8 @@
 import '../utils/unique_id.dart';
 import 'operation_contracts.dart';
-import 'resource_mutations.dart';
 import 'resource_queries.dart';
 
-/// A fixed, bounded set of resource identities owned by one run. A later query
+/// A fixed set of resource identities owned by one run. A later query
 /// or a changed data snapshot cannot silently retarget a common batch patch.
 class ResourceSelection {
   ResourceSelection._({
@@ -52,8 +51,6 @@ class ResourceSelectionRegistry {
     : _clock = clock ?? DateTime.now,
       _id = id ?? generateUuidV4;
 
-  static const maxSelections = 32;
-  static const lifetime = Duration(minutes: 30);
   final DateTime Function() _clock;
   final String Function() _id;
   final _selections = <String, ResourceSelection>{};
@@ -72,16 +69,7 @@ class ResourceSelectionRegistry {
       );
     }
     final now = _clock();
-    _selections.removeWhere(
-      (_, value) =>
-          value.scope.isCancelled || now.difference(value.createdAt) > lifetime,
-    );
-    if (_selections.length >= maxSelections) {
-      throw const OperationProblem(
-        OperationErrorCode.busy,
-        'This run has too many pending selections.',
-      );
-    }
+    _selections.removeWhere((_, value) => value.scope.isCancelled);
     final targets = <ResourceRef>[];
     String? cursor;
     do {
@@ -102,12 +90,6 @@ class ResourceSelectionRegistry {
           cursor: cursor,
         ),
       );
-      if (page.totalMatches > ResourceMutationCompiler.maxOperations) {
-        throw const OperationProblem(
-          OperationErrorCode.invalidArgument,
-          'Narrow the selection to at most 1000 resources. No partial set was selected.',
-        );
-      }
       targets.addAll(page.items.map((item) => item.ref));
       cursor = page.nextCursor;
     } while (cursor != null);
@@ -134,8 +116,7 @@ class ResourceSelectionRegistry {
     if (value == null ||
         !identical(value.scope, scope) ||
         value.generation != reader.datasetGeneration ||
-        value.revision != reader.snapshotRevision ||
-        _clock().difference(value.createdAt) > lifetime) {
+        value.revision != reader.snapshotRevision) {
       throw const OperationProblem(
         OperationErrorCode.expired,
         'The selection is stale or belongs to another run. Query and select again.',

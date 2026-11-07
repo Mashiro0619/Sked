@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import '../models/timetable_models.dart';
 import 'operation_contracts.dart';
 import 'resource_contracts.dart';
@@ -90,29 +92,41 @@ String resourceChangeKey(ResourceRef ref) =>
     'resource:${ref.kind.name}:${Uri.encodeComponent(ref.parentId ?? '')}:'
     '${Uri.encodeComponent(ref.id)}';
 
-/// Copies caller-owned JSON and rejects non-JSON/cyclic or excessive nesting.
-Object? immutableMutationJson(Object? value, [int depth = 0]) {
-  if (depth > 64) {
-    throw const OperationProblem(
-      OperationErrorCode.invalidArgument,
-      'Mutation JSON exceeds the supported nesting depth.',
-    );
+/// Copies caller-owned JSON while preserving arbitrary content and rejecting cycles.
+Object? immutableMutationJson(Object? value) {
+  final active = HashSet<Object>.identity();
+  Object? freeze(Object? value) {
+    if (value == null || value is String || value is bool) return value;
+    if (value is num && value.isFinite) return value;
+    if (value is! List && value is! Map) {
+      throw const OperationProblem(
+        OperationErrorCode.invalidArgument,
+        'Mutation values must be finite JSON values.',
+      );
+    }
+    if (!active.add(value)) {
+      throw const OperationProblem(
+        OperationErrorCode.invalidArgument,
+        'Mutation JSON is cyclic.',
+      );
+    }
+    try {
+      if (value is List) return List<Object?>.unmodifiable(value.map(freeze));
+      final map = value as Map;
+      if (map.keys.any((key) => key is! String)) {
+        throw const OperationProblem(
+          OperationErrorCode.invalidArgument,
+          'Mutation JSON object keys must be strings.',
+        );
+      }
+      return Map<String, Object?>.unmodifiable({
+        for (final entry in map.entries)
+          entry.key as String: freeze(entry.value),
+      });
+    } finally {
+      active.remove(value);
+    }
   }
-  if (value == null || value is String || value is bool) return value;
-  if (value is num && value.isFinite) return value;
-  if (value is List) {
-    return List<Object?>.unmodifiable([
-      for (final item in value) immutableMutationJson(item, depth + 1),
-    ]);
-  }
-  if (value is Map && value.keys.every((key) => key is String)) {
-    return Map<String, Object?>.unmodifiable({
-      for (final entry in value.entries)
-        entry.key as String: immutableMutationJson(entry.value, depth + 1),
-    });
-  }
-  throw const OperationProblem(
-    OperationErrorCode.invalidArgument,
-    'Mutation values must be finite JSON values.',
-  );
+
+  return freeze(value);
 }

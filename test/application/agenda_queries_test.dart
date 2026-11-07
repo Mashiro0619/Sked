@@ -164,39 +164,85 @@ void main() {
     );
   });
 
-  test(
-    'candidate and duration budgets reject rather than return a partial answer',
-    () {
-      final agenda = AgendaQueries(
-        reader(
-          List.generate(
-            AgendaQueries.maxCandidates + 1,
-            (i) => event('e$i', 10, 11),
-          ),
-        ),
+  test('aggregates include more than the former candidate budget', () {
+    final agenda = AgendaQueries(
+      reader(List.generate(2001, (i) => event('e$i', 10, 11))),
+    );
+    final result = agenda.freeSlots(start: at(9), end: at(18));
+    expect(result.occurrenceCount, 2001);
+    expect(result.items, hasLength(2));
+    expect(result.hasMore, isFalse);
+    expect(
+      () => agenda.freeSlots(start: at(9), end: at(18), minimumMinutes: 0),
+      throwsA(isA<ResourceQueryException>()),
+    );
+    expect(
+      AgendaQueries(reader([]))
+          .conflicts(start: at(9), end: at(18), limit: 101)
+          .items,
+      isEmpty,
+    );
+  });
+  test('aggregate offsets traverse every free slot and conflict once', () {
+    final agenda = AgendaQueries(
+      reader([event('a', 10, 11), event('b', 12, 13), event('c', 14, 15)]),
+    );
+    final slots = <(DateTime, DateTime)>[];
+    var offset = 0;
+    while (true) {
+      final page = agenda.freeSlots(
+        start: at(9),
+        end: at(18),
+        offset: offset,
+        limit: 1,
       );
-      expect(
-        () => agenda.freeSlots(start: at(9), end: at(18)),
-        throwsA(
-          isA<ResourceQueryException>().having(
-            (error) => error.code,
-            'code',
-            ResourceQueryErrorCode.queryTooLarge,
-          ),
-        ),
+      expect(page.offset, offset);
+      slots.addAll(page.items.map((item) => (item.start, item.end)));
+      if (!page.hasMore) {
+        expect(page.nextOffset, isNull);
+        break;
+      }
+      offset = page.nextOffset!;
+    }
+    expect(slots, [
+      (at(9), at(10)),
+      (at(11), at(12)),
+      (at(13), at(14)),
+      (at(15), at(18)),
+    ]);
+    final overlapping = AgendaQueries(
+      reader([event('a', 10, 13), event('b', 10, 12), event('c', 11, 14)]),
+    );
+    final pairs = <(String, String)>[];
+    offset = 0;
+    while (true) {
+      final page = overlapping.conflicts(
+        start: at(9),
+        end: at(18),
+        offset: offset,
+        limit: 1,
       );
-      expect(
-        () =>
-            AgendaQueries(reader([]))
-                .freeSlots(start: at(9), end: at(18), minimumMinutes: 0),
-        throwsA(isA<ResourceQueryException>()),
-      );
-      expect(
-        () =>
-            AgendaQueries(reader([]))
-                .conflicts(start: at(9), end: at(18), limit: 101),
-        throwsA(isA<ResourceQueryException>()),
-      );
-    },
-  );
+      pairs.addAll(page.items.map((item) => (item.first.id, item.second.id)));
+      if (!page.hasMore) {
+        expect(page.nextOffset, isNull);
+        break;
+      }
+      offset = page.nextOffset!;
+    }
+    final full = overlapping.conflicts(start: at(9), end: at(18));
+    expect(pairs, full.items.map((item) => (item.first.id, item.second.id)));
+    expect(pairs, hasLength(3));
+    expect(
+      agenda.freeSlots(start: at(9), end: at(18), offset: 10).items,
+      isEmpty,
+    );
+    expect(
+      () => agenda.freeSlots(start: at(9), end: at(18), offset: -1),
+      throwsA(isA<ResourceQueryException>()),
+    );
+    expect(
+      () => agenda.conflicts(start: at(9), end: at(18), offset: -1),
+      throwsA(isA<ResourceQueryException>()),
+    );
+  });
 }

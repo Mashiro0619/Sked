@@ -37,21 +37,17 @@ void main() {
     },
   );
 
-  test(
-    'an oversized filtered set is rejected rather than partially selected',
-    () {
-      expect(
-        () => selections.create(
-          reader: _reader(1001),
-          query: ResourceQuery(kind: ResourceKind.event),
-          scope: scope,
-        ),
-        throwsA(_problem(OperationErrorCode.invalidArgument)),
-      );
-    },
-  );
+  test('selection includes every match beyond the former batch threshold', () {
+    final selected = selections.create(
+      reader: _reader(1001),
+      query: ResourceQuery(kind: ResourceKind.event),
+      scope: scope,
+    );
+    expect(selected.targets, hasLength(1001));
+    expect(selected.page(offset: 1000)['items'], hasLength(1));
+  });
 
-  test('snapshot, generation, scope and expiry prevent retargeting', () {
+  test('snapshot, generation and scope prevent retargeting without a clock timeout', () {
     final reader = _reader(2);
     final selected = selections.create(
       reader: reader,
@@ -76,10 +72,7 @@ void main() {
       throwsA(_problem(OperationErrorCode.expired)),
     );
     now = now.add(const Duration(minutes: 31));
-    expect(
-      () => selections.get(selected.id, reader, scope),
-      throwsA(_problem(OperationErrorCode.expired)),
-    );
+    expect(selections.get(selected.id, reader, scope), same(selected));
   });
 
   test('completion discards handles and a cancelled scope cannot select', () {

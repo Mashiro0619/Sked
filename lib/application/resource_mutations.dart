@@ -18,8 +18,6 @@ part 'resource_mutations_occurrence.dart';
 class ResourceMutationCompiler {
   const ResourceMutationCompiler();
 
-  static const maxOperations = 1000;
-  static const maxInputBytes = 1024 * 1024;
   static const _service = GeneralCalendarService();
 
   /// Describes a candidate produced by an existing deterministic import codec.
@@ -99,19 +97,8 @@ class ResourceMutationCompiler {
     _validateGeneralIdentities(base.generalMode);
     _validateStudentIdentities(base.studentMode);
     final prepared = <ResourceMutation>[];
-    var inputBytes = 0;
     for (final operation in operations) {
-      if (prepared.length >= maxOperations) {
-        _invalid(
-          'Split this mutation into fewer than 1001 commands.',
-          'operations',
-        );
-      }
       _validateEnvelope(operation);
-      inputBytes += utf8.encode(jsonEncode(operation.values)).length;
-      if (inputBytes > maxInputBytes) {
-        _invalid('Mutation arguments exceed the byte budget.', 'values');
-      }
       prepared.add(operation);
     }
     var general = base.generalMode;
@@ -667,8 +654,8 @@ List<String> _exceptions(
   DateTime start,
   GeneralEventRecurrenceRule rule,
 ) {
-  if (value is! List || value.length > 20000) {
-    _invalid('Expected a bounded date list.', 'recurrenceExceptionDates');
+  if (value is! List) {
+    _invalid('Expected a date list.', 'recurrenceExceptionDates');
   }
   final result = <String>{};
   for (final item in value) {
@@ -687,8 +674,8 @@ List<String> _exceptions(
 }
 
 List<GeneralEventReminder> _reminders(Object? value) {
-  if (value is! List || value.length > 100) {
-    _invalid('Expected at most 100 reminder offsets.', 'reminders');
+  if (value is! List) {
+    _invalid('Expected reminder offsets.', 'reminders');
   }
   final offsets = <int>{};
   for (final item in value) {
@@ -801,10 +788,8 @@ T _enumValue<T>(
 }
 
 void _id(String id, String field) {
-  if (id.trim().isEmpty ||
-      id != id.trim() ||
-      id.length > ResourceQueryLimits.maxIdLength) {
-    _invalid('Expected a bounded non-empty stable ID.', field);
+  if (id.trim().isEmpty || id != id.trim()) {
+    _invalid('Expected a non-empty stable ID.', field);
   }
 }
 

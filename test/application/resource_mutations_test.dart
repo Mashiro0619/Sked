@@ -886,20 +886,50 @@ void main() {
     );
   });
 
-  test('command count, input bytes, unsupported kinds and empty batches are explicit', () {
+  test('one mutation candidate includes every target beyond the former command ceiling', () {
+    final base = fixture(
+      events: [for (var i = 0; i < 1001; i++) event('event-$i')],
+    );
+    final draft = Host().compile(base, [
+      for (var i = 0; i < 1001; i++) patch('event-$i', {'title': 'Updated $i'}),
+    ]);
+    expect(draft.changes, hasLength(1001));
+    for (var i = 0; i < 1001; i++) {
+      expect(findEvent(draft.candidate, 'event-$i').title, 'Updated $i');
+      expect(findEvent(base, 'event-$i').title, isNot('Updated $i'));
+    }
+  });
+
+  test('large mutation fields retain their complete content', () {
+    final base = fixture(events: [event('a')]);
+    final notes = 'x' * (1024 * 1024);
+    final draft = Host().compile(base, [
+      patch('a', {'notes': notes}),
+    ]);
+    expect(findEvent(draft.candidate, 'a').notes, notes);
+    expect((draft.changes.single.after as Map)['notes'], notes);
+  });
+
+  test(
+    'mutation JSON preserves deep acyclic values and rejects real cycles',
+    () {
+      Object? nested = {'value': 'kept'};
+      for (var i = 0; i < 80; i++) {
+        nested = {'nested': nested};
+      }
+      expect(jsonEncode(immutableMutationJson(nested)), jsonEncode(nested));
+      final cycle = <Object?>[];
+      cycle.add(cycle);
+      expect(
+        () => immutableMutationJson(cycle),
+        throwsA(problem(OperationErrorCode.invalidArgument)),
+      );
+    },
+  );
+
+  test('unsupported kinds and empty batches retain their domain semantics', () {
     final base = fixture(events: [event('a')]);
     expect(Host().compile(base, []).isEmpty, true);
-    expect(
-      () =>
-          Host().compile(base, [for (var i = 0; i < 1001; i++) patch('a', {})]),
-      throwsA(problem(OperationErrorCode.invalidArgument, 'operations')),
-    );
-    expect(
-      () => Host().compile(base, [
-        patch('a', {'notes': 'x' * (1024 * 1024)}),
-      ]),
-      throwsA(problem(OperationErrorCode.invalidArgument, 'values')),
-    );
     expect(
       () => Host().compile(base, [
         ResourceMutation(

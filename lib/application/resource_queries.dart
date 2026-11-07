@@ -52,12 +52,6 @@ class ResourceQueries {
     for (final match in _matches(query)) {
       if (query.ids != null && !query.ids!.contains(match.ref.id)) continue;
       matches.add(match);
-      if (matches.length > ResourceQueryLimits.maxMatches) {
-        throw const ResourceQueryException(
-          ResourceQueryErrorCode.queryTooLarge,
-          'Narrow the resource filters or occurrence date range.',
-        );
-      }
     }
     matches.sort(_compareMatches);
     if (offset > 0 && offset >= matches.length) {
@@ -76,21 +70,6 @@ class ResourceQueries {
         view: query.view,
         values: {for (final field in fields) field: match.read(field)},
       );
-      final candidate = _page(
-        [...items, record],
-        matches.length,
-        next + 1,
-        fingerprint,
-      );
-      if (_byteLength(candidate.toJson()) > ResourceQueryLimits.maxPageBytes) {
-        if (items.isEmpty) {
-          throw const ResourceQueryException(
-            ResourceQueryErrorCode.resultTooLarge,
-            'Select fewer fields; one resource exceeds the page byte budget.',
-          );
-        }
-        break;
-      }
       items.add(record);
       next += 1;
     }
@@ -169,19 +148,10 @@ class ResourceQueries {
     nextCursor: next < total ? _cursor(next, fingerprint) : null,
   );
 
-  /// Host-side input for deterministic agenda aggregates. It expands a bounded
-  /// window once instead of repeating the same expansion for every result page.
-  /// Callers must return their own bounded aggregate, not serialize this list as
-  /// an unrestricted tool result.
-  List<ResourceRecord> readOccurrenceWindow(
-    ResourceQuery query, {
-    int maxItems = 2000,
-  }) {
+  /// Expands one finite date window for deterministic agenda aggregates.
+  List<ResourceRecord> readOccurrenceWindow(ResourceQuery query) {
     _validate(query);
-    if (query.kind != ResourceKind.occurrence ||
-        query.cursor != null ||
-        maxItems < 1 ||
-        maxItems > ResourceQueryLimits.maxMatches) {
+    if (query.kind != ResourceKind.occurrence || query.cursor != null) {
       throw const ResourceQueryException(
         ResourceQueryErrorCode.invalidArgument,
         'An aggregate requires an initial bounded occurrence window.',
@@ -192,12 +162,6 @@ class ResourceQueries {
     for (final match in _matches(query)) {
       if (query.ids != null && !query.ids!.contains(match.ref.id)) continue;
       matches.add(match);
-      if (matches.length > maxItems) {
-        throw const ResourceQueryException(
-          ResourceQueryErrorCode.queryTooLarge,
-          'Narrow the aggregate window or resource filters.',
-        );
-      }
     }
     matches.sort(_compareMatches);
     return List.unmodifiable([
@@ -369,12 +333,6 @@ class ResourceQueries {
             startInclusive: query.startInclusive!,
             endExclusive: query.endExclusive!,
           );
-          if (occurrences.length > ResourceQueryLimits.maxMatches) {
-            throw const ResourceQueryException(
-              ResourceQueryErrorCode.queryTooLarge,
-              'Narrow the occurrence date range or select a source record.',
-            );
-          }
           for (final occurrence in occurrences) {
             yield _Match(
               ResourceRef(
@@ -591,25 +549,17 @@ class ResourceQueries {
   }
 
   void _validate(ResourceQuery query) {
-    if (query.limit < 1 ||
-        query.limit > ResourceQueryLimits.maxPageItems ||
-        query.search.length > 512) {
+    if (query.limit < 1) {
       throw const ResourceQueryException(
         ResourceQueryErrorCode.invalidArgument,
-        'The page limit or search text exceeds the supported bounds.',
+        'The page limit must be positive.',
       );
     }
     for (final ids in [query.ids, query.parentIds, query.sourceIds]) {
-      if (ids != null &&
-          (ids.length > ResourceQueryLimits.maxFilterIds ||
-              ids.any(
-                (id) =>
-                    id.trim().isEmpty ||
-                    id.length > ResourceQueryLimits.maxIdLength,
-              ))) {
+      if (ids != null && ids.any((id) => id.trim().isEmpty)) {
         throw const ResourceQueryException(
           ResourceQueryErrorCode.invalidArgument,
-          'Resource filters require bounded, non-empty IDs.',
+          'Resource filters require non-empty IDs.',
         );
       }
     }
@@ -631,12 +581,10 @@ class ResourceQueries {
           end == null ||
           start.year < 1 ||
           end.year > 9999 ||
-          !end.isAfter(start) ||
-          end.difference(start) >
-              const Duration(days: ResourceQueryLimits.maxRangeDays)) {
+          !end.isAfter(start)) {
         throw const ResourceQueryException(
           ResourceQueryErrorCode.invalidArgument,
-          'Occurrences require a positive range of at most 366 days within years 1–9999.',
+          'Occurrences require a positive finite range within years 1–9999.',
           field: 'dateRange',
         );
       }
@@ -770,8 +718,6 @@ int _compareMatches(_Match a, _Match b) {
 bool _search(String query, List<String> values) =>
     query.isEmpty || values.any((value) => value.toLowerCase().contains(query));
 
-int _byteLength(Object? value) => utf8.encode(jsonEncode(value)).length;
-
 Map<String, Object?> _effectiveTime(
   CourseItem course,
   List<CoursePeriodTime> periods,
@@ -801,7 +747,6 @@ List<GeneralEventOccurrence> _indexedOccurrences({
 );
 
 ({OccurrenceSource source, String id})? _occurrenceTarget(ResourceRef ref) {
-  if (ref.id.length > ResourceQueryLimits.maxIdLength) return null;
   final event = parseGeneralOccurrenceKey(ref.id);
   if (event != null &&
       event.calendarId == ref.parentId &&

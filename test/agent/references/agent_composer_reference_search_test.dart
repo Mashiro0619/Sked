@@ -389,7 +389,7 @@ void main() {
     expect(result.groups, hasLength(7));
     expect(result.totalCount, 0);
     expect(result.groups.map((group) => group.totalMatches), everyElement(0));
-    await expectLater(search.search('x' * 513), throwsFormatException);
+    expect((await search.search('x' * 513)).totalCount, 0);
     await expectLater(
       search.search('', limitPerGroup: 0),
       throwsFormatException,

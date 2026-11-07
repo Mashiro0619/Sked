@@ -34,12 +34,15 @@ class AgendaAggregate<T> {
     required this.snapshotRevision,
     required Iterable<T> items,
     required this.hasMore,
+    required this.offset,
     required this.occurrenceCount,
   }) : items = List.unmodifiable(items);
   final String datasetGeneration;
   final int snapshotRevision;
   final List<T> items;
   final bool hasMore;
+  final int offset;
+  int? get nextOffset => hasMore ? offset + items.length : null;
   final int occurrenceCount;
 }
 
@@ -48,8 +51,6 @@ class AgendaAggregate<T> {
 class AgendaQueries {
   const AgendaQueries(this.resources);
   final ResourceQueries resources;
-  static const maxCandidates = 2000;
-  static const maxResults = 100;
 
   int count(ResourceQuery query) => resources
       .query(
@@ -75,13 +76,14 @@ class AgendaQueries {
     required DateTime end,
     int minimumMinutes = 30,
     int limit = 20,
+    int offset = 0,
     Set<String>? parentIds,
     Set<String>? sourceIds,
     bool includeHidden = true,
     bool includeDisabled = true,
   }) {
-    _validateLimit(limit);
-    if (minimumMinutes < 1 || minimumMinutes > 366 * 24 * 60) {
+    _validatePage(limit, offset);
+    if (minimumMinutes < 1) {
       throw const ResourceQueryException(
         ResourceQueryErrorCode.invalidArgument,
         'Minimum slot duration is outside the supported range.',
@@ -98,9 +100,12 @@ class AgendaQueries {
     final slots = <FreeTimeSlot>[];
     var position = start;
     var more = false;
+    var skipped = 0;
     void add(DateTime from, DateTime to) {
       if (to.difference(from) < Duration(minutes: minimumMinutes)) return;
-      if (slots.length == limit) {
+      if (skipped < offset) {
+        skipped++;
+      } else if (slots.length == limit) {
         more = true;
       } else {
         slots.add(FreeTimeSlot(from, to));
@@ -112,19 +117,20 @@ class AgendaQueries {
       if (interval.end.isAfter(position)) position = interval.end;
     }
     if (end.isAfter(position)) add(position, end);
-    return _result(slots, more, intervals.length);
+    return _result(slots, more, intervals.length, offset);
   }
 
   AgendaAggregate<AgendaConflict> conflicts({
     required DateTime start,
     required DateTime end,
     int limit = 20,
+    int offset = 0,
     Set<String>? parentIds,
     Set<String>? sourceIds,
     bool includeHidden = true,
     bool includeDisabled = true,
   }) {
-    _validateLimit(limit);
+    _validatePage(limit, offset);
     final intervals = _intervals(
       start,
       end,
@@ -135,11 +141,16 @@ class AgendaQueries {
     );
     final active = <_Interval>[];
     final conflicts = <AgendaConflict>[];
+    var skipped = 0;
     for (final interval in intervals) {
       active.removeWhere((old) => !old.end.isAfter(interval.start));
       for (final other in active) {
+        if (skipped < offset) {
+          skipped++;
+          continue;
+        }
         if (conflicts.length == limit) {
-          return _result(conflicts, true, intervals.length);
+          return _result(conflicts, true, intervals.length, offset);
         }
         conflicts.add(
           AgendaConflict(
@@ -154,7 +165,7 @@ class AgendaQueries {
       }
       active.add(interval);
     }
-    return _result(conflicts, false, intervals.length);
+    return _result(conflicts, false, intervals.length, offset);
   }
 
   List<_Interval> _intervals(
@@ -176,7 +187,6 @@ class AgendaQueries {
         includeDisabled: includeDisabled,
         fields: const {'start', 'end'},
       ),
-      maxItems: maxCandidates,
     );
     return [
       for (final record in records)
@@ -188,20 +198,25 @@ class AgendaQueries {
     ];
   }
 
-  AgendaAggregate<T> _result<T>(List<T> values, bool more, int count) =>
-      AgendaAggregate(
-        datasetGeneration: resources.datasetGeneration,
-        snapshotRevision: resources.snapshotRevision,
-        items: values,
-        hasMore: more,
-        occurrenceCount: count,
-      );
+  AgendaAggregate<T> _result<T>(
+    List<T> values,
+    bool more,
+    int count,
+    int offset,
+  ) => AgendaAggregate(
+    datasetGeneration: resources.datasetGeneration,
+    snapshotRevision: resources.snapshotRevision,
+    items: values,
+    hasMore: more,
+    offset: offset,
+    occurrenceCount: count,
+  );
 
-  static void _validateLimit(int value) {
-    if (value < 1 || value > maxResults) {
+  static void _validatePage(int value, int offset) {
+    if (value < 1 || offset < 0) {
       throw const ResourceQueryException(
         ResourceQueryErrorCode.invalidArgument,
-        'Aggregate result limit must be between 1 and 100.',
+        'Aggregate page size must be positive and offset must be non-negative.',
       );
     }
   }

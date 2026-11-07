@@ -1,4 +1,3 @@
-import 'dart:collection';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -800,20 +799,29 @@ void main() {
     }
   });
 
+  test('long stable IDs remain usable resource filters', () {
+    final original = fixture();
+    final table = original.studentMode.timetables.first;
+    final longId = 'course-${'x' * 4096}';
+    final value = original.copyWith(
+      studentMode: original.studentMode.copyWith(
+        timetables: [
+          table.copyWith(courses: [table.courses.first.copyWith(id: longId)]),
+        ],
+      ),
+    );
+    final result = queries(value)
+        .query(ResourceQuery(kind: ResourceKind.course, ids: {longId}));
+    expect(result.items.single.ref.id, longId);
+  });
+
   test(
     'queries reject unbounded dates, invalid filters and unknown fields',
     () {
       final reader = queries(fixture());
       final invalid = [
         ResourceQuery(kind: ResourceKind.course, limit: 0),
-        ResourceQuery(kind: ResourceKind.course, limit: 101),
         ResourceQuery(kind: ResourceKind.course, ids: {''}),
-        ResourceQuery(kind: ResourceKind.course, ids: {'x' * 2049}),
-        ResourceQuery(
-          kind: ResourceKind.course,
-          ids: {for (var i = 0; i < 513; i++) '$i'},
-        ),
-        ResourceQuery(kind: ResourceKind.course, search: 'x' * 513),
         ResourceQuery(kind: ResourceKind.timetable, parentIds: {'table-a'}),
         ResourceQuery(kind: ResourceKind.course, sourceIds: {'course-a'}),
         ResourceQuery(
@@ -825,11 +833,6 @@ void main() {
           kind: ResourceKind.occurrence,
           startInclusive: DateTime(2026),
           endExclusive: DateTime(2026),
-        ),
-        ResourceQuery(
-          kind: ResourceKind.occurrence,
-          startInclusive: DateTime(2026),
-          endExclusive: DateTime(2027, 1, 3),
         ),
         ResourceQuery(
           kind: ResourceKind.occurrence,
@@ -861,7 +864,7 @@ void main() {
     },
   );
 
-  test('UTF-8 byte budget ends a page with an exact continuation', () {
+  test('large UTF-8 fields remain complete across ordinary item pages', () {
     final reader = queries(
       fixture(
         calendars: [
@@ -872,14 +875,14 @@ void main() {
       ),
     );
     var page = reader.query(
-      ResourceQuery(kind: ResourceKind.event, fields: {'notes'}, limit: 100),
+      ResourceQuery(kind: ResourceKind.event, fields: {'notes'}, limit: 2),
     );
     expect(page.items, hasLength(2));
     final found = <String>[];
     while (true) {
       expect(
-        utf8.encode(jsonEncode(page.toJson())).length,
-        lessThanOrEqualTo(ResourceQueryLimits.maxPageBytes),
+        page.items.every((item) => item.values['notes'] == '界' * 9000),
+        isTrue,
       );
       found.addAll(ids(page));
       if (!page.hasMore) break;
@@ -887,7 +890,7 @@ void main() {
         ResourceQuery(
           kind: ResourceKind.event,
           fields: {'notes'},
-          limit: 100,
+          limit: 2,
           cursor: page.nextCursor,
         ),
       );
@@ -895,112 +898,80 @@ void main() {
     expect(found, ['event-0', 'event-1', 'event-2', 'event-3', 'event-4']);
   });
 
-  test(
-    'oversized single detail errors explicitly while summary is readable',
-    () {
-      final reader = queries(
-        fixture(
-          calendars: [
-            calendar('calendar-a', [event('large', notes: '界' * 30000)]),
-          ],
-        ),
-      );
-      expect(
-        () => reader.query(
-          ResourceQuery(kind: ResourceKind.event, view: ResourceView.detail),
-        ),
-        throwsA(queryProblem(ResourceQueryErrorCode.resultTooLarge)),
-      );
-      expect(ids(reader.query(ResourceQuery(kind: ResourceKind.event))), [
-        'large',
-      ]);
-    },
-  );
+  test('a large detail remains readable without requesting fewer fields', () {
+    final reader = queries(
+      fixture(
+        calendars: [
+          calendar('calendar-a', [event('large', notes: '界' * 30000)]),
+        ],
+      ),
+    );
+    expect(
+      reader
+          .query(
+            ResourceQuery(kind: ResourceKind.event, view: ResourceView.detail),
+          )
+          .items
+          .single
+          .values['notes'],
+      '界' * 30000,
+    );
+    expect(ids(reader.query(ResourceQuery(kind: ResourceKind.event))), [
+      'large',
+    ]);
+  });
 
-  test(
-    'match count budget does not silently report a truncated whole dataset',
-    () {
-      final reader = queries(
-        fixture(
-          tables: [
-            table('table-a', [
-              for (var i = 0; i <= ResourceQueryLimits.maxMatches; i++)
-                course('course-$i'),
-            ]),
-          ],
-        ),
-      );
-      expect(
-        () =>
-            reader.query(ResourceQuery(kind: ResourceKind.course, fields: {})),
-        throwsA(queryProblem(ResourceQueryErrorCode.queryTooLarge)),
-      );
-      expect(
-        ids(
-          reader.query(
-            ResourceQuery(
-              kind: ResourceKind.course,
-              ids: {'course-20000'},
-              fields: {},
-            ),
-          ),
-        ),
-        ['course-20000'],
-      );
-    },
-  );
-
-  test(
-    'large expansion length is rejected before any occurrence materializes',
-    () {
-      final reader = queries(
-        fixture(),
-        expandEvent: ({
-          required calendar,
-          required event,
-          required startInclusive,
-          required endExclusive,
-        }) => _OversizedOccurrenceList(),
-      );
-      expect(
-        () => reader.query(occurrenceQuery(source: OccurrenceSource.event)),
-        throwsA(queryProblem(ResourceQueryErrorCode.queryTooLarge)),
-      );
-    },
-  );
-
-  test(
-    'a short query cannot force eager expansion of a century-long daily event',
-    () {
-      final reader = queries(
-        fixture(
-          calendars: [
-            calendar('calendar-a', [
-              event(
-                'long',
-                start: '1900-01-01T09:00:00.000Z',
-                end: '2026-10-05T10:00:00.000Z',
-                recurrenceRule: const GeneralEventRecurrenceRule(
-                  type: GeneralEventRecurrence.daily,
-                ),
-              ),
-            ]),
-          ],
-        ),
-      );
-      expect(
-        () => reader.query(
+  test('queries traverse every match beyond the old total threshold', () {
+    final reader = queries(
+      fixture(
+        tables: [
+          table('table-a', [
+            for (var i = 0; i <= 20000; i++) course('course-$i'),
+          ]),
+        ],
+      ),
+    );
+    final first = reader.query(
+      ResourceQuery(kind: ResourceKind.course, fields: {}, limit: 20000),
+    );
+    expect(first.totalMatches, 20001);
+    expect(first.items, hasLength(20000));
+    final last = reader.query(
+      ResourceQuery(
+        kind: ResourceKind.course,
+        fields: {},
+        limit: 20000,
+        cursor: first.nextCursor,
+      ),
+    );
+    expect(last.items, hasLength(1));
+    expect(last.hasMore, isFalse);
+    expect(
+      ids(
+        reader.query(
           ResourceQuery(
-            kind: ResourceKind.occurrence,
-            occurrenceSource: OccurrenceSource.event,
-            startInclusive: DateTime.utc(2026, 10, 5),
-            endExclusive: DateTime.utc(2026, 10, 6),
+            kind: ResourceKind.course,
+            ids: {'course-20000'},
+            fields: {},
           ),
         ),
-        throwsA(queryProblem(ResourceQueryErrorCode.queryTooLarge)),
-      );
-    },
-  );
+      ),
+      ['course-20000'],
+    );
+  });
+
+  test('finite occurrence windows may span more than one year', () {
+    final reader = queries(fixture());
+    final page = reader.query(
+      ResourceQuery(
+        kind: ResourceKind.occurrence,
+        startInclusive: DateTime(2026),
+        endExclusive: DateTime(2028),
+        limit: 200,
+      ),
+    );
+    expect(page.items, isNotEmpty);
+  });
 
   test('unsupported custom values fail only when that field is requested', () {
     final reader = queries(
@@ -1172,16 +1143,3 @@ GeneralEvent event(
   recurrenceExceptionDateIso: exceptions,
   reminderBehavior: reminderBehavior,
 );
-
-class _OversizedOccurrenceList extends ListBase<GeneralEventOccurrence> {
-  @override
-  int get length => ResourceQueryLimits.maxMatches + 1;
-  @override
-  set length(int value) => throw UnsupportedError('read-only');
-  @override
-  GeneralEventOccurrence operator [](int index) =>
-      throw StateError('must not materialize');
-  @override
-  void operator []=(int index, GeneralEventOccurrence value) =>
-      throw UnsupportedError('read-only');
-}

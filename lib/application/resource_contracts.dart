@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 /// Public, read-only application resource contracts. These are projections,
 /// never serialized AppData snapshots or commands that can modify the app.
 enum ResourceKind {
@@ -110,11 +112,6 @@ class ResourceQuery {
 
 abstract final class ResourceQueryLimits {
   static const maxPageItems = 100;
-  static const maxMatches = 20000;
-  static const maxRangeDays = 366;
-  static const maxPageBytes = 64 * 1024;
-  static const maxFilterIds = 512;
-  static const maxIdLength = 2048;
 }
 
 class ResourceRecord {
@@ -122,7 +119,7 @@ class ResourceRecord {
     required this.ref,
     required this.view,
     required Map<String, Object?> values,
-  }) : values = _freezeMap(values, 0);
+  }) : values = _freezeMap(values);
 
   final ResourceRef ref;
   final ResourceView view;
@@ -165,31 +162,40 @@ class QueryPage {
   };
 }
 
-Map<String, Object?> _freezeMap(Map<String, Object?> value, int depth) =>
-    Map.unmodifiable({
-      for (final entry in value.entries)
-        entry.key: _freezeValue(entry.value, depth + 1),
-    });
+Map<String, Object?> _freezeMap(Map<String, Object?> values) {
+  final active = HashSet<Object>.identity();
+  Object? freeze(Object? value) {
+    if (value == null || value is String || value is bool) return value;
+    if (value is num && value.isFinite) return value;
+    if (value is! List && value is! Map) {
+      throw const ResourceQueryException(
+        ResourceQueryErrorCode.invalidSnapshot,
+        'The selected resource contains an unsupported JSON value.',
+      );
+    }
+    if (!active.add(value)) {
+      throw const ResourceQueryException(
+        ResourceQueryErrorCode.invalidSnapshot,
+        'The selected resource contains cyclic JSON.',
+      );
+    }
+    try {
+      if (value is List) return List<Object?>.unmodifiable(value.map(freeze));
+      final map = value as Map;
+      if (map.keys.any((key) => key is! String)) {
+        throw const ResourceQueryException(
+          ResourceQueryErrorCode.invalidSnapshot,
+          'The selected resource contains a non-string object key.',
+        );
+      }
+      return Map<String, Object?>.unmodifiable({
+        for (final entry in map.entries)
+          entry.key as String: freeze(entry.value),
+      });
+    } finally {
+      active.remove(value);
+    }
+  }
 
-Object? _freezeValue(Object? value, int depth) {
-  if (depth > 64) {
-    throw const ResourceQueryException(
-      ResourceQueryErrorCode.resultTooLarge,
-      'The selected value exceeds the supported nesting depth.',
-    );
-  }
-  if (value == null || value is String || value is bool) return value;
-  if (value is num && value.isFinite) return value;
-  if (value is List) {
-    return List<Object?>.unmodifiable([
-      for (final item in value) _freezeValue(item, depth + 1),
-    ]);
-  }
-  if (value is Map && value.keys.every((key) => key is String)) {
-    return _freezeMap(value.cast<String, Object?>(), depth);
-  }
-  throw const ResourceQueryException(
-    ResourceQueryErrorCode.invalidSnapshot,
-    'The selected resource contains an unsupported JSON value.',
-  );
+  return freeze(values) as Map<String, Object?>;
 }

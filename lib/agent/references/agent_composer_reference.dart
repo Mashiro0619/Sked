@@ -62,9 +62,6 @@ class AgentComposerReference {
     )..validate();
   }
 
-  static const maxPerMessage = 20;
-  static const maxLabelLength = 256;
-
   final AgentComposerReferenceKind kind;
   final String label;
   final ResourceRef? resourceRef;
@@ -95,15 +92,15 @@ class AgentComposerReference {
   };
 
   void validate() {
-    _text(label, maxLabelLength);
+    _text(label);
     switch (kind) {
       case AgentComposerReferenceKind.resource:
         final ref = resourceRef;
         if (ref == null) {
           throw const FormatException('Missing resource reference.');
         }
-        _text(datasetGeneration, 128);
-        _text(ref.id, ResourceQueryLimits.maxIdLength);
+        _text(datasetGeneration);
+        _text(ref.id);
         final needsParent = const {
           ResourceKind.course,
           ResourceKind.event,
@@ -113,22 +110,22 @@ class AgentComposerReference {
           throw const FormatException('Invalid resource parent scope.');
         }
         if (ref.parentId != null) {
-          _text(ref.parentId, ResourceQueryLimits.maxIdLength);
+          _text(ref.parentId);
         }
       case AgentComposerReferenceKind.skill:
-        if (!RegExp(r'^[a-z][a-z0-9-]{0,127}$').hasMatch(_text(skillId, 128)) ||
+        if (!RegExp(r'^[a-z][a-z0-9-]{0,127}$').hasMatch(_text(skillId)) ||
             !RegExp(r'^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$')
-                .hasMatch(_text(skillVersion, 128))) {
+                .hasMatch(_text(skillVersion))) {
           throw const FormatException(
             'Invalid skill reference identity or version.',
           );
         }
         _digest(skillSha256);
       case AgentComposerReferenceKind.attachment:
-        if (!validAttachmentId(_text(attachmentId, 128))) {
+        if (!validAttachmentId(_text(attachmentId))) {
           throw const FormatException('Invalid attachment reference identity.');
         }
-        _text(conversationId, 256);
+        _text(conversationId);
         _digest(attachmentDigest);
     }
   }
@@ -175,7 +172,7 @@ class AgentComposerReference {
         },
       },
     });
-    final label = _text(json['label'], maxLabelLength);
+    final label = _text(json['label']);
     if (kind == AgentComposerReferenceKind.resource) {
       final ref = _object(json['ref']);
       _keys(ref, const {'kind', 'id', 'parentId'});
@@ -188,12 +185,10 @@ class AgentComposerReference {
       return AgentComposerReference.resource(
         ref: ResourceRef(
           kind: resourceKind,
-          id: _text(ref['id'], ResourceQueryLimits.maxIdLength),
-          parentId: ref['parentId'] == null
-              ? null
-              : _text(ref['parentId'], ResourceQueryLimits.maxIdLength),
+          id: _text(ref['id']),
+          parentId: ref['parentId'] == null ? null : _text(ref['parentId']),
         ),
-        datasetGeneration: _text(json['datasetGeneration'], 128),
+        datasetGeneration: _text(json['datasetGeneration']),
         label: label,
       );
     }
@@ -201,19 +196,19 @@ class AgentComposerReference {
       kind: kind,
       label: label,
       skillId: kind == AgentComposerReferenceKind.skill
-          ? _text(json['id'], 128)
+          ? _text(json['id'])
           : null,
       skillVersion: kind == AgentComposerReferenceKind.skill
-          ? _text(json['version'], 128)
+          ? _text(json['version'])
           : null,
       skillSha256: kind == AgentComposerReferenceKind.skill
           ? _digest(json['contentSha256'])
           : null,
       attachmentId: kind == AgentComposerReferenceKind.attachment
-          ? _text(json['id'], 128)
+          ? _text(json['id'])
           : null,
       conversationId: kind == AgentComposerReferenceKind.attachment
-          ? _text(json['conversationId'], 256)
+          ? _text(json['conversationId'])
           : null,
       attachmentDigest: kind == AgentComposerReferenceKind.attachment
           ? _digest(json['digest'])
@@ -223,7 +218,7 @@ class AgentComposerReference {
 
   static List<AgentComposerReference> decodeList(Object? value) {
     if (value == null) return const [];
-    if (value is! List || value.length > maxPerMessage) {
+    if (value is! List) {
       throw const FormatException('Invalid composer reference list.');
     }
     return validatedList(value.map(AgentComposerReference.fromJson));
@@ -236,11 +231,8 @@ class AgentComposerReference {
     final identities = <String>{};
     for (final reference in references) {
       reference.validate();
-      if (result.length == maxPerMessage ||
-          !identities.add(reference.stableKey)) {
-        throw const FormatException(
-          'Too many or duplicate composer references.',
-        );
+      if (!identities.add(reference.stableKey)) {
+        throw const FormatException('Duplicate composer references.');
       }
       result.add(reference);
     }
@@ -248,15 +240,15 @@ class AgentComposerReference {
   }
 }
 
-String _text(Object? value, int max) {
-  if (value is! String || value.trim().isEmpty || value.length > max) {
+String _text(Object? value) {
+  if (value is! String || value.trim().isEmpty) {
     throw const FormatException('Invalid composer reference text.');
   }
   return value;
 }
 
 String _digest(Object? value) {
-  final digest = _text(value, 64);
+  final digest = _text(value);
   if (!RegExp(r'^[a-f0-9]{64}$').hasMatch(digest)) {
     throw const FormatException('Invalid composer reference digest.');
   }

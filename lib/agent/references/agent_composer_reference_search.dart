@@ -100,12 +100,9 @@ class AgentComposerReferenceSearch {
     int limitPerGroup = 8,
     Map<AgentComposerReferenceGroup, int> offsets = const {},
   }) async {
-    if (query.length > 512 ||
-        limitPerGroup < 1 ||
+    if (limitPerGroup < 1 ||
         limitPerGroup > maxPerGroup ||
-        offsets.values.any(
-          (offset) => offset < 0 || offset > ResourceQueryLimits.maxMatches,
-        )) {
+        offsets.values.any((offset) => offset < 0)) {
       throw const FormatException('Invalid composer reference search bounds.');
     }
     final requestedOffsets = Map<AgentComposerReferenceGroup, int>.unmodifiable(
@@ -394,9 +391,5 @@ String _label(Object? value, String fallback) {
   final text = value is String && value.trim().isNotEmpty
       ? value.trim()
       : fallback;
-  if (text.length <= AgentComposerReference.maxLabelLength) return text;
-  var end = AgentComposerReference.maxLabelLength;
-  final last = text.codeUnitAt(end - 1);
-  if (last >= 0xd800 && last <= 0xdbff) end--;
-  return text.substring(0, end);
+  return text;
 }

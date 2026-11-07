@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import '../../application/mutation_coordinator.dart';
 import '../../application/operation_contracts.dart';
 import '../../application/resource_contracts.dart';
@@ -246,10 +244,6 @@ MutationDraft compileSchoolImport(
   String? targetTimetableId,
   String? periodTimeSetId,
 }) {
-  if (utf8.encode(jsonEncode(candidate)).length >
-      ResourceMutationCompiler.maxInputBytes) {
-    _invalidImport('The extracted candidate exceeds its byte budget.');
-  }
   final wrapped = candidate.containsKey('timetable');
   if (wrapped) {
     _onlyFields(candidate, {'ok', 'message', 'meta', 'timetable'}, 'candidate');

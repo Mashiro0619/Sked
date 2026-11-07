@@ -124,15 +124,9 @@ void main() {
         throwsFormatException,
       );
     }
-    expect(
-      () => resource(id: 'i' * (ResourceQueryLimits.maxIdLength + 1)),
-      throwsFormatException,
-    );
-    expect(
-      () => resource(label: 'l' * (AgentComposerReference.maxLabelLength + 1)),
-      throwsFormatException,
-    );
-    expect(() => resource(generation: 'g' * 129), throwsFormatException);
+    expect(resource(id: 'i' * 3000).resourceRef!.id, 'i' * 3000);
+    expect(resource(label: 'l' * 3000).label, 'l' * 3000);
+    expect(resource(generation: 'g' * 129).datasetGeneration, 'g' * 129);
     expect(() => resource(id: ' '), throwsFormatException);
   });
 
@@ -210,26 +204,20 @@ void main() {
         throwsFormatException,
       );
       final maximum = List.generate(
-        AgentComposerReference.maxPerMessage,
+        100,
         (index) => resource(id: 'course-$index'),
       );
+      expect(AgentComposerReference.validatedList(maximum), hasLength(100));
       expect(
-        AgentComposerReference.validatedList(maximum),
-        hasLength(AgentComposerReference.maxPerMessage),
-      );
-      expect(
-        () => AgentComposerReference.validatedList([
+        AgentComposerReference.validatedList([
           ...maximum,
           resource(id: 'extra'),
         ]),
-        throwsFormatException,
+        hasLength(101),
       );
       expect(
         () => AgentComposerReference.decodeList(
-          List.filled(
-            AgentComposerReference.maxPerMessage + 1,
-            resource().toJson(),
-          ),
+          List.filled(101, resource().toJson()),
         ),
         throwsFormatException,
       );
