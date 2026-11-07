@@ -11,6 +11,7 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/app_data.dart';
 
 import 'agent_feature_journey.dart';
+import 'agent_history_readback.dart';
 import 'agent_native_session.dart';
 
 const _originalRequest = 'Create one hidden synthetic history calendar.';
@@ -246,6 +247,7 @@ class AgentHistoryJourney implements AgentNativeFeature {
   String? _businessDigest;
   String? _beforeRedoDigest;
   AgentConversation? _beforeRedo;
+  Map<String, Object?>? _lastReadback;
 
   @override
   String get name => 'history';
@@ -263,6 +265,7 @@ class AgentHistoryJourney implements AgentNativeFeature {
     'createdCalendarId': _createdCalendarId,
     'originalOperationId': _originalOperationId,
     'beforeRedoMessageSha256': _beforeRedoDigest,
+    'lastReadback': _lastReadback,
     if (_active case final journey?)
       'history': {
         'turnCount': _current(journey).turns.length,
@@ -356,9 +359,16 @@ class AgentHistoryJourney implements AgentNativeFeature {
               AgentNativeSession.historyDigest(short.messages) == _shortDigest),
       'The history journey changed the fixed prefix, independent conversation or selection.',
     );
-    requireAgentFeature(
-      jsonEncode(saved.toJson()) == jsonEncode(_current(journey).toJson()),
-      'The live history state differs from the production-codec storage readback.',
+    _lastReadback = verifyAgentHistoryReadback(
+      saved: saved,
+      cached: _current(journey),
+      fullyLoaded: app.agent.conversations.isConversationLoaded(
+        agentNativeLongId,
+      ),
+      visibleMessages: app.agent.conversations.visibleMessages(
+        agentNativeLongId,
+      ),
+      visibleTurns: app.agent.conversations.visibleTurns(agentNativeLongId),
     );
     final main = AppData.decodeStorageSnapshot(journey.session.mainSource);
     requireAgentFeature(
@@ -408,6 +418,7 @@ class AgentHistoryJourney implements AgentNativeFeature {
     AgentFeatureJourney journey,
   ) async {
     final initial = await _readSaved(journey);
+    final initialReadback = _lastReadback;
     _shortDigest = AgentNativeSession.historyDigest(
       ConversationArchive.decode(await journey.session.readChatSource())
           .conversations
@@ -457,6 +468,8 @@ class AgentHistoryJourney implements AgentNativeFeature {
     );
     return {
       'configuration': journey.assertOwner(),
+      'initialReadback': initialReadback,
+      'operationReadback': _lastReadback,
       'businessBefore': businessBefore,
       'businessBeforeSha256': _businessDigest,
       'shortHistorySha256': _shortDigest,

@@ -93,6 +93,8 @@ JSON 通过之后，仍需复核本轮原生进程日志中的 Flutter 错误、
 在独立进程中选择 `SKED_AGENT_FEATURE_JOURNEY=history`，另设本轮标签和新的系统 Temp 输出目录。继续使用真实主页、`AgentNativeSession` 的明确合成存储，以及同一平台与框架配置。Windows 使用独立测试 checkout/build tree 和非空 `SKED_WINDOWS_TEST_NAMESPACE`；最终 `flutter drive` 必须使用已经核对过该 namespace 的同一 CMakeCache。参见 [Windows 原生验收](../docs/WINDOWS_NATIVE_ACCEPTANCE.md)。
 
 1. 从正式主页进入当前 Agent 长会话，经可见输入框和发送按钮发出一个合成请求。受控 provider 只返回 `capabilities.describe → mutation.apply` 的真实工具调用，以及最终文字回复。应用工具创建一个隐藏的空合成日历；旅程通过生产 codec 读回主库和聊天，核对真实可逆回执及宿主记录的运行/工具/轮次归属。
+
+   首次发送前，仓库保留最新历史页。读回校验按 `isConversationLoaded` 区分分页与完整对象：分页按完整存储重建包含全部元数据、消息后缀和附件引用的预期视图，明确验证其余集合尚未加载及相对执行边界，并单独核对完整轮次索引；正式操作完成全量加载后恢复整个对象的逐字段比较。校验不主动加载或改写仓库，不改变可见历史窗口。
 2. 再通过输入框发送一个后续纯文字请求。保留两个独立轮次，原日历操作仍只属于首轮。
 3. 点击实际回复的“重新生成回复”按钮。受控 provider 检查这次请求没有工具目录，只返回新文字。原回复 ID、消息顺序、操作归属和主库保持不变，两份回复文字版本均保留；同时读取实际 RenderParagraph / RenderEditable 核对可见的新正文。
 4. 保存一条未发送的聊天草稿。通过首轮用户消息的“编辑并重做”进入实际对话框，修改文字后点击“取消”；聊天内容、主库和 provider 次数不变。重新打开同一对话框，实际输入框仍保存刚取消的编辑内容，聊天输入草稿保持独立。

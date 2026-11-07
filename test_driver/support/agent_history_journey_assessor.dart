@@ -17,6 +17,7 @@ const agentHistoryCheckpoints = [
 
 const agentHistoryRelevantSources = [
   'integration_test/support/agent_history_journey.dart',
+  'integration_test/support/agent_history_readback.dart',
   'test_driver/support/agent_history_journey_assessor.dart',
   'lib/agent/history/conversation_history.dart',
   'lib/agent/history/conversation_history_service.dart',
@@ -331,6 +332,29 @@ void validateAgentHistoryJourney(Map<String, Object?> report) {
     created['suffix'],
     created['suffixSha256'],
     'Original owned suffix',
+  );
+  final initialReadback = _map(
+    created['initialReadback'],
+    'Initial paged readback',
+  );
+  final operationReadback = _map(
+    created['operationReadback'],
+    'Full operation readback',
+  );
+  _require(
+    initialReadback['mode'] == 'paged' &&
+        initialReadback['storedMessageCount'] == 512 &&
+        initialReadback['cachedMessageCount'] == 50 &&
+        initialReadback['visibleMessageCount'] == 50 &&
+        initialReadback['visibleStart'] == 462 &&
+        initialReadback['allProjectedFieldsCompared'] == true &&
+        initialReadback['visibleTurnIndexCompared'] == true &&
+        operationReadback['mode'] == 'full' &&
+        operationReadback['storedMessageCount'] == 512 + original.length &&
+        operationReadback['cachedMessageCount'] == 512 + original.length &&
+        operationReadback['allProjectedFieldsCompared'] == true &&
+        operationReadback['visibleTurnIndexCompared'] == true,
+    'The history readback did not preserve its paged entry and complete operation snapshot.',
   );
   final originalTurn = _map(created['turn'], 'Original turn');
   final operations = _maps(
