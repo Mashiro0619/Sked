@@ -64,10 +64,8 @@ void main() {
           find.text(l.clearAppDataConfirmTitle),
           clear ? findsOneWidget : findsNothing,
         );
-        expect(
-          find.text(l.clearAppDataAction),
-          clear ? findsOneWidget : findsNothing,
-        );
+        expect(find.text(l.agentApprove), findsOneWidget);
+        expect(find.text(l.agentReject), findsOneWidget);
         if (clear) {
           final warning = find.byKey(
             const ValueKey('agent-clear-data-warning'),
@@ -87,6 +85,12 @@ void main() {
           );
         }
         final approve = find.byKey(const ValueKey('agent-approve'));
+        if (clear) {
+          final colors = Theme.of(tester.element(approve)).colorScheme;
+          final button = tester.widget<FilledButton>(approve);
+          expect(button.style?.backgroundColor?.resolve({}), colors.error);
+          expect(button.style?.foregroundColor?.resolve({}), colors.onError);
+        }
         await tester.ensureVisible(approve);
         await tester.pumpAndSettle();
         await tester.tap(approve);

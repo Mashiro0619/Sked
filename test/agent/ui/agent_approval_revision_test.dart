@@ -67,8 +67,10 @@ void main() {
         active: active,
         interactive: interactive,
       );
-  VoidCallback revise(WidgetTester tester) =>
-      tester.widget<TextButton>(key('agent-revise-approval')).onPressed!;
+  List<VoidCallback> decisions(WidgetTester tester) => [
+    tester.widget<FilledButton>(key('agent-approve')).onPressed!,
+    tester.widget<OutlinedButton>(key('agent-reject')).onPressed!,
+  ];
   Future<void> settle(WidgetTester tester) async {
     await tester.pumpAndSettle();
     await repository.waitForPendingWrites();
@@ -77,7 +79,7 @@ void main() {
 
   for (final draft in ['', '已有草稿，请保留']) {
     testWidgets(
-      'approval correction focuses original input without submitting or replacing draft "$draft"',
+      'approval keeps two decisions and preserves draft until composer steering "$draft"',
       (tester) async {
         addTearDown(tester.view.reset);
         await initialize(draft: draft);
@@ -96,26 +98,29 @@ void main() {
           );
         }
         final originalValue = controller.value;
-        expect(key('agent-revise-approval'), findsOneWidget);
+        expect(key('agent-revise-approval'), findsNothing);
+        expect(key('agent-approve'), findsOneWidget);
+        expect(key('agent-reject'), findsOneWidget);
+        final l = AppLocalizations.of(tester.element(key('agent-composer')));
+        expect(find.text(l.agentApprove), findsOneWidget);
+        expect(find.text(l.agentReject), findsOneWidget);
         if (draft.isEmpty) {
           expect(key('agent-steer'), findsNothing);
         }
-        await tester.ensureVisible(key('agent-revise-approval'));
-        await tester.pumpAndSettle();
-        await tester.tap(key('agent-revise-approval'));
-        await settle(tester);
-        expect(field.focusNode!.hasFocus, isTrue);
-        expect(tester.testTextInput.hasAnyClients, isTrue);
         expect(controller.value, originalValue);
         expect(repository.selected!.draft, draft);
         expect(delegate.calls, isEmpty);
         expect(delegate.state.value.runFor(id).pendingApproval, same(plan));
+        await tester.ensureVisible(key('agent-composer'));
+        await tester.pumpAndSettle();
+        await tester.tap(key('agent-composer'));
+        await settle(tester);
+        expect(field.focusNode!.hasFocus, isTrue);
+        expect(tester.testTextInput.hasAnyClients, isTrue);
         expect(key('agent-composer').hitTestable(), findsOneWidget);
-        final l = AppLocalizations.of(tester.element(key('agent-composer')));
-        expect(find.text(l.agentApprovalReviseHint), findsOneWidget);
         await tester.enterText(key('agent-composer'), '请改为 B402，时间保持不变');
         await settle(tester);
-        expect(key('agent-approval-revise-hint'), findsOneWidget);
+        expect(key('agent-approval-revise-hint'), findsNothing);
         await tester.ensureVisible(key('agent-steer'));
         await tester.pumpAndSettle();
         await tester.tap(key('agent-steer'));
@@ -127,33 +132,57 @@ void main() {
     );
   }
 
-  testWidgets('320px 2x approval correction reaches input above the keyboard', (
+  testWidgets('320px 2x approval keeps composer steering above the keyboard', (
     tester,
   ) async {
     addTearDown(tester.view.reset);
+    const size = Size(320, 740);
+    const keyboard = 280.0;
     await initialize(draft: '保留草稿');
     await mountAgentUi(
       tester,
       view(),
-      size: const Size(320, 740),
+      size: size,
       scale: 2,
-      keyboard: 280,
+      keyboard: keyboard,
       locale: const Locale('zh'),
     );
     expect(key('agent-approve').hitTestable(), findsOneWidget);
-    await tester.drag(key('agent-transcript-$id'), const Offset(0, 180));
+    expect(key('agent-revise-approval'), findsNothing);
+    await tester.ensureVisible(key('agent-composer'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(key('agent-revise-approval'));
-    await tester.pumpAndSettle();
-    expect(key('agent-revise-approval').hitTestable(), findsOneWidget);
-    await tester.tap(key('agent-revise-approval'));
+    await tester.tap(key('agent-composer'));
     await settle(tester);
     final field = tester.widget<TextField>(key('agent-composer'));
     expect(field.controller!.text, '保留草稿');
     expect(field.focusNode!.hasFocus, isTrue);
     expect(tester.testTextInput.hasAnyClients, isTrue);
     expect(delegate.calls, isEmpty);
-    expect(key('agent-composer').hitTestable(), findsOneWidget);
+    // The whole TextField center includes the selection-handle overlay. The
+    // editable text and caret remain the actual reachable input surface.
+    final editableFinder = find.descendant(
+      of: key('agent-composer'),
+      matching: find.byType(EditableText),
+    );
+    expect(editableFinder.hitTestable(), findsOneWidget);
+    final editable = tester
+        .state<EditableTextState>(editableFinder)
+        .renderEditable;
+    final caret = editable
+        .getLocalRectForCaret(field.controller!.selection.extent)
+        .shift(editable.localToGlobal(Offset.zero));
+    final body = tester.getRect(key('agent-composer-body-scroll'));
+    expect(body.contains(caret.center), isTrue);
+    expect(caret.top, greaterThanOrEqualTo(body.top));
+    expect(caret.bottom, lessThanOrEqualTo(body.bottom));
+    expect(caret.bottom, lessThanOrEqualTo(size.height - keyboard));
+    expect(
+      tester
+          .hitTestOnBinding(caret.center)
+          .path
+          .any((entry) => identical(entry.target, editable)),
+      isTrue,
+    );
     tester.testTextInput.updateEditingValue(
       const TextEditingValue(
         text: '请保留时间，只改教室',
@@ -176,6 +205,9 @@ void main() {
     expect(key('agent-revise-approval'), findsNothing);
     expect(key('agent-approve'), findsOneWidget);
     expect(key('agent-reject'), findsOneWidget);
+    final l = AppLocalizations.of(tester.element(key('agent-composer')));
+    expect(find.text(l.agentApprove), findsOneWidget);
+    expect(find.text(l.agentReject), findsOneWidget);
     expect(key('agent-approval-revise-hint'), findsNothing);
   });
 
@@ -188,17 +220,22 @@ void main() {
     'maintenance',
   ]) {
     testWidgets(
-      'old approval correction cannot focus after $boundary round trip',
+      'old approval decisions stay retired after $boundary round trip',
       (tester) async {
         await initialize();
         await mountAgentUi(tester, view());
-        final old = revise(tester);
-        final field = tester.widget<TextField>(key('agent-composer'));
+        final oldDecisions = decisions(tester);
+        void invokeOld() {
+          for (final decision in oldDecisions) {
+            decision();
+          }
+        }
+
         switch (boundary) {
           case 'conversation':
             await repository.create(title: 'Other conversation');
             await settle(tester);
-            old();
+            invokeOld();
             await repository.select(id);
             await settle(tester);
           case 'permission':
@@ -208,7 +245,7 @@ void main() {
               (current) => current.copyWith(mode: AgentPermissionMode.plan),
             );
             await settle(tester);
-            old();
+            invokeOld();
             await repository.update(
               id,
               (current) => current.copyWith(mode: mode),
@@ -223,12 +260,12 @@ void main() {
               ),
             );
             await settle(tester);
-            old();
+            invokeOld();
             publish();
             await settle(tester);
           case 'covered route':
             final navigator = Navigator.of(
-              tester.element(key('agent-revise-approval')),
+              tester.element(key('agent-approve')),
             );
             navigator.push<void>(
               MaterialPageRoute(
@@ -236,30 +273,30 @@ void main() {
               ),
             );
             await tester.pumpAndSettle();
-            old();
+            invokeOld();
             navigator.pop();
             await tester.pumpAndSettle();
           case 'hidden host':
             await mountAgentUi(tester, view(active: false));
-            old();
+            invokeOld();
             await mountAgentUi(tester, view());
           case 'maintenance':
             publish(maintenance: true);
             await settle(tester);
-            old();
+            invokeOld();
             publish();
             await settle(tester);
         }
-        old();
+        invokeOld();
         await settle(tester);
-        expect(field.focusNode!.hasFocus, isFalse);
         expect(key('agent-approval-revise-hint'), findsNothing);
         expect(delegate.calls, isEmpty);
-        await tester.ensureVisible(key('agent-revise-approval'));
+        expect(delegate.state.value.runFor(id).pendingApproval, same(plan));
+        await tester.ensureVisible(key('agent-approve'));
         await tester.pumpAndSettle();
-        await tester.tap(key('agent-revise-approval'));
+        await tester.tap(key('agent-approve'));
         await settle(tester);
-        expect(field.focusNode!.hasFocus, isTrue);
+        expect(delegate.calls, ['approve:$id:${plan.id}']);
         expect(tester.takeException(), isNull);
       },
     );

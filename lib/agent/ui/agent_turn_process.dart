@@ -202,10 +202,13 @@ extension _AgentTurnProcess on _AgentConversationViewState {
       if (state.pendingApproval != null &&
           !_approvalHasOperation(conversation, state))
         _approval(conversation.id, state.pendingApproval!, writable, l),
-      if (conversation.pendingQuestion case final question?
-          when !question.isResolved &&
-              !_hasQuestionActivity(conversation, question.toolCallId))
-        _question(conversation, writable),
+      if (conversation.pendingQuestion?.isResolved == false &&
+          !conversation.messages.any(
+            (message) => message.toolCalls.any(
+              (tool) => tool.id == conversation.pendingQuestion!.toolCallId,
+            ),
+          ))
+        _notice(l.agentWaitingForAnswer),
     ];
   }
 }

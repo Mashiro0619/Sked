@@ -132,12 +132,14 @@ void main() {
         AgentConversationView(repository: repository, delegate: runtime),
         size: const Size(390, 844),
       );
-      final revise = find.byKey(const ValueKey('agent-revise-approval'));
-      await tester.ensureVisible(revise);
-      await tester.pumpAndSettle();
-      await tester.tap(revise);
-      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('agent-revise-approval')), findsNothing);
+      expect(find.byKey(const ValueKey('agent-approve')), findsOneWidget);
+      expect(find.byKey(const ValueKey('agent-reject')), findsOneWidget);
       final composer = find.byKey(const ValueKey('agent-composer'));
+      await tester.ensureVisible(composer);
+      await tester.pumpAndSettle();
+      await tester.tap(composer);
+      await tester.pumpAndSettle();
       final input = tester.widget<TextField>(composer);
       expect(input.focusNode!.hasFocus, isTrue);
       expect(input.controller!.text, 'Keep my unsent draft');

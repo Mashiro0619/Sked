@@ -403,6 +403,14 @@ void main() {
     );
     final queue = find.byKey(const ValueKey('agent-queue'));
     await tester.ensureVisible(queue);
+    await tester.pumpAndSettle();
+    expect(queue.hitTestable(), findsOneWidget);
+    expect(
+      find.descendant(of: queue, matching: find.byType(Text)),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('agent-stop')), findsOneWidget);
+    expect(find.byKey(const ValueKey('agent-send')), findsNothing);
     await tester.tap(queue);
     await _pumpUntil(
       tester,

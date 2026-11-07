@@ -6231,7 +6231,7 @@ abstract class AppLocalizations {
   /// No description provided for @agentApprove.
   ///
   /// In en, this message translates to:
-  /// **'Approve these changes'**
+  /// **'Allow'**
   String get agentApprove;
 
   /// No description provided for @agentReject.
@@ -7878,12 +7878,6 @@ abstract class AppLocalizations {
   /// **'Chat history retention'**
   String get agentHistoryRetentionTitle;
 
-  /// No description provided for @agentApprovalReviseHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Describe the changes in the message box, then choose “Update current request”. The pending changes have not been approved.'**
-  String get agentApprovalReviseHint;
-
   /// No description provided for @timetableImportContinueWithAgent.
   ///
   /// In en, this message translates to:
@@ -8105,6 +8099,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Keep the current data and conversation. The remaining redo will not run.'**
   String get agentEndRedoDescription;
+
+  /// No description provided for @agentContextUtilization.
+  ///
+  /// In en, this message translates to:
+  /// **'{usedPercent}% used ({remainingPercent}% remaining)'**
+  String agentContextUtilization(String usedPercent, String remainingPercent);
+
+  /// No description provided for @agentContextTokenUsage.
+  ///
+  /// In en, this message translates to:
+  /// **'{used} of {total} tokens used'**
+  String agentContextTokenUsage(String used, String total);
+
+  /// No description provided for @agentQuestionProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'{current} of {total}'**
+  String agentQuestionProgress(int current, int total);
 }
 
 class _AppLocalizationsDelegate

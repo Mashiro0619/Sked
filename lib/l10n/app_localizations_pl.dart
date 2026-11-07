@@ -3515,7 +3515,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get agentPlanDetails => 'Change details';
 
   @override
-  String get agentApprove => 'Approve these changes';
+  String get agentApprove => 'Allow';
 
   @override
   String get agentReject => 'Reject';
@@ -4443,10 +4443,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String get agentHistoryRetentionTitle => 'Chat history retention';
 
   @override
-  String get agentApprovalReviseHint =>
-      'Describe the changes in the message box, then choose “Update current request”. The pending changes have not been approved.';
-
-  @override
   String get timetableImportContinueWithAgent => 'Continue with Agent';
 
   @override
@@ -4570,4 +4566,19 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get agentEndRedoDescription =>
       'Keep the current data and conversation. The remaining redo will not run.';
+
+  @override
+  String agentContextUtilization(String usedPercent, String remainingPercent) {
+    return '$usedPercent% used ($remainingPercent% remaining)';
+  }
+
+  @override
+  String agentContextTokenUsage(String used, String total) {
+    return '$used of $total tokens used';
+  }
+
+  @override
+  String agentQuestionProgress(int current, int total) {
+    return '$current of $total';
+  }
 }

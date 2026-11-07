@@ -876,7 +876,6 @@ void main() {
           'agent-mode-picker',
           'agent-model-picker',
           'agent-stop',
-          'agent-queue',
         ];
         await tester.ensureVisible(
           find.byKey(const ValueKey('agent-composer-actions')),
@@ -890,9 +889,11 @@ void main() {
           expect(rect.height, greaterThanOrEqualTo(48));
         }
         expect(
-          find.byKey(const ValueKey('agent-context-usage')),
+          find.byKey(const ValueKey('agent-context-indicator')),
           findsOneWidget,
         );
+        expect(find.byKey(const ValueKey('agent-send')), findsNothing);
+        expect(find.byKey(const ValueKey('agent-queue')), findsNothing);
         await tester.tap(find.byKey(const ValueKey('agent-composer-more')));
         await tester.pumpAndSettle();
         final l = AppLocalizations.of(
@@ -1217,7 +1218,7 @@ void main() {
       );
       expect(
         find.byKey(const ValueKey('agent-model-effort-label')),
-        layout.width >= 390 && layout.scale == 1
+        layout.width >= 460 && layout.scale == 1
             ? findsOneWidget
             : findsNothing,
       );

@@ -39,6 +39,8 @@ void main() {
       find.byKey(ValueKey('agent-question-option-$question-$id'));
   final submit = find.byKey(const ValueKey('agent-question-submit'));
   final skip = find.byKey(const ValueKey('agent-question-skip'));
+  final next = find.byKey(const ValueKey('agent-question-next'));
+  final previous = find.byKey(const ValueKey('agent-question-previous'));
 
   Future<void> tap(WidgetTester tester, Finder finder) async {
     await tester.ensureVisible(finder);
@@ -49,8 +51,38 @@ void main() {
   bool canSubmit(WidgetTester tester) =>
       tester.widget<FilledButton>(submit).onPressed != null;
 
+  Finder selectedMark(String question, String id) => find.descendant(
+    of: option(question, id),
+    matching: find.byIcon(Icons.check),
+  );
+
   AppLocalizations labels(WidgetTester tester) =>
       AppLocalizations.of(tester.element(find.byType(AgentQuestionView)));
+
+  testWidgets('question navigation and submit align with the card end', (
+    tester,
+  ) async {
+    addTearDown(tester.view.reset);
+    for (final layout in [
+      (width: 720.0, scale: 1.0),
+      (width: 320.0, scale: 2.0),
+    ]) {
+      await mount(
+        tester,
+        _request(questions: _questions()),
+        size: Size(layout.width, 900),
+        scale: layout.scale,
+      );
+      final end =
+          tester
+              .getRect(find.byKey(const ValueKey('agent-question-card')))
+              .right -
+          12;
+      expect(tester.getRect(next).right, closeTo(end, 1));
+      expect(tester.getRect(submit).right, closeTo(end, 1));
+      expect(tester.takeException(), isNull);
+    }
+  });
 
   testWidgets('all prompts require a deliberate selection or text answer', (
     tester,
@@ -66,14 +98,27 @@ void main() {
     );
     expect(canSubmit(tester), false);
     expect(submitted, isNull);
+    expect(field('one'), findsOneWidget);
+    expect(field('many'), findsNothing);
+    expect(field('free'), findsNothing);
+    expect(tester.widget<IconButton>(previous).onPressed, isNull);
     await tap(tester, option('one', 'a'));
     await tap(tester, option('one', 'b'));
+    expect(selectedMark('one', 'a'), findsNothing);
+    expect(selectedMark('one', 'b'), findsOneWidget);
+    await tap(tester, next);
+    expect(field('one'), findsNothing);
+    expect(field('many'), findsOneWidget);
     await tap(tester, option('many', 'x'));
     await tap(tester, option('many', 'y'));
     await tap(tester, option('many', 'x'));
-    expect(tester.widget<CheckboxListTile>(option('many', 'x')).value, false);
+    expect(selectedMark('many', 'x'), findsNothing);
     await tap(tester, option('many', 'x'));
     expect(canSubmit(tester), false);
+    await tap(tester, next);
+    expect(field('many'), findsNothing);
+    expect(field('free'), findsOneWidget);
+    expect(tester.widget<IconButton>(next).onPressed, isNull);
     await tester.enterText(field('free'), '   ');
     await tester.pump();
     expect(canSubmit(tester), false);
@@ -81,6 +126,18 @@ void main() {
     await tester.pump();
     expect(canSubmit(tester), true);
     expect(submitted, isNull);
+    await tap(tester, previous);
+    expect(selectedMark('many', 'x'), findsOneWidget);
+    expect(selectedMark('many', 'y'), findsOneWidget);
+    await tap(tester, previous);
+    expect(selectedMark('one', 'b'), findsOneWidget);
+    expect(canSubmit(tester), true);
+    await tap(tester, next);
+    await tap(tester, next);
+    expect(
+      tester.widget<TextField>(field('free')).controller!.text,
+      '  My own answer  ',
+    );
     await tap(tester, submit);
     expect(submitted, hasLength(3));
     expect(submitted![0].optionIds, ['b']);
@@ -139,10 +196,7 @@ void main() {
       expect(canSubmit(tester), false);
       expect(tester.widget<TextButton>(skip).onPressed, isNull);
       expect(tester.widget<TextField>(field('one')).enabled, false);
-      expect(
-        tester.widget<RadioListTile<String>>(option('one', 'a')).enabled,
-        false,
-      );
+      expect(tester.widget<InkWell>(option('one', 'a')).onTap, isNull);
       expect(find.text(l.agentSaving), findsOneWidget);
       release.completeError(StateError('raw-secret-must-not-be-shown'));
       await tester.pumpAndSettle();
@@ -175,11 +229,14 @@ void main() {
       },
     );
     final l = labels(tester);
+    await tap(tester, next);
+    await tap(tester, next);
     await tester.enterText(field('free'), 'Keep my draft');
     await tester.pump();
     expect(canSubmit(tester), false);
     await tap(tester, skip);
     expect(tester.widget<TextButton>(skip).onPressed, isNull);
+    expect(tester.widget<IconButton>(previous).onPressed, isNull);
     release.completeError(StateError('Synthetic save failure'));
     await tester.pumpAndSettle();
     expect(find.text(l.agentOperationFailed), findsOneWidget);
@@ -198,11 +255,16 @@ void main() {
     'equal restored requests preserve drafts and changed content resets them',
     (tester) async {
       addTearDown(tester.view.reset);
-      final request = _request();
+      final request = _request(questions: _questions());
       await mount(tester, request);
+      await tap(tester, next);
+      await tap(tester, next);
       await tester.enterText(field('free'), 'Preserve this');
       await tester.pump();
       await mount(tester, AgentQuestionRequest.fromJson(request.toJson()));
+      expect(field('one'), findsNothing);
+      expect(field('many'), findsNothing);
+      expect(field('free'), findsOneWidget);
       expect(
         tester.widget<TextField>(field('free')).controller!.text,
         'Preserve this',
@@ -219,6 +281,27 @@ void main() {
       expect(canSubmit(tester), false);
     },
   );
+
+  testWidgets('old page callbacks cannot navigate a replacement request', (
+    tester,
+  ) async {
+    addTearDown(tester.view.reset);
+    await mount(tester, _request(questions: _questions()));
+    final oldNext = tester.widget<IconButton>(next).onPressed!;
+    await tap(tester, next);
+    final oldPrevious = tester.widget<IconButton>(previous).onPressed!;
+    await mount(tester, _request(id: 'replacement'));
+    oldNext();
+    await tester.pump();
+    expect(field('free'), findsOneWidget);
+    expect(next, findsNothing);
+    expect(tester.takeException(), isNull);
+    oldPrevious();
+    await tester.pump();
+    expect(field('free'), findsOneWidget);
+    expect(previous, findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'old action callbacks cannot submit or skip a replacement request',
@@ -330,12 +413,14 @@ void main() {
     tester,
   ) async {
     addTearDown(tester.view.reset);
-    final request = _request(questions: [_questions().first]).withAnswers([
+    final request = _request(questions: _questions()).withAnswers([
       AgentQuestionAnswer(
         questionId: 'one',
         optionIds: ['b'],
         text: 'Saved detail',
       ),
+      AgentQuestionAnswer(questionId: 'many', optionIds: ['y']),
+      AgentQuestionAnswer(questionId: 'free', text: 'Saved final answer'),
     ]);
     await mount(tester, request);
     expect(find.text('Second option'), findsOneWidget);
@@ -343,6 +428,14 @@ void main() {
     expect(find.byType(TextField), findsNothing);
     expect(submit, findsNothing);
     expect(skip, findsNothing);
+    await tap(tester, next);
+    expect(find.text('Examples'), findsOneWidget);
+    expect(find.text('Second option'), findsNothing);
+    await tap(tester, next);
+    expect(find.text('Saved final answer'), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);
+    await tap(tester, previous);
+    expect(find.text('Examples'), findsOneWidget);
     await mount(tester, _request().withDismissed());
     expect(find.text(labels(tester).agentQuestionSkipped), findsOneWidget);
     expect(submit, findsNothing);
@@ -389,6 +482,7 @@ void main() {
                 ),
               ],
             ),
+            AgentQuestionPrompt(id: 'final', question: 'Anything else?'),
           ],
         ),
         size: const Size(320, 480),
@@ -398,7 +492,17 @@ void main() {
         },
       );
       expect(tester.takeException(), isNull);
+      expect(tester.getSize(next).width, greaterThanOrEqualTo(48));
+      expect(tester.getSize(next).height, greaterThanOrEqualTo(48));
       await tap(tester, option('long', 'details'));
+      expect(
+        tester.getSize(option('long', 'details')).height,
+        greaterThanOrEqualTo(48),
+      );
+      await tap(tester, next);
+      expect(field('final'), findsOneWidget);
+      await tap(tester, previous);
+      expect(selectedMark('long', 'details'), findsOneWidget);
       await tester.ensureVisible(submit);
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
@@ -406,7 +510,20 @@ void main() {
       expect(dismisses, 1);
       expect(tester.takeException(), isNull);
     },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
+
+  testWidgets('short option rows retain a complete touch target', (
+    tester,
+  ) async {
+    addTearDown(tester.view.reset);
+    await mount(tester, _request(questions: [_questions().first]));
+    expect(tester.getSize(option('one', 'b')).height, greaterThanOrEqualTo(48));
+    expect(tester.getSize(option('one', 'b')).width, greaterThanOrEqualTo(48));
+    await tap(tester, option('one', 'b'));
+    expect(selectedMark('one', 'b'), findsOneWidget);
+    expect(canSubmit(tester), true);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 }
 
 AgentQuestionRequest _request({

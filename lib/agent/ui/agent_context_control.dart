@@ -1,7 +1,9 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../theme/sked_expressive_theme.dart';
 import '../../widgets/sked_popup_menu.dart';
+import '../../widgets/sked_tooltip.dart';
 import '../../theme/sked_menu_style.dart';
 import 'agent_ui_delegate.dart';
 
@@ -127,7 +129,7 @@ class AgentContextControl extends StatelessWidget {
   }
 }
 
-/// The current request estimate remains visible while its actions share More.
+/// The current request estimate stays beside the model; its actions share More.
 class AgentContextIndicator extends StatelessWidget {
   const AgentContextIndicator({super.key, required this.usage});
   final AgentContextUsage? usage;
@@ -135,30 +137,69 @@ class AgentContextIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final current = usage;
-    if (current == null ||
-        (current.estimatedTokens == null &&
-            !current.isCompacting &&
-            !current.isCompactionQueued &&
-            current.errorMessage == null)) {
-      return const SizedBox.shrink();
-    }
     final l = AppLocalizations.of(context);
-    return Padding(
-      padding: const EdgeInsetsDirectional.fromSTEB(8, 4, 8, 0),
-      child: Text(
-        key: const ValueKey('agent-context-usage'),
-        current.isCompacting
-            ? l.agentCompactingContext
-            : current.isCompactionQueued
-            ? l.agentCompactionQueued
-            : current.errorMessage != null
-            ? '${l.agentContextTitle}: ${l.agentOperationFailed}'
-            : '${l.agentContextEstimated}: ${current.estimatedTokens} / '
-                  '${current.maxContextTokens ?? l.agentContextUnset} Token',
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: current.errorMessage == null
-              ? Theme.of(context).colorScheme.onSurfaceVariant
-              : Theme.of(context).colorScheme.error,
+    final estimated = current?.estimatedTokens;
+    final window = current?.maxContextTokens;
+    final knownEstimate = estimated != null && estimated >= 0;
+    final knownWindow = window != null && window > 0;
+    final ratio =
+        estimated != null && estimated >= 0 && window != null && window > 0
+        ? estimated / window
+        : null;
+    final usedPercent = ratio == null ? null : (ratio * 100).round();
+    final remainingPercent = usedPercent == null
+        ? null
+        : (100 - usedPercent).clamp(0, 100);
+    final compacting = current?.isCompacting == true;
+    final queued = current?.isCompactionQueued == true;
+    final failed = current?.errorMessage != null;
+    final tooltip = [
+      l.agentContextTitle,
+      if (compacting)
+        l.agentCompactingContext
+      else if (queued)
+        l.agentCompactionQueued
+      else if (failed)
+        l.agentOperationFailed,
+      if (usedPercent != null && remainingPercent != null)
+        l.agentContextUtilization('$usedPercent', '$remainingPercent'),
+      '${l.agentContextEstimated}: '
+          '${l.agentContextTokenUsage(knownEstimate ? '$estimated' : l.agentContextUnset, knownWindow ? '$window' : l.agentContextUnset)}',
+    ].join('\n');
+    final desktop = SkedMenuStyle.of(context).desktop;
+    final motion = SkedMotionPolicy.of(context);
+    return SkedTooltip(
+      key: const ValueKey('agent-context-indicator'),
+      message: tooltip,
+      preferBelow: false,
+      verticalOffset: 8,
+      textAlign: TextAlign.center,
+      child: SizedBox(
+        width: desktop ? 24 : 32,
+        height: desktop ? 32 : 48,
+        child: Center(
+          child: ExcludeSemantics(
+            child: SizedBox.square(
+              key: const ValueKey('agent-context-ring'),
+              dimension: 14,
+              child: failed && !compacting
+                  ? Icon(
+                      Icons.error_outline_rounded,
+                      size: 14,
+                      color: Theme.of(context).colorScheme.error,
+                    )
+                  : CircularProgressIndicator(
+                      value: compacting
+                          ? (motion.spatialAnimationsEnabled ? null : 0.75)
+                          : (ratio ?? 0).clamp(0.0, 1.0),
+                      strokeWidth: 2,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      backgroundColor: Theme.of(context)
+                          .colorScheme
+                          .outlineVariant,
+                    ),
+            ),
+          ),
         ),
       ),
     );

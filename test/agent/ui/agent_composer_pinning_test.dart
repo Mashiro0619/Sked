@@ -157,7 +157,10 @@ void main() {
       );
       final actions = key('agent-composer-actions');
       final before = tester.getRect(actions);
+      expect(key('agent-stop'), findsOneWidget);
+      expect(key('agent-send'), findsNothing);
       expect(key('agent-stop').hitTestable(), findsOneWidget);
+      expect(before.contains(tester.getCenter(key('agent-stop'))), isTrue);
       await tester.tap(key('agent-stop'));
       await settle(tester);
       expect(delegate.calls, ['stop:$id']);
@@ -171,6 +174,11 @@ void main() {
       await settle(tester);
       await tester.ensureVisible(key('agent-queue'));
       await settle(tester);
+      expect(
+        find.descendant(of: key('agent-queue'), matching: find.byType(Text)),
+        findsOneWidget,
+      );
+      expect(key('agent-queue').hitTestable(), findsOneWidget);
       expect(key('agent-stop').hitTestable(), findsOneWidget);
       await tester.tap(key('agent-queue'));
       await settle(tester);

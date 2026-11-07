@@ -7,6 +7,7 @@ import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/interactions/agent_question.dart';
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_question_view.dart';
+import 'package:sked/agent/ui/agent_turn_activity.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
 import 'package:sked/l10n/app_localizations.dart';
 
@@ -15,6 +16,8 @@ import 'agent_ui_test_support.dart';
 void main() {
   Finder key(String value) => find.byKey(ValueKey(value));
   final question = find.byType(AgentQuestionView);
+  final next = key('agent-question-next');
+  final previous = key('agent-question-previous');
 
   Future<void> tap(WidgetTester tester, Finder target) async {
     await tester.ensureVisible(target);
@@ -34,6 +37,66 @@ void main() {
   }
 
   testWidgets(
+    'pending questions dock with the composer while the transcript keeps a summary',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      final app = await fixture();
+      await mountAgentUi(tester, app.view());
+      final dock = key('agent-question-dock');
+      final composerBody = key('agent-composer-body-scroll');
+      final composer = key('agent-composer');
+      final transcript = key('agent-transcript-conversation');
+      final activity = find.byType(AgentTurnActivity);
+      final l = AppLocalizations.of(tester.element(question));
+      expect(find.descendant(of: dock, matching: question), findsOneWidget);
+      expect(find.descendant(of: composerBody, matching: dock), findsOneWidget);
+      expect(
+        find.descendant(of: composerBody, matching: composer),
+        findsOneWidget,
+      );
+      expect(
+        tester.getRect(composerBody).top,
+        greaterThanOrEqualTo(tester.getRect(transcript).bottom),
+      );
+      expect(
+        tester.getRect(dock).bottom,
+        lessThanOrEqualTo(tester.getRect(composer).top),
+      );
+      expect(activity, findsOneWidget);
+      expect(find.descendant(of: activity, matching: question), findsNothing);
+      expect(
+        find.descendant(of: activity, matching: find.byType(TextField)),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: activity,
+          matching: find.byType(AgentToolActivityDetails),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: activity,
+          matching: find.text(l.agentWaitingForAnswer),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: activity,
+          matching: find.text('Which level of detail do you want?'),
+        ),
+        findsNothing,
+      );
+      expect(find.text('Which level of detail do you want?'), findsOneWidget);
+      expect(key('agent-question-text-style'), findsOneWidget);
+      expect(key('agent-question-text-details'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'the conversation submits the exact pending request and answers',
     (tester) async {
       addTearDown(tester.view.reset);
@@ -45,6 +108,9 @@ void main() {
       expect(card.request.id, 'question-conversation');
       expect(find.text('Which level of detail do you want?'), findsOneWidget);
       await tap(tester, key('agent-question-option-style-detailed'));
+      await tap(tester, next);
+      expect(find.text('Which level of detail do you want?'), findsNothing);
+      expect(find.text('What should the answer include?'), findsOneWidget);
       await tester.ensureVisible(key('agent-question-text-details'));
       await tester.enterText(
         key('agent-question-text-details'),
@@ -52,6 +118,22 @@ void main() {
       );
       await tester.pump();
       expect(app.delegate.answers, isEmpty);
+      await tap(tester, previous);
+      expect(
+        find.descendant(
+          of: key('agent-question-option-style-detailed'),
+          matching: find.byIcon(Icons.check),
+        ),
+        findsOneWidget,
+      );
+      await tap(tester, next);
+      expect(
+        tester
+            .widget<TextField>(key('agent-question-text-details'))
+            .controller!
+            .text,
+        'Include examples',
+      );
       await tap(tester, key('agent-question-submit'));
       final submission = app.delegate.answers.single;
       expect(submission.conversationId, 'conversation');
@@ -139,6 +221,7 @@ void main() {
         app.delegate.beforeAnswer = () => release.future;
         await mountAgentUi(tester, app.view());
         await tap(tester, key('agent-question-option-style-brief'));
+        await tap(tester, next);
         await tester.ensureVisible(key('agent-question-text-details'));
         await tester.enterText(
           key('agent-question-text-details'),
@@ -153,6 +236,9 @@ void main() {
               ? replacement.view()
               : app.view(delegate: newDelegate),
         );
+        expect(key('agent-question-text-style'), findsOneWidget);
+        expect(key('agent-question-text-details'), findsNothing);
+        await tap(tester, next);
         final currentField = tester.widget<TextField>(
           key('agent-question-text-details'),
         );
@@ -186,6 +272,7 @@ void main() {
     addTearDown(tester.view.reset);
     final app = await fixture();
     await mountAgentUi(tester, app.view());
+    await tap(tester, next);
     await tester.ensureVisible(key('agent-question-text-details'));
     await tester.enterText(
       key('agent-question-text-details'),
@@ -208,6 +295,19 @@ void main() {
     expect(
       tester.widget<TextButton>(key('agent-question-skip')).onPressed,
       isNull,
+    );
+    await tap(tester, previous);
+    expect(
+      tester.widget<InkWell>(key('agent-question-option-style-brief')).onTap,
+      isNull,
+    );
+    await tap(tester, next);
+    expect(
+      tester
+          .widget<TextField>(key('agent-question-text-details'))
+          .controller!
+          .text,
+      'Keep my answer draft',
     );
     expect(key('agent-continue'), findsOneWidget);
     await tap(tester, key('agent-continue'));
@@ -237,6 +337,34 @@ void main() {
         scale: 2,
       );
       expect(tester.takeException(), isNull);
+      expect(
+        find.descendant(of: key('agent-question-dock'), matching: question),
+        findsOneWidget,
+      );
+      await tap(tester, key('agent-question-option-style-detailed'));
+      await tap(tester, next);
+      await tester.ensureVisible(key('agent-question-text-details'));
+      await tester.enterText(
+        key('agent-question-text-details'),
+        'Keep both pages reachable',
+      );
+      await tester.pump();
+      await tap(tester, previous);
+      expect(
+        find.descendant(
+          of: key('agent-question-option-style-detailed'),
+          matching: find.byIcon(Icons.check),
+        ),
+        findsOneWidget,
+      );
+      await tap(tester, next);
+      expect(
+        tester
+            .widget<TextField>(key('agent-question-text-details'))
+            .controller!
+            .text,
+        'Keep both pages reachable',
+      );
       await tap(tester, key('agent-question-skip'));
       expect(app.delegate.calls, [
         'dismiss:conversation:question-conversation',

@@ -179,7 +179,6 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   int _uiGeneration = 0;
   int _configurationGeneration = 0;
   int _approvalActionGeneration = 0;
-  bool Function()? _approvalRevisionCurrent;
   TransitionRoute<dynamic>? _ownedHistoryRoute;
   SkedTaskSession? _messageHistorySession;
 
@@ -634,9 +633,6 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   void _changed({bool synchronizeDraft = true}) {
     if (!mounted) return;
     _approvalActionGeneration++;
-    if (_approvalRevisionCurrent?.call() == false) {
-      _approvalRevisionCurrent = null;
-    }
     final conversation = _repository.selected;
     final id = conversation?.id;
     final switched = id != _shownId;
@@ -2285,12 +2281,9 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         interactionForTool: (tool) =>
             conversation.pendingQuestion?.toolCallId == tool.id &&
                 conversation.pendingQuestion?.isResolved == false
-            ? _question(
-                conversation,
-                _repository.canWrite &&
-                    _runtime.enabled &&
-                    !_runtime.maintenance &&
-                    !conversation.archived,
+            ? Text(
+                l.agentWaitingForAnswer,
+                style: Theme.of(context).textTheme.bodySmall,
               )
             : null,
       ),
@@ -2330,11 +2323,6 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       ),
     };
   }
-
-  bool _hasQuestionActivity(AgentConversation conversation, String toolId) =>
-      conversation.messages.any(
-        (message) => message.toolCalls.any((tool) => tool.id == toolId),
-      );
 
   bool _approvalHasOperation(
     AgentConversation conversation,
@@ -2816,16 +2804,18 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         _uiSessionCurrent(generation, id) &&
         identical(delegate, widget.delegate) &&
         _runFor(id).runId == runId &&
-        identical(_runFor(id).pendingApproval, plan);
-    bool canRevise() =>
-        isCurrent() &&
+        identical(_runFor(id).pendingApproval, plan) &&
         routeGeneration == _configurationGeneration &&
         _repository.canWrite &&
         _runtime.enabled &&
-        _runtime.configured &&
         !_runtime.maintenance &&
         _repository.find(id)?.archived == false &&
         _repository.find(id)?.mode == mode;
+    Future<void> decide(Future<void> Function() action) async {
+      if (actionGeneration != _approvalActionGeneration || !isCurrent()) return;
+      await _perform('approval-$id', action, isCurrent: isCurrent);
+    }
+
     return Padding(
       key: ValueKey('agent-approval-card-${plan.id}'),
       padding: embedded
@@ -2859,28 +2849,6 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                 ),
               const SizedBox(height: 8),
               AgentPlanPreview(details: plan.details),
-              if (plan.details['kind'] != 'httpTransport') ...[
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: TextButton.icon(
-                    key: const ValueKey('agent-revise-approval'),
-                    onPressed:
-                        writable &&
-                            canRevise() &&
-                            !_busy.contains('approval-$id')
-                        ? () {
-                            if (actionGeneration != _approvalActionGeneration) {
-                              return;
-                            }
-                            _focusApprovalRevision(canRevise);
-                          }
-                        : null,
-                    icon: const Icon(Icons.edit_outlined),
-                    label: Text(l.agentSteer),
-                  ),
-                ),
-                const SizedBox(height: 8),
-              ],
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
@@ -2894,34 +2862,16 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                           )
                         : null,
                     onPressed: writable && !_busy.contains('approval-$id')
-                        ? () => _perform(
-                            'approval-$id',
-                            () => delegate.approve(id, plan.id),
-                            isCurrent: isCurrent,
-                          )
+                        ? () => decide(() => delegate.approve(id, plan.id))
                         : null,
-                    child: Text(
-                      clearsLocalData
-                          ? l.clearAppDataAction
-                          : plan.details['kind'] == 'httpTransport'
-                          ? l.confirm
-                          : l.agentApprove,
-                    ),
+                    child: Text(l.agentApprove),
                   ),
                   OutlinedButton(
                     key: const ValueKey('agent-reject'),
                     onPressed: writable && !_busy.contains('approval-$id')
-                        ? () => _perform(
-                            'approval-$id',
-                            () => delegate.reject(id, plan.id),
-                            isCurrent: isCurrent,
-                          )
+                        ? () => decide(() => delegate.reject(id, plan.id))
                         : null,
-                    child: Text(
-                      plan.details['kind'] == 'httpTransport'
-                          ? l.cancel
-                          : l.agentReject,
-                    ),
+                    child: Text(l.agentReject),
                   ),
                 ],
               ),
@@ -2930,29 +2880,6 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         ),
       ),
     );
-  }
-
-  void _focusApprovalRevision(bool Function() isCurrent) {
-    if (!isCurrent()) return;
-    setState(() => _approvalRevisionCurrent = isCurrent);
-    _composerFocus.requestFocus();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted ||
-          !identical(_approvalRevisionCurrent, isCurrent) ||
-          !isCurrent()) {
-        return;
-      }
-      final editor = _composerField.currentContext;
-      if (editor != null) {
-        unawaited(
-          Scrollable.ensureVisible(
-            editor,
-            alignment: 1,
-            alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
-          ),
-        );
-      }
-    });
   }
 
   ({double minimumComposer, double minimumTranscript}) _composerBudget(
@@ -3100,7 +3027,8 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                     );
               final spacingWidth =
                   8.0 + (widget.modelPickerBuilder == null ? 0 : 4);
-              final otherWidth = buttonWidth * (active ? 3 : 2) + spacingWidth;
+              final otherWidth =
+                  buttonWidth * 2 + (desktop ? 24 : 32) + spacingWidth;
               final compactPermission =
                   availableWidth < permissionWidth + pickerWidth + otherWidth;
               final scrollLeading =
@@ -3130,6 +3058,12 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    if (conversation.pendingQuestion?.isResolved == false)
+                      Padding(
+                        key: const ValueKey('agent-question-dock'),
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: _question(conversation, enabled),
+                      ),
                     if (widget.binaryAttachments case final service?) ...[
                       if (conversation.draftAttachmentIds.isNotEmpty)
                         AgentAttachmentList(
@@ -3189,18 +3123,6 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                           ),
                         ),
                       ),
-                    if (_approvalRevisionCurrent?.call() == true)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
-                        child: Semantics(
-                          liveRegion: true,
-                          child: Text(
-                            l.agentApprovalReviseHint,
-                            key: const ValueKey('agent-approval-revise-hint'),
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ),
-                      ),
                     ..._referenceWidgets(conversation),
                     KeyedSubtree(
                       key: _composerField,
@@ -3241,6 +3163,14 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                         runSpacing: 4,
                         alignment: WrapAlignment.end,
                         children: [
+                          TextButton.icon(
+                            key: const ValueKey('agent-queue'),
+                            onPressed: canSend && !sending
+                                ? () => _queue(conversation, steering: false)
+                                : null,
+                            icon: const Icon(Icons.add, size: 16),
+                            label: Text(l.agentQueueFollowUp),
+                          ),
                           TextButton(
                             key: const ValueKey('agent-steer'),
                             onPressed: canSend && !sending
@@ -3251,7 +3181,6 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                         ],
                       ),
                     status,
-                    AgentContextIndicator(usage: state.contextUsage),
                   ],
                 );
                 return ListenableBuilder(
@@ -3292,6 +3221,9 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                           key: const ValueKey('agent-composer-actions'),
                           scrollLeading: scrollLeading,
                           picker: picker,
+                          contextIndicator: AgentContextIndicator(
+                            usage: state.contextUsage,
+                          ),
                           permission: _permissionPicker(
                             conversation,
                             l,
@@ -3338,45 +3270,30 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                               );
                             },
                           ),
-                          send: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (active)
-                                IconButton(
-                                  key: const ValueKey('agent-stop'),
-                                  tooltip: l.agentStop,
-                                  onPressed:
-                                      _busy.contains('stop-${conversation.id}')
+                          send: IconButton.filled(
+                            key: ValueKey(active ? 'agent-stop' : 'agent-send'),
+                            tooltip: active ? l.agentStop : l.agentSend,
+                            onPressed: active
+                                ? (_busy.contains('stop-${conversation.id}') ||
+                                          !sourceCurrent()
                                       ? null
                                       : () => _perform(
                                           'stop-${conversation.id}',
                                           () => widget.delegate.stop(
                                             conversation.id,
                                           ),
-                                        ),
-                                  icon: const Icon(Icons.stop_rounded),
-                                ),
-                              IconButton.filled(
-                                key: ValueKey(
-                                  active ? 'agent-queue' : 'agent-send',
-                                ),
-                                tooltip: active
-                                    ? l.agentQueueFollowUp
-                                    : l.agentSend,
-                                onPressed:
-                                    canSend &&
-                                        !sending &&
-                                        _hasInput(conversation)
-                                    ? () => active
-                                          ? _queue(
-                                              conversation,
-                                              steering: false,
-                                            )
-                                          : _send(conversation)
-                                    : null,
-                                icon: const Icon(Icons.arrow_upward_rounded),
-                              ),
-                            ],
+                                          isCurrent: sourceCurrent,
+                                        ))
+                                : (canSend &&
+                                          !sending &&
+                                          _hasInput(conversation)
+                                      ? () => _send(conversation)
+                                      : null),
+                            icon: Icon(
+                              active
+                                  ? Icons.stop_rounded
+                                  : Icons.arrow_upward_rounded,
+                            ),
                           ),
                         ),
                       ],
@@ -3411,11 +3328,13 @@ class _AgentComposerActions extends StatelessWidget {
     required this.permission,
     required this.send,
     required this.scrollLeading,
+    required this.contextIndicator,
     this.attachment,
     this.picker,
   });
 
   final Widget? attachment;
+  final Widget contextIndicator;
   final Widget permission;
   final Widget? picker;
   final Widget send;
@@ -3424,19 +3343,22 @@ class _AgentComposerActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final trailing = [
-      if (picker case final picker?) ...[
-        Expanded(
-          child: Align(
-            alignment: AlignmentDirectional.centerEnd,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 320),
-              child: picker,
-            ),
-          ),
+      Expanded(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            contextIndicator,
+            if (picker case final picker?)
+              Flexible(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 320),
+                  child: picker,
+                ),
+              ),
+          ],
         ),
-        const SizedBox(width: 4),
-      ] else
-        const Spacer(),
+      ),
+      const SizedBox(width: 4),
       send,
     ];
     if (scrollLeading) {
@@ -3453,6 +3375,7 @@ class _AgentComposerActions extends StatelessWidget {
                   ?attachment,
                   const SizedBox(width: 4),
                   permission,
+                  contextIndicator,
                   if (picker != null) ...[
                     const SizedBox(width: 4),
                     SizedBox(width: target, child: picker),

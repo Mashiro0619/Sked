@@ -3274,7 +3274,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get agentPlanDetails => '修改详情';
 
   @override
-  String get agentApprove => '批准这些修改';
+  String get agentApprove => '允许';
 
   @override
   String get agentReject => '拒绝';
@@ -4146,9 +4146,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get agentHistoryRetentionTitle => '聊天记录保留';
 
   @override
-  String get agentApprovalReviseHint => '在输入框中写明要调整的内容，再选择“补充当前要求”。当前修改尚未获准执行。';
-
-  @override
   String get timetableImportContinueWithAgent => '交给 Agent 继续';
 
   @override
@@ -4268,6 +4265,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentEndRedoDescription => '保留当前数据和对话，不再继续这次重做。';
+
+  @override
+  String agentContextUtilization(String usedPercent, String remainingPercent) {
+    return '$usedPercent% 已用（剩余 $remainingPercent%）';
+  }
+
+  @override
+  String agentContextTokenUsage(String used, String total) {
+    return '已用 $used Token，共 $total';
+  }
+
+  @override
+  String agentQuestionProgress(int current, int total) {
+    return '$current / $total';
+  }
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -7541,7 +7553,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get agentPlanDetails => '修改詳情';
 
   @override
-  String get agentApprove => '批准這些修改';
+  String get agentApprove => '允許';
 
   @override
   String get agentReject => '拒絕';
@@ -8414,9 +8426,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get agentHistoryRetentionTitle => '聊天記錄保留';
 
   @override
-  String get agentApprovalReviseHint => '在輸入框中寫明要調整的內容，再選擇「補充目前要求」。目前修改尚未獲准執行。';
-
-  @override
   String get timetableImportContinueWithAgent => '交給 Agent 繼續';
 
   @override
@@ -8536,4 +8545,19 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentEndRedoDescription => '保留目前資料與對話，不再繼續這次重做。';
+
+  @override
+  String agentContextUtilization(String usedPercent, String remainingPercent) {
+    return '$usedPercent% 已用（剩餘 $remainingPercent%）';
+  }
+
+  @override
+  String agentContextTokenUsage(String used, String total) {
+    return '已用 $used Token，共 $total';
+  }
+
+  @override
+  String agentQuestionProgress(int current, int total) {
+    return '$current / $total';
+  }
 }

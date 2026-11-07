@@ -2354,7 +2354,7 @@
   "@agentApprovalRequired": {},
   "agentPlanDetails": "Change details",
   "@agentPlanDetails": {},
-  "agentApprove": "Approve these changes",
+  "agentApprove": "Allow",
   "@agentApprove": {},
   "agentReject": "Reject",
   "@agentReject": {},
@@ -2961,8 +2961,6 @@
   "@agentConversationGuidanceHint": {},
   "agentHistoryRetentionTitle": "Chat history retention",
   "@agentHistoryRetentionTitle": {},
-  "agentApprovalReviseHint": "Describe the changes in the message box, then choose “Update current request”. The pending changes have not been approved.",
-  "@agentApprovalReviseHint": {},
   "timetableImportContinueWithAgent": "Continue with Agent",
   "@timetableImportContinueWithAgent": {},
   "timetableImportTextContent": "Timetable content",
@@ -3066,5 +3064,38 @@
   "agentEndRedoTitle": "End this redo?",
   "@agentEndRedoTitle": {},
   "agentEndRedoDescription": "Keep the current data and conversation. The remaining redo will not run.",
-  "@agentEndRedoDescription": {}
+  "@agentEndRedoDescription": {},
+  "agentContextUtilization": "{usedPercent}% used ({remainingPercent}% remaining)",
+  "@agentContextUtilization": {
+    "placeholders": {
+      "usedPercent": {
+        "type": "String"
+      },
+      "remainingPercent": {
+        "type": "String"
+      }
+    }
+  },
+  "agentContextTokenUsage": "{used} of {total} tokens used",
+  "@agentContextTokenUsage": {
+    "placeholders": {
+      "used": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "agentQuestionProgress": "{current} of {total}",
+  "@agentQuestionProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  }
 }

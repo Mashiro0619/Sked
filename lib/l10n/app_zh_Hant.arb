@@ -2286,7 +2286,7 @@
   "@agentApprovalRequired": {},
   "agentPlanDetails": "修改詳情",
   "@agentPlanDetails": {},
-  "agentApprove": "批准這些修改",
+  "agentApprove": "允許",
   "@agentApprove": {},
   "agentReject": "拒絕",
   "@agentReject": {},
@@ -2893,8 +2893,6 @@
   "@agentConversationGuidanceHint": {},
   "agentHistoryRetentionTitle": "聊天記錄保留",
   "@agentHistoryRetentionTitle": {},
-  "agentApprovalReviseHint": "在輸入框中寫明要調整的內容，再選擇「補充目前要求」。目前修改尚未獲准執行。",
-  "@agentApprovalReviseHint": {},
   "timetableImportContinueWithAgent": "交給 Agent 繼續",
   "@timetableImportContinueWithAgent": {},
   "timetableImportTextContent": "課表內容",
@@ -2998,5 +2996,38 @@
   "agentEndRedoTitle": "結束這次重做？",
   "@agentEndRedoTitle": {},
   "agentEndRedoDescription": "保留目前資料與對話，不再繼續這次重做。",
-  "@agentEndRedoDescription": {}
+  "@agentEndRedoDescription": {},
+  "agentContextUtilization": "{usedPercent}% 已用（剩餘 {remainingPercent}%）",
+  "@agentContextUtilization": {
+    "placeholders": {
+      "usedPercent": {
+        "type": "String"
+      },
+      "remainingPercent": {
+        "type": "String"
+      }
+    }
+  },
+  "agentContextTokenUsage": "已用 {used} Token，共 {total}",
+  "@agentContextTokenUsage": {
+    "placeholders": {
+      "used": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "agentQuestionProgress": "{current} / {total}",
+  "@agentQuestionProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  }
 }
