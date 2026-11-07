@@ -8,6 +8,7 @@ import 'package:http/testing.dart';
 import 'package:sked/agent/attachments/attachment_repository.dart';
 import 'package:sked/agent/attachments/conversation_attachments.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
+import 'package:sked/agent/history/conversation_history.dart';
 import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/runtime/agent_runtime_controller.dart';
 import 'package:sked/agent/runtime/conversation_context.dart';
@@ -70,7 +71,7 @@ void main() {
     expect(await h.attachments.storage.ids(), {attachment.id});
   });
 
-  test('history keeps file references and explicit reuse includes the original bytes in a later request', () async {
+  test('follow-up keeps prior files and explicit reuse sends their bytes only once', () async {
     final sent = <Map>[];
     final h = await _Harness.create((request) async {
       sent.add(jsonDecode(request.body) as Map);
@@ -89,14 +90,17 @@ void main() {
     final attachment = h.conversations.find(h.id)!.attachments.single;
     await h.runtime.send(h.id, 'first');
     await h.runtime.send(h.id, 'a new request');
-    expect(jsonEncode(sent.last), isNot(contains('data:image/png;base64,')));
+    expect(jsonEncode(sent.last), contains('data:image/png;base64,AQID'));
     expect(
       jsonEncode(sent.last),
-      contains('Earlier attachments are not included'),
+      isNot(contains('Earlier attachments are not included')),
     );
     await h.files.useAgain(h.id, attachment.id, canModify: () => true);
     await h.runtime.send(h.id, 'read again');
-    expect(jsonEncode(sent.last), contains('data:image/png;base64,AQID'));
+    expect(
+      'data:image/png;base64,AQID'.allMatches(jsonEncode(sent.last)),
+      hasLength(1),
+    );
     final archive = ConversationArchive.decode(h.storage.source!);
     expect(
       archive.conversations.single.messages.where(
@@ -106,6 +110,104 @@ void main() {
     );
     expect(archive.conversations.single.attachments, hasLength(1));
   });
+
+  test(
+    'regeneration only includes files from the selected reply prefix',
+    () async {
+      final sent = <Map>[];
+      final h = await _Harness.create((request) async {
+        sent.add(jsonDecode(request.body) as Map);
+        return _reply();
+      });
+      addTearDown(h.dispose);
+      await h.files.attach(
+        h.id,
+        XFile.fromData(
+          Uint8List.fromList([1, 2, 3]),
+          path: 'first.png',
+          name: 'first.png',
+        ),
+        canModify: () => true,
+      );
+      await h.runtime.send(h.id, 'First image');
+      final reply = h.conversations.find(h.id)!.messages.last;
+      await h.files.attach(
+        h.id,
+        XFile.fromData(
+          Uint8List.fromList([4, 5, 6]),
+          path: 'later.png',
+          name: 'later.png',
+        ),
+        canModify: () => true,
+      );
+      await h.runtime.send(h.id, 'Later image');
+      expect(jsonEncode(sent.last), contains('base64,AQID'));
+      expect(jsonEncode(sent.last), contains('base64,BAUG'));
+      await h.runtime.regenerateReply(h.id, reply.id);
+      expect(jsonEncode(sent.last), contains('base64,AQID'));
+      expect(jsonEncode(sent.last), isNot(contains('base64,BAUG')));
+      expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
+    },
+  );
+
+  test(
+    'files kept only in a historical version do not enter the active request',
+    () async {
+      final sent = <Map>[];
+      final h = await _Harness.create((request) async {
+        sent.add(jsonDecode(request.body) as Map);
+        return _reply();
+      });
+      addTearDown(h.dispose);
+      await h.files.attach(
+        h.id,
+        XFile.fromData(
+          Uint8List.fromList([4, 5, 6]),
+          path: 'retired.png',
+          name: 'retired.png',
+        ),
+        canModify: () => true,
+      );
+      final file = h.conversations.find(h.id)!.attachments.single;
+      await h.conversations.update(
+        h.id,
+        (conversation) => conversation.copyWith(
+          draftAttachmentIds: const [],
+          historyVersions: [
+            ConversationHistoryVersion(
+              id: 'version',
+              batchId: 'retired-batch',
+              createdAt: DateTime.utc(2026),
+              messages: [
+                ConversationMessage(
+                  id: 'retired-user',
+                  role: ConversationRole.user,
+                  text: 'Retired request',
+                  createdAt: DateTime.utc(2026),
+                  attachmentIds: [file.id],
+                ),
+              ],
+              runs: const [],
+              turns: const [],
+            ),
+          ],
+        ),
+      );
+      await h.runtime.send(h.id, 'Current task');
+      expect(sent, hasLength(1));
+      expect(jsonEncode(sent.last), isNot(contains('base64,BAUG')));
+      expect(
+        h.conversations
+            .find(h.id)!
+            .historyVersions
+            .single
+            .messages
+            .single
+            .attachmentIds,
+        [file.id],
+      );
+    },
+  );
 
   test('an empty attachment-only message leaves preparing after service acceptance', () async {
     final h = await _Harness.create((request) async {

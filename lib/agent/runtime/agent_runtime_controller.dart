@@ -2124,14 +2124,16 @@ class AgentRuntimeController implements AgentUiDelegate {
   List<ProviderAttachment> _providerAttachments(
     AgentConversation conversation,
     ConversationMessage message,
-    _Run run,
-  ) {
-    if (message.attachmentIds.isEmpty) return const [];
+    _Run run, {
+    Iterable<String>? attachmentIds,
+  }) {
+    final ids = (attachmentIds ?? message.attachmentIds).toList();
+    if (ids.isEmpty) return const [];
     final store = attachments;
     if (store == null) {
       throw const AttachmentException(AttachmentError.unavailable);
     }
-    return message.attachmentIds.map((id) {
+    return ids.map((id) {
       final attachment = conversation.attachments
           .where((a) => a.id == id)
           .firstOrNull;
@@ -2912,6 +2914,26 @@ class AgentRuntimeController implements AgentUiDelegate {
                 (message) => message.id == throughMessageId,
               ) +
               1;
+    // The active transcript owns attachment access. A repeated reference sends
+    // its bytes once, at the latest user message within this request's prefix.
+    final attachmentOwners = <String, String>{
+      for (final message in conversation.messages.take(through))
+        if (message.role == ConversationRole.user)
+          for (final id in message.attachmentIds) id: message.id,
+    };
+    List<ProviderAttachment> attachmentsFor(ConversationMessage message) =>
+        _providerAttachments(
+          conversation,
+          message,
+          run,
+          attachmentIds: message.attachmentIds.where(
+            (id) => attachmentOwners[id] == message.id,
+          ),
+        );
+    String attachmentNote(ConversationMessage message) =>
+        message.attachmentIds.any((id) => attachmentOwners[id] != message.id)
+        ? '\n[Repeated attachments are included with their latest user message in this request.]'
+        : '';
     for (var index = 0; index < through; index++) {
       final message = conversation.messages[index];
       if (index < conversation.executionHistoryStart) {
@@ -2922,7 +2944,8 @@ class AgentRuntimeController implements AgentUiDelegate {
                   ? ProviderRole.user
                   : ProviderRole.assistant,
               text:
-                  '[Imported history; no current operation or permission]\n${message.text}',
+                  '[Imported history; no current operation or permission]\n${message.text}${attachmentNote(message)}',
+              attachments: attachmentsFor(message),
             ),
             message.id,
           );
@@ -2961,10 +2984,7 @@ class AgentRuntimeController implements AgentUiDelegate {
           requestTools: requestTools,
         );
       }
-      if (message.id != run.inputMessageId &&
-          message.attachmentIds.isNotEmpty) {
-        text += '\n[Earlier attachments are not included in this request. Ask the user to attach them again if needed.]';
-      }
+      text += attachmentNote(message);
       addSource(
         ProviderMessage(
           role: switch (message.role) {
@@ -2974,9 +2994,7 @@ class AgentRuntimeController implements AgentUiDelegate {
             ConversationRole.notice => throw StateError('unreachable'),
           },
           text: text,
-          attachments: message.id == run.inputMessageId
-              ? _providerAttachments(conversation, message, run)
-              : const [],
+          attachments: attachmentsFor(message),
           toolCallId: message.toolCallId,
           responseItems:
               message.modelSelection?.modelId == run.modelSelection?.modelId &&
