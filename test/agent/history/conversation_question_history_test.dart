@@ -2,15 +2,20 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sked/agent/agent_application.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
+import 'package:sked/agent/history/conversation_history.dart';
 import 'package:sked/agent/history/conversation_history_preflight.dart';
 import 'package:sked/agent/interactions/agent_question.dart';
 import 'package:sked/agent/provider/provider.dart';
+import 'package:sked/agent/references/agent_composer_reference.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/application/operation_contracts.dart';
+import 'package:sked/application/resource_contracts.dart';
 import 'package:sked/models/agent_settings.dart';
+import 'package:sked/models/application_ledger.dart';
 import 'package:sked/models/timetable_models.dart';
 
 import '../../support/workspace_harness.dart';
@@ -25,6 +30,142 @@ void main() {
     addTearDown(value.close);
     return value;
   }
+
+  for (final change in ['none', 'references', 'connection', 'generation']) {
+    test(
+      'ending redo preserves a saved answer with $change context changes',
+      () async {
+        final h = await harness();
+        await h.referenceTimetable();
+        final stopped = await h.stopAfterAnswer(redo: true);
+        final batch = h.current.pendingRedo!;
+        final requests = h.provider.requests.length;
+        switch (change) {
+          case 'references':
+            await h.app.agent.history.replacePendingReferences(h.id, const []);
+          case 'connection':
+            await h.app.agent.configure(
+              h.app.agent.settings.copyWith(
+                endpoint: 'https://changed.example/v1',
+              ),
+            );
+          case 'generation':
+            await h.changeGeneration();
+        }
+        await h.app.agent.history.endRedo(h.id, batchId: batch.id);
+        expect(h.provider.requests.length, requests);
+        final ended = h.chats.saved;
+        expect(ended.pendingRedo, isNull);
+        expect(ended.pendingQuestion, isNull);
+        expect(ended.redoBatches.single.phase, ConversationRedoPhase.abandoned);
+        final reply = _reply(ended.messages, stopped.question.toolCallId);
+        _expectResult(reply, stopped.question);
+        final result = jsonDecode(reply.text) as Map;
+        expect(result['contextChanged'], change == 'none' ? isNull : isTrue);
+        expect(ended.turns.single.messageIds, contains(reply.id));
+        expect(
+          ended.runs.last.tools.single.outcome,
+          ConversationAttemptOutcome.completed,
+        );
+        if (change == 'none' || change == 'references') {
+          h.provider.respond = (_) => _done();
+          await h.app.agent.runtime.send(
+            h.id,
+            'Continue with the current selection',
+          );
+          final forwarded = h.provider.requests.last.messages.singleWhere(
+            (message) => message.toolCallId == stopped.question.toolCallId,
+          );
+          expect(jsonDecode(forwarded.text), result);
+        }
+      },
+    );
+  }
+
+  test(
+    'ending redo rechecks question context after a queued conversation reload',
+    () async {
+      final h = await harness();
+      final stopped = await h.stopAfterAnswer(redo: true);
+      final batchId = h.current.pendingRedo!.id;
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      h.chats.beforeLoad = () async {
+        entered.complete();
+        await release.future;
+      };
+      // Reloading unchanged storage occupies the serialized queue without
+      // changing the transcript. End redo reads context after this is released.
+      final loading = h.app.agent.conversations.load();
+      await entered.future.timeout(const Duration(seconds: 5));
+      final blockedTail = h.app.agent.conversations.waitForPendingWrites();
+      final ending = h.app.agent.history.endRedo(h.id, batchId: batchId);
+      try {
+        for (
+          var attempt = 0;
+          attempt < 1000 &&
+              identical(
+                h.app.agent.conversations.waitForPendingWrites(),
+                blockedTail,
+              );
+          attempt++
+        ) {
+          await Future<void>.microtask(() {});
+        }
+        expect(
+          identical(
+            h.app.agent.conversations.waitForPendingWrites(),
+            blockedTail,
+          ),
+          isFalse,
+          reason: 'End redo reached its queued save before context changes.',
+        );
+        await h.changeGeneration();
+      } finally {
+        h.chats.beforeLoad = null;
+        release.complete();
+      }
+      await loading;
+      await ending;
+      final result = jsonDecode(
+        _reply(h.chats.saved.messages, stopped.question.toolCallId).text,
+      ) as Map;
+      expect(result['contextChanged'], isTrue);
+      _expectResult(
+        _reply(h.chats.saved.messages, stopped.question.toolCallId),
+        stopped.question,
+      );
+    },
+  );
+
+  test('failed redo exit keeps the saved answer and retries its context annotation', () async {
+    final h = await harness();
+    await h.referenceTimetable();
+    final stopped = await h.stopAfterAnswer(redo: true);
+    final batchId = h.current.pendingRedo!.id;
+    await h.app.agent.history.replacePendingReferences(h.id, const []);
+    final before = h.chats.source;
+    final calls = h.provider.requests.length;
+    h.chats.beforeSave = (archive) async {
+      if (archive.conversations.single.pendingRedo == null) {
+        throw const ConversationStorageException('Synthetic redo exit failure');
+      }
+    };
+    await expectLater(
+      h.app.agent.history.endRedo(h.id, batchId: batchId),
+      throwsA(isA<ConversationStorageException>()),
+    );
+    expect(h.chats.source, before);
+    expect(h.current.pendingQuestion!.toJson(), stopped.question.toJson());
+    expect(h.current.pendingRedo!.id, batchId);
+    h.chats.beforeSave = null;
+    await h.app.agent.conversations.load();
+    await h.app.agent.history.endRedo(h.id, batchId: batchId);
+    final reply = _reply(h.chats.saved.messages, stopped.question.toolCallId);
+    expect((jsonDecode(reply.text) as Map)['contextChanged'], isTrue);
+    _expectResult(reply, stopped.question);
+    expect(h.provider.requests.length, calls);
+  });
 
   for (final dismissed in [false, true]) {
     test(
@@ -423,7 +564,12 @@ class _Harness {
   Future<_StoppedAnswer> stopAfterAnswer({
     bool dismissed = false,
     bool createCalendar = false,
+    bool redo = false,
   }) async {
+    if (redo) {
+      provider.respond = (_) => _done();
+      await app.agent.runtime.send(id, 'Original task before redo');
+    }
     var round = 0;
     provider.respond = (request) {
       if (!createCalendar) return _ask();
@@ -450,7 +596,13 @@ class _Harness {
         _ => _ask(),
       };
     };
-    final running = app.agent.runtime.send(id, 'Original question task');
+    final running = redo
+        ? app.agent.history.editAndRedo(
+            id,
+            current.messages.first.id,
+            'Ask before choosing a date',
+          )
+        : app.agent.runtime.send(id, 'Original question task');
     await waitForQuestion();
     final question = current.pendingQuestion!;
     String? answerSnapshot;
@@ -477,6 +629,46 @@ class _Harness {
       current.pendingQuestion!,
       answerSnapshot!,
     );
+  }
+
+  Future<void> referenceTimetable() async {
+    final initial = app.session.committedData;
+    final table = TimetableData(
+      id: 'question-reference-table',
+      config: TimetableConfig(
+        name: 'Question reference timetable',
+        startDate: DateTime(2026, 11, 2),
+        totalWeeks: 16,
+        periodTimeSetId: initial.studentMode.periodTimeSets.first.id,
+      ),
+      courses: const [],
+    );
+    final changed = initial.copyWith(
+      studentMode: initial.studentMode.copyWith(
+        activeTimetableId: table.id,
+        timetables: [...initial.studentMode.timetables, table],
+      ),
+    );
+    app.session.replaceData(changed);
+    await app.session.persist(changed);
+    await app.agent.updateComposerReferences(id, [
+      AgentComposerReference.resource(
+        ref: ResourceRef(kind: ResourceKind.timetable, id: table.id),
+        datasetGeneration: app.agent.mutations.generation,
+        label: table.config.name,
+      ),
+    ]);
+  }
+
+  Future<void> changeGeneration() async {
+    expect(app.session.committedData.applicationLedger!.receipts, isEmpty);
+    final changed = app.session.committedData.copyWith(
+      applicationLedger: ApplicationLedger(
+        generation: '00000000-0000-4000-8000-000000000003',
+      ),
+    );
+    app.session.replaceData(changed);
+    await app.session.persist(changed);
   }
 
   Future<void> waitForQuestion() => waitUntil(
@@ -526,13 +718,17 @@ class _Provider extends ProviderClient {
 class _Chats extends ConversationStorage {
   _Chats() : super.base();
   String? source;
+  Future<void> Function()? beforeLoad;
   Future<void> Function(ConversationArchive)? beforeSave;
   void Function(ConversationArchive)? didSave;
   AgentConversation get saved =>
       ConversationArchive.decode(source!).conversations.single;
   @override
-  Future<ConversationStorageLoad> load() async =>
-      ConversationStorageLoad(source: source);
+  Future<ConversationStorageLoad> load() async {
+    await beforeLoad?.call();
+    return ConversationStorageLoad(source: source);
+  }
+
   @override
   Future<void> save(String value, {required int revision}) async {
     final archive = ConversationArchive.decode(value);

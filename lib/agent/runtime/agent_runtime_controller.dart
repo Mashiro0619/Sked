@@ -391,16 +391,8 @@ class AgentRuntimeController implements AgentUiDelegate {
       final original = repository.find(conversationId)!;
       final expected = jsonEncode(original.toJson());
       final question = original.pendingQuestion;
-      final settled = question != null && question.isResolved
-          ? _materializeUserQuestion(
-              original,
-              question,
-              jsonEncode(_userQuestionResult(question)),
-              outcome: ConversationAttemptOutcome.completed,
-            )
-          : original;
       final recovered = await recoverAgentOperationHistory(
-        settled.executionMessages.toList(),
+        original.executionMessages.toList(),
         readReceipt: readOperationReceipt,
         id: _id,
         clock: _clock,
@@ -418,12 +410,25 @@ class AgentRuntimeController implements AgentUiDelegate {
           throw const AgentRuntimeException(AgentRuntimeError.busy);
         }
         final messages = [
-          ...settled.messages.take(settled.executionHistoryStart),
+          ...original.messages.take(original.executionHistoryStart),
           ...recovered.messages,
         ];
-        return settled.copyWith(
+        var settled = original.copyWith(
           messages: messages,
-          turns: _includeRecoveredMessages(settled, messages),
+          turns: _includeRecoveredMessages(original, messages),
+        );
+        if (question != null && question.isResolved) {
+          // Read the current context at the queued save boundary, after any
+          // asynchronous receipt reads, while the original question is kept
+          // durable until this complete candidate has been saved.
+          settled = _materializeUserQuestion(
+            settled,
+            question,
+            jsonEncode(_endedRedoQuestionResult(settled, question)),
+            outcome: ConversationAttemptOutcome.completed,
+          );
+        }
+        return settled.copyWith(
           redoBatches: [
             for (final batch in settled.redoBatches)
               if (batch.id == batchId)

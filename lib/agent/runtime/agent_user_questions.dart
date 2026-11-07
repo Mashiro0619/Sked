@@ -6,12 +6,31 @@ class _PendingUserQuestion {
   final result = Completer<AgentQuestionRequest>();
 }
 
-Map<String, Object?> _userQuestionResult(AgentQuestionRequest request) => {
+Map<String, Object?> _userQuestionResult(
+  AgentQuestionRequest request, {
+  bool contextChanged = false,
+}) => {
   'status': request.dismissed ? 'dismissed' : 'answered',
   'questionId': request.id,
   'answers': request.answers?.map((answer) => answer.toJson()).toList() ?? [],
   if (request.dismissed) 'message': 'The user skipped these questions. Continue with the known facts or explain what still requires an answer.',
+  if (contextChanged) ...{
+    'contextChanged': true,
+    'message': 'These answers belong to earlier references. Ask a new question when the current task requires clarification.',
+  },
 };
+
+bool _userQuestionContextChanged(
+  AgentQuestionRequest request, {
+  required String? connectionFingerprint,
+  required Object? datasetGeneration,
+  required List<AgentComposerReference> references,
+}) =>
+    request.connectionFingerprint != connectionFingerprint ||
+    (request.datasetGeneration != null &&
+        request.datasetGeneration != datasetGeneration) ||
+    (request.contextReferenceDigest ?? _referenceBindingDigest(const [])) !=
+        _referenceBindingDigest(references);
 
 Map<String, Object?>? _resolvedUserQuestionResult(
   AgentConversation? conversation,
@@ -187,21 +206,16 @@ extension _AgentUserQuestions on AgentRuntimeController {
     final request = _current(run).pendingQuestion;
     if (request == null) return;
     _rejectSecretValues(request.toJson(), run.apiKey);
-    final generation = run.environment['datasetGeneration'];
-    final stale =
-        request.connectionFingerprint != run.fingerprint ||
-        (request.datasetGeneration != null &&
-            request.datasetGeneration != generation) ||
-        (request.contextReferenceDigest ?? _referenceBindingDigest(const [])) !=
-            _referenceBindingDigest(run.inputReferences);
+    final stale = _userQuestionContextChanged(
+      request,
+      connectionFingerprint: run.fingerprint,
+      datasetGeneration: run.environment['datasetGeneration'],
+      references: run.inputReferences,
+    );
     final Map<String, Object?> result;
     if (stale) {
       result = request.isResolved
-          ? {
-              ..._userQuestionResult(request),
-              'contextChanged': true,
-              'message': 'These answers belong to earlier references. Ask a new question when the current task requires clarification.',
-            }
+          ? _userQuestionResult(request, contextChanged: true)
           : {
               'status': 'not_executed',
               'error': {'code': 'question_context_changed'},
@@ -228,6 +242,36 @@ extension _AgentUserQuestions on AgentRuntimeController {
             : ConversationAttemptOutcome.completed,
       ).copyWith(status: ConversationStatus.running);
     }, expectedRunId: run.id);
+  }
+
+  Map<String, Object?> _endedRedoQuestionResult(
+    AgentConversation conversation,
+    AgentQuestionRequest question,
+  ) {
+    String? fingerprint;
+    try {
+      final settings = readSettings();
+      fingerprint = _fingerprint(settings, resolveEndpoint(settings));
+    } on AgentRuntimeException {
+      // An unavailable connection still allows ending the redo. Its old
+      // answer must retain the fact that its connection no longer matches.
+    } on FormatException {
+      // Endpoint configuration may have been cleared while the redo stopped.
+    }
+    return _userQuestionResult(
+      question,
+      contextChanged: _userQuestionContextChanged(
+        question,
+        connectionFingerprint: fingerprint,
+        datasetGeneration: readEnvironment?.call()['datasetGeneration'],
+        references:
+            conversation.executionMessages
+                .where((message) => message.role == ConversationRole.user)
+                .lastOrNull
+                ?.contextReferences ??
+            const [],
+      ),
+    );
   }
 
   /// Publish the accepted answer and consume its pending state in one save.
