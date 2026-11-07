@@ -4190,6 +4190,132 @@ void registerRecoveryTests() {
     },
   );
 
+  for (final ending in ['replacement', 'stop', 'replacement-failure']) {
+    test(
+      'steering cancellation keeps one running state until $ending',
+      () async {
+        final entered = Completer<void>();
+        final cancelled = Completer<void>();
+        final release = Completer<void>();
+        final phases = <AgentUiPhase>[];
+        var requests = 0;
+        final h = await _Harness.create(
+          handler: (_, token) async* {
+            if (++requests == 1) {
+              entered.complete();
+              yield const ProviderTextDelta('Working on the original input');
+              await token!.whenCancelled;
+              cancelled.complete();
+              await release.future;
+              throw const ProviderException(ProviderError.cancelled);
+            }
+            if (ending == 'replacement-failure') {
+              throw const ProviderException(ProviderError.transportFailure);
+            }
+            yield ProviderCompleted(_response('Handled the replacement'));
+          },
+        );
+        final watch = h.runtime.watchConversation(h.id);
+        void observe() => phases.add(watch.value.phase);
+        watch.addListener(observe);
+        addTearDown(() async {
+          watch.removeListener(observe);
+          h.runtime.cancelAll();
+          if (!release.isCompleted) release.complete();
+          await h.runtime.waitForIdle();
+          h.dispose();
+        });
+        final sending = h.runtime.send(h.id, 'Original input');
+        await entered.future;
+        await h.runtime.steer(h.id, 'Replacement input');
+        await cancelled.future;
+        expect(watch.value.phase, AgentUiPhase.running);
+        expect(watch.value.errorMessage, isNull);
+        expect(phases, isNot(contains(AgentUiPhase.failed)));
+        expect(phases, isNot(contains(AgentUiPhase.stopped)));
+        if (ending == 'stop') {
+          await h.runtime.stop(h.id);
+          expect(watch.value.phase, AgentUiPhase.stopped);
+        }
+        release.complete();
+        await sending;
+        await h.runtime.waitForIdle();
+        if (ending == 'stop') {
+          expect(requests, 1);
+          expect(watch.value.phase, AgentUiPhase.stopped);
+          expect(
+            h.repository.find(h.id)!.queuedInputs.single.text,
+            'Replacement input',
+          );
+        } else if (ending == 'replacement-failure') {
+          expect(requests, 2);
+          expect(watch.value.phase, AgentUiPhase.failed);
+          expect(watch.value.errorMessage, 'provider.transportFailure');
+        } else {
+          expect(requests, 2);
+          expect(watch.value.phase, AgentUiPhase.idle);
+          expect(phases, isNot(contains(AgentUiPhase.failed)));
+          expect(phases, isNot(contains(AgentUiPhase.stopped)));
+          expect(h.runtime.pendingInputCount(h.id), 0);
+        }
+      },
+    );
+  }
+
+  test(
+    'steering preserves a real failure while settling an accepted write',
+    () async {
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      final phases = <AgentUiPhase>[];
+      var requests = 0;
+      final h = await _Harness.create(
+        handler: (_, _) => _events(
+          ++requests == 1
+              ? _response('', calls: [_call('accepted')])
+              : _response('Replacement'),
+        ),
+        execute: (_, scope, _) async {
+          scope.checkActive();
+          entered.complete();
+          await release.future;
+          throw const OperationProblem(
+            OperationErrorCode.storageFailure,
+            'The accepted write could not be saved.',
+          );
+        },
+      );
+      final watch = h.runtime.watchConversation(h.id);
+      void observe() => phases.add(watch.value.phase);
+      watch.addListener(observe);
+      addTearDown(() async {
+        watch.removeListener(observe);
+        h.runtime.cancelAll();
+        if (!release.isCompleted) release.complete();
+        await h.runtime.waitForIdle();
+        h.dispose();
+      });
+      final sending = h.runtime.send(h.id, 'Original input');
+      await entered.future;
+      await h.runtime.steer(h.id, 'Replacement input');
+      release.complete();
+      await sending;
+      await h.runtime.waitForIdle();
+      expect(phases, contains(AgentUiPhase.failed));
+      expect(requests, 1);
+      expect(watch.value.phase, AgentUiPhase.failed);
+      expect(
+        h.repository.find(h.id)!.queuedInputs.single.text,
+        'Replacement input',
+      );
+      final saved = h.repository
+          .find(h.id)!
+          .messages
+          .singleWhere((message) => message.toolCallId == 'accepted');
+      expect(jsonDecode(saved.text)['error']['code'], 'storageFailure');
+    },
+  );
+
   test(
     'steering drains an accepted write and revokes remaining old actions',
     () async {

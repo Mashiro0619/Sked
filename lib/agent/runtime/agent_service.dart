@@ -944,9 +944,7 @@ class AgentService implements AgentUiDelegate {
         final occupyingRun = _activeRun(conversationId);
         if (occupyingRun != null) {
           await occupyingRun.done;
-          if (occupyingRun.outcomeUnknown ||
-              (!occupyingRun.succeeded &&
-                  occupyingRun.stopReason != AgentRuntimeError.steered)) {
+          if (!_canContinueQueuedRun(occupyingRun)) {
             return;
           }
           // Settling callbacks may have admitted another run. Recheck actual
@@ -969,10 +967,7 @@ class AgentService implements AgentUiDelegate {
           rethrow;
         }
         final completedRun = attemptedRun;
-        if (completedRun == null ||
-            completedRun.outcomeUnknown ||
-            (!completedRun.succeeded &&
-                completedRun.stopReason != AgentRuntimeError.steered)) {
+        if (completedRun == null || !_canContinueQueuedRun(completedRun)) {
           return;
         }
       }
@@ -2151,13 +2146,20 @@ class AgentService implements AgentUiDelegate {
   }
 
   void _cancel(_ExecutionAttempt run, AgentRuntimeError reason) {
-    run.stopReason ??= reason;
+    if (run.stopReason == null || run.stopReason == AgentRuntimeError.steered) {
+      run.stopReason = reason;
+    }
     run.scope.cancel();
     run.cancellation.cancel();
     _interactions._finishApproval(run);
     _transition(
       run,
-      AgentUiRunState(phase: AgentUiPhase.stopped, errorMessage: reason.name),
+      run.stopReason == AgentRuntimeError.steered
+          ? const AgentUiRunState(phase: AgentUiPhase.running)
+          : AgentUiRunState(
+              phase: AgentUiPhase.stopped,
+              errorMessage: run.stopReason!.name,
+            ),
     );
   }
 
@@ -2499,6 +2501,26 @@ String _safeError(Object error) => switch (error) {
   ConversationStorageException _ => 'storageUnavailable',
   _ => 'runtimeFailure',
 };
+
+bool _isSteeringCancellation(_ExecutionAttempt run, Object error) =>
+    run.stopReason == AgentRuntimeError.steered &&
+    switch (error) {
+      AgentRuntimeException(code: AgentRuntimeError.steered) => true,
+      ProviderException(code: ProviderError.cancelled) => true,
+      OperationProblem(code: OperationErrorCode.cancelled) => true,
+      _ => false,
+    };
+
+bool _canContinueQueuedRun(_ExecutionAttempt run) =>
+    !run.outcomeUnknown &&
+    (run.succeeded ||
+        (run.stopReason == AgentRuntimeError.steered &&
+            const {
+              'steered',
+              'provider.cancelled',
+              'operation.cancelled',
+            }.contains(run.failureCode)));
+
 bool _mustStopForToolError(Object? error) =>
     error is AgentRuntimeException ||
     (error is OperationProblem &&

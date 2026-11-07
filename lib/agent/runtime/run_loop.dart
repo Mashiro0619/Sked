@@ -127,17 +127,19 @@ class RunLoop {
     } catch (error) {
       failure = error;
       final terminalError = failure;
+      final handingOff = _isSteeringCancellation(run, terminalError);
       run.failureCode = _safeError(terminalError);
       if (_host.repository.find(run.conversationId) != null) {
         _host._transition(
           run,
           AgentUiRunState(
-            phase:
-                run.stopReason == AgentRuntimeError.cancelled ||
-                    run.stopReason == AgentRuntimeError.disabled
+            phase: handingOff
+                ? AgentUiPhase.running
+                : run.stopReason == AgentRuntimeError.cancelled ||
+                      run.stopReason == AgentRuntimeError.disabled
                 ? AgentUiPhase.stopped
                 : AgentUiPhase.failed,
-            errorMessage: _safeError(terminalError),
+            errorMessage: handingOff ? null : _safeError(terminalError),
             providerErrorDetails: _providerErrorDetails(terminalError, run),
             providerErrorResponseBody: _providerErrorBody(terminalError, run),
             providerErrorMetadata: _providerErrorMetadata(terminalError, run),
@@ -295,17 +297,17 @@ class RunLoop {
       allowCancelled: true,
     );
 
-    if (run.scope.isCancelled) {
-      return AgentRuntimeException(
-        run.stopReason ?? AgentRuntimeError.cancelled,
-      );
-    }
     if (_mustStopForToolError(toolFailure) ||
         outcome.kind == ToolOutcomeKind.needsReconciliation) {
       return toolFailure ??
           const AgentRuntimeException(
             AgentRuntimeError.interruptedRunNeedsReview,
           );
+    }
+    if (run.scope.isCancelled) {
+      return AgentRuntimeException(
+        run.stopReason ?? AgentRuntimeError.cancelled,
+      );
     }
     return null;
   }
