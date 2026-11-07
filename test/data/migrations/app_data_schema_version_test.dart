@@ -9,8 +9,8 @@ import 'package:sked/utils/constants.dart';
 
 void main() {
   group('AppData schemaVersion', () {
-    test('current schema is version 7', () {
-      expect(appDataCurrentSchemaVersion, 7);
+    test('current schema is version 8', () {
+      expect(appDataCurrentSchemaVersion, 8);
     });
 
     test('v1 moves legacy top-level themes into unthemed modes', () {
@@ -29,7 +29,7 @@ void main() {
 
       final migrated = appDataMigrationRunner.run(input);
 
-      expect(migrated['schemaVersion'], 7);
+      expect(migrated['schemaVersion'], 8);
       for (final modeKey in const ['studentMode', 'generalMode']) {
         final mode = migrated[modeKey] as Map<String, dynamic>;
         expect(mode['themeMode'], 'dark');

@@ -259,6 +259,112 @@ void main() {
     );
   });
 
+  test('context settings round trip independently for every model', () {
+    final settings = AgentSettings(
+      model: 'first',
+      models: [
+        AgentModelConfig(
+          id: 'first',
+          reasoningEfforts: const [AgentReasoningEffort.medium],
+          defaultReasoningEffort: AgentReasoningEffort.medium,
+          maxContextTokens: 120000,
+          reportedContextTokens: 64000,
+          autoCompactAtTokens: 90000,
+        ),
+        AgentModelConfig(
+          id: 'second',
+          reasoningEfforts: const [AgentReasoningEffort.high],
+          defaultReasoningEffort: AgentReasoningEffort.high,
+          reportedContextTokens: 200000,
+          autoCompact: false,
+        ),
+      ],
+    );
+    final decoded = AgentSettings.fromJson(settings.toJson());
+    expect(decoded, settings);
+    expect(decoded.hashCode, settings.hashCode);
+    expect(decoded.modelConfig('first')!.effectiveContextTokens, 120000);
+    expect(decoded.modelConfig('first')!.effectiveCompactAtTokens, 90000);
+    expect(decoded.modelConfig('second')!.effectiveContextTokens, 200000);
+    expect(decoded.modelConfig('second')!.effectiveCompactAtTokens, isNull);
+  });
+
+  test(
+    'context metadata supplies a window and 80 percent trigger only when known',
+    () {
+      const base = AgentModelConfig(
+        id: 'first',
+        reasoningEfforts: [AgentReasoningEffort.medium],
+        defaultReasoningEffort: AgentReasoningEffort.medium,
+      );
+      expect(base.effectiveContextTokens, isNull);
+      expect(base.effectiveCompactAtTokens, isNull);
+      final known = AgentModelConfig.fromJson({
+        ...base.toJson(),
+        'reportedContextTokens': 100001,
+      });
+      expect(known.effectiveContextTokens, 100001);
+      expect(known.effectiveCompactAtTokens, 80000);
+      final user = AgentModelConfig.fromJson({
+        ...known.toJson(),
+        'maxContextTokens': 50000,
+      });
+      expect(user.effectiveContextTokens, 50000);
+      expect(user.effectiveCompactAtTokens, 40000);
+      final standalone = AgentModelConfig.fromJson({
+        ...base.toJson(),
+        'autoCompactAtTokens': 20000,
+      });
+      expect(standalone.effectiveContextTokens, isNull);
+      expect(standalone.effectiveCompactAtTokens, 20000);
+      final disabled = AgentModelConfig.fromJson({
+        ...standalone.toJson(),
+        'autoCompact': false,
+      });
+      expect(disabled.autoCompactAtTokens, 20000);
+      expect(disabled.effectiveCompactAtTokens, isNull);
+    },
+  );
+
+  test('context values require positive integers and a trigger within a known window', () {
+    const base = AgentModelConfig(
+      id: 'first',
+      reasoningEfforts: [AgentReasoningEffort.medium],
+      defaultReasoningEffort: AgentReasoningEffort.medium,
+    );
+    for (final key in [
+      'maxContextTokens',
+      'reportedContextTokens',
+      'autoCompactAtTokens',
+    ]) {
+      for (final value in [0, -1, 2.5, '100']) {
+        expect(
+          () => AgentModelConfig.fromJson({...base.toJson(), key: value}),
+          throwsFormatException,
+        );
+      }
+    }
+    expect(
+      () => AgentModelConfig.fromJson({
+        ...base.toJson(),
+        'maxContextTokens': 100,
+        'autoCompactAtTokens': 101,
+      }),
+      throwsFormatException,
+    );
+    final exact = AgentModelConfig.fromJson({
+      ...base.toJson(),
+      'maxContextTokens': 100,
+      'autoCompactAtTokens': 100,
+    });
+    expect(exact.effectiveCompactAtTokens, 100);
+    expect(
+      () =>
+          AgentModelConfig.fromJson({...base.toJson(), 'autoCompact': 'false'}),
+      throwsFormatException,
+    );
+  });
+
   test('legacy token budgets are ignored while other preferences survive', () {
     const settings = AgentSettings(
       systemInstructions: 'Keep this guidance.',

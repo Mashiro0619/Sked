@@ -8,7 +8,7 @@ import 'migration_runner.dart';
 /// 1. 把这里的常量 +1。
 /// 2. 在 [appDataMigrations] 注册新的 `from: 旧版本, to: 新版本` 实现。
 /// 3. 编写对应的单元测试，确认旧数据能升级、新数据 round-trip 保版本号。
-const int appDataCurrentSchemaVersion = 7;
+const int appDataCurrentSchemaVersion = 8;
 
 const _legacyThemeFieldKeys = <String>{
   'themeMode',
@@ -210,7 +210,20 @@ const List<Migration> appDataMigrations = <Migration>[
   AppDataMigrationV4ToV5(),
   AppDataMigrationV5ToV6(),
   AppDataMigrationV6ToV7(),
+  AppDataMigrationV7ToV8(),
 ];
+
+/// Per-model context preferences extend the persisted model configuration.
+/// Missing values remain unset; the migration never guesses a context window.
+class AppDataMigrationV7ToV8 extends Migration {
+  const AppDataMigrationV7ToV8();
+  @override
+  int get from => 7;
+  @override
+  int get to => 8;
+  @override
+  Map<String, dynamic> apply(Map<String, dynamic> json) => {...json};
+}
 
 /// AppData 加载路径统一使用的 runner。
 const MigrationRunner appDataMigrationRunner = MigrationRunner(

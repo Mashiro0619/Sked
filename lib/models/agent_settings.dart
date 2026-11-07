@@ -58,11 +58,28 @@ class AgentModelConfig {
     required this.id,
     required this.reasoningEfforts,
     required this.defaultReasoningEffort,
+    this.maxContextTokens,
+    this.reportedContextTokens,
+    this.autoCompactAtTokens,
+    this.autoCompact = true,
   });
 
   final String id;
   final List<AgentReasoningEffort> reasoningEfforts;
   final AgentReasoningEffort defaultReasoningEffort;
+  final int? maxContextTokens;
+  final int? reportedContextTokens;
+  final int? autoCompactAtTokens;
+  final bool autoCompact;
+
+  int? get effectiveContextTokens => maxContextTokens ?? reportedContextTokens;
+
+  int? get effectiveCompactAtTokens => !autoCompact
+      ? null
+      : autoCompactAtTokens ??
+            (effectiveContextTokens == null
+                ? null
+                : (effectiveContextTokens! * .8).floor());
 
   AgentModelSelection get defaultSelection =>
       AgentModelSelection(modelId: id, reasoningEffort: defaultReasoningEffort);
@@ -74,6 +91,16 @@ class AgentModelConfig {
         !reasoningEfforts.contains(defaultReasoningEffort)) {
       throw const FormatException('Invalid enabled model configuration.');
     }
+    if ([
+          ?maxContextTokens,
+          ?reportedContextTokens,
+          ?autoCompactAtTokens,
+        ].any((value) => value <= 0) ||
+        (effectiveContextTokens != null &&
+            autoCompactAtTokens != null &&
+            autoCompactAtTokens! > effectiveContextTokens!)) {
+      throw const FormatException('Invalid model context configuration.');
+    }
   }
 
   Map<String, Object?> toJson() {
@@ -82,14 +109,34 @@ class AgentModelConfig {
       'id': id,
       'reasoningEfforts': reasoningEfforts.map((value) => value.name).toList(),
       'defaultReasoningEffort': defaultReasoningEffort.name,
+      'maxContextTokens': maxContextTokens,
+      'reportedContextTokens': reportedContextTokens,
+      'autoCompactAtTokens': autoCompactAtTokens,
+      'autoCompact': autoCompact,
     };
   }
 
   factory AgentModelConfig.fromJson(Object? value) {
     if (value is! Map ||
-        value.length != 3 ||
+        value.keys.any(
+          (key) => !const {
+            'id',
+            'reasoningEfforts',
+            'defaultReasoningEffort',
+            'maxContextTokens',
+            'reportedContextTokens',
+            'autoCompactAtTokens',
+            'autoCompact',
+          }.contains(key),
+        ) ||
         value['id'] is! String ||
-        value['reasoningEfforts'] is! List) {
+        value['reasoningEfforts'] is! List ||
+        [
+          'maxContextTokens',
+          'reportedContextTokens',
+          'autoCompactAtTokens',
+        ].any((key) => value[key] != null && value[key] is! int) ||
+        (value['autoCompact'] != null && value['autoCompact'] is! bool)) {
       throw const FormatException('Invalid enabled model configuration.');
     }
     AgentReasoningEffort decodeEffort(Object? raw) {
@@ -106,6 +153,10 @@ class AgentModelConfig {
         (value['reasoningEfforts'] as List).map(decodeEffort),
       ),
       defaultReasoningEffort: decodeEffort(value['defaultReasoningEffort']),
+      maxContextTokens: value['maxContextTokens'] as int?,
+      reportedContextTokens: value['reportedContextTokens'] as int?,
+      autoCompactAtTokens: value['autoCompactAtTokens'] as int?,
+      autoCompact: value['autoCompact'] as bool? ?? true,
     );
     result.validate();
     return result;
@@ -116,11 +167,22 @@ class AgentModelConfig {
       other is AgentModelConfig &&
       id == other.id &&
       listEquals(reasoningEfforts, other.reasoningEfforts) &&
-      defaultReasoningEffort == other.defaultReasoningEffort;
+      defaultReasoningEffort == other.defaultReasoningEffort &&
+      maxContextTokens == other.maxContextTokens &&
+      reportedContextTokens == other.reportedContextTokens &&
+      autoCompactAtTokens == other.autoCompactAtTokens &&
+      autoCompact == other.autoCompact;
 
   @override
-  int get hashCode =>
-      Object.hash(id, Object.hashAll(reasoningEfforts), defaultReasoningEffort);
+  int get hashCode => Object.hash(
+    id,
+    Object.hashAll(reasoningEfforts),
+    defaultReasoningEffort,
+    maxContextTokens,
+    reportedContextTokens,
+    autoCompactAtTokens,
+    autoCompact,
+  );
 }
 
 bool _validModelId(String value) =>
