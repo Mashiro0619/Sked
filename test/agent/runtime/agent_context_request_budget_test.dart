@@ -11,17 +11,17 @@ import 'package:sked/models/agent_settings.dart';
 void main() {
   for (final protocol in AgentModelProtocol.values) {
     test(
-      '${protocol.name} compresses Chinese history before the wire byte limit',
+      '${protocol.name} preserves long history above the old default wire byte limit',
       () async {
         final h = await _Harness.create(protocol: protocol);
         addTearDown(h.close);
         await h.seed('中' * 400000);
         await h.runtime.send(h.id, 'Continue the original request');
         expect(h.bodies, hasLength(1));
-        expect(h.bodies.single.length, lessThanOrEqualTo(1024 * 1024));
+        expect(h.bodies.single.length, greaterThan(1024 * 1024));
         expect(
           utf8.decode(h.bodies.single),
-          contains('Earlier conversation checkpoint'),
+          isNot(contains('Earlier conversation checkpoint')),
         );
         expect(h.repository.find(h.id)!.messages[1].text.length, 400000);
         expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
@@ -30,7 +30,49 @@ void main() {
   }
 
   test(
-    'tool schema bytes participate in compaction before transport',
+    'default requests retain over 200 messages and all long user constraints',
+    () async {
+      final h = await _Harness.create();
+      addTearDown(h.close);
+      await h.repository.update(
+        h.id,
+        (conversation) => conversation.copyWith(
+          messages: [
+            for (var index = 0; index < 160; index++) ...[
+              ConversationMessage(
+                id: 'user-$index',
+                role: ConversationRole.user,
+                text: 'Constraint $index: ${'x' * 7000}',
+                createdAt: DateTime.utc(2026),
+              ),
+              ConversationMessage(
+                id: 'reply-$index',
+                role: ConversationRole.assistant,
+                text: 'Acknowledged $index.',
+                createdAt: DateTime.utc(2026),
+              ),
+            ],
+          ],
+        ),
+      );
+      await h.runtime.send(h.id, 'Continue all requirements.');
+      expect(h.bodies, hasLength(1));
+      final wire = jsonDecode(utf8.decode(h.bodies.single)) as Map;
+      final messages = wire['messages'] as List;
+      expect(messages, hasLength(322));
+      expect(h.bodies.single.length, greaterThan(1024 * 1024));
+      expect(jsonEncode(wire), contains('Constraint 0:'));
+      expect(jsonEncode(wire), contains('Constraint 159:'));
+      expect(
+        jsonEncode(wire),
+        isNot(contains('Earlier conversation checkpoint')),
+      );
+      expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
+    },
+  );
+
+  test(
+    'an explicit wire limit cannot silently truncate the complete proposal',
     () async {
       final h = await _Harness.create(
         maxRequestBytes: 8000,
@@ -39,13 +81,15 @@ void main() {
       addTearDown(h.close);
       await h.seed('Older query result ' * 250);
       await h.runtime.send(h.id, 'Continue');
-      expect(h.bodies, hasLength(1));
-      expect(h.bodies.single.length, lessThanOrEqualTo(8000));
+      expect(h.bodies, isEmpty);
       expect(
-        utf8.decode(h.bodies.single),
-        contains('Earlier conversation checkpoint'),
+        h.runtime.state.value.runFor(h.id).errorMessage,
+        'provider.requestBudgetExceeded',
       );
-      expect(h.runtime.state.value.runFor(h.id).errorMessage, isNull);
+      expect(
+        h.repository.find(h.id)!.messages[1].text,
+        'Older query result ' * 250,
+      );
     },
   );
 
@@ -110,7 +154,7 @@ class _Harness {
 
   static Future<_Harness> create({
     AgentModelProtocol protocol = AgentModelProtocol.chatCompletions,
-    int maxRequestBytes = 1024 * 1024,
+    int? maxRequestBytes,
     String toolDescription = 'Read synthetic data',
     String Function(AgentConversation)? systemInstructions,
   }) async {

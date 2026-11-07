@@ -93,7 +93,7 @@ void main() {
         (exchange['assistant'] as Map)['text'],
         contains('Second edit the existing winter timetable'),
       );
-      expect((exchange['assistant'] as Map)['truncated'], true);
+      expect((exchange['assistant'] as Map)['truncated'], false);
       expect((exchange['user'] as Map)['text'], '采用第二个。');
       expect((h.wires.single['messages'] as List).last['content'], '采用第二个。');
       expect(h.repository.find(h.id)!.messages[1].text, options);
@@ -450,7 +450,7 @@ class _Harness {
       },
       onOpenSettings: () {},
       systemInstructions: (_) => 'Host rules',
-      limits: const AgentRuntimeLimits(maxContextCharacters: 6000),
+      limits: const AgentRuntimeLimits(maxContextMessages: 3),
     );
   }
 

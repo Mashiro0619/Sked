@@ -12,17 +12,17 @@ Map<String, Object?> buildConversationTaskCheckpoint(
   required Set<String> omittedMessageIds,
   Iterable<ConversationTurn> turns = const [],
   int executionHistoryStart = 0,
-  int maxExcerptCharacters = 1200,
-  int maxDecisionExchanges = 8,
-  int maxObjectReferences = 24,
-  int maxClarificationCharacters = 24000,
+  int? maxExcerptCharacters,
+  int? maxDecisionExchanges,
+  int? maxObjectReferences,
+  int? maxClarificationCharacters,
 }) {
   if (executionHistoryStart < 0 ||
       executionHistoryStart > messages.length ||
-      maxExcerptCharacters < 16 ||
-      maxDecisionExchanges < 0 ||
-      maxObjectReferences < 0 ||
-      maxClarificationCharacters < 0) {
+      (maxExcerptCharacters != null && maxExcerptCharacters < 16) ||
+      (maxDecisionExchanges != null && maxDecisionExchanges < 0) ||
+      (maxObjectReferences != null && maxObjectReferences < 0) ||
+      (maxClarificationCharacters != null && maxClarificationCharacters < 0)) {
     throw ArgumentError('Invalid task checkpoint limits.');
   }
   final turnIds = <String, String>{
@@ -95,7 +95,8 @@ Map<String, Object?> buildConversationTaskCheckpoint(
       'fields': fields,
       if (omittedFields.isNotEmpty) 'omittedFields': omittedFields,
     });
-    if (references.length > maxObjectReferences) {
+    if (maxObjectReferences != null &&
+        references.length > maxObjectReferences) {
       references.removeAt(0);
     }
   }
@@ -168,7 +169,8 @@ Map<String, Object?> buildConversationTaskCheckpoint(
           ...source(message, index),
           'user': _excerpt(message.text, maxExcerptCharacters),
         });
-        if (exchanges.length > maxDecisionExchanges) {
+        if (maxDecisionExchanges != null &&
+            exchanges.length > maxDecisionExchanges) {
           exchanges.removeAt(0);
         }
       }
@@ -222,7 +224,8 @@ Map<String, Object?> buildConversationTaskCheckpoint(
             'reason': 'invalidRecordedQuestion',
           },
         });
-        if (clarifications.length > maxDecisionExchanges) {
+        if (maxDecisionExchanges != null &&
+            clarifications.length > maxDecisionExchanges) {
           clarifications.removeAt(0);
         }
       }
@@ -241,7 +244,8 @@ Map<String, Object?> buildConversationTaskCheckpoint(
   for (var index = clarifications.length - 1; index >= 0; index--) {
     final value = clarifications[index];
     final size = jsonEncode(value).length;
-    if (clarificationCharacters + size <= maxClarificationCharacters) {
+    if (maxClarificationCharacters == null ||
+        clarificationCharacters + size <= maxClarificationCharacters) {
       clarificationCharacters += size;
       value['truncated'] = false;
     } else {
@@ -280,8 +284,8 @@ Map<String, Object?> buildConversationTaskCheckpoint(
   };
 }
 
-Map<String, Object?> _excerpt(String text, int limit) {
-  if (text.length <= limit) {
+Map<String, Object?> _excerpt(String text, int? limit) {
+  if (limit == null || text.length <= limit) {
     return {'text': text, 'truncated': false};
   }
   const marker = '\n[…]\n';

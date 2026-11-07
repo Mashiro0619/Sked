@@ -88,8 +88,8 @@ class AgentRuntimeLimits {
   const AgentRuntimeLimits({
     this.maxModelRounds,
     this.maxToolCalls,
-    this.maxContextMessages = 200,
-    this.maxContextCharacters = 512 * 1024,
+    this.maxContextMessages,
+    this.maxContextCharacters,
     this.maxUserMessageCharacters,
     this.maxToolResultCharacters,
     this.totalTimeout,
@@ -98,8 +98,8 @@ class AgentRuntimeLimits {
   });
   final int? maxModelRounds;
   final int? maxToolCalls;
-  final int maxContextMessages;
-  final int maxContextCharacters;
+  final int? maxContextMessages;
+  final int? maxContextCharacters;
   final int? maxUserMessageCharacters;
   final int? maxToolResultCharacters;
   final Duration? totalTimeout;
@@ -141,8 +141,8 @@ class AgentRuntimeController implements AgentUiDelegate {
     if ([
           ?limits.maxModelRounds,
           ?limits.maxToolCalls,
-          limits.maxContextMessages,
-          limits.maxContextCharacters,
+          ?limits.maxContextMessages,
+          ?limits.maxContextCharacters,
           ?limits.maxUserMessageCharacters,
           ?limits.maxToolResultCharacters,
         ].any((value) => value <= 0) ||
@@ -3001,6 +3001,10 @@ class AgentRuntimeController implements AgentUiDelegate {
       throw const AgentRuntimeException(AgentRuntimeError.unpairedToolHistory);
     }
     bool fitsRequest(List<ProviderMessage> candidate) {
+      if (limits.providerLimits.maxRequestBytes == null &&
+          limits.providerLimits.maxAttachmentBytes == null) {
+        return true;
+      }
       try {
         final size = measureProviderRequestSize(
           _providerRequest(run, candidate),

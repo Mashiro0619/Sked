@@ -87,37 +87,70 @@ List<Map<String, Object?>> _entries(Map<String, Object?> result, String key) =>
     (result[key] as List).cast<Map<String, Object?>>();
 
 void main() {
-  test(
-    'goals remain verbatim and long decision context has bounded excerpts',
-    () {
-      final proposal =
-          'Use one of these options.\n${'较长的旧解释' * 70000}\n'
-          'Option 2 is the existing Winter timetable.';
-      final messages = [
-        _message('goal', ConversationRole.user, '调整课表，禁止星期二排课。'),
-        _message('options', ConversationRole.assistant, proposal),
-        _message('choice', ConversationRole.user, '第二个，上午开始。'),
-        _message('tail', ConversationRole.assistant, 'I will inspect it.'),
-      ];
-      final result = buildConversationTaskCheckpoint(
-        messages,
-        omittedMessageIds: {'goal', 'options', 'choice'},
+  test('default checkpoint retains all decisions and structured answers', () {
+    final messages = <ConversationMessage>[];
+    for (var index = 0; index < 40; index++) {
+      messages.add(
+        _message(
+          'proposal-$index',
+          ConversationRole.assistant,
+          'Choose A or B for item $index.',
+        ),
       );
-      expect(_entries(result, 'userRequests').map((entry) => entry['text']), [
-        '调整课表，禁止星期二排课。',
-        '第二个，上午开始。',
-      ]);
-      final exchange = _entries(result, 'decisionExchanges').single;
-      expect(exchange['assistantMessageId'], 'options');
-      expect(exchange['messageId'], 'choice');
-      final excerpt = exchange['assistant'] as Map;
-      expect(excerpt['truncated'], true);
-      expect(excerpt['originalCharacters'], proposal.length);
-      expect((excerpt['text'] as String).length, lessThanOrEqualTo(1200));
-      expect(excerpt['text'], contains('Option 2'));
-      expect(jsonEncode(result).length, lessThan(4000));
-    },
-  );
+      messages.add(
+        _message(
+          'decision-$index',
+          ConversationRole.user,
+          'B for item $index.',
+        ),
+      );
+      messages.addAll(_question(suffix: '-$index'));
+    }
+    final checkpoint = buildConversationTaskCheckpoint(
+      messages,
+      omittedMessageIds: messages.map((message) => message.id).toSet(),
+    );
+    expect(_entries(checkpoint, 'decisionExchanges'), hasLength(40));
+    expect(_entries(checkpoint, 'clarifications'), hasLength(40));
+    expect(checkpoint['omittedDecisionExchanges'], 0);
+    expect(checkpoint['omittedClarifications'], 0);
+    expect(
+      _entries(
+        checkpoint,
+        'clarifications',
+      ).every((answer) => answer['truncated'] == false),
+      isTrue,
+    );
+    expect(jsonEncode(checkpoint), contains('question-call-0'));
+    expect(jsonEncode(checkpoint), contains('question-call-39'));
+  });
+  test('default checkpoints preserve entire long proposals and their middle choices', () {
+    final proposal =
+        'Use one of these options.\n${'较长的旧解释' * 35000}\n'
+        'Option 2 is the existing Winter timetable.\n${'较长的后文' * 35000}';
+    final messages = [
+      _message('goal', ConversationRole.user, '调整课表，禁止星期二排课。'),
+      _message('options', ConversationRole.assistant, proposal),
+      _message('choice', ConversationRole.user, '第二个，上午开始。'),
+      _message('tail', ConversationRole.assistant, 'I will inspect it.'),
+    ];
+    final result = buildConversationTaskCheckpoint(
+      messages,
+      omittedMessageIds: {'goal', 'options', 'choice'},
+    );
+    expect(_entries(result, 'userRequests').map((entry) => entry['text']), [
+      '调整课表，禁止星期二排课。',
+      '第二个，上午开始。',
+    ]);
+    final exchange = _entries(result, 'decisionExchanges').single;
+    expect(exchange['assistantMessageId'], 'options');
+    expect(exchange['messageId'], 'choice');
+    final excerpt = exchange['assistant'] as Map;
+    expect(excerpt['truncated'], false);
+    expect(excerpt['text'], proposal);
+    expect(excerpt['text'], contains('Option 2'));
+    expect(jsonEncode(result).length, greaterThan(1200));
+  });
 
   test(
     'a user choice in the retained tail keeps its omitted question context',

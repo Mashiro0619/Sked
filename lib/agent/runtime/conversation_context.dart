@@ -8,16 +8,17 @@ import 'operation_outcome.dart';
 /// through conversation.history. Tool calls and their results stay in groups.
 List<ProviderMessage>? boundConversationContext(
   List<ProviderMessage> messages, {
-  required int maxMessages,
-  required int maxCharacters,
+  required int? maxMessages,
+  required int? maxCharacters,
   bool Function(List<ProviderMessage> messages)? fitsRequest,
   Map<String, Object?> Function(List<ProviderMessage> omittedMessages)?
   taskCheckpoint,
 }) {
   bool fits(List<ProviderMessage> value) =>
-      value.length <= maxMessages &&
-      value.fold<int>(0, (sum, message) => sum + _size(message)) <=
-          maxCharacters &&
+      (maxMessages == null || value.length <= maxMessages) &&
+      (maxCharacters == null ||
+          value.fold<int>(0, (sum, message) => sum + _size(message)) <=
+              maxCharacters) &&
       (fitsRequest?.call(value) ?? true);
   if (fits(messages)) return messages;
 
