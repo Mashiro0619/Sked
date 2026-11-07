@@ -18,6 +18,7 @@ dependencies:
   path_provider: ^2.1.6
   shared_preferences: ^2.5.6
   web: ^1.1.1
+  drift: ^2.35.3
 
   file_selector: ^1.1.0
   share_plus: ^13.3.1
@@ -54,6 +55,8 @@ dev_dependencies:
   url_launcher_platform_interface: 2.3.2
   flutter_secure_storage_platform_interface: ^2.1.1
   flutter_lints: ^6.0.0
+  drift_dev: ^2.35.2
+  build_runner: ^2.16.2
   flutter_launcher_icons: ^0.14.3
   xml: ^7.1.0
   yaml: ^3.1.4

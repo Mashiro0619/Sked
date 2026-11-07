@@ -1,2 +1,5 @@
 # Skill manifests hash exact UTF-8 source bytes across checkout platforms.
 assets/agent/skills/** text eol=lf
+# Preserve the published SQLite runtime asset digests on Windows checkouts.
+web/drift_worker.js text eol=lf
+web/sqlite3.wasm -text
