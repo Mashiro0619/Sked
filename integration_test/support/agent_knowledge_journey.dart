@@ -251,7 +251,7 @@ class AgentKnowledgeJourney implements AgentNativeFeature {
       'The current knowledge page did not use the expected shared owner.',
     );
     requireAgentFeature(
-      journey.tester.widget<FilledButton>(add).onPressed != null,
+      journey.tester.widget<IconButton>(add).onPressed != null,
       'The knowledge add action is disabled.',
     );
     return {
