@@ -3097,5 +3097,9 @@
         "type": "int"
       }
     }
-  }
+  },
+  "agentPinConversation": "Pin conversation",
+  "@agentPinConversation": {},
+  "agentUnpinConversation": "Unpin conversation",
+  "@agentUnpinConversation": {}
 }

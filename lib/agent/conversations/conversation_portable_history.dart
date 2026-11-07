@@ -11,6 +11,7 @@ AgentConversation conversationAsPortableHistory(AgentConversation source) =>
       id: source.id,
       title: source.title,
       titleWasEdited: source.titleWasEdited,
+      pinned: source.pinned,
       createdAt: source.createdAt,
       updatedAt: source.updatedAt,
       mode: AgentPermissionMode.ask,

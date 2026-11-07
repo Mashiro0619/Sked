@@ -29,6 +29,53 @@ Matcher operationError(OperationErrorCode code) =>
     isA<OperationProblem>().having((error) => error.code, 'code', code);
 
 void main() {
+  test(
+    'pinning preserves activity time and excludes automatic retention',
+    () async {
+      var date = DateTime.utc(2026, 1, 1);
+      final memory = MemoryConversationStorage();
+      final history = ConversationRepository(
+        storage: memory,
+        clock: () => date,
+      );
+      addTearDown(history.dispose);
+      await history.load();
+      final saved = await history.create(id: 'pinned', title: 'Keep nearby');
+      date = DateTime.utc(2026, 3, 1);
+      await history.setPinned(saved.id, true);
+      expect(history.find(saved.id)!.updatedAt, saved.updatedAt);
+      expect(history.find(saved.id)!.titleWasEdited, isFalse);
+      expect(await history.pruneHistory(days: 30, canRemove: (_) => true), 0);
+      expect(
+        ConversationArchive.decode(memory.source!).conversations.single.pinned,
+        isTrue,
+      );
+      await history.setPinned(saved.id, false);
+      expect(history.find(saved.id)!.updatedAt, saved.updatedAt);
+      expect(await history.pruneHistory(days: 30, canRemove: (_) => true), 1);
+      final draft = await history.createDraft(id: 'draft', title: 'Unsent');
+      await expectLater(
+        history.setPinned(draft.id, true),
+        throwsA(operationError(OperationErrorCode.invalidArgument)),
+      );
+    },
+  );
+
+  test('failed pin saves retain the last accepted pin state', () async {
+    final memory = MemoryConversationStorage();
+    final history = ConversationRepository(storage: memory);
+    addTearDown(history.dispose);
+    await history.load();
+    final saved = await history.create(title: 'Saved');
+    memory.failure = StateError('Storage unavailable');
+    await expectLater(history.setPinned(saved.id, true), throwsStateError);
+    expect(history.find(saved.id)!.pinned, isFalse);
+    expect(
+      ConversationArchive.decode(memory.source!).conversations.single.pinned,
+      isFalse,
+    );
+  });
+
   test('retention preserves unfinished, drafted and queued conversations and persists tombstones', () async {
     var date = DateTime.utc(2026, 1, 1);
     final memory = MemoryConversationStorage();

@@ -1287,6 +1287,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final state = delegate.state.value;
     return AgentConversationList(
       repository: repository,
+      delegate: delegate,
       onSelected: onSelected,
       active: widget.active && active,
       interactive: widget.interactive && !state.maintenance,
@@ -1308,6 +1309,15 @@ class _AgentConversationViewState extends State<AgentConversationView> {
           : null,
       header: header,
       shrinkWrap: shrinkWrap,
+      onArchive:
+          widget.active &&
+              active &&
+              widget.interactive &&
+              repository.canWrite &&
+              state.enabled &&
+              !state.maintenance
+          ? (id) => delegate.setArchived(id, true)
+          : null,
       onRestore:
           widget.active &&
               active &&

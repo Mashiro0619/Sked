@@ -508,6 +508,7 @@ class ConversationRepository extends ChangeNotifier {
     final removed = conversations
         .where(
           (item) =>
+              !item.pinned &&
               item.status == ConversationStatus.idle &&
               item.pendingRedo == null &&
               item.pendingQuestion == null &&
@@ -548,6 +549,24 @@ class ConversationRepository extends ChangeNotifier {
     String id,
     AgentConversation Function(AgentConversation current) transform, {
     String? expectedRunId,
+  }) => _update(id, transform, expectedRunId: expectedRunId);
+
+  Future<AgentConversation> setPinned(String id, bool pinned) =>
+      _update(id, (current) {
+        if (isDraft(id)) {
+          throw const OperationProblem(
+            OperationErrorCode.invalidArgument,
+            'Only saved conversations can be pinned.',
+          );
+        }
+        return current.copyWith(pinned: pinned);
+      }, updateTimestamp: false);
+
+  Future<AgentConversation> _update(
+    String id,
+    AgentConversation Function(AgentConversation current) transform, {
+    String? expectedRunId,
+    bool updateTimestamp = true,
   }) => _enqueue(() async {
     _checkWritable(expectedRunId: expectedRunId);
     await _ensureConversationLoaded(id);
@@ -558,7 +577,10 @@ class ConversationRepository extends ChangeNotifier {
         'This conversation run is no longer current.',
       );
     }
-    final next = transform(current).withUpdatedAt(_clock().toUtc());
+    final transformed = transform(current);
+    final next = updateTimestamp
+        ? transformed.withUpdatedAt(_clock().toUtc())
+        : transformed;
     if (_frozen) _validateShutdownRunUpdate(current, next, expectedRunId!);
     if (next.id != current.id || next.createdAt != current.createdAt) {
       throw const OperationProblem(

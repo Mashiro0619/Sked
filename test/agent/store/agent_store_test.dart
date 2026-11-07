@@ -44,6 +44,55 @@ void main() {
   }
 
   test(
+    'pin metadata survives SQLite reopen, paging, and portable history',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'sked-pinned-history-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final filename = path.join(directory.path, 'agent.sqlite');
+      var store = AgentStore.open(filePath: filename);
+      var repository = ConversationRepository(storage: store.conversations);
+      try {
+        await repository.load();
+        await repository.create(id: 'pinned', title: 'Pinned conversation');
+        final saved = await repository.update(
+          'pinned',
+          (value) => value.copyWith(
+            messages: List.generate(64, (index) => _message('message-$index')),
+          ),
+        );
+        await repository.setPinned('pinned', true);
+        expect(
+          (await store.readConversation('pinned'))!.updatedAt,
+          saved.updatedAt,
+        );
+        repository.dispose();
+        await store.close();
+
+        store = AgentStore.open(filePath: filename);
+        repository = ConversationRepository(storage: store.conversations);
+        await repository.load();
+        expect(repository.find('pinned')!.pinned, isTrue);
+        expect(repository.isConversationLoaded('pinned'), isFalse);
+        final complete = (await store.readConversation('pinned'))!;
+        expect(complete.pinned, isTrue);
+        expect(complete.messages, hasLength(64));
+        final portable = conversationAsPortableHistory(complete);
+        final restored = ConversationArchive.decode(
+          ConversationArchive(conversations: [portable]).encode(),
+        );
+        expect(restored.conversations.single.pinned, isTrue);
+        await repository.setPinned('pinned', false);
+        expect((await store.readConversation('pinned'))!.pinned, isFalse);
+      } finally {
+        repository.dispose();
+        await store.close();
+      }
+    },
+  );
+
+  test(
     'invalid typed conversations never reach SQLite or block later writes',
     () async {
       final store = memoryStore();

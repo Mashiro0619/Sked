@@ -1,9 +1,12 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/ui/agent_conversation_list.dart';
+import 'package:sked/agent/ui/agent_ui_delegate.dart';
 import 'package:sked/widgets/sked_popup_menu.dart';
 
 import 'agent_ui_test_support.dart';
@@ -15,12 +18,15 @@ class _HistoryHost extends ChangeNotifier {
   bool interactive = true;
   bool allowNew = true;
   bool allowRestore = true;
+  bool allowArchive = false;
+  AgentUiDelegate? delegate;
   bool shrinkWrap = false;
   bool header = false;
   TextDirection direction = TextDirection.ltr;
   int newCalls = 0, closeCalls = 0;
   final selected = <String>[];
   final restored = <String>[];
+  final archived = <String>[];
 
   void update({
     ConversationRepository? repository,
@@ -28,12 +34,16 @@ class _HistoryHost extends ChangeNotifier {
     bool? interactive,
     bool? allowNew,
     bool? allowRestore,
+    bool? allowArchive,
+    AgentUiDelegate? delegate,
   }) {
     this.repository = repository ?? this.repository;
     this.active = active ?? this.active;
     this.interactive = interactive ?? this.interactive;
     this.allowNew = allowNew ?? this.allowNew;
     this.allowRestore = allowRestore ?? this.allowRestore;
+    this.allowArchive = allowArchive ?? this.allowArchive;
+    this.delegate = delegate ?? this.delegate;
     notifyListeners();
   }
 
@@ -47,6 +57,8 @@ class _HistoryHost extends ChangeNotifier {
         onSelected: selected.add,
         onNewConversation: allowNew ? () => newCalls++ : null,
         onRestore: allowRestore ? restored.add : null,
+        onArchive: allowArchive ? archived.add : null,
+        delegate: delegate,
         active: active,
         interactive: interactive,
         shrinkWrap: shrinkWrap,
@@ -81,6 +93,9 @@ class _CapturedArchive {
 }
 
 Finder _key(String value) => find.byKey(ValueKey(value));
+Finder _tooltip(String message) => find.byWidgetPredicate(
+  (widget) => widget is Tooltip && widget.message == message,
+);
 Finder _menu() =>
     find.byWidgetPredicate((widget) => widget is SkedPopupMenuButton);
 
@@ -91,7 +106,9 @@ void _disposeRepositoryAfterTest(
   addTearDown(() async {
     await tester.runAsync(() async {
       try {
-        await repository.waitForPendingWrites();
+        await repository.waitForPendingWrites().timeout(
+          const Duration(seconds: 10),
+        );
       } finally {
         repository.dispose();
       }
@@ -158,13 +175,26 @@ Future<void> _mount(
   );
 }
 
-Future<void> _tap(WidgetTester tester, Finder finder) async {
+Future<void> _tap(
+  WidgetTester tester,
+  Finder finder, {
+  ConversationRepository? waitForRepository,
+}) async {
   if (finder.hitTestable().evaluate().isEmpty) {
     await tester.ensureVisible(finder);
     await tester.pumpAndSettle();
   }
   expect(finder.hitTestable(), findsOneWidget);
-  await tester.tap(finder.hitTestable());
+  if (waitForRepository == null) {
+    await tester.tap(finder.hitTestable());
+  } else {
+    await tester.runAsync(() async {
+      await tester.tap(finder.hitTestable());
+      await waitForRepository.waitForPendingWrites().timeout(
+        const Duration(seconds: 10),
+      );
+    });
+  }
   await tester.pumpAndSettle();
 }
 
@@ -196,6 +226,269 @@ ScrollController _scroll(WidgetTester tester) => tester
     .controller!;
 
 void main() {
+  testWidgets(
+    'desktop history reveals pin and archive on hover and keeps the full title',
+    (tester) async {
+      const title =
+          'Explain how the shared Agent conversation preserves the complete long title';
+      final repository = await _repository(tester, count: 1);
+      await tester.runAsync(
+        () => repository.update(
+          'chat-0',
+          (value) => value.copyWith(title: title),
+        ),
+      );
+      final host = _HistoryHost(repository)..allowArchive = true;
+      await _mount(tester, host, size: const Size(280, 420));
+      final row = _key('agent-history-chat-0');
+      final renderedTitle = tester.widget<Text>(find.text(title));
+      expect(renderedTitle.maxLines, 1);
+      expect(renderedTitle.overflow, TextOverflow.ellipsis);
+      expect(_tooltip(title), findsOneWidget);
+      expect(_key('agent-pin-chat-0').hitTestable(), findsNothing);
+      expect(_key('agent-archive-chat-0').hitTestable(), findsNothing);
+      final mouse = await tester.createGesture(
+        kind: ui.PointerDeviceKind.mouse,
+      );
+      addTearDown(mouse.removePointer);
+      await mouse.addPointer(location: const Offset(1, 1));
+      await mouse.moveTo(tester.getCenter(row));
+      await tester.pump();
+      expect(_key('agent-pin-chat-0').hitTestable(), findsOneWidget);
+      expect(_key('agent-archive-chat-0').hitTestable(), findsOneWidget);
+      await mouse.moveTo(const Offset(1, 1));
+      await tester.pump();
+      expect(_key('agent-pin-chat-0').hitTestable(), findsNothing);
+      await mouse.moveTo(tester.getCenter(row));
+      await tester.pump();
+      await _tap(tester, _key('agent-archive-chat-0'));
+      expect(host.archived, ['chat-0']);
+      expect(host.selected, isEmpty);
+      expect(tester.takeException(), isNull);
+    },
+    semanticsEnabled: false,
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets(
+    'a requested semantics tree reveals desktop pin and archive without hover',
+    (tester) async {
+      final repository = await _repository(tester, count: 1);
+      final host = _HistoryHost(repository)..allowArchive = true;
+      await _mount(tester, host, size: const Size(280, 420));
+      final row = _key('agent-history-chat-0');
+      final pin = _key('agent-pin-chat-0');
+      final archive = _key('agent-archive-chat-0');
+      expect(MediaQuery.accessibleNavigationOf(tester.element(row)), isFalse);
+      expect(pin.hitTestable(), findsNothing);
+      expect(archive.hitTestable(), findsNothing);
+      final semantics = tester.ensureSemantics();
+      try {
+        await tester.pump();
+        expect(MediaQuery.accessibleNavigationOf(tester.element(row)), isFalse);
+        final actionTooltips = <String>[];
+        for (final action in [pin, archive]) {
+          expect(action.hitTestable(), findsOneWidget);
+          final button = tester.widget<IconButton>(action);
+          actionTooltips.add(button.tooltip!);
+          final data = tester.getSemantics(action).getSemanticsData();
+          expect(data.tooltip, button.tooltip);
+          expect(data.hasAction(ui.SemanticsAction.tap), isTrue);
+        }
+        final owner = tester.binding.renderViews.single.owner!.semanticsOwner!;
+        Set<String> currentSemanticTooltips() {
+          final tooltips = <String>{};
+          void visit(SemanticsNode node) {
+            tooltips.add(node.getSemanticsData().tooltip);
+            node.visitChildren((child) {
+              visit(child);
+              return true;
+            });
+          }
+
+          visit(owner.rootSemanticsNode!);
+          return tooltips;
+        }
+
+        for (final state in [
+          (active: false, interactive: true),
+          (active: true, interactive: false),
+        ]) {
+          host.update(active: state.active, interactive: state.interactive);
+          await tester.pump();
+          for (final action in [pin, archive]) {
+            expect(action.hitTestable(), findsNothing);
+          }
+          final hiddenTooltips = currentSemanticTooltips();
+          for (final tooltip in actionTooltips) {
+            expect(hiddenTooltips, isNot(contains(tooltip)));
+          }
+          host.update(active: true, interactive: true);
+          await tester.pump();
+          for (final action in [pin, archive]) {
+            expect(action.hitTestable(), findsOneWidget);
+            final button = tester.widget<IconButton>(action);
+            final data = tester.getSemantics(action).getSemanticsData();
+            expect(data.tooltip, button.tooltip);
+            expect(data.hasAction(ui.SemanticsAction.tap), isTrue);
+          }
+        }
+        expect(host.selected, isEmpty);
+        expect(host.archived, isEmpty);
+        expect(tester.takeException(), isNull);
+      } finally {
+        semantics.dispose();
+      }
+    },
+    semanticsEnabled: false,
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets(
+    'pinning reorders history without changing activity or selecting the row',
+    (tester) async {
+      final repository = await _repository(tester, count: 3);
+      final host = _HistoryHost(repository);
+      await _mount(tester, host);
+      final original = repository.find('chat-0')!;
+      final oldPin = tester
+          .widget<IconButton>(_key('agent-pin-chat-0'))
+          .onPressed!;
+      await _tap(
+        tester,
+        _key('agent-pin-chat-0'),
+        waitForRepository: repository,
+      );
+      expect(repository.find('chat-0')!.pinned, isTrue);
+      expect(repository.find('chat-0')!.updatedAt, original.updatedAt);
+      expect(
+        tester.getTopLeft(_key('agent-history-chat-0')).dy,
+        lessThan(tester.getTopLeft(_key('agent-history-chat-2')).dy),
+      );
+      oldPin();
+      await tester.pumpAndSettle();
+      expect(repository.find('chat-0')!.pinned, isTrue);
+      await _tap(
+        tester,
+        _key('agent-pin-chat-0'),
+        waitForRepository: repository,
+      );
+      expect(repository.find('chat-0')!.pinned, isFalse);
+      expect(
+        tester.getTopLeft(_key('agent-history-chat-0')).dy,
+        greaterThan(tester.getTopLeft(_key('agent-history-chat-2')).dy),
+      );
+      expect(host.selected, isEmpty);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'keyboard focus reveals desktop actions and activates pin',
+    (tester) async {
+      final repository = await _repository(tester, count: 1);
+      final host = _HistoryHost(repository)..allowArchive = true;
+      await _mount(tester, host, size: const Size(280, 420));
+      expect(_key('agent-pin-chat-0').hitTestable(), findsNothing);
+      for (
+        var step = 0;
+        step < 8 && _key('agent-pin-chat-0').hitTestable().evaluate().isEmpty;
+        step++
+      ) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+      }
+      expect(_key('agent-pin-chat-0').hitTestable(), findsOneWidget);
+      expect(_key('agent-archive-chat-0').hitTestable(), findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.runAsync(() async {
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await repository.waitForPendingWrites().timeout(
+          const Duration(seconds: 10),
+        );
+      });
+      await tester.pumpAndSettle();
+      expect(repository.find('chat-0')!.pinned, isTrue);
+      expect(host.selected, isEmpty);
+      expect(tester.takeException(), isNull);
+    },
+    semanticsEnabled: false,
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
+
+  testWidgets('pin and archive callbacks cannot cross the repository owner', (
+    tester,
+  ) async {
+    final first = await _repository(tester, count: 1);
+    final second = await _repository(tester, count: 1, prefix: 'Replacement');
+    final host = _HistoryHost(first)..allowArchive = true;
+    await _mount(tester, host);
+    final oldPin = tester
+        .widget<IconButton>(_key('agent-pin-chat-0'))
+        .onPressed!;
+    final oldArchive = tester
+        .widget<IconButton>(_key('agent-archive-chat-0'))
+        .onPressed!;
+    host.update(repository: second);
+    await tester.pumpAndSettle();
+    host.update(repository: first);
+    await tester.pumpAndSettle();
+    oldPin();
+    oldArchive();
+    await tester.pumpAndSettle();
+    expect(first.find('chat-0')!.pinned, isFalse);
+    expect(second.find('chat-0')!.pinned, isFalse);
+    expect(host.archived, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'tail ring follows live conversation state and retires the old delegate',
+    (tester) async {
+      final repository = await _repository(tester, count: 2);
+      final delegate = UiDelegate(repository);
+      final replacement = UiDelegate(repository);
+      addTearDown(delegate.state.dispose);
+      addTearDown(replacement.state.dispose);
+      final host = _HistoryHost(repository)..delegate = delegate;
+      await _mount(tester, host);
+      expect(_key('agent-history-status-chat-0'), findsNothing);
+      delegate.state.value = AgentUiState(
+        enabled: true,
+        configured: true,
+        runs: const {'chat-0': AgentUiRunState(phase: AgentUiPhase.running)},
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(_key('agent-history-status-chat-0'), findsOneWidget);
+      expect(_key('agent-history-status-chat-1'), findsNothing);
+      expect(repository.find('chat-0')!.status, ConversationStatus.idle);
+      delegate.state.value = AgentUiState(
+        enabled: true,
+        configured: true,
+        runs: const {
+          'chat-0': AgentUiRunState(phase: AgentUiPhase.waitingUser),
+        },
+      );
+      await tester.pumpAndSettle();
+      expect(_tooltip('Waiting for your answer'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      host.update(delegate: replacement);
+      await tester.pumpAndSettle();
+      expect(_key('agent-history-status-chat-0'), findsNothing);
+      // Check that replacing the owner actually releases its run subscription.
+      // ignore: invalid_use_of_protected_member
+      expect(delegate.state.hasListeners, isFalse);
+      delegate.state.value = AgentUiState(
+        enabled: true,
+        configured: true,
+        runs: const {'chat-0': AgentUiRunState(phase: AgentUiPhase.failed)},
+      );
+      await tester.pumpAndSettle();
+      expect(_key('agent-history-status-chat-0'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('desktop history uses compact targets and rows', (tester) async {
     final host = _HistoryHost(await _repository(tester, count: 3));
     await _mount(tester, host, size: const Size(224, 420));

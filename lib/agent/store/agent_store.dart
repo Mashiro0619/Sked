@@ -572,6 +572,7 @@ class AgentStore {
       'id': value.id,
       'title': value.title,
       'titleWasEdited': value.titleWasEdited,
+      'pinned': value.pinned,
       'createdAt': value.createdAt.toUtc().toIso8601String(),
       'updatedAt': value.updatedAt.toUtc().toIso8601String(),
       'mode': value.mode.name,

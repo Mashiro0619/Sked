@@ -56,7 +56,7 @@ Windows 学校页面清理需要等待锁定 WebView 插件 `dispose` 通道的�
 
 聊天和共享知识使用 SQLite 的版本化行存储，选择恢复 journal 保留独立恢复协议。遇到较新版本时报告具体格式错误并保留原数据。SQLite 事务确认回滚后，原快照保持可写；提交结果未知时重新加载实际状态。输入验证在写入之前完成，不把无写入的参数错误误判为存储损坏。见 [数据库回归](../test/agent/store/agent_database_test.dart)、[事务与分页回归](../test/agent/store/agent_store_test.dart)和[恢复回归](../test/backup/selective_backup_recovery_test.dart)。
 
-学校网页交接的来源、首条消息和交接标识一起持久化，普通文件附件按本地添加流程单独保存到会话。删除同步处理关联事实及附件引用，迟到模型响应不能复活会话。归档和删除先处理当前运行，删除聊天不撤销业务操作。保留策略只清理超过期限、无草稿、无运行或排队输入的已完成会话；中断运行与需要核对的结果不自动重放。恢复的聊天保持历史只读身份，分页视图按页起点换算执行边界。上下文摘要保留原始消息与工具配对。见 [会话仓库](../test/agent/conversations/conversation_repository_test.dart)、[上下文](../test/agent/context/context_service_test.dart) 与 [会话工具](../test/agent/tools/conversation_tool_adapters_test.dart)。
+学校网页交接的来源、首条消息和交接标识一起持久化，普通文件附件按本地添加流程单独保存到会话。删除同步处理关联事实及附件引用，迟到模型响应不能复活会话。归档和删除先处理当前运行，删除聊天不撤销业务操作。保留策略只清理超过期限、未固定、无草稿、无运行或排队输入的已完成会话；中断运行与需要核对的结果不自动重放。恢复的聊天保持历史只读身份，分页视图按页起点换算执行边界。上下文摘要保留原始消息与工具配对。见 [会话仓库](../test/agent/conversations/conversation_repository_test.dart)、[上下文](../test/agent/context/context_service_test.dart) 与 [会话工具](../test/agent/tools/conversation_tool_adapters_test.dart)。
 
 二进制会话附件先完成私有存储写入和读回核验，再发布草稿引用，不自动调用模型。文件大小、单条消息附件数量及整次请求附件总量没有 Sked 固定额度。原生私有文件与 Web IndexedDB Blob 使用相同的长度、摘要、取消和引用规则；原生请求流式读取并按协议编码，文本与 Base64 开销分别核算。重试复用已核验文件身份，最终读回核验仍可取消；会话、消息边界和数据世代变化后拒绝发布旧引用。见[附件协议与验证入口](AGENT_ATTACHMENTS.md)、[应用生命周期](../test/agent/attachments/attachment_application_lifecycle_test.dart)和[聊天入口](../test/agent/ui/agent_binary_attachment_view_test.dart)。网页及文本来源继续验证实际格式与编码。
 

@@ -3027,5 +3027,9 @@
         "type": "int"
       }
     }
-  }
+  },
+  "agentPinConversation": "固定会话",
+  "@agentPinConversation": {},
+  "agentUnpinConversation": "取消固定",
+  "@agentUnpinConversation": {}
 }

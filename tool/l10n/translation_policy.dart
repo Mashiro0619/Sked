@@ -35,6 +35,8 @@ const commonEnglishFallbacks = <String>{
   'agentContextUtilization',
   'agentContextTokenUsage',
   'agentQuestionProgress',
+  'agentPinConversation',
+  'agentUnpinConversation',
   'agentTaskDetails',
   'agentTaskChanges',
   'agentContextTitle',

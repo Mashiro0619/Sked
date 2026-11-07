@@ -4613,4 +4613,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String agentQuestionProgress(int current, int total) {
     return '$current of $total';
   }
+
+  @override
+  String get agentPinConversation => 'Pin conversation';
+
+  @override
+  String get agentUnpinConversation => 'Unpin conversation';
 }

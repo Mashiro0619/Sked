@@ -8117,6 +8117,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{current} of {total}'**
   String agentQuestionProgress(int current, int total);
+
+  /// No description provided for @agentPinConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin conversation'**
+  String get agentPinConversation;
+
+  /// No description provided for @agentUnpinConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpin conversation'**
+  String get agentUnpinConversation;
 }
 
 class _AppLocalizationsDelegate

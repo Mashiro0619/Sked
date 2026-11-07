@@ -4280,6 +4280,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String agentQuestionProgress(int current, int total) {
     return '$current / $total';
   }
+
+  @override
+  String get agentPinConversation => '固定会话';
+
+  @override
+  String get agentUnpinConversation => '取消固定';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -8560,4 +8566,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String agentQuestionProgress(int current, int total) {
     return '$current / $total';
   }
+
+  @override
+  String get agentPinConversation => '固定對話';
+
+  @override
+  String get agentUnpinConversation => '取消固定';
 }

@@ -559,6 +559,7 @@ class AgentConversation {
     required this.id,
     required this.title,
     this.titleWasEdited = false,
+    this.pinned = false,
     required this.createdAt,
     required this.updatedAt,
     this.mode = AgentPermissionMode.ask,
@@ -624,6 +625,7 @@ class AgentConversation {
     : id = source.id,
       title = source.title,
       titleWasEdited = source.titleWasEdited,
+      pinned = source.pinned,
       createdAt = source.createdAt,
       mode = source.mode,
       status = source.status,
@@ -654,6 +656,7 @@ class AgentConversation {
   final String id;
   final String title;
   final bool titleWasEdited;
+  final bool pinned;
   final DateTime createdAt;
   final DateTime updatedAt;
   final AgentPermissionMode mode;
@@ -688,6 +691,7 @@ class AgentConversation {
   AgentConversation copyWith({
     String? title,
     bool? titleWasEdited,
+    bool? pinned,
     DateTime? updatedAt,
     AgentPermissionMode? mode,
     ConversationStatus? status,
@@ -718,6 +722,7 @@ class AgentConversation {
     title: title ?? this.title,
     titleWasEdited:
         titleWasEdited ?? (title != null ? true : this.titleWasEdited),
+    pinned: pinned ?? this.pinned,
     createdAt: createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     mode: mode ?? this.mode,
@@ -753,6 +758,7 @@ class AgentConversation {
     'id': id,
     'title': title,
     'titleWasEdited': titleWasEdited,
+    'pinned': pinned,
     'createdAt': createdAt.toUtc().toIso8601String(),
     'updatedAt': updatedAt.toUtc().toIso8601String(),
     'mode': mode.name,
@@ -788,6 +794,9 @@ class AgentConversation {
   };
 
   factory AgentConversation.fromJson(Map<String, dynamic> json) {
+    if (json.containsKey('pinned') && json['pinned'] is! bool) {
+      throw const FormatException('Invalid pinned conversation state.');
+    }
     if (json.containsKey('archived') && json['archived'] is! bool) {
       throw const FormatException('Invalid archived conversation state.');
     }
@@ -840,6 +849,7 @@ class AgentConversation {
       id: _string(json, 'id', max: 256),
       title: _string(json, 'title'),
       titleWasEdited: json['titleWasEdited'] as bool? ?? false,
+      pinned: json['pinned'] as bool? ?? false,
       createdAt: _date(json, 'createdAt'),
       updatedAt: _date(json, 'updatedAt'),
       mode: _enumValue(AgentPermissionMode.values, json['mode']),

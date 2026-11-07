@@ -3029,5 +3029,9 @@
         "type": "int"
       }
     }
-  }
+  },
+  "agentPinConversation": "固定對話",
+  "@agentPinConversation": {},
+  "agentUnpinConversation": "取消固定",
+  "@agentUnpinConversation": {}
 }
