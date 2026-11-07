@@ -12,7 +12,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/agent/attachments/attachment_storage_io.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
 import 'package:sked/agent/conversations/conversation_models.dart';
-import 'package:sked/agent/interactions/agent_question.dart';
 import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/store/agent_store.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
@@ -23,6 +22,7 @@ import 'package:sked/models/agent_settings.dart';
 import 'package:sked/services/app_storage_layout_io.dart';
 
 import '../test/support/workspace_harness.dart';
+import 'support/agent_live_question_responder.dart';
 
 // Explicit native acceptance only. Read connection configuration and copy the
 // secure credential slots into an isolated memory vault; all business and
@@ -207,6 +207,9 @@ void main() {
         ),
       );
       final stages = <Map<String, Object?>>[];
+      final questionResponder = AgentLiveQuestionResponder();
+      final approvalRecords = <Map<String, Object?>>[];
+      var activeStage = AgentLiveStage.create;
       final report = <String, Object?>{
         'sourceSha': _revision,
         'platform': Platform.operatingSystem,
@@ -221,6 +224,8 @@ void main() {
             : 'isolated copy of existing AgentSettings',
         'requests': provider.requests,
         'stages': stages,
+        'questionInteractions': questionResponder.records,
+        'approvalInteractions': approvalRecords,
       };
       var approvals = 0, questions = 0;
       final handling = <String>{};
@@ -229,15 +234,32 @@ void main() {
       StackTrace? interactionStack;
       String? conversationId;
       ValueListenable<AgentUiRunState>? watch;
-      void handleInteraction(String id, Future<void> action) {
+      void handleInteraction(
+        String id,
+        Future<void> action, {
+        Map<String, Object?>? approvalRecord,
+      }) {
         late final Future<void> tracked;
         tracked = action
+            .then((_) {
+              approvalRecord?['status'] = 'approved';
+            })
             .catchError((Object error, StackTrace stack) async {
+              approvalRecord?.addAll({
+                'status': 'failed',
+                'failureType': error.runtimeType.toString(),
+                'failure': error.toString(),
+              });
               interactionFailure ??= error;
               interactionStack ??= stack;
               await app.agent.runtime.stop(id);
             })
-            .whenComplete(() => pendingInteractions.remove(tracked));
+            .whenComplete(() {
+              approvalRecord?['finishedAt'] = DateTime.now()
+                  .toUtc()
+                  .toIso8601String();
+              pendingInteractions.remove(tracked);
+            });
         pendingInteractions.add(tracked);
         tracked.ignore();
       }
@@ -245,25 +267,37 @@ void main() {
       void answer() {
         final id = conversationId;
         if (id == null) return;
-        final approval = app.agent.runtime.state.value
-            .runFor(id)
-            .pendingApproval;
+        final runState = app.agent.runtime.state.value.runFor(id);
+        final approval = runState.pendingApproval;
         if (approval != null && handling.add('approval:${approval.id}')) {
           approvals++;
-          handleInteraction(id, app.agent.runtime.approve(id, approval.id));
-        }
-        final question = app.agent.conversations.find(id)?.pendingQuestion;
-        if (question != null &&
-            !question.isResolved &&
-            handling.add('question:${question.id}')) {
-          questions++;
+          final record = <String, Object?>{
+            'stage': activeStage.label,
+            'id': approval.id,
+            'summary': approval.summary,
+            'details': approval.details,
+            'phase': runState.phase.name,
+            'submittedAt': DateTime.now().toUtc().toIso8601String(),
+            'status': 'submitting',
+          };
+          approvalRecords.add(record);
           handleInteraction(
             id,
-            app.agent.runtime.answerQuestion(id, question.id, [
-              for (final prompt in question.questions)
-                AgentQuestionAnswer(questionId: prompt.id, text: '2026-09-14'),
-            ]),
+            app.agent.runtime.approve(id, approval.id),
+            approvalRecord: record,
           );
+        }
+        final question = app.agent.conversations.find(id)?.pendingQuestion;
+        final response = questionResponder.respond(
+          stage: activeStage,
+          phase: runState.phase,
+          question: question,
+          answer: (questionId, answers) =>
+              app.agent.runtime.answerQuestion(id, questionId, answers),
+        );
+        if (response != null) {
+          questions++;
+          handleInteraction(id, response);
         }
       }
 
@@ -297,7 +331,8 @@ void main() {
         watch = app.agent.runtime.watchConversation(chat.id);
         watch.addListener(answer);
         app.agent.conversations.addListener(answer);
-        Future<void> run(String label, String prompt) async {
+        Future<void> run(AgentLiveStage stage, String prompt) async {
+          activeStage = stage;
           final before = provider.requests.length;
           await app.agent.runtime.send(chat.id, prompt);
           await Future.wait(pendingInteractions.toList());
@@ -306,20 +341,20 @@ void main() {
           }
           final state = app.agent.runtime.state.value.runFor(chat.id);
           stages.add({
-            'name': label,
+            'name': stage.label,
             'phase': state.phase.name,
             'error': state.errorMessage,
             'requests': provider.requests.length - before,
           });
-          expect(state.phase, AgentUiPhase.idle, reason: label);
+          expect(state.phase, AgentUiPhase.idle, reason: stage.label);
         }
 
         await run(
-          'create',
+          AgentLiveStage.create,
           '这是合成数据验收。创建名为“Agent合成验收”的课表，'
-              '开学日期2026年9月7日，共18周，使用现有节次时间集。'
-              '再添加两门每周上课的课程：数学，周一第1节；英语，周二第2节。'
-              '完成后核对实际保存结果。',
+          '开学日期2026年9月7日，共18周，使用现有节次时间集。'
+          '再添加两门每周上课的课程：数学，周一第1节；英语，周二第2节。'
+          '完成后核对实际保存结果。',
         );
         final table = app.session.committedData.studentMode.timetables
             .singleWhere((table) => table.config.name == 'Agent合成验收');
@@ -347,9 +382,10 @@ void main() {
         );
         await app.agent.runtime.setMode(chat.id, AgentPermissionMode.plan);
         await run(
-          'preview',
-          '请规划创建另一张名为“仅预览验收”的课表，'
-              '2026年9月7日开学，共18周，使用同一节次时间集。',
+          AgentLiveStage.preview,
+          '请只规划创建另一张名为“仅预览验收”的空课表，'
+          '2026年9月7日开学，共18周，沿用“Agent合成验收”的节次时间集。'
+          '不添加课程，不执行保存。',
         );
         expect(
           app.session.committedData.studentMode.timetables.any(
@@ -358,13 +394,15 @@ void main() {
           isFalse,
         );
         await app.agent.runtime.setMode(chat.id, AgentPermissionMode.ask);
+        final questionsBefore = questions;
+        final approvalsBefore = approvals;
         await run(
-          'question-and-approval',
+          AgentLiveStage.questionAndApproval,
           '先通过问答向我询问新的开学日期。'
-              '收到答案后，将“Agent合成验收”课表的开学日期改为我给出的日期。',
+          '收到答案后，将“Agent合成验收”课表的开学日期改为我给出的日期。',
         );
-        expect(questions, greaterThan(0));
-        expect(approvals, greaterThan(0));
+        expect(questions, greaterThan(questionsBefore));
+        expect(approvals, greaterThan(approvalsBefore));
         final changed = app.session.committedData.studentMode.timetables
             .singleWhere((value) => value.id == table.id);
         expect(changed.config.startDate, DateTime(2026, 9, 14));
@@ -396,6 +434,8 @@ void main() {
         app.agent.conversations.removeListener(answer);
         await app.agent.quiesce();
         await Future.wait(pendingInteractions.toList());
+        report['approvals'] = approvals;
+        report['questions'] = questions;
         report['conversations'] = [
           for (final chat in await app.agent.conversations.readAll())
             chat.toJson(),

@@ -65,6 +65,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Agent native UI verification failed' }
 
 [真实模型入口](../integration_test/agent_live_model_test.dart) 使用现有 Agent 连接和合成业务内容，验证创建课表与两门课程、只读计划、问答和审批、自动压缩与手动压缩。用 [driver](../test_driver/agent_live_model_driver.dart) 保存主机报告。
 
+合成交互响应器与正式问答界面使用同一可回答条件：当前问题仍未解决，且运行已进入 `waitingUser`。仓库提前发布的问题只记录，等待运行状态就绪后提交一次；提交失败保留错误并使验收失败。报告保留模型原问题、选项、逐项答案及审批记录。预览阶段明确规划空课表，额外问答仍回答不添加课程、不保存；日期变更阶段单独要求发生新的日期问答和审批，并核对实际保存的开学日期。
+
 `SKED_AGENT_LIVE_PROFILE_FILE` 指向显式选定的现有 AppData 主存档；也可用 `SKED_AGENT_LIVE_CONNECTION_FILE` 指向其独立 AgentSettings JSON，两者选一。入口读取连接后新建合成主库、临时 SQLite 与附件目录，结束时核对连接来源字节不变。`SKED_AGENT_LIVE_REPORT_FILE` 是原生进程可写的临时报告绝对路径，`SKED_SOURCE_SHA` 记录候选源码。
 
 Windows 默认通过原生安全存储只读 active/pending 槽，复制到本轮内存凭据库。Android 独立测试包使用 `SKED_AGENT_LIVE_CREDENTIALS_FILE`：文件放在该测试包 `getTemporaryDirectory()` 内，JSON 的 `active`、`pending` 值为现有安全槽原文或 null。文件路径经实际路径核对，读取成功或解析失败均在 finally 删除；槽内容不写入命令行、Dart defines、APK 或验收报告。连接文件只携带 AgentSettings，不复制个人课表。

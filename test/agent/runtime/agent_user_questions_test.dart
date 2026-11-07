@@ -12,10 +12,149 @@ import 'package:sked/agent/ui/agent_ui_delegate.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/models/agent_settings.dart';
 
+import '../../../integration_test/support/agent_live_question_responder.dart';
 import '../tools/core_tool_test_support.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  for (final stage in AgentLiveStage.values) {
+    test(
+      'live ${stage.label} waits for the real question readiness and answers once',
+      () async {
+        final h = await _QuestionHarness.create(
+          questions: [
+            AgentQuestionPrompt(
+              id: stage == AgentLiveStage.preview ? 'courses' : 'date',
+              question: stage == AgentLiveStage.preview
+                  ? '空课表需要添加课程吗？'
+                  : '开学日期和课表要求是什么？',
+              options: stage == AgentLiveStage.preview
+                  ? [
+                      AgentQuestionOption(id: 'none', label: '暂不添加课程'),
+                      AgentQuestionOption(id: 'same', label: '添加同样的两门课'),
+                    ]
+                  : const [],
+            ),
+          ],
+        );
+        addTearDown(h.close);
+        final responder = AgentLiveQuestionResponder();
+        final watch = h.runtime.watchConversation(h.id);
+        final responses = <Future<void>>[];
+        final failures = <Object>[];
+        var earlyNotifications = 0, submissions = 0;
+        void answer() {
+          final question = h.current.pendingQuestion;
+          final phase = watch.value.phase;
+          if (question != null &&
+              !question.isResolved &&
+              phase != AgentUiPhase.waitingUser) {
+            earlyNotifications++;
+          }
+          Future<void>? respond() => responder.respond(
+            stage: stage,
+            phase: phase,
+            question: question,
+            answer: (questionId, answers) {
+              submissions++;
+              return h.runtime.answerQuestion(h.id, questionId, answers);
+            },
+          );
+          final response = respond();
+          // Repeated synchronous notifications must retain the same claim.
+          final duplicate = respond();
+          if (duplicate != null) {
+            failures.add(StateError('The same question was submitted twice.'));
+            responses.add(duplicate);
+          }
+          if (response != null) {
+            responses.add(
+              response.catchError((Object error) async {
+                failures.add(error);
+                await h.runtime.stop(h.id);
+              }),
+            );
+          }
+        }
+
+        watch.addListener(answer);
+        h.repository.addListener(answer);
+        try {
+          await h.runtime
+              .send(h.id, 'Run the synthetic ${stage.label} stage')
+              .timeout(const Duration(seconds: 5));
+          await Future.wait(responses);
+        } finally {
+          watch.removeListener(answer);
+          h.repository.removeListener(answer);
+        }
+        expect(earlyNotifications, greaterThan(0));
+        expect(failures, isEmpty);
+        expect(submissions, 1);
+        expect(watch.value.phase, AgentUiPhase.idle);
+        expect(h.current.pendingQuestion, isNull);
+        final record = responder.records.single;
+        expect(record['firstObservedPhase'], AgentUiPhase.running.name);
+        expect(record['answerPhase'], AgentUiPhase.waitingUser.name);
+        expect(record['answerStage'], stage.label);
+        expect(record['status'], 'answered');
+        expect(
+          (record['request'] as Map)['questions'],
+          h.provider.questions.map((question) => question.toJson()).toList(),
+        );
+        expect(
+          _questionResult(h.provider.requests.last)['answers'],
+          record['answers'],
+        );
+        final answerText = ((record['answers'] as List).single as Map)['text'];
+        switch (stage) {
+          case AgentLiveStage.create:
+            expect(answerText, contains('数学周一第1节'));
+            expect(answerText, contains('英语周二第2节'));
+          case AgentLiveStage.preview:
+            expect(answerText, contains('不添加课程，不执行保存'));
+            expect(answerText, isNot('2026-09-14'));
+          case AgentLiveStage.questionAndApproval:
+            expect(answerText, '2026-09-14');
+        }
+      },
+    );
+  }
+
+  test(
+    'live question failures retain the answer and propagate without retry',
+    () async {
+      final h = await _QuestionHarness.create();
+      addTearDown(h.close);
+      final send = h.runtime.send(h.id, 'Ask for a synthetic date');
+      final question = await h.waitForQuestion();
+      final responder = AgentLiveQuestionResponder();
+      final failure = StateError('Synthetic answer submission failed');
+      var attempts = 0;
+      Future<void>? respond() => responder.respond(
+        stage: AgentLiveStage.questionAndApproval,
+        phase: h.runtime.state.value.runFor(h.id).phase,
+        question: question,
+        answer: (_, _) async {
+          attempts++;
+          throw failure;
+        },
+      );
+      await expectLater(respond(), throwsA(same(failure)));
+      expect(respond(), isNull);
+      expect(attempts, 1);
+      final record = responder.records.single;
+      expect(record['status'], 'failed');
+      expect(record['failureType'], 'StateError');
+      expect(record['failure'], failure.toString());
+      expect(record['answers'], hasLength(question.questions.length));
+      expect((record['request'] as Map)['id'], question.id);
+      expect(h.current.pendingQuestion!.isResolved, isFalse);
+      await h.runtime.stop(h.id);
+      await send;
+    },
+  );
 
   for (final mode in AgentPermissionMode.values) {
     test(
