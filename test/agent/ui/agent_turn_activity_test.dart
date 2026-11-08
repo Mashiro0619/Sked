@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/ui/agent_conversation_timeline.dart';
 import 'package:sked/agent/ui/agent_selectable_text.dart';
 import 'package:sked/agent/ui/agent_turn_activity.dart';
+import 'package:sked/agent/ui/agent_ui_style.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/theme/color_contrast.dart';
 
@@ -114,6 +115,101 @@ void main() {
       expect(tester.takeException(), isNull);
     }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
   }
+
+  testWidgets(
+    'activity hover and keyboard focus share one surface without moving semantics',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      final before = FocusNode();
+      addTearDown(before.dispose);
+      var active = true;
+      late StateSetter change;
+      final current = activity(count: 2);
+      await mountAgentUi(
+        tester,
+        StatefulBuilder(
+          builder: (context, update) {
+            change = update;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextButton(
+                  autofocus: true,
+                  focusNode: before,
+                  onPressed: () {},
+                  child: const Text('Before activity'),
+                ),
+                AgentTurnActivity(activity: current, active: active),
+              ],
+            );
+          },
+        ),
+      );
+      final toggle = key('agent-activity-toggle-turn');
+      final rect = tester.getRect(toggle);
+      final semanticsId = tester.getSemantics(toggle).id;
+      final style = AgentUiStyle.of(tester.element(toggle));
+      ShapeDecoration surface() =>
+          tester
+                  .widget<DecoratedBox>(
+                    find.descendant(
+                      of: toggle,
+                      matching: find.byType(DecoratedBox),
+                    ),
+                  )
+                  .decoration
+              as ShapeDecoration;
+      BorderSide border() => (surface().shape as OutlinedBorder).side;
+      expect(surface().color, Colors.transparent);
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(mouse.removePointer);
+      await mouse.addPointer(location: const Offset(1, 1));
+      await mouse.moveTo(tester.getCenter(toggle));
+      await tester.pump();
+      expect(surface().color, style.hover);
+      expect(border().style, BorderStyle.none);
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<InkWell>(toggle).statesController!.value,
+        contains(WidgetState.focused),
+      );
+      expect(surface().color, style.hover);
+      expect(border().color, style.muted);
+      expect(border().width, 1);
+      expect(tester.getRect(toggle), rect);
+      expect(tester.getSemantics(toggle).id, semanticsId);
+      await mouse.down(tester.getCenter(toggle));
+      await tester.pump();
+      expect(surface().color, style.selected);
+      expect(
+        tester.widget<InkWell>(toggle).overlayColor!.resolve({
+          WidgetState.hovered,
+          WidgetState.focused,
+          WidgetState.pressed,
+        }),
+        Colors.transparent,
+      );
+      await mouse.up();
+      await tester.pumpAndSettle();
+      expect(key('agent-activity-list-turn'), findsOneWidget);
+      final oldToggle = tester.widget<InkWell>(toggle).onTap!;
+      change(() => active = false);
+      await tester.pump();
+      expect(surface().color, Colors.transparent);
+      expect(border().style, BorderStyle.none);
+      expect(tester.getSemantics(toggle).id, semanticsId);
+      change(() => active = true);
+      await tester.pump();
+      oldToggle();
+      await tester.pump();
+      expect(key('agent-activity-list-turn'), findsOneWidget);
+      expect(tester.getSemantics(toggle).id, semanticsId);
+      expect(tester.getRect(toggle), rect);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
 
   testWidgets(
     'running activity text remains readable on a dark narrow surface',
@@ -319,6 +415,87 @@ void main() {
     expect(key('agent-activity-detail-tool-0'), findsOneWidget);
   });
 
+  for (final boundary in ['content', 'owner', 'active', 'interactive']) {
+    testWidgets('an accepted copy failure retires across $boundary changes', (
+      tester,
+    ) async {
+      addTearDown(tester.view.reset);
+      final gate = Completer<void>();
+      final copied = <String>[];
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        if (call.method == 'Clipboard.setData') {
+          copied.add((call.arguments as Map)['text'] as String);
+          if (copied.length == 1) await gate.future;
+          throw PlatformException(code: 'synthetic-copy-failure');
+        }
+        return null;
+      });
+      addTearDown(() {
+        if (!gate.isCompleted) gate.complete();
+        messenger.setMockMethodCallHandler(SystemChannels.platform, null);
+      });
+      var current = activity(output: 'Before');
+      var active = true;
+      var interactive = true;
+      late StateSetter change;
+      await mountAgentUi(
+        tester,
+        StatefulBuilder(
+          builder: (context, update) {
+            change = update;
+            return AgentTurnActivity(
+              activity: current,
+              active: active,
+              interactive: interactive,
+            );
+          },
+        ),
+      );
+      await tester.tap(key('agent-activity-toggle-tool-0'));
+      await tester.pump();
+      final copy = key('agent-activity-copy-tool-0');
+      await tester.tap(copy);
+      await tester.pump();
+      expect(copied, hasLength(1));
+      expect(copied.single, contains('Before'));
+      if (boundary == 'content' || boundary == 'owner') {
+        change(() {
+          current = activity(
+            output: boundary == 'content' ? 'After' : 'Before',
+          );
+        });
+        await tester.pump();
+      } else {
+        change(() {
+          active = boundary != 'active';
+          interactive = boundary != 'interactive';
+        });
+        await tester.pump();
+        change(() {
+          active = true;
+          interactive = true;
+        });
+        await tester.pump();
+      }
+      gate.complete();
+      await tester.pumpAndSettle();
+      final l = AppLocalizations.of(tester.element(copy));
+      expect(find.text(l.agentCopyFailed), findsNothing);
+      expect(find.byType(SnackBar), findsNothing);
+      expect(copy.hitTestable(), findsOneWidget);
+      await tester.tap(copy);
+      await tester.pumpAndSettle();
+      expect(copied, hasLength(2));
+      expect(copied.last, contains(boundary == 'content' ? 'After' : 'Before'));
+      expect(find.text(l.agentCopyFailed), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    });
+  }
+
   for (final kind in [PointerDeviceKind.mouse, PointerDeviceKind.touch]) {
     testWidgets('pressed row is retired across visibility changes for $kind', (
       tester,
@@ -376,6 +553,16 @@ void main() {
       final copy = key('agent-activity-copy-tool-0');
       expect(tester.getSize(copy).width, greaterThanOrEqualTo(48));
       expect(tester.getSize(copy).height, greaterThanOrEqualTo(48));
+      expect(copy.hitTestable(), findsOneWidget);
+      final detail = key('agent-activity-detail-tool-0');
+      final scrollbar = tester.widget<Scrollbar>(
+        find.ancestor(of: detail, matching: find.byType(Scrollbar)).first,
+      );
+      expect(scrollbar.thumbVisibility, isTrue);
+      expect(scrollbar.controller!.position.maxScrollExtent, greaterThan(0));
+      await tester.drag(detail, const Offset(0, -120));
+      await tester.pumpAndSettle();
+      expect(scrollbar.controller!.position.pixels, greaterThan(0));
       expect(copy.hitTestable(), findsOneWidget);
       expect(tester.takeException(), isNull);
     }, variant: TargetPlatformVariant.only(TargetPlatform.android));

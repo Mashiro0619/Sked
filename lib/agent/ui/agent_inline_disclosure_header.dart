@@ -96,20 +96,80 @@ class AgentInlineDisclosureHeader extends StatelessWidget {
         child: KeyedSubtree(
           key: controlsKey,
           child: disclosure
-              ? Material(
-                  type: MaterialType.transparency,
-                  child: InkWell(
-                    key: toggleKey,
-                    borderRadius: BorderRadius.circular(8),
-                    hoverColor: style.hover,
-                    focusColor: style.selected,
-                    highlightColor: style.selected,
-                    splashFactory: NoSplash.splashFactory,
-                    onTap: onTap,
-                    child: content,
-                  ),
+              ? _DisclosureSurface(
+                  toggleKey: toggleKey,
+                  onTap: onTap,
+                  child: content,
                 )
               : content,
+        ),
+      ),
+    );
+  }
+}
+
+class _DisclosureSurface extends StatefulWidget {
+  const _DisclosureSurface({
+    required this.toggleKey,
+    required this.onTap,
+    required this.child,
+  });
+
+  final Key? toggleKey;
+  final VoidCallback? onTap;
+  final Widget child;
+
+  @override
+  State<_DisclosureSurface> createState() => _DisclosureSurfaceState();
+}
+
+class _DisclosureSurfaceState extends State<_DisclosureSurface> {
+  final _states = WidgetStatesController();
+
+  @override
+  void dispose() {
+    _states.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final control = AgentUiStyle.of(context).controlStyle;
+    const fallbackShape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.all(Radius.circular(8)),
+    );
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        key: widget.toggleKey,
+        statesController: _states,
+        onTap: widget.onTap,
+        canRequestFocus: widget.onTap != null,
+        customBorder:
+            control.shape?.resolve(const <WidgetState>{}) ?? fallbackShape,
+        overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+        splashFactory: NoSplash.splashFactory,
+        child: ValueListenableBuilder<Set<WidgetState>>(
+          valueListenable: _states,
+          builder: (context, interaction, child) {
+            final states = <WidgetState>{
+              ...interaction,
+              if (widget.onTap == null) WidgetState.disabled,
+            };
+            final shape = control.shape?.resolve(states) ?? fallbackShape;
+            return DecoratedBox(
+              decoration: ShapeDecoration(
+                color:
+                    control.backgroundColor?.resolve(states) ??
+                    Colors.transparent,
+                shape: shape.copyWith(
+                  side: control.side?.resolve(states) ?? BorderSide.none,
+                ),
+              ),
+              child: child,
+            );
+          },
+          child: widget.child,
         ),
       ),
     );

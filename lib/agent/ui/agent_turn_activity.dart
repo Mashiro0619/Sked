@@ -363,7 +363,10 @@ class _AgentToolActivityDetailsState extends State<AgentToolActivityDetails> {
         setState(() => _copied = true);
       }
     } catch (_) {
-      if (mounted && widget.enabled) {
+      if (mounted &&
+          widget.enabled &&
+          revision == _revision &&
+          identical(tool, widget.tool)) {
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(
           SnackBar(content: Text(AppLocalizations.of(context).agentCopyFailed)),
         );
@@ -425,33 +428,39 @@ class _AgentToolActivityDetailsState extends State<AgentToolActivityDetails> {
           ),
           ConstrainedBox(
             constraints: BoxConstraints(maxHeight: desktop ? 280 : 320),
-            child: Scrollbar(
-              controller: _scroll,
-              child: SingleChildScrollView(
-                key: ValueKey('agent-activity-detail-${tool.id}'),
+            child: ScrollConfiguration(
+              behavior: ScrollConfiguration.of(context)
+                  .copyWith(scrollbars: false),
+              child: Scrollbar(
                 controller: _scroll,
-                padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      l.agentToolArguments,
-                      style: style.caption.copyWith(color: style.muted),
-                    ),
-                    _ActivityPayload(tool.arguments),
-                    const SizedBox(height: 8),
-                    Text(
-                      l.agentToolResponse,
-                      style: style.caption.copyWith(color: style.muted),
-                    ),
-                    if (tool.result case final result?)
-                      _ActivityPayload(result)
-                    else
+                thumbVisibility: true,
+                thickness: 4,
+                child: SingleChildScrollView(
+                  key: ValueKey('agent-activity-detail-${tool.id}'),
+                  controller: _scroll,
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
                       Text(
-                        agentToolActivityStatusLabel(tool.status, l),
-                        style: style.caption,
+                        l.agentToolArguments,
+                        style: style.caption.copyWith(color: style.muted),
                       ),
-                  ],
+                      _ActivityPayload(tool.arguments),
+                      const SizedBox(height: 8),
+                      Text(
+                        l.agentToolResponse,
+                        style: style.caption.copyWith(color: style.muted),
+                      ),
+                      if (tool.result case final result?)
+                        _ActivityPayload(result)
+                      else
+                        Text(
+                          agentToolActivityStatusLabel(tool.status, l),
+                          style: style.caption,
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),

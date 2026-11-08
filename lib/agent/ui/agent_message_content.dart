@@ -139,6 +139,9 @@ class _AgentMessageContentState extends State<AgentMessageContent> {
                 fontFamily: 'monospace',
                 backgroundColor: colors.surfaceContainerHigh,
               ),
+              // The custom code builder owns its rounded surface. Prevent the
+              // Markdown fallback theme from painting behind its corners.
+              codeblockDecoration: const BoxDecoration(),
               blockquoteDecoration: BoxDecoration(
                 color: colors.surfaceContainerLow,
                 border: BorderDirectional(
@@ -342,12 +345,16 @@ class _AgentCopyButtonState extends State<AgentCopyButton> {
   @override
   Widget build(BuildContext context) {
     final epoch = _interactionEpoch;
+    final style = AgentUiStyle.of(context);
     final button = IconButton(
       tooltip: _copied
           ? AppLocalizations.of(context).agentCopied
           : widget.label,
       onPressed: !_enabled || _copying ? null : () => unawaited(_copy(epoch)),
       iconSize: 18,
+      style: style.controlStyle.copyWith(
+        padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+      ),
       icon: ExpressiveSwitcher(
         child: Icon(
           _copied ? Icons.check_rounded : Icons.copy_outlined,
@@ -376,11 +383,10 @@ class _CodeBlockBuilder extends MarkdownElementBuilder {
       'language-',
       '',
     );
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
+    final style = AgentUiStyle.of(context);
     return Material(
-      color: colors.surfaceContainerLow,
-      shape: skedShapeSchemeOf(context).card,
+      color: style.subtleSurface,
+      shape: skedShapeSchemeOf(context).control,
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -394,9 +400,7 @@ class _CodeBlockBuilder extends MarkdownElementBuilder {
                     language ?? '',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
+                    style: style.caption,
                   ),
                 ),
                 Builder(
@@ -419,10 +423,7 @@ class _CodeBlockBuilder extends MarkdownElementBuilder {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: AgentSelectableText(
               code,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontFamily: 'monospace',
-                height: 1.5,
-              ),
+              style: style.label.copyWith(fontFamily: 'monospace', height: 1.5),
             ),
           ),
         ],

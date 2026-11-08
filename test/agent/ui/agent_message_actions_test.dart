@@ -45,6 +45,7 @@ void main() {
         ),
       );
       final edit = key('agent-edit-redo-user');
+      final messageRect = tester.getRect(key('body-user'));
       expect(edit.hitTestable(), findsNothing);
       expect(key('agent-regenerate-reply').hitTestable(), findsOneWidget);
       final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
@@ -52,6 +53,7 @@ void main() {
       await mouse.moveTo(tester.getCenter(key('body-user')));
       await tester.pumpAndSettle();
       expect(edit.hitTestable(), findsOneWidget);
+      expect(tester.getRect(key('body-user')), messageRect);
       expect(
         tester.getRect(edit).right,
         closeTo(tester.getRect(key('body-user')).right, 1),
@@ -105,6 +107,15 @@ void main() {
         Focus.of(tester.element(key('agent-copy-reply'))).hasFocus,
         isTrue,
       );
+      final material = tester.widget<Material>(
+        find
+            .descendant(
+              of: key('agent-copy-reply'),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+      expect((material.shape! as OutlinedBorder).side.style, BorderStyle.solid);
       expect(tester.takeException(), isNull);
     },
     semanticsEnabled: false,

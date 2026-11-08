@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../theme/sked_menu_style.dart';
+import 'agent_ui_style.dart';
 
 /// Keeps message operations beside their owner. Hidden desktop controls retain
 /// keyboard traversal, reveal on focus, and cannot receive invisible clicks.
@@ -131,7 +132,7 @@ class _AgentMessageActionsState extends State<AgentMessageActions> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final theme = Theme.of(context);
+    final style = AgentUiStyle.of(context);
     final desktop = SkedMenuStyle.of(context).desktop;
     final extent = desktop ? 32.0 : 48.0;
     final generation = _generation;
@@ -157,11 +158,10 @@ class _AgentMessageActionsState extends State<AgentMessageActions> {
             }
           : null,
       icon: Icon(icon, size: 18),
-      style: IconButton.styleFrom(
-        foregroundColor: theme.colorScheme.onSurfaceVariant,
-        minimumSize: Size.square(extent),
-        maximumSize: Size.square(extent),
-        padding: EdgeInsets.zero,
+      style: style.controlStyle.copyWith(
+        minimumSize: WidgetStatePropertyAll(Size.square(extent)),
+        maximumSize: WidgetStatePropertyAll(Size.square(extent)),
+        padding: const WidgetStatePropertyAll(EdgeInsets.zero),
         tapTargetSize: desktop
             ? MaterialTapTargetSize.shrinkWrap
             : MaterialTapTargetSize.padded,
@@ -217,9 +217,7 @@ class _AgentMessageActionsState extends State<AgentMessageActions> {
                 '${l.agentReplyVersion(widget.versionIndex + 1, widget.versionCount)}',
             child: Text(
               l.agentReplyVersion(widget.versionIndex + 1, widget.versionCount),
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+              style: style.caption,
             ),
           ),
           action(
