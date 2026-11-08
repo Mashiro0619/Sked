@@ -21,6 +21,7 @@ class SkedMenuAnchor extends StatefulWidget {
     this.childFocusNode,
     this.onOpen,
     this.onClose,
+    this.onKeyEvent,
     this.onAnimationStatusChanged,
     this.style,
     this.anchorRectBuilder,
@@ -37,6 +38,9 @@ class SkedMenuAnchor extends StatefulWidget {
   final FocusNode? childFocusNode;
   final VoidCallback? onOpen;
   final VoidCallback? onClose;
+
+  /// Observes menu-scope keys before navigation and dismiss shortcuts run.
+  final FocusOnKeyEventCallback? onKeyEvent;
   final ValueChanged<AnimationStatus>? onAnimationStatusChanged;
   final MenuStyle? style;
 
@@ -343,6 +347,7 @@ class _SkedMenuAnchorState extends State<SkedMenuAnchor>
                 child: FocusScope(
                   node: _focus,
                   skipTraversal: true,
+                  onKeyEvent: widget.onKeyEvent,
                   child: SkedMenuSurface(
                     animation: _animation,
                     motion: _motion!,

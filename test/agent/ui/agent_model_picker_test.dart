@@ -274,6 +274,81 @@ void main() {
     );
   }
 
+  for (final input in [
+    'pointer',
+    'keyboard',
+    'pointer then Tab',
+    'pointer then arrow',
+  ]) {
+    testWidgets('model menu restores focus according to $input input', (
+      tester,
+    ) async {
+      await initialize(tester);
+      final editorFocus = FocusNode();
+      final editor = TextEditingController(text: 'Keep this draft');
+      addTearDown(() async {
+        await tester.pumpWidget(const SizedBox.shrink());
+        editorFocus.dispose();
+        editor.dispose();
+      });
+      await mountAgentUi(
+        tester,
+        Column(
+          children: [
+            TextField(focusNode: editorFocus, controller: editor),
+            view(),
+          ],
+        ),
+      );
+      editorFocus.requestFocus();
+      await tester.pump();
+      final trigger = find.byKey(const ValueKey('agent-model-picker'));
+      final focus = tester.widget<TextButton>(trigger).focusNode!;
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: const Offset(1, 700));
+      addTearDown(mouse.removePointer);
+      if (input == 'keyboard') {
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pump();
+        expect(focus.hasFocus, isTrue);
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      } else {
+        await mouse.moveTo(tester.getCenter(trigger));
+        await mouse.down(tester.getCenter(trigger));
+        await mouse.up();
+      }
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('agent-model-panel')), findsOneWidget);
+      await mouse.moveTo(const Offset(1, 700));
+      if (input == 'pointer then Tab' || input == 'pointer then arrow') {
+        await tester.sendKeyEvent(
+          input == 'pointer then Tab'
+              ? LogicalKeyboardKey.tab
+              : LogicalKeyboardKey.arrowDown,
+        );
+        await tester.pump();
+      }
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('agent-model-panel')), findsNothing);
+      expect(focus.hasFocus, input != 'pointer');
+      final painted = tester.widget<Material>(
+        find.descendant(of: trigger, matching: find.byType(Material)).first,
+      );
+      final ui = AgentUiStyle.of(tester.element(trigger));
+      expect(
+        (painted.shape! as OutlinedBorder).side,
+        input == 'pointer' ? BorderSide.none : BorderSide(color: ui.muted),
+      );
+      expect(painted.color, input == 'pointer' ? Colors.transparent : ui.hover);
+      expect(editorFocus.hasFocus, isFalse);
+      expect(tester.testTextInput.isVisible, isFalse);
+      expect(editor.text, 'Keep this draft');
+      expect(delegate.choices, isEmpty);
+      expect(tester.takeException(), isNull);
+    }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
+  }
+
   for (final scene in [
     (size: const Size(1440, 900), scale: 1.0),
     (size: const Size(390, 844), scale: 1.0),

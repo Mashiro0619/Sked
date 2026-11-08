@@ -145,12 +145,17 @@ void main() {
   ) async {
     final menu = MenuController();
     final selected = <int>[];
+    final observedKeys = <LogicalKeyboardKey>[];
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: Center(
             child: SkedMenuAnchor(
               controller: menu,
+              onKeyEvent: (_, event) {
+                if (event is KeyDownEvent) observedKeys.add(event.logicalKey);
+                return KeyEventResult.ignored;
+              },
               menuChildren: [
                 for (var index = 0; index < 3; index++)
                   MenuItemButton(
@@ -177,6 +182,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pump();
+    expect(observedKeys, [LogicalKeyboardKey.arrowDown]);
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
     await tester.pump();
     await tester.sendKeyEvent(LogicalKeyboardKey.tab);
@@ -189,6 +195,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
+    expect(observedKeys.last, LogicalKeyboardKey.escape);
     expect(menu.isOpen, isFalse);
     expect(selected, [0]);
     await tester.pumpWidget(const SizedBox.shrink());
