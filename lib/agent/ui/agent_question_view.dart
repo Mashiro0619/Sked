@@ -415,93 +415,93 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
                   checked: checked,
                   inMutuallyExclusiveGroup: !question.multiple,
                   enabled: _editable,
-                  child: Material(
-                    color: checked ? style.selected : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                    child: InkWell(
-                      key: ValueKey(
-                        'agent-question-option-${question.id}-${option.id}',
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                      hoverColor: style.hover,
-                      focusColor: style.hover,
-                      onTap: !_editable
-                          ? null
-                          : () {
-                              if (generation != _generation || !_editable) {
-                                return;
+                  child: _AgentQuestionOptionSurface(
+                    key: ValueKey((question.id, option.id)),
+                    inkKey: ValueKey(
+                      'agent-question-option-${question.id}-${option.id}',
+                    ),
+                    selected: checked,
+                    onTap: !_editable
+                        ? null
+                        : () {
+                            if (generation != _generation || !_editable) {
+                              return;
+                            }
+                            setState(() {
+                              if (checked) {
+                                selected.remove(option.id);
+                              } else {
+                                if (!question.multiple) selected.clear();
+                                selected.add(option.id);
                               }
-                              setState(() {
-                                if (checked) {
-                                  selected.remove(option.id);
-                                } else {
-                                  if (!question.multiple) selected.clear();
-                                  selected.add(option.id);
-                                }
-                                _failed = false;
-                              });
-                            },
-                      child: Container(
-                        constraints: BoxConstraints(
-                          minHeight: style.desktop ? 32 : 48,
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 6,
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              constraints: const BoxConstraints(
-                                minWidth: 20,
-                                minHeight: 20,
+                              _failed = false;
+                            });
+                          },
+                    child: Container(
+                      constraints: BoxConstraints(
+                        minHeight: style.desktop ? 32 : 48,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 6,
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            constraints: const BoxConstraints(
+                              minWidth: 20,
+                              minHeight: 20,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: checked
+                                  ? style.foreground
+                                  : style.subtleSurface,
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            child: Text(
+                              '${index + 1}',
+                              textAlign: TextAlign.center,
+                              style: style.caption.copyWith(
+                                color: checked ? style.canvas : style.muted,
                               ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: checked
-                                    ? style.foreground
-                                    : style.subtleSurface,
-                                borderRadius: BorderRadius.circular(5),
-                              ),
-                              child: Text(
-                                '${index + 1}',
-                                textAlign: TextAlign.center,
-                                style: style.caption.copyWith(
-                                  color: checked ? style.canvas : style.muted,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  option.label,
+                                  style: style.label.copyWith(fontSize: 14),
                                 ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    option.label,
-                                    style: style.label.copyWith(fontSize: 14),
-                                  ),
-                                  if (option.description
-                                      case final description?) ...[
-                                    const SizedBox(height: 2),
-                                    Text(description, style: style.caption),
-                                  ],
+                                if (option.description
+                                    case final description?) ...[
+                                  const SizedBox(height: 2),
+                                  Text(description, style: style.caption),
                                 ],
-                              ),
+                              ],
                             ),
-                            if (checked) ...[
-                              const SizedBox(width: 6),
-                              Icon(
-                                Icons.check,
-                                size: 16,
-                                color: style.foreground,
-                              ),
-                            ],
-                          ],
-                        ),
+                          ),
+                          SizedBox(
+                            width: 22,
+                            child: Align(
+                              alignment: AlignmentDirectional.topEnd,
+                              child: checked
+                                  ? Icon(
+                                      Icons.check,
+                                      size: 16,
+                                      color: style.foreground,
+                                    )
+                                  : const SizedBox(height: 16),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -512,4 +512,83 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
       ],
     );
   }
+}
+
+class _AgentQuestionOptionSurface extends StatefulWidget {
+  const _AgentQuestionOptionSurface({
+    super.key,
+    required this.inkKey,
+    required this.selected,
+    required this.onTap,
+    required this.child,
+  });
+
+  final Key inkKey;
+  final bool selected;
+  final VoidCallback? onTap;
+  final Widget child;
+
+  @override
+  State<_AgentQuestionOptionSurface> createState() =>
+      _AgentQuestionOptionSurfaceState();
+}
+
+class _AgentQuestionOptionSurfaceState
+    extends State<_AgentQuestionOptionSurface> {
+  late final WidgetStatesController _states;
+
+  @override
+  void initState() {
+    super.initState();
+    _states = WidgetStatesController({
+      if (widget.onTap == null) WidgetState.disabled,
+    });
+  }
+
+  @override
+  void didUpdateWidget(_AgentQuestionOptionSurface oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Publish disabled state before the descendant InkWell updates itself.
+    _states.update(WidgetState.disabled, widget.onTap == null);
+    if (widget.onTap == null) _states.update(WidgetState.pressed, false);
+  }
+
+  @override
+  void dispose() {
+    _states.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      ValueListenableBuilder<Set<WidgetState>>(
+        valueListenable: _states,
+        child: widget.child,
+        builder: (context, value, child) {
+          final style = AgentUiStyle.of(context);
+          final control = style.controlStyle;
+          final states = {
+            ...value,
+            if (widget.onTap == null) WidgetState.disabled,
+          };
+          final shape = control.shape!
+              .resolve(states)!
+              .copyWith(side: control.side!.resolve(states));
+          return Material(
+            color: widget.selected
+                ? style.selected
+                : control.backgroundColor!.resolve(states),
+            shape: shape,
+            child: InkWell(
+              key: widget.inkKey,
+              statesController: _states,
+              customBorder: shape,
+              overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+              splashFactory: NoSplash.splashFactory,
+              onTap: widget.onTap,
+              child: child,
+            ),
+          );
+        },
+      );
 }

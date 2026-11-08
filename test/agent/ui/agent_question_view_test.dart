@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/interactions/agent_question.dart';
 import 'package:sked/agent/ui/agent_question_view.dart';
+import 'package:sked/agent/ui/agent_ui_style.dart';
 import 'package:sked/l10n/app_localizations.dart';
 
 import 'agent_ui_test_support.dart';
@@ -18,22 +21,28 @@ void main() {
     Future<void> Function()? onDismiss,
     Size size = const Size(460, 820),
     double scale = 1,
+    TextDirection direction = TextDirection.ltr,
+    Brightness brightness = Brightness.light,
   }) => mountAgentUi(
     tester,
-    SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: AgentQuestionView(
-          request: request,
-          enabled: enabled,
-          docked: docked,
-          onAnswer: onAnswer ?? (_) async {},
-          onDismiss: onDismiss ?? () async {},
+    Directionality(
+      textDirection: direction,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: AgentQuestionView(
+            request: request,
+            enabled: enabled,
+            docked: docked,
+            onAnswer: onAnswer ?? (_) async {},
+            onDismiss: onDismiss ?? () async {},
+          ),
         ),
       ),
     ),
     size: size,
     scale: scale,
+    brightness: brightness,
   );
 
   Finder field(String id) => find.byKey(ValueKey('agent-question-text-$id'));
@@ -146,6 +155,140 @@ void main() {
     expect(selectedMark('one', 'b'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'selecting long options keeps text and rows stable in both directions',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      const label = 'Include the complete explanation and supporting details';
+      const description =
+          'Describe each decision clearly so the answer remains easy to review.';
+      final request = _request(
+        questions: [
+          AgentQuestionPrompt(
+            id: 'layout',
+            question: 'Choose a format',
+            options: [
+              AgentQuestionOption(
+                id: 'full',
+                label: label,
+                description: description,
+              ),
+              AgentQuestionOption(id: 'short', label: 'Short answer'),
+            ],
+          ),
+        ],
+      );
+      final row = option('layout', 'full');
+      final following = option('layout', 'short');
+      Rect relativeRect(Finder target) =>
+          tester.getRect(target).shift(-tester.getTopLeft(row));
+
+      for (final direction in TextDirection.values) {
+        for (final scale in [1.0, 2.0]) {
+          await mount(
+            tester,
+            request,
+            size: const Size(320, 960),
+            scale: scale,
+            direction: direction,
+          );
+          final rowSize = tester.getSize(row);
+          final labelRect = relativeRect(find.text(label));
+          final descriptionRect = relativeRect(find.text(description));
+          final followingOffset =
+              tester.getTopLeft(following) - tester.getTopLeft(row);
+          await tap(tester, row);
+          expect(selectedMark('layout', 'full'), findsOneWidget);
+          expect(tester.getSize(row), rowSize);
+          expect(relativeRect(find.text(label)), labelRect);
+          expect(relativeRect(find.text(description)), descriptionRect);
+          expect(
+            tester.getTopLeft(following) - tester.getTopLeft(row),
+            followingOffset,
+          );
+          final mark = relativeRect(selectedMark('layout', 'full'));
+          if (direction == TextDirection.ltr) {
+            expect(mark.left, greaterThanOrEqualTo(labelRect.right));
+          } else {
+            expect(mark.right, lessThanOrEqualTo(labelRect.left));
+          }
+          await tap(tester, row);
+          expect(selectedMark('layout', 'full'), findsNothing);
+          expect(tester.getSize(row), rowSize);
+          expect(relativeRect(find.text(label)), labelRect);
+          expect(tester.takeException(), isNull);
+        }
+      }
+    },
+  );
+
+  testWidgets(
+    'option hover and keyboard focus share one surface and one action',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      final mouse = await tester.createGesture(
+        kind: ui.PointerDeviceKind.mouse,
+      );
+      addTearDown(mouse.removePointer);
+      await mouse.addPointer(location: const Offset(1, 1));
+      final first = option('one', 'a');
+      final second = option('one', 'b');
+      Material surface(Finder target) =>
+          tester.element(target).findAncestorWidgetOfExactType<Material>()!;
+      BorderSide side(Finder target) =>
+          (surface(target).shape! as OutlinedBorder).side;
+
+      for (final brightness in Brightness.values) {
+        final request = _request(
+          id: 'focus-${brightness.name}',
+          questions: [_questions().first],
+        );
+        await mount(tester, request, brightness: brightness);
+        final style = AgentUiStyle.of(tester.element(first));
+        final firstRect = tester.getRect(first);
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pumpAndSettle();
+        expect(surface(first).color, style.hover);
+        expect(side(first), BorderSide(color: style.muted));
+        await mouse.moveTo(tester.getCenter(first));
+        await tester.pumpAndSettle();
+        expect(surface(first).color, style.hover);
+        expect(side(first), BorderSide(color: style.muted));
+        expect(tester.getRect(first), firstRect);
+        final ink = tester.widget<InkWell>(first);
+        for (final state in [WidgetState.hovered, WidgetState.focused]) {
+          expect(ink.overlayColor?.resolve({state}), Colors.transparent);
+        }
+        await tester.sendKeyEvent(LogicalKeyboardKey.space);
+        await tester.pumpAndSettle();
+        expect(selectedMark('one', 'a'), findsOneWidget);
+        expect(surface(first).color, style.selected);
+        expect(side(first), BorderSide(color: style.muted));
+        await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+        await tester.pumpAndSettle();
+        expect(side(first), BorderSide.none);
+        expect(side(second), BorderSide(color: style.muted));
+        await tester.sendKeyEvent(LogicalKeyboardKey.space);
+        await tester.pumpAndSettle();
+        expect(selectedMark('one', 'a'), findsNothing);
+        expect(selectedMark('one', 'b'), findsOneWidget);
+        expect(surface(first).color, style.hover);
+        expect(surface(second).color, style.selected);
+        await mount(tester, request, enabled: false, brightness: brightness);
+        expect(tester.widget<InkWell>(first).onTap, isNull);
+        expect(tester.widget<InkWell>(second).onTap, isNull);
+        expect(side(first), BorderSide.none);
+        expect(side(second), BorderSide.none);
+        expect(surface(first).color, Colors.transparent);
+        expect(surface(second).color, style.selected);
+        expect(tester.takeException(), isNull);
+        await mouse.moveTo(const Offset(1, 1));
+        await tester.pumpWidget(const SizedBox.shrink());
+      }
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
 
   testWidgets('all prompts require a deliberate selection or text answer', (
     tester,
