@@ -15,6 +15,12 @@
 
 `crypto 3.0.8` 修正 HMAC 分块输入结束时的摘要输出；业务指纹、备份摘要和 Skill 内容哈希继续使用各自现有的编码与校验约定。`web 1.1.2` 要求 Dart 3.13，升级时保留浏览器存储和实例锁适配，不因原生平台不直接引用而删除 Web 依赖。`lunar 1.7.9` 增加 2027 年法定假日数据，仍由日历界面使用。
 
+### Material 与 Cupertino 组件
+
+`material_ui 1.10.0` 和 `cupertino_ui 1.1.6` 与项目现有 Flutter 3.47.7／Dart 3.13.5 工具链配套。Material 更新包含菜单 Esc 关闭、Web 快捷键标签、RTL 滑杆、时间选择器本地数字和搜索栏语义修复；Cupertino 本次补丁主要完善组件文档。
+
+升级后按现有菜单、日期与时间选择器、Agent 问答及输入栏回归检查焦点、关闭、草稿和适配行为。视觉与交互验收继续覆盖手机与桌面、浅深主题及 2× 字号，并核对长译文、键盘和读屏。
+
 ### WebView Git 固定版本
 
 `dependency_overrides` 中的不可变 Git 提交用于上游尚未发布的原生兼容性修复：Android 的 edge-to-edge API，以及 Apple 插件的 Xcode 可用性边界。具体提交和原因保留在 `pubspec.yaml` 注释中。

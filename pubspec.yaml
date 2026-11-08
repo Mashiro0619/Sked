@@ -38,8 +38,8 @@ dependencies:
   flutter_timezone: ^5.1.1
   intl: ^0.20.2
   timezone: ^0.11.2
-  material_ui: ^1.8.0
-  cupertino_ui: ^1.1.4
+  material_ui: ^1.10.0
+  cupertino_ui: ^1.1.6
   sked_android_productivity_plugin:
     path: packages/android_productivity_plugin
   flutter_markdown_plus: 1.0.12
