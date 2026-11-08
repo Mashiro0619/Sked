@@ -45,6 +45,12 @@
 - Windows、Linux 和 Apple 原生安全存储验证；模拟 SecretStore 不能证明原生迁移成功。
 - 卸载重装、系统备份恢复的预期说明；普通 AppData 备份仍不应携带 API Key。
 
+### 系统通知插件
+
+`flutter_local_notifications 22.3.3` 修正重复通知跨夏令时边界时的墙钟时间计算，继续兼容当前 compileSdk 36、Java 17 和 desugaring 2.1.4。Sked 的通知网关仍按业务规划器生成的具体时间排程，保留权限检查、后台重建与 Windows 队列去重流程。
+
+23.0.0 要求 compileSdk 37、AGP 9.1.1，并将 Windows 插件提升到 C++20。升级到该版本需同时评估 Android 与 Windows 工具链、CI 和产物要求；当前 AGP 9.1.0 构建组合保持使用 22.3.3。
+
 ### XML 与平台安全检查
 
 发布检查器使用 XML 7 的 `namespaceUri:` API，并捕获 `XmlException`。升级解析器时，保留 [产物检查测试](../test/tool/platform_artifact_check_test.dart) 和 [平台安全配置测试](../test/platform/platform_security_config_test.dart) 中的命名空间与损坏 XML 回归。
