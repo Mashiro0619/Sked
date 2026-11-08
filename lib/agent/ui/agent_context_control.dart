@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
@@ -227,54 +228,31 @@ class AgentContextIndicator extends StatelessWidget {
       container: true,
       child: !active
           ? indicator
-          : RawTooltip(
-              semanticsTooltip: description,
-              hoverDelay: const Duration(milliseconds: 600),
-              dismissDelay: const Duration(milliseconds: 200),
-              touchDelay: const Duration(seconds: 4),
-              triggerMode: TooltipTriggerMode.tap,
-              animationStyle: AnimationStyle(
-                duration: motion.effects(SkedMotionSpeed.fast),
-                reverseDuration: motion.effects(SkedMotionSpeed.fast),
-              ),
-              positionDelegate: (position) {
-                final size = position.tooltipSize;
-                final top =
-                    position.target.dy -
-                    position.targetSize.height / 2 -
-                    6 -
-                    size.height;
-                final y = top >= bounds.top
-                    ? top
-                    : position.target.dy + position.targetSize.height / 2 + 6;
-                return Offset(
-                  (position.target.dx - size.width / 2).clamp(
-                    bounds.left,
-                    math.max(bounds.left, bounds.right - size.width),
-                  ),
-                  y.clamp(
-                    bounds.top,
-                    math.max(bounds.top, bounds.bottom - size.height),
-                  ),
-                );
-              },
-              tooltipBuilder: (context, animation) {
-                return FadeTransition(
-                  opacity: animation,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: math.min(272, bounds.width),
-                      maxHeight: bounds.height,
-                    ),
-                    child: Material(
-                      key: const ValueKey('agent-context-card'),
-                      color: ui.popover,
-                      elevation: 2,
-                      shadowColor: ui.colors.shadow.withValues(alpha: .14),
-                      surfaceTintColor: Colors.transparent,
-                      shape: ui.popoverShape,
-                      clipBehavior: Clip.antiAlias,
+          : _ContextCardAnchor(
+              description: description,
+              duration: motion.effects(SkedMotionSpeed.fast),
+              bounds: bounds,
+              cardBuilder: (scroll) => ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: math.min(272, bounds.width),
+                  maxHeight: bounds.height,
+                ),
+                child: Material(
+                  key: const ValueKey('agent-context-card'),
+                  color: ui.popover,
+                  elevation: 2,
+                  shadowColor: ui.colors.shadow.withValues(alpha: .14),
+                  surfaceTintColor: Colors.transparent,
+                  shape: ui.popoverShape,
+                  clipBehavior: Clip.antiAlias,
+                  child: ScrollConfiguration(
+                    behavior: ScrollConfiguration.of(context)
+                        .copyWith(scrollbars: false),
+                    child: Scrollbar(
+                      controller: scroll,
+                      thumbVisibility: true,
                       child: SingleChildScrollView(
+                        controller: scroll,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 14,
                           vertical: 10,
@@ -325,10 +303,237 @@ class AgentContextIndicator extends StatelessWidget {
                       ),
                     ),
                   ),
-                );
-              },
+                ),
+              ),
               child: indicator,
             ),
     );
   }
+}
+
+/// A readable card keeps touch interaction inside its own tap region. Hover
+/// remains transient, while an explicit tap keeps it open until an outside tap.
+class _ContextCardAnchor extends StatefulWidget {
+  const _ContextCardAnchor({
+    required this.description,
+    required this.duration,
+    required this.bounds,
+    required this.cardBuilder,
+    required this.child,
+  });
+
+  final String description;
+  final Duration duration;
+  final Rect bounds;
+  final Widget Function(ScrollController) cardBuilder;
+  final Widget child;
+
+  @override
+  State<_ContextCardAnchor> createState() => _ContextCardAnchorState();
+}
+
+class _ContextCardAnchorState extends State<_ContextCardAnchor>
+    with SingleTickerProviderStateMixin {
+  final _overlay = OverlayPortalController();
+  final _tapRegion = Object();
+  final _scroll = ScrollController();
+  final _cardPointers = <int>{};
+  late final AnimationController _animation = AnimationController(
+    vsync: this,
+    duration: widget.duration,
+  )..addStatusListener(_animationChanged);
+  Timer? _hoverTimer;
+  Timer? _dismissTimer;
+  bool _visible = false;
+  bool _pinned = false;
+  bool _triggerHovered = false;
+  bool _cardHovered = false;
+
+  @override
+  void didUpdateWidget(_ContextCardAnchor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _animation.duration = widget.duration;
+  }
+
+  void _animationChanged(AnimationStatus status) {
+    if (status == AnimationStatus.dismissed && !_visible) _overlay.hide();
+  }
+
+  void _show({bool pinned = false}) {
+    if (!mounted) return;
+    _hoverTimer?.cancel();
+    _dismissTimer?.cancel();
+    _pinned = _pinned || pinned;
+    setState(() => _visible = true);
+    _overlay.show();
+    _animation.forward();
+  }
+
+  void _dismiss() {
+    _hoverTimer?.cancel();
+    _dismissTimer?.cancel();
+    _pinned = false;
+    if (!_visible) return;
+    setState(() => _visible = false);
+    if (_animation.isDismissed) {
+      _overlay.hide();
+    } else {
+      _animation.reverse();
+    }
+  }
+
+  void _enter({required bool card}) {
+    if (card) {
+      _cardHovered = true;
+    } else {
+      _triggerHovered = true;
+    }
+    _dismissTimer?.cancel();
+    _hoverTimer?.cancel();
+    if (_overlay.isShowing) {
+      _show();
+    } else {
+      _hoverTimer = Timer(const Duration(milliseconds: 600), _show);
+    }
+  }
+
+  void _exit({required bool card}) {
+    if (card) {
+      _cardHovered = false;
+    } else {
+      _triggerHovered = false;
+    }
+    _scheduleHoverDismiss();
+  }
+
+  void _scheduleHoverDismiss() {
+    if (_triggerHovered ||
+        _cardHovered ||
+        _pinned ||
+        _cardPointers.isNotEmpty) {
+      return;
+    }
+    _hoverTimer?.cancel();
+    _dismissTimer?.cancel();
+    _dismissTimer = Timer(const Duration(milliseconds: 200), _dismiss);
+  }
+
+  void _endCardPointer(int pointer) {
+    _cardPointers.remove(pointer);
+    _scheduleHoverDismiss();
+  }
+
+  Widget _region({required bool card, required Widget child}) => TapRegion(
+    groupId: _tapRegion,
+    onTapOutside: card ? null : (_) => _dismiss(),
+    child: MouseRegion(
+      onEnter: (_) => _enter(card: card),
+      onExit: (_) => _exit(card: card),
+      child: card
+          ? Listener(
+              onPointerDown: (event) {
+                _cardPointers.add(event.pointer);
+                _dismissTimer?.cancel();
+              },
+              onPointerUp: (event) => _endCardPointer(event.pointer),
+              onPointerCancel: (event) => _endCardPointer(event.pointer),
+              child: child,
+            )
+          : child,
+    ),
+  );
+
+  @override
+  void dispose() {
+    _hoverTimer?.cancel();
+    _dismissTimer?.cancel();
+    _animation.dispose();
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => OverlayPortal.overlayChildLayoutBuilder(
+    controller: _overlay,
+    overlayChildBuilder: (context, layout) {
+      if (layout.childPaintTransform.determinant() == 0) {
+        return const SizedBox.shrink();
+      }
+      final target = MatrixUtils.transformRect(
+        layout.childPaintTransform,
+        Offset.zero & layout.childSize,
+      );
+      return Positioned.fill(
+        bottom: MediaQuery.maybeViewInsetsOf(context)?.bottom ?? 0,
+        child: CustomSingleChildLayout(
+          delegate: _ContextCardPosition(target: target, bounds: widget.bounds),
+          child: IgnorePointer(
+            ignoring: !_visible,
+            child: ExcludeSemantics(
+              excluding: !_visible,
+              child: FadeTransition(
+                opacity: _animation,
+                child: _region(
+                  card: true,
+                  child: SelectionContainer.disabled(
+                    child: widget.cardBuilder(_scroll),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+    child: _region(
+      card: false,
+      child: Semantics(
+        button: true,
+        expanded: _visible,
+        tooltip: widget.description,
+        onTap: () => _show(pinned: true),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          excludeFromSemantics: true,
+          onTap: () => _show(pinned: true),
+          child: widget.child,
+        ),
+      ),
+    ),
+  );
+}
+
+class _ContextCardPosition extends SingleChildLayoutDelegate {
+  const _ContextCardPosition({required this.target, required this.bounds});
+  final Rect target;
+  final Rect bounds;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
+      BoxConstraints.loose(
+        Size(
+          math.min(constraints.maxWidth, bounds.width),
+          math.min(constraints.maxHeight, bounds.height),
+        ),
+      );
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    final top = target.top - 6 - childSize.height;
+    final y = top >= bounds.top ? top : target.bottom + 6;
+    return Offset(
+      (target.center.dx - childSize.width / 2).clamp(
+        bounds.left,
+        math.max(bounds.left, bounds.right - childSize.width),
+      ),
+      y.clamp(
+        bounds.top,
+        math.max(bounds.top, bounds.bottom - childSize.height),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRelayout(_ContextCardPosition oldDelegate) =>
+      target != oldDelegate.target || bounds != oldDelegate.bounds;
 }

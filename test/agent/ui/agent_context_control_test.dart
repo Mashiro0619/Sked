@@ -6,6 +6,7 @@ import 'package:sked/agent/ui/agent_context_control.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
 import 'package:sked/agent/ui/agent_ui_style.dart';
 import 'package:sked/l10n/app_localizations.dart';
+import 'package:sked/theme/sked_expressive_theme.dart';
 
 import 'agent_ui_test_support.dart';
 
@@ -355,6 +356,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 350));
     expect(_card(), findsOneWidget);
     final card = tester.getRect(_card());
+    expect(card.width, lessThanOrEqualTo(272));
     expect(card.left, greaterThanOrEqualTo(8));
     expect(card.right, lessThanOrEqualTo(312));
     expect(card.top, greaterThanOrEqualTo(8));
@@ -364,6 +366,113 @@ void main() {
     expect(_card(), findsNothing);
     expect(tester.takeException(), isNull);
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  for (final disableAnimations in [false, true]) {
+    testWidgets(
+      'touch context card remains readable and scrollable with animations=${!disableAnimations}',
+      (tester) async {
+        addTearDown(tester.view.reset);
+        final enabled = ValueNotifier(true);
+        addTearDown(() async {
+          await tester.pumpWidget(const SizedBox.shrink());
+          enabled.dispose();
+        });
+        await mountAgentUi(
+          tester,
+          SkedMotionPolicyScope(
+            disableAnimations: disableAnimations,
+            reduceMotion: false,
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: ValueListenableBuilder<bool>(
+                valueListenable: enabled,
+                builder: (context, value, _) => AgentContextIndicator(
+                  enabled: value,
+                  usage: const AgentContextUsage(
+                    estimatedTokens: 123456789012345,
+                    maxContextTokens: 999999999999999,
+                    isCompactionQueued: true,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          size: const Size(320, 240),
+          scale: 2,
+        );
+        final l = AppLocalizations.of(tester.element(_indicator()));
+        await tester.tap(_indicator());
+        await tester.pumpAndSettle();
+        expect(_card(), findsOneWidget);
+        final scroll = tester
+            .state<ScrollableState>(_inCard(find.byType(Scrollable)).first)
+            .position;
+        expect(scroll.maxScrollExtent, greaterThan(0));
+        await tester.pump(const Duration(seconds: 5));
+        expect(_card(), findsOneWidget);
+        await tester.drag(_card(), const Offset(0, -600));
+        await tester.pumpAndSettle();
+        expect(_card(), findsOneWidget);
+        expect(scroll.pixels, closeTo(scroll.maxScrollExtent, .5));
+        expect(
+          _inCard(find.text(l.agentCompactionQueued)).hitTestable(),
+          findsOneWidget,
+        );
+        await tester.tapAt(tester.getCenter(_card()));
+        await tester.pump(const Duration(seconds: 5));
+        expect(_card(), findsOneWidget);
+        await tester.tapAt(const Offset(1, 1));
+        await tester.pumpAndSettle();
+        expect(_card(), findsNothing);
+
+        // Dismiss before the first animation frame, including zero-duration mode.
+        await tester.tap(_indicator());
+        await tester.tapAt(const Offset(1, 1));
+        await tester.pumpAndSettle();
+        expect(_card(), findsNothing);
+        await tester.tap(_indicator());
+        await tester.pumpAndSettle();
+        expect(_card(), findsOneWidget);
+        enabled.value = false;
+        await tester.pump();
+        expect(_card(), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+    );
+  }
+
+  testWidgets(
+    'hovered context card remains open during a mouse press and drag',
+    (tester) async {
+      addTearDown(tester.view.reset);
+      await mountAgentUi(
+        tester,
+        const Center(
+          child: AgentContextIndicator(
+            usage: AgentContextUsage(
+              estimatedTokens: 1200,
+              maxContextTokens: 32000,
+            ),
+          ),
+        ),
+      );
+      final mouse = await _mouse(tester);
+      await _showCard(tester, mouse);
+      final card = tester.getRect(_card());
+      await mouse.moveTo(card.center);
+      await mouse.down(card.center);
+      await mouse.moveTo(card.topLeft - const Offset(12, 12));
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(_card(), findsOneWidget);
+      await mouse.up();
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.pumpAndSettle();
+      expect(_card(), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.windows),
+  );
 
   for (final boundary in ['enabled', 'source']) {
     testWidgets('$boundary changes retire the old context card', (
