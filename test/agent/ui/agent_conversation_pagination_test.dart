@@ -1,8 +1,6 @@
-import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
-import 'package:sked/agent/store/agent_store.dart';
+
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 
 import 'agent_ui_test_support.dart';
@@ -12,8 +10,8 @@ void main() {
     'the formal chat loads earlier pages and keeps a bounded initial transcript',
     (tester) async {
       addTearDown(tester.view.reset);
-      final store = AgentStore(AgentDatabase(NativeDatabase.memory()));
-      final writer = ConversationRepository(storage: store.conversations);
+      final storage = UiMemoryStorage();
+      final writer = MemoryConversationRepository(storage: storage);
       final now = DateTime.utc(2026, 11, 7);
       await writer.load();
       await writer.create(id: 'chat', title: 'Long synthetic conversation');
@@ -39,14 +37,13 @@ void main() {
         ),
       );
       writer.dispose();
-      final repository = ConversationRepository(storage: store.conversations);
+      final repository = MemoryConversationRepository(storage: storage);
       await repository.load();
       final delegate = UiDelegate(repository);
       addTearDown(() async {
         await tester.pumpWidget(const SizedBox.shrink());
         repository.dispose();
         delegate.state.dispose();
-        await store.close();
       });
       expect(repository.isConversationLoaded('chat'), isFalse);
       final initial = repository.visibleMessages('chat');

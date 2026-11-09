@@ -1,10 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import '../agent/conversations/conversation_models.dart';
-import '../agent/conversations/conversation_portable_history.dart';
-import '../agent/knowledge/knowledge_models.dart';
-import '../application/operation_contracts.dart' show AgentPermissionMode;
+import '../agent/attachments/attachment_models.dart';
 import '../data/migrations/migration.dart'
     show UnsupportedSchemaVersionException;
 import '../l10n/app_locale.dart' show defaultLocaleCode;
@@ -13,6 +10,7 @@ import '../models/school_site_models.dart';
 import '../models/timetable_models.dart';
 import 'selective_backup_models.dart';
 import 'selective_backup_planner.dart';
+import 'selective_backup_agent_data.dart';
 
 enum BackupSettingsGroup {
   application,
@@ -106,13 +104,12 @@ const _settingsFields = <BackupSettingsGroup, Set<String>>{
   },
 };
 
-/// Produces metadata without reading binary files. Built-in Skills must be
-/// passed as effective records from AgentKnowledgeService.exportSelected.
+/// Combines business objects with portable records exported by the native
+/// Agent. Binary contents are read only after the user selects them.
 SelectiveBackupBundle buildSelectiveBackupInventory({
   required AppData appData,
   Iterable<SchoolSite> schoolSites = const [],
-  Iterable<KnowledgeRecord> knowledge = const [],
-  Iterable<AgentConversation> conversations = const [],
+  Iterable<BackupRecord> agentRecords = const [],
   Iterable<BackupRecord> devicePreferences = const [],
   bool includeAgentSettings = true,
   DateTime? createdAt,
@@ -181,50 +178,17 @@ SelectiveBackupBundle buildSelectiveBackupInventory({
       ),
     );
   }
-  for (final record in knowledge) {
-    if (record.usesOriginal && record.body.isEmpty) {
-      backupInvalid('Read the effective built-in Skill before exporting it.');
+  for (final record in agentRecords) {
+    if (!const {
+      BackupObjectKind.skill,
+      BackupObjectKind.memory,
+      BackupObjectKind.conversation,
+      BackupObjectKind.attachment,
+    }.contains(record.key.kind)) {
+      backupInvalid('Invalid Agent backup inventory.');
     }
-    final data = record.toJson()..['revision'] = 0;
-    records.add(
-      BackupRecord(
-        key: BackupObjectKey(
-          record.kind == KnowledgeKind.skill
-              ? BackupObjectKind.skill
-              : BackupObjectKind.memory,
-          record.id,
-        ),
-        label: record.title,
-        data: data,
-      ),
-    );
+    records.add(record);
   }
-  final attachmentRecords = <String, BackupRecord>{};
-  for (final conversation in conversations) {
-    for (final attachment in conversation.attachments) {
-      final record = BackupRecord(
-        key: BackupObjectKey(BackupObjectKind.attachment, attachment.id),
-        label: attachment.name,
-        data: attachment.toJson(),
-      );
-      final previous = attachmentRecords[attachment.id];
-      if (previous != null && previous.fingerprint != record.fingerprint) {
-        backupInvalid('Shared attachment identities conflict.');
-      }
-      attachmentRecords[attachment.id] = record;
-    }
-    records.add(
-      BackupRecord(
-        key: BackupObjectKey(BackupObjectKind.conversation, conversation.id),
-        label: conversation.title,
-        data: portableConversationData(conversation),
-        dependencies: conversation.attachments.map(
-          (item) => BackupObjectKey(BackupObjectKind.attachment, item.id),
-        ),
-      ),
-    );
-  }
-  records.addAll(attachmentRecords.values);
   final appJson = appData.toJson();
   for (final group in BackupSettingsGroup.values) {
     if (!includeAgentSettings &&
@@ -322,7 +286,7 @@ Future<SelectiveBackupBundle> exportSelectiveBackup({
       records.add(record);
       continue;
     }
-    final attachment = ConversationAttachment.fromJson(record.data);
+    final attachment = nativeBackupAttachment(record.data);
     if (!binaries.containsKey(attachment.digest)) {
       final reading = readAttachment(attachment, cancellation);
       final bytes = cancellation == null
@@ -343,103 +307,6 @@ Future<SelectiveBackupBundle> exportSelectiveBackup({
     binaries: binaries,
     createdAt: selected.createdAt,
   );
-}
-
-Map<String, Object?> portableConversationData(AgentConversation conversation) {
-  final history = conversationAsPortableHistory(conversation);
-  final raw = history.toJson();
-  return {
-    'id': history.id,
-    'title': history.title,
-    'titleWasEdited': history.titleWasEdited,
-    'createdAt': history.createdAt.toUtc().toIso8601String(),
-    'updatedAt': history.updatedAt.toUtc().toIso8601String(),
-    'archived': history.archived,
-    'draft': history.draft,
-    'messages': history.messages.map((item) => item.toJson()).toList(),
-    'sources': history.sources.map((item) => item.toJson()).toList(),
-    'attachments': history.attachments.map((item) => item.toJson()).toList(),
-    'draftAttachmentIds': history.draftAttachmentIds,
-    if (raw['historyVersions'] case final List versions)
-      'historyVersions': versions,
-    if (raw['replyRevisions'] case final List revisions)
-      'replyRevisions': revisions,
-  };
-}
-
-AgentConversation restorePortableConversation(
-  BackupRecord record, {
-  required AgentPermissionMode currentMode,
-}) {
-  if (record.key.kind != BackupObjectKind.conversation) {
-    backupInvalid('This backup object is not a conversation.');
-  }
-  final data = _mutable(record.data);
-  const required = {
-    'id',
-    'title',
-    'createdAt',
-    'updatedAt',
-    'archived',
-    'draft',
-    'messages',
-    'sources',
-    'attachments',
-    'draftAttachmentIds',
-  };
-  const optional = {'historyVersions', 'replyRevisions', 'titleWasEdited'};
-  if (!required.every(data.containsKey) ||
-      data.keys.any(
-        (key) => !required.contains(key) && !optional.contains(key),
-      )) {
-    backupInvalid('Unexpected or missing portable conversation fields.');
-  }
-  if (data['id'] != record.key.id) {
-    backupInvalid('Conversation identity mismatch.');
-  }
-  final messages = backupList(data['messages']);
-  for (final raw in messages) {
-    if (raw is! Map || raw.containsKey('responseItems')) {
-      backupInvalid(
-        'Provider continuation cannot be restored from a portable backup.',
-      );
-    }
-  }
-  data.addAll({
-    'mode': currentMode.name,
-    'status': ConversationStatus.idle.name,
-    'runs': const [],
-    'turns': const [],
-    'executionHistoryStart': messages.length,
-  });
-  final restored = conversationAsPortableHistory(
-    AgentConversation.fromJson(data),
-  ).copyWith(mode: currentMode);
-  if (restored.executionHistoryStart != messages.length) {
-    throw StateError('The host did not isolate imported conversation history.');
-  }
-  return restored;
-}
-
-List<KnowledgeRecord> selectedKnowledgeRestoreRecords(
-  BackupRestorePlan plan,
-) => [
-  for (final change in plan.changes)
-    if (change.needsWrite && change.after.key.owner == BackupOwner.knowledge)
-      _knowledgeRecord(change.after),
-];
-
-KnowledgeRecord _knowledgeRecord(BackupRecord record) {
-  if (record.data['revision'] != 0) {
-    backupInvalid('Portable knowledge cannot supply a local revision.');
-  }
-  final parsed = KnowledgeRecord.fromJson(_mutable(record.data));
-  if (record.key.id != parsed.id ||
-      (record.key.kind == BackupObjectKind.skill) !=
-          (parsed.kind == KnowledgeKind.skill)) {
-    backupInvalid('Knowledge identity mismatch.');
-  }
-  return parsed;
 }
 
 List<SchoolSite> mergeSelectedSchoolSites(

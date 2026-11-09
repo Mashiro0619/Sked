@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/agent/provider/provider.dart';
-import 'package:sked/agent/conversations/conversation_models.dart';
 import 'package:sked/agent/ui/agent_transcript.dart';
 import 'package:sked/agent/ui/agent_resource_view.dart';
 import 'package:sked/app_runtime.dart';
@@ -18,6 +17,7 @@ import 'package:sked/services/export_service.dart';
 import 'package:sked/widgets/assistant_pane.dart';
 
 import '../../support/workspace_harness.dart';
+import '../../support/agent_native_fixture.dart';
 import '../../support/agent_workspace_navigation.dart';
 
 Future<void> _until(
@@ -58,55 +58,6 @@ Future<void> _complete(
   if (failure != null) Error.throwWithStackTrace(failure!, failureStack!);
 }
 
-class _ReplyProvider extends ProviderClient {
-  var requests = 0;
-  ProviderCancellationToken? cancellation;
-  StreamController<ProviderEvent>? _events;
-  Future<void>? _closing;
-
-  @override
-  Stream<ProviderEvent> stream(
-    ProviderRequest request, {
-    required String apiKey,
-    ProviderCancellationToken? cancellation,
-  }) {
-    expect(apiKey, isEmpty);
-    expect(request.endpoint.host, 'workspace-return.invalid');
-    expect(request.model, 'return-fixture');
-    requests++;
-    expect(requests, 1);
-    this.cancellation = cancellation;
-    final events = _events = StreamController<ProviderEvent>();
-    unawaited(
-      cancellation!.whenCancelled.then((_) {
-        if (!events.isClosed) {
-          events.addError(const ProviderException(ProviderError.cancelled));
-          _closing ??= events.close();
-        }
-      }),
-    );
-    return events.stream;
-  }
-
-  Future<void> finish() async {
-    final events = _events;
-    if (events == null) return;
-    if (!events.isClosed) {
-      events.add(
-        ProviderCompleted(
-          ProviderResponse(
-            text: 'The synthetic reply is complete.',
-            toolCalls: const [],
-            finishReason: 'stop',
-          ),
-        ),
-      );
-      _closing ??= events.close();
-    }
-    await _closing;
-  }
-}
-
 class _Exports extends ExportService {
   final payloads = <ExportPayload>[];
   ExportSaveStatus status = ExportSaveStatus.saved;
@@ -123,24 +74,26 @@ class _Exports extends ExportService {
 
 void main() {
   late AppRuntime app;
-  late _ReplyProvider provider;
-  String? hostConversationId;
+  late MemoryAgentCore native;
   late _Exports exports;
   late WidgetTester activeTester;
   var call = 0;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    provider = _ReplyProvider();
+    native = MemoryAgentCore();
     app = await workspaceProvider(
       mode: AppMode.general,
-      agentProvider: provider,
+      agentNativeClient: native.client,
     );
+    // These UI binding cases own their Dart business scopes directly.
+    // Native preparation acknowledgements are checked by the offline journey.
+    app.agent.tools.onOperationPrepared = null;
+    app.agent.tools.onOperationUpdate = null;
     await app.lifecycle.completeFirstLaunch(
       AppMode.general,
       hideWorkspaceNavigation: false,
     );
-    hostConversationId = null;
     exports = _Exports();
     call = 0;
   });
@@ -152,36 +105,33 @@ void main() {
     String name,
     Map<String, Object?> args,
   ) async {
+    Map<String, Object?>? result;
     Object? failure;
     StackTrace? failureStack;
-    final result = await activeTester.runAsync(() async {
+    await activeTester.runAsync(() async {
       await app.agent.initialize();
-      hostConversationId ??= (await app.agent.conversations.create(
-        title: 'Native host tools',
-        mode: AgentPermissionMode.full,
-      )).id;
-      Map<String, Object?>? result;
-      await app.agent.runtime.runHostAction(hostConversationId!, (
-        scope,
-        ask,
-      ) async {
-        try {
-          result = await app.agent.tools.execute(
-            ProviderToolCall(
-              id: 'host-call-${++call}',
-              name: name,
-              arguments: jsonEncode(args),
-            ),
-            scope,
-            (_) => throw StateError('Full mode must not request approval.'),
-          );
-        } catch (error, stack) {
-          failure = error;
-          failureStack = stack;
-        }
-        return result ?? {'status': 'failed'};
-      });
-      return result;
+      final scope = OperationScope(
+        id: 'ui-host-${++call}',
+        policy: OperationPolicy(enabled: true, mode: AgentPermissionMode.full),
+      );
+      try {
+        result = await app.agent.tools.execute(
+          ProviderToolCall(
+            id: 'host-call-$call',
+            name: name,
+            arguments: jsonEncode(args),
+          ),
+          scope,
+          (_) => throw StateError('Full mode must not request approval.'),
+        );
+      } catch (error, stack) {
+        failure = error;
+        failureStack = stack;
+      } finally {
+        app.agent.tools.finishScope(scope);
+        app.agent.external.discardScope(scope);
+        scope.cancel();
+      }
     });
     if (failure != null) Error.throwWithStackTrace(failure!, failureStack!);
     return result!;
@@ -219,48 +169,89 @@ void main() {
           ],
         ),
       );
-      final conversation = await app.agent.conversations.create(
+      final initial = nativeConversationFixture(
+        id: 'ui-running-history',
         title: 'Return to the full workspace',
+        messages: [
+          for (var index = 0; index < 16; index++)
+            ViewMessage(
+              id: 'host-history-$index',
+              role: index.isEven
+                  ? ViewMessageRole.user
+                  : ViewMessageRole.assistant,
+              text:
+                  'Synthetic history $index. ${List.filled(4, 'This is a local reading-position fixture. It contains no personal schedule or credentials.').join(' ')}',
+              createdAt: DateTime.utc(
+                2026,
+                1,
+                1,
+                12,
+                index,
+              ).millisecondsSinceEpoch,
+              toolCalls: const [],
+              responseItems: const [],
+              attachmentIds: const [],
+              contextReferences: const [],
+              attachmentDelivery: ViewAttachmentDelivery.local,
+            ),
+        ],
       );
-      await app.agent.conversations.update(
-        conversation.id,
-        (current) => current.copyWith(
-          messages: [
-            for (var index = 0; index < 16; index++)
-              ConversationMessage(
-                id: 'host-history-$index',
-                role: index.isEven
-                    ? ConversationRole.user
-                    : ConversationRole.assistant,
-                text:
-                    'Synthetic history $index. ${List.filled(4, 'This is a local reading-position fixture. It contains no personal schedule or credentials.').join(' ')}',
-                createdAt: DateTime.utc(2026, 1, 1, 12, index),
-              ),
-          ],
+      final value = initial.conversation;
+      native.snapshots[value.id] = copyNativeSnapshot(
+        initial,
+        conversation: ViewConversation(
+          id: value.id,
+          title: value.title,
+          titleWasEdited: false,
+          pinned: false,
+          archived: false,
+          draftOnly: false,
+          createdAt: value.createdAt,
+          updatedAt: value.updatedAt,
+          mode: ViewPermissionMode.ask,
+          status: ViewConversationStatus.running,
+          draft: '',
+          draftAttachmentIds: const [],
+          draftReferences: const [],
+          executionHistoryStart: 0,
+          runId: 'ui-running',
         ),
       );
+      native.selectedId = value.id;
+      native.presentations[value.id] = const RunPresentation(
+        active: true,
+        canContinue: false,
+        compacting: false,
+      );
+      app.agent.runtime.ingestSnapshot(
+        native.snapshots[value.id]!,
+        presentation: native.presentations[value.id],
+      );
+      await app.agent.conversations.load();
       // The bundle caches Futures across tests. Load the real catalog outside
       // FakeAsync so later host tools can await the same cached asset.
       await app.agent.knowledge.initialize();
     });
     await mount(tester);
     await tester.tap(key('workspace-agent-entry'));
-    await tester.pumpAndSettle();
-    final id = app.agent.conversations.selectedId!;
-    await tester.enterText(key('agent-composer'), 'Read the current plan.');
-    await tester.pump();
-    await tester.tap(key('agent-send'));
     await _until(
       tester,
-      () => provider.requests == 1,
-      'the actual provider request',
+      () => key('agent-composer').hitTestable().evaluate().isNotEmpty,
+      'the running composer to become interactive',
     );
+    final id = app.agent.conversations.selectedId!;
     expect(app.agent.runtime.state.value.runFor(id).isActive, isTrue);
     await tester.enterText(
       key('agent-composer'),
       'Keep the full workspace draft.',
     );
-    await tester.pumpAndSettle();
+    await _until(
+      tester,
+      () =>
+          app.agent.conversations.find(id)?.draft ==
+          'Keep the full workspace draft.',
+      'the native draft projection',
+    );
     expect(find.byType(AgentPage), findsOneWidget);
     expect(
       tester.widget<TextField>(key('agent-composer')).controller!.text,
@@ -270,6 +261,13 @@ void main() {
       key('agent-composer'),
       'Edited in the full workspace.',
     );
+    await _until(
+      tester,
+      () =>
+          app.agent.conversations.find(id)?.draft ==
+          'Edited in the full workspace.',
+      'the edited native draft projection',
+    );
     return id;
   }
 
@@ -278,12 +276,15 @@ void main() {
       tester,
       app.workspaceView.activeMode.value,
     );
-    await tester.pumpAndSettle();
+    await _until(
+      tester,
+      () => find.byType(AgentPage).evaluate().isEmpty,
+      'the business workspace to replace the Agent page',
+    );
     expect(find.byType(AgentPage), findsNothing);
   }
 
   Future<void> finishAndUnmount(WidgetTester tester) async {
-    await _complete(tester, provider.finish(), 'the provider stream to finish');
     await _complete(
       tester,
       app.agent.quiesce(),
@@ -294,12 +295,27 @@ void main() {
   }
 
   testWidgets(
-    'real sidebar reopens the running full Agent workspace with draft and reading position',
+    'sidebar reopens the running Agent view with its draft and reading position',
     (tester) async {
       try {
         final id = await openRunningFullWorkspace(tester);
         await tester.drag(key('agent-transcript-$id'), const Offset(0, 620));
-        await tester.pumpAndSettle();
+        await _until(
+          tester,
+          () => !tester
+              .state<ScrollableState>(
+                find
+                    .descendant(
+                      of: key('agent-transcript-$id'),
+                      matching: find.byType(Scrollable),
+                    )
+                    .first,
+              )
+              .position
+              .isScrollingNotifier
+              .value,
+          'transcript scrolling to finish',
+        );
         final reading = tester
             .widget<AgentTranscript>(find.byType(AgentTranscript))
             .position;
@@ -310,9 +326,19 @@ void main() {
         expect(find.byType(AgentAssistantPane), findsNothing);
         expect(key('agent-composer'), findsNothing);
         tester.view.physicalSize = const Size(1062, 853);
-        await tester.pumpAndSettle();
+        await tester.pump();
+        await _until(
+          tester,
+          () =>
+              key('workspace-agent-entry').hitTestable().evaluate().isNotEmpty,
+          'the resized sidebar entry',
+        );
         await tester.tap(key('workspace-agent-entry'));
-        await tester.pumpAndSettle();
+        await _until(
+          tester,
+          () => key('agent-composer').hitTestable().evaluate().isNotEmpty,
+          'the reopened composer',
+        );
         expect(key('agent-composer').hitTestable(), findsOneWidget);
         final reopenedReading = tester
             .widget<AgentTranscript>(find.byType(AgentTranscript))
@@ -330,8 +356,10 @@ void main() {
           'Edited in the full workspace.',
         );
         expect(app.agent.runtime.state.value.runFor(id).isActive, isTrue);
-        expect(provider.requests, 1);
-        expect(provider.cancellation!.isCancelled, isFalse);
+        expect(
+          native.commands.where((command) => command.kind == CommandKind.send),
+          isEmpty,
+        );
         expect(tester.takeException(), isNull);
       } finally {
         await finishAndUnmount(tester);
@@ -496,14 +524,16 @@ void main() {
           generated = Completer<void>();
           proceed = Completer<void>();
           await app.agent.initialize();
-          hostConversationId ??= (await app.agent.conversations.create(
-            title: 'Native export',
-            mode: AgentPermissionMode.full,
-          )).id;
-          running = app.agent.runtime.runHostAction(hostConversationId!, (
-            scope,
-            ask,
-          ) async {
+          final scope = OperationScope(
+            id: 'ui-export-${++call}',
+            policy: OperationPolicy(
+              enabled: true,
+              mode: AgentPermissionMode.full,
+            ),
+          );
+          Future<MutationApproval?> ask(Object _) async =>
+              throw StateError('Full mode must not request approval.');
+          running = (() async {
             try {
               final artifact = await app.agent.tools.execute(
                 ProviderToolCall(
@@ -532,9 +562,13 @@ void main() {
               failure = error;
               failureStack = stack;
               if (!generated.isCompleted) generated.complete();
-              return {'status': 'failed'};
+              return <String, Object?>{'status': 'failed'};
+            } finally {
+              app.agent.tools.finishScope(scope);
+              app.agent.external.discardScope(scope);
+              scope.cancel();
             }
-          });
+          })();
           await generated.future;
         });
         if (unmount) await tester.pumpWidget(const SizedBox.shrink());

@@ -1,74 +1,38 @@
 # Agent 主界面原生验证
 
-[主界面与设置入口](../integration_test/agent_overhaul_native_test.dart)在 Windows 的真实 Flutter surface 上验证内嵌聊天、资源历史、紧凑活动及二三级设置导航。窗口尺寸通过现有 Win32 窗口脚本调整，等待实际 View 更新；不覆盖测试 View 的尺寸或 DPR。
+正式 Agent 界面由 `AgentApplication` 装配 Rust 核心。[原生离线旅程](../integration_test/agent_rust_offline_journey_test.dart)在 Windows／Android 上通过真实 FRB、JSONL、SQLite、业务保存和 Flutter 页面验证完整调用链。模型回复使用预置传输内容。
 
-主库和凭据使用合成内容；聊天与知识使用测试独占临时目录中的后台 SQLite。活动历史夹具保存 7 条消息、1 个轮次、2 次查询和 1 次 `mutation.apply`；一条已保存回执包含课表及两门课程。报告分别记录持久历史展示、脚本 Provider 驱动的真实运行时、原生绘制和框架输入。
+## 功能旅程
 
-六态场景开始前，通过正式持久化入口初始化主库资源命名空间，核对新账本没有回执、序号仍为 1，且主库其余全部字段保持不变，再保存场景基线。已有账本的基线保持完整原值。随后继续逐场景比较整份主库，覆盖业务数据、账本和设置，避免首次问答正常保存命名空间被误判成业务修改。
+[主流程](../integration_test/support/agent_rust_offline_journey.dart)检查草稿、分页、来源引用、标题、流式回复、三种权限、队列、停止继续、页面关闭期间的已接纳保存，以及关闭后重新读取业务与 Agent 存档。
 
-## 覆盖与工件
+同一入口继续执行：
 
-入口依次请求四组简体中文窗口：浅色 1× 宽窗 1440×900、深色 2× 宽窗 1280×820、浅色 1× 窄窗 640×900、深色 2× 窄窗 640×900。验证未发送会话不进入存档、主标题与统一新建入口、完成过程默认折叠、查询与操作详情内联展开，以及辅助面板在宽窗内联和窄窗底部展示。设置旅程核对模型保存后父连接草稿保留，以及返回取消与丢弃。每个配置还运行六种状态，截图清单记录实际 View 尺寸、DPR、字号、语言、主题和源码 SHA。
+- [历史流程](../integration_test/support/agent_rust_history_journey.dart)：重新生成、编辑重做、跨业务与知识仓储的撤销和恢复预约。
+- [选择恢复流程](../integration_test/support/agent_rust_backup_journey.dart)：新 Agent 备份、业务对象选择、固定目标、回执丢失后恢复、附件缺失，以及恢复完全成功时才丢弃未发送草稿。
+- [清空流程](../integration_test/support/agent_rust_clear_journey.dart)：关库、失败后重开、旧核心迟到回执隔离和成功清空后的写入关闭。
 
-跨平台入口 [agent_run_states_native_test.dart](../integration_test/agent_run_states_native_test.dart) 在 Windows 或 Android 主界面复用相同的六态场景：
+这些流程使用[独立原生工作区](../integration_test/support/agent_rust_offline_workspace.dart)。可见组件和系统输入的覆盖以入口实际调用为准；数据保存由实际文件读回核对。布局、菜单、输入行、模型浮层、回执文案和编辑表单继续由 [Agent 组件回归](../test/agent/ui)检查。
 
-| 状态 | 数据与执行来源 | 核对内容 |
-| --- | --- | --- |
-| 进行中 | 脚本流式回复，真实统一运行时 | 草稿区可用；先排队，再立即补充；切回业务页并重开后保留会话与运行；停止后不执行排队项 |
-| 待确认 | 真实 `mutation.apply` 编译与询问模式审批 | 一个操作行、可见确认入口、主库保持审批前内容 |
-| 待回答 | 真实 `ask_user` 与持久问题 | 问题输入可见，待答记录已进入 SQLite |
-| 完成 | 真实 `mutation.apply` 保存合成日程 | 一个已保存操作行和唯一业务结果 |
-| 错误 | 脚本传输错误经过运行时结算 | 错误反馈及继续入口 |
-| 恢复 | SQLite 重读合成待核对结果，再调用实际恢复流程 | 待核对提示、继续入口及业务内容保持 |
+## 原生读屏
 
-运行与问答由受控 Provider 提供事件，HTTP 客户端拒绝网络调用。Provider 的异步事件回调使用 `expectSync` 校验空凭据、取消令牌与请求轮次，允许原生帧泵同时推进。恢复夹具表示已有结果无法核对的存档状态；进程强杀、实体设备与真实模型另按各自入口记录。
+[Windows 读屏入口](../integration_test/native_accessibility_smoke_test.dart)保留同一原生进程的 MSAA 探针。其 [Agent 场景](../integration_test/support/agent_native_accessibility.dart)使用正式应用与原生存档，检查设置、偏好、Skills、Memory、计划预览分页、首末项详情、输入框及允许／拒绝入口，操作完成后核对持久回执。
 
-跨平台入口参数包括 `SKED_SOURCE_SHA`、`SKED_AGENT_STATES_CAPTURE_DIR`、`SKED_AGENT_STATES_DARK`、`SKED_AGENT_STATES_TEXT_SCALE`、`SKED_AGENT_STATES_RTL` 和 `SKED_AGENT_STATES_KEYBOARD`。主题、字号和布局方向可独立组合；RTL 使用中文内容核对镜像布局。`SKED_AGENT_STATES_ACCESSIBLE=true` 是深色、2× 的便捷默认值。
+读屏场景通过 [Agent 原生工作区](../integration_test/support/agent_native_accessibility_workspace.dart)构造合成内容，分别运行 baseline 和 accessible 配置。报告记录实际窗口、DPR、字号、主题、进程与探针结果。运行方式和系统探针前置条件见[原生可访问性验证](NATIVE_ACCESSIBILITY_SMOKE.md)。
 
-Windows 最低覆盖上述四组窗口，以及独立的深色 1×、浅色 2×、RTL 各一轮；Android 实际窄屏浅/深、2×、RTL 和软件键盘各一轮。Android 键盘场景使用真实 IME 和 `View.viewInsets`，拒绝零键盘避让量，不注入测试视口高度。PNG 是 Flutter View 内容，报告另存实际键盘避让量；系统键盘本身的画面可在同一轮补采设备截图。
+## 运行与证据
 
-场景失败时保留当前可绘制界面与输入框位置作为诊断工件，仍按原失败退出；失败画面不计入通过场景的截图清单。六态等待遇到非预期运行失败时立即记录目标状态、实际状态、请求计数及运行时已脱敏的错误详情；执行 Future 的原异常与堆栈继续上抛。立即补充按 runId 区分仍在收尾的旧请求取消与新请求失败，保留两次请求、新 owner 和流式回复的完整条件；交接完成后立即记录等待期间的 owner、状态、停止与继续入口及相对耗时，并在切页前截图。每态快照形成后立即写入诊断，后续导航或场景失败仍保留前序观察。未达到目标的超时也保存同一诊断，两个原生入口均将其写入报告。
+先在独立测试 checkout/build tree 中安装锁定依赖。Windows 需按[原生隔离约定](WINDOWS_NATIVE_ACCEPTANCE.md)设置唯一的 `SKED_WINDOWS_TEST_NAMESPACE`；Android 使用独立测试 applicationId。构建与运行使用同一个候选工作区。
 
-连续切换目的地时，导航夹具保留已存在的入口，等待淡出淡入过渡使该入口恢复可点击，再执行下一次点击；仅在入口不存在时打开资源导航。窄屏抽屉随旧页面关闭时，先等待当前页面的资源或更多按钮可点击，再打开导航。重开截图同时等待输入框可点击和工作区透明度恢复为 1。
-
-查询详情内层滚动后，若折叠标题离开正文视口，夹具通过外层正文的实际滚动手势将标题恢复到可点击位置；保留最终命中断言，并记录标题与视口位置、外层滚动偏移及跟随状态。
-
-正文条目的语义索引与内容共享稳定身份。折叠过程或恢复阅读位置时，重建滚动起点会一起移动整条语义分组，保留内部按钮与文本的父子归属；条目顺序、展开状态和点击动作继续按当前内容提供。
-
-`SKED_SOURCE_SHA` 必须是该测试树对应的完整提交 SHA，`SKED_AGENT_OVERHAUL_WINDOW_SCRIPT` 必须指向同一 checkout 内窗口脚本的绝对路径，不依赖原生进程的工作目录。`SKED_AGENT_OVERHAUL_CAPTURE_DIR` 可通过 Dart define 或进程环境指定，必须是系统临时目录中的独立绝对路径；显式目录保留截图和 `agent-overhaul-evidence.json`。未指定时由测试创建并清理自己的临时目录。
-
-## 运行
-
-先按[原生隔离运行说明](NATIVE_ACCESSIBILITY_SMOKE.md#running)创建路径较短的系统临时 checkout，安装根项目和内部 Android 插件的锁定依赖，并在构建前配置唯一的 `SKED_WINDOWS_TEST_NAMESPACE`。合成 Dart 数据不能隔离 Windows 实例互斥量与窗口状态；不能使用生产构建目录或个人存档运行入口。
-
-在已配置隔离命名空间的测试 checkout 根目录执行：
+Windows 执行前把 `TEMP`、`TMP`、`TMPDIR` 指向本轮 F 盘目录；Android 数据位于独立测试包的私有临时目录，模拟器与主机工件保存在 F 盘。
 
 ```powershell
-$agentUiRevision = (git rev-parse HEAD).Trim()
-$agentUiWindowScript = (Resolve-Path -LiteralPath 'tool/capture_workbench_window.ps1').ProviderPath
-$agentUiCaptures = Join-Path ([IO.Path]::GetTempPath()) ('sked-agent-ui-' + [Guid]::NewGuid().ToString('N'))
-New-Item -ItemType Directory -Path $agentUiCaptures -ErrorAction Stop | Out-Null
-flutter test --no-pub -d windows integration_test/agent_overhaul_native_test.dart `
-  "--dart-define=SKED_SOURCE_SHA=$agentUiRevision" `
-  "--dart-define=SKED_AGENT_OVERHAUL_WINDOW_SCRIPT=$agentUiWindowScript" `
-  "--dart-define=SKED_AGENT_OVERHAUL_CAPTURE_DIR=$agentUiCaptures"
-if ($LASTEXITCODE -ne 0) { throw 'Agent native UI verification failed' }
+$agentRevision = (git rev-parse HEAD).Trim()
+flutter test --no-pub -d windows integration_test/agent_rust_offline_journey_test.dart `
+  "--dart-define=SKED_AGENT_NATIVE_REVISION=$agentRevision"
+if ($LASTEXITCODE -ne 0) { throw 'Rust Agent offline journey failed' }
 ```
 
-同时保留 CMake cache、命令日志和截图清单，并确认构建后命名空间仍一致。工作树有源码改动时，SHA 仅标识基点，需另存实际候选差异与文件摘要。临时截图与日志不进入仓库。
+Android 将设备参数替换为本轮核实的测试设备 ID。报告通过 `IntegrationTestWidgetsFlutterBinding.reportData` 提供 `agentRustOfflineJourney`，包括源码基点、平台、临时目录、有序检查点和失败信息。保存完整命令与进程日志；候选有未提交改动时，同时保留差异与文件摘要。
 
-与[主工作区运行冒烟](../integration_test/agent_platform_smoke_test.dart)、[平台功能旅程](../integration_test/AGENT_FEATURE_JOURNEYS.md)及[原生读屏门禁](NATIVE_ACCESSIBILITY_SMOKE.md)分别执行；本入口不替代它们的运行、持久化和原生输入范围。
-
-跨平台六态可使用 `flutter drive --no-pub -d <设备> --target=integration_test/agent_run_states_native_test.dart --driver=test_driver/agent_run_states_native_driver.dart`，传入前述 Dart defines；每轮为 `FLUTTER_TEST_OUTPUTS_DIR` 分配新的系统临时目录。Android 使用独立测试 applicationId；原生包身份与 Dart 的 PackageInfo 测试值分别核对。功能旅程继续负责知识、附件、编辑重做和选择恢复；原生主旅程负责长历史阅读、流式输入和重开。
-
-## 现有连接与真实模型
-
-[真实模型入口](../integration_test/agent_live_model_test.dart) 使用现有 Agent 连接和合成业务内容，验证创建课表与两门课程、只读计划、问答和审批、自动压缩与手动压缩。用 [driver](../test_driver/agent_live_model_driver.dart) 保存主机报告。
-
-合成交互响应器与正式问答界面使用同一可回答条件：当前问题仍未解决，且运行已进入 `waitingUser`。仓库提前发布的问题只记录，等待运行状态就绪后提交一次；提交失败保留错误并使验收失败。报告保留模型原问题、选项、逐项答案及审批记录。预览阶段明确规划空课表，额外问答仍回答不添加课程、不保存；日期变更阶段单独要求发生新的日期问答和审批，并核对实际保存的开学日期。
-
-`SKED_AGENT_LIVE_PROFILE_FILE` 指向显式选定的现有 AppData 主存档；也可用 `SKED_AGENT_LIVE_CONNECTION_FILE` 指向其独立 AgentSettings JSON，两者选一。入口读取连接后新建合成主库、临时 SQLite 与附件目录，结束时核对连接来源字节不变。`SKED_AGENT_LIVE_REPORT_FILE` 是原生进程可写的临时报告绝对路径，`SKED_SOURCE_SHA` 记录候选源码。
-
-Windows 默认通过原生安全存储只读 active/pending 槽，复制到本轮内存凭据库。Android 独立测试包使用 `SKED_AGENT_LIVE_CREDENTIALS_FILE`：文件放在该测试包 `getTemporaryDirectory()` 内，JSON 的 `active`、`pending` 值为现有安全槽原文或 null。文件路径经实际路径核对，读取成功或解析失败均在 finally 删除；槽内容不写入命令行、Dart defines、APK 或验收报告。连接文件只携带 AgentSettings，不复制个人课表。
-
-Android 可先构建并安装独立调试包，把连接与凭据经标准输入写入 `run-as <测试包>` 的私有缓存，然后以 `flutter drive --use-application-binary=<已构建APK> --target=integration_test/agent_live_model_test.dart --driver=test_driver/agent_live_model_driver.dart` 启动同一构建。Dart defines 只包含该包内的输入/报告路径；驱动结束后取回报告并清理测试包。
+真实模型调用和性能对照保持暂停。Windows／Android 的编译、离线旅程、原生读屏、模拟器和实体设备分别记录实际执行结果。

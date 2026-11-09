@@ -3031,5 +3031,7 @@
   "agentPinConversation": "固定会话",
   "@agentPinConversation": {},
   "agentUnpinConversation": "取消固定",
-  "@agentUnpinConversation": {}
+  "@agentUnpinConversation": {},
+  "agentUnsupportedPlatform": "此平台暂不支持 Agent。",
+  "@agentUnsupportedPlatform": {}
 }

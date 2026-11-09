@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import '../agent/references/agent_composer_reference.dart';
 import '../utils/unique_id.dart';
 import 'selective_backup_models.dart';
 
@@ -282,24 +281,21 @@ BackupRecord rebindBackupRecord(
           .toList();
     }
     if (raw.containsKey('contextReferences')) {
-      final references = AgentComposerReference.decodeList(
-        raw['contextReferences'],
-      );
-      raw['contextReferences'] = references.map((reference) {
-        if (reference.kind != AgentComposerReferenceKind.attachment) {
-          return reference.toJson();
+      for (final reference in backupList(raw['contextReferences'])) {
+        if (reference is! Map<String, dynamic>) {
+          backupInvalid('Invalid native conversation reference.');
         }
-        if (reference.conversationId != record.key.id) {
+        if (reference['kind'] != 'attachment') continue;
+        if (reference['conversationId'] != record.key.id) {
           backupInvalid(
             'A conversation reference belongs to another conversation.',
           );
         }
-        return AgentComposerReference.fromJson({
-          ...reference.toJson(),
-          'id': mapped(BackupObjectKind.attachment, reference.attachmentId),
-          'conversationId': key.id,
-        }).toJson();
-      }).toList();
+        final before = backupText(reference['attachmentId'], max: 256);
+        final after = mapped(BackupObjectKind.attachment, before);
+        reference['attachmentId'] = after;
+        if (reference['id'] == before) reference['id'] = after;
+      }
     }
   }
 
@@ -353,8 +349,12 @@ BackupRecord rebindBackupRecord(
           rebindMessageAttachments(message);
         }
       }
-      if (data['draftAttachmentIds'] case final List ids) {
-        data['draftAttachmentIds'] = ids
+      final conversation = data['conversation'];
+      if (conversation is! Map<String, dynamic>) {
+        backupInvalid('Invalid native conversation.');
+      }
+      if (conversation['draftAttachmentIds'] case final List ids) {
+        conversation['draftAttachmentIds'] = ids
             .map((id) => mapped(BackupObjectKind.attachment, id))
             .toList();
       }

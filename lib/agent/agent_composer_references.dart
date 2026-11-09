@@ -33,7 +33,7 @@ extension AgentComposerReferences on AgentApplication {
       ),
       skills: SharedSkillLoader(
         loadString: rootBundle.loadString,
-        registeredTools: tools.registeredNames,
+        registeredTools: _nativeToolNames,
         overlays: knowledge.captureSkillSnapshot(),
       ),
       conversation: conversation,
@@ -177,18 +177,5 @@ extension AgentComposerReferences on AgentApplication {
         'The reference input owner changed.',
       );
     }
-  }
-
-  Future<Map<String, Object?>> _prepareComposerReferenceContext(
-    OperationScope scope,
-    List<AgentComposerReference> references,
-  ) async {
-    scope.checkActive();
-    final skills = await tools.loadSelectedSkills(scope, references);
-    scope.checkActive();
-    return {
-      'references': references.map((reference) => reference.toJson()).toList(),
-      if (skills.isNotEmpty) 'selectedSkillInstructions': skills,
-    };
   }
 }

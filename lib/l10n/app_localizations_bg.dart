@@ -4619,4 +4619,8 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get agentUnpinConversation => 'Unpin conversation';
+
+  @override
+  String get agentUnsupportedPlatform =>
+      'Agent is not available on this platform yet.';
 }

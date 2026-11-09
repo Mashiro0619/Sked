@@ -22,7 +22,10 @@ import 'package:sked/main.dart' show MyApp;
 import 'package:sked/providers/app_scope.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/agent/agent_application.dart';
-import 'package:sked/agent/conversations/conversation_storage.dart';
+import 'package:sked/application/operation_contracts.dart';
+
+import '../support/agent_native_fixture.dart';
+
 import 'package:sked/controllers/app_lifecycle.dart'
     show bundledPrivacyPolicyVersion;
 import 'package:sked/screens/adaptive_sked_shell.dart';
@@ -79,26 +82,19 @@ class _BlockingStorage extends _MemoryStorage {
   }
 }
 
-class _BlockingConversationStorage extends ConversationStorage {
-  _BlockingConversationStorage() : super.base();
-
-  String? source;
+class _BlockingAgentCore extends MemoryAgentCore {
   bool blockNextSave = false;
   final saveStarted = Completer<void>();
   final allowSave = Completer<void>();
 
   @override
-  Future<ConversationStorageLoad> load() async =>
-      ConversationStorageLoad(source: source);
-
-  @override
-  Future<void> save(String value, {required int revision}) async {
-    if (blockNextSave) {
+  Future<CommandResult> dispatch({required AgentCommand command}) async {
+    if (blockNextSave && command.kind == CommandKind.selectConversation) {
       blockNextSave = false;
       saveStarted.complete();
       await allowSave.future;
     }
-    source = value;
+    return super.dispatch(command: command);
   }
 
   void release() {
@@ -142,14 +138,14 @@ AppData _shellData({AppMode mode = AppMode.student, bool populated = false}) {
 Future<AppRuntime> _providerFor(
   TimetableStorage storage, {
   AppMode mode = AppMode.student,
-  ConversationStorage? agentConversationStorage,
+  MemoryAgentCore? agentCore,
 }) async {
   final provider = AppRuntime(
     dataTransferCodec: inlineDataTransferCodec,
     storage: storage,
     systemLocaleCodeResolver: () => defaultLocaleCode,
     uiStateSaveDelay: Duration.zero,
-    agentConversationStorage: agentConversationStorage,
+    agentNativeClient: (agentCore ?? MemoryAgentCore()).client,
   );
   await provider.lifecycle.load();
   if (provider.workspaceView.activeMode != mode) {
@@ -822,23 +818,27 @@ void main() {
             agentSettings: data.agentSettings.copyWith(enabled: true),
           ),
         );
-        final conversationStorage = _BlockingConversationStorage();
+        final conversationStorage = _BlockingAgentCore();
         final provider = await _providerFor(
           mainStorage,
-          agentConversationStorage: conversationStorage,
+          agentCore: conversationStorage,
         );
         addTearDown(provider.dispose);
         addTearDown(conversationStorage.release);
         addTearDown(() => tester.binding.setSurfaceSize(null));
         await provider.agent.conversations.load();
-        final first = await provider.agent.conversations.create(
-          id: 'navigation-first',
-          title: 'First conversation',
-        );
-        final second = await provider.agent.conversations.create(
-          id: 'navigation-second',
-          title: 'Second conversation',
-        );
+        final first = await provider.agent.conversations
+            .createManagedConversation(
+              mode: AgentPermissionMode.ask,
+              id: 'navigation-first',
+              title: 'First conversation',
+            );
+        final second = await provider.agent.conversations
+            .createManagedConversation(
+              mode: AgentPermissionMode.ask,
+              id: 'navigation-second',
+              title: 'Second conversation',
+            );
         await tester.binding.setSurfaceSize(const Size(800, 700));
         await tester.pumpWidget(
           _appFor(provider, platform: TargetPlatform.android),
@@ -922,37 +922,47 @@ void main() {
           agentSettings: data.agentSettings.copyWith(enabled: true),
         ),
       );
-      final conversationStorage = _BlockingConversationStorage();
+      final conversationStorage = _BlockingAgentCore();
       final provider = await _providerFor(
         mainStorage,
-        agentConversationStorage: conversationStorage,
+        agentCore: conversationStorage,
       );
       addTearDown(provider.dispose);
       addTearDown(conversationStorage.release);
-      final replacement = await workspaceProvider();
+      final replacement = await workspaceProvider(
+        agentNativeClient: MemoryAgentCore().client,
+      );
       addTearDown(replacement.dispose);
       addTearDown(() => tester.binding.setSurfaceSize(null));
       final oldApplication = provider.agent;
       final newApplication = replacement.agent;
       await oldApplication.conversations.load();
-      final oldTarget = await oldApplication.conversations.create(
-        id: 'old-navigation-target',
-        title: 'Old target',
-      );
-      final oldSelected = await oldApplication.conversations.create(
-        id: 'old-navigation-selected',
-        title: 'Old selected',
-      );
+      final oldTarget = await oldApplication.conversations
+          .createManagedConversation(
+            mode: AgentPermissionMode.ask,
+            id: 'old-navigation-target',
+            title: 'Old target',
+          );
+      final oldSelected = await oldApplication.conversations
+          .createManagedConversation(
+            mode: AgentPermissionMode.ask,
+            id: 'old-navigation-selected',
+            title: 'Old selected',
+          );
       await newApplication.setEnabled(true);
       await newApplication.initialize();
-      final newTarget = await newApplication.conversations.create(
-        id: 'replacement-navigation-target',
-        title: 'Replacement target',
-      );
-      final newSelected = await newApplication.conversations.create(
-        id: 'replacement-navigation-selected',
-        title: 'Replacement selected',
-      );
+      final newTarget = await newApplication.conversations
+          .createManagedConversation(
+            mode: AgentPermissionMode.ask,
+            id: 'replacement-navigation-target',
+            title: 'Replacement target',
+          );
+      final newSelected = await newApplication.conversations
+          .createManagedConversation(
+            mode: AgentPermissionMode.ask,
+            id: 'replacement-navigation-selected',
+            title: 'Replacement selected',
+          );
       expect(oldApplication.settings.enabled, isTrue);
       expect(newApplication.settings.enabled, isTrue);
       await tester.binding.setSurfaceSize(const Size(800, 700));

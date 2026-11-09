@@ -3101,5 +3101,7 @@
   "agentPinConversation": "Pin conversation",
   "@agentPinConversation": {},
   "agentUnpinConversation": "Unpin conversation",
-  "@agentUnpinConversation": {}
+  "@agentUnpinConversation": {},
+  "agentUnsupportedPlatform": "Agent is not available on this platform yet.",
+  "@agentUnsupportedPlatform": {}
 }

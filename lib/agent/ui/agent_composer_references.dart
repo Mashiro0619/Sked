@@ -12,7 +12,7 @@ class _AgentReferenceSession {
     required this.target,
   });
 
-  final ConversationRepository repository;
+  final ConversationViewRepository repository;
   final AgentUiDelegate delegate;
   final String conversationId;
   final int uiGeneration;
@@ -227,7 +227,7 @@ extension _AgentComposerReferences on _AgentConversationViewState {
       jsonEncode(references.map((reference) => reference.toJson()).toList());
 
   Future<void> _saveReferences(
-    ConversationRepository repository,
+    ConversationViewRepository repository,
     String id,
     List<AgentComposerReference> references,
     void Function(AgentConversation) validate,

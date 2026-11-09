@@ -1,6 +1,6 @@
 import '../../services/text_file_picker.dart';
 import '../../utils/unique_id.dart';
-import '../conversations/conversation_repository.dart';
+import '../conversations/conversation_view_repository.dart';
 
 export '../../services/text_file_picker.dart'
     show PickedTextFile, TextFileTooLargeException;
@@ -9,7 +9,7 @@ export '../../services/text_file_picker.dart'
 /// recovery. No file content is sent to a model by this local operation.
 class ConversationFileAttachments {
   ConversationFileAttachments(this.repository);
-  final ConversationRepository repository;
+  final ConversationViewRepository repository;
   static const extensions = ['json', 'ics', 'txt', 'html', 'htm'];
   final _pending = <String, ConversationSource>{};
 
@@ -70,26 +70,29 @@ class ConversationFileAttachments {
   }) async {
     final source = _pending[conversationId];
     if (source == null) return;
-    await repository.update(conversationId, (current) {
-      final existing = current.sources
-          .where((value) => value.id == source.id)
-          .firstOrNull;
-      if (existing != null) {
-        if (existing.digest != source.digest) {
-          throw StateError('The attachment identity changed.');
+    await repository.addSource(
+      conversationId,
+      source,
+      validate: (current) {
+        final existing = current.sources
+            .where((value) => value.id == source.id)
+            .firstOrNull;
+        if (existing != null) {
+          if (existing.digest != source.digest) {
+            throw StateError('The attachment identity changed.');
+          }
+          return;
         }
-        return current;
-      }
-      if (!canModify() ||
-          current.archived ||
-          source.provenance!.datasetGeneration != generation ||
-          !_sameInputBoundary(current, source)) {
-        throw StateError(
-          'The conversation changed before its attachment was saved.',
-        );
-      }
-      return current.copyWith(sources: [...current.sources, source]);
-    });
+        if (!canModify() ||
+            current.archived ||
+            source.provenance!.datasetGeneration != generation ||
+            !_sameInputBoundary(current, source)) {
+          throw StateError(
+            'The conversation changed before its attachment was saved.',
+          );
+        }
+      },
+    );
     _pending.remove(conversationId);
   }
 
@@ -99,27 +102,29 @@ class ConversationFileAttachments {
   ) =>
       source.kind == 'structured_file' &&
       !conversation.archived &&
-      _sameInputBoundary(conversation, source);
+      source.boundInputId == null &&
+      source.boundMessageId == null;
 
   Future<void> remove(
     String conversationId,
     String sourceId, {
     required bool Function() canModify,
   }) async {
-    await repository.update(conversationId, (current) {
-      final source = current.sources
-          .where((value) => value.id == sourceId)
-          .firstOrNull;
-      if (source == null) return current;
-      if (!canModify() || !canRemove(current, source)) {
-        throw StateError(
-          'An attachment used by a run must remain in its history.',
-        );
-      }
-      return current.copyWith(
-        sources: current.sources.where((value) => value.id != sourceId),
-      );
-    });
+    await repository.removeSource(
+      conversationId,
+      sourceId,
+      validate: (current) {
+        final source = current.sources
+            .where((value) => value.id == sourceId)
+            .firstOrNull;
+        if (source == null) return;
+        if (!canModify() || !canRemove(current, source)) {
+          throw StateError(
+            'An attachment used by a run must remain in its history.',
+          );
+        }
+      },
+    );
   }
 }
 

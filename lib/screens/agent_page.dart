@@ -275,6 +275,8 @@ class _AgentConversationHostState extends State<AgentConversationHost> {
         l.agentInitializationConversationStorage,
       AgentInitializationFailure.connectionStorage =>
         l.agentInitializationConnectionStorage,
+      AgentInitializationFailure.unsupportedPlatform =>
+        l.agentUnsupportedPlatform,
       null => null,
     };
     return LayoutBuilder(

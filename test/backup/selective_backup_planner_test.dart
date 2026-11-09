@@ -147,7 +147,7 @@ void main() {
     BackupRecord attachment(String digest) => BackupRecord(
       key: file,
       label: 'File',
-      data: {'id': 'file', 'digest': digest},
+      data: {'id': 'file', 'sha256': digest},
     );
     final current = _inventory([attachment('local')]);
     final source = _inventory([
@@ -156,16 +156,15 @@ void main() {
         key: chat,
         label: 'Chat',
         data: {
-          'id': 'chat',
+          'conversation': {'id': 'chat', 'draftAttachmentIds': <String>[]},
           'attachments': [
-            {'id': 'file', 'digest': 'imported'},
+            {'id': 'file', 'sha256': 'imported'},
           ],
           'messages': [
             {
               'attachmentIds': ['file'],
             },
           ],
-          'draftAttachmentIds': <String>[],
         },
         dependencies: const [file],
       ),

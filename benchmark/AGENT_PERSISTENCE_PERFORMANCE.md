@@ -1,5 +1,7 @@
 # Agent 持久化性能协议
 
+> 历史协议：下文记录旧 Dart Agent 实现的测量方法和字段。对应执行入口随 Rust 切换退役，既有报告保留原源码与数据身份。真实模型和性能对照保持暂停；重新开始时须为正式 Rust 装配建立新的固定基线。
+
 `agent-persistence-v1` 在 Windows 或 Android 的原生 Profile 进程中测量正式会话仓储。消息夹具与 `agent-ui-frames-v3`、`agent-stream-frames-v1` 共用：一个 512 条消息的长会话和一个 2 条消息的独立短会话，正文、身份、日期和初始草稿固定。
 
 每个进程使用新的系统临时目录和真实持久后端。当前实现使用后台 SQLite；对照旧版本时使用该版本正式的 `PlatformConversationStorage` 双槽 JSON，并仅适配测试入口。主仓库的生产存储不提供回退选项。

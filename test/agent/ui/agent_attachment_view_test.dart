@@ -4,7 +4,9 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/attachments/attachment_repository.dart';
+
+import '../../support/agent_memory_attachments.dart';
+
 import 'package:sked/agent/ui/agent_attachment_view.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/widgets/sked_popup_menu.dart';
@@ -333,11 +335,11 @@ class _Fixture {
       byteLength: bytes.length,
       digest: sha256.convert(bytes).toString(),
     );
-    repository = AttachmentRepository(storage: this.storage);
+    repository = MemoryAttachmentReader(storage: this.storage);
   }
   final _CountingStorage storage;
   late final ConversationAttachment attachment;
-  late final AttachmentRepository repository;
+  late final MemoryAttachmentReader repository;
 
   // The repository is created in runAsync's real zone. Dart `await` on a
   // completed fake-zone Future can still enqueue its continuation there after
@@ -346,7 +348,7 @@ class _Fixture {
       repository.close().timeout(const Duration(seconds: 10));
 }
 
-class _CountingStorage extends MemoryAttachmentStorage {
+class _CountingStorage extends UiMemoryAttachmentBytes {
   int reads = 0;
   @override
   Stream<List<int>> read(String id) {

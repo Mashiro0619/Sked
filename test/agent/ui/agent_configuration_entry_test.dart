@@ -1,10 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
-import 'package:sked/models/agent_settings.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/screens/agent_connection_settings_page.dart';
 import 'package:sked/screens/agent_settings_page.dart';
@@ -12,17 +11,18 @@ import 'package:sked/screens/agent_settings_page.dart';
 import '../../support/agent_workspace_navigation.dart';
 import '../../support/workspace_harness.dart';
 import 'agent_ui_test_support.dart';
+import '../../support/agent_native_fixture.dart' as native;
 
 Finder _key(String value) => find.byKey(ValueKey(value));
 
 void main() {
-  late ConversationRepository repository;
+  late MemoryConversationRepository repository;
   late UiDelegate delegate;
   late int opened;
   late VoidCallback configure;
 
   Future<void> initialize() async {
-    repository = ConversationRepository(storage: UiMemoryStorage());
+    repository = MemoryConversationRepository(storage: UiMemoryStorage());
     await repository.load();
     await repository.create(title: 'Configuration');
     delegate = UiDelegate(repository);
@@ -153,7 +153,7 @@ void main() {
           configure = () => opened += 10;
           await mountAgentUi(tester, view());
         case 'repository':
-          repository = ConversationRepository(storage: UiMemoryStorage());
+          repository = MemoryConversationRepository(storage: UiMemoryStorage());
           addTearDown(repository.dispose);
           await repository.load();
           await repository.create(title: 'Replacement source');
@@ -186,6 +186,7 @@ void main() {
             ? const Size(1440, 900)
             : const Size(320, 740);
         final app = await workspaceProvider(
+          agentNativeClient: native.MemoryAgentCore().client,
           agentCredentialStore: MemoryAgentCredentialStore(),
         );
         addTearDown(app.dispose);

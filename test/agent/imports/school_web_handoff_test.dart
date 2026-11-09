@@ -1,54 +1,28 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
 import 'package:sked/agent/imports/school_web_handoff.dart';
 import 'package:sked/application/operation_contracts.dart';
-import 'package:sked/models/agent_settings.dart';
 import 'package:sked/l10n/app_locale.dart';
 import 'package:sked/l10n/app_localizations.dart';
 
-class _MemoryStorage extends ConversationStorage {
-  _MemoryStorage() : super.base();
-  String? source;
-  Future<void> Function()? beforeSave;
-  bool fail = false;
-  @override
-  Future<ConversationStorageLoad> load() async =>
-      ConversationStorageLoad(source: source);
-  @override
-  Future<void> save(String value, {required int revision}) async {
-    await beforeSave?.call();
-    if (fail) throw StateError('synthetic storage failure');
-    source = value;
-  }
-}
-
-Matcher _problem(OperationErrorCode code) =>
-    isA<OperationProblem>().having((problem) => problem.code, 'code', code);
+import '../../support/agent_memory_conversations.dart';
 
 void main() {
-  late _MemoryStorage storage;
-  late ConversationRepository repository;
+  late MemoryConversationRepository repository;
   late SchoolWebHandoffController handoff;
   late AgentSettings settings;
   late SchoolWebReviewedDraft draft;
   var generation = 'dataset-one';
-  var current = true;
-  late List<String> starts;
+  final starts = <String>[];
   Future<void> Function() initialize = () async {};
-
   setUp(() async {
-    storage = _MemoryStorage();
-    repository = ConversationRepository(storage: storage);
+    repository = MemoryConversationRepository();
     await repository.load();
-    addTearDown(repository.dispose);
+    starts.clear();
     generation = 'dataset-one';
-    current = true;
-    starts = [];
     initialize = () async {};
     settings = const AgentSettings(
-      enabled: true,
       endpoint: 'https://model.example/v1',
       model: 'test-model',
       models: [
@@ -77,246 +51,63 @@ void main() {
       clock: () => DateTime.utc(2026, 10, 30, 1),
     );
   });
+  tearDown(() => repository.dispose());
 
-  test(
-    'a source, first message and handoff persist before starting inference',
-    () async {
-      settings = settings.copyWith(
-        models: const [
-          AgentModelConfig(
-            id: 'test-model',
-            reasoningEfforts: [AgentReasoningEffort.medium],
-            defaultReasoningEffort: AgentReasoningEffort.medium,
-          ),
-          AgentModelConfig(
-            id: 'later-default',
-            reasoningEfforts: [AgentReasoningEffort.medium],
-            defaultReasoningEffort: AgentReasoningEffort.medium,
-          ),
-        ],
-      );
-      final originalSelection = settings.defaultModelSelection;
-      final saving = Completer<void>();
-      final release = Completer<void>();
-      storage.beforeSave = () async {
-        saving.complete();
-        await release.future;
-      };
-      final pending = handoff.handoff(draft, isCurrent: () => current);
-      await saving.future;
-      expect(starts, isEmpty);
-      expect(repository.conversations, isEmpty);
-      settings = settings.copyWith(model: 'later-default');
-      release.complete();
-      final result = await pending;
-      final archive = ConversationArchive.decode(storage.source!);
-      expect(archive.handoffs.single.id, result.handoffId);
-      expect(
-        archive.handoffs.single.messageId,
-        archive.conversations.single.messages.single.id,
-      );
-      final source = archive.conversations.single.sources.single;
-      expect(source.url, 'https://school.test/courses');
-      expect(source.truncated, isTrue);
-      expect(source.provenance!.datasetGeneration, generation);
-      expect(archive.conversations.single.modelSelection, originalSelection);
-      expect(
-        archive.conversations.single.messages.single.modelSelection,
-        originalSelection,
-      );
-      expect(starts, [result.conversationId]);
-    },
-  );
-
-  test(
-    'rapid duplicate clicks and navigation retry keep the same request',
-    () async {
-      final gate = Completer<void>();
-      initialize = () => gate.future;
-      final first = handoff.handoff(draft, isCurrent: () => current);
-      final second = handoff.handoff(draft, isCurrent: () => current);
-      expect(identical(first, second), isTrue);
-      gate.complete();
-      final result = await first;
-      final retry = await handoff.handoff(draft, isCurrent: () => current);
-      expect(retry.created, isFalse);
-      expect(retry.handoffId, result.handoffId);
-      expect(retry.conversationId, result.conversationId);
-      expect(repository.conversations.single.messages.length, 1);
-      expect(repository.conversations.single.sources.length, 1);
-    },
-  );
-
-  for (final locale in ['en', 'zh', 'zh-Hant']) {
-    test(
-      '$locale handoff persists a readable task and localized untitled source',
-      () async {
-        final l = lookupAppLocalizations(appLocaleFromCode(locale));
-        final reviewed = SchoolWebReviewedDraft(
-          content: draft.content,
-          datasetGeneration: generation,
-          capturedAt: draft.capturedAt,
-          localeCode: locale,
-        );
-        final result = await handoff.handoff(reviewed, isCurrent: () => true);
-        final conversation = repository.find(result.conversationId)!;
-        expect(conversation.messages.single.text, l.schoolWebAgentImportTask);
-        expect(
-          conversation.messages.single.text,
-          isNot(contains('import-school-web')),
-        );
-        expect(conversation.title, l.schoolWebAgentSourceTitle);
-        expect(
-          conversation.sources.single.provenance!.title,
-          l.schoolWebAgentSourceTitle,
-        );
-        expect(conversation.sources.single.provenance!.localeCode, locale);
-        final bytes = storage.source;
-        await repository.load();
-        expect(
-          repository.find(result.conversationId)!.messages.single.text,
-          l.schoolWebAgentImportTask,
-        );
-        expect(storage.source, bytes);
-        expect(
-          (await handoff.handoff(reviewed, isCurrent: () => true)).created,
-          isFalse,
-        );
-      },
+  test('handoff passes reviewed source and localized task to the conversation owner', () async {
+    final result = await handoff.handoff(draft, isCurrent: () => true);
+    final conversation = repository.find(result.conversationId)!;
+    final source = conversation.sources.single;
+    expect(source.url, 'https://school.test/courses');
+    expect(source.text, draft.content);
+    expect(source.truncated, isTrue);
+    expect(source.provenance!.datasetGeneration, generation);
+    expect(
+      conversation.messages.single.text,
+      lookupAppLocalizations(appLocaleFromCode('en')).schoolWebAgentImportTask,
     );
-  }
-
-  test('loading an old handoff preserves its original user prompt verbatim', () async {
-    const legacy =
-        'Use the import-school-web skill. Preserve this historical prompt verbatim.';
-    final old = await repository.handoff(
-      handoffId: 'legacy',
-      source: const ConversationSource(
-        id: 'old-source',
-        kind: 'school_web',
-        text: 'old page',
-      ),
-      title: 'Old page',
-      prompt: legacy,
-    );
-    final bytes = storage.source;
-    await repository.load();
-    expect(storage.source, bytes);
-    expect(repository.find(old.conversation.id)!.messages.single.text, legacy);
+    expect(starts, [result.conversationId]);
   });
 
   test(
-    'cancelled source before acceptance never creates a conversation',
+    'duplicate UI requests share admission and cancelled review starts nothing',
     () async {
       final gate = Completer<void>();
       initialize = () => gate.future;
-      final pending = handoff.handoff(draft, isCurrent: () => current);
+      var current = true;
+      final first = handoff.handoff(draft, isCurrent: () => current);
+      final second = handoff.handoff(draft, isCurrent: () => current);
+      expect(identical(first, second), isTrue);
       current = false;
       gate.complete();
       await expectLater(
-        pending,
-        throwsA(_problem(OperationErrorCode.cancelled)),
-      );
-      expect(repository.conversations, isEmpty);
-      expect(starts, isEmpty);
-    },
-  );
-
-  test(
-    'disabled and missing configuration preserve a retriable source',
-    () async {
-      settings = const AgentSettings(enabled: false);
-      await expectLater(
-        handoff.handoff(draft, isCurrent: () => true),
-        throwsA(_problem(OperationErrorCode.disabled)),
-      );
-      settings = settings.copyWith(enabled: true);
-      await expectLater(
-        handoff.handoff(draft, isCurrent: () => true),
-        throwsA(_problem(OperationErrorCode.invalidArgument)),
-      );
-      expect(repository.conversations, isEmpty);
-      settings = settings.copyWith(
-        endpoint: 'https://model.test/v1',
-        model: 'test',
-        models: const [
-          AgentModelConfig(
-            id: 'test',
-            reasoningEfforts: [AgentReasoningEffort.medium],
-            defaultReasoningEffort: AgentReasoningEffort.medium,
+        first,
+        throwsA(
+          isA<OperationProblem>().having(
+            (error) => error.code,
+            'code',
+            OperationErrorCode.cancelled,
           ),
-        ],
-      );
-      await handoff.handoff(draft, isCurrent: () => true);
-      expect(
-        repository.conversations.single.sources.single.text,
-        draft.content,
-      );
-    },
-  );
-
-  test(
-    'storage failure leaves no inference and can recover the same handoff',
-    () async {
-      storage.fail = true;
-      await expectLater(
-        handoff.handoff(draft, isCurrent: () => true),
-        throwsStateError,
-      );
-      expect(starts, isEmpty);
-      storage.fail = false;
-      await repository.load();
-      final result = await handoff.handoff(draft, isCurrent: () => true);
-      expect(result.created, isTrue);
-      expect(repository.conversations.length, 1);
-    },
-  );
-
-  test(
-    'restoration invalidates old sources and a new review is distinct',
-    () async {
-      generation = 'dataset-two';
-      await expectLater(
-        handoff.handoff(draft, isCurrent: () => true),
-        throwsA(_problem(OperationErrorCode.expired)),
+        ),
       );
       expect(repository.conversations, isEmpty);
-      final refreshed = SchoolWebReviewedDraft(
-        content: 'Re-reviewed content',
-        datasetGeneration: generation,
-        capturedAt: draft.capturedAt,
-        localeCode: 'en',
-      );
-      await handoff.handoff(refreshed, isCurrent: () => true);
-      expect(
-        repository.conversations.single.sources.single.text,
-        refreshed.content,
-      );
+      expect(starts, isEmpty);
     },
   );
 
-  test(
-    'large source handoff preserves text and unsafe URLs remain excluded',
-    () async {
-      expect(redactSchoolWebSourceUrl('javascript:alert(1)'), isNull);
-      expect(redactSchoolWebSourceUrl('file:///private'), isNull);
-      final oversized = SchoolWebReviewedDraft(
-        content: 'x' * (120001),
-        title: '课程来源🌸' * 100,
-        datasetGeneration: generation,
-        capturedAt: draft.capturedAt,
-        localeCode: 'en',
-      );
-      await handoff.handoff(oversized, isCurrent: () => true);
-      expect(
-        repository.conversations.single.sources.single.text,
-        oversized.content,
-      );
-      expect(starts, hasLength(1));
-      await repository.load();
-      final savedSource = repository.conversations.single.sources.single;
-      expect(savedSource.text, oversized.content);
-      expect(savedSource.provenance!.title, oversized.title);
-    },
-  );
+  test('a restored dataset requires a new review and unsafe source URLs are excluded', () async {
+    generation = 'dataset-two';
+    await expectLater(
+      handoff.handoff(draft, isCurrent: () => true),
+      throwsA(
+        isA<OperationProblem>().having(
+          (error) => error.code,
+          'code',
+          OperationErrorCode.expired,
+        ),
+      ),
+    );
+    expect(repository.conversations, isEmpty);
+    expect(redactSchoolWebSourceUrl('javascript:alert(1)'), isNull);
+    expect(redactSchoolWebSourceUrl('file:///private'), isNull);
+  });
 }

@@ -41,19 +41,19 @@ Flutter 3.47.7／Dart 3.13.5 和现有 Android 工具链保持。新增 Cargo.lo
 
 分批更新 crypto 3.0.8、web 1.1.2、lunar 1.7.9；material_ui 1.10.0、cupertino_ui 1.1.6；flutter_local_notifications 22.3.3。archive 保持 4.5.2，WebView 保留三个固定 Git 补丁。依赖声明与锁文件一起维护。
 
-Rust 存储切换后删除 drift、drift_dev、build_runner、Agent 数据库生成代码及专用 Web worker／Wasm 资产。http、crypto、html、archive、Markdown 和平台依赖仍被保留的功能使用。
+已删除 drift、drift_dev、build_runner、旧 Agent 数据库生成代码及专用 Web worker／Wasm 资产。http、crypto、html、archive、Markdown 和平台依赖仍被保留的功能使用。
 
 ## 实施进度
 
 | 阶段 | 完成条件 | 状态 |
 | --- | --- | --- |
 | 1. 基线和依赖 | 三批依赖更新，相关分析、编译和功能检查 | 依赖更新已提交，原生构建随接入阶段验证 |
-| 2. Rust 与 FRB | Windows／Android 加载 Rust，命令、事件和宿主回调接通 | 两端正式离线旅程已通过，Android 系统证书初始化已接通 |
-| 3. 新存储 | JSONL、索引、知识、附件和新备份完整可用 | Rust 存储已实现，待接入正式会话仓储与综合备份 |
-| 4. Rig 与业务工具 | 离线模型回包驱动正式工具并取得真实业务结果 | 正式业务宿主的三种权限与保存收尾已通过离线旅程，平台等其余适配待接线 |
-| 5. 完整功能 | 现有 Agent 功能全部接入原界面 | UI delegate 已实现，完整页面、知识与附件管理仍待接线 |
-| 6. 切换清理 | 等已接纳动作完成，重建开发数据，删除旧实现 | 待开始 |
-| 7. 离线收尾 | 两端安装包、完整功能旅程和文档完成 | 待开始 |
+| 2. Rust 与 FRB | Windows／Android 加载 Rust，命令、事件和宿主回调接通 | 核心加载与桥接已通过两端初始旅程，Android 系统证书初始化已接通 |
+| 3. 新存储 | JSONL、索引、知识、附件和新备份完整可用 | 正式仓储与选择性备份已接线，综合验证进行中 |
+| 4. Rig 与业务工具 | 离线模型回包驱动正式工具并取得真实业务结果 | 业务及平台适配已接线，原生基础旅程已通过，完整装配验证进行中 |
+| 5. 完整功能 | 现有 Agent 功能全部接入原界面 | 页面、知识、附件、HTTP 与历史维护已接线，正在校验完整行为 |
+| 6. 切换清理 | 等已接纳动作完成，重建开发数据，删除旧实现 | 正式装配已改用 Rust，旧核心已退役；开发数据与最终验收待收尾 |
+| 7. 离线收尾 | 两端安装包、完整功能旅程和文档完成 | 完整离线旅程进行中，安装包与原生读屏待验收 |
 
 接入阶段通过离线演示入口逐步完成，完整功能接通后切换；最终不保留旧 Dart harness 回退执行路径。
 
@@ -73,7 +73,7 @@ Rust 存储切换后删除 drift、drift_dev、build_runner、Agent 数据库生
 
 原生入口为 `integration_test/agent_rust_offline_journey_test.dart`：模型使用预置回包，FRB、Rust 核心、业务工具、主库文件和 JSONL 使用正式实现。流程覆盖工具发现、三种权限、流式回复、已接纳保存期间的页面关闭、排队、停止继续、退出及重新打开数据。
 
-Rust 工具链版本与目标维护在 `rust/rust-toolchain.toml`；手动 Cargo 命令从 `rust/` 目录运行。Flutter native assets hook 使用同一工具链，Android 编译使用项目当前最低 API，不提升 Android 基线。Android 的 `SkedApplication` 在启动时加载原生库并初始化系统证书验证器，AAR 版本取自 `Cargo.lock` 中的配套发布版本。正式 `AgentApplication` 仍使用现有装配，待全部功能接通后统一切换。
+Rust 工具链版本与目标维护在 `rust/rust-toolchain.toml`；手动 Cargo 命令从 `rust/` 目录运行。Flutter native assets hook 使用同一工具链，Android 编译使用项目当前最低 API，不提升 Android 基线。Android 的 `SkedApplication` 在启动时加载原生库并初始化系统证书验证器，AAR 版本取自 `Cargo.lock` 中的配套发布版本。正式 `AgentApplication` 已接入 Rust；本轮完整功能与安装包验收正在进行。
 
 ## 验收与提交
 

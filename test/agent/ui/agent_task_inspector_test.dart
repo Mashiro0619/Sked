@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_task_inspector.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
@@ -14,7 +14,9 @@ void main() {
       'task details use ${desktop ? "inline desktop" : "narrow bottom sheet"} and share live context',
       (tester) async {
         addTearDown(tester.view.reset);
-        final repository = ConversationRepository(storage: UiMemoryStorage());
+        final repository = MemoryConversationRepository(
+          storage: UiMemoryStorage(),
+        );
         await repository.load();
         final chat = await repository.create(title: 'Inspector');
         final delegate = UiDelegate(repository);
@@ -106,7 +108,9 @@ void main() {
     'an inline inspector moves to a bottom sheet when the window narrows',
     (tester) async {
       addTearDown(tester.view.reset);
-      final repository = ConversationRepository(storage: UiMemoryStorage());
+      final repository = MemoryConversationRepository(
+        storage: UiMemoryStorage(),
+      );
       await repository.load();
       await repository.create(title: 'Resize inspector');
       final delegate = UiDelegate(repository);

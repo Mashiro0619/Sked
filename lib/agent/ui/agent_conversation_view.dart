@@ -33,11 +33,11 @@ import 'agent_selectable_text.dart';
 import 'agent_transcript.dart';
 import 'agent_turn_activity.dart';
 import 'agent_attachment_view.dart';
-import '../attachments/conversation_attachments.dart';
-import '../conversations/conversation_repository.dart';
+import '../attachments/agent_attachment_controller.dart';
+import '../conversations/conversation_view_repository.dart';
 import '../history/conversation_history.dart';
-import '../history/conversation_history_preflight.dart';
-import '../history/conversation_history_service.dart';
+import '../history/conversation_history_errors.dart';
+import '../history/agent_history_controller.dart';
 import '../imports/conversation_file_attachments.dart';
 import '../references/agent_composer_reference.dart';
 import '../references/agent_composer_reference_search.dart';
@@ -84,7 +84,7 @@ typedef AgentWorkspaceLayoutBuilder = Widget Function(
 );
 
 typedef _AgentHistorySource = ({
-  ConversationRepository repository,
+  ConversationViewRepository repository,
   AgentUiDelegate delegate,
   int generation,
   String? selectedId,
@@ -113,14 +113,14 @@ class AgentConversationView extends StatefulWidget {
     this.recoverConversations,
     this.pickAttachment = ConversationFileAttachments.pickFile,
     this.binaryAttachments,
-    this.pickBinaryAttachment = ConversationAttachments.pickFile,
+    this.pickBinaryAttachment = pickAgentBinaryAttachment,
     this.history,
     this.onRegenerateReply,
     this.createReferenceSearch,
     this.validateReference,
     this.updateComposerReferences,
   });
-  final ConversationRepository repository;
+  final ConversationViewRepository repository;
   final AgentUiDelegate delegate;
   final bool showTitle;
   final bool fullWorkspace;
@@ -146,9 +146,9 @@ class AgentConversationView extends StatefulWidget {
   final String Function()? readDatasetGeneration;
   final Future<void> Function()? recoverConversations;
   final Future<PickedTextFile?> Function() pickAttachment;
-  final ConversationAttachments? binaryAttachments;
+  final AgentAttachmentController? binaryAttachments;
   final Future<XFile?> Function() pickBinaryAttachment;
-  final ConversationHistoryService? history;
+  final AgentHistoryController? history;
   final Future<void> Function(String conversationId, String messageId)?
   onRegenerateReply;
   final Future<AgentComposerReferenceSearch> Function(String conversationId)?
@@ -272,7 +272,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
 
   Future<void> _binaryAction(
     String id,
-    Future<void> Function(ConversationAttachments service) action,
+    Future<void> Function(AgentAttachmentController service) action,
   ) => _perform('attachment-$id', () async {
     final service = widget.binaryAttachments;
     if (service == null) return;
@@ -300,7 +300,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
 
   VoidCallback? _cancelAttachmentImport(
     String id,
-    ConversationAttachments service,
+    AgentAttachmentController service,
   ) {
     final cancel = service.importCancellation(id);
     if (cancel == null) return null;
@@ -456,7 +456,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         }
       });
 
-  ConversationRepository get _repository => widget.repository;
+  ConversationViewRepository get _repository => widget.repository;
   AgentUiState get _runtime => widget.delegate.state.value;
   AgentUiState? _observedRuntime;
   ValueListenable<AgentUiRunState>? _conversationRun;
@@ -839,11 +839,9 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     setState(() => _drafts[id] = text);
     // Enqueue immediately: removing a panel or route cannot discard a timer's
     // unsaved text. Repository serialization keeps these writes in order.
-    final write = repository
-        .update(id, (current) => current.copyWith(draft: text))
-        .then<void>((_) {
-          if (identical(repository, _repository)) _savedDrafts[id] = text;
-        });
+    final write = repository.updateDraftText(id, text).then<void>((_) {
+      if (identical(repository, _repository)) _savedDrafts[id] = text;
+    });
     _draftWrites[id] = write;
     unawaited(
       write.catchError((Object _) {
@@ -968,10 +966,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       return;
     }
     await _perform('rename', () async {
-      await repository.update(
-        conversation.id,
-        (current) => current.copyWith(title: title),
-      );
+      await repository.rename(conversation.id, title);
     });
   }
 

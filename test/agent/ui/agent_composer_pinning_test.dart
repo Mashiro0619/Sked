@@ -1,13 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/attachments/conversation_attachments.dart';
-import 'package:sked/agent/attachments/attachment_repository.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
+import '../../support/agent_memory_attachments.dart';
+
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_model_picker.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
 import 'package:sked/agent/ui/agent_transcript.dart';
-import 'package:sked/models/agent_settings.dart';
 
 import 'agent_ui_test_support.dart';
 
@@ -21,14 +20,14 @@ void main() {
     8,
     (index) => '第 ${index + 1} 项：保留课程名称、时间和地点。',
   ).join('\n');
-  late ConversationRepository repository;
-  late ConversationAttachments files;
+  late MemoryConversationRepository repository;
+  late MemoryAttachmentController files;
   late UiDelegate delegate;
   late String id;
   Finder key(String value) => find.byKey(ValueKey(value));
 
   Future<void> initialize({bool running = false}) async {
-    repository = ConversationRepository(storage: UiMemoryStorage());
+    repository = MemoryConversationRepository(storage: UiMemoryStorage());
     await repository.load();
     id = (await repository.create(title: 'Pinned composer')).id;
     await repository.update(
@@ -48,9 +47,9 @@ void main() {
         draftAttachmentIds: ['file-0', 'file-1', 'file-2'],
       ),
     );
-    files = ConversationAttachments(
+    files = MemoryAttachmentController(
       conversations: repository,
-      repository: AttachmentRepository(storage: MemoryAttachmentStorage()),
+      repository: MemoryAttachmentReader(storage: UiMemoryAttachmentBytes()),
     );
     delegate = UiDelegate(repository);
     delegate.state.value = AgentUiState(

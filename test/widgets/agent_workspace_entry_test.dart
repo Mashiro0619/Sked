@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,20 +7,23 @@ import 'package:material_ui/material_ui.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/agent/agent_application.dart';
-import 'package:sked/agent/attachments/attachment_repository.dart';
-import 'package:sked/agent/attachments/conversation_attachments.dart';
+import 'package:sked/agent/bridge/conversation_projection.dart'
+    show conversationFromRust;
 import 'package:sked/agent/connection/agent_credential_store.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
-import 'package:sked/agent/history/conversation_history_service.dart';
-import 'package:sked/agent/knowledge/knowledge_service.dart';
+import 'package:sked/agent/bridge/rust_conversation_repository.dart';
+import 'package:sked/agent/bridge/rust_conversation_attachments.dart';
+import 'package:sked/agent/bridge/rust_knowledge_editor_controller.dart';
+import 'package:sked/agent/bridge/rust_agent_ui_delegate.dart';
+
+import '../support/agent_native_fixture.dart' as native;
+
+import 'package:sked/agent/history/agent_history_controller.dart';
 import 'package:sked/agent/provider/provider.dart';
-import 'package:sked/agent/runtime/agent_runtime_controller.dart';
 import 'package:sked/agent/tools/application_tool_host.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/controllers/settings_view_state.dart';
 import 'package:sked/controllers/workspace_view_state.dart';
 import 'package:sked/l10n/app_localizations.dart';
-import 'package:sked/models/agent_settings.dart';
 import 'package:sked/models/app_mode.dart';
 import 'package:sked/screens/adaptive_sked_shell.dart';
 import 'package:sked/screens/agent_connection_settings_page.dart';
@@ -39,38 +43,112 @@ import '../support/agent_workspace_navigation.dart';
 
 Finder _key(String value) => find.byKey(ValueKey(value));
 
-class _Provider extends ProviderClient {
-  final requests = <ProviderRequest>[];
+class _Provider extends native.MemoryAgentCore {
+  final requests = <native.AgentCommand>[];
   final cancellations = <ProviderCancellationToken?>[];
-  final streams = <StreamController<ProviderEvent>>[];
+  final pending = <native.AgentCommand>[];
 
   @override
-  Stream<ProviderEvent> stream(
-    ProviderRequest request, {
-    required String apiKey,
-    ProviderCancellationToken? cancellation,
-  }) {
-    expect(apiKey, 'fixture-key');
-    requests.add(request);
-    cancellations.add(cancellation);
-    final events = StreamController<ProviderEvent>();
-    streams.add(events);
-    return events.stream;
+  Future<native.CommandResult> dispatch({
+    required native.AgentCommand command,
+  }) async {
+    if (command.kind == native.CommandKind.send) return _begin(command);
+    if (command.kind == native.CommandKind.queue) {
+      commands.add(command);
+      pending.add(command);
+      final old = snapshots[command.conversationId]!;
+      final next = native.copyNativeSnapshot(
+        old,
+        sequence: old.sequence + 1,
+        conversation: native.copyNativeConversation(
+          old.conversation,
+          draft: '',
+        ),
+        queuedInputs: [
+          ...old.queuedInputs,
+          native.ViewQueuedInput(
+            id: 'queued-${pending.length}',
+            text: command.text!,
+            createdAt: 1793664000000,
+            mode: native.ViewQueueMode.followUp,
+            attachmentIds: const [],
+            contextReferences: const [],
+          ),
+        ],
+      );
+      publish(next);
+      return native.CommandResult(snapshot: next);
+    }
+    if (command.kind == native.CommandKind.stop) {
+      for (var index = 0; index < requests.length; index++) {
+        if (requests[index].conversationId == command.conversationId) {
+          cancellations[index]?.cancel();
+        }
+      }
+    }
+    return super.dispatch(command: command);
+  }
+
+  native.CommandResult _begin(native.AgentCommand command) {
+    commands.add(command);
+    requests.add(command);
+    cancellations.add(ProviderCancellationToken());
+    final old = snapshots[command.conversationId]!;
+    final next = native.copyNativeSnapshot(
+      old,
+      sequence: old.sequence + 1,
+      conversation: native.copyNativeConversation(
+        old.conversation,
+        draft: '',
+        draftOnly: false,
+        status: native.ViewConversationStatus.running,
+        runId: 'run-${requests.length}',
+      ),
+      messages: [
+        ...old.messages,
+        native.nativeMessageFixture(
+          id: 'user-${requests.length}',
+          role: native.ViewMessageRole.user,
+          text: command.text!,
+        ),
+      ],
+      queuedInputs: const [],
+    );
+    publish(next);
+    return native.CommandResult(snapshot: next);
   }
 
   Future<void> finish(int index) async {
-    streams[index].add(
-      ProviderCompleted(
-        ProviderResponse(
-          text: 'Fixture response',
-          toolCalls: const [],
-          finishReason: 'stop',
-        ),
+    final id = requests[index].conversationId!;
+    final old = snapshots[id]!;
+    final next = native.copyNativeSnapshot(
+      old,
+      sequence: old.sequence + 1,
+      conversation: native.copyNativeConversation(
+        old.conversation,
+        status: native.ViewConversationStatus.idle,
       ),
+      messages: [
+        ...old.messages,
+        native.nativeMessageFixture(
+          id: 'reply-$index',
+          text: 'Fixture response',
+        ),
+      ],
     );
-    await streams[index].close();
+    publish(next);
+    if (pending.isNotEmpty) _begin(pending.removeAt(0));
+  }
+
+  void close() {
+    unawaited(client.shutdown());
   }
 }
+
+String _savedConversationJson(_Provider provider) => jsonEncode([
+  for (final snapshot in provider.source.values)
+    conversationFromRust(snapshot).toJson(),
+]);
 
 /// Navigation fixtures do not execute tools or observe notification scheduling.
 class _ReadOnlyToolHost extends ChangeNotifier implements ApplicationToolHost {
@@ -89,41 +167,33 @@ class _ReadOnlyToolHost extends ChangeNotifier implements ApplicationToolHost {
 
 /// These navigation fixtures never invoke history mutations. The application
 /// history suite exercises those commands with the actual storage owners.
-class _NavigationHistory implements ConversationHistoryService {
+class _NavigationHistory implements AgentHistoryController {
   @override
   dynamic noSuchMethod(Invocation invocation) =>
       throw StateError('Navigation fixtures cannot execute history commands.');
 }
 
-/// Only application composition and storage are substituted. User messages,
-/// run state, mode changes and cancellation use the real runtime controller.
+/// The application consumes fixed native view states for navigation scenarios.
 class _Application extends ChangeNotifier implements AgentApplication {
   _Application();
-  final storage = UiMemoryStorage();
+  @override
+  bool get platformSupported => true;
   final provider = _Provider();
+  _Provider get storage => provider;
   @override
   final ApplicationToolHost tools = _ReadOnlyToolHost();
   @override
-  final ConversationHistoryService history = _NavigationHistory();
+  final AgentHistoryController history = _NavigationHistory();
   @override
-  final attachmentStore = AttachmentRepository(
-    storage: MemoryAttachmentStorage(),
-  );
+  late final RustConversationRepository conversations;
   @override
-  late final binaryAttachments = ConversationAttachments(
-    conversations: conversations,
-    repository: attachmentStore,
-  );
+  late final RustConversationAttachments binaryAttachments;
   @override
-  final knowledgeRepository = AgentKnowledgeRepository(
-    storage: MemoryKnowledgeStorage(),
-  );
+  RustAttachmentReader get attachmentStore => binaryAttachments.repository;
   @override
-  late final knowledge = AgentKnowledgeService(repository: knowledgeRepository);
+  late final RustKnowledgeEditorController knowledge;
   @override
-  late final ConversationRepository conversations;
-  @override
-  late final AgentRuntimeController runtime;
+  late final RustAgentUiDelegate runtime;
   @override
   AgentSettings settings = const AgentSettings(
     enabled: true,
@@ -150,24 +220,31 @@ class _Application extends ChangeNotifier implements AgentApplication {
 
   static Future<_Application> create() async {
     final app = _Application();
-    var sequence = 0;
-    app.conversations = ConversationRepository(
-      storage: app.storage,
-      idGenerator: () => 'conversation-${sequence++}',
+    app.provider.snapshots['first'] = native.nativeConversationFixture(
+      id: 'first',
+      title: 'First conversation',
     );
+    app.provider.selectedId = 'first';
+    app.conversations = RustConversationRepository(app.provider.client);
     await app.conversations.load();
-    await app.conversations.create(title: 'First conversation');
-    app.runtime = AgentRuntimeController(
-      repository: app.conversations,
-      provider: app.provider,
-      attachments: app.attachmentStore,
-      onAttachmentProgress: app.binaryAttachments.transferProgress,
+    app.binaryAttachments = RustConversationAttachments(
+      client: app.provider.client,
+      readConversation: app.conversations.find,
+      publishSnapshot: app.conversations.ingestSnapshot,
+    );
+    app.knowledge = RustKnowledgeEditorController(
+      client: app.provider.client,
+      readDataGeneration: () => 'ui-generation',
+      readRegisteredTools: () => const {},
+    );
+    app.runtime = RustAgentUiDelegate(
+      client: app.provider.client,
       readSettings: () => app.settings,
       readApiKey: (_) async => 'fixture-key',
-      readTools: (_) => const [],
-      executeTool: (_, _, _) => throw StateError('No tools in this fixture'),
       onOpenSettings: () => throw StateError('Host must route settings'),
+      onSnapshot: app.conversations.ingestSnapshot,
     );
+    await app.runtime.loadConversation('first');
     return app;
   }
 
@@ -188,7 +265,11 @@ class _Application extends ChangeNotifier implements AgentApplication {
   Future<void> setEnabled(bool value) async {
     enabledChanges.add(value);
     settings = settings.copyWith(enabled: value);
-    if (!value) runtime.cancelAll();
+    if (!value) {
+      for (final conversation in conversations.conversations) {
+        unawaited(runtime.stop(conversation.id));
+      }
+    }
     runtime.refreshSettings();
     notifyListeners();
   }
@@ -224,12 +305,11 @@ class _Application extends ChangeNotifier implements AgentApplication {
 
   @override
   void dispose() {
-    runtime.dispose();
+    unawaited(runtime.dispose());
     tools.dispose();
     unawaited(binaryAttachments.close());
     binaryAttachments.dispose();
     knowledge.dispose();
-    knowledgeRepository.dispose();
     provider.close();
     conversations.dispose();
     super.dispose();
@@ -245,6 +325,15 @@ Future<void> _until(WidgetTester tester, bool Function() ready) async {
   }
   expect(ready(), isTrue);
 }
+
+// Running status keeps animating; navigation completes when its input is usable.
+Future<void> _untilAgentVisible(WidgetTester tester) => _until(
+  tester,
+  () => _key('agent-composer').hitTestable().evaluate().length == 1,
+);
+
+Future<void> _untilAgentHidden(WidgetTester tester) =>
+    _until(tester, () => find.byType(AgentPage).evaluate().isEmpty);
 
 Future<void> _settleSettingsUi(WidgetTester tester) async {
   await tester.pumpAndSettle();
@@ -447,7 +536,7 @@ void main() {
       await tester.pump();
       await tester.ensureVisible(_key('agent-queue'));
       expect(
-        tester.widget<IconButton>(_key('agent-queue')).onPressed,
+        tester.widget<TextButton>(_key('agent-queue')).onPressed,
         isNotNull,
       );
       await tester.tap(_key('agent-queue'));
@@ -557,20 +646,46 @@ void main() {
           );
           await tester.ensureVisible(_key('agent-mode-picker'));
           await tester.tap(_key('agent-mode-picker'));
-          await tester.pumpAndSettle();
+          await _until(
+            tester,
+            () => _key('agent-mode-full').evaluate().length == 1,
+          );
           await tester.ensureVisible(_key('agent-mode-full'));
+          await _until(
+            tester,
+            () => _key('agent-mode-full').hitTestable().evaluate().length == 1,
+          );
           await tester.tap(_key('agent-mode-full'));
-          await tester.pumpAndSettle();
+          await _until(
+            tester,
+            () =>
+                application.conversations.find(first)!.mode ==
+                    AgentPermissionMode.full &&
+                _key('agent-mode-full').evaluate().isEmpty,
+          );
           expect(
             application.conversations.find(first)!.mode,
             AgentPermissionMode.full,
           );
           await tester.ensureVisible(_key('agent-mode-picker'));
           await tester.tap(_key('agent-mode-picker'));
-          await tester.pumpAndSettle();
+          await _until(
+            tester,
+            () => _key('agent-mode-plan').evaluate().length == 1,
+          );
           await tester.ensureVisible(_key('agent-mode-plan'));
+          await _until(
+            tester,
+            () => _key('agent-mode-plan').hitTestable().evaluate().length == 1,
+          );
           await tester.tap(_key('agent-mode-plan'));
-          await tester.pumpAndSettle();
+          await _until(
+            tester,
+            () =>
+                application.conversations.find(first)!.mode ==
+                    AgentPermissionMode.plan &&
+                _key('agent-mode-plan').evaluate().isEmpty,
+          );
           expect(
             application.conversations.find(first)!.mode,
             AgentPermissionMode.plan,
@@ -578,19 +693,38 @@ void main() {
           await openAgentShellHistory(tester);
           await tester.ensureVisible(_key('agent-history-new'));
           await tester.tap(_key('agent-history-new').hitTestable());
-          await tester.pumpAndSettle();
+          await _until(
+            tester,
+            () =>
+                application.conversations.selectedId != null &&
+                application.conversations.selectedId != first &&
+                _key('workspace-resource-scrim').evaluate().isEmpty &&
+                _key('agent-composer').evaluate().length == 1,
+          );
           final second = application.conversations.selectedId!;
           expect(second, isNot(first));
           await tester.ensureVisible(_key('agent-composer'));
+          await _untilAgentVisible(tester);
           await tester.enterText(_key('agent-composer'), 'Second draft');
           await openAgentShellHistory(tester);
-          await tester.ensureVisible(_key('agent-history-$first'));
-          await tester.tap(_key('agent-history-$first'));
-          await tester.pumpAndSettle();
+          final firstTitle = find.descendant(
+            of: _key('agent-history-$first'),
+            matching: find.text('First conversation'),
+          );
+          await tester.ensureVisible(firstTitle);
+          await tester.tap(firstTitle.hitTestable());
+          await _until(
+            tester,
+            () =>
+                application.conversations.selectedId == first &&
+                _key('workspace-resource-scrim').evaluate().isEmpty &&
+                _key('agent-composer').evaluate().length == 1,
+          );
           await tester.ensureVisible(_key('agent-composer'));
+          await _untilAgentVisible(tester);
           await tester.enterText(_key('agent-composer'), 'Next question');
           await selectAgentShellDestination(tester, 'student');
-          await tester.pumpAndSettle();
+          await _untilAgentHidden(tester);
           expect(
             application.runtime.state.value.runFor(first).isActive,
             isTrue,
@@ -602,10 +736,10 @@ void main() {
           expect(assistant.isOpen, isFalse);
           if (desktop) {
             tester.view.physicalSize = const Size(800, 1000);
-            await tester.pumpAndSettle();
+            await tester.pump();
           }
           await selectAgentShellDestination(tester, 'agent');
-          await tester.pumpAndSettle();
+          await _untilAgentVisible(tester);
           expect(
             tester.widget<TextField>(_key('agent-composer')).controller!.text,
             'Next question',
@@ -634,12 +768,11 @@ void main() {
     testWidgets(
       'application-owned Agent enables and runs in the ${desktop ? 'desktop' : 'phone'} full workspace',
       (tester) async {
-        final storage = UiMemoryStorage();
         final provider = _Provider();
+        final storage = provider;
         final app = await workspaceProvider(
-          agentConversationStorage: storage,
+          agentNativeClient: provider.client,
           agentCredentialStore: MemoryAgentCredentialStore(),
-          agentProvider: provider,
         );
         addTearDown(app.dispose);
         addTearDown(tester.view.reset);
@@ -716,14 +849,14 @@ void main() {
           tester,
           app.workspaceView.activeMode.value,
         );
-        await tester.pumpAndSettle();
+        await _untilAgentHidden(tester);
         if (desktop) tester.view.physicalSize = const Size(720, 1000);
         unawaited(
           AgentPage.openConversation(
             tester.element(find.byType(AdaptiveSkedShell)),
           ),
         );
-        await tester.pumpAndSettle();
+        await _untilAgentVisible(tester);
         expect(app.agent.conversations.selectedId, conversation);
         expect(
           tester.widget<TextField>(_key('agent-composer')).controller!.text,
@@ -739,7 +872,7 @@ void main() {
           app.agent.conversations.find(conversation)!.messages.last.text,
           'Fixture response',
         );
-        expect(storage.source, isNot(contains('fixture-key')));
+        expect(_savedConversationJson(storage), isNot(contains('fixture-key')));
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox.shrink());
         // Drain while the widget test's async zone is still being pumped.
@@ -771,9 +904,15 @@ void main() {
       await tester.tap(_key('agent-send'));
       await _until(tester, () => application.provider.requests.isNotEmpty);
       await tester.enterText(_key('agent-composer'), 'Keep this next question');
-      await tester.pumpAndSettle();
+      await _until(
+        tester,
+        () =>
+            application.conversations.find(id)!.draft ==
+            'Keep this next question',
+      );
       tester.view.physicalSize = const Size(720, 1000);
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await _untilAgentVisible(tester);
       expect(find.byType(AgentPage), findsOneWidget);
       expect(
         _key('workspace-resource-mode-student').hitTestable(),
@@ -789,12 +928,12 @@ void main() {
       );
       await tester.enterText(_key('agent-composer'), 'Edited in full chat');
       await selectAgentShellDestination(tester, 'student');
-      await tester.pumpAndSettle();
+      await _untilAgentHidden(tester);
       expect(find.byType(AgentPage), findsNothing);
       expect(find.byType(AgentAssistantPane), findsNothing);
       expect(assistant.isOpen, isFalse);
       await selectAgentShellDestination(tester, 'agent');
-      await tester.pumpAndSettle();
+      await _untilAgentVisible(tester);
       expect(
         tester.widget<TextField>(_key('agent-composer')).controller!.text,
         'Edited in full chat',
@@ -910,14 +1049,14 @@ void main() {
         'transient-fixture-key',
       );
       expect(
-        application.storage.source,
+        _savedConversationJson(application.storage),
         isNot(contains('transient-fixture-key')),
       );
       await _tapSettingsUi(tester, _key('agent-save-connection'));
       expect(application.suppliedKey, 'transient-fixture-key');
       expect(application.credentialAction, AgentCredentialAction.replace);
       expect(
-        application.storage.source,
+        _savedConversationJson(application.storage),
         isNot(contains('transient-fixture-key')),
       );
       expect(find.byType(AgentConnectionSettingsPage), findsNothing);
@@ -1112,14 +1251,19 @@ void main() {
       final id = application.conversations.selectedId!;
       await tester.enterText(_key('agent-composer'), 'Shared next question');
       await selectAgentShellDestination(tester, 'student');
-      await tester.pumpAndSettle();
+      await _until(
+        tester,
+        () =>
+            app.workspaceView.activeMode == AppMode.student &&
+            find.byType(AgentPage).evaluate().isEmpty,
+      );
       expect(app.workspaceView.activeMode, AppMode.student);
       expect(find.byType(AgentAssistantPane), findsNothing);
       await application.configure(application.settings);
-      await tester.pumpAndSettle();
+      await _untilAgentHidden(tester);
       expect(find.byType(AgentAssistantPane), findsNothing);
       await tester.tap(_key('workspace-agent-entry'));
-      await tester.pumpAndSettle();
+      await _untilAgentVisible(tester);
       expect(find.byType(AgentPage), findsOneWidget);
       expect(application.conversations.selectedId, id);
       expect(

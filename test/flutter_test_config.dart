@@ -3,33 +3,16 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show SynchronousFuture;
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sked/agent/conversations/conversation_storage.dart';
 import 'package:sked/agent/attachments/attachment_storage.dart';
-import 'package:sked/agent/knowledge/knowledge_storage.dart';
-import 'package:sked/agent/store/agent_store.dart';
+import 'package:sked/agent/bridge/rust_agent_bootstrap.dart';
 import 'package:sked/backup/backup_staging_storage.dart';
 import 'package:sked/backup/selective_restore_coordinator.dart';
 import 'package:sked/backup/selective_restore_journal.dart';
 import 'package:sked/services/app_backup_restore_journal.dart';
-
-import 'support/agent_store_test_factory.dart';
-
-class _TestConversationStorage extends ConversationStorage {
-  _TestConversationStorage() : super.base();
-  String? source;
-
-  @override
-  Future<ConversationStorageLoad> load() async =>
-      ConversationStorageLoad(source: source);
-
-  @override
-  Future<void> save(String value, {required int revision}) async {
-    source = value;
-  }
-}
 
 class _TestAppBackupRestoreJournalState {
   String? source;
@@ -106,34 +89,21 @@ class _TestAppBackupRestoreJournal extends AppBackupRestoreJournal {
 
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   final appBackupRestoreJournalState = _TestAppBackupRestoreJournalState();
-  final agentStores = <AgentStore>[];
-  var storeLifecycleZone = Zone.current;
-  AgentStore createStore() {
-    final store = createTestAgentStore(lifecycleZone: storeLifecycleZone);
-    agentStores.add(store);
-    return store;
-  }
-
-  debugSetAgentStoreFactory(createStore);
-  // Defaults remain isolated even when a test constructs AppRuntime directly.
-  // Each test captures a fresh store so late work retains its own old state.
-  debugSetConversationStorageFactory(_TestConversationStorage.new);
+  // Widget/VM tests use explicit view fixtures; real native state belongs to
+  // the isolated Windows/Android integration journey.
+  debugSetRustAgentPlatformSupported(false);
   debugSetAttachmentStorageFactory(MemoryAttachmentStorage.new);
-  debugSetKnowledgeStorageFactory(MemoryKnowledgeStorage.new);
   debugSetBackupStagingStorageFactory(MemoryAttachmentStorage.new);
   debugSetSelectiveRestoreJournalFactory(MemorySelectiveRestoreJournal.new);
   debugSetAppBackupRestoreJournalFactory(
     () => _TestAppBackupRestoreJournal(appBackupRestoreJournalState),
   );
   setUp(() {
-    storeLifecycleZone = Zone.current;
-    debugSetAgentStoreFactory(createStore);
-    final conversations = _TestConversationStorage();
-    debugSetConversationStorageFactory(() => conversations);
+    // Cached asset futures must belong to the current test's async zone.
+    rootBundle.clear();
+    debugSetRustAgentPlatformSupported(false);
     final attachments = MemoryAttachmentStorage();
     debugSetAttachmentStorageFactory(() => attachments);
-    final knowledge = MemoryKnowledgeStorage();
-    debugSetKnowledgeStorageFactory(() => knowledge);
     final backupStaging = MemoryAttachmentStorage();
     debugSetBackupStagingStorageFactory(() => backupStaging);
     final selectiveJournal = MemorySelectiveRestoreJournal();
@@ -142,17 +112,9 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
     FlutterSecureStorage.setMockInitialValues({});
     SharedPreferences.setMockInitialValues({});
   });
-  tearDown(() async {
-    for (final store in agentStores) {
-      await store.close();
-    }
-    agentStores.clear();
-  });
   tearDownAll(() {
-    debugSetAgentStoreFactory(null);
-    debugSetConversationStorageFactory(null);
+    debugSetRustAgentPlatformSupported(null);
     debugSetAttachmentStorageFactory(null);
-    debugSetKnowledgeStorageFactory(null);
     debugSetBackupStagingStorageFactory(null);
     debugSetSelectiveRestoreJournalFactory(null);
     debugSetAppBackupRestoreJournalFactory(null);

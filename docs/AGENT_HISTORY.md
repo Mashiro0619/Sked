@@ -8,17 +8,19 @@
 
 消息、轮次、运行和操作绑定使用稳定身份。业务回执保存在其业务拥有者中，聊天中的自然语言不能制造已保存或已授权的事实。操作 ID 由宿主绑定到原始工具调用，模型不用复制新操作身份。
 
-新的 Agent 会话快照使用版本 9。正式存储是按行 SQLite；快照用于显式备份和恢复目标。旧 Agent 文件在一次切换中提取未决写入证据，完成真实回执核对后重建，不恢复旧预算或旧 notice 指令执行路径。
+会话事实保存在原生追加式 JSONL，SQLite 只保存可重建索引。新格式归档由 Rust 编解码；未发布的旧 Agent 开发档案直接重建，不保留旧格式兼容。
 
 ## 编辑并重做
 
 编辑历史请求时先固定受影响轮次、附件、引用及对应业务操作。全部逆变更在写入前核对；任一真实冲突使整段修改保持未执行。
 
-主库和知识库各自提交自己的净逆变更与回执。跨库阶段由历史批次和独立恢复标记记录。已经开始保存后发生中断，继续读取原批次与实际回执，不重新生成一套撤销操作。
+历史维护租约先关闭普通写入入口并排空其他运行；主库和知识库各自提交自己的净逆变更与回执。跨库阶段由历史批次和独立恢复标记记录。已经开始保存后发生中断，继续读取原批次与实际回执，不重新生成一套撤销操作。
 
 逆变更完成后，在同一次会话事务中保存旧历史版本、发布编辑后的请求并切换重做阶段。后续旧请求不会自动重放。重做失败或停止后，显式继续沿用批次和已经完成的撤销；新的运行尝试单独记录服务用量。
 
 “结束重做”结束后续重做流程，并保留实际已经保存的结果与历史。取消尚未开始的批次清理其未执行票据，不改变业务正文。已保存但结果未知的写入须先核对。
+
+待继续的重做批次保留原入口，新消息、重新生成、手动压缩和操作卡等待该批次继续或结束。接纳前先核对已保存回执，再按当前会话状态复核。
 
 已经接纳的回答在正常停止时保存为唯一工具结果，并消费待回答记录。若进程中断时只保存了答案、尚未发布工具结果，重启和历史重做从这份持久记录补齐原工具身份；上下文已变化时保留答案并标记其原上下文。
 
@@ -32,7 +34,7 @@
 
 ## 存储与恢复
 
-原始与退役历史版本的消息、工具调用、运行和轮次分别存行，编辑一个会话不重写其他聊天。历史数量、批次数、操作数和正文长度没有人为容量门槛。
+原始与退役历史版本的消息、工具调用、运行和轮次作为会话事务追加到 JSONL，编辑一个会话不重写其他聊天。历史数量、批次数、操作数和正文长度没有人为容量门槛。
 
 输入队列独立存储，尚未执行的要求不会伪装成工具或 notice 消息。摘要记录来源范围并保留原文；分页与摘要都不删除协议历史。附件回收同时考虑当前消息、队列、草稿、旧版本与待重做请求。
 
@@ -40,9 +42,4 @@
 
 ## 验证入口
 
-- [范围与归属](../test/agent/history/conversation_history_preflight_test.dart)、[重做协调器](../test/agent/history/conversation_redo_coordinator_test.dart)。
-- [主库逆变更](../test/agent/history/conversation_main_undo_test.dart)、[知识逆变更](../test/agent/history/knowledge_history_undo_test.dart)。
-- [文字重生成](../test/agent/history/conversation_reply_regeneration_test.dart)、[应用组合](../test/agent/history/conversation_history_application_test.dart)。
-- [SQLite 历史与分页](../test/agent/store/agent_store_test.dart)、[历史标记重开](../test/agent/history/conversation_history_marker_test.dart)、[旧写入切换证据](../test/agent/history/conversation_legacy_preference_recovery_test.dart)。
-
-确定性协议、文件故障注入、组件交互、真实模型和原生平台分别记录证据；正式验收以当前源码的完整场景为准。
+[原生历史流程](../rust/src/runtime/history.rs)与[主库逆变更](../test/agent/history/conversation_main_undo_test.dart)维护各自的保存契约。回包丢失、逆变更恢复、稳定批次和原始消息身份通过同一 [Rust 离线旅程](../rust/src/runtime/journey.rs)验证；Flutter 与 FRB 组合通过 [正式原生旅程](../integration_test/agent_rust_offline_journey_test.dart)验证。

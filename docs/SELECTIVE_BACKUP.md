@@ -14,9 +14,9 @@
 
 ## 新归档格式
 
-新 ZIP 使用选择性备份版本 2，manifest 另外声明 `agentSchema: sked-agent-records` 与 `agentVersion: 1`。逐对象 JSON 和按摘要命名的二进制文件分别保存。长度、SHA-256、对象依赖、唯一身份及归档路径参与校验，ZIP 内容不解压成任意本机路径。
+新 ZIP 使用选择性备份版本 2，manifest 另外声明 `agentSchema: sked-agent-records` 与 `agentVersion: 2`。Agent 对象直接保存 Rust 导出的便携会话快照、知识记录和附件元数据；Dart 负责对象选择、依赖映射和 ZIP 包装。逐对象 JSON 和按摘要命名的二进制文件分别保存。长度、SHA-256、对象依赖、唯一身份及归档路径参与校验，ZIP 内容不解压成任意本机路径。
 
-旧 v1 ZIP 中仅业务分组的归档继续读取；包含旧 Agent 聊天、知识或附件时明确报告版本不支持。旧完整业务 JSON 和文本入口继续进入对象选择，不从兼容默认值补造 Agent 配置。
+旧 v1 ZIP、声明旧 Agent 版本但只包含业务分组的 v2 ZIP 继续读取；包含旧 Agent 聊天、知识或附件时明确报告版本不支持。旧完整业务 JSON 和文本入口继续进入对象选择，不从兼容默认值补造 Agent 配置。
 
 对象数量、消息数量、单文件、单对象、清单及总字节数不再使用旧固定容量门槛。分页、折叠和预览只影响加载与展示。损坏、摘要不符、未知版本、未声明文件、重复身份或循环依赖按实际问题拒绝。
 
@@ -36,15 +36,13 @@
 
 恢复先排空已接纳写入并冻结参与拥有者，固定对象映射、数据世代和每个目标。二进制先进入专用暂存。历史撤销与备份恢复共用维护入口，不同时执行两个互相覆盖的恢复。
 
-主库、凭据、学校站点、设备偏好、知识和聊天按已登记阶段保存。SQLite 的聊天或知识目标、版本和恢复摘要在同一个数据库事务内提交；协调器读取版本和恢复标记核验，不在仓储保存后再次整档编码读回。事务失败时记录与标记一起回滚。
+主库、凭据、学校站点、设备偏好、知识和聊天按已登记阶段保存。会话目标和恢复摘要进入同一次 JSONL 提交，知识目标和恢复摘要进入同一个 SQLite 事务。协调器通过 Rust 核对固定目标与恢复标记，不在 Dart 中重建原生摘要算法。
 
 跨库 journal 保留固定目标和进度。重启或“继续恢复”读取实际已保存结果，跳过完成步骤，不重新生成 ID 或重放效果。全部阶段确认后清理暂存和 journal，并刷新正常的数据视图。数据库 marker 作为已提交事实保留，阶段回包丢失时仍可核对。
 
 Agent 发起的完整或选择性恢复在各自已有的 journal 中固定本次操作的完成账本，复用既有主库目标。所有参与者确认后才保存最终回执，再清理 journal。最终回执保存失败时，恢复继续完成同一目标；原操作身份、请求摘要、恢复 ID 和前后数据世代共同绑定这条记录，其他旧世代操作保持失效。完整 JSON 恢复 journal 使用版本 3 保存这份完成账本，继续读取版本 1、2；回执已保存但回包丢失或 journal 清理失败时，重启核对同一账本并跳过已完成的业务写入。
 
-原生跨库 journal 继续由专用文件拥有者保存；它不承担正常聊天或知识的日常持久化。该协调记录与 Agent SQLite 的事务职责不同。
-
-升级时若已有旧版恢复 journal，继续其已经接纳的主库、凭据、站点和设备设置阶段。旧知识与会话目标通过一次性退休 marker 确认重建，原 journal 的固定目标和校验摘要保持不变；不会把旧聊天的运行权限或队列装入新库。已完成的旧阶段也参与核对，主库旧格式先按正式升级规则归一后比较。旧 Agent 文件仍由切换流程核对未决回执后统一清理。
+原生跨库 journal 继续由专用文件拥有者保存；它不承担正常聊天或知识的日常持久化。Agent 恢复阶段只接受当前原生格式。
 
 Agent 使用 `backups.inspect` 查看范围、`exports.generate` 生成产物、`exports.write` 保存文件及 `backups.restore` 恢复选中对象。业务动作各用一次模型调用，权限确认在调用中完成。发起恢复的运行在排空时排除自身，已经接纳的恢复由应用继续核对。
 
@@ -52,4 +50,4 @@ Agent 使用 `backups.inspect` 查看范围、`exports.generate` 生成产物、
 
 ## 验证入口
 
-[格式与大对象集合](../test/backup/selective_backup_codec_test.dart)、[选择规划](../test/backup/selective_backup_planner_test.dart)、[业务合并](../test/backup/selective_backup_app_data_test.dart)、[协调器](../test/backup/selective_restore_coordinator_test.dart)、[应用组合](../test/backup/selective_backup_service_test.dart)、[SQLite 重开恢复](../test/backup/selective_backup_recovery_test.dart)、[旧恢复切换](../test/backup/legacy_agent_restore_test.dart)、[事务 marker 回滚](../test/agent/store/agent_store_test.dart)、[草稿边界](../test/backup/backup_draft_boundary_test.dart)、[工具调用](../test/backup/selective_backup_tools_test.dart)和[选择页面](../test/backup/selective_backup_page_test.dart)覆盖对应行为。文件选择器、浏览器持久化和原生设备验收使用各平台真实入口。
+[格式与大对象集合](../test/backup/selective_backup_codec_test.dart)、[选择规划](../test/backup/selective_backup_planner_test.dart)、[原生附件引用重绑](../test/backup/selective_backup_reference_test.dart)、[业务合并](../test/backup/selective_backup_app_data_test.dart)和[协调器](../test/backup/selective_restore_coordinator_test.dart)覆盖对应业务与传输行为。原生存储和 FRB 接入通过同一[离线原生旅程](../integration_test/agent_rust_offline_journey_test.dart)验证。文件选择器和原生设备验收使用各平台真实入口。

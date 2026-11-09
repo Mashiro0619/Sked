@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 
+import '../support/agent_native_fixture.dart' as native;
 import '../support/workspace_harness.dart';
 
 void main() {
@@ -116,7 +117,10 @@ void main() {
         t.view.devicePixelRatio = 1;
         t.view.physicalSize = const Size(320, 850);
         addTearDown(t.view.reset);
-        final provider = await workspaceProvider(locale: 'zh');
+        final provider = await workspaceProvider(
+          locale: 'zh',
+          agentNativeClient: native.MemoryAgentCore().client,
+        );
         addTearDown(provider.dispose);
         await t.pumpWidget(
           WorkspaceHarness(
@@ -165,6 +169,8 @@ void main() {
         expect(t.widget<NavigationBar>(bar).selectedIndex, 1);
         expect(provider.workspaceView.activeMode, AppMode.general);
         expect(t.takeException(), isNull);
+        await t.pumpWidget(const SizedBox.shrink());
+        await provider.agent.quiesce();
       },
       variant: const TargetPlatformVariant({TargetPlatform.android}),
     );

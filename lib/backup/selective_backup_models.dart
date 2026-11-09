@@ -168,6 +168,17 @@ class BackupRecord {
         backupInvalid('Invalid device preference group.');
       }
     }
+    if (key.kind == BackupObjectKind.skill ||
+        key.kind == BackupObjectKind.memory) {
+      if (this.data['id'] != key.id || this.data['kind'] != key.kind.name) {
+        backupInvalid('Native knowledge identity mismatch.');
+      }
+    }
+    if (key.kind == BackupObjectKind.attachment &&
+        (this.data['id'] != key.id ||
+            binaryDigest != null && this.data['sha256'] != binaryDigest)) {
+      backupInvalid('Native attachment identity or digest mismatch.');
+    }
     if (this.dependencies.toSet().length != this.dependencies.length ||
         this.dependencies.contains(key)) {
       backupInvalid('Invalid backup object dependencies.');
@@ -315,7 +326,10 @@ class SelectiveBackupBundle {
       }
       if (record.key.kind == BackupObjectKind.conversation) {
         final definitions = record.data['attachments'];
-        if (definitions is! List || record.data['id'] != record.key.id) {
+        final conversation = record.data['conversation'];
+        if (definitions is! List ||
+            conversation is! Map ||
+            conversation['id'] != record.key.id) {
           backupInvalid(
             'Invalid portable conversation attachment definitions.',
           );
@@ -369,7 +383,7 @@ class SelectiveBackupBundle {
       if (digest != null) {
         final binary = this.binaries[digest];
         if (binary == null ||
-            record.data['digest'] != digest ||
+            record.data['sha256'] != digest ||
             record.data['byteLength'] != binary.length) {
           backupInvalid('Attachment bytes do not match their metadata.');
         }

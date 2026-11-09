@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import '../../application/external_operation_coordinator.dart';
@@ -5,9 +6,12 @@ import '../../application/mutation_coordinator.dart' show mutationDigest;
 import '../../application/mutation_draft.dart';
 import '../../application/operation_contracts.dart';
 import '../../utils/unique_id.dart';
-import '../conversations/conversation_repository.dart';
+import '../bridge/conversation_projection.dart';
+import '../bridge/generated/api/contracts.dart' as native;
+import '../bridge/rust_agent_ui_delegate.dart';
+import '../bridge/rust_conversation_repository.dart';
+import '../conversations/conversation_models.dart';
 import '../provider/provider.dart';
-import '../runtime/agent_runtime_controller.dart';
 import 'application_tool_host.dart';
 import 'platform_tool_adapters.dart';
 import 'workflow_tool_adapters.dart';
@@ -15,8 +19,8 @@ import 'workflow_tool_adapters.dart';
 ConversationToolAdapters registerConversationTools(
   ApplicationToolHost host, {
   required ExternalOperationCoordinator external,
-  required ConversationRepository repository,
-  required AgentRuntimeController runtime,
+  required RustConversationRepository repository,
+  required RustAgentUiDelegate runtime,
   required PlatformToolAdapters platformTools,
   String Function()? idGenerator,
 }) {
@@ -44,9 +48,17 @@ class ConversationToolAdapters {
 
   final ApplicationToolHost _host;
   final ExternalOperationCoordinator _external;
-  final ConversationRepository _repository;
-  final AgentRuntimeController _runtime;
+  final RustConversationRepository _repository;
+  final RustAgentUiDelegate _runtime;
   final String Function() _id;
+  final _pendingOperations = <String, Future<void>>{};
+  final _pendingErrors = <String, Object>{};
+
+  Future<void> waitForPendingOperations() async {
+    while (_pendingOperations.isNotEmpty) {
+      await Future.wait(_pendingOperations.values.toList());
+    }
+  }
 
   /// Each persisted field has an explicit management owner. Adding a model
   /// field requires updating this classification and the coverage assertion.
@@ -59,6 +71,8 @@ class ConversationToolAdapters {
     'mode': 'user_permission_control',
     'status': 'runtime_lifecycle',
     'archived': 'conversations.archive',
+    'pinned': 'user_history_organization',
+    'titleGeneration': 'runtime_title_generation',
     'draft': 'user_input_queue',
     'connectionFingerprint': 'private_endpoint_binding',
     'runId': 'runtime_lifecycle',
@@ -160,12 +174,14 @@ class ConversationToolAdapters {
                 final order = a.createdAt.compareTo(b.createdAt);
                 return order == 0 ? a.id.compareTo(b.id) : order;
               });
-        final offset = _integer(args, 'offset', 0, 0, items.length);
-        final limit = _integer(args, 'limit', 20, 1, 50);
+        final offset = _integer(args, 'offset', 0, 0, null);
+        final limit = _integer(args, 'limit', 20, 1, null);
         final end = (offset + limit).clamp(0, items.length);
         return {
           'conversations': await Future.wait(
-            items.sublist(offset, end).map((item) => _readSummary(item.id)),
+            items
+                .sublist(offset.clamp(0, items.length), end)
+                .map((item) => _readSummary(item.id)),
           ),
           'offset': offset,
           'total': items.length,
@@ -214,7 +230,9 @@ class ConversationToolAdapters {
         final conversation = _requireConversation(
           _text(args, 'conversationId'),
         );
-        return _runtime.describeRun(conversation.id);
+        await _runtime.loadConversation(conversation.id);
+        await _repository.read(conversation.id);
+        return _describeRun(conversation.id);
       },
       required: ['conversationId'],
     );
@@ -311,9 +329,8 @@ class ConversationToolAdapters {
           }
 
           checkQueuedCreate();
-          final value = await _repository.create(
+          final value = await _repository.createManagedConversation(
             title: title,
-            titleWasEdited: true,
             mode: mode,
             modelSelection: modelSelection,
             id: id,
@@ -343,7 +360,7 @@ class ConversationToolAdapters {
         : target.archived;
     if (archived is! bool) _invalid('archived must be a boolean.');
     if (action == 'runs.resume') {
-      if (_runtime.isRunning(id)) {
+      if (_isRunning(id)) {
         throw const OperationProblem(
           OperationErrorCode.busy,
           'The conversation already has a run.',
@@ -352,7 +369,7 @@ class ConversationToolAdapters {
       if (target.archived) {
         _invalid('Restore the archived conversation before resuming it.');
       }
-      if (!target.messages.any(
+      if (!target.executionMessages.any(
         (message) => message.role == ConversationRole.user,
       )) {
         _invalid('Resume requires an existing user request.');
@@ -392,12 +409,12 @@ class ConversationToolAdapters {
       validate: () {
         final current = _requireConversation(id);
         if (_targetVersion(current, action) != version) _conflict();
-        if (action == 'runs.resume' && _runtime.isRunning(id)) _conflict();
+        if (action == 'runs.resume' && _isRunning(id)) _conflict();
       },
-      execute: (_) async {
+      execute: (operation) async {
         final acceptedMode = scope.policy.mode;
         final stopsCallingRun =
-            _runtime.conversationForScope(scope)?.id == id &&
+            _host.conversationForScope(scope)?.id == id &&
             (action == 'conversations.delete' ||
                 action == 'conversations.archive' && archived);
         void checkQueuedTarget(AgentConversation current) {
@@ -416,30 +433,22 @@ class ConversationToolAdapters {
         checkQueuedTarget(_requireConversation(id));
         switch (action) {
           case 'conversations.rename':
-            await _repository.update(id, (current) {
-              checkQueuedTarget(current);
-              return current.copyWith(title: title, titleWasEdited: true);
-            });
+            checkQueuedTarget(_requireConversation(id));
+            await _repository.rename(id, title);
           case 'conversations.archive':
-            await _runtime.setArchived(
-              id,
-              archived,
-              validate: checkQueuedTarget,
+            return _deferManagement(
+              operation,
+              () => _runtime.setArchived(id, archived),
             );
           case 'conversations.delete':
-            // Never await a run from inside this serial external effect: it
-            // may be waiting for another effect queued behind this one.
-            await _runtime.deleteConversation(id, validate: checkQueuedTarget);
-            return _applied({
-              'conversationId': id,
-              'deleted': _repository.find(id) == null,
-              'operationReceiptsRetained': true,
-              'acceptedWritesMayFinish': true,
-            });
+            return _deferManagement(
+              operation,
+              () => _repository.delete(id, validate: checkQueuedTarget),
+            );
           case 'runs.stop':
             await _runtime.stop(id);
             return _applied({
-              ..._runtime.describeRun(id),
+              ..._describeRun(id),
               'stopRequested': true,
               'acceptedWritesMayFinish': true,
             });
@@ -518,10 +527,17 @@ class ConversationToolAdapters {
   Future<ExternalEffectResult> _readBack(
     ExternalOperationContext operation,
   ) async {
-    if (!_repository.canWrite) return _unknown();
     final args = operation.arguments;
     final id = args['conversationId'] as String;
-    final target = _repository.find(id);
+    final result = await _repository.client.query(
+      native.AgentQuery(
+        kind: native.QueryKind.readConversation,
+        conversationId: id,
+      ),
+    );
+    final target = result.snapshot == null
+        ? null
+        : conversationFromRust(result.snapshot!);
     if (operation.action == 'conversations.delete') {
       return target == null
           ? _applied({
@@ -537,30 +553,43 @@ class ConversationToolAdapters {
       'conversations.rename' => target.title == args['title'],
       'conversations.archive' => target.archived == args['archived'],
       'runs.stop' =>
-        !_runtime.isRunning(id) ||
-            _runtime.describeRun(id)['stopRequested'] == true,
-      'runs.resume' => target.runId == args['runId'],
+        result.presentation?.active == false ||
+            target.status == ConversationStatus.stopping,
+      'runs.resume' => target.runs.any((run) => run.id == args['runId']),
       _ => false,
     };
     return applied
         ? _applied({
-            'conversation': await _readSummary(target.id),
+            'conversation': _summary(
+              target,
+              active: result.presentation?.active,
+            ),
             if (operation.action.startsWith('runs.'))
-              'run': _runtime.describeRun(id),
+              'run': {
+                'runId': target.runId,
+                'active': result.presentation?.active,
+                'canContinue': result.presentation?.canContinue,
+                'queuedInputs': target.queuedInputs.length,
+              },
           })
-        : _unknown();
+        : ExternalEffectResult(
+            state: ExternalEffectState.unknown,
+            details: {
+              'code': 'conversationOutcomeUnknown',
+              if (_pendingErrors[operation.operationId] case final error?)
+                'message': error.toString(),
+            },
+          );
   }
 
   Future<Map<String, Object?>> _readSummary(String id) async {
     _requireConversation(id);
-    final statistics = await _repository.statistics(id);
-    return _summary(_requireConversation(id), statistics: statistics);
+    final conversation = await _repository.read(id);
+    await _runtime.loadConversation(id);
+    return _summary(conversation);
   }
 
-  Map<String, Object?> _summary(
-    AgentConversation item, {
-    ConversationStatistics? statistics,
-  }) => {
+  Map<String, Object?> _summary(AgentConversation item, {bool? active}) => {
     'id': item.id,
     'title': item.title,
     'archived': item.archived,
@@ -568,12 +597,58 @@ class ConversationToolAdapters {
     'permissionMode': item.mode.name,
     'createdAt': item.createdAt.toUtc().toIso8601String(),
     'updatedAt': item.updatedAt.toUtc().toIso8601String(),
-    'messageCount': statistics?.messageCount ?? item.messages.length,
-    'sourceCount': statistics?.sourceCount ?? item.sources.length,
+    'messageCount': item.messages.length,
+    'sourceCount': item.sources.length,
     'hasDraft': item.draft.isNotEmpty,
-    'runActive': _runtime.isRunning(item.id),
-    'usage': statistics?.usage ?? summarizeConversationUsage(item.runs),
+    'runActive': active ?? _isRunning(item.id),
+    'usage': summarizeConversationUsage(item.runs),
   };
+
+  bool _isRunning(String id) => _runtime.state.value.runFor(id).isActive;
+
+  Map<String, Object?> _describeRun(String id) {
+    final conversation = _requireConversation(id);
+    final run = _runtime.state.value.runFor(id);
+    return {
+      'conversationId': id,
+      'runId': conversation.runId,
+      'active': run.isActive,
+      'status': conversation.status.name,
+      'stopRequested': conversation.status == ConversationStatus.stopping,
+      'queuedInputs': conversation.queuedInputs.length,
+      'usage': summarizeConversationUsage(conversation.runs),
+    };
+  }
+
+  ExternalEffectResult _deferManagement(
+    ExternalOperationContext operation,
+    Future<void> Function() action,
+  ) {
+    final id = operation.operationId;
+    _pendingOperations[id] ??= Future<void>.sync(action)
+        .catchError((Object error) {
+          _pendingErrors[id] = error;
+        })
+        .then<void>((_) async {
+          try {
+            await _external.reconcile(operationId: id, readBack: _readBack);
+          } catch (error) {
+            _pendingErrors[id] = error;
+          }
+        })
+        .whenComplete(() {
+          unawaited(_pendingOperations.remove(id));
+        });
+    return ExternalEffectResult(
+      state: ExternalEffectState.pending,
+      details: {
+        'conversationId': operation.arguments['conversationId'],
+        'accepted': true,
+        'completed': false,
+        'operationId': id,
+      },
+    );
+  }
 
   AgentDataArtifact _artifact(
     AgentConversation conversation,
@@ -658,7 +733,7 @@ ExternalEffectResult _unknown() => ExternalEffectResult(
 );
 const _string = {'type': 'string'};
 const _offset = {'type': 'integer', 'minimum': 0};
-const _limit = {'type': 'integer', 'minimum': 1, 'maximum': 50};
+const _limit = {'type': 'integer', 'minimum': 1};
 void _keys(Map<String, Object?> args, Set<String> allowed) {
   if (args.keys.any((key) => !allowed.contains(key))) {
     _invalid('Unexpected tool argument.');
@@ -679,10 +754,10 @@ int _integer(
   String key,
   int fallback,
   int min,
-  int max,
+  int? max,
 ) {
   final value = args[key] ?? fallback;
-  if (value is! int || value < min || value > max) {
+  if (value is! int || value < min || max != null && value > max) {
     _invalid('$key is outside its bounds.');
   }
   return value;

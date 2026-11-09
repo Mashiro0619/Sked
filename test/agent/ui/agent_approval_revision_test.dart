@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
 import 'package:sked/l10n/app_localizations.dart';
@@ -9,7 +9,7 @@ import 'package:sked/application/operation_contracts.dart';
 import 'agent_ui_test_support.dart';
 
 void main() {
-  late ConversationRepository repository;
+  late MemoryConversationRepository repository;
   late UiDelegate delegate;
   late String id;
   late AgentUiApproval plan;
@@ -31,7 +31,7 @@ void main() {
   }
 
   Future<void> initialize({String draft = '', bool http = false}) async {
-    repository = ConversationRepository(storage: UiMemoryStorage());
+    repository = MemoryConversationRepository(storage: UiMemoryStorage());
     await repository.load();
     id = (await repository.create(title: 'Review course change')).id;
     if (draft.isNotEmpty) {

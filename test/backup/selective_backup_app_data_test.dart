@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sked/agent/conversations/conversation_models.dart';
-import 'package:sked/agent/knowledge/knowledge_models.dart';
+import 'package:sked/agent/attachments/attachment_models.dart';
 import 'package:sked/application/operation_contracts.dart';
+import 'package:sked/backup/selective_backup_agent_data.dart';
 import 'package:sked/backup/selective_backup_app_data.dart';
 import 'package:sked/backup/selective_backup_models.dart';
 import 'package:sked/backup/selective_backup_planner.dart';
@@ -13,6 +13,72 @@ import 'package:sked/models/school_site_models.dart';
 import 'package:sked/models/timetable_models.dart';
 
 AppData _base() => buildInitialAppData(buildDefaultPeriodTimes());
+Map<String, Object?> _nativeConversation({
+  List<Map<String, Object?>> attachments = const [],
+}) => {
+  'conversation': {
+    'id': 'chat',
+    'title': 'Chat',
+    'mode': 'ask',
+    'status': 'idle',
+    'createdAt': 1793404800000,
+    'updatedAt': 1793404800000,
+    'draft': '',
+    'draftOnly': false,
+    'archived': false,
+    'pinned': false,
+    'titleWasEdited': false,
+    'modelSelection': null,
+    'connectionFingerprint': null,
+    'runId': null,
+    'executionHistoryStart': 2,
+    'draftAttachmentIds': <String>[],
+    'draftReferences': <Object?>[],
+    'titleGeneration': null,
+  },
+  'sequence': 0,
+  'messages': [
+    {
+      'id': 'request',
+      'role': 'user',
+      'text': 'Request',
+      'createdAt': 1793404800000,
+      'toolCalls': <Object?>[],
+      'responseItems': <Object?>[],
+      'attachmentIds': attachments.map((value) => value['id']).toList(),
+      'contextReferences': <Object?>[],
+    },
+    {
+      'id': 'reply',
+      'role': 'assistant',
+      'text': 'Reply',
+      'createdAt': 1793404800000,
+      'toolCalls': <Object?>[],
+      'responseItems': <Object?>[],
+      'attachmentIds': <String>[],
+      'contextReferences': <Object?>[],
+    },
+  ],
+  'attachments': attachments,
+  'runs': <Object?>[],
+  'turns': <Object?>[],
+  'operations': <Object?>[],
+  'queuedInputs': <Object?>[],
+  'queuedControls': <Object?>[],
+  'currentQuestion': null,
+  'plan': null,
+  'checkpoint': null,
+  'contextFailures': <Object?>[],
+  'historyVersions': <Object?>[],
+  'replyRevisions': <Object?>[],
+  'redoBatches': <Object?>[],
+  'attachmentReferences': <Object?>[],
+  'sources': <Object?>[],
+  'handoffs': <Object?>[],
+  'providerHistory': <Object?>[],
+  'extensions': <String, Object?>{},
+};
+
 BackupRestorePlan _prepare(
   AppData source,
   AppData current,
@@ -327,89 +393,63 @@ void main() {
     );
   });
 
-  test('restored transcript remains readable but has no executable history, credential destination or continuation', () {
-    final conversation = AgentConversation(
-      id: 'chat',
-      title: 'Chat',
-      createdAt: DateTime.utc(2026, 10, 31),
-      updatedAt: DateTime.utc(2026, 10, 31),
-      mode: AgentPermissionMode.full,
-      status: ConversationStatus.waitingApproval,
-      runId: 'old-run',
-      connectionFingerprint: 'old-destination',
-      messages: [
-        ConversationMessage(
-          id: 'request',
-          role: ConversationRole.user,
-          text: 'Request',
-          createdAt: DateTime.utc(2026, 10, 31),
-        ),
-        ConversationMessage(
-          id: 'queued',
-          role: ConversationRole.notice,
-          text: '{"kind":"agent_pending_input","version":1,"mode":"followUp","text":"Old request"}',
-          createdAt: DateTime.utc(2026, 10, 31),
-        ),
-        ConversationMessage(
-          id: 'reply',
-          role: ConversationRole.assistant,
-          text: 'Reply',
-          createdAt: DateTime.utc(2026, 10, 31),
-          responseItems: const [
-            {'type': 'message', 'id': 'opaque-provider-item'},
-          ],
-        ),
-      ],
-    );
-    final record = buildSelectiveBackupInventory(
-      appData: _base(),
-      conversations: [conversation],
-    ).byKey[const BackupObjectKey(BackupObjectKind.conversation, 'chat')]!;
-    expect(jsonEncode(record.data), isNot(contains('opaque-provider-item')));
-    final restored = restorePortableConversation(
-      record,
-      currentMode: AgentPermissionMode.plan,
-    );
-    expect(
-      restored.messages.map((message) => message.text),
-      conversation.messages.map((message) => message.text),
-    );
-    expect(restored.executionMessages, isEmpty);
-    expect(restored.mode, AgentPermissionMode.plan);
-    expect(restored.status, ConversationStatus.idle);
-    expect(restored.runId, isNull);
-    expect(restored.connectionFingerprint, isNull);
-    expect(restored.runs, isEmpty);
-    expect(restored.turns, isEmpty);
-    expect(restored.redoBatches, isEmpty);
-  });
+  test(
+    'native conversation inventory preserves snapshot identity and payload',
+    () {
+      final conversation = _nativeConversation();
+      final records = nativeAgentBackupRecords({
+        'conversations': [conversation],
+        'knowledge': <Object?>[],
+        'attachments': <Object?>[],
+      });
+      final record = buildSelectiveBackupInventory(
+        appData: _base(),
+        agentRecords: records,
+      ).byKey[const BackupObjectKey(BackupObjectKind.conversation, 'chat')]!;
+      expect(record.label, 'Chat');
+      expect(record.data, conversation);
+      expect(nativeArchiveParts([record]), {
+        'conversations': [conversation],
+        'knowledge': <Object?>[],
+        'attachments': <Object?>[],
+      });
+    },
+  );
 
   test('selected files are read only when their bytes are explicitly included and checksum verified', () async {
     final bytes = Uint8List.fromList([1, 2, 3]);
-    final attachment = ConversationAttachment(
-      id: 'file',
-      name: 'data.bin',
-      mediaType: 'application/octet-stream',
-      byteLength: 3,
-      digest: backupDigest(bytes),
-    );
-    final chat = AgentConversation(
-      id: 'chat',
-      title: 'Chat',
-      createdAt: DateTime.utc(2026),
-      updatedAt: DateTime.utc(2026),
-      attachments: [attachment],
-    );
+    final attachment = <String, Object?>{
+      'id': 'file',
+      'name': 'data.bin',
+      'mediaType': 'application/octet-stream',
+      'byteLength': 3,
+      'sha256': backupDigest(bytes),
+      'createdAt': 1793404800000,
+    };
+    final chat = _nativeConversation(attachments: [attachment]);
     final inventory = buildSelectiveBackupInventory(
       appData: _base(),
-      conversations: [chat],
+      agentRecords: nativeAgentBackupRecords({
+        'conversations': [chat],
+        'knowledge': <Object?>[],
+        'attachments': [attachment],
+      }),
+    );
+    expect(
+      inventory
+          .byKey[const BackupObjectKey(BackupObjectKind.conversation, 'chat')]!
+          .dependencies,
+      const [BackupObjectKey(BackupObjectKind.attachment, 'file')],
     );
     var reads = 0;
     Future<Uint8List> read(
-      ConversationAttachment _,
+      ConversationAttachment value,
       BackupCancellation? cancellation,
     ) async {
       reads++;
+      expect(value.id, 'file');
+      expect(value.digest, attachment['sha256']);
+      expect(value.byteLength, bytes.length);
       return bytes;
     }
 
@@ -447,24 +487,44 @@ void main() {
     );
   });
 
-  test('portable knowledge includes effective text and enabled state without local receipts or revisions', () {
-    final memory = KnowledgeRecord(
-      kind: KnowledgeKind.memory,
-      id: 'preference',
-      title: 'Preference',
-      body: 'Mornings',
-      revision: 21,
-      enabled: false,
-    );
-    final inventory = buildSelectiveBackupInventory(
-      appData: _base(),
-      knowledge: [memory],
-    );
-    final record = inventory
-        .byKey[const BackupObjectKey(BackupObjectKind.memory, 'preference')]!;
-    expect(record.data['revision'], 0);
-    expect(record.data['enabled'], isFalse);
-    expect(record.data['body'], 'Mornings');
-    expect(record.data, isNot(contains('receipts')));
-  });
+  test(
+    'native knowledge inventory keeps the portable payload and enabled state',
+    () {
+      const memory = <String, Object?>{
+        'kind': 'memory',
+        'id': 'preference',
+        'title': 'Preference',
+        'body': 'Mornings',
+        'summary': '',
+        'revision': 0,
+        'enabled': false,
+        'builtIn': false,
+        'usesOriginal': false,
+        'baseVersion': null,
+        'baseSha256': null,
+        'triggers': <String>[],
+        'sourceKinds': <String>[],
+        'requiredTools': <String>[],
+        'optionalTools': <String>[],
+        'sourceNote': '',
+        'sourceConversationId': null,
+        'sourceMessageId': null,
+        'references': <Object?>[],
+        'expiresAt': null,
+      };
+      final inventory = buildSelectiveBackupInventory(
+        appData: _base(),
+        agentRecords: nativeAgentBackupRecords({
+          'conversations': <Object?>[],
+          'knowledge': [memory],
+          'attachments': <Object?>[],
+        }),
+      );
+      final record = inventory
+          .byKey[const BackupObjectKey(BackupObjectKind.memory, 'preference')]!;
+      expect(record.label, 'Preference');
+      expect(record.data, memory);
+      expect(nativeArchiveParts([record])['knowledge'], [memory]);
+    },
+  );
 }

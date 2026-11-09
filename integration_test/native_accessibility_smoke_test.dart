@@ -702,7 +702,8 @@ void main() {
             'dataIsolation':
                 'WorkspaceHarness memory data, secrets, sites, '
                 'journal, notification runtime, developer and layout preferences; '
-                'AgentNativeSession explicit synthetic memory owners',
+                'AgentNativeSession actual AppRuntime, F: business files and '
+                'native JSONL/SQLite with synthetic data',
             'input':
                 'Synthetic Flutter mouse and key events in a native Windows '
                 'runner; actual native semantics serialization remains enabled',

@@ -16,7 +16,7 @@ BackupRestorePlan _plan() {
       BackupRecord(
         key: const BackupObjectKey(BackupObjectKind.memory, 'memory'),
         label: 'Memory',
-        data: const {'id': 'memory'},
+        data: const {'id': 'memory', 'kind': 'memory'},
       ),
     ],
     roots: const [

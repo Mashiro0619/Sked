@@ -5,7 +5,10 @@ import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/agent_application.dart';
 import 'package:sked/agent/connection/agent_connection_diagnostics.dart';
 import 'package:sked/agent/connection/agent_connection_manager.dart';
-import 'package:sked/agent/knowledge/knowledge_service.dart';
+
+import '../../support/agent_memory_knowledge.dart';
+import '../../support/agent_native_fixture.dart' as native;
+
 import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/ui/agent_knowledge_view.dart';
 import 'package:sked/app_runtime.dart';
@@ -134,7 +137,7 @@ void main() {
           );
           await tester.pumpAndSettle();
           expect(
-            fixture.app.agent.knowledgeRepository.records.single.body,
+            fixture.knowledge.records.single.body,
             'Accepted current memory body',
           );
           expect(find.text(l.agentKnowledgeSaved), findsOneWidget);
@@ -171,7 +174,7 @@ void main() {
       oldUndo();
       await _pumpAsyncFrame(tester);
       expect(fixture.knowledge.undoCalls, isEmpty);
-      expect(fixture.app.agent.knowledgeRepository.records, hasLength(2));
+      expect(fixture.knowledge.records, hasLength(2));
       expect(tester.takeException(), isNull);
     },
   );
@@ -194,15 +197,9 @@ void main() {
       await _pumpUntil(tester, () => fixture.knowledge.undoCalls.length == 1);
       await coverAndReturn(tester, find.byType(AgentKnowledgeView));
       fixture.knowledge.resumeUndo.complete();
-      await _pumpUntil(
-        tester,
-        () => fixture.app.agent.knowledgeRepository.records.length == 1,
-      );
+      await _pumpUntil(tester, () => fixture.knowledge.records.length == 1);
       await tester.pumpAndSettle();
-      expect(
-        fixture.app.agent.knowledgeRepository.records.single.id,
-        fixture.record.id,
-      );
+      expect(fixture.knowledge.records.single.id, fixture.record.id);
       expect(tester.takeException(), isNull);
     },
   );
@@ -572,22 +569,19 @@ class _Fixture {
   final KnowledgeRecord record;
 
   static Future<_Fixture> create() async {
-    final app = await workspaceProvider();
+    final app = await workspaceProvider(
+      agentNativeClient: native.MemoryAgentCore().client,
+    );
     await app.agent.initialize();
     await app.agent.configure(_settings);
-    await app.agent.knowledge.initialize();
-    final record = app.agent.knowledge.newRecord(
+    final knowledge = _HeldKnowledgeService();
+    await knowledge.initialize();
+    final record = knowledge.newRecord(
       KnowledgeKind.memory,
       title: 'Deferred memory',
       body: 'Original stored memory body',
     );
-    await app.agent.knowledge.saveFromUi(
-      app.agent.knowledge.prepareSave(record),
-    );
-    final knowledge = _HeldKnowledgeService(
-      repository: app.agent.knowledgeRepository,
-    );
-    await knowledge.initialize();
+    await knowledge.seed(record);
     return _Fixture(app, knowledge, _DiagnosticApplication(app.agent), record);
   }
 }
@@ -601,8 +595,8 @@ class _HeldRead {
   }
 }
 
-class _HeldKnowledgeService extends AgentKnowledgeService {
-  _HeldKnowledgeService({required super.repository});
+class _HeldKnowledgeService extends MemoryKnowledgeController {
+  _HeldKnowledgeService();
   final reads = <_HeldRead>[];
   final undoCalls = <String>[];
   bool pauseUndo = false;

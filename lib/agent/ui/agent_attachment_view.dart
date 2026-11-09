@@ -6,7 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../../widgets/expressive_dialog.dart';
 import '../../widgets/sked_popup_menu.dart';
 import '../../widgets/sked_task_session.dart';
-import '../attachments/attachment_repository.dart';
+import '../attachments/agent_attachment_controller.dart';
 import 'agent_selectable_text.dart';
 
 String agentAttachmentError(AppLocalizations l, AttachmentError error) =>
@@ -53,7 +53,7 @@ class AgentAttachmentList extends StatefulWidget {
   final String conversationId;
   final List<ConversationAttachment> attachments;
   final List<String> ids;
-  final AttachmentRepository repository;
+  final AgentAttachmentReader repository;
   final bool active;
   final bool interactive;
   final AttachmentDelivery delivery;
@@ -334,7 +334,7 @@ class _AttachmentPreview extends StatefulWidget {
     required this.session,
   });
   final ConversationAttachment attachment;
-  final AttachmentRepository repository;
+  final AgentAttachmentReader repository;
   final SkedTaskSession session;
   @override
   State<_AttachmentPreview> createState() => _AttachmentPreviewState();

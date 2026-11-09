@@ -5,12 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
 import 'package:sked/agent/ui/agent_model_picker.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
 import 'package:sked/agent/ui/agent_ui_style.dart';
 import 'package:sked/l10n/app_localizations.dart';
-import 'package:sked/models/agent_settings.dart';
 import 'package:sked/theme/sked_expressive_theme.dart';
 import 'package:sked/widgets/workspace_frame.dart';
 
@@ -63,7 +62,7 @@ void main() {
     modelId: 'model-a',
     reasoningEffort: AgentReasoningEffort.low,
   );
-  late ConversationRepository repository;
+  late MemoryConversationRepository repository;
   late _ModelDelegate delegate;
   late String id;
   Future<void> initialize(
@@ -74,7 +73,7 @@ void main() {
     bool running = false,
   }) async {
     addTearDown(tester.view.reset);
-    repository = ConversationRepository(storage: UiMemoryStorage());
+    repository = MemoryConversationRepository(storage: UiMemoryStorage());
     await repository.load();
     id = (await repository.create(title: 'Model choice')).id;
     if (currentSelection != null) {

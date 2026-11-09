@@ -151,6 +151,6 @@ Windows 中，Agent 自有的纯文本选择区域在同一个只读语义节点
 - [工作区入口及共享运行回归](../test/widgets/agent_workspace_entry_test.dart)
 - [真实主页返回及共享运行回归](../test/agent/ui/agent_application_host_test.dart)
 - [动画策略切换与状态连续性回归](../test/widgets/expressive_motion_test.dart)
-- [历史重做、回复版本与正式页面回归](../test/agent/history/conversation_history_application_test.dart)
+- [原生历史重做与回复版本](../integration_test/support/agent_rust_history_journey.dart)
 
-组件回归使用受控模型和存储。实际平台的输入法、键盘、窗口控制、读屏及动画观感仍需按[可靠性验证指南](RELIABILITY_BASELINE.md)分别检查，不能以模拟布局替代真实平台结果。
+组件回归使用明确的展示状态与业务数据；正式 Rust 执行和存储由原生离线旅程验证。实际平台的输入法、键盘、窗口控制、读屏及动画观感仍需按[可靠性验证指南](RELIABILITY_BASELINE.md)分别检查，不能以模拟布局替代真实平台结果。

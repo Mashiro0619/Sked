@@ -6,7 +6,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/controllers/settings_commands.dart';
 import 'package:sked/controllers/settings_view_state.dart';
@@ -22,7 +21,7 @@ import 'package:sked/screens/settings_page.dart';
 import 'package:sked/services/update_distribution.dart';
 import 'package:sked/widgets/text_transfer_widgets.dart';
 
-import '../support/memory_conversation_storage.dart';
+import '../support/agent_native_fixture.dart';
 import '../support/notification_test_scope.dart';
 import '../support/workspace_harness.dart';
 
@@ -36,45 +35,11 @@ Finder get _textEditor => find.descendant(
 );
 Finder get _reviewEditor => _key('school-web-source-editor');
 
-class _Conversations extends MemoryConversationStorage {
-  bool fail = false;
-  Future<void> Function()? beforeSave;
-
-  @override
-  Future<void> save(String value, {required int revision}) async {
-    await beforeSave?.call();
-    if (fail) throw StateError('Synthetic handoff storage failure');
-    await super.save(value, revision: revision);
-  }
-}
-
-class _Provider extends ProviderClient {
-  final requests = <ProviderRequest>[];
-
-  @override
-  Stream<ProviderEvent> stream(
-    ProviderRequest request, {
-    required String apiKey,
-    ProviderCancellationToken? cancellation,
-  }) async* {
-    requests.add(request);
-    // The real runtime accepts the reviewed source, but this fixture never
-    // requests a mutation or accesses an external endpoint.
-    yield ProviderCompleted(
-      ProviderResponse(
-        text: 'Please confirm the period times before importing.',
-        toolCalls: const [],
-        finishReason: 'stop',
-      ),
-    );
-  }
-}
-
 class _Fixture {
   _Fixture(this.app, this.provider, this.storage);
   final AppRuntime app;
-  final _Provider provider;
-  final _Conversations storage;
+  final MemoryAgentCore provider;
+  final MemoryAgentCore storage;
   late NavigatorState navigator;
   late ModalRoute<dynamic> rootRoute;
 
@@ -113,14 +78,13 @@ Future<_Fixture> _mount(
   Size size = const Size(390, 844),
   bool enabled = true,
 }) async {
-  final storage = _Conversations();
-  final provider = _Provider();
+  final storage = MemoryAgentCore();
+  final provider = storage;
   final app = await workspaceProvider(
     storage: WorkspaceMemoryStorage(
       buildInitialAppData(buildDefaultPeriodTimes(), localeCode: 'en'),
     ),
-    agentConversationStorage: storage,
-    agentProvider: provider,
+    agentNativeClient: storage.client,
   );
   await app.agent.configure(
     const AgentSettings(
@@ -249,10 +213,10 @@ void main() {
           final data = fixture.app.session.committedData.studentMode.toJson();
           await _openText(tester, settings: settings);
           await _review(tester);
-          expect(fixture.provider.requests, isEmpty);
+          expect(fixture.provider.modelRequests, isEmpty);
           expect(fixture.app.agent.conversations.conversations, isEmpty);
           await _prepare(tester);
-          expect(fixture.provider.requests, isEmpty);
+          expect(fixture.provider.modelRequests, isEmpty);
           expect(fixture.app.session.committedData.studentMode.toJson(), data);
           final reviewed = tester
               .widget<TextField>(_reviewEditor)
@@ -260,7 +224,7 @@ void main() {
               .text
               .trim();
           await _tap(tester, _key('school-web-handoff'));
-          await fixture.app.agent.runtime.waitForIdle();
+          await fixture.app.agent.conversations.waitForPendingWrites();
           await tester.pumpAndSettle();
 
           final conversation =
@@ -272,7 +236,7 @@ void main() {
             l.importTimetableText,
           );
           expect(conversation.messages.first.text, l.schoolWebAgentImportTask);
-          expect(fixture.provider.requests, hasLength(1));
+          expect(fixture.provider.modelRequests, hasLength(1));
           expect(fixture.app.session.committedData.studentMode.toJson(), data);
           expect(fixture.rootRoute.isCurrent, isTrue);
           expect(fixture.navigator.canPop(), isFalse);
@@ -310,7 +274,7 @@ void main() {
     );
     expect(find.text(l.importFailedCheckContent), findsOneWidget);
     expect(tester.widget<TextField>(_textEditor).controller!.text, _source);
-    expect(fixture.provider.requests, isEmpty);
+    expect(fixture.provider.modelRequests, isEmpty);
     expect(fixture.app.agent.conversations.conversations, isEmpty);
     expect(fixture.app.session.committedData.studentMode.toJson(), data);
     expect(tester.takeException(), isNull);
@@ -334,17 +298,16 @@ void main() {
       skipOffstage: false,
     );
     expect(tester.widget<TextField>(original).controller!.text, _source);
-    expect(fixture.provider.requests, isEmpty);
+    expect(fixture.provider.modelRequests, isEmpty);
     expect(fixture.app.agent.conversations.conversations, isEmpty);
     fixture.storage.fail = false;
-    // A failed durable write deliberately closes the repository gate. The
-    // continuation must not bypass recovery or invent a successful handoff.
+    // Retry reads the current native projection before publishing the handoff.
     await fixture.app.agent.conversations.load();
     await _tap(tester, _key('school-web-handoff'));
-    await fixture.app.agent.runtime.waitForIdle();
+    await fixture.app.agent.conversations.waitForPendingWrites();
     await tester.pumpAndSettle();
     expect(fixture.app.agent.conversations.conversations, hasLength(1));
-    expect(fixture.provider.requests, hasLength(1));
+    expect(fixture.provider.modelRequests, hasLength(1));
     expect(_key('agent-composer').hitTestable(), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -357,7 +320,7 @@ void main() {
     await _review(tester);
     await _prepare(tester);
     expect(fixture.app.agent.settings.enabled, isFalse);
-    expect(fixture.provider.requests, isEmpty);
+    expect(fixture.provider.modelRequests, isEmpty);
     expect(fixture.app.agent.conversations.conversations, isEmpty);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
@@ -412,7 +375,7 @@ void main() {
       find.byType(SchoolHtmlImportPage, skipOffstage: false),
       findsNothing,
     );
-    expect(fixture.provider.requests, isEmpty);
+    expect(fixture.provider.modelRequests, isEmpty);
     expect(fixture.app.agent.conversations.conversations, isEmpty);
     expect(find.byType(AgentPage), findsNothing);
     expect(tester.takeException(), isNull);
@@ -454,11 +417,11 @@ void main() {
     final newer = tester.element(_key('text-handoff-newer-destination'));
     release.complete();
     await tester.pumpAndSettle();
-    await fixture.app.agent.runtime.waitForIdle();
+    await fixture.app.agent.conversations.waitForPendingWrites();
     await tester.pumpAndSettle();
     expect(tester.element(_key('text-handoff-newer-destination')), same(newer));
     expect(fixture.app.agent.conversations.conversations, hasLength(1));
-    expect(fixture.provider.requests, hasLength(1));
+    expect(fixture.provider.modelRequests, hasLength(1));
     expect(find.byType(TextImportPage, skipOffstage: false), findsNothing);
     expect(
       find.byType(SchoolHtmlImportPage, skipOffstage: false),
@@ -483,7 +446,7 @@ void main() {
       findsNothing,
     );
     expect(fixture.rootRoute.isCurrent, isTrue);
-    expect(fixture.provider.requests, isEmpty);
+    expect(fixture.provider.modelRequests, isEmpty);
     expect(fixture.app.agent.conversations.conversations, isEmpty);
     expect(find.byType(AgentPage), findsNothing);
     expect(tester.takeException(), isNull);

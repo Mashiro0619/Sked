@@ -1,5 +1,7 @@
 # Offline Agent host benchmarks
 
+> 历史协议：下文记录旧 Dart Agent 实现的测量方法和字段。对应执行入口随 Rust 切换退役，既有报告保留原源码与数据身份。真实模型和性能对照保持暂停；重新开始时须为正式 Rust 装配建立新的固定基线。
+
 `agent_performance_benchmark_test.dart` measures application-owned Agent loading,
 paged read tools, saved context assembly and durable main-store batches in the
 already-running Flutter test host. It uses production implementations with

@@ -7,7 +7,6 @@ import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/agent/attachments/attachment_storage.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
-import 'package:sked/agent/knowledge/knowledge_storage.dart';
 import 'package:sked/backup/selective_restore_coordinator.dart';
 import 'package:sked/services/device_preferences_store.dart';
 import 'package:sked/data/timetable_storage_io.dart';
@@ -21,7 +20,6 @@ import 'package:sked/services/school_site_store_io.dart';
 import 'package:sked/services/secret_store.dart';
 
 import '../test/support/workspace_harness.dart';
-import '../test/support/memory_conversation_storage.dart';
 
 class _Secrets implements SecretStore {
   String value = '';
@@ -36,9 +34,8 @@ class _Secrets implements SecretStore {
 /// Also exercised by the default-storage rejection regression.
 Future<AppRuntime> loadDataLifecycleRuntime(Directory directory) async {
   final provider = AppRuntime(
-    agentConversationStorage: MemoryConversationStorage(),
-    agentAttachmentStorage: MemoryAttachmentStorage(),
-    agentKnowledgeStorage: MemoryKnowledgeStorage(),
+    agentPlatformSupported: false,
+
     agentCredentialStore: MemoryAgentCredentialStore(),
     selectiveRestoreJournal: MemorySelectiveRestoreJournal(),
     backupStagingStorage: MemoryAttachmentStorage(),

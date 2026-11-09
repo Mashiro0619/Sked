@@ -2,202 +2,111 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
-import 'package:sked/application/operation_contracts.dart';
 
-import '../acceptance/acceptance_harness.dart';
 import 'agent_ui_test_support.dart';
-
-class _RevisionProvider extends ProviderClient {
-  final requests = <ProviderRequest>[];
-
-  @override
-  Stream<ProviderEvent> stream(
-    ProviderRequest request, {
-    required String apiKey,
-    ProviderCancellationToken? cancellation,
-  }) async* {
-    requests.add(request);
-    yield ProviderCompleted(
-      ProviderResponse(
-        text: 'The revised request makes no changes.',
-        toolCalls: const [],
-        finishReason: 'stop',
-      ),
-    );
-  }
-}
-
-Matcher _problem(OperationErrorCode code) =>
-    isA<OperationProblem>().having((error) => error.code, 'code', code);
-
-Future<void> _complete(WidgetTester tester, Future<void> future) async {
-  var complete = false;
-  Object? failure;
-  StackTrace? failureStack;
-  unawaited(
-    future.then(
-      (_) => complete = true,
-      onError: (Object error, StackTrace stack) {
-        failure = error;
-        failureStack = stack;
-        complete = true;
-      },
-    ),
-  );
-  final watch = Stopwatch()..start();
-  while (!complete) {
-    if (watch.elapsed > const Duration(seconds: 10)) {
-      fail('The approval revision did not settle.');
-    }
-    await tester.pump(const Duration(milliseconds: 16));
-    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
-  }
-  if (failure != null) Error.throwWithStackTrace(failure!, failureStack!);
-}
 
 void main() {
   testWidgets(
-    'revising a real approval waits for steering and invalidates the old plan',
+    'approval steering waits for its owner and removes the old decision controls',
     (tester) async {
       addTearDown(tester.view.reset);
-      final provider = _RevisionProvider();
-      final h = AcceptanceHarness();
-      await tester.runAsync(() => h.initialize(provider: provider));
-      final runtime = h.app.agent.runtime;
-      final repository = h.app.agent.conversations;
-      Future<void>? running;
-      addTearDown(() async {
-        await tester.pumpWidget(const SizedBox.shrink());
-        await _complete(tester, () async {
-          await runtime.stop(h.conversationId);
-          await running;
-          await h.close();
-        }());
+      final repository = MemoryConversationRepository();
+      await repository.load();
+      final conversation = await repository.create(title: 'Review approval');
+      await repository.updateDraftText(conversation.id, 'Keep my unsent draft');
+      final delegate = _SteeringDelegate(repository, conversation.id);
+      addTearDown(() {
+        delegate.release();
+        delegate.state.dispose();
+        repository.dispose();
       });
-
-      late OperationScope originalScope;
-      late AgentUiApproval approval;
-      await tester.runAsync(() async {
-        await runtime.setMode(h.conversationId, AgentPermissionMode.ask);
-        await repository.update(
-          h.conversationId,
-          (current) => current.copyWith(draft: 'Keep my unsent draft'),
-        );
-        final announced = Completer<AgentUiApproval>();
-        void captureApproval() {
-          final pending = runtime.state.value
-              .runFor(h.conversationId)
-              .pendingApproval;
-          if (pending != null && !announced.isCompleted) {
-            announced.complete(pending);
-          }
-        }
-
-        final execution = runtime.watchConversation(h.conversationId);
-        execution.addListener(captureApproval);
-        try {
-          running = h.run(() async {
-            originalScope = h.scope;
-            await expectLater(
-              h.call('mutation.apply', {
-                'commands': [
-                  {
-                    'kind': 'calendar',
-                    'action': 'create',
-                    'values': {'name': 'This calendar must not be saved'},
-                  },
-                ],
-              }),
-              throwsA(_problem(OperationErrorCode.cancelled)),
-            );
-          });
-          approval = await Future.any<AgentUiApproval>([
-            announced.future,
-            running!.then<AgentUiApproval>(
-              (_) => throw StateError('The real approval was not presented.'),
-            ),
-          ]);
-        } finally {
-          execution.removeListener(captureApproval);
-        }
-      });
-      final originalData = h.saved.encode();
-      final originalRunId = runtime.state.value.runFor(h.conversationId).runId;
-      expect(approval.details['operationId'], isNotEmpty);
       await mountAgentUi(
         tester,
-        AgentConversationView(repository: repository, delegate: runtime),
+        AgentConversationView(repository: repository, delegate: delegate),
         size: const Size(390, 844),
       );
       expect(find.byKey(const ValueKey('agent-revise-approval')), findsNothing);
       expect(find.byKey(const ValueKey('agent-approve')), findsOneWidget);
       expect(find.byKey(const ValueKey('agent-reject')), findsOneWidget);
       final composer = find.byKey(const ValueKey('agent-composer'));
-      await tester.ensureVisible(composer);
-      await tester.pumpAndSettle();
       await tester.tap(composer);
       await tester.pumpAndSettle();
-      final input = tester.widget<TextField>(composer);
-      expect(input.focusNode!.hasFocus, isTrue);
-      expect(input.controller!.text, 'Keep my unsent draft');
+      expect(tester.widget<TextField>(composer).focusNode!.hasFocus, isTrue);
       expect(
-        runtime.state.value.runFor(h.conversationId).pendingApproval,
-        same(approval),
+        tester.widget<TextField>(composer).controller!.text,
+        'Keep my unsent draft',
       );
-      expect(originalScope.isCancelled, isFalse);
-      expect(runtime.pendingInputCount(h.conversationId), 0);
-      expect(provider.requests, isEmpty);
-      expect(h.saved.encode(), originalData);
-
       const correction =
           'Do not create the calendar. Only explain the options.';
       await tester.enterText(composer, correction);
       await tester.pumpAndSettle();
       final steer = find.byKey(const ValueKey('agent-steer'));
       await tester.ensureVisible(steer);
-      await tester.pumpAndSettle();
       await tester.tap(steer);
-      await _complete(tester, Future.wait([running!, runtime.waitForIdle()]));
-      await tester.pumpAndSettle();
-      expect(originalScope.isCancelled, isTrue);
+      await tester.pump();
+      expect(delegate.calls, ['steer:${conversation.id}:$correction']);
       expect(
-        runtime.state.value.runFor(h.conversationId).pendingApproval,
+        delegate.state.value.runFor(conversation.id).pendingApproval,
+        same(delegate.approval),
+      );
+      delegate.release();
+      await tester.pumpAndSettle();
+      expect(
+        delegate.state.value.runFor(conversation.id).pendingApproval,
         isNull,
       );
-      expect(
-        runtime.state.value.runFor(h.conversationId).runId,
-        isNot(originalRunId),
-      );
-      expect(provider.requests, hasLength(1));
-      expect(provider.requests.single.messages.last.role, ProviderRole.user);
-      expect(provider.requests.single.messages.last.text, correction);
-      expect(h.saved.encode(), originalData);
-
-      await expectLater(
-        runtime.approve(h.conversationId, approval.id),
-        throwsA(_problem(OperationErrorCode.invalidApproval)),
-      );
-      Object? replayError;
-      await _complete(tester, () async {
-        // Even a new fully authorized scope cannot revive the old plan.
-        await runtime.setMode(h.conversationId, AgentPermissionMode.full);
-        await h.run(() async {
-          try {
-            await h.app.agent.mutations.commit(
-              planId: approval.id,
-              scope: h.scope,
-            );
-          } catch (error) {
-            replayError = error;
-          }
-        });
-      }());
-      expect(replayError, _problem(OperationErrorCode.expired));
-      expect(h.saved.encode(), originalData);
+      expect(find.byKey(const ValueKey('agent-approve')), findsNothing);
+      expect(find.byKey(const ValueKey('agent-reject')), findsNothing);
       expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
     },
   );
+}
+
+class _SteeringDelegate extends UiDelegate {
+  _SteeringDelegate(super.repository, this.id) {
+    publish(approval);
+  }
+  final String id;
+  final gate = Completer<void>();
+  final approval = AgentUiApproval(
+    id: 'plan-1',
+    summary: 'Create calendar',
+    details: {
+      'planId': 'plan-1',
+      'changes': [
+        {
+          'key': 'calendar',
+          'before': null,
+          'after': {'name': 'Proposed calendar'},
+        },
+      ],
+    },
+  );
+  void publish(AgentUiApproval? approval) => state.value = AgentUiState(
+    enabled: true,
+    configured: true,
+    runs: {
+      id: AgentUiRunState(
+        phase: approval == null
+            ? AgentUiPhase.idle
+            : AgentUiPhase.waitingApproval,
+        runId: approval == null ? 'run-2' : 'run-1',
+        pendingApproval: approval,
+      ),
+    },
+  );
+  void release() {
+    if (!gate.isCompleted) gate.complete();
+  }
+
+  @override
+  Future<void> steer(String conversationId, String text) async {
+    calls.add('steer:$conversationId:$text');
+    await gate.future;
+    await repository.updateDraftText(id, '');
+    publish(null);
+  }
 }

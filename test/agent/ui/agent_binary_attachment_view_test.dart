@@ -5,9 +5,9 @@ import 'dart:typed_data';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/attachments/attachment_repository.dart';
-import 'package:sked/agent/attachments/conversation_attachments.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
+import '../../support/agent_memory_attachments.dart';
+
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
 import 'package:sked/l10n/app_localizations.dart';
@@ -463,18 +463,18 @@ Future<void> _pumpUntil(
 
 class _Fixture {
   _Fixture(this.conversations, this.id, this.chatStorage) {
-    files = ConversationAttachments(
+    files = MemoryAttachmentController(
       conversations: conversations,
       repository: store,
     );
     delegate = UiDelegate(conversations);
   }
-  final ConversationRepository conversations;
+  final MemoryConversationRepository conversations;
   final String id;
   final UiMemoryStorage chatStorage;
-  final blobs = MemoryAttachmentStorage();
-  late final store = AttachmentRepository(storage: blobs);
-  late final ConversationAttachments files;
+  final blobs = UiMemoryAttachmentBytes();
+  late final store = MemoryAttachmentReader(storage: blobs);
+  late final MemoryAttachmentController files;
   late final UiDelegate delegate;
   XFile? selected;
   Future<XFile?> Function()? pick;
@@ -482,7 +482,7 @@ class _Fixture {
 
   static Future<_Fixture> create() async {
     final storage = UiMemoryStorage();
-    final conversations = ConversationRepository(storage: storage);
+    final conversations = MemoryConversationRepository(storage: storage);
     await conversations.load();
     final id = (await conversations.create(title: 'Files')).id;
     // This fixture and its byte-stream operations share runAsync's real zone.

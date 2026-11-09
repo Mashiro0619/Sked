@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_operation_card.dart';
 import 'package:sked/agent/ui/agent_task_inspector.dart';
@@ -15,7 +15,9 @@ void main() {
     'collapsed saved operation and inspector observe reminder failure without warning on unknown delivery',
     (tester) async {
       addTearDown(tester.view.reset);
-      final repository = ConversationRepository(storage: UiMemoryStorage());
+      final repository = MemoryConversationRepository(
+        storage: UiMemoryStorage(),
+      );
       final changes = ValueNotifier(0);
       await repository.load();
       final chat = await repository.create(title: 'Notification observation');

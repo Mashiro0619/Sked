@@ -123,8 +123,9 @@ def agent_scenario(name):
     } for event in events]
     before_hash = "a" * 64
     after_hash = "b" * 64 if accessible else before_hash
-    result = {"status": "committed", "operationId": "fixture-operation"} if accessible else None
-    tool_result = result if accessible else {"status": "not_executed", "error": {"code": "cancelled"}}
+    result = ({"status": "committed", "operationId": "fixture-operation"} if accessible
+              else {"status": "not_executed", "error": {"code": "cancelled"}})
+    tool_result = result
     configuration = {
         "name": name, "brightness": "dark" if accessible else "light",
         "textScale": 2 if accessible else 1,
@@ -139,18 +140,15 @@ def agent_scenario(name):
         "originalLongHistoryPreserved": True,
         "receiptCount": 1 if accessible else 0,
         "terminal": {
-            "runtimeActive": False, "phase": "idle" if accessible else "failed",
-            "errorCode": None if accessible else "operation.cancelled",
+            "runtimeActive": False, "phase": "idle", "errorCode": None,
             "pendingApproval": False, "recoveryRequired": False,
-            "conversationStatus": "idle" if accessible else "interrupted",
+            "conversationStatus": "idle",
             "conversationSha256": "c" * 64, "storedConversationSha256": "c" * 64,
-            "runStatus": "completed" if accessible else "interrupted", "settled": True,
-            "requestCount": 3 if accessible else 2,
-            "requestOutcomes": ["completed"] * (3 if accessible else 2),
-            "toolOutcomes": ["completed", "completed" if accessible else "failed"],
-            "lastMessageRole": "assistant" if accessible else "tool",
-            "lastMessageToolCallId": None if accessible else f"native-msaa-{name}-2",
-            "finalProviderReply": accessible,
+            "runStatus": "completed", "settled": True,
+            "requestCount": 3, "requestOutcomes": ["completed"] * 3,
+            "toolOutcomes": ["completed", "completed" if accessible else "cancelled"],
+            "lastMessageRole": "assistant", "lastMessageToolCallId": None,
+            "finalProviderReply": True,
         },
     }
     if accessible:
@@ -164,7 +162,7 @@ def agent_scenario(name):
     else:
         decision["errorCode"] = "cancelled"
     scenario = {
-        "protocol": "agent-msaa-v2", "status": "passed", "revision": REVISION,
+        "protocol": "agent-msaa-v3", "status": "passed", "revision": REVISION,
         "processId": PROCESS_ID, "configuration": configuration,
         "observedConfiguration": deepcopy(configuration),
         "textInputTransport": "registered-flutter-test-client",
@@ -187,21 +185,20 @@ def agent_scenario(name):
             } for position, event in [("first", events[0]), ("last", events[-1])]],
         },
         "provider": {
-            "requests": 3 if accessible else 2,
+            "requests": 3,
             "requestedTools": ["capabilities.describe", "mutation.apply"],
-            "transportAttempts": 0, "closed": True, "result": result,
+            "modelTransport": "native offline scripted transport", "closed": True, "result": result,
         },
         "httpOperationAttempts": 0, "decision": decision,
-        "storageAfterCleanup": {"mainSha256": after_hash},
+        "storageAfterCleanup": {
+            "backend": "native-jsonl-sqlite", "mainSha256": after_hash, "archiveSha256": "d" * 64,
+        },
         "cleanup": {
             "unmount": "complete", "httpGuardRestored": True,
-            "owners": {"status": "complete", "steps": [
-                {"name": step, "status": "complete"} for step in [
-                    "cancel-active-run", "quiesce", "dispose-runtime", "close-agent",
-                    "close-backup-staging", "close-session", "drain-main-writes", "flush-layout",
-                    "release-owned-preferences", "snapshot-agent-storage", "close-agent-store", "remove-agent-data",
-                ]
-            ]},
+            "owners": {
+                "status": "complete", "nativeCoreClosed": True, "businessSessionClosed": True,
+                "providerClosed": True, "temporaryDataRemoved": True,
+            },
         },
     }
     probes = [native_probe(f"agent-{name}-composer-value", draft, "editable-value", 42, name)]

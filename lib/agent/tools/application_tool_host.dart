@@ -23,7 +23,7 @@ import '../references/agent_composer_reference.dart';
 import '../provider/provider.dart';
 import '../operations/operation_executor.dart';
 import '../operations/tool_outcome.dart';
-import '../runtime/agent_runtime_controller.dart';
+import '../operations/approval_requester.dart';
 import '../skills/shared_skill_loader.dart';
 import 'tool_effects.dart';
 

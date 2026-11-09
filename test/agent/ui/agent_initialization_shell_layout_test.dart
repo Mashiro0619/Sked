@@ -5,7 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/agent_application.dart';
-import 'package:sked/agent/conversations/conversation_storage.dart';
+
+import '../../support/agent_native_fixture.dart' as native;
+
 import 'package:sked/app_runtime.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/screens/agent_page.dart';
@@ -62,30 +64,22 @@ Finder? _visibleMainNavigation() {
   return null;
 }
 
-class _FailingStorage extends ConversationStorage {
-  _FailingStorage() : super.base();
-
+class _FailingStorage extends native.MemoryAgentCore {
+  _FailingStorage() {
+    beforeQuery = (query) async {
+      if (query.kind != native.QueryKind.conversations) return;
+      loads++;
+      await release.future;
+      throw StateError(_storageError);
+    };
+  }
   final release = Completer<void>();
   int loads = 0;
-  int saves = 0;
-
+  int get saves => commands
+      .where((command) => command.kind == native.CommandKind.updateDraft)
+      .length;
   void failLoad() {
     if (!release.isCompleted) release.complete();
-  }
-
-  @override
-  Future<ConversationStorageLoad> load() async {
-    loads++;
-    await release.future;
-    throw const ConversationStorageException(_storageError);
-  }
-
-  @override
-  Future<void> save(String source, {required int revision}) async {
-    saves++;
-    throw StateError(
-      'The initialization fixture must never save a conversation.',
-    );
   }
 }
 
@@ -111,8 +105,7 @@ class _Fixture {
 
   void expectStorageFailure() {
     final error = initializationError;
-    if (error is! ConversationStorageException ||
-        error.message != _storageError) {
+    if (error is! StateError || error.message != _storageError) {
       if (error != null) Error.throwWithStackTrace(error, initializationTrace!);
       fail('The gated synthetic conversation load must fail explicitly.');
     }
@@ -205,7 +198,7 @@ Future<_Fixture> _mount(
   }
   final fixture = (await tester.runAsync(() async {
     final storage = _FailingStorage();
-    final app = await workspaceProvider(agentConversationStorage: storage);
+    final app = await workspaceProvider(agentNativeClient: storage.client);
     return _Fixture(app, storage, calls);
   }))!;
   addTearDown(() async {

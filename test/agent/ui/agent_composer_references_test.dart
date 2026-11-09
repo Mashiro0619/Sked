@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
 import 'package:sked/agent/history/conversation_history.dart';
 import 'package:sked/agent/references/agent_composer_reference.dart';
 import 'package:sked/agent/references/agent_composer_reference_search.dart';
@@ -94,7 +94,9 @@ void main() {
       expect(chips, findsOneWidget);
       expect(picker, findsNothing);
       expect(
-        ConversationArchive.decode(app.storage.source!)
+        app
+            .storage
+            .source!
             .conversations
             .single
             .draftReferences
@@ -468,9 +470,7 @@ void main() {
         app.repository.selected!.draftReferences.single.attachmentId,
         'notes',
       );
-      final saved = ConversationArchive.decode(app.storage.source!)
-          .conversations
-          .single;
+      final saved = app.storage.source!.conversations.single;
       expect(saved.draftAttachmentIds, ['notes']);
       expect(saved.draftReferences.single.attachmentId, 'notes');
     },
@@ -686,7 +686,7 @@ class _ReferenceFixture {
   _ReferenceFixture({required this.customSkills});
   final int customSkills;
   final storage = UiMemoryStorage();
-  late final repository = ConversationRepository(storage: storage);
+  late final repository = MemoryConversationRepository(storage: storage);
   late final delegate = _ReferenceDelegate(repository);
   final data = buildInitialAppData(buildDefaultPeriodTimes());
   int searches = 0;

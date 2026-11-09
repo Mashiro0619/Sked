@@ -1,17 +1,11 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
-import 'package:sked/agent/provider/provider.dart';
+
 import 'package:sked/agent/references/agent_composer_reference.dart';
-import 'package:sked/agent/runtime/agent_runtime_controller.dart';
 import 'package:sked/agent/ui/agent_conversation_view.dart';
-import 'package:sked/agent/ui/agent_ui_delegate.dart';
-import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/application/resource_contracts.dart';
-import 'package:sked/models/agent_settings.dart';
 
 import 'agent_ui_test_support.dart';
 
@@ -63,8 +57,8 @@ void main() {
       expect(field.controller!.text, 'Original queued text');
       expect(field.focusNode!.hasFocus, isTrue);
       expect(field.enabled, isTrue);
-      expect(h.runtime.pendingInputCount(h.id), 0);
-      expect(h.provider.requests, isEmpty);
+      expect(h.delegate.pendingInputCount(h.id), 0);
+      expect(h.delegate.calls, isEmpty);
       expect(tester.takeException(), isNull);
     },
   );
@@ -90,8 +84,8 @@ void main() {
         tester.widget<TextField>(composer).controller!.text,
         'Keep this draft',
       );
-      expect(h.runtime.pendingInputCount(h.id), 0);
-      expect(h.provider.requests, isEmpty);
+      expect(h.delegate.pendingInputCount(h.id), 0);
+      expect(h.delegate.calls, isEmpty);
     },
   );
 
@@ -115,7 +109,7 @@ void main() {
       await tester.pump();
       expect(entered.isCompleted, isTrue);
       expect(tester.widget<TextField>(composer).enabled, isFalse);
-      expect(h.runtime.pendingInputCount(h.id), 1);
+      expect(h.delegate.pendingInputCount(h.id), 1);
       release.complete();
       await tester.pumpAndSettle();
       h.storage.beforeSave = null;
@@ -124,8 +118,8 @@ void main() {
         tester.widget<TextField>(composer).controller!.text,
         'Original queued text',
       );
-      expect(h.runtime.pendingInputCount(h.id), 0);
-      expect(h.provider.requests, isEmpty);
+      expect(h.delegate.pendingInputCount(h.id), 0);
+      expect(h.delegate.calls, isEmpty);
     },
   );
 
@@ -151,14 +145,14 @@ void main() {
       await tester.pumpAndSettle();
       release.complete();
       await tester.pumpAndSettle();
-      expect(h.runtime.pendingInputCount(h.id), 1);
+      expect(h.delegate.pendingInputCount(h.id), 1);
       expect(h.repository.find(h.id)!.draft, isEmpty);
       expect(h.repository.selected!.draft, 'Other draft');
       expect(
         tester.widget<TextField>(composer).controller!.text,
         'Other draft',
       );
-      expect(h.provider.requests, isEmpty);
+      expect(h.delegate.calls, isEmpty);
       expect(tester.takeException(), isNull);
     },
   );
@@ -177,8 +171,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(first.delegate.actions, isEmpty);
       expect(second.delegate.actions, isEmpty);
-      expect(first.runtime.pendingInputCount(first.id), 1);
-      expect(second.runtime.pendingInputCount(second.id), 1);
+      expect(first.delegate.pendingInputCount(first.id), 1);
+      expect(second.delegate.pendingInputCount(second.id), 1);
       expect(second.current.draft, isEmpty);
       expect(tester.takeException(), isNull);
     },
@@ -198,26 +192,17 @@ void main() {
       await reveal(tester, cancel);
       await tester.tap(cancel.hitTestable());
       await tester.pumpAndSettle();
-      expect(h.runtime.pendingInputCount(h.id), 0);
-      expect(h.provider.requests, isEmpty);
+      expect(h.delegate.pendingInputCount(h.id), 0);
+      expect(h.delegate.calls, isEmpty);
       expect(tester.takeException(), isNull);
     },
   );
 }
 
 class _Harness {
-  _Harness(
-    this.storage,
-    this.repository,
-    this.provider,
-    this.runtime,
-    this.delegate,
-    this.id,
-  );
+  _Harness(this.storage, this.repository, this.delegate, this.id);
   final UiMemoryStorage storage;
-  final ConversationRepository repository;
-  final _Provider provider;
-  final AgentRuntimeController runtime;
+  final MemoryConversationRepository repository;
   final _Delegate delegate;
   final String id;
   AgentConversation get current => repository.find(id)!;
@@ -227,7 +212,7 @@ class _Harness {
   static Future<_Harness> create() async {
     final storage = UiMemoryStorage();
     var sequence = 0;
-    final repository = ConversationRepository(
+    final repository = MemoryConversationRepository(
       storage: storage,
       idGenerator: () =>
           sequence++ == 0 ? 'conversation' : 'conversation-$sequence',
@@ -260,89 +245,33 @@ class _Harness {
         ],
       ),
     );
-    final provider = _Provider();
-    final runtime = AgentRuntimeController(
-      repository: repository,
-      provider: provider,
-      readSettings: () => const AgentSettings(
-        enabled: true,
-        endpoint: 'https://fixture.example/v1',
-        model: 'fixture',
-        models: [
-          AgentModelConfig(
-            id: 'fixture',
-            reasoningEfforts: [AgentReasoningEffort.medium],
-            defaultReasoningEffort: AgentReasoningEffort.medium,
-          ),
-        ],
-      ),
-      readApiKey: (_) async => '',
-      readTools: (_) => const [],
-      executeTool: (_, _, _) async => throw StateError('Unexpected tool'),
-      onOpenSettings: () {},
-    );
     return _Harness(
       storage,
       repository,
-      provider,
-      runtime,
-      _Delegate(runtime),
+      _Delegate(repository),
       conversation.id,
     );
   }
 
   Future<void> close() async {
     storage.beforeSave = null;
-    runtime.dispose();
-    await runtime.waitForIdle();
+    await repository.waitForPendingWrites();
+    delegate.state.dispose();
     repository.dispose();
   }
 }
 
-class _Provider extends ProviderClient {
-  final requests = <ProviderRequest>[];
-  @override
-  Stream<ProviderEvent> stream(
-    ProviderRequest request, {
-    required String apiKey,
-    ProviderCancellationToken? cancellation,
-  }) async* {
-    requests.add(request);
-    yield ProviderCompleted(
-      ProviderResponse(
-        text: 'Completed',
-        toolCalls: const [],
-        finishReason: 'stop',
-      ),
-    );
-  }
-}
-
-class _Delegate extends AgentUiDelegate {
-  _Delegate(this.runtime);
-  final AgentRuntimeController runtime;
+class _Delegate extends UiDelegate {
+  _Delegate(super.repository);
   final actions = <String>[];
   Future<void> Function()? beforeAction;
   @override
-  ValueListenable<AgentUiState> get state => runtime.state;
-  @override
-  Future<void> send(String id, String text) => runtime.send(id, text);
-  @override
-  Future<void> stop(String id) => runtime.stop(id);
-  @override
-  Future<void> approve(String id, String planId) => runtime.approve(id, planId);
-  @override
-  Future<void> reject(String id, String planId) => runtime.reject(id, planId);
-  @override
-  Future<void> setMode(String id, AgentPermissionMode mode) =>
-      runtime.setMode(id, mode);
-  @override
-  void openSettings() {}
-  @override
   bool canManageQueuedInput(String id, String inputId) =>
-      runtime.canManageQueuedInput(id, inputId);
+      repository.canWrite &&
+      repository.find(id)!.queuedInputs.any((input) => input.id == inputId);
   @override
-  int pendingInputCount(String id) => runtime.pendingInputCount(id);
+  int pendingInputCount(String id) =>
+      repository.find(id)?.queuedInputs.length ?? 0;
   @override
   Future<void> restoreQueuedInput(
     String id,
@@ -351,7 +280,20 @@ class _Delegate extends AgentUiDelegate {
   }) async {
     actions.add('restore:$id:${input.id}');
     await beforeAction?.call();
-    await runtime.restoreQueuedInput(id, input, validate: validate);
+    validate?.call();
+    await repository.update(id, (current) {
+      final queued = current.queuedInputs.singleWhere(
+        (value) => value.id == input.id,
+      );
+      return current.copyWith(
+        draft: queued.text,
+        draftReferences: queued.contextReferences,
+        draftAttachmentIds: queued.attachmentIds,
+        queuedInputs: current.queuedInputs.where(
+          (value) => value.id != input.id,
+        ),
+      );
+    });
   }
 
   @override
@@ -362,6 +304,14 @@ class _Delegate extends AgentUiDelegate {
   }) async {
     actions.add('cancel:$id:${input.id}');
     await beforeAction?.call();
-    await runtime.cancelQueuedInput(id, input, validate: validate);
+    validate?.call();
+    await repository.update(
+      id,
+      (current) => current.copyWith(
+        queuedInputs: current.queuedInputs.where(
+          (value) => value.id != input.id,
+        ),
+      ),
+    );
   }
 }

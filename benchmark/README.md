@@ -11,11 +11,10 @@ Its memory samples include precise observation times, read costs, entry-to-ready
 and entry-to-end changes, and the process lifetime peak through measurement end.
 These are separate from this suite's warmed host JIT and UI frame workloads.
 
-Agent-specific dormant/open loading, long context and history reads, complete
-resource/tool discovery, and atomic main-store batches use the separate
-[offline Agent host protocol](AGENT_PERFORMANCE.md). Its verification contract,
-whole-process RSS endpoints and host timing populations remain distinct from
-native startup and engine-frame evidence.
+The [historical offline Agent host protocol](AGENT_PERFORMANCE.md) retains
+the earlier Dart Agent measurement contract and source identity. Its execution
+targets were retired with the Rust cutover. Agent performance comparisons are
+paused; resuming them requires a fixed baseline for the native implementation.
 
 The current runtime no longer has a remote privacy-version service to replace
 with an offline fake. Older baselines must retain their own frozen runtime

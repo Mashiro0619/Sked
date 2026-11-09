@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
 import 'package:sked/l10n/app_localizations.dart';
@@ -13,7 +13,9 @@ void main() {
       'approval describes the concrete clear scope before approval: $clear at $scale',
       (tester) async {
         addTearDown(tester.view.reset);
-        final repository = ConversationRepository(storage: UiMemoryStorage());
+        final repository = MemoryConversationRepository(
+          storage: UiMemoryStorage(),
+        );
         await repository.load();
         final conversation = await repository.create(title: 'Review changes');
         final delegate = UiDelegate(repository);

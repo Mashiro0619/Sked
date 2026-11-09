@@ -2,18 +2,17 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/knowledge/knowledge_service.dart';
+
+import '../../support/agent_memory_knowledge.dart';
+
 import 'package:sked/agent/ui/agent_knowledge_view.dart';
 
 import 'agent_ui_test_support.dart';
 
 void main() {
-  late AgentKnowledgeRepository repository;
-  late AgentKnowledgeService service;
+  late MemoryKnowledgeController service;
   Future<void> initialize() async {
-    repository = AgentKnowledgeRepository(storage: MemoryKnowledgeStorage());
-    service = AgentKnowledgeService(
-      repository: repository,
+    service = MemoryKnowledgeController(
       loadSkillAsset: (path) async => File(path).readAsStringSync(),
     );
     await service.initialize();
@@ -21,7 +20,6 @@ void main() {
 
   tearDown(() {
     service.dispose();
-    repository.dispose();
   });
 
   Future<void> chooseFilter(
@@ -48,7 +46,7 @@ void main() {
         title: 'Study',
         body: body,
       );
-      await service.saveFromUi(service.prepareSave(memory));
+      await service.seed(memory);
       await mountAgentUi(
         tester,
         AgentKnowledgeView(service: service, kind: KnowledgeKind.memory),
@@ -62,7 +60,7 @@ void main() {
       expect(preview.data!.characters.length, 161);
       expect(preview.data, endsWith('…'));
       expect(preview.data, isNot(contains('private-tail')));
-      expect(repository.records.single.body, body);
+      expect(service.records.single.body, body);
       await tester.tap(find.byKey(ValueKey('knowledge-item-${memory.key}')));
       await tester.pumpAndSettle();
       expect(
@@ -82,12 +80,10 @@ void main() {
     (tester) async {
       await initialize();
       final original = await service.read(KnowledgeKind.skill, 'read-agenda');
-      await service.saveFromUi(
-        service.prepareSave(
-          original.copyWith(
-            body: '${original.body}\nCustom instruction.',
-            usesOriginal: false,
-          ),
+      await service.seed(
+        original.copyWith(
+          body: '${original.body}\nCustom instruction.',
+          usesOriginal: false,
         ),
       );
       final enabled = service.newRecord(
@@ -110,7 +106,7 @@ void main() {
           )
           .copyWith(requiredTools: ['resources.unavailable']);
       for (final record in [enabled, disabled, missing]) {
-        await service.saveFromUi(service.prepareSave(record));
+        await service.seed(record);
       }
       await mountAgentUi(
         tester,
@@ -173,7 +169,7 @@ void main() {
       final memory = service
           .newRecord(KnowledgeKind.memory, title: 'Study', body: 'Morning')
           .copyWith(enabled: false);
-      await service.saveFromUi(service.prepareSave(memory));
+      await service.seed(memory);
       await mountAgentUi(
         tester,
         AgentKnowledgeView(service: service, kind: KnowledgeKind.memory),
@@ -225,13 +221,13 @@ void main() {
       await tester.ensureVisible(find.byKey(const ValueKey('knowledge-save')));
       await tester.tap(find.byKey(const ValueKey('knowledge-save')));
       await tester.pumpAndSettle();
-      expect(repository.records.single.body, 'Prefer quiet mornings.');
+      expect(service.records.single.body, 'Prefer quiet mornings.');
       await tester.tap(find.text('Undo'));
       await tester.pumpAndSettle();
-      expect(repository.records, isEmpty);
+      expect(service.records, isEmpty);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
-      await repository.waitForPendingWrites();
+      await service.waitForPendingWrites();
     },
   );
 
@@ -239,16 +235,14 @@ void main() {
     'concurrent change preserves editor draft and rejects a stale save',
     (tester) async {
       await initialize();
-      await service.saveFromUi(
-        service.prepareSave(
-          service.newRecord(
-            KnowledgeKind.memory,
-            title: 'Study',
-            body: 'Morning',
-          ),
+      await service.seed(
+        service.newRecord(
+          KnowledgeKind.memory,
+          title: 'Study',
+          body: 'Morning',
         ),
       );
-      final current = repository.records.single;
+      final current = service.records.single;
       await mountAgentUi(
         tester,
         AgentKnowledgeView(service: service, kind: KnowledgeKind.memory),
@@ -259,12 +253,10 @@ void main() {
         find.byKey(const ValueKey('knowledge-body')),
         'Editor draft',
       );
-      await service.saveFromUi(
-        service.prepareSave(current.copyWith(body: 'Concurrent update')),
-      );
+      await service.seed(current.copyWith(body: 'Concurrent update'));
       await tester.tap(find.byKey(const ValueKey('knowledge-save')));
       await tester.pumpAndSettle();
-      expect(repository.records.single.body, 'Concurrent update');
+      expect(service.records.single.body, 'Concurrent update');
       expect(
         find.text('This item changed. Reopen it before saving.'),
         findsOneWidget,
@@ -277,7 +269,7 @@ void main() {
         'Editor draft',
       );
       await tester.pumpWidget(const SizedBox());
-      await repository.waitForPendingWrites();
+      await service.waitForPendingWrites();
     },
   );
 
@@ -315,7 +307,7 @@ void main() {
         title: 'Study',
         body: 'Mornings',
       );
-      await service.saveFromUi(service.prepareSave(memory));
+      await service.seed(memory);
       await mountAgentUi(
         tester,
         AgentKnowledgeView(service: service, kind: KnowledgeKind.memory),

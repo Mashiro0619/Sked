@@ -40,6 +40,7 @@ class _AgentSettingsPageState extends State<AgentSettingsPage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final application = context.read<AgentApplication>();
+    if (!application.platformSupported) return;
     if (identical(_initializationAttempt, application)) return;
     _initializationAttempt = application;
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -98,31 +99,41 @@ class _AgentSettingsPageState extends State<AgentSettingsPage> {
           SettingsConnectedGroup(
             tonal: true,
             children: [
-              destination(
-                'agent-settings-connection',
-                l.agentConnectionAndModels,
-                Icons.hub_outlined,
-                const AgentConnectionSettingsPage(),
-                value: endpoint,
-              ),
+              if (!application.platformSupported)
+                SettingsConnectedTile(
+                  key: const ValueKey('agent-settings-unsupported-platform'),
+                  leading: const Icon(Icons.info_outline),
+                  title: l.agentUnsupportedPlatform,
+                  informational: true,
+                )
+              else
+                destination(
+                  'agent-settings-connection',
+                  l.agentConnectionAndModels,
+                  Icons.hub_outlined,
+                  const AgentConnectionSettingsPage(),
+                  value: endpoint,
+                ),
               destination(
                 'agent-settings-preferences',
                 l.agentRunPreferences,
                 Icons.tune,
                 const AgentPreferencesSettingsPage(),
               ),
-              destination(
-                'agent-settings-skills',
-                l.agentSkills,
-                Icons.auto_awesome_outlined,
-                const _AgentKnowledgeSettingsPage(kind: KnowledgeKind.skill),
-              ),
-              destination(
-                'agent-settings-memories',
-                l.agentMemories,
-                Icons.psychology_outlined,
-                const _AgentKnowledgeSettingsPage(kind: KnowledgeKind.memory),
-              ),
+              if (application.platformSupported) ...[
+                destination(
+                  'agent-settings-skills',
+                  l.agentSkills,
+                  Icons.auto_awesome_outlined,
+                  const _AgentKnowledgeSettingsPage(kind: KnowledgeKind.skill),
+                ),
+                destination(
+                  'agent-settings-memories',
+                  l.agentMemories,
+                  Icons.psychology_outlined,
+                  const _AgentKnowledgeSettingsPage(kind: KnowledgeKind.memory),
+                ),
+              ],
             ],
           ),
         ],

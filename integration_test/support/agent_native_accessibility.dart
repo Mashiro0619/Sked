@@ -4,11 +4,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:http/http.dart' as http;
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_models.dart';
 import 'package:sked/agent/knowledge/knowledge_models.dart';
-import 'package:sked/agent/provider/provider.dart';
 import 'package:sked/agent/ui/agent_knowledge_view.dart';
 import 'package:sked/agent/ui/agent_operation_card.dart';
 import 'package:sked/agent/ui/agent_plan_preview.dart';
@@ -22,7 +19,10 @@ import 'package:sked/screens/agent_settings_page.dart';
 import 'package:sked/theme/sked_expressive_theme.dart';
 
 import '../../test/support/agent_workspace_navigation.dart';
-import 'agent_native_session.dart';
+import 'agent_native_accessibility_workspace.dart';
+
+import 'package:sked/agent/bridge/generated/api/contracts.dart' as bridge;
+import 'package:sked/agent/bridge/generated/frb_generated.dart';
 
 const _changeCount = 21;
 const _start = '2026-09-07T15:00:00.000';
@@ -46,126 +46,78 @@ typedef AgentAccessibilityInput = Future<void> Function(
   List<Map<String, Object?>> diagnostics,
 );
 
-class _RejectingClient extends http.BaseClient {
-  var attempts = 0;
-
-  @override
-  Future<http.StreamedResponse> send(http.BaseRequest request) async {
-    attempts++;
-    throw StateError('The MSAA fixture must not use HTTP transport.');
-  }
-}
-
-/// Only provider events are scripted. Capability discovery, compilation,
-/// approval, persistence and receipt rendering use the production application.
-class _PreviewProvider extends ProviderClient {
-  _PreviewProvider._(this.name, this.transport) : super(client: transport);
-  factory _PreviewProvider(String name) =>
-      _PreviewProvider._(name, _RejectingClient());
-
-  final String name;
-  final _RejectingClient transport;
-  final tools = <String>[];
-  var requests = 0;
-  var closed = false;
-  Map<String, dynamic>? result;
-
-  Map<String, dynamic> _lastTool(ProviderRequest request) => jsonDecode(
-    request.messages.lastWhere((item) => item.role == ProviderRole.tool).text,
-  ) as Map<String, dynamic>;
-
-  ProviderResponse _call(String tool, Map<String, Object?> arguments) {
-    tools.add(tool);
-    return ProviderResponse(
-      text: '',
-      toolCalls: [
-        ProviderToolCall(
-          id: 'native-msaa-$name-$requests',
-          name: tool,
-          arguments: jsonEncode(arguments),
-        ),
+List<bridge.OfflineModelReply> _previewReplies(String name) {
+  bridge.OfflineModelReply reply(
+    int index, {
+    String? tool,
+    Map<String, Object?>? arguments,
+  }) {
+    final delta = tool == null
+        ? {'role': 'assistant', 'content': _completedReply}
+        : {
+            'role': 'assistant',
+            'tool_calls': [
+              {
+                'index': 0,
+                'id': 'native-msaa-$name-$index',
+                'type': 'function',
+                'function': {
+                  'name': tool.replaceAll('_', '_u').replaceAll('.', '__'),
+                  'arguments': jsonEncode(arguments),
+                },
+              },
+            ],
+          };
+    Map<String, Object?> chunk(Map<String, Object?> value, String? finish) => {
+      'id': 'native-msaa-$name-$index',
+      'object': 'chat.completion.chunk',
+      'created': 0,
+      'model': 'native-ui-fixture',
+      'choices': [
+        {'index': 0, 'delta': value, 'finish_reason': finish},
       ],
-      finishReason: 'tool_calls',
+    };
+    return bridge.OfflineModelReply(
+      status: 200,
+      contentType: 'text/event-stream',
+      body:
+          'data: ${jsonEncode(chunk(delta, null))}\n\n'
+          'data: ${jsonEncode(chunk({}, tool == null ? 'stop' : 'tool_calls'))}\n\n'
+          'data: [DONE]\n\n',
     );
   }
 
-  @override
-  Stream<ProviderEvent> stream(
-    ProviderRequest request, {
-    required String apiKey,
-    ProviderCancellationToken? cancellation,
-  }) async* {
-    expectSync(closed, isFalse);
-    expectSync(apiKey, isEmpty);
-    expectSync(request.endpoint.host, 'native-ui.invalid');
-    expectSync(request.model, 'native-ui-fixture');
-    expectSync(cancellation, isNotNull);
-    expectSync(cancellation!.isCancelled, isFalse);
-    requests++;
-    final ProviderResponse response;
-    switch (requests) {
-      case 1:
-        expectSync(
-          request.messages
-              .lastWhere((item) => item.role == ProviderRole.user)
-              .text,
-          _draft(name),
-        );
-        response = _call('capabilities.describe', {
-          'names': ['mutation.apply'],
-        });
-      case 2:
-        expectSync(
-          (_lastTool(request)['tools'] as List).map((tool) => tool['name']),
-          contains('mutation.apply'),
-        );
-        response = _call('mutation.apply', {
-          'commands': [
-            for (var index = 1; index <= _changeCount; index++)
-              {
-                'kind': 'event',
-                'action': 'create',
-                'destinationParentId': 'native-calendar',
-                'values': {
-                  'title': _title(name, index),
-                  'start': _start,
-                  'end': _end,
-                  'notes': _notes(name, index),
-                  'reminderBehavior': 'disabled',
-                },
+  return [
+    reply(
+      1,
+      tool: 'capabilities.describe',
+      arguments: {
+        'names': ['mutation.apply'],
+      },
+    ),
+    reply(
+      2,
+      tool: 'mutation.apply',
+      arguments: {
+        'commands': [
+          for (var index = 1; index <= _changeCount; index++)
+            {
+              'kind': 'event',
+              'action': 'create',
+              'destinationParentId': 'native-calendar',
+              'values': {
+                'title': _title(name, index),
+                'start': _start,
+                'end': _end,
+                'notes': _notes(name, index),
+                'reminderBehavior': 'disabled',
               },
-          ],
-        });
-      case 3:
-        result = _lastTool(request);
-        response = ProviderResponse(
-          text: _completedReply,
-          toolCalls: const [],
-          finishReason: 'stop',
-        );
-      default:
-        throw StateError(
-          'Unexpected extra model request in MSAA fixture: $requests.',
-        );
-    }
-    yield ProviderCompleted(response);
-  }
-
-  Map<String, Object?> toJson() => {
-    'requests': requests,
-    'requestedTools': tools,
-    'transportAttempts': transport.attempts,
-    'closed': closed,
-    'result': result,
-  };
-
-  @override
-  void close() {
-    if (closed) return;
-    closed = true;
-    super.close();
-    transport.close();
-  }
+            },
+        ],
+      },
+    ),
+    reply(3),
+  ];
 }
 
 /// Appended after the original workspace tree has been unmounted. The caller
@@ -179,6 +131,7 @@ Future<void> runAgentNativeAccessibility(
   required List<Map<String, dynamic>> nativeProbes,
   required List<Map<String, Object?>> scenarios,
 }) async {
+  await RustLib.init();
   for (final name in ['baseline', 'accessible']) {
     final config = AgentNativeConfig(
       name: name,
@@ -186,7 +139,7 @@ Future<void> runAgentNativeAccessibility(
       label: 'msaa-$name',
     );
     final report = <String, Object?>{
-      'protocol': 'agent-msaa-v2',
+      'protocol': 'agent-msaa-v3',
       'revision': revision,
       'processId': pid,
       'configuration': config.toJson(),
@@ -198,16 +151,17 @@ Future<void> runAgentNativeAccessibility(
     scenarios.add(report);
     final guard = AgentNativeHttpGuard();
     AgentNativeSession? session;
-    _PreviewProvider? provider;
+    NativeAccessibilityObservation? provider;
     Object? failure;
     StackTrace? failureStack;
     try {
       config.validate();
       guard.install();
-      final scripted = provider = _PreviewProvider(name);
       final native = session = await AgentNativeSession.create(
-        provider: scripted,
+        name: name,
+        replies: _previewReplies(name),
       );
+      final scripted = provider = native.provider;
       report['fixture'] = native.fixtureReport();
       final journey = _MsaaScenario(
         tester,
@@ -270,7 +224,6 @@ Future<void> runAgentNativeAccessibility(
       if (finalProvider != null) {
         await clean('provider', () async {
           expect(finalProvider.closed, isTrue);
-          expect(finalProvider.transport.attempts, 0);
         });
       }
     }
@@ -295,7 +248,7 @@ class _MsaaScenario {
 
   final WidgetTester tester;
   final AgentNativeSession session;
-  final _PreviewProvider provider;
+  final NativeAccessibilityObservation provider;
   final AgentNativeConfig config;
   final Map<String, Object?> report;
   final AgentAccessibilityPhase phase;
@@ -526,7 +479,6 @@ class _MsaaScenario {
   Future<void> run() async {
     const homeControls = ['workspace-agent-entry', 'workspace-main-navigation'];
     await at('mount', () async {
-      await session.app.lifecycle.load().timeout(const Duration(seconds: 20));
       expect(session.app.lifecycle.canWrite, isTrue);
       expect(session.app.agent.isInitialized, isFalse);
       await tester.pumpWidget(AgentNativeApp(session: session, config: config));
@@ -1002,108 +954,81 @@ class _MsaaScenario {
     await at(approve ? 'decision-approve' : 'decision-reject', () async {
       unchanged();
       await tap(key(approve ? 'agent-approve' : 'agent-reject'));
-      await until(() {
-        final runtime = session.app.agent.runtime;
-        report['decisionObservation'] = runtime.describeRun(conversationId);
-        return !runtime.isRunning(conversationId) &&
-            !runtime.state.value.runFor(conversationId).isActive;
-      }, 'the completed host decision');
-      await session.app.agent.runtime.waitForIdle().timeout(
-        const Duration(seconds: 20),
+      await until(
+        () => !session.app.agent.runtime.state.value
+            .runFor(conversationId)
+            .isActive,
+        'the native host decision and final model response',
       );
+      await session.app.agent.quiesce();
       await drain();
-      expect(provider.requests, approve ? 3 : 2);
+      expect(provider.requests, 3);
       expect(provider.tools, ['capabilities.describe', 'mutation.apply']);
       expect(preview, findsNothing);
-      expect(
-        session.app.agent.conversations.selected!.mode,
-        AgentPermissionMode.ask,
-      );
-      // The real host terminates cancelled writes after persisting the tool
-      // result. Only approval reaches the provider's final reply round.
-      final conversation = session.app.agent.conversations.find(
+      final conversation = await session.app.agent.conversations.read(
         conversationId,
-      )!;
-      final storedConversation = ConversationArchive.decode(
-        await session.readChatSource(),
-      ).conversations.singleWhere((item) => item.id == conversationId);
+      );
+      final stored = await session.readStoredConversation(conversationId);
+      final storedConversation = stored.conversation;
+      final snapshot = stored.snapshot;
+      final run = snapshot.runs.single;
+      final lastMessage = snapshot.messages.last;
       expect(storedConversation.toJson(), conversation.toJson());
-      final commitCallId = 'native-msaa-${config.name}-2';
-      final toolMessages = storedConversation.messages
-          .where((item) => item.role == ConversationRole.tool)
-          .toList();
-      expect(toolMessages.map((item) => item.toolCallId), [
-        for (var index = 1; index <= 2; index++)
-          'native-msaa-${config.name}-$index',
-      ]);
-      final toolMessage = toolMessages.singleWhere(
-        (item) => item.toolCallId == commitCallId,
+      final toolMessage = storedConversation.messages.singleWhere(
+        (message) => message.toolCallId == 'native-msaa-${config.name}-2',
       );
       final toolResult = jsonDecode(toolMessage.text) as Map<String, dynamic>;
-      final run = storedConversation.runs.single;
       final display = session.app.agent.runtime.state.value.runFor(
         conversationId,
       );
-      expect(storedConversation.runId, run.id);
-      expect(
-        storedConversation.status,
-        approve ? ConversationStatus.idle : ConversationStatus.interrupted,
-      );
-      expect(
-        run.status,
-        approve
-            ? ConversationRunStatus.completed
-            : ConversationRunStatus.interrupted,
-      );
-      expect(run.settledAt, isNotNull);
-      expect(run.requests, hasLength(approve ? 3 : 2));
-      expect(
-        run.requests.map((item) => item.outcome),
-        everyElement(ConversationAttemptOutcome.completed),
-      );
-      expect(run.tools.map((item) => item.name), provider.tools);
-      expect(run.tools.map((item) => item.outcome), [
-        ConversationAttemptOutcome.completed,
-        approve
-            ? ConversationAttemptOutcome.completed
-            : ConversationAttemptOutcome.failed,
-      ]);
       expect(display.isActive, isFalse);
       expect(display.pendingApproval, isNull);
       expect(display.recoveryRequired, isFalse);
-      expect(display.phase.name, approve ? 'idle' : 'failed');
-      expect(display.errorMessage, approve ? isNull : 'operation.cancelled');
+      expect(display.phase.name, 'idle');
+      expect(snapshot.conversation.status.name, 'idle');
+      expect(run.status.name, 'completed');
+      expect(run.errorCode, isNull);
+      expect(run.settledAt, isNotNull);
+      expect(run.requests, hasLength(3));
       expect(
-        storedConversation.messages.last.role,
-        approve ? ConversationRole.assistant : ConversationRole.tool,
+        run.requests.every((request) => request.settledAt != null),
+        isTrue,
       );
-      if (approve) {
-        expect(provider.result, toolResult);
-        expect(storedConversation.messages.last.text, _completedReply);
-      } else {
-        expect(provider.result, isNull);
-        expect(storedConversation.messages.last.toolCallId, commitCallId);
-      }
+      expect(run.requests.map((request) => request.outcome.name), [
+        'completed',
+        'completed',
+        'completed',
+      ]);
+      expect(run.tools.map((tool) => tool.outcome.name), [
+        'completed',
+        approve ? 'completed' : 'cancelled',
+      ]);
+      expect(storedConversation.messages.last.text, _completedReply);
+      expect(provider.result, toolResult);
       final saved = AppData.decodeStorageSnapshot(session.mainSource);
       final current = session.app.session.committedData;
       expect(saved.toJson(), current.toJson());
       final result = <String, Object?>{
         'action': approve ? 'approve' : 'reject',
+        'toolCallId': toolMessage.toolCallId,
         'beforeCommittedSha256': agentNativeDigest(beforeSource),
         'beforeStoredSha256': agentNativeDigest(beforeStored),
         'afterCommittedSha256': agentNativeDigest(current.encode()),
         'afterStoredSha256': agentNativeDigest(session.mainSource),
-        'eventCountBefore': before.generalMode.schedules.single.events.length,
-        'eventCountAfter': saved.generalMode.schedules.single.events.length,
-        'toolCallId': commitCallId,
+        'eventCountBefore': before.generalMode.schedules
+            .expand((calendar) => calendar.events)
+            .length,
+        'eventCountAfter': saved.generalMode.schedules
+            .expand((calendar) => calendar.events)
+            .length,
         'toolResult': toolResult,
         'terminal': {
-          'runtimeActive': session.app.agent.runtime.isRunning(conversationId),
+          'runtimeActive': display.isActive,
           'phase': display.phase.name,
-          'errorCode': display.errorMessage,
+          'errorCode': run.errorCode,
           'pendingApproval': display.pendingApproval != null,
           'recoveryRequired': display.recoveryRequired,
-          'conversationStatus': storedConversation.status.name,
+          'conversationStatus': snapshot.conversation.status.name,
           'conversationSha256': agentNativeDigest(
             jsonEncode(conversation.toJson()),
           ),
@@ -1111,15 +1036,19 @@ class _MsaaScenario {
             jsonEncode(storedConversation.toJson()),
           ),
           'runStatus': run.status.name,
-          'settled': run.settledAt != null,
+          'settled':
+              run.settledAt != null &&
+              run.requests.every((request) => request.settledAt != null),
           'requestCount': run.requests.length,
           'requestOutcomes': [
-            for (final item in run.requests) item.outcome.name,
+            for (final request in run.requests) request.outcome.name,
           ],
-          'toolOutcomes': [for (final item in run.tools) item.outcome.name],
-          'lastMessageRole': storedConversation.messages.last.role.name,
-          'lastMessageToolCallId': storedConversation.messages.last.toolCallId,
-          'finalProviderReply': approve,
+          'toolOutcomes': [for (final tool in run.tools) tool.outcome.name],
+          'lastMessageRole': lastMessage.role.name,
+          'lastMessageToolCallId': lastMessage.toolCallId,
+          'finalProviderReply':
+              lastMessage.role.name == 'assistant' &&
+              lastMessage.text == _completedReply,
         },
       };
       report['decision'] = result;
@@ -1131,11 +1060,10 @@ class _MsaaScenario {
           isA<Map>().having((error) => error['code'], 'code', 'cancelled'),
         );
         expect(saved.applicationLedger!.receipts, isEmpty);
-        result['receiptCount'] = 0;
-        result['errorCode'] = 'cancelled';
+        result['receiptCount'] = saved.applicationLedger!.receipts.length;
+        result['errorCode'] = (toolResult['error'] as Map)['code'];
       } else {
-        expect(provider.result!['status'], 'committed');
-        expect(saved.generalMode.schedules, hasLength(1));
+        expect(toolResult['status'], 'committed');
         final calendar = saved.generalMode.schedules.single;
         final originals = before.generalMode.schedules.single.events;
         final created = {
@@ -1146,28 +1074,26 @@ class _MsaaScenario {
         for (final original in originals) {
           expect(
             calendar.events
-                .singleWhere((item) => item.id == original.id)
+                .singleWhere((event) => event.id == original.id)
                 .toJson(),
             original.toJson(),
           );
         }
+        final verifiedCreatedIds = <String>[];
         for (final entry in created.entries) {
-          expect(
-            calendar.events
-                .singleWhere((item) => item.id == entry.key)
-                .toJson(),
-            entry.value,
+          final savedEvent = calendar.events.singleWhere(
+            (event) => event.id == entry.key,
           );
+          expect(savedEvent.toJson(), entry.value);
+          verifiedCreatedIds.add(savedEvent.id);
         }
-        // Compare the complete non-ledger snapshot after removing only the 21
-        // newly created events; no unrelated preference or resource may drift.
         final withoutNew = saved.copyWith(
           applicationLedger: before.applicationLedger,
           generalMode: saved.generalMode.copyWith(
             schedules: [
               calendar.copyWith(
                 events: calendar.events
-                    .where((item) => !created.containsKey(item.id))
+                    .where((event) => !created.containsKey(event.id))
                     .toList(),
               ),
             ],
@@ -1175,18 +1101,14 @@ class _MsaaScenario {
         );
         expect(withoutNew.toJson(), before.toJson());
         final receipt = saved.applicationLedger!.receipts.single;
-        expect(receipt.operationId, provider.result!['operationId']);
-        expect(receipt.result['status'], 'committed');
+        expect(receipt.operationId, toolResult['operationId']);
         expect(receipt.result['changeCount'], _changeCount);
-        final receiptChanges = receipt.result['changes'] as List;
-        expect(receiptChanges, hasLength(_changeCount));
-        expect(
-          receiptChanges.map((item) => (item as Map)['ref']['id']).toSet(),
-          created.keys.toSet(),
-        );
-        for (final change in receiptChanges) {
-          expect((change as Map)['action'], 'created');
-        }
+        final receiptIds = [
+          for (final change in receipt.result['changes'] as List)
+            ((change as Map)['ref'] as Map)['id'] as String,
+        ];
+        expect(receiptIds, hasLength(_changeCount));
+        expect(receiptIds.toSet(), verifiedCreatedIds.toSet());
         final card = find.byWidgetPredicate(
           (widget) =>
               widget is AgentOperationCard &&
@@ -1198,21 +1120,20 @@ class _MsaaScenario {
           'the actual committed receipt card',
         );
         result.addAll({
-          'receiptCount': 1,
+          'receiptCount': saved.applicationLedger!.receipts.length,
           'operationId': receipt.operationId,
           'receiptStatus': receipt.result['status'],
-          'receiptChangeCount': receiptChanges.length,
-          'receiptIds': receiptChanges
-              .map((item) => (item as Map)['ref']['id'])
-              .toList(),
-          'verifiedCreatedIds': created.keys.toList(),
-          'unrelatedSnapshotPreserved': true,
+          'receiptChangeCount': receipt.result['changeCount'],
+          'receiptIds': receiptIds,
+          'verifiedCreatedIds': verifiedCreatedIds,
           'committedReceiptCard': true,
+          'unrelatedSnapshotPreserved': true,
         });
       }
       expect(
         AgentNativeSession.historyDigest(
-          session.app.agent.conversations.find(agentNativeLongId)!.messages,
+          (await session.app.agent.conversations.read(agentNativeLongId))
+              .messages,
         ),
         session.originalHistoryDigest,
       );

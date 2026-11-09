@@ -5,9 +5,7 @@ import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/agent/attachments/attachment_storage.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
-import 'package:sked/agent/conversations/conversation_storage.dart';
-import 'package:sked/agent/knowledge/knowledge_storage.dart';
-import 'package:sked/agent/store/agent_store.dart';
+import 'package:sked/agent/agent_application.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/backup/backup_staging_storage.dart';
 import 'package:sked/backup/selective_backup_models.dart';
@@ -50,17 +48,11 @@ void main() {
       throw StateError('The synthetic runtime reached $name platform storage');
     }
 
-    debugSetConversationStorageFactory(() => reject('conversations'));
-    debugSetAgentStoreFactory(() => reject('Agent SQLite'));
-    debugSetKnowledgeStorageFactory(() => reject('knowledge'));
     debugSetAttachmentStorageFactory(() => reject('attachments'));
     debugSetSelectiveRestoreJournalFactory(() => reject('selective journal'));
     debugSetBackupStagingStorageFactory(() => reject('backup staging'));
     debugSetAppBackupRestoreJournalFactory(() => reject('legacy journal'));
     addTearDown(() {
-      debugSetConversationStorageFactory(null);
-      debugSetAgentStoreFactory(null);
-      debugSetKnowledgeStorageFactory(null);
       debugSetAttachmentStorageFactory(null);
       debugSetSelectiveRestoreJournalFactory(null);
       debugSetBackupStagingStorageFactory(null);
@@ -279,9 +271,13 @@ Future<void> _verifyAgentStores(AppRuntime app) async {
     app.agent.connections.status.storageKind,
     AgentCredentialStorageKind.memoryOnly,
   );
-  await app.agent.initialize();
-  expect(app.agent.isInitialized, isTrue);
-  expect(app.agent.attachmentStore.storage, isA<MemoryAttachmentStorage>());
+  expect(app.agent.platformSupported, isFalse);
+  await expectLater(app.agent.initialize(), throwsUnsupportedError);
+  expect(
+    app.agent.initializationFailure,
+    AgentInitializationFailure.unsupportedPlatform,
+  );
+  expect(app.agent.nativeClient.isInitialized, isFalse);
   expect(app.backups.selective.journal, isA<MemorySelectiveRestoreJournal>());
   final inventory = await app.backups.selective.inventory();
   expect(

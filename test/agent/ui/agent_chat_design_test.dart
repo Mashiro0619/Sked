@@ -2,20 +2,20 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
 
 import 'agent_ui_test_support.dart';
 
 void main() {
-  late ConversationRepository repository;
+  late MemoryConversationRepository repository;
   late UiDelegate delegate;
   late String id;
 
   Future<void> initialize() async {
     var sequence = 0;
-    repository = ConversationRepository(
+    repository = MemoryConversationRepository(
       storage: UiMemoryStorage(),
       idGenerator: () => 'chat-${sequence++}',
     );

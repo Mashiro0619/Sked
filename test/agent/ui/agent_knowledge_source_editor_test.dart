@@ -2,18 +2,17 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/knowledge/knowledge_service.dart';
+
+import '../../support/agent_memory_knowledge.dart';
+
 import 'package:sked/agent/ui/agent_knowledge_view.dart';
 
 import 'agent_ui_test_support.dart';
 
 void main() {
-  late AgentKnowledgeRepository repository;
-  late AgentKnowledgeService service;
+  late MemoryKnowledgeController service;
   Future<void> initialize() async {
-    repository = AgentKnowledgeRepository(storage: MemoryKnowledgeStorage());
-    service = AgentKnowledgeService(
-      repository: repository,
+    service = MemoryKnowledgeController(
       loadSkillAsset: (path) async => File(path).readAsStringSync(),
     );
     await service.initialize();
@@ -21,7 +20,6 @@ void main() {
 
   tearDown(() {
     service.dispose();
-    repository.dispose();
   });
 
   Finder key(String value) => find.byKey(ValueKey(value));
@@ -85,7 +83,7 @@ void main() {
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
       expect(find.byType(AgentKnowledgeEditor), findsNothing);
-      expect(repository.records, isEmpty);
+      expect(service.records, isEmpty);
       expect(tester.takeException(), isNull);
     },
   );
@@ -183,14 +181,10 @@ void main() {
     (tester) async {
       await initialize();
       final original = await service.read(KnowledgeKind.skill, 'read-agenda');
-      await service.saveFromUi(
-        service.prepareSave(
-          original.copyWith(
-            body: original.body
-                .replaceAll('\r\n', '\n')
-                .replaceAll('\n', '\r\n'),
-            usesOriginal: false,
-          ),
+      await service.seed(
+        original.copyWith(
+          body: original.body.replaceAll('\r\n', '\n').replaceAll('\n', '\r\n'),
+          usesOriginal: false,
         ),
       );
       final record = await service.read(KnowledgeKind.skill, original.id);
@@ -267,7 +261,7 @@ void main() {
       title: 'Custom',
       body: source,
     );
-    await service.saveFromUi(service.prepareSave(record));
+    await service.seed(record);
     await open(tester, await service.read(KnowledgeKind.skill, record.id));
     expect(body(tester).text, source);
     expect(key('knowledge-source-toggle'), findsNothing);
@@ -281,13 +275,11 @@ void main() {
     (tester) async {
       await initialize();
       final original = await service.read(KnowledgeKind.skill, 'read-agenda');
-      await service.saveFromUi(
-        service.prepareSave(
-          original.copyWith(
-            body: 'Local override',
-            usesOriginal: false,
-            enabled: false,
-          ),
+      await service.seed(
+        original.copyWith(
+          body: 'Local override',
+          usesOriginal: false,
+          enabled: false,
         ),
       );
       await open(tester, await service.read(KnowledgeKind.skill, original.id));

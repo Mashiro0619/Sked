@@ -7,7 +7,7 @@ import '../../theme/sked_expressive_theme.dart';
 import '../../widgets/sked_popup_menu.dart';
 import '../../widgets/sked_task_session.dart';
 import '../../widgets/workbench_chrome_metrics.dart';
-import '../conversations/conversation_repository.dart';
+import '../conversations/conversation_view_repository.dart';
 import 'agent_conversation_row.dart';
 import 'agent_ui_delegate.dart';
 import 'agent_ui_style.dart';
@@ -31,7 +31,7 @@ class AgentConversationList extends StatefulWidget {
     this.isOwnerCurrent,
   });
 
-  final ConversationRepository repository;
+  final ConversationViewRepository repository;
   final ValueChanged<String> onSelected;
   final VoidCallback? onNewConversation;
   final FutureOr<void> Function(String)? onRestore;
@@ -127,12 +127,12 @@ class _AgentConversationListState extends State<AgentConversationList> {
     super.dispose();
   }
 
-  bool _sameOwner(int generation, ConversationRepository repository) =>
+  bool _sameOwner(int generation, ConversationViewRepository repository) =>
       _enabled &&
       generation == _generation &&
       identical(repository, widget.repository);
 
-  bool _current(int generation, ConversationRepository repository) =>
+  bool _current(int generation, ConversationViewRepository repository) =>
       _sameOwner(generation, repository) &&
       ModalRoute.of(context)?.isCurrent != false;
 
@@ -148,7 +148,7 @@ class _AgentConversationListState extends State<AgentConversationList> {
     bool archived,
     int generation,
     int actionGeneration,
-    ConversationRepository repository,
+    ConversationViewRepository repository,
   ) async {
     bool targetCurrent() =>
         _current(generation, repository) &&
@@ -171,7 +171,7 @@ class _AgentConversationListState extends State<AgentConversationList> {
       if (!repository.canWrite) {
         final recover = widget.onRecover;
         if (!repository.blocked || recover == null) {
-          throw const ConversationStorageException('History is unavailable.');
+          throw StateError('History is unavailable.');
         }
         await recover();
         if (!targetCurrent()) return;
@@ -182,7 +182,7 @@ class _AgentConversationListState extends State<AgentConversationList> {
       if (!targetCurrent()) return;
       final action = archived ? widget.onArchive : widget.onRestore;
       if (!repository.canWrite || action == null) {
-        throw const ConversationStorageException('History is unavailable.');
+        throw StateError('History is unavailable.');
       }
       // Once accepted, this persistent operation belongs to its delegate.
       // Hiding history only retires feedback, and never cancels the save.
@@ -203,7 +203,7 @@ class _AgentConversationListState extends State<AgentConversationList> {
     String id,
     bool pinned,
     int generation,
-    ConversationRepository repository,
+    ConversationViewRepository repository,
   ) async {
     bool targetCurrent() =>
         _current(generation, repository) &&
@@ -221,7 +221,7 @@ class _AgentConversationListState extends State<AgentConversationList> {
       if (!repository.canWrite) {
         final recover = widget.onRecover;
         if (!repository.blocked || recover == null) {
-          throw const ConversationStorageException('History is unavailable.');
+          throw StateError('History is unavailable.');
         }
         await recover();
         if (!targetCurrent()) return;
@@ -241,7 +241,7 @@ class _AgentConversationListState extends State<AgentConversationList> {
     }
   }
 
-  void _toggleSearch(int generation, ConversationRepository repository) {
+  void _toggleSearch(int generation, ConversationViewRepository repository) {
     if (!_current(generation, repository)) return;
     setState(() => _searchOpen = !_searchOpen);
     if (!_searchOpen) {

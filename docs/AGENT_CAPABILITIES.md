@@ -40,9 +40,9 @@ Agent 纳入现有功能管理，使用一个开关控制启用与入口显示�
 
 网页附件记录来源与内容版本，不能携带登录 Cookie、认证头或未选择的浏览器会话数据。移交后的目标仍用稳定 ID 解析；从网页选择到会话执行期间发生删除、恢复或目标修改时，重新校验而不回退写入当前课表。网页和文字中的内容作为数据，不能改变权限模式或充当工具执行指令。
 
-旧 [AiApiSettings](../lib/models/ai_api_settings.dart)只用于存档兼容和本机迁移；SchoolImportApi 及独立解析设置/文字入口已退役，由[统一 Provider](../lib/agent/provider/provider_client.dart)承接网络请求。模型地址、协议、模型、凭据引用及统一指令改由单例 Agent 设置和连接管理器管理。普通请求按实际服务响应、用户取消及真实网络失败结束；取消、脱敏、结构化导入校验与安全存储由对应入口处理。
+旧 [AiApiSettings](../lib/models/ai_api_settings.dart)只用于存档兼容和本机迁移；SchoolImportApi 及独立解析设置/文字入口已退役，Agent 模型请求由 [Rust 模型客户端](../rust/src/model_client/mod.rs)执行，Dart [Provider](../lib/agent/provider/provider_client.dart)继续服务连接诊断和模型目录。模型地址、协议、模型、凭据引用及统一指令由单例 Agent 设置和连接管理器管理。普通请求按实际服务响应、用户取消及真实网络失败结束；取消、脱敏、结构化导入校验与安全存储由对应入口处理。
 
-迁移遵守[架构第 11 节](AGENT_ARCHITECTURE.md)的旧连接与备份策略：本机旧地址/模型转入统一连接，已有新配置不覆盖；同一端点的密钥经安全存储写入与读回验证后退役旧 key，不能通过会话正文或工具结果搬运。旧 customPrompt 仅作可查看/导出的迁移材料，不自动成为 Agent 系统指令或共享 Skill。旧存档和备份继续兼容读取，但不得重新创建已退役的解析页面、旧请求流程或独立 AI 配置。
+旧连接与业务备份沿用既有迁移规则：本机旧地址/模型转入统一连接，已有新配置不覆盖；同一端点的密钥经安全存储写入与读回验证后退役旧 key，不能通过会话正文或工具结果搬运。旧 customPrompt 仅作可查看/导出的迁移材料，不自动成为 Agent 系统指令或共享 Skill。旧业务存档和备份继续兼容读取，但不得重新创建已退役的解析页面、旧请求流程或独立 AI 配置。
 
 ## 现有基底与接入原则
 
@@ -194,7 +194,7 @@ Agent 参数校验不能依赖 Flutter 表单是否打开。需从 [CourseEditor
 
 `AgentSettings` 与设置目录管理共享指令、历史保留和连接配置。共享指令保留用户原文，不设字数门槛；历史保留接受非负整数，0 表示一直保留，正数表示保留天数。普通运行没有累计 Token、轮数、工具次数或普通任务时限配额，用量按实际 provider 报告独立统计。共享偏好支持 keep/set/reset 及条件撤销；权限模式由用户选择，模型不能通过设置工具提权。缺失的 usage 和没有可信价格来源的费用保留为未知。
 
-会话、消息、工具调用、操作绑定、交互、队列、摘要、历史版本及知识保存到共享 Drift/SQLite；附件元数据入库，二进制内容独立保存。列表和正文分页读取，管理工具的数量与用量来自真实统计，导出、恢复执行和修改目标在需要时读取完整会话。原始协议历史与模型工作上下文分开，折叠正文不改变历史。备份使用新版本快照；旧 Agent 数据先核对已接受写入，再按切换流程重建，不恢复旧 notice 执行路径。
+会话、消息、工具调用、操作绑定、交互、队列、摘要及历史版本由 Rust 保存到每会话的追加式 JSONL；会话列表与消息位置使用可重建的 SQLite 索引，知识及其版本、回执保存到独立 SQLite。附件元数据随引用保存，二进制内容存入私有文件。列表和正文分页读取，管理工具的数量与用量来自真实统计，导出、恢复执行和修改目标在需要时读取完整会话。原始协议历史与模型工作上下文分开，折叠正文不改变历史。Agent 备份使用新布局；开发聊天、附件、自定义 Skills 和记忆直接重建，业务、连接和凭据继续保留。
 
 上下文配置按模型保存：用户设置的最大窗口优先，其次使用服务明确报告的窗口；未知窗口保持未设置。自动压缩默认取已知窗口的 80%，可配置触发 Token 数或关闭；手动入口和 `/compact` 使用同一服务。运行中的同模型压缩配置在下一请求生效，切换下一次使用的模型保持在途请求的模型身份。上下文占用区分估算与实际报告，并关联对应模型。摘要成功持久化后才更新工作上下文，失败保留原文和重试入口。
 
@@ -247,7 +247,7 @@ API 连接与凭据分离。旧学校解析配置与密钥按明确迁移契约�
 
 审批中的业务对象先展示可读字段：课程的星期、周次、节次及时间，课表的学期日期和周数，日程的时间、全天和重复规则等。编辑只列出发生变化的可读字段及前后值；复合导入内的课程与作息逐项展开，每次先显示 20 项并提供继续查看。未知字段和完整原生值保留在详情中，显示投影不改写计划；绝对时间明确标注 UTC，浮动时间不擅自转换设备时区。保存后的只读资源查看复用这些字段格式，不启用工作区或改变选择。回归见[业务字段预览](../test/agent/ui/agent_change_fields_test.dart)与[只读资源](../test/agent/ui/agent_resource_view_test.dart)。
 
-课表审批同时显示关联作息的名称、复用／新增／修改状态及节次时间。该参考快照只取自准备完成的候选，并按精确作息 ID 关联；不会读取后来选中的时间集，也不替换为当前应用状态。参考数据仅用于用户审批，不加入模型摘要、变更本身或持久回执，原审批身份和提交校验保持不变。缺少参考快照的历史预览保留具体 ID，不猜测名称。见[引用快照](../test/agent/imports/school_import_tool_adapter_test.dart)、[真实审批传递](../test/agent/acceptance/agent_period_reference_test.dart)和[作息预览](../test/agent/ui/agent_period_reference_preview_test.dart)。
+课表审批同时显示关联作息的名称、复用／新增／修改状态及节次时间。该参考快照只取自准备完成的候选，并按精确作息 ID 关联；不会读取后来选中的时间集，也不替换为当前应用状态。参考数据仅用于用户审批，不加入模型摘要、变更本身或持久回执，原审批身份和提交校验保持不变。缺少参考快照的历史预览保留具体 ID，不猜测名称。见[引用快照](../test/agent/imports/school_import_tool_adapter_test.dart)、[正式审批桥接](../lib/agent/bridge/rust_agent_business_host.dart)和[作息预览](../test/agent/ui/agent_period_reference_preview_test.dart)。
 
 | 权限模式 | 执行契约 |
 | --- | --- |
@@ -302,6 +302,6 @@ HTTP 传输许可与业务修改审批分别处理。只读计划和询问模式
 11. **共享 Skills**：所有领域能力都有相应操作指导；文字和网页导入、重复范围、批量设置、冲突及恢复都有合成场景，确认 Skill 所用工具和当前契约一致。
 12. **真实场景**：使用合成数据验证“调整全部课表中的指定课程”“修改隐藏分类中的重复日程本次及以后”“批量修改停用域主题与默认提醒”“恢复所有显示设置”“网页校对后在新会话导入课程”“更换自选 API 凭据并开始新运行”等流程，以实际存储状态和回执为依据。
 
-现有可复用回归入口包括[显式课表目标](../test/controllers/student_timetable_test.dart)、[课程服务](../test/services/student_timetable_service_test.dart)、[重复范围编辑](../test/services/general_event_scope_edit_test.dart)、[数据传输](../test/controllers/data_transfer_controller_test.dart)、[保存回执](../test/controllers/app_session_commit_test.dart)、[仓库批边界](../test/data/app_repository_batch_test.dart)、[备份隔离](../test/controllers/app_backup_restore_isolation_test.dart)、[密钥持久化](../test/controllers/school_import_secret_persistence_test.dart)、[端点授权](../test/agent/runtime/agent_runtime_controller_test.dart)、[设备布局](../test/services/desktop_layout_preferences_test.dart)和[Android 能力桥接](../test/services/android_productivity_bridge_test.dart)。新增能力需补目标明确的回归，不以旧测试存在代替新功能验收。
+现有可复用回归入口包括[显式课表目标](../test/controllers/student_timetable_test.dart)、[课程服务](../test/services/student_timetable_service_test.dart)、[重复范围编辑](../test/services/general_event_scope_edit_test.dart)、[数据传输](../test/controllers/data_transfer_controller_test.dart)、[保存回执](../test/controllers/app_session_commit_test.dart)、[仓库批边界](../test/data/app_repository_batch_test.dart)、[备份隔离](../test/controllers/app_backup_restore_isolation_test.dart)、[密钥持久化](../test/controllers/school_import_secret_persistence_test.dart)、[端点授权](../rust/src/runtime/transport.rs)、[设备布局](../test/services/desktop_layout_preferences_test.dart)和[Android 能力桥接](../test/services/android_productivity_bridge_test.dart)。新增能力需补目标明确的回归，不以旧测试存在代替新功能验收。
 
 日期和重复改动遵守贡献指南中的五区原生时区检查。Widget、内存通知网关、模拟器、平台构建和实体设备分别记录范围；跨平台内置 Agent 不等于移动系统允许其全天后台运行，后台执行和进程恢复须另按平台约束验收。

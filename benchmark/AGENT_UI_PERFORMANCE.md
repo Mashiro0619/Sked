@@ -1,5 +1,7 @@
 # Agent transcript and host performance
 
+> 历史协议：下文记录旧 Dart Agent 实现的测量方法和字段。对应执行入口随 Rust 切换退役，既有报告保留原源码与数据身份。真实模型和性能对照保持暂停；重新开始时须为正式 Rust 装配建立新的固定基线。
+
 `integration_test/agent_ui_performance_benchmark_test.dart` records native
 Profile engine frames for the actual Agent entry, long-history scrolling,
 main-shell close/reopen transitions and return to the latest message. It reuses
@@ -206,7 +208,7 @@ the driver recalculates them from the retained raw frames. It also checks
 ordered cold/warm actions, transcript text hashes, reading continuity, one
 archive load, stable semantics and complete cleanup.
 
-The [population contract regression](../test/agent_ui_performance_protocol_test.dart)
+The historical population contract regression (`test/agent_ui_performance_protocol_test.dart`)
 checks the benchmark and driver together, including rejection of v1/v2 reports,
 memory storage, report prewarming, unrelated scroll targets and incomplete
 cold/warm requirements. It does not collect native frames.

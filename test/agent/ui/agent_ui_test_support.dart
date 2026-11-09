@@ -1,31 +1,19 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
+import '../../support/agent_memory_conversations.dart';
+
+export '../../support/agent_memory_conversations.dart';
+
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/theme/app_theme.dart';
 
-class UiMemoryStorage extends ConversationStorage {
-  UiMemoryStorage() : super.base();
-  String? source;
-  bool fail = false;
-  Future<void> Function()? beforeSave;
-  @override
-  Future<ConversationStorageLoad> load() async =>
-      ConversationStorageLoad(source: source);
-  @override
-  Future<void> save(String value, {required int revision}) async {
-    await beforeSave?.call();
-    if (fail) throw StateError('raw-secret-must-not-be-shown');
-    source = value;
-  }
-}
-
 class UiDelegate extends AgentUiDelegate {
   UiDelegate(this.repository);
-  final ConversationRepository repository;
+  final MemoryConversationRepository repository;
   @override
   final ValueNotifier<AgentUiState> state = ValueNotifier(
     AgentUiState(enabled: true, configured: true),

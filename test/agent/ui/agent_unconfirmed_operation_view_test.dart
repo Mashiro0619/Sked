@@ -1,23 +1,14 @@
-import 'package:sked/agent/operations/tool_outcome.dart';
-
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:provider/provider.dart';
-import 'package:sked/agent/knowledge/knowledge_storage.dart';
-import 'package:sked/agent/tools/workflow_tool_adapters.dart';
 import 'package:sked/agent/ui/agent_operation_card.dart';
 import 'package:sked/agent/ui/agent_plan_preview.dart';
 import 'package:sked/agent/ui/agent_resource_view.dart';
-import 'package:sked/agent/ui/agent_ui_delegate.dart';
-import 'package:sked/application/operation_contracts.dart';
-import 'package:sked/controllers/app_session.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
 
-import '../acceptance/acceptance_harness.dart';
+import 'agent_receipt_view_support.dart';
 import 'agent_ui_test_support.dart';
 
 const _locales = [
@@ -28,227 +19,161 @@ const _locales = [
 
 void main() {
   for (final locale in _locales) {
+    testWidgets('resource preparation keeps changes unconfirmed in $locale', (
+      tester,
+    ) async {
+      addTearDown(tester.view.reset);
+      final changes = <Map<String, Object?>>[
+        {
+          'action': 'created',
+          'ref': {'kind': 'calendar', 'id': 'new'},
+          'before': null,
+          'after': {'name': 'Uncommitted calendar'},
+        },
+        {
+          'action': 'updated',
+          'ref': {'kind': 'calendar', 'id': 'visible'},
+          'before': {'name': 'Studies'},
+          'after': {'name': 'Planned studies'},
+        },
+        {
+          'action': 'deleted',
+          'ref': {'kind': 'calendar', 'id': 'remove-me'},
+          'before': {'name': 'Remove calendar'},
+          'after': null,
+        },
+      ];
+      final prepared = <String, Object?>{
+        'planId': 'ui-plan',
+        'changes': changes,
+      };
+      final source = jsonEncode(prepared);
+      final opened = <Map<String, Object?>>[];
+      await mountReceiptView(tester, prepared, locale: locale, opened: opened);
+      var l = AppLocalizations.of(
+        tester.element(find.byType(AgentOperationCard)),
+      );
+      expect(find.text(l.agentPlanReady), findsOneWidget);
+      for (final name in [
+        'Uncommitted calendar',
+        'Planned studies',
+        'Remove calendar',
+      ]) {
+        expect(find.text(name), findsOneWidget);
+      }
+      expect(_completedRows(l), findsNothing);
+      expect(find.byTooltip(l.agentViewObject), findsNothing);
+      expect(opened, isEmpty);
+      expect(jsonEncode(prepared), source);
+      expect(tester.takeException(), isNull);
+
+      await tester.pumpWidget(const SizedBox());
+      await mountAgentUi(
+        tester,
+        SingleChildScrollView(child: AgentPlanPreview(details: prepared)),
+        locale: locale,
+        scale: 2,
+        size: const Size(390, 844),
+      );
+      l = AppLocalizations.of(tester.element(find.byType(AgentPlanPreview)));
+      for (final completed in [
+        l.agentChangeCreated,
+        l.agentChangeUpdated,
+        l.agentChangeDeleted,
+      ]) {
+        expect(find.text(completed), findsNothing);
+      }
+      final items = [
+        (name: 'Uncommitted calendar', verb: l.agentKnowledgeAdd),
+        (name: 'Planned studies', verb: l.agentKnowledgeEdit),
+        (name: 'Remove calendar', verb: l.delete),
+      ];
+      for (var index = 0; index < items.length; index++) {
+        final item = items[index];
+        final tile = find.byKey(ValueKey('agent-plan-preview-change-$index'));
+        expect(
+          find.descendant(of: tile, matching: find.text(item.verb)),
+          findsOneWidget,
+        );
+        await tester.ensureVisible(tile);
+        await tester.tap(find.text(item.name).first);
+        await tester.pumpAndSettle();
+        final details = find.descendant(
+          of: tile,
+          matching: find.widgetWithText(ExpansionTile, l.agentPlanDetails),
+        );
+        await tester.ensureVisible(details);
+        await tester.tap(
+          find.descendant(of: details, matching: find.text(l.agentPlanDetails)),
+        );
+        await tester.pumpAndSettle();
+        final displayed = tester.widget<SelectableText>(
+          find.descendant(of: details, matching: find.byType(SelectableText)),
+        );
+        expect(jsonDecode(displayed.data!), {
+          l.agentValueBefore: changes[index]['before'],
+          l.agentValueAfter: changes[index]['after'],
+        });
+        await tester.ensureVisible(find.text(item.name).first);
+        await tester.tap(find.text(item.name).first);
+        await tester.pumpAndSettle();
+      }
+      expect(jsonEncode(prepared), source);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    });
+
     testWidgets(
-      'real resource preparation and approval keep changes unconfirmed in $locale',
+      'committed resources open with unknown reminder observation in $locale',
       (tester) async {
         addTearDown(tester.view.reset);
-        final h = AcceptanceHarness();
-        await _realAsync(
+        final initial = buildInitialAppData(buildDefaultPeriodTimes());
+        final app = await receiptWorkspace(
           tester,
-          () => h.initialize(
-            data: _previewData(),
-            knowledgeStorage: MemoryKnowledgeStorage(),
-          ),
-        );
-        addTearDown(h.close);
-        final originalData = h.saved.encode();
-        final originalKnowledge = h.app.agent.knowledgeRepository.snapshot
-            .encode();
-        late Map<String, Object?> prepared;
-        late AgentUiApproval approval;
-        await _realAsync(tester, () async {
-          final runtime = h.app.agent.runtime;
-          await runtime.setMode(h.conversationId, AgentPermissionMode.ask);
-          final announced = Completer<AgentUiApproval>();
-          final execution = runtime.watchConversation(h.conversationId);
-          void captureApproval() {
-            final pending = execution.value.pendingApproval;
-            if (pending != null && !announced.isCompleted) {
-              prepared = h.app.agent.mutations.plan(pending.id)!.summary();
-              announced.complete(pending);
-            }
-          }
-
-          execution.addListener(captureApproval);
-          try {
-            final running = h.run(() async {
-              await expectLater(
-                h.call('mutation.apply', {
-                  'commands': [
-                    {
-                      'kind': 'calendar',
-                      'action': 'create',
-                      'values': {'name': 'Uncommitted calendar'},
-                    },
-                    {
-                      'kind': 'calendar',
-                      'action': 'patch',
-                      'target': {'id': 'visible'},
-                      'values': {'name': 'Planned studies'},
-                    },
-                    {
-                      'kind': 'calendar',
-                      'action': 'delete',
-                      'target': {'id': 'remove-me'},
-                    },
-                  ],
-                }),
-                throwsA(
-                  isA<OperationProblem>().having(
-                    (error) => error.code,
-                    'code',
-                    OperationErrorCode.cancelled,
-                  ),
+          initial.copyWith(
+            generalMode: initial.generalMode.copyWith(
+              schedules: const [
+                GeneralSchedule(
+                  id: 'saved',
+                  name: 'Saved calendar',
+                  events: [],
                 ),
-              );
-            });
-            approval = await Future.any<AgentUiApproval>([
-              announced.future,
-              running.then<AgentUiApproval>(
-                (_) => throw StateError('The real approval was not presented.'),
-              ),
-            ]);
-            await runtime.reject(h.conversationId, approval.id);
-            await running;
-          } finally {
-            execution.removeListener(captureApproval);
-          }
-        });
-        expect(prepared['status'], isNull);
-        expect(approval.id, prepared['planId']);
-        final changes = (prepared['changes'] as List).cast<Map>();
-        expect(
-          changes.map((change) => change['action']),
-          containsAll(['created', 'updated', 'deleted']),
-        );
-        expect(
-          changes.firstWhere((change) => change['action'] == 'created')['ref'],
-          isA<Map>(),
-        );
-        final preparedJson = jsonEncode(prepared);
-        final approvalJson = jsonEncode(approval.details);
-        final opened = <Map<String, Object?>>[];
-        await _mountCard(tester, h, prepared, locale: locale, opened: opened);
-        var l = AppLocalizations.of(
-          tester.element(find.byType(AgentOperationCard)),
-        );
-        expect(find.text(l.agentPlanReady), findsOneWidget);
-        for (final name in [
-          'Uncommitted calendar',
-          'Planned studies',
-          'Remove calendar',
-        ]) {
-          expect(find.text(name), findsOneWidget);
-        }
-        expect(_completedRows(l), findsNothing);
-        expect(find.byTooltip(l.agentViewObject), findsNothing);
-        expect(opened, isEmpty);
-        expect(jsonEncode(prepared), preparedJson);
-        expect(h.saved.encode(), originalData);
-        expect(tester.takeException(), isNull);
-
-        await tester.pumpWidget(const SizedBox());
-        await mountAgentUi(
-          tester,
-          SingleChildScrollView(
-            child: AgentPlanPreview(details: approval.details),
-          ),
-          locale: locale,
-          scale: 2,
-          size: const Size(390, 844),
-        );
-        l = AppLocalizations.of(tester.element(find.byType(AgentPlanPreview)));
-        for (final completed in [
-          l.agentChangeCreated,
-          l.agentChangeUpdated,
-          l.agentChangeDeleted,
-        ]) {
-          expect(find.text(completed), findsNothing);
-        }
-        final previewChanges = (approval.details['changes'] as List)
-            .cast<Map>();
-        for (final item in [
-          (name: 'Uncommitted calendar', verb: l.agentKnowledgeAdd),
-          (name: 'Planned studies', verb: l.agentKnowledgeEdit),
-          (name: 'Remove calendar', verb: l.delete),
-        ]) {
-          final original = previewChanges.singleWhere((change) {
-            final after = change['after'], before = change['before'];
-            return (after is Map && after['name'] == item.name) ||
-                (before is Map && before['name'] == item.name);
-          });
-          final index = previewChanges.indexOf(original);
-          final tile = find.byKey(ValueKey('agent-plan-preview-change-$index'));
-          expect(
-            find.descendant(of: tile, matching: find.text(item.verb)),
-            findsOneWidget,
-          );
-          await tester.ensureVisible(tile);
-          await tester.tap(find.text(item.name).first);
-          await tester.pumpAndSettle();
-          final details = find.descendant(
-            of: tile,
-            matching: find.widgetWithText(ExpansionTile, l.agentPlanDetails),
-          );
-          await tester.ensureVisible(details);
-          await tester.tap(
-            find.descendant(
-              of: details,
-              matching: find.text(l.agentPlanDetails),
-            ),
-          );
-          await tester.pumpAndSettle();
-          final displayed = tester.widget<SelectableText>(
-            find.descendant(of: details, matching: find.byType(SelectableText)),
-          );
-          expect(jsonDecode(displayed.data!), {
-            l.agentValueBefore: original['before'],
-            l.agentValueAfter: original['after'],
-          });
-          await tester.ensureVisible(find.text(item.name).first);
-          await tester.tap(find.text(item.name).first);
-          await tester.pumpAndSettle();
-        }
-        expect(jsonEncode(prepared), preparedJson);
-        expect(jsonEncode(approval.details), approvalJson);
-        expect(h.saved.encode(), originalData);
-        expect(
-          h.app.agent.knowledgeRepository.snapshot.encode(),
-          originalKnowledge,
-        );
-        expect(tester.takeException(), isNull);
-        await tester.pumpWidget(const SizedBox());
-      },
-    );
-
-    testWidgets(
-      'a real committed resource stays saved and opens with unknown reminder observation in $locale',
-      (tester) async {
-        addTearDown(tester.view.reset);
-        final h = AcceptanceHarness();
-        await _realAsync(
-          tester,
-          () => h.initialize(knowledgeStorage: MemoryKnowledgeStorage()),
-        );
-        addTearDown(h.close);
-        late Map<String, Object?> receipt;
-        await _realAsync(tester, () async {
-          await h.run(() async {
-            final prepared = await h.call('mutation.apply', {
-              'commands': [
-                {
-                  'kind': 'calendar',
-                  'action': 'create',
-                  'values': {'name': 'Saved calendar'},
-                },
               ],
-            });
-            receipt = prepared;
-          });
-        });
-        expect(receipt['status'], 'committed');
-        // An unbound observer supplies the real host's unknown notification
-        // projection. It does not change the already committed business result.
-        h.app.agent.tools.bindNotificationEffects();
-        final described = h.app.agent.tools.describeCommitResult(receipt);
+            ),
+          ),
+        );
+        const expectedRef = <String, Object?>{
+          'kind': 'calendar',
+          'id': 'saved',
+        };
+        final receipt = <String, Object?>{
+          'status': 'committed',
+          'operationId': 'ui-resource',
+          'generation': 'ui',
+          'sequence': 1,
+          'changes': [
+            {
+              'action': 'created',
+              'ref': expectedRef,
+              'label': 'Saved calendar',
+              'before': null,
+              'after': {'name': 'Saved calendar'},
+            },
+          ],
+        };
+        app.agent.tools.bindNotificationEffects();
+        final described = app.agent.tools.describeCommitResult(receipt);
         expect((described['notificationEffect'] as Map)['state'], 'unknown');
-        expect(described['status'], 'committed');
-        final change = (receipt['changes'] as List).single as Map;
-        final expectedRef = Map<String, Object?>.from(change['ref'] as Map);
-        final originalReceipt = jsonEncode(receipt);
-        final originalData = h.saved.encode();
+        final source = jsonEncode(receipt);
+        final saved = app.session.committedData.encode();
         final opened = <Map<String, Object?>>[];
-        await _mountCard(tester, h, receipt, locale: locale, opened: opened);
+        await mountReceiptView(
+          tester,
+          receipt,
+          locale: locale,
+          opened: opened,
+          app: app,
+        );
         final l = AppLocalizations.of(
           tester.element(find.byType(AgentOperationCard)),
         );
@@ -264,13 +189,16 @@ void main() {
         await tester.tap(button);
         await tester.pumpAndSettle();
         expect(opened, [expectedRef]);
-        final view = tester.widget<AgentResourceView>(
-          find.byType(AgentResourceView),
+        expect(
+          tester
+              .widget<AgentResourceView>(find.byType(AgentResourceView))
+              .ref
+              .toJson(),
+          expectedRef,
         );
-        expect(view.ref.toJson(), expectedRef);
         expect(find.text('Saved calendar'), findsOneWidget);
-        expect(jsonEncode(receipt), originalReceipt);
-        expect(h.saved.encode(), originalData);
+        expect(jsonEncode(receipt), source);
+        expect(app.session.committedData.encode(), saved);
         Navigator.of(tester.element(find.byType(AgentResourceView))).pop();
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
@@ -280,58 +208,28 @@ void main() {
   }
 
   testWidgets(
-    'a real applied export keeps its confirmed effect when final receipt storage is partial',
+    'an applied export retains its effect while receipt finalization is partial',
     (tester) async {
       addTearDown(tester.view.reset);
-      final h = AcceptanceHarness();
-      await _realAsync(
-        tester,
-        () => h.initialize(knowledgeStorage: MemoryKnowledgeStorage()),
-      );
-      addTearDown(h.close);
-      late Map<String, Object?> receipt;
-      await _realAsync(tester, () async {
-        h.app.agent.workflowTools.bindServices(
-          saveArtifact: (artifact) async {
-            h.writtenArtifacts.add(artifact);
-            h.storage.saveError = StateError(
-              'Synthetic final receipt failure.',
-            );
-            return const AgentArtifactWriteResult(
-              saved: true,
-              destination: 'memory://confirmed-export',
-            );
+      final receipt = <String, Object?>{
+        'operationId': 'ui-export',
+        'kind': 'external',
+        'status': 'partial',
+        'effectStatus': 'applied',
+        'receiptFinalized': false,
+        'recoveryRequired': true,
+        'changes': [
+          {
+            'key': 'export.artifact',
+            'before': null,
+            'after': {'destination': 'memory://confirmed-export'},
           },
-        );
-        await h.run(() async {
-          final artifact = await h.call('exports.generate', {
-            'format': 'schedules_json',
-            'ids': ['visible'],
-          });
-          final prepared = await h.call('exports.write', {
-            'artifactId': artifact['artifactId'],
-          });
-          receipt = prepared;
-        });
-      });
-      expect(receipt['status'], 'partial');
-      expect(receipt['effectStatus'], 'applied');
-      expect(receipt['receiptFinalized'], isFalse);
-      expect(receipt['recoveryRequired'], isTrue);
-      expect(h.writtenArtifacts, hasLength(1));
-      expect(h.writtenArtifacts.single.text, isNotEmpty);
-      expect(
-        h.app.agent.external
-            .status(receipt['operationId'] as String)!
-            .result['effectStatus'],
-        'pending',
-      );
-      final originalReceipt = jsonEncode(receipt);
-      final originalData = h.saved.encode();
+        ],
+      };
+      final source = jsonEncode(receipt);
       final opened = <Map<String, Object?>>[];
-      await _mountCard(
+      await mountReceiptView(
         tester,
-        h,
         receipt,
         locale: const Locale('en'),
         opened: opened,
@@ -348,28 +246,9 @@ void main() {
         'applied',
       );
       expect(opened, isEmpty);
-      expect(jsonEncode(receipt), originalReceipt);
-      expect(h.saved.encode(), originalData);
-      expect(h.writtenArtifacts, hasLength(1));
+      expect(jsonEncode(receipt), source);
       expect(tester.takeException(), isNull);
-      await tester.pumpWidget(const SizedBox());
     },
-  );
-}
-
-AppData _previewData() {
-  final data = acceptanceData();
-  return data.copyWith(
-    generalMode: data.generalMode.copyWith(
-      schedules: [
-        ...data.generalMode.schedules,
-        const GeneralSchedule(
-          id: 'remove-me',
-          name: 'Remove calendar',
-          events: [],
-        ),
-      ],
-    ),
   );
 }
 
@@ -380,50 +259,4 @@ Finder _completedRows(AppLocalizations l) {
     l.agentChangeDeleted,
   ].map(RegExp.escape).join('|');
   return find.textContaining(RegExp('^($actions) · '));
-}
-
-Future<void> _mountCard(
-  WidgetTester tester,
-  AcceptanceHarness h,
-  Map<String, Object?> receipt, {
-  required Locale locale,
-  required List<Map<String, Object?>> opened,
-}) => mountAgentUi(
-  tester,
-  Provider<AppSession>.value(
-    value: h.app.session,
-    child: Builder(
-      builder: (context) => SingleChildScrollView(
-        child: AgentOperationCard(
-          outcome: ToolOutcome.fromResult(
-            h.app.agent.tools.describeCommitResult(receipt),
-          ),
-          onOpenResource: (ref) {
-            opened.add(ref);
-            unawaited(AgentResourceView.open(context, ref));
-          },
-        ),
-      ),
-    ),
-  ),
-  locale: locale,
-  scale: 2,
-  size: const Size(390, 844),
-);
-
-Future<void> _realAsync(
-  WidgetTester tester,
-  Future<void> Function() action,
-) async {
-  Object? failure;
-  StackTrace? failureStack;
-  await tester.runAsync(() async {
-    try {
-      await action();
-    } catch (error, stack) {
-      failure = error;
-      failureStack = stack;
-    }
-  });
-  if (failure != null) Error.throwWithStackTrace(failure!, failureStack!);
 }

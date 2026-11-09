@@ -3033,5 +3033,7 @@
   "agentPinConversation": "固定對話",
   "@agentPinConversation": {},
   "agentUnpinConversation": "取消固定",
-  "@agentUnpinConversation": {}
+  "@agentUnpinConversation": {},
+  "agentUnsupportedPlatform": "此平台暫不支援 Agent。",
+  "@agentUnsupportedPlatform": {}
 }

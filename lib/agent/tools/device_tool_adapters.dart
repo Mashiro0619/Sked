@@ -7,7 +7,7 @@ import '../../services/desktop_layout_preferences.dart';
 import '../../services/desktop_window_bridge.dart';
 import '../../services/developer_ui_preferences.dart';
 import '../provider/provider.dart';
-import '../runtime/agent_runtime_controller.dart' show AgentApprovalRequester;
+import '../operations/approval_requester.dart';
 import 'application_tool_host.dart';
 
 /// Device services belong to the mounted application. Binding never creates a

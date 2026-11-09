@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:sked/agent/attachments/attachment_storage.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
-import 'package:sked/agent/knowledge/knowledge_storage.dart';
 import 'package:sked/backup/selective_restore_coordinator.dart';
 import 'package:sked/services/device_preferences_store.dart';
 import 'package:sked/app_runtime.dart';
@@ -10,7 +9,6 @@ import 'package:sked/main.dart' show AppBootstrap;
 import 'package:sked/models/timetable_models.dart';
 
 import 'startup_protocol.dart';
-import '../../test/support/memory_conversation_storage.dart';
 
 AppBootstrap createStartupRoot(
   StartupDependencies dependencies,
@@ -23,11 +21,8 @@ AppBootstrap createStartupRoot(
     final app = AppRuntime(
       // Explicit test owners prevent this benchmark from opening user stores.
       // ignore: invalid_use_of_visible_for_testing_member
-      agentConversationStorage: MemoryConversationStorage(),
-      // ignore: invalid_use_of_visible_for_testing_member
-      agentAttachmentStorage: MemoryAttachmentStorage(),
-      // ignore: invalid_use_of_visible_for_testing_member
-      agentKnowledgeStorage: MemoryKnowledgeStorage(),
+      agentPlatformSupported: false,
+
       // ignore: invalid_use_of_visible_for_testing_member
       agentCredentialStore: MemoryAgentCredentialStore(),
       // ignore: invalid_use_of_visible_for_testing_member

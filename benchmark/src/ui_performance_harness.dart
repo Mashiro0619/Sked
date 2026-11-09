@@ -2,7 +2,6 @@ import '../../test/support/agenda_notification_memory.dart';
 
 import 'package:sked/agent/attachments/attachment_storage.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
-import 'package:sked/agent/knowledge/knowledge_storage.dart';
 import 'package:sked/backup/selective_restore_coordinator.dart';
 import 'package:sked/services/device_preferences_store.dart';
 import 'package:sked/providers/app_scope.dart';
@@ -30,8 +29,6 @@ import 'package:sked/theme/sked_expressive_theme.dart';
 import 'package:sked/widgets/desktop_window_host.dart';
 import 'package:sked/widgets/material_ui_compatibility.dart';
 
-import '../../test/support/memory_conversation_storage.dart';
-
 /// Only external boundaries are replaced. Provider, shell, routes, widgets,
 /// motion, layout and occurrence queries are the production implementations.
 class UiPerformanceSession {
@@ -44,11 +41,8 @@ class UiPerformanceSession {
     provider = AppRuntime(
       // Explicit test owners prevent this benchmark from opening user stores.
       // ignore: invalid_use_of_visible_for_testing_member
-      agentConversationStorage: MemoryConversationStorage(),
-      // ignore: invalid_use_of_visible_for_testing_member
-      agentAttachmentStorage: MemoryAttachmentStorage(),
-      // ignore: invalid_use_of_visible_for_testing_member
-      agentKnowledgeStorage: MemoryKnowledgeStorage(),
+      agentPlatformSupported: false,
+
       // ignore: invalid_use_of_visible_for_testing_member
       agentCredentialStore: MemoryAgentCredentialStore(),
       // ignore: invalid_use_of_visible_for_testing_member

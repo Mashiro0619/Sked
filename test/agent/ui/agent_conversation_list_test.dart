@@ -4,7 +4,7 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
 import 'package:sked/agent/ui/agent_conversation_list.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
 import 'package:sked/widgets/sked_popup_menu.dart';
@@ -13,7 +13,7 @@ import 'agent_ui_test_support.dart';
 
 class _HistoryHost extends ChangeNotifier {
   _HistoryHost(this.repository);
-  ConversationRepository repository;
+  MemoryConversationRepository repository;
   bool active = true;
   bool interactive = true;
   bool allowNew = true;
@@ -29,7 +29,7 @@ class _HistoryHost extends ChangeNotifier {
   final archived = <String>[];
 
   void update({
-    ConversationRepository? repository,
+    MemoryConversationRepository? repository,
     bool? active,
     bool? interactive,
     bool? allowNew,
@@ -101,7 +101,7 @@ Finder _menu() =>
 
 void _disposeRepositoryAfterTest(
   WidgetTester tester,
-  ConversationRepository repository,
+  MemoryConversationRepository repository,
 ) {
   addTearDown(() async {
     await tester.runAsync(() async {
@@ -116,14 +116,14 @@ void _disposeRepositoryAfterTest(
   });
 }
 
-Future<ConversationRepository> _repository(
+Future<MemoryConversationRepository> _repository(
   WidgetTester tester, {
   int count = 6,
   int archivedCount = 1,
   String prefix = 'Current',
 }) async {
   var tick = 0;
-  final repository = ConversationRepository(
+  final repository = MemoryConversationRepository(
     storage: UiMemoryStorage(),
     clock: () => DateTime.utc(2026, 11, 5).add(Duration(seconds: tick++)),
   );
@@ -178,7 +178,7 @@ Future<void> _mount(
 Future<void> _tap(
   WidgetTester tester,
   Finder finder, {
-  ConversationRepository? waitForRepository,
+  MemoryConversationRepository? waitForRepository,
 }) async {
   if (finder.hitTestable().evaluate().isEmpty) {
     await tester.ensureVisible(finder);
@@ -990,7 +990,7 @@ void main() {
   testWidgets('empty unsent-only history shrinkWrap has a finite scroll body', (
     tester,
   ) async {
-    final repository = ConversationRepository(storage: UiMemoryStorage());
+    final repository = MemoryConversationRepository(storage: UiMemoryStorage());
     _disposeRepositoryAfterTest(tester, repository);
     await tester.runAsync(() async {
       await repository.load();

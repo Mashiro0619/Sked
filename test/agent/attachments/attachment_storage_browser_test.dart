@@ -10,7 +10,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:web/web.dart' as web;
-import 'package:sked/agent/attachments/attachment_repository.dart';
+import 'package:sked/agent/attachments/attachment_models.dart';
 import 'package:sked/agent/attachments/attachment_storage_web.dart';
 
 void main() {
@@ -39,28 +39,21 @@ void main() {
     final name =
         'sked-attachment-test-${DateTime.now().microsecondsSinceEpoch}';
     addTearDown(() => _deleteDatabase(name));
-    final first = AttachmentRepository(
-      storage: PlatformAttachmentStorage(databaseName: name),
-    );
+    final first = PlatformAttachmentStorage(databaseName: name);
     addTearDown(first.close);
     final data = Uint8List.fromList(
       List.generate(200000, (i) => (i * 37) % 256),
     );
-    final attachment = await first.put(
-      id: 'blob-id',
-      name: 'binary.pdf',
-      mediaType: 'application/pdf',
-      byteLength: data.length,
-      openRead: () => Stream.value(data),
-    );
+    await first.write('blob-id', Stream.value(data));
     await first.close();
-    final reopened = AttachmentRepository(
-      storage: PlatformAttachmentStorage(databaseName: name),
-    );
+    final reopened = PlatformAttachmentStorage(databaseName: name);
     addTearDown(reopened.close);
-    expect(await reopened.readBytes(attachment), data);
-    await reopened.collect({});
-    expect(await reopened.storage.ids(), isEmpty);
+    expect(
+      await reopened.read('blob-id').expand((chunk) => chunk).toList(),
+      data,
+    );
+    await reopened.delete('blob-id');
+    expect(await reopened.ids(), isEmpty);
     await reopened.close();
   });
 }

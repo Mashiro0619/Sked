@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
 import 'package:sked/agent/imports/conversation_file_attachments.dart';
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 
@@ -14,7 +14,9 @@ void main() {
       'text picker expires after ${changesActivity ? 'activity' : 'interaction'} is hidden and restored',
       (tester) async {
         addTearDown(tester.view.reset);
-        final repository = ConversationRepository(storage: UiMemoryStorage());
+        final repository = MemoryConversationRepository(
+          storage: UiMemoryStorage(),
+        );
         await repository.load();
         await repository.create(title: 'Retained source draft');
         final delegate = UiDelegate(repository);
@@ -60,7 +62,7 @@ void main() {
     (tester) async {
       addTearDown(tester.view.reset);
       final storage = UiMemoryStorage();
-      final repository = ConversationRepository(storage: storage);
+      final repository = MemoryConversationRepository(storage: storage);
       await repository.load();
       final conversation = await repository.create(title: 'Files');
       final delegate = UiDelegate(repository);
@@ -126,7 +128,9 @@ void main() {
     'text attachments larger than the old threshold remain complete',
     (tester) async {
       addTearDown(tester.view.reset);
-      final repository = ConversationRepository(storage: UiMemoryStorage());
+      final repository = MemoryConversationRepository(
+        storage: UiMemoryStorage(),
+      );
       await repository.load();
       await repository.create(title: 'Large text');
       final delegate = UiDelegate(repository);

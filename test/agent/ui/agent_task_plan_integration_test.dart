@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
 import 'package:sked/agent/history/conversation_history.dart';
 import 'package:sked/agent/interactions/agent_task_plan.dart';
 import 'package:sked/agent/ui/agent_conversation_view.dart';
@@ -323,7 +323,7 @@ List<ConversationMessage> _planMessages(AgentTaskPlan plan) => [
 ];
 
 class _PlanFixture {
-  final repository = ConversationRepository(storage: UiMemoryStorage());
+  final repository = MemoryConversationRepository(storage: UiMemoryStorage());
   late final delegate = UiDelegate(repository);
 
   Future<void> initialize(String title) async {

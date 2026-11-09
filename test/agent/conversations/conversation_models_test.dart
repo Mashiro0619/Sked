@@ -24,40 +24,27 @@ class _CountedMessage extends ConversationMessage {
 void main() {
   final now = DateTime.utc(2026, 10, 30);
 
-  test('v9 archives without pin metadata remain readable', () {
-    final conversation = AgentConversation(
+  test('conversation DTO preserves pin metadata', () {
+    final source = AgentConversation(
       id: 'saved',
       title: 'Saved conversation',
       createdAt: now,
       updatedAt: now,
+      pinned: true,
     );
-    final json = ConversationArchive(
-      conversations: [conversation],
-      selectedId: conversation.id,
-    ).toJson();
-    final legacy = Map<String, Object?>.from(conversation.toJson())
-      ..remove('pinned');
-    json['conversations'] = [legacy];
-    expect(json['version'], 9);
-    final restored = ConversationArchive.decode(jsonEncode(json));
-    expect(restored.conversations.single.pinned, isFalse);
-    expect(restored.conversations.single.titleGeneration, isNull);
-    final pinned = restored.conversations.single.copyWith(pinned: true);
+    final restored = AgentConversation.fromJson(
+      jsonDecode(jsonEncode(source.toJson())) as Map<String, dynamic>,
+    );
+    expect(restored.pinned, isTrue);
     expect(
-      pinned.withUpdatedAt(now.add(const Duration(seconds: 1))).pinned,
+      restored.withUpdatedAt(now.add(const Duration(seconds: 1))).pinned,
       isTrue,
     );
     expect(
-      AgentConversation.fromJson(jsonDecode(jsonEncode(pinned.toJson())))
-          .pinned,
-      isTrue,
-    );
-    expect(
-      () => AgentConversation.fromJson({...legacy, 'pinned': 'true'}),
+      () => AgentConversation.fromJson({...source.toJson(), 'pinned': 'true'}),
       throwsFormatException,
     );
   });
-
   test('timestamp updates reuse validated history without scanning message identities', () {
     final message = _CountedMessage(now);
     final source = AgentConversation(

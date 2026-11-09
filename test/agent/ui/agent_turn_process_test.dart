@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_transcript.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
@@ -50,7 +50,7 @@ void main() {
       message('answer', ConversationRole.assistant, 'The timetable is ready.'),
   ];
 
-  late ConversationRepository repository;
+  late MemoryConversationRepository repository;
   late UiDelegate delegate;
   late String id;
   Future<void> initialize(
@@ -58,7 +58,7 @@ void main() {
     bool complete = true,
     String? progress,
   }) async {
-    repository = ConversationRepository(storage: UiMemoryStorage());
+    repository = MemoryConversationRepository(storage: UiMemoryStorage());
     await repository.load();
     final conversation = await repository.create(title: 'Synthetic task');
     id = conversation.id;

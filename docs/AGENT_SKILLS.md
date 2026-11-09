@@ -25,7 +25,7 @@ Manifest 记录稳定 ID、内容版本、用途、触发提示、资源路径�
 
 普通只读工具不依赖 Skills 或记忆初始化。能力按需发现，已经公开的定义不反复加入请求。用户显式引用的 Skill 在发送时核对选定版本，运行使用不可变正文与依赖快照，修改在后续运行生效。
 
-技能篇数、单篇正文和累计正文没有固定容量门槛。请求上下文通过按模型配置的压缩服务管理；完整历史仍保存在数据库中。大列表使用可遍历分页，页面大小不限制任务总量。
+技能篇数、单篇正文和累计正文没有固定容量门槛。请求上下文通过按模型配置的压缩服务管理；完整历史仍保存在会话 JSONL 中。大列表使用可遍历分页，页面大小不限制任务总量。
 
 当前运行的目标、用户决定和真实回执优先于技能中的泛化步骤。参数错误正常回送模型修正，未知保存先核对回执。技能不能把未知效果写成成功。
 
@@ -35,4 +35,4 @@ Manifest 记录稳定 ID、内容版本、用途、触发提示、资源路径�
 
 更新内置 Skill 时同步 manifest 摘要和依赖，核对公开工具名称及权限说明；更新工具契约时同时修订相关技能，移除已退役调用。
 
-验证入口：[资产打包](../test/agent/skills/bundled_skill_assets_test.dart)、[装载器](../test/agent/skills/shared_skill_loader_test.dart)、[发现与加载](../test/agent/tools/skill_discovery_contract_test.dart)、[技能任务](../test/agent/acceptance/shared_skill_tasks_test.dart)。真实模型任务按[实施计划](AGENT_IMPLEMENTATION_PLAN.md)验收。
+验证入口：[资产打包](../test/agent/skills/bundled_skill_assets_test.dart)、[装载器](../test/agent/skills/shared_skill_loader_test.dart)、[发现与加载](../test/agent/tools/skill_discovery_contract_test.dart)、[原生技能快照与工具旅程](../rust/src/runtime/journey.rs)。真实模型任务按[Rust 迁移方案](AGENT_RUST_MIGRATION.md)保持暂停。

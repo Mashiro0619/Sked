@@ -4286,6 +4286,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentUnpinConversation => '取消固定';
+
+  @override
+  String get agentUnsupportedPlatform => '此平台暂不支持 Agent。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -8572,4 +8575,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentUnpinConversation => '取消固定';
+
+  @override
+  String get agentUnsupportedPlatform => '此平台暫不支援 Agent。';
 }

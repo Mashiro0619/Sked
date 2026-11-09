@@ -10,6 +10,7 @@ import 'package:sked/screens/workspace_features_page.dart';
 import 'package:sked/widgets/workspace_navigation.dart';
 import 'package:sked/widgets/sked_popup_menu.dart';
 
+import '../support/agent_native_fixture.dart' as native;
 import '../support/workspace_harness.dart';
 
 Finder _key(String value) => find.byKey(ValueKey(value));
@@ -57,10 +58,12 @@ Future<AppRuntime> _mount(
   double scale = 1,
   String locale = 'en',
   WorkspaceMemoryStorage? storage,
+  native.MemoryAgentCore? nativeCore,
 }) async {
   _viewport(t, size);
   final p = await workspaceProvider(
     locale: locale,
+    agentNativeClient: nativeCore?.client,
     storage:
         storage ?? WorkspaceMemoryStorage(_data(empty: empty, hidden: hidden)),
   );
@@ -278,7 +281,11 @@ void main() {
   testWidgets(
     'single business workspace hides its fallback while the drawer follows Agent enablement',
     (t) async {
-      final p = await _mount(t, hidden: false);
+      final p = await _mount(
+        t,
+        hidden: false,
+        nativeCore: native.MemoryAgentCore(),
+      );
       await p.settingsCommands.updateStudentToolbarNavigationVisibility(
         'workspace',
         true,
@@ -343,6 +350,8 @@ void main() {
       );
       expect(_menu, findsNothing);
       expect(t.takeException(), isNull);
+      await t.pumpWidget(const SizedBox.shrink());
+      await p.agent.quiesce();
     },
     variant: _phones,
   );

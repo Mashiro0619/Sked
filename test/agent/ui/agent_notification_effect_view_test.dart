@@ -2,17 +2,18 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:provider/provider.dart';
-import 'package:sked/agent/agent_application.dart';
+
+import '../../support/agent_native_fixture.dart' as native;
+
+import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
 import 'package:sked/agent/ui/agent_operation_card.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/application/mutation_coordinator.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/application/setting_registry.dart';
 import 'package:sked/models/timetable_models.dart';
-import 'package:sked/screens/agent_page.dart';
 import 'package:sked/services/agenda_effect_ticket.dart';
 
 import '../../support/workspace_harness.dart';
@@ -23,6 +24,8 @@ class _Fixture {
 
   final UiMemoryStorage storage;
   late AppRuntime app;
+  late final repository = MemoryConversationRepository(storage: storage);
+  late final delegate = UiDelegate(repository);
   final tracker = AgendaEffectTracker();
   final scope = OperationScope(
     id: 'notification-effect-view',
@@ -35,10 +38,11 @@ class _Fixture {
   Future<void> initialize({AppData? initialData}) async {
     app = await workspaceProvider(
       storage: initialData == null ? null : WorkspaceMemoryStorage(initialData),
-      agentConversationStorage: storage,
+      agentNativeClient: native.MemoryAgentCore().client,
       agentCredentialStore: MemoryAgentCredentialStore(),
     );
     await app.agent.initialize();
+    await repository.load();
     tracker.seed(app.session.committedData);
     app.agent.tools.bindNotificationEffects(
       read: tracker.forOperation,
@@ -46,6 +50,8 @@ class _Fixture {
     );
     addTearDown(() async {
       scope.cancel();
+      repository.dispose();
+      delegate.state.dispose();
       app.agent.tools.bindNotificationEffects();
       tracker.close();
       tracker.dispose();
@@ -82,10 +88,8 @@ class _Fixture {
     storedMessage = jsonEncode(
       app.agent.tools.describeCommitResult(committed.toJson()),
     );
-    final conversation = await app.agent.conversations.create(
-      title: 'Saved change',
-    );
-    await app.agent.conversations.update(
+    final conversation = await repository.create(title: 'Saved change');
+    await repository.update(
       conversation.id,
       (current) => current.copyWith(
         messages: [
@@ -101,9 +105,11 @@ class _Fixture {
     );
   }
 
-  Widget get view => ChangeNotifierProvider<AgentApplication>.value(
-    value: app.agent,
-    child: const AgentConversationHost(),
+  Widget get view => AgentConversationView(
+    repository: repository,
+    delegate: delegate,
+    operationChanges: app.agent.tools.notificationEffectChanges,
+    describeOperation: app.agent.tools.describeCommitResult,
   );
 }
 
@@ -145,7 +151,7 @@ void main() {
         expect(_effect(tester), state.name);
         expect(find.text('Changes saved'), findsOneWidget);
         expect(
-          fixture.app.agent.conversations.selected!.messages.single.text,
+          fixture.repository.selected!.messages.single.text,
           fixture.storedMessage,
         );
         expect(fixture.storage.source, beforeSource);
@@ -193,8 +199,7 @@ void main() {
         await mountAgentUi(tester, fixture.view);
         await _openReceipt(tester);
         final source = storage.source;
-        final original =
-            fixture.app.agent.conversations.selected!.messages.single.text;
+        final original = fixture.repository.selected!.messages.single.text;
 
         fixture.app.agent.tools.bindNotificationEffects();
         await tester.pumpAndSettle();
@@ -213,10 +218,7 @@ void main() {
           find.text('Reminder scheduling failed. Your changes are saved.'),
           findsNothing,
         );
-        expect(
-          fixture.app.agent.conversations.selected!.messages.single.text,
-          original,
-        );
+        expect(fixture.repository.selected!.messages.single.text, original);
         await tester.pumpWidget(const SizedBox());
 
         final restarted = _Fixture(storage);
@@ -232,10 +234,7 @@ void main() {
           findsNothing,
         );
         expect(find.text('Changes saved'), findsOneWidget);
-        expect(
-          restarted.app.agent.conversations.selected!.messages.single.text,
-          original,
-        );
+        expect(restarted.repository.selected!.messages.single.text, original);
         expect(storage.source, source);
         final card = tester.widget<AgentOperationCard>(
           find.byType(AgentOperationCard),

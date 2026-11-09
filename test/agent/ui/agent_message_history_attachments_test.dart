@@ -3,9 +3,9 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/attachments/attachment_repository.dart';
-import 'package:sked/agent/attachments/conversation_attachments.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
+import '../../support/agent_memory_attachments.dart';
+
 import 'package:sked/agent/history/conversation_history.dart';
 import 'package:sked/agent/ui/agent_attachment_view.dart';
 import 'package:sked/agent/ui/agent_conversation_view.dart';
@@ -210,13 +210,15 @@ Future<void> _pumpUntil(WidgetTester tester, bool Function() settled) async {
 }
 
 class _Fixture {
-  final conversations = ConversationRepository(storage: UiMemoryStorage());
-  final replacement = ConversationRepository(storage: UiMemoryStorage());
-  final blobs = MemoryAttachmentStorage();
+  final conversations = MemoryConversationRepository(
+    storage: UiMemoryStorage(),
+  );
+  final replacement = MemoryConversationRepository(storage: UiMemoryStorage());
+  final blobs = UiMemoryAttachmentBytes();
   late final delegate = UiDelegate(conversations);
   late final replacementDelegate = UiDelegate(replacement);
-  late final files = AttachmentRepository(storage: blobs);
-  late final ConversationAttachments attachments;
+  late final files = MemoryAttachmentReader(storage: blobs);
+  late final MemoryAttachmentController attachments;
   late final String id;
   late final ConversationAttachment file;
   String generation = 'original';
@@ -240,7 +242,7 @@ class _Fixture {
     );
     fixture.blobs.values[fixture.file.id] = bytes;
     // Construct the service and its futures in the same real zone as storage.
-    fixture.attachments = ConversationAttachments(
+    fixture.attachments = MemoryAttachmentController(
       conversations: fixture.conversations,
       repository: fixture.files,
     );

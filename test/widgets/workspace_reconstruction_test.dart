@@ -16,6 +16,7 @@ import 'package:sked/widgets/general_event_editor_sheet.dart';
 import 'package:sked/widgets/sked_tooltip.dart';
 import 'package:sked/widgets/workspace_navigation.dart';
 
+import '../support/agent_native_fixture.dart' as native;
 import '../support/workspace_harness.dart';
 
 void recordLayoutErrors() {
@@ -505,7 +506,9 @@ void main() {
   testWidgets(
     'single business workspace removes disabled pages and preserves the enabled Agent destination',
     (tester) async {
-      final p = await workspaceProvider();
+      final p = await workspaceProvider(
+        agentNativeClient: native.MemoryAgentCore().client,
+      );
       addTearDown(p.dispose);
       await p.workspaces.setEnabled(AppMode.student, false);
       await tester.pumpWidget(WorkspaceHarness(provider: p));
@@ -575,6 +578,7 @@ void main() {
       );
       expect(p.workspaceView.isEnabled(AppMode.student), isFalse);
       await tester.pumpWidget(const SizedBox.shrink());
+      await p.agent.quiesce();
     },
   );
   for (final savedStudentTheme in [null, 'light']) {

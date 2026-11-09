@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+import 'package:sked/agent/conversations/conversation_models.dart';
 import 'package:sked/agent/history/conversation_history.dart';
 import 'package:sked/agent/interactions/agent_task_plan.dart';
 

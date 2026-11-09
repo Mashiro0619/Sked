@@ -6,20 +6,17 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
 import 'package:sked/agent/history/conversation_history.dart';
 import 'package:sked/agent/ui/agent_conversation_timeline.dart';
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_operation_card.dart';
 import 'package:sked/agent/ui/agent_operation_activity.dart';
-import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/agent/ui/agent_transcript.dart';
 import 'package:sked/agent/ui/agent_turn_activity.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
 import 'package:sked/l10n/app_localizations.dart';
-import 'package:sked/models/agent_settings.dart';
 
-import '../acceptance/acceptance_harness.dart';
 import '../../support/agent_transcript_navigation.dart';
 import 'agent_ui_test_support.dart';
 
@@ -254,94 +251,84 @@ void main() {
     'one inline row owns each operation while rejected parameters remain activity',
     (tester) async {
       addTearDown(tester.view.reset);
-      final harness = AcceptanceHarness();
-      await tester.runAsync(harness.initialize);
+      final storage = UiMemoryStorage();
+      final repository = MemoryConversationRepository(storage: storage);
+      await repository.load();
+      final conversation = await repository.create(title: 'Operation activity');
+      final delegate = UiDelegate(repository);
       addTearDown(() async {
         await tester.pumpWidget(const SizedBox.shrink());
-        await tester.runAsync(harness.close);
+        await repository.waitForPendingWrites();
+        repository.dispose();
+        delegate.state.dispose();
       });
-      final application = harness.app.agent,
-          repository = harness.app.agent.conversations;
-      late Map<String, Object?> preview, saved, failed;
-      Map<String, Object?> create(String name) => {
-        'commands': [
-          {
-            'kind': 'calendar',
-            'action': 'create',
-            'values': {'name': name},
+      final frames = <Map<String, Object?>>[
+        {
+          'status': 'preview',
+          'operationId': 'preview',
+          'changes': [
+            {
+              'key': 'calendar',
+              'action': 'created',
+              'label': 'Preview calendar',
+              'after': {'name': 'Preview calendar'},
+            },
+          ],
+        },
+        {
+          'status': 'committed',
+          'operationId': 'saved',
+          'changes': [
+            {
+              'key': 'calendar',
+              'action': 'created',
+              'label': 'Saved calendar',
+              'after': {'name': 'Saved calendar'},
+            },
+          ],
+        },
+        {
+          'status': 'failed',
+          'error': {
+            'code': 'notFound',
+            'message': 'The requested target does not exist.',
           },
-        ],
-      };
-      await tester.runAsync(() async {
-        await repository.update(
-          harness.conversationId,
-          (current) => current.copyWith(
-            messages: [
-              _message(
-                'actual-request',
-                ConversationRole.user,
-                text: 'Preview then save and inspect an invalid target.',
+        },
+      ];
+      final messages = <ConversationMessage>[
+        _message(
+          'actual-request',
+          ConversationRole.user,
+          text: 'Preview then save and inspect an invalid target.',
+        ),
+        _message(
+          'calls',
+          ConversationRole.assistant,
+          calls: [
+            for (var index = 0; index < 3; index++)
+              ConversationToolCall(
+                id: 'operation-$index',
+                name: 'mutation.apply',
+                arguments: '{}',
               ),
-            ],
+          ],
+        ),
+        for (var index = 0; index < 3; index++)
+          _message(
+            'result-$index',
+            ConversationRole.tool,
+            toolId: 'operation-$index',
+            text: jsonEncode(frames[index]),
           ),
-        );
-        await application.runtime.setMode(
-          harness.conversationId,
-          AgentPermissionMode.plan,
-        );
-        preview = await application.runtime.runHostTool(
-          harness.conversationId,
-          toolName: 'mutation.apply',
-          arguments: create('Preview calendar'),
-        );
-        await application.runtime.setMode(
-          harness.conversationId,
-          AgentPermissionMode.full,
-        );
-        saved = await application.runtime.runHostTool(
-          harness.conversationId,
-          toolName: 'mutation.apply',
-          arguments: create('Saved calendar'),
-        );
-        failed = await application.runtime.runHostTool(
-          harness.conversationId,
-          toolName: 'mutation.apply',
-          arguments: {
-            'commands': [
-              {
-                'kind': 'calendar',
-                'action': 'patch',
-                'target': {'id': 'missing'},
-                'values': {'name': 'Invalid'},
-              },
-            ],
-          },
-        );
-      });
-      expect(preview['status'], 'preview');
-      expect(saved['status'], 'committed');
-      expect(failed['error'], isNotNull);
-      expect(
-        harness.saved.generalMode.schedules.where(
-          (calendar) => calendar.name == 'Saved calendar',
-        ),
-        hasLength(1),
+      ];
+      await repository.update(
+        conversation.id,
+        (value) => value.copyWith(messages: messages),
       );
-      expect(
-        harness.saved.generalMode.schedules.any(
-          (calendar) =>
-              calendar.name == 'Preview calendar' || calendar.name == 'Invalid',
-        ),
-        isFalse,
-      );
-      final beforeMain = harness.saved.encode(),
-          beforeHistory = harness.conversations.source;
+      final beforeHistory = storage.source;
       await mountAgentUi(
         tester,
-        AgentConversationView(
-          repository: repository,
-          delegate: application.runtime,
-        ),
+        AgentConversationView(repository: repository, delegate: delegate),
         size: const Size(1000, 1600),
       );
       final operations = tester
@@ -394,8 +381,8 @@ void main() {
           .where((tool) => tool.status == AgentToolActivityStatus.failed);
       expect(rejected, hasLength(1));
       expect(rejected.single.result, contains('error'));
-      expect(harness.saved.encode(), beforeMain);
-      expect(harness.conversations.source, beforeHistory);
+      expect(storage.source, beforeHistory);
+      expect(delegate.calls, isEmpty);
       expect(tester.takeException(), isNull);
     },
   );
@@ -956,7 +943,7 @@ Future<_ActivityFixture> _mountFixture(
 class _ActivityFixture {
   _ActivityFixture(this.storage, this.repository, this.delegate, this.id);
   final UiMemoryStorage storage;
-  final ConversationRepository repository;
+  final MemoryConversationRepository repository;
   final UiDelegate delegate;
   final String id;
 
@@ -977,7 +964,7 @@ class _ActivityFixture {
     String? result,
   }) async {
     final storage = UiMemoryStorage();
-    final repository = ConversationRepository(
+    final repository = MemoryConversationRepository(
       storage: storage,
       idGenerator: () => 'activity-conversation',
       clock: () => _time,

@@ -23,7 +23,7 @@ import '../../widgets/timetable_week_projection.dart';
 import '../../utils/unique_id.dart';
 import '../conversations/conversation_models.dart';
 import '../provider/provider.dart';
-import '../runtime/agent_runtime_controller.dart' show AgentApprovalRequester;
+import '../operations/approval_requester.dart';
 import 'application_tool_host.dart';
 import 'platform_tool_adapters.dart';
 

@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:path/path.dart' as path;
@@ -12,15 +14,18 @@ import 'package:sked/agent/bridge/generated/api/models.dart' as view;
 import 'package:sked/agent/bridge/generated/frb_generated.dart';
 import 'package:sked/agent/bridge/rust_agent_business_host.dart';
 import 'package:sked/agent/bridge/rust_agent_client.dart';
-import 'package:sked/agent/bridge/rust_agent_main_undo.dart';
 import 'package:sked/agent/bridge/rust_agent_ui_delegate.dart';
+import 'package:sked/agent/bridge/rust_conversation_repository.dart';
 import 'package:sked/agent/conversations/conversation_models.dart';
+import 'package:sked/agent/references/agent_composer_reference.dart';
 import 'package:sked/agent/tools/application_tool_host.dart';
 import 'package:sked/agent/ui/agent_message_content.dart';
 import 'package:sked/agent/ui/agent_plan_preview.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
 import 'package:sked/application/mutation_coordinator.dart';
 import 'package:sked/application/operation_contracts.dart';
+import 'package:sked/application/resource_contracts.dart';
+import 'package:sked/backup/selective_backup_agent_store.dart';
 import 'package:sked/controllers/app_session.dart';
 import 'package:sked/data/app_repository.dart';
 import 'package:sked/data/timetable_storage_io.dart';
@@ -28,6 +33,11 @@ import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/models/agent_settings.dart';
 import 'package:sked/models/timetable_models.dart';
+
+import 'agent_rust_offline_workspace.dart';
+import 'agent_rust_backup_journey.dart';
+import 'agent_rust_history_journey.dart';
+import 'agent_rust_clear_journey.dart';
 
 const _calendarId = 'rust-offline-calendar';
 const _model = 'offline-model';
@@ -65,6 +75,11 @@ Future<void> runRustAgentOfflineJourney(
     await RustLib.init();
     await journey.open();
     await journey.show(tester);
+    expect(journey.conversations.isDraft(journey.id), isTrue);
+    expect(journey.conversations.conversations, isEmpty);
+    expect(journey.conversations.selected!.draft, '准备创建复习日程');
+    expect(journey.conversations.selected!.draftReferences, hasLength(1));
+    checkpoints.add('独立Rust仓储创建应用内草稿并按字段保存输入');
 
     final firstRun = await journey.send('创建课后复习日程');
     await journey.settled(firstRun);
@@ -104,6 +119,87 @@ Future<void> runRustAgentOfflineJourney(
       contains('mutation.apply'),
     );
     checkpoints.add('发现工具、流式回复、正式新增日程与回执');
+    expect(journey.conversations.isDraft(journey.id), isFalse);
+    expect(journey.conversations.conversations, hasLength(1));
+    final paged = RustConversationRepository(journey.client, pageSize: 2);
+    await paged.load();
+    await paged.select(journey.id);
+    final recent = paged.visibleMessages(journey.id);
+    expect(recent.length, lessThan(first.messages.length));
+    expect(recent.first.role, isNot(ConversationRole.tool));
+    expect(paged.hasEarlierMessages(journey.id), isTrue);
+    await paged.read(journey.id);
+    expect(
+      paged.visibleMessages(journey.id).map((message) => message.id),
+      recent.map((message) => message.id),
+    );
+    while (paged.hasEarlierMessages(journey.id)) {
+      await paged.loadEarlierMessages(journey.id);
+    }
+    expect(
+      paged.visibleMessages(journey.id).map((message) => message.id),
+      first.messages.map((message) => message.id),
+    );
+    paged.dispose();
+    final unsent = await journey.conversations.createDraft(title: '稍后继续的草稿');
+    await journey.conversations.updateDraftText(unsent.id, '保留应用内输入');
+    await journey.conversations.select(journey.id);
+    expect(
+      (await journey.conversations.createDraft(title: '复用草稿')).id,
+      unsent.id,
+    );
+    expect(journey.conversations.selected!.draft, '保留应用内输入');
+    await journey.conversations.select(journey.id);
+    checkpoints.add('首次接纳转入历史、完整工具分页、后台全读保持窗口与草稿切换');
+
+    final queuedBytes = Uint8List.fromList([1, 4, 9]);
+    final queuedSource = await File(path.join(root.path, 'queued.bin'))
+        .writeAsBytes(queuedBytes);
+    await journey.workspace.app.agent.binaryAttachments.attach(
+      journey.id,
+      XFile(queuedSource.path, mimeType: 'application/octet-stream'),
+      canModify: () => journey.conversations.canWrite,
+    );
+    final queuedFile = journey.conversations
+        .find(journey.id)!
+        .attachments
+        .single;
+    await journey.conversations.updateDraftReferences(journey.id, [
+      AgentComposerReference.attachment(
+        attachment: queuedFile,
+        conversationId: journey.id,
+      ),
+    ]);
+    await journey.delegate.queueFollowUp(journey.id, '仅排队并恢复输入');
+    final queued = journey.conversations.find(journey.id)!.queuedInputs.single;
+    expect(queued.attachmentIds, [queuedFile.id]);
+    expect(queued.contextReferences, hasLength(1));
+    await journey.delegate.restoreQueuedInput(
+      journey.id,
+      queued.asUserMessage(),
+    );
+    final restoredInput = journey.conversations.find(journey.id)!;
+    expect(restoredInput.queuedInputs, isEmpty);
+    expect(restoredInput.draft, '仅排队并恢复输入');
+    expect(restoredInput.draftAttachmentIds, [queuedFile.id]);
+    expect(restoredInput.draftReferences.single.attachmentId, queuedFile.id);
+    expect(
+      await journey.workspace.app.agent.attachmentStore.readBytes(queuedFile),
+      queuedBytes,
+    );
+    await journey.delegate.queueFollowUp(journey.id, restoredInput.draft);
+    await journey.delegate.cancelQueuedInput(
+      journey.id,
+      journey.conversations
+          .find(journey.id)!
+          .queuedInputs
+          .single
+          .asUserMessage(),
+    );
+    expect(journey.conversations.find(journey.id)!.queuedInputs, isEmpty);
+    expect(journey.conversations.find(journey.id)!.draft, isEmpty);
+    expect(journey.conversations.find(journey.id)!.runId, firstRun);
+    checkpoints.add('队列恢复原子转回正文、引用与二进制；取消队列不发起模型');
 
     await journey.delegate.setMode(journey.id, AgentPermissionMode.ask);
     final allowedRun = await journey.send('再创建一个需要确认的日程');
@@ -150,12 +246,43 @@ Future<void> runRustAgentOfflineJourney(
     );
     checkpoints.add('只读计划返回预览并保持主库');
 
+    await journey.delegate.setMode(journey.id, AgentPermissionMode.ask);
+    final replacedRun = await journey.send('先提议一个待审批安排');
+    await journey.approval('create-steer-approval');
+    const steeringText = '改为只解释安排，不保存这项提议';
+    await journey.delegate.steer(journey.id, steeringText);
+    final steered = await journey.events.wait(
+      (event) =>
+          event.snapshot?.conversation.id == journey.id &&
+          event.snapshot?.conversation.runId != replacedRun &&
+          event.snapshot!.messages.any(
+            (message) => message.text == steeringText,
+          ),
+    );
+    await journey.settled(steered.snapshot!.conversation.runId!);
+    await expectLater(
+      journey.delegate.approve(journey.id, 'create-steer-approval'),
+      throwsA(isA<Object>()),
+    );
+    final afterSteer = await journey.snapshot();
+    expect(
+      afterSteer.operations
+          .singleWhere(
+            (operation) => operation.toolCallId == 'create-steer-approval',
+          )
+          .phase,
+      view.ViewOperationPhase.cancelled,
+    );
+    expect(afterSteer.conversation.runId, isNot(replacedRun));
+    expect(journey.eventTitles, unorderedEquals(['课后复习', '已批准的安排']));
+    checkpoints.add('审批中补充要求取消原票据，新轮次不能批准旧操作');
+
     await journey.delegate.setMode(journey.id, AgentPermissionMode.full);
     journey.writeGate.arm();
     final heldRun = await journey.send('保存期间关闭界面，然后继续管理任务');
     await journey.writeGate.entered.future.timeout(const Duration(seconds: 20));
     await tester.pumpWidget(const SizedBox.shrink());
-    await journey.delegate.dispose();
+    journey.detachView();
     final stillRunning = await journey.client.query(
       native.AgentQuery(
         kind: native.QueryKind.readConversation,
@@ -164,7 +291,7 @@ Future<void> runRustAgentOfflineJourney(
     );
     expect(stillRunning.presentation!.active, isTrue);
     expect(journey.eventTitles, unorderedEquals(['课后复习', '已批准的安排']));
-    journey.replaceDelegate();
+    journey.attachView();
     await journey.delegate.loadConversation(journey.id);
     await journey.show(tester);
     checkpoints.add('关闭界面订阅后原生核心与已接纳保存继续运行');
@@ -215,6 +342,10 @@ Future<void> runRustAgentOfflineJourney(
       hasLength(3),
     );
     checkpoints.add('显式继续消费队列且不重复业务保存');
+
+    final backupHistory = await NativeAgentBackupStore(journey.client)
+        .exportParts(conversationIds: [journey.id], knowledgeKeys: const []);
+    final backupSeed = journey.session.committedData;
 
     final savedMessages = [
       for (final message in finished.messages)
@@ -288,6 +419,15 @@ Future<void> runRustAgentOfflineJourney(
       ),
     );
     try {
+      expect(
+        (await reopened.query(
+          query: native.AgentQuery(
+            kind: native.QueryKind.readConversation,
+            conversationId: unsent.id,
+          ),
+        )).snapshot,
+        isNull,
+      );
       final restored = (await reopened.query(
         query: native.AgentQuery(
           kind: native.QueryKind.readConversation,
@@ -348,6 +488,14 @@ Future<void> runRustAgentOfflineJourney(
     } finally {
       await reopened.shutdown();
     }
+    await runRustAgentBackupJourney(
+      root: root,
+      seed: backupSeed,
+      historyParts: backupHistory,
+      checkpoints: checkpoints,
+    );
+    await runRustHistoryJourney(root, checkpoints);
+    await runRustAgentClearJourney(root, backupSeed, checkpoints);
   } finally {
     journey.writeGate.release();
     await tester.pumpWidget(const SizedBox.shrink());
@@ -358,22 +506,26 @@ Future<void> runRustAgentOfflineJourney(
 }
 
 class _Journey {
-  _Journey(this.root);
+  _Journey(this.root) : workspace = OfflineAgentWorkspace(root);
   final Directory root;
-  late final businessDirectory = Directory(path.join(root.path, 'business'));
-  late final agentDirectory = Directory(path.join(root.path, 'agent'));
-  final writeGate = _WriteGate();
+  final OfflineAgentWorkspace workspace;
+  Directory get businessDirectory => workspace.businessDirectory;
+  Directory get agentDirectory => workspace.agentDirectory;
+  OfflineWriteGate get writeGate => workspace.writeGate;
   final conversation = ValueNotifier<AgentConversation?>(null);
-  late AppSession session;
-  late MutationCoordinator mutations;
-  late ApplicationToolHost tools;
-  late AgentRustClient client;
-  late RustAgentBusinessHost business;
-  late RustAgentUiDelegate delegate;
+  AppSession get session => workspace.app.session;
+  MutationCoordinator get mutations => workspace.app.agent.mutations;
+  ApplicationToolHost get tools => workspace.app.agent.tools;
+  AgentRustClient get client => workspace.client;
+  RustAgentBusinessHost get business => workspace.app.agent.businessHost;
+  RustAgentUiDelegate get delegate => workspace.app.agent.runtime;
+  RustConversationRepository get conversations =>
+      workspace.app.agent.conversations;
   late _EventLog events;
   late String id;
   bool _opened = false;
   bool _coreClosed = false;
+  bool _viewAttached = false;
   Future<void>? _uiAction;
   (Object, StackTrace)? _uiError;
 
@@ -387,11 +539,6 @@ class _Journey {
       .toList(growable: false);
 
   Future<void> open() async {
-    await businessDirectory.create();
-    final storage = IoTimetableStorage(
-      directoryProvider: () async => businessDirectory,
-      beforeMainReplace: writeGate.beforeReplace,
-    );
     final seed =
         buildInitialAppData(
           buildDefaultPeriodTimes(),
@@ -407,71 +554,40 @@ class _Journey {
           ),
           agentSettings: _settings,
         );
-    await storage.save(seed);
-    final repository = AppRepository(storage: storage);
-    session = AppSession(
-      repository: repository,
-      initialData: (await repository.load())!,
-      requireMutationAllowed: () {},
-    );
-    mutations = MutationCoordinator(
-      session: session,
-      settlePendingChanges: () async {},
-      dataSessionRevision: () => 0,
-    );
-    tools = ApplicationToolHost(
-      session: session,
-      mutations: mutations,
-      conversationForScope: (scope) => business.conversationForScope(scope),
-      environmentForScope: (scope) => business.environmentForScope(scope),
-    );
-    client = AgentRustClient(
-      initialize: () => AgentCore.initialize(
-        config: native.CoreConfig(
-          dataDirectory: agentDirectory.path,
-          preamble: 'Use Sked tools and report actual business receipts.',
-          tools: business.definitions,
-          generateTitles: false,
-          offlineReplies: _replies(),
-        ),
-      ),
-    );
-    final undo = RustAgentMainUndo(session: session, mutations: mutations);
-    business = RustAgentBusinessHost(
-      client: client,
-      tools: tools,
-      readEnvironment: (_) => {
-        'datasetGeneration': mutations.generation,
-        'localeCode': 'zh_CN',
-        'localDateTime': '2026-11-09T08:00:00+08:00',
-      },
-      prepareUndo: undo.prepare,
-      commitUndo: undo.commit,
-    );
+    await workspace.open(seed: seed, replies: _replies());
     events = _EventLog(client.events);
-    replaceDelegate();
     _opened = true;
-    final created = await client.dispatch(
-      const native.AgentCommand(
-        kind: native.CommandKind.createConversation,
-        text: 'Rust 原生离线旅程',
-        mode: view.ViewPermissionMode.full,
-      ),
+    await conversations.load();
+    final created = await conversations.createDraft(
+      title: 'Rust 原生离线旅程',
+      mode: AgentPermissionMode.full,
     );
-    id = created.id!;
-    delegate.ingestSnapshot(created.snapshot!);
+    id = created.id;
+    attachView();
+    await conversations.updateDraftReferences(id, [
+      AgentComposerReference.resource(
+        ref: const ResourceRef(kind: ResourceKind.calendar, id: _calendarId),
+        datasetGeneration: mutations.generation,
+        label: '离线旅程日历',
+      ),
+    ]);
+    await conversations.updateDraftText(id, '准备创建复习日程');
     await delegate.loadConversation(id);
   }
 
-  void replaceDelegate() {
-    delegate = RustAgentUiDelegate(
-      client: client,
-      readSettings: () => _settings,
-      readApiKey: (_) async => 'offline-placeholder',
-      onOpenSettings: () {},
-      onSnapshot: (snapshot) =>
-          conversation.value = conversationFromRust(snapshot),
-    );
+  void attachView() {
+    if (_viewAttached) return;
+    conversations.addListener(_updateView);
+    _viewAttached = true;
+    _updateView();
+  }
+
+  void _updateView() => conversation.value = conversations.find(id);
+
+  void detachView() {
+    if (!_viewAttached) return;
+    conversations.removeListener(_updateView);
+    _viewAttached = false;
   }
 
   Future<view.ViewConversationSnapshot> snapshot() async =>
@@ -529,9 +645,8 @@ class _Journey {
 
   Future<void> closeCore() async {
     if (!_opened || _coreClosed) return;
-    await client.shutdown();
-    await business.dispose();
-    await delegate.dispose();
+    detachView();
+    await workspace.closeCore();
     await events.close();
     _coreClosed = true;
   }
@@ -539,10 +654,7 @@ class _Journey {
   Future<void> close() async {
     if (!_opened) return;
     await closeCore();
-    await mutations.waitForPendingWrites();
-    await session.repository.waitForPendingWrites(propagateErrors: true);
-    tools.dispose();
-    await session.close();
+    await workspace.close();
     conversation.dispose();
   }
 }
@@ -617,29 +729,6 @@ class _JourneyPane extends StatelessWidget {
   }
 }
 
-class _WriteGate {
-  Completer<void> entered = Completer<void>();
-  Completer<void>? _release;
-
-  void arm() {
-    entered = Completer<void>();
-    _release = Completer<void>();
-  }
-
-  Future<void> beforeReplace() async {
-    final gate = _release;
-    if (gate == null) return;
-    if (!entered.isCompleted) entered.complete();
-    await gate.future;
-  }
-
-  void release() {
-    final gate = _release;
-    _release = null;
-    if (gate != null && !gate.isCompleted) gate.complete();
-  }
-}
-
 class _EventLog {
   _EventLog(Stream<native.AgentEvent> source) {
     _subscription = source.listen((event) {
@@ -699,6 +788,12 @@ List<native.OfflineModelReply> _replies() => [
     arguments: _create('仅预览的安排'),
   ),
   _reply(text: '已经提供安排预览。'),
+  _reply(
+    callId: 'create-steer-approval',
+    tool: 'mutation.apply',
+    arguments: _create('已被补充要求取消的安排'),
+  ),
+  _reply(text: '已按补充要求解释安排，没有保存原提议。'),
   _reply(
     callId: 'create-held',
     tool: 'mutation.apply',

@@ -3,13 +3,15 @@ import 'dart:async';
 import 'package:flutter/semantics.dart' show SemanticsNode, SemanticsOwner;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
 import 'package:sked/agent/ui/agent_conversation_list.dart';
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/l10n/app_localizations.dart';
-import 'package:sked/models/agent_settings.dart';
-import 'package:sked/screens/agent_page.dart';
+
+import '../../support/agent_native_fixture.dart' as native;
+
+import 'package:sked/agent/ui/agent_ui_delegate.dart';
 import 'package:sked/widgets/workspace_frame.dart';
 import 'package:sked/widgets/workspace_navigation.dart';
 
@@ -26,7 +28,7 @@ class _HistoryFixture {
     : delegate = UiDelegate(repository);
 
   final UiMemoryStorage storage;
-  final ConversationRepository repository;
+  final MemoryConversationRepository repository;
   final UiDelegate delegate;
   int recoverCalls = 0;
   Completer<void>? _saveEntered;
@@ -35,7 +37,7 @@ class _HistoryFixture {
   static Future<_HistoryFixture> create({String prefix = '原宿主'}) async {
     final storage = UiMemoryStorage();
     var tick = 0;
-    final repository = ConversationRepository(
+    final repository = MemoryConversationRepository(
       storage: storage,
       clock: () => DateTime.utc(2026, 11, 5).add(Duration(seconds: tick++)),
     );
@@ -71,9 +73,8 @@ class _HistoryFixture {
     await repository.load();
   }
 
-  AgentConversation stored(String id) =>
-      ConversationArchive.decode(storage.source!).conversations
-          .singleWhere((conversation) => conversation.id == id);
+  AgentConversation stored(String id) => storage.source!.conversations
+      .singleWhere((conversation) => conversation.id == id);
 
   void pauseSave({required bool fail}) {
     expect(_allowSave, isNull);
@@ -184,7 +185,7 @@ class _RealRecoveryStorage extends UiMemoryStorage {
   Completer<void>? _allowSave;
 
   @override
-  Future<ConversationStorageLoad> load() async {
+  Future<MemoryConversationSnapshot?> load() async {
     loadCalls++;
     final allow = _allowLoad;
     if (allow != null) {
@@ -195,7 +196,10 @@ class _RealRecoveryStorage extends UiMemoryStorage {
   }
 
   @override
-  Future<void> save(String value, {required int revision}) async {
+  Future<void> save(
+    MemoryConversationSnapshot value, {
+    required int revision,
+  }) async {
     saveCalls++;
     await super.save(value, revision: revision);
   }
@@ -230,83 +234,67 @@ class _RealRecoveryStorage extends UiMemoryStorage {
   }
 }
 
-class _RealRecoveryFixture {
-  const _RealRecoveryFixture(this.app, this.storage);
-
+class _RealRecoveryFixture extends _HistoryFixture {
+  _RealRecoveryFixture(
+    this.app,
+    _RealRecoveryStorage storage,
+    MemoryConversationRepository repository,
+  ) : super._(storage, repository);
   final AppRuntime app;
-  final _RealRecoveryStorage storage;
-
-  ConversationRepository get repository => app.agent.conversations;
-  ConversationArchive get archive =>
-      ConversationArchive.decode(storage.source!);
-
+  @override
+  _RealRecoveryStorage get storage => super.storage as _RealRecoveryStorage;
+  MemoryConversationSnapshot get archive => storage.source!;
   static Future<_RealRecoveryFixture> create() async {
     final seed = await _HistoryFixture.create();
     final storage = _RealRecoveryStorage()..source = seed.storage.source;
     await seed.dispose();
+    final repository = MemoryConversationRepository(storage: storage);
+    await repository.load();
     final app = await workspaceProvider(
       locale: 'zh',
-      agentConversationStorage: storage,
+      agentNativeClient: native.MemoryAgentCore().client,
     );
-    final fixture = _RealRecoveryFixture(app, storage);
+    await app.agent.initialize();
+    return _RealRecoveryFixture(app, storage, repository);
+  }
+
+  @override
+  Future<void> recover() async {
+    recoverCalls++;
+    delegate.state.value = AgentUiState(enabled: false, configured: true);
     try {
-      await app.agent.configure(
-        const AgentSettings(
-          enabled: true,
-          endpoint: 'https://history-feedback.example.invalid/v1',
-          model: 'feedback-model',
-          historyRetentionDays: 0,
-          models: [
-            AgentModelConfig(
-              id: 'feedback-model',
-              reasoningEfforts: [AgentReasoningEffort.medium],
-              defaultReasoningEffort: AgentReasoningEffort.medium,
-            ),
-          ],
-        ),
-      );
-      return fixture;
-    } catch (_) {
-      await fixture.dispose();
-      rethrow;
+      await repository.load();
+    } finally {
+      delegate.state.value = AgentUiState(enabled: true, configured: true);
     }
   }
 
+  @override
   Future<void> dispose() async {
     storage.releaseLoad();
     storage.releaseSave();
-    try {
-      await app.persistence.flushPendingUiStateSaves();
-      await app.shutdown.quiesce();
-    } finally {
-      app.dispose();
-      await app.session.close();
-    }
+    await super.dispose();
+    await app.shutdown.quiesce();
+    app.dispose();
+    await app.session.close();
   }
 }
 
 class _RealRecoveryHost extends ChangeNotifier implements _HistoryDrawerHost {
-  _RealRecoveryHost(this.owner, {required this.embedded});
-
+  _RealRecoveryHost(this.owner, {required this.embedded})
+    : _view = _HistoryFeedbackHost(owner, embedded: embedded);
   final _RealRecoveryFixture owner;
+  final _HistoryFeedbackHost _view;
   @override
   final bool embedded;
-  bool active = true;
-
-  void update({required bool active}) {
-    this.active = active;
-    notifyListeners();
+  void update({required bool active}) =>
+      _view.update(active: active, interactive: active);
+  Widget build() => _view.build();
+  @override
+  void dispose() {
+    _view.dispose();
+    super.dispose();
   }
-
-  Widget build() => ListenableBuilder(
-    listenable: this,
-    builder: (context, _) => AgentPage(
-      key: const ValueKey('real-recovery-agent-page'),
-      embedded: embedded,
-      active: active,
-      interactive: active,
-    ),
-  );
 }
 
 Finder _key(String value) => find.byKey(ValueKey(value));
@@ -314,10 +302,10 @@ Finder _key(String value) => find.byKey(ValueKey(value));
 class _RepositoryFeedbackHost extends ChangeNotifier {
   _RepositoryFeedbackHost(this.repository, this.delegate);
 
-  ConversationRepository repository;
+  MemoryConversationRepository repository;
   final UiDelegate delegate;
 
-  void replaceRepository(ConversationRepository repository) {
+  void replaceRepository(MemoryConversationRepository repository) {
     this.repository = repository;
     notifyListeners();
   }
@@ -333,10 +321,12 @@ class _RepositoryFeedbackHost extends ChangeNotifier {
   );
 }
 
-Future<({ConversationRepository repository, _RealRecoveryStorage storage})>
+Future<
+  ({MemoryConversationRepository repository, _RealRecoveryStorage storage})
+>
 _frozenRepository() async {
   final storage = _RealRecoveryStorage();
-  final repository = ConversationRepository(
+  final repository = MemoryConversationRepository(
     storage: storage,
     clock: () => DateTime.utc(2026, 11, 5),
   );
@@ -559,9 +549,9 @@ Future<void> _mountRealRecovery(
   );
   await tester.pumpAndSettle();
   expect(host.owner.app.agent.isInitialized, isTrue);
-  expect(host.owner.app.agent.runtime.state.value.enabled, isTrue);
+  expect(host.owner.delegate.state.value.enabled, isTrue);
   expect(host.owner.repository.selectedId, _currentId);
-  expect(find.byType(AgentConversationHost), findsOneWidget);
+  expect(find.byType(AgentConversationView), findsOneWidget);
 }
 
 Future<void> _failRealRestore(
@@ -623,7 +613,7 @@ void main() {
   for (final embedded in [false, true]) {
     group(embedded ? 'embedded resource history' : 'standalone history drawer', () {
       testWidgets(
-        'failed restore stays visible and retries through real storage recovery',
+        'failed restore stays visible and retries through gated UI recovery',
         (tester) async {
           final owner = (await tester.runAsync(_HistoryFixture.create))!;
           final host = _HistoryFeedbackHost(owner, embedded: embedded);
@@ -944,7 +934,7 @@ void main() {
       }
 
       testWidgets(
-        'real recovery resumes the current restore and remains busy after re-enabling',
+        'gated UI recovery resumes the current restore and remains busy after re-enabling',
         (tester) async {
           final owner = (await tester.runAsync(_RealRecoveryFixture.create))!;
           final host = _RealRecoveryHost(owner, embedded: embedded);
@@ -970,11 +960,11 @@ void main() {
             tester,
             () =>
                 owner.storage.loadEntered &&
-                !owner.app.agent.runtime.state.value.enabled,
-            reason: 'The real application recovery must disable its runtime.',
+                !owner.delegate.state.value.enabled,
+            reason: 'The recovery UI owner must disable its runtime.',
           );
           expect(owner.app.agent.isInitialized, isTrue);
-          expect(owner.app.agent.runtime.state.value.maintenance, isFalse);
+          expect(owner.delegate.state.value.maintenance, isFalse);
           expect(owner.storage.loadCalls, loadCalls + 1);
           expect(owner.storage.saveCalls, saveCalls);
           expect(owner.storage.source, saved);
@@ -1000,9 +990,9 @@ void main() {
           await _until(
             tester,
             () =>
-                owner.storage.saveEntered &&
-                owner.app.agent.runtime.state.value.enabled,
-            reason: 'The current restore must follow real recovery completion.',
+                owner.storage.saveEntered && owner.delegate.state.value.enabled,
+            reason:
+                'The current restore must follow gated UI recovery completion.',
           );
           expect(
             tester
@@ -1046,7 +1036,7 @@ void main() {
             isFalse,
           );
           expect(owner.repository.blocked, isFalse);
-          expect(owner.app.agent.runtime.state.value.enabled, isTrue);
+          expect(owner.delegate.state.value.enabled, isTrue);
           expect(owner.repository.selectedId, _currentId);
           expect(_inHistory('agent-history-$_firstArchivedId'), findsNothing);
           expect(
@@ -1060,7 +1050,7 @@ void main() {
       );
 
       testWidgets(
-        'real recovery hidden and re-entered cannot restore for its retired drawer',
+        'gated UI recovery hidden and re-entered cannot restore for its retired drawer',
         (tester) async {
           final owner = (await tester.runAsync(_RealRecoveryFixture.create))!;
           final host = _RealRecoveryHost(owner, embedded: embedded);
@@ -1080,8 +1070,8 @@ void main() {
             tester,
             () =>
                 owner.storage.loadEntered &&
-                !owner.app.agent.runtime.state.value.enabled,
-            reason: 'Hide only after the real recovery has begun.',
+                !owner.delegate.state.value.enabled,
+            reason: 'Hide only after the gated UI recovery has begun.',
           );
           await _closeHistory(tester, host);
           host.update(active: false);
@@ -1107,8 +1097,7 @@ void main() {
           await _until(
             tester,
             () =>
-                owner.app.agent.runtime.state.value.enabled &&
-                !owner.repository.blocked,
+                owner.delegate.state.value.enabled && !owner.repository.blocked,
             reason: 'Accepted recovery must finish for the application.',
           );
           await tester.runAsync(owner.repository.waitForPendingWrites);

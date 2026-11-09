@@ -279,7 +279,7 @@ void main() {
         expect(find.text('项目计划'), findsOneWidget);
         expect(find.byType(AgentSelectableText), findsNothing);
         final objectRow = find.byKey(
-          const ValueKey('agent-activity-tool-host-2'),
+          const ValueKey('agent-activity-toggle-host-2'),
         );
         await tester.ensureVisible(objectRow);
         await tester.tap(objectRow);

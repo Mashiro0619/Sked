@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/agent/imports/school_web_handoff.dart';
 import 'package:sked/app_runtime.dart';
+import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/controllers/settings_commands.dart';
 import 'package:sked/controllers/settings_view_state.dart';
 import 'package:sked/controllers/workspace_commands.dart';
@@ -22,6 +23,7 @@ import 'package:sked/widgets/sked_task_route.dart';
 
 import '../support/notification_test_scope.dart';
 import '../support/workspace_harness.dart';
+import '../support/agent_native_fixture.dart';
 
 Finder _key(String value) => find.byKey(ValueKey(value));
 
@@ -211,13 +213,21 @@ Future<_SchoolNavigationFixture> _mount(
   Size size = const Size(390, 850),
   bool allowSettingsExit = true,
 }) async {
-  final app = await workspaceProvider();
+  final app = await workspaceProvider(
+    agentNativeClient: MemoryAgentCore().client,
+  );
   addTearDown(app.dispose);
   await app.agent.initialize();
-  final initial = await app.agent.conversations.create(
+  final initial = await app.agent.conversations.createManagedConversation(
+    id: 'navigation-existing',
     title: 'Existing conversation',
+    mode: AgentPermissionMode.ask,
   );
-  final target = await app.agent.conversations.create(title: 'School handoff');
+  final target = await app.agent.conversations.createManagedConversation(
+    id: 'navigation-handoff',
+    title: 'School handoff',
+    mode: AgentPermissionMode.ask,
+  );
   await app.agent.conversations.select(initial.id);
   final fixture = _SchoolNavigationFixture(
     app: app,

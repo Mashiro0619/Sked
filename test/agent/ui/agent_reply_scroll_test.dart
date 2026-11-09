@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_message_content.dart';
 import 'package:sked/agent/ui/agent_transcript.dart';
@@ -153,13 +153,13 @@ class _Fixture {
   static const lastId = 'tail-reply-23';
   static const savedReply = 'The saved early reply stays here.';
   final UiMemoryStorage storage;
-  final ConversationRepository repository;
+  final MemoryConversationRepository repository;
   final UiDelegate delegate;
   final String id;
 
   static Future<_Fixture> create() async {
     final storage = UiMemoryStorage();
-    final repository = ConversationRepository(storage: storage);
+    final repository = MemoryConversationRepository(storage: storage);
     await repository.load();
     final id = (await repository.create(title: 'Reading an earlier reply')).id;
     ConversationMessage message(

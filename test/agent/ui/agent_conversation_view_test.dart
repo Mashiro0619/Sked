@@ -4,18 +4,18 @@ import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart' show RenderCustomPaint;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
 import 'package:sked/agent/history/conversation_history.dart';
-import 'package:sked/agent/history/conversation_history_service.dart';
+import 'package:sked/agent/history/agent_history_controller.dart';
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
 import 'package:sked/agent/ui/agent_selectable_text.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/l10n/app_localizations.dart';
-import 'package:sked/models/agent_settings.dart';
 import 'package:sked/agent/ui/agent_model_picker.dart';
-import 'package:sked/agent/attachments/attachment_repository.dart';
-import 'package:sked/agent/attachments/conversation_attachments.dart';
+
+import '../../support/agent_memory_attachments.dart';
+
 import 'package:sked/widgets/sked_popup_menu.dart';
 
 import 'agent_ui_test_support.dart';
@@ -38,7 +38,7 @@ class _AcceptedSendDelegate extends UiDelegate {
   }
 }
 
-class _RecordingHistoryService implements ConversationHistoryService {
+class _RecordingHistoryService implements AgentHistoryController {
   final calls = <(String, String, String)>[];
 
   @override
@@ -56,13 +56,13 @@ class _RecordingHistoryService implements ConversationHistoryService {
 
 void main() {
   late UiMemoryStorage storage;
-  late ConversationRepository repository;
+  late MemoryConversationRepository repository;
   late UiDelegate delegate;
   var sequence = 0;
   Future<void> initialize() async {
     sequence = 0;
     storage = UiMemoryStorage();
-    repository = ConversationRepository(
+    repository = MemoryConversationRepository(
       storage: storage,
       idGenerator: () => 'conversation-${++sequence}',
       clock: () => DateTime.utc(2026, 10, 29),
@@ -868,10 +868,10 @@ void main() {
         );
         var picks = 0;
         final files = (await tester.runAsync(
-          () async => ConversationAttachments(
+          () async => MemoryAttachmentController(
             conversations: repository,
-            repository: AttachmentRepository(
-              storage: MemoryAttachmentStorage(),
+            repository: MemoryAttachmentReader(
+              storage: UiMemoryAttachmentBytes(),
             ),
           ),
         ))!;

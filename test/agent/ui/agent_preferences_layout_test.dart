@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:sked/screens/agent_preferences_settings_page.dart';
 import 'package:sked/screens/agent_settings_page.dart';
 
+import '../../support/agent_native_fixture.dart' as native;
 import '../../support/workspace_harness.dart';
 
 void main() {
@@ -10,7 +11,9 @@ void main() {
     'grouped preferences keep editable drafts through narrow large-text reflow',
     (tester) async {
       final app = (await tester.runAsync(() async {
-        final result = await workspaceProvider();
+        final result = await workspaceProvider(
+          agentNativeClient: native.MemoryAgentCore().client,
+        );
         await result.agent.initialize();
         return result;
       }))!;

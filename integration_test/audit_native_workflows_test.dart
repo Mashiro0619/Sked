@@ -11,7 +11,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/agent/attachments/attachment_storage.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
-import 'package:sked/agent/knowledge/knowledge_storage.dart';
 import 'package:sked/backup/selective_restore_coordinator.dart';
 import 'package:sked/services/device_preferences_store.dart';
 import 'package:sked/app_runtime.dart';
@@ -28,7 +27,6 @@ import 'package:sked/widgets/course_editor_sheet.dart';
 import 'package:sked/widgets/general_event_editor_sheet.dart';
 
 import '../test/support/workspace_harness.dart';
-import '../test/support/memory_conversation_storage.dart';
 
 class _Secrets implements SecretStore {
   @override
@@ -49,9 +47,8 @@ class _LifecycleLog extends WidgetsBindingObserver {
 
 /// Also exercised by the default-storage rejection regression.
 AppRuntime createNativeWorkflowsRuntime(Directory directory) => AppRuntime(
-  agentConversationStorage: MemoryConversationStorage(),
-  agentAttachmentStorage: MemoryAttachmentStorage(),
-  agentKnowledgeStorage: MemoryKnowledgeStorage(),
+  agentPlatformSupported: false,
+
   agentCredentialStore: MemoryAgentCredentialStore(),
   selectiveRestoreJournal: MemorySelectiveRestoreJournal(),
   backupStagingStorage: MemoryAttachmentStorage(),

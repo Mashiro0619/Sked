@@ -3,7 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
 import 'package:sked/agent/interactions/agent_question.dart';
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_question_view.dart';
@@ -27,7 +27,7 @@ void main() {
   }
 
   Future<_QuestionFixture> fixture() async {
-    final repository = ConversationRepository(storage: UiMemoryStorage());
+    final repository = MemoryConversationRepository(storage: UiMemoryStorage());
     await repository.load();
     await _addQuestion(repository, 'conversation');
     final delegate = _QuestionDelegate(repository)..publish();
@@ -422,7 +422,10 @@ void main() {
   );
 }
 
-Future<void> _addQuestion(ConversationRepository repository, String id) async {
+Future<void> _addQuestion(
+  MemoryConversationRepository repository,
+  String id,
+) async {
   final now = DateTime.utc(2026, 11, 7);
   final request = AgentQuestionRequest(
     id: 'question-$id',
@@ -500,7 +503,7 @@ List<AgentQuestionAnswer> _answers() => [
 
 class _QuestionFixture {
   _QuestionFixture(this.repository, this.delegate);
-  final ConversationRepository repository;
+  final MemoryConversationRepository repository;
   final _QuestionDelegate delegate;
 
   Widget view({

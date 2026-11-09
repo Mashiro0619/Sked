@@ -8129,6 +8129,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unpin conversation'**
   String get agentUnpinConversation;
+
+  /// No description provided for @agentUnsupportedPlatform.
+  ///
+  /// In en, this message translates to:
+  /// **'Agent is not available on this platform yet.'**
+  String get agentUnsupportedPlatform;
 }
 
 class _AppLocalizationsDelegate

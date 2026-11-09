@@ -8,12 +8,9 @@ import 'package:sked/agent/ui/agent_operation_card.dart';
 import 'package:sked/agent/ui/agent_inline_disclosure_header.dart';
 import 'package:sked/agent/ui/agent_plan_preview.dart';
 import 'package:sked/agent/ui/agent_setting_labels.dart';
-import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/application/setting_registry.dart';
 import 'package:sked/l10n/app_localizations.dart';
-import 'package:sked/services/desktop_layout_preferences.dart';
 
-import '../acceptance/acceptance_harness.dart';
 import 'agent_ui_test_support.dart';
 
 const _locales = [
@@ -57,236 +54,74 @@ void main() {
       'agentPreferences',
       'scheduleDisplay',
     ]) {
-      testWidgets(
-        'actual $kind plans and receipts have readable names in $locale',
-        (tester) async {
-          addTearDown(tester.view.reset);
-          final h = AcceptanceHarness();
-          await _realAsync(tester, h.initialize);
-          try {
-            late Map<String, Object?> prepared;
-            late Map<String, Object?> receipt;
-            late Map<String, Object?> approval;
-            final enabledBefore = h.saved.agentSettings.enabled;
-            final localeTarget = h.saved.localeCode == 'zh' ? 'en' : 'zh';
-            final hideTarget = !h.saved.hideHomeWorkspaceNavigation;
-            final weekendsTarget = !h.saved.generalMode.showWeekends;
-            await _realAsync(
-              tester,
-              () => h.run(() async {
-                final before = h.saved.encode();
-                final (tool, arguments, external) = switch (kind) {
-                  'layout' => (
-                    'device.layout.apply',
-                    <String, Object?>{
-                      'region': 'assistant',
-                      'action': 'set',
-                      'values': {
-                        'width': 420,
-                        'height': 620,
-                        'dockedWidth': 440,
-                      },
-                    },
-                    true,
-                  ),
-                  'legacyPreview' => (
-                    'device.preferences.apply',
-                    <String, Object?>{'action': 'set', 'value': true},
-                    true,
-                  ),
-                  'connection' => (
-                    'connection.apply',
-                    <String, Object?>{
-                      'action': 'set',
-                      'endpoint': 'https://receipt.invalid/v1',
-                      'model': 'receipt-model',
-                      'models': [
-                        {
-                          'id': 'receipt-model',
-                          'reasoningEfforts': ['medium'],
-                          'defaultReasoningEffort': 'medium',
-                        },
-                      ],
-                    },
-                    true,
-                  ),
-                  'appSettings' => (
-                    'settings.update',
-                    <String, Object?>{
-                      'edits': [
-                        {
-                          'key': 'app.localeCode',
-                          'action': 'set',
-                          'value': localeTarget,
-                        },
-                        {
-                          'key': 'app.hideHomeWorkspaceNavigation',
-                          'action': 'set',
-                          'value': hideTarget,
-                        },
-                      ],
-                    },
-                    false,
-                  ),
-                  'agentPreferences' => (
-                    'agent_settings.update',
-                    <String, Object?>{
-                      'edits': [
-                        {
-                          'key': 'agent.systemInstructions',
-                          'action': 'set',
-                          'value': 'Use confirmed host receipts.',
-                        },
-                        {
-                          'key': 'agent.historyRetentionDays',
-                          'action': 'set',
-                          'value': 7,
-                        },
-                      ],
-                    },
-                    false,
-                  ),
-                  _ => (
-                    'settings.update',
-                    <String, Object?>{
-                      'edits': [
-                        {
-                          'key': 'general.dayStartHour',
-                          'action': 'set',
-                          'value': 7,
-                        },
-                        {
-                          'key': 'general.showWeekends',
-                          'action': 'set',
-                          'value': weekendsTarget,
-                        },
-                      ],
-                    },
-                    false,
-                  ),
-                };
-                h.scope.policy.update(mode: AgentPermissionMode.ask);
-                h.approval = (plan) async {
-                  expect(h.saved.encode(), before);
-                  prepared = plan.summary();
-                  approval = {
-                    ...plan.summary(),
-                    'changes': [
-                      for (final change in plan.changes) change.toJson(),
-                    ],
-                  };
-                  return h.scope.approve(plan.id);
-                };
-                receipt = await h.call(tool, arguments);
-                if (external) expect(receipt['effectStatus'], 'applied');
-              }),
-            );
-            switch (kind) {
-              case 'layout':
-                expect(
-                  h.layout.preferenceFor(DesktopLayoutRegion.assistant),
-                  const PreferredRegionSize(
-                    width: 420,
-                    height: 620,
-                    dockedWidth: 440,
-                  ),
-                );
-              case 'legacyPreview':
-                expect(h.developer.assistantVisible, isTrue);
-                expect(h.saved.agentSettings.enabled, enabledBefore);
-              case 'connection':
-                expect(
-                  h.saved.agentSettings.endpoint,
-                  'https://receipt.invalid/v1',
-                );
-                expect(h.saved.agentSettings.model, 'receipt-model');
-              case 'appSettings':
-                expect(h.saved.localeCode, localeTarget);
-                expect(h.saved.hideHomeWorkspaceNavigation, hideTarget);
-              case 'agentPreferences':
-                expect(
-                  h.saved.agentSettings.systemInstructions,
-                  'Use confirmed host receipts.',
-                );
-                expect(h.saved.agentSettings.historyRetentionDays, 7);
-              case 'scheduleDisplay':
-                expect(h.saved.generalMode.dayStartHour, 7);
-                expect(h.saved.generalMode.showWeekends, weekendsTarget);
-            }
-            final saved = h.saved.encode();
-            final conversations = h.conversations.source;
-            for (final (frame, applied) in [
-              (prepared, false),
-              (receipt, true),
-            ]) {
-              final original = jsonEncode(frame);
-              await mountAgentUi(
-                tester,
-                SingleChildScrollView(
-                  child: AgentOperationCard(
-                    outcome: ToolOutcome.fromResult(frame),
-                  ),
-                ),
-                locale: locale,
-                scale: 2,
-                size: const Size(390, 844),
-              );
-              final l = AppLocalizations.of(
-                tester.element(find.byType(AgentOperationCard)),
-              );
-              for (final label in _labels(kind, l)) {
-                expect(
-                  find.text(
-                    applied ? '${l.agentChangeUpdated} · $label' : label,
-                  ),
-                  findsOneWidget,
-                );
-              }
-              for (final change in (frame['changes'] as List).cast<Map>()) {
-                expect(
-                  find.textContaining(change['key'] as String),
-                  findsNothing,
-                );
-              }
-              expect(jsonEncode(frame), original);
-              expect(h.saved.encode(), saved);
-              expect(h.conversations.source, conversations);
-              expect(tester.takeException(), isNull);
-              await tester.pumpWidget(const SizedBox());
-            }
-            final originalApproval = jsonEncode(approval);
-            await mountAgentUi(
-              tester,
-              SingleChildScrollView(child: AgentPlanPreview(details: approval)),
-              locale: locale,
-              scale: 2,
-              size: const Size(390, 844),
-            );
-            final l = AppLocalizations.of(
-              tester.element(find.byType(AgentPlanPreview)),
-            );
-            for (final label in _labels(kind, l)) {
-              expect(
-                find.widgetWithText(AgentInlineDisclosureHeader, label),
-                findsOneWidget,
-              );
-            }
-            expect(jsonEncode(approval), originalApproval);
-            expect(h.saved.encode(), saved);
-            expect(h.conversations.source, conversations);
-            expect(tester.takeException(), isNull);
-          } finally {
-            await tester.pumpWidget(const SizedBox());
-            await _realAsync(
-              tester,
-              () => h.close().timeout(const Duration(seconds: 10)),
+      testWidgets('$kind plans and receipts have readable names in $locale', (
+        tester,
+      ) async {
+        addTearDown(tester.view.reset);
+        final changes = [
+          for (final key in _keys(kind)) {'key': key, 'before': 0, 'after': 1},
+        ];
+        for (final applied in [false, true]) {
+          final frame = <String, Object?>{
+            'operationId': 'ui-setting',
+            'kind': 'external',
+            'status': applied ? 'applied' : 'preview',
+            if (applied) 'effectStatus': 'applied',
+            'changes': changes,
+          };
+          final original = jsonEncode(frame);
+          await mountAgentUi(
+            tester,
+            SingleChildScrollView(
+              child: AgentOperationCard(outcome: ToolOutcome.fromResult(frame)),
+            ),
+            locale: locale,
+            scale: 2,
+            size: const Size(390, 844),
+          );
+          final l = AppLocalizations.of(
+            tester.element(find.byType(AgentOperationCard)),
+          );
+          for (final label in _labels(kind, l)) {
+            expect(
+              find.text(applied ? '${l.agentChangeUpdated} · $label' : label),
+              findsOneWidget,
             );
           }
-        },
-      );
+          for (final change in changes) {
+            expect(find.textContaining(change['key'] as String), findsNothing);
+          }
+          expect(jsonEncode(frame), original);
+          expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox());
+        }
+        final approval = <String, Object?>{
+          'planId': 'ui-approval',
+          'changes': changes,
+        };
+        final original = jsonEncode(approval);
+        await mountAgentUi(
+          tester,
+          SingleChildScrollView(child: AgentPlanPreview(details: approval)),
+          locale: locale,
+          scale: 2,
+          size: const Size(390, 844),
+        );
+        final l = AppLocalizations.of(
+          tester.element(find.byType(AgentPlanPreview)),
+        );
+        for (final label in _labels(kind, l)) {
+          expect(
+            find.widgetWithText(AgentInlineDisclosureHeader, label),
+            findsOneWidget,
+          );
+        }
+        expect(jsonEncode(approval), original);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      });
     }
   }
-
   testWidgets(
     'unknown historical keys stay inspectable and unsupported outcomes stay failed',
     (tester) async {
@@ -348,19 +183,18 @@ List<String> _labels(String kind, AppLocalizations l) => switch (kind) {
   ],
 };
 
-Future<void> _realAsync(
-  WidgetTester tester,
-  Future<void> Function() action,
-) async {
-  Object? failure;
-  StackTrace? failureStack;
-  await tester.runAsync(() async {
-    try {
-      await action();
-    } catch (error, stack) {
-      failure = error;
-      failureStack = stack;
-    }
-  });
-  if (failure != null) Error.throwWithStackTrace(failure!, failureStack!);
-}
+List<String> _keys(String kind) => switch (kind) {
+  'layout' => [
+    'device.layout.assistant.width',
+    'device.layout.assistant.height',
+    'device.layout.assistant.dockedWidth',
+  ],
+  'legacyPreview' => ['device.assistantPreviewEnabled'],
+  'connection' => ['agent.connection'],
+  'appSettings' => ['app.localeCode', 'app.hideHomeWorkspaceNavigation'],
+  'agentPreferences' => [
+    'agent.systemInstructions',
+    'agent.historyRetentionDays',
+  ],
+  _ => ['general.dayStartHour', 'general.showWeekends'],
+};

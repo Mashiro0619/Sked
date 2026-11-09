@@ -2,25 +2,24 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
 import 'package:sked/agent/history/conversation_history.dart';
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_message_content.dart';
 import 'package:sked/agent/ui/agent_ui_delegate.dart';
 import 'package:sked/l10n/app_localizations.dart';
-import 'package:sked/models/agent_settings.dart';
 
 import 'agent_ui_test_support.dart';
 
 void main() {
-  late ConversationRepository repository;
+  late MemoryConversationRepository repository;
   late UiDelegate delegate;
   late UiMemoryStorage storage;
   late AgentConversation conversation;
 
   Future<void> seed({bool versions = false}) async {
     storage = UiMemoryStorage();
-    repository = ConversationRepository(storage: storage);
+    repository = MemoryConversationRepository(storage: storage);
     await repository.load();
     conversation = await repository.create(title: 'Reply alternatives');
     delegate = UiDelegate(repository);

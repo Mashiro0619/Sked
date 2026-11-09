@@ -4,8 +4,8 @@ import '../../application/operation_contracts.dart';
 import '../../models/app_data.dart';
 import '../../models/application_ledger.dart';
 import 'conversation_history.dart';
-import 'conversation_history_preflight.dart';
-import 'conversation_redo_coordinator.dart';
+import 'conversation_history_errors.dart';
+import 'conversation_undo_contracts.dart';
 
 /// Main-data inverse bodies already belong to the durable original receipts.
 /// This adapter seals their complete projected inverse, then reconstructs only

@@ -1,11 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sked/agent/attachments/attachment_storage.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
-import 'package:sked/agent/conversations/conversation_storage.dart';
-import 'package:sked/agent/knowledge/knowledge_models.dart';
-import 'package:sked/agent/knowledge/knowledge_storage.dart';
-import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/backup/backup_staging_storage.dart';
 import 'package:sked/backup/selective_backup_models.dart';
 import 'package:sked/backup/selective_restore_coordinator.dart';
@@ -13,97 +11,89 @@ import 'package:sked/backup/selective_restore_journal.dart';
 import 'package:sked/services/app_backup_restore_journal.dart';
 import 'package:sked/services/device_preferences_store.dart';
 
-import 'memory_conversation_storage.dart';
+import 'agent_native_fixture.dart';
 import 'workspace_harness.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('workspace defaults isolate native storage and each runtime', () async {
-    SharedPreferences.setMockInitialValues({});
-    final attemptedFactories = <String>[];
-    Never reject(String name) {
-      attemptedFactories.add(name);
-      throw StateError('The synthetic workspace reached $name storage');
-    }
-
-    debugSetConversationStorageFactory(() => reject('conversations'));
-    debugSetKnowledgeStorageFactory(() => reject('knowledge'));
-    debugSetAttachmentStorageFactory(() => reject('attachments'));
-    debugSetSelectiveRestoreJournalFactory(() => reject('selective journal'));
-    debugSetBackupStagingStorageFactory(() => reject('backup staging'));
-    debugSetAppBackupRestoreJournalFactory(() => reject('legacy journal'));
-    addTearDown(() {
-      debugSetConversationStorageFactory(null);
-      debugSetKnowledgeStorageFactory(null);
-      debugSetAttachmentStorageFactory(null);
-      debugSetSelectiveRestoreJournalFactory(null);
-      debugSetBackupStagingStorageFactory(null);
-      debugSetAppBackupRestoreJournalFactory(null);
-    });
-
-    final first = await workspaceProvider();
-    final second = await workspaceProvider();
-    try {
-      for (final runtime in [first, second]) {
-        expect(runtime.session.canWrite, isTrue);
-        await runtime.agent.initialize();
-        expect(runtime.agent.isInitialized, isTrue);
-        expect(
-          runtime.agent.connections.status.storageKind,
-          AgentCredentialStorageKind.memoryOnly,
-        );
-        final inventory = await runtime.backups.selective.inventory();
-        expect(
-          inventory.records.where(
-            (record) => record.key.kind == BackupObjectKind.timetable,
-          ),
-          isNotEmpty,
-        );
-        expect(
-          runtime.agent.attachmentStore.storage,
-          isA<MemoryAttachmentStorage>(),
-        );
-        expect(
-          runtime.backups.selective.journal,
-          isA<MemorySelectiveRestoreJournal>(),
-        );
+  test(
+    'workspace defaults isolate platform storage and each runtime',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final attemptedFactories = <String>[];
+      Never reject(String name) {
+        attemptedFactories.add(name);
+        throw StateError('The synthetic workspace reached $name storage');
       }
-      final conversation = await first.agent.conversations.create(
-        title: 'Owned by the first runtime',
-        mode: AgentPermissionMode.ask,
-      );
-      expect(second.agent.conversations.find(conversation.id), isNull);
-      expect(
-        identical(
-          first.agent.attachmentStore.storage,
-          second.agent.attachmentStore.storage,
-        ),
-        isFalse,
-      );
-      expect(attemptedFactories, isEmpty);
-    } finally {
-      await first.agent.quiesce();
-      first.dispose();
-      await second.agent.quiesce();
-      second.dispose();
-    }
-  });
+
+      debugSetAttachmentStorageFactory(() => reject('attachments'));
+      debugSetSelectiveRestoreJournalFactory(() => reject('selective journal'));
+      debugSetBackupStagingStorageFactory(() => reject('backup staging'));
+      debugSetAppBackupRestoreJournalFactory(() => reject('legacy journal'));
+      addTearDown(() {
+        debugSetAttachmentStorageFactory(null);
+        debugSetSelectiveRestoreJournalFactory(null);
+        debugSetBackupStagingStorageFactory(null);
+        debugSetAppBackupRestoreJournalFactory(null);
+      });
+      final first = await workspaceProvider();
+      final second = await workspaceProvider();
+      try {
+        for (final runtime in [first, second]) {
+          expect(runtime.session.canWrite, isTrue);
+          expect(runtime.agent.platformSupported, isFalse);
+          expect(runtime.agent.nativeClient.isInitialized, isFalse);
+          final inventory = await runtime.backups.selective.inventory();
+          expect(
+            inventory.records.where(
+              (record) => record.key.kind == BackupObjectKind.timetable,
+            ),
+            isNotEmpty,
+          );
+          expect(
+            runtime.backups.selective.journal,
+            isA<MemorySelectiveRestoreJournal>(),
+          );
+        }
+        await first.settingsCommands.updateLocaleCode('zh');
+        await first.persistence.flushPendingUiStateSaves();
+        expect(first.session.committedData.localeCode, 'zh');
+        expect(second.session.committedData.localeCode, 'en');
+        expect(
+          identical(first.devicePreferences, second.devicePreferences),
+          isFalse,
+        );
+        expect(
+          identical(
+            first.backups.selective.journal,
+            second.backups.selective.journal,
+          ),
+          isFalse,
+        );
+        expect(attemptedFactories, isEmpty);
+      } finally {
+        await first.agent.quiesce();
+        first.dispose();
+        await second.agent.quiesce();
+        second.dispose();
+      }
+    },
+  );
 
   test(
-    'explicit workspace stores own initialization and accepted writes',
+    'explicit workspace owners receive initialization and settings writes',
     () async {
-      final conversations = MemoryConversationStorage();
-      final knowledge = MemoryKnowledgeStorage();
-      final attachments = MemoryAttachmentStorage();
+      final native = MemoryAgentCore();
+      final directory = await Directory.systemTemp.createTemp('sked-ui-owner-');
+      addTearDown(() => directory.delete(recursive: true));
       final journal = MemorySelectiveRestoreJournal();
       final staging = MemoryAttachmentStorage();
       final credentials = _ObservedCredentials();
       final devices = DevicePreferencesStore.memory();
       final runtime = await workspaceProvider(
-        agentConversationStorage: conversations,
-        agentKnowledgeStorage: knowledge,
-        agentAttachmentStorage: attachments,
+        agentNativeClient: native.client,
+        agentAttachmentStagingDirectory: directory,
         selectiveRestoreJournal: journal,
         backupStagingStorage: staging,
         agentCredentialStore: credentials,
@@ -112,29 +102,17 @@ void main() {
       try {
         await runtime.agent.initialize();
         expect(runtime.agent.isInitialized, isTrue);
+        expect(runtime.agent.nativeClient, same(native.client));
+        expect(native.initializationCount, 1);
         expect(credentials.reads, greaterThan(0));
-        expect(runtime.agent.attachmentStore.storage, same(attachments));
         expect(runtime.backups.selective.journal, same(journal));
         expect(runtime.devicePreferences, same(devices));
-        final conversation = await runtime.agent.conversations.create(
-          title: 'Explicit conversation owner',
-          mode: AgentPermissionMode.ask,
-        );
-        expect(conversations.source, contains(conversation.id));
-        final service = runtime.agent.knowledge;
-        await service.initialize();
-        await service.saveFromUi(
-          service.prepareSave(
-            service.newRecord(
-              KnowledgeKind.memory,
-              title: 'Explicit knowledge owner',
-              body: 'The caller owns this storage.',
-            ),
-          ),
-        );
-        expect(knowledge.source, contains('Explicit knowledge owner'));
+        await runtime.settingsCommands.updateLocaleCode('zh');
+        await runtime.persistence.flushPendingUiStateSaves();
+        expect(runtime.session.committedData.localeCode, 'zh');
       } finally {
         await runtime.agent.quiesce();
+        await runtime.agent.close();
         runtime.dispose();
       }
     },
@@ -143,7 +121,6 @@ void main() {
 
 class _ObservedCredentials extends MemoryAgentCredentialStore {
   int reads = 0;
-
   @override
   Future<String?> read(AgentCredentialSlot slot) async {
     reads++;

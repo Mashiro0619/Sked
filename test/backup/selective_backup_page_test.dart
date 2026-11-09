@@ -4,9 +4,10 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_models.dart';
+import 'package:sked/backup/selective_backup_service.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/backup/selective_backup_models.dart';
+import 'package:sked/backup/selective_backup_planner.dart';
 import 'package:sked/l10n/app_localization_delegates.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/timetable_models.dart';
@@ -20,15 +21,17 @@ void main() {
     Uint8List? source,
     Size size = const Size(393, 900),
     double textScale = 1,
-    Future<void> Function(AppRuntime)? setup,
+    Future<void> Function(_InventoryScene)? setup,
   }) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = size;
     addTearDown(tester.view.resetDevicePixelRatio);
     addTearDown(tester.view.resetPhysicalSize);
+    late _InventoryScene service;
     final runtime = (await tester.runAsync(() async {
       final value = await workspaceProvider();
-      await setup?.call(value);
+      service = _InventoryScene(value.backups.selective);
+      await setup?.call(service);
       return value;
     }))!;
     addTearDown(runtime.dispose);
@@ -44,12 +47,12 @@ void main() {
             child: child!,
           ),
           home: SelectiveBackupPage(
-            service: runtime.backups.selective,
+            service: service,
             pickBackup: () async => source,
           ),
         ),
       );
-      await runtime.backups.selective.inventory();
+      await service.inventory();
     });
     await tester.pumpAndSettle();
     return runtime;
@@ -126,31 +129,39 @@ void main() {
     (tester) async {
       await fixture(
         tester,
-        setup: (runtime) async {
-          await runtime.agent.prepareBackupRead();
-          final file = ConversationAttachment(
-            id: 'group-file',
-            name: 'Shared notes',
-            mediaType: 'text/plain',
-            byteLength: 3,
-            digest: backupDigest([1, 2, 3]),
+        setup: (service) async {
+          final metadata = <String, Object?>{
+            'id': 'group-file',
+            'name': 'Shared notes',
+            'mediaType': 'text/plain',
+            'byteLength': 3,
+            'sha256': backupDigest([1, 2, 3]),
+            'createdAt': 0,
+          };
+          service.rows.add(
+            BackupRecord(
+              key: const BackupObjectKey(
+                BackupObjectKind.attachment,
+                'group-file',
+              ),
+              label: 'Shared notes',
+              data: metadata,
+            ),
           );
           for (var index = 0; index < 2; index++) {
-            final chat = await runtime.agent.conversations.create(
-              title: 'Chat $index',
-            );
-            await runtime.agent.conversations.update(
-              chat.id,
-              (current) => current.copyWith(
-                attachments: [file],
-                messages: [
-                  ConversationMessage(
-                    id: 'request-$index',
-                    role: ConversationRole.user,
-                    text: 'Notes',
-                    createdAt: DateTime.utc(2026),
-                    attachmentIds: [file.id],
-                  ),
+            service.rows.add(
+              BackupRecord(
+                key: BackupObjectKey(
+                  BackupObjectKind.conversation,
+                  'chat-$index',
+                ),
+                label: 'Chat $index',
+                data: {
+                  'conversation': {'id': 'chat-$index', 'title': 'Chat $index'},
+                  'attachments': [metadata],
+                },
+                dependencies: const [
+                  BackupObjectKey(BackupObjectKind.attachment, 'group-file'),
                 ],
               ),
             );
@@ -547,4 +558,56 @@ void main() {
       },
     );
   }
+}
+
+/// Supplies stable Agent rows while the actual service owns business restore
+/// preparation and its busy notifications.
+class _InventoryScene extends Fake implements SelectiveBackupService {
+  _InventoryScene(this.inner);
+  final SelectiveBackupService inner;
+  final rows = <BackupRecord>[
+    BackupRecord(
+      key: const BackupObjectKey(BackupObjectKind.skill, 'read-agenda'),
+      label: 'Read agenda',
+      data: {
+        'kind': 'skill',
+        'id': 'read-agenda',
+        'title': 'Read agenda',
+        'body': 'Read the selected agenda.',
+        'builtIn': true,
+        'usesOriginal': true,
+      },
+    ),
+  ];
+  @override
+  bool get isBusy => inner.isBusy;
+  @override
+  bool get recoveryPending => inner.recoveryPending;
+  @override
+  void addListener(VoidCallback listener) => inner.addListener(listener);
+  @override
+  void removeListener(VoidCallback listener) => inner.removeListener(listener);
+  @override
+  bool supportsDeviceGroup(BackupRecord record) =>
+      inner.supportsDeviceGroup(record);
+  @override
+  Future<bool> refreshRecoveryStatus() => inner.refreshRecoveryStatus();
+  @override
+  Future<SelectiveBackupBundle> inventory() async {
+    final business = await inner.inventory();
+    return SelectiveBackupBundle(
+      records: [...business.records, ...rows],
+      roots: [...business.roots, ...rows.map((row) => row.key)],
+      binaries: business.binaries,
+      createdAt: business.createdAt,
+    );
+  }
+
+  @override
+  SelectiveBackupBundle decode(Uint8List bytes) => inner.decode(bytes);
+  @override
+  Future<BackupRestorePlan> prepareRestore(
+    SelectiveBackupBundle source,
+    BackupSelection selection,
+  ) => inner.prepareRestore(source, selection);
 }

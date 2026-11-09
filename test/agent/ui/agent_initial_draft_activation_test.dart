@@ -3,10 +3,9 @@ import 'dart:ui' show SemanticsAction, Tristate;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/application/operation_contracts.dart';
-import 'package:sked/models/agent_settings.dart';
 
 import 'agent_ui_test_support.dart';
 
@@ -17,7 +16,7 @@ class _DraftStorage extends UiMemoryStorage {
   Completer<void>? _allowLoad;
 
   @override
-  Future<ConversationStorageLoad> load() async {
+  Future<MemoryConversationSnapshot?> load() async {
     loads++;
     final allow = _allowLoad;
     if (allow != null) {
@@ -28,7 +27,10 @@ class _DraftStorage extends UiMemoryStorage {
   }
 
   @override
-  Future<void> save(String value, {required int revision}) async {
+  Future<void> save(
+    MemoryConversationSnapshot value, {
+    required int revision,
+  }) async {
     saves++;
     await super.save(value, revision: revision);
   }
@@ -48,7 +50,7 @@ class _DraftStorage extends UiMemoryStorage {
   }
 }
 
-class _DraftRepository extends ConversationRepository {
+class _DraftRepository extends MemoryConversationRepository {
   _DraftRepository(_DraftStorage storage, String prefix)
     : super(
         storage: storage,
@@ -84,14 +86,17 @@ class _DraftRepository extends ConversationRepository {
 
 typedef _DraftOwner = ({_DraftStorage storage, _DraftRepository repository});
 
-Future<_DraftOwner> _owner({String prefix = 'initial', String? source}) async {
+Future<_DraftOwner> _owner({
+  String prefix = 'initial',
+  MemoryConversationSnapshot? source,
+}) async {
   final storage = _DraftStorage()..source = source;
   final repository = _DraftRepository(storage, prefix);
   await repository.load();
   return (storage: storage, repository: repository);
 }
 
-String _savedSource() {
+MemoryConversationSnapshot _savedSource() {
   final date = DateTime.utc(2026, 11, 5);
   final saved = AgentConversation(
     id: 'saved-conversation',
@@ -108,10 +113,10 @@ String _savedSource() {
       ),
     ],
   );
-  return ConversationArchive(
+  return MemoryConversationSnapshot(
     selectedId: saved.id,
     conversations: [saved],
-  ).encode();
+  );
 }
 
 class _ActivationHost extends ChangeNotifier {

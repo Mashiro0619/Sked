@@ -1,6 +1,6 @@
 # Agent 附件
 
-附件先保存到应用私有存储，长度和 SHA-256 核对成功后发布引用。SQLite 保存稳定 ID、名称、媒体类型、长度和摘要，二进制独立保存。选择文件不自动调用模型，也不自动导入课表或日程。
+附件先保存到应用私有存储，长度和 SHA-256 核对成功后发布引用。Rust 在同一存储队列中完成文件入库、元数据与草稿引用发布；会话 JSONL 保存稳定 ID、名称、媒体类型、长度和摘要，二进制按摘要独立保存。选择文件不自动调用模型，也不自动导入课表或日程。
 
 ## 草稿、队列与历史
 
@@ -8,9 +8,9 @@
 
 新会话尚未接纳输入时，草稿引用属于当前应用生命周期，不建立历史记录；首次接纳输入时与用户消息一起保存。已有持久会话的草稿和排队项保留各自引用。队列消费把完整输入和文件引用一起移入用户消息。
 
-移除草稿中的文件不会删除仍被其他消息、队列或历史版本引用的内容。垃圾回收读取数据库保存的全部引用，不依赖当前页面是否加载了旧聊天。先保存元数据变更，再删除已经没有引用的二进制。
+移除草稿中的文件不会删除仍被其他消息、队列或历史版本引用的内容。Rust 垃圾回收读取全部会话 JSONL、历史版本、队列及当前草稿引用，不依赖页面是否加载了旧聊天。文件复制成功与引用发布之间不会插入回收。
 
-重试复用已经核验的文件身份，并允许取消读取和核验。保存失败不宣称引用已发布；迟到的选择结果仍须属于原会话和本次导入。
+文件选择结果先分块暂存到当前导入拥有的临时目录；重试复用稳定的导入身份与输入文件。取消绑定本次导入，Rust 在提交前检查取消并返回实际结果；已提交的引用保持成功状态。保存失败不宣称引用已发布，迟到的选择结果仍须属于原会话、运行和输入边界。
 
 ## 流式处理与展示
 
@@ -32,23 +32,23 @@
 | 文件目录中登记的文本与文档 | 按当前 `file` 能力检查 | `input_file` |
 | 其他类型 | 保留本地文件并说明实际能力 | 保留本地文件并说明实际能力 |
 
-精确类型以[媒体类型目录](../lib/agent/attachments/attachment_media_types.dart)和[协议编码器](../lib/agent/provider/provider_protocol.dart)为准。编码在发送前使用附件元数据计算长度，并在读取流中核对实际内容。服务拒绝后不自动换模型或只发送文件名。
+精确类型以[媒体类型目录](../lib/agent/attachments/attachment_media_types.dart)、[Rust 类型目录](../rust/src/runtime/attachment_media.rs)和[原生传输准备](../rust/src/runtime/transport.rs)为准。Rig 内容块保留私有附件 ID；HTTP 传输在发送前打开相应文件，按原始媒体类型和文件名生成请求内容，分块 Base64 编码并核对实际长度、SHA-256。JSONL 不嵌入二进制内容。服务拒绝后不自动换模型或只发送文件名。
 
 活动上下文保留文件引用。压缩不会删除原文件；重新生成使用所选回复之前的有效附件。仅由退役历史版本引用的文件不会自动进入当前模型请求。
 
 ## 平台与维护
 
-原生二进制位于应用支持目录的 `Sked_agent_attachments`；写入临时文件由同一拥有者管理。Web 使用独立 IndexedDB Blob。附件元数据和引用使用新的 Agent 库，不再写入聊天双槽 JSON。
+原生二进制位于 Agent 数据目录的 `attachments` 子目录，采用摘要命名的 `.blob` 文件。picker 暂存目录只在实际选择文件后创建，由当前控制器负责排空与清理；持久文件和引用由 Rust 拥有。
 
-恢复和清空先取消未接纳工作并排空已经接纳的写入。原生清空先关闭 SQLite isolate，释放文件句柄，再删除应用管理的数据。失败后重新读取实际存储，不能用旧内存复活已经清除的内容。
+恢复和清空先取消未接纳工作并排空已经接纳的写入、导入和读取。应用通过共享原生拥有者协调文件句柄与存储维护；失败后重新读取实际存储，不能用旧内存复活已经清除的内容。
 
 备份中的附件元数据随聊天保存，二进制单独选择；未携带的文件在恢复后保持缺失。恢复前的空会话草稿只在全部恢复完成后丢弃。
 
 ## 验证入口
 
-- [附件仓储](../test/agent/attachments/attachment_repository_test.dart)：复制、核验、取消、重开和保存失败。
-- [流式上传](../test/agent/provider/provider_streaming_upload_test.dart)与[协议附件](../test/agent/provider/provider_attachments_test.dart)：实际请求编码、字节流、取消及能力错误。
-- [历史引用回收](../test/agent/attachments/attachment_history_collection_test.dart)与[SQLite 分页](../test/agent/store/agent_store_test.dart)：未加载历史的引用保留。
-- [运行时附件](../test/agent/runtime/agent_attachments_test.dart)、[菜单与预览](../test/agent/ui/agent_attachment_view_test.dart)、[浏览器 Blob](../test/agent/attachments/attachment_storage_browser_test.dart)：各自环境中的交互与存储行为。
+- [原生正式旅程](../integration_test/support/agent_rust_offline_journey.dart)与[Rust 旅程](../rust/src/runtime/journey.rs)：附件接纳、协议内容、取消、重开及历史引用。
+- [原生流式请求体](../rust/src/model_client/request_body.rs)：实际文件分块 Base64、请求长度、取消和摘要不符的拒绝。
+- [分页界面](../test/agent/ui/agent_conversation_pagination_test.dart)与[历史附件界面](../test/agent/ui/agent_message_history_attachments_test.dart)：分页读取与历史附件的交互呈现。
+- [菜单与预览](../test/agent/ui/agent_attachment_view_test.dart)和[附件编辑界面](../test/agent/ui/agent_binary_attachment_view_test.dart)：内存场景中的选择、取消、重试、恢复与预览交互。
 
 Windows、Android 文件选择和真实模型接收能力按正式平台场景另行记录。

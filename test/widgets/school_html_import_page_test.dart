@@ -2,38 +2,25 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
+import '../support/agent_memory_conversations.dart';
+
 import 'package:sked/agent/imports/school_web_handoff.dart';
 import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/l10n/app_localizations.dart';
-import 'package:sked/models/agent_settings.dart';
 import 'package:sked/screens/school_html_import_page.dart';
 import 'package:sked/services/school_import_content_sanitizer.dart';
 
 import '../support/school_import_preparation.dart';
 import '../support/workspace_harness.dart';
 
-class _MemoryConversations extends ConversationStorage {
-  _MemoryConversations() : super.base();
-  String? source;
-  bool fail = false;
-  Future<void> Function()? beforeSave;
-  @override
-  Future<ConversationStorageLoad> load() async =>
-      ConversationStorageLoad(source: source);
-  @override
-  Future<void> save(String value, {required int revision}) async {
-    await beforeSave?.call();
-    if (fail) throw StateError('raw secret must not be shown');
-    source = value;
-  }
-}
+class _MemoryConversations extends UiMemoryStorage {}
 
 class _Fixture {
   _Fixture(this.provider, this.repository, this.storage);
   final AppRuntime provider;
-  final ConversationRepository repository;
+  final MemoryConversationRepository repository;
   final _MemoryConversations storage;
   AgentSettings settings = const AgentSettings(
     enabled: true,
@@ -75,11 +62,9 @@ Future<_Fixture> _mount(
   tester.view.physicalSize = size;
   addTearDown(tester.view.reset);
   final storage = _MemoryConversations();
-  final repository = ConversationRepository(storage: storage);
+  final repository = MemoryConversationRepository(storage: storage);
   await repository.load();
-  final provider = await workspaceProvider(
-    agentConversationStorage: _MemoryConversations(),
-  );
+  final provider = await workspaceProvider();
   final fixture = _Fixture(provider, repository, storage);
   if (settings != null) fixture.settings = settings;
   addTearDown(() {
@@ -178,7 +163,7 @@ void main() {
       final reviewed = _text(tester);
       await _press(tester, _continue);
       final result = fixture.results.single!;
-      final saved = ConversationArchive.decode(fixture.storage.source!);
+      final saved = fixture.storage.source!;
       expect(result.conversationId, saved.conversations.single.id);
       expect(saved.conversations.single.sources.single.text, reviewed);
       expect(fixture.starts, [result.conversationId]);

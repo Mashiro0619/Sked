@@ -17,7 +17,8 @@ SelectiveBackupBundle _bundle() {
     'name': 'unknown.xyz',
     'mediaType': 'application/octet-stream',
     'byteLength': bytes.length,
-    'digest': digest,
+    'sha256': digest,
+    'createdAt': 1790812800000,
   };
   return SelectiveBackupBundle(
     createdAt: DateTime.utc(2026, 10, 31),
@@ -26,7 +27,7 @@ SelectiveBackupBundle _bundle() {
         key: _chatKey,
         label: 'Chat',
         data: {
-          'id': 'chat-1',
+          'conversation': {'id': 'chat-1'},
           'attachments': [metadata],
         },
         dependencies: const [_fileKey],
@@ -99,7 +100,13 @@ void main() {
       ) as Map;
       expect(manifest['version'], 2);
       expect(manifest['agentSchema'], 'sked-agent-records');
-      expect(manifest['agentVersion'], 1);
+      expect(manifest['agentVersion'], 2);
+      expect(
+        () => codec.decode(
+          _rewriteManifest(source, (manifest) => manifest['agentVersion'] = 1),
+        ),
+        throwsA(error(SelectiveBackupError.unsupportedVersion)),
+      );
       expect(
         () => codec.decode(
           _rewriteManifest(source, (manifest) {
@@ -133,6 +140,11 @@ void main() {
       manifest.remove('agentVersion');
     });
     expect(codec.decode(source).byKey[key]!.label, 'Calendar');
+    final previousAgentVersion = _rewriteManifest(
+      codec.encode(bundle),
+      (manifest) => manifest['agentVersion'] = 1,
+    );
+    expect(codec.decode(previousAgentVersion).byKey[key]!.label, 'Calendar');
   });
 
   test(

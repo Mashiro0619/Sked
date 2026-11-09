@@ -12,7 +12,7 @@ import '../../widgets/settings_list.dart';
 import '../../widgets/settings_page_header.dart';
 import '../../widgets/sked_task_session.dart';
 import '../../widgets/sked_dropdown_menu.dart';
-import '../knowledge/knowledge_service.dart';
+import '../knowledge/agent_knowledge_editor_controller.dart';
 import 'agent_settings_exit_guard.dart';
 
 enum _KnowledgeOrigin { all, builtIn, custom, modified }
@@ -27,7 +27,7 @@ class AgentKnowledgeView extends StatefulWidget {
     this.pageEditor = false,
     this.headerSliver,
   });
-  final AgentKnowledgeService service;
+  final AgentKnowledgeEditorController service;
   final KnowledgeKind kind;
   final bool pageEditor;
   final Widget? headerSliver;
@@ -604,7 +604,7 @@ class AgentKnowledgeEditor extends StatefulWidget {
     this.record,
     this.pagePresentation = false,
   });
-  final AgentKnowledgeService service;
+  final AgentKnowledgeEditorController service;
   final KnowledgeKind kind;
   final KnowledgeRecord? record;
   final bool pagePresentation;
@@ -727,11 +727,11 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor>
     });
     try {
       final before = widget.record;
-      KnowledgeChangeSet plan;
+      KnowledgeReceipt receipt;
       if (original) {
-        plan = widget.service.prepareOriginal(before!);
+        receipt = await widget.service.restoreOriginal(before!);
       } else if (delete) {
-        plan = widget.service.prepareDelete(before!);
+        receipt = await widget.service.delete(before!);
       } else {
         final draft = before == null
             ? KnowledgeRecord(
@@ -764,9 +764,8 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor>
                     _requiredTools.text == before.requiredTools.join('\n') &&
                     _optionalTools.text == before.optionalTools.join('\n'),
               );
-        plan = widget.service.prepareSave(draft);
+        receipt = await widget.service.saveDraft(draft, create: before == null);
       }
-      final receipt = await widget.service.saveFromUi(plan);
       if (mounted) {
         setState(() => _saving = false);
         completeSettingsSave<KnowledgeReceipt>(receipt);

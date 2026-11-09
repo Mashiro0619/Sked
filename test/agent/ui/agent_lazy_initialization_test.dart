@@ -4,8 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/agent_application.dart';
 import 'package:sked/agent/connection/agent_credential_store.dart';
-import 'package:sked/agent/conversations/conversation_models.dart';
-import 'package:sked/agent/conversations/conversation_storage.dart';
+
+import '../../support/agent_native_fixture.dart' as native;
+
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/l10n/app_localizations.dart';
@@ -16,29 +17,37 @@ import 'package:sked/screens/agent_settings_page.dart';
 import '../../support/workspace_harness.dart';
 import '../../support/agent_workspace_navigation.dart';
 
-class _Storage extends ConversationStorage {
-  _Storage() : super.base();
+class _Storage extends native.MemoryAgentCore {
+  _Storage() {
+    beforeQuery = (query) async {
+      if (query.kind != native.QueryKind.conversations) return;
+      loads++;
+      if (!started.isCompleted) started.complete();
+      await gate?.future;
+      if (failure case final error?) throw error;
+    };
+  }
   int loads = 0;
   final started = Completer<void>();
   Completer<void>? gate;
   Object? failure;
-  String? source;
-  final saves = <String>[];
-
-  @override
-  Future<ConversationStorageLoad> load() async {
-    loads++;
-    if (!started.isCompleted) started.complete();
-    await gate?.future;
-    if (failure case final error?) throw error;
-    return ConversationStorageLoad(source: source);
+  set stored(native.ViewConversationSnapshot snapshot) {
+    snapshots[snapshot.conversation.id] = snapshot;
+    selectedId = snapshot.conversation.id;
   }
 
-  @override
-  Future<void> save(String value, {required int revision}) async {
-    saves.add(value);
-    source = value;
-  }
+  List<native.AgentCommand> get saves => commands
+      .where(
+        (command) => const {
+          native.CommandKind.createManagedConversation,
+          native.CommandKind.rename,
+          native.CommandKind.pin,
+          native.CommandKind.archive,
+          native.CommandKind.updateDraft,
+          native.CommandKind.deleteConversation,
+        }.contains(command.kind),
+      )
+      .toList();
 }
 
 /// These presentation fixtures never initialize storage or execute requests.
@@ -67,29 +76,19 @@ class _FailureApplication extends ChangeNotifier implements AgentApplication {
 
 Finder _key(String value) => find.byKey(ValueKey(value));
 
-String _storedChat() {
-  final date = DateTime.utc(2026, 11, 3);
-  return ConversationArchive(
-    selectedId: 'stored-chat',
-    conversations: [
-      AgentConversation(
-        id: 'stored-chat',
-        title: 'Stored conversation',
-        createdAt: date,
-        updatedAt: date,
-        draft: 'Stored draft',
-        messages: [
-          ConversationMessage(
-            id: 'stored-message',
-            role: ConversationRole.user,
-            text: 'Stored message',
-            createdAt: date,
-          ),
-        ],
-      ),
-    ],
-  ).encode();
-}
+native.ViewConversationSnapshot _storedChat() =>
+    native.nativeConversationFixture(
+      id: 'stored-chat',
+      title: 'Stored conversation',
+      draft: 'Stored draft',
+      messages: [
+        native.nativeMessageFixture(
+          id: 'stored-message',
+          role: native.ViewMessageRole.user,
+          text: 'Stored message',
+        ),
+      ],
+    );
 
 Future<void> _until(WidgetTester tester, bool Function() ready) async {
   for (var attempt = 0; attempt < 100 && !ready(); attempt++) {
@@ -112,7 +111,7 @@ void main() {
   Future<void> create() async {
     storage = _Storage();
     app = await workspaceProvider(
-      agentConversationStorage: storage,
+      agentNativeClient: storage.client,
       agentCredentialStore: MemoryAgentCredentialStore(),
     );
     addTearDown(app.dispose);
@@ -180,7 +179,7 @@ void main() {
     (tester) async {
       await create();
       final original = _storedChat();
-      storage.source = original;
+      storage.stored = original;
       final gate = Completer<void>();
       storage.gate = gate;
       addTearDown(() {
@@ -220,7 +219,7 @@ void main() {
       await _until(tester, () => find.byType(AgentPage).evaluate().isEmpty);
       expect(find.byType(AgentPage), findsNothing);
       expect(find.byType(AgentPage, skipOffstage: false), findsOneWidget);
-      expect(storage.source, original);
+      expect(storage.source['stored-chat'], original);
       expect(storage.saves, isEmpty);
 
       gate.complete();
@@ -232,7 +231,7 @@ void main() {
         app.agent.conversations.find('stored-chat')!.draft,
         'Stored draft',
       );
-      expect(storage.source, original);
+      expect(storage.source['stored-chat'], original);
       expect(storage.saves, isEmpty);
       expect(tester.takeException(), isNull);
     },
@@ -244,8 +243,8 @@ void main() {
       await create();
       final original = _storedChat();
       const rawError = 'fixture-secret /private/chat-file failed';
-      storage.source = original;
-      storage.failure = const ConversationStorageException(rawError);
+      storage.stored = original;
+      storage.failure = StateError(rawError);
       await mountEntry(tester);
       await _until(tester, () => app.agent.initializationError);
       await tester.pumpAndSettle();
@@ -289,7 +288,7 @@ void main() {
       final chat = app.agent.conversations.find('stored-chat')!;
       expect(chat.draft, 'Stored draft');
       expect(chat.messages.single.text, 'Stored message');
-      expect(storage.source, original);
+      expect(storage.source['stored-chat'], original);
       expect(storage.saves, isEmpty);
       expect(tester.takeException(), isNull);
     },
@@ -325,6 +324,8 @@ void main() {
             l.agentInitializationConversationStorage,
           AgentInitializationFailure.connectionStorage =>
             l.agentInitializationConnectionStorage,
+          AgentInitializationFailure.unsupportedPlatform =>
+            l.agentUnsupportedPlatform,
         };
         expect(find.text(reason), findsOneWidget);
         expect(_key('agent-initialization-back'), findsNothing);

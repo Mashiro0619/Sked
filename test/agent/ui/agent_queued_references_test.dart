@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
 import 'package:sked/agent/references/agent_composer_reference.dart';
 import 'package:sked/agent/ui/agent_conversation_view.dart';
 import 'package:sked/agent/ui/agent_reference_picker.dart';
@@ -92,7 +92,7 @@ void main() {
 
 class _QueuedFixture {
   final storage = UiMemoryStorage();
-  late final repository = ConversationRepository(storage: storage);
+  late final repository = MemoryConversationRepository(storage: storage);
   late final delegate = UiDelegate(repository);
   late final AgentComposerReference reference;
 

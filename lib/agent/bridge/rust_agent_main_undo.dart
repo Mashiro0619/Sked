@@ -4,7 +4,7 @@ import '../../controllers/app_session.dart';
 import '../../utils/unique_id.dart';
 import '../history/conversation_history.dart';
 import '../history/conversation_main_undo.dart';
-import '../history/conversation_redo_coordinator.dart';
+import '../history/conversation_undo_contracts.dart';
 import 'generated/api/contracts.dart' as native;
 import 'generated/api/models.dart' as view;
 

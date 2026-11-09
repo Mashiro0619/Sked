@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/models/timetable_models.dart';
 
+import '../support/agent_native_fixture.dart' as native;
 import '../support/agent_workspace_navigation.dart';
 import '../support/workbench_dense_data.dart';
 import '../support/workspace_harness.dart';
@@ -17,6 +18,7 @@ void main() {
           addTearDown(tester.view.reset);
           final app = await workspaceProvider(
             mode: AppMode.general,
+            agentNativeClient: native.MemoryAgentCore().client,
             storage: WorkspaceMemoryStorage(
               denseWorkbenchData().copyWith(
                 hideHomeWorkspaceNavigation: hidden,
@@ -56,6 +58,8 @@ void main() {
             findsOneWidget,
           );
           expect(tester.takeException(), isNull);
+          await tester.pumpWidget(const SizedBox.shrink());
+          await app.agent.quiesce();
         },
         variant: TargetPlatformVariant.only(TargetPlatform.android),
       );
@@ -69,7 +73,10 @@ void main() {
         tester.view.devicePixelRatio = 1;
         tester.view.physicalSize = Size(width, 900);
         addTearDown(tester.view.reset);
-        final app = await workspaceProvider(mode: AppMode.general);
+        final app = await workspaceProvider(
+          mode: AppMode.general,
+          agentNativeClient: native.MemoryAgentCore().client,
+        );
         addTearDown(() async {
           await tester.pumpWidget(const SizedBox.shrink());
           app.dispose();
@@ -82,9 +89,15 @@ void main() {
         await tester.pumpAndSettle();
 
         await selectAgentShellDestination(tester, 'general');
-        final agentEntry = find.byKey(const ValueKey('workspace-agent-entry'));
-        expect(agentEntry, scale == 2 ? findsNothing : findsOneWidget);
-        expect(agentEntry.hitTestable(), findsNothing);
+        final agentEntries = find.byWidgetPredicate(
+          (widget) => const [
+            ValueKey('adaptive-shell-agent-destination'),
+            ValueKey('adaptive-shell-agent-entry'),
+            ValueKey('adaptive-shell-agent-selected'),
+            ValueKey('workspace-agent-entry'),
+          ].contains(widget.key),
+        );
+        expect(agentEntries.hitTestable(), findsNothing);
         await selectAgentShellDestination(tester, 'agent');
         await tester.pumpAndSettle();
 
@@ -94,6 +107,8 @@ void main() {
         );
         expect(app.workspaceView.activeMode, AppMode.general);
         expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await app.agent.quiesce();
       },
       variant: TargetPlatformVariant.only(TargetPlatform.windows),
     );

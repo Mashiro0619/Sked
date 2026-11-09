@@ -4,7 +4,10 @@ import 'dart:ui' as ui;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/rendering.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/knowledge/knowledge_service.dart';
+
+import '../../support/agent_memory_knowledge.dart';
+import '../../support/agent_native_fixture.dart' as native;
+
 import 'package:sked/agent/ui/agent_knowledge_view.dart';
 import 'package:sked/app_runtime.dart';
 import 'package:sked/l10n/app_localizations.dart';
@@ -41,8 +44,8 @@ class _SettingsStorage extends WorkspaceMemoryStorage {
   }
 }
 
-class _DelayedKnowledgeService extends AgentKnowledgeService {
-  _DelayedKnowledgeService({required super.repository});
+class _DelayedKnowledgeService extends MemoryKnowledgeController {
+  _DelayedKnowledgeService();
   final readStarted = Completer<void>();
   final resumeRead = Completer<void>();
 
@@ -54,8 +57,8 @@ class _DelayedKnowledgeService extends AgentKnowledgeService {
   }
 }
 
-class _FailedKnowledgeService extends AgentKnowledgeService {
-  _FailedKnowledgeService({required super.repository});
+class _FailedKnowledgeService extends MemoryKnowledgeController {
+  _FailedKnowledgeService();
 
   @override
   Future<void> initialize({bool reload = false}) => Future.error(
@@ -91,16 +94,24 @@ void main() {
     double scale = 1,
     _SettingsStorage? storage,
     bool configured = true,
+    bool supportedPlatform = true,
     Locale locale = const Locale('en'),
   }) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = Size(width, height);
     addTearDown(tester.view.reset);
     await tester.runAsync(() async {
-      app = await workspaceProvider(storage: storage);
-      await app.agent.initialize();
-      await app.agent.knowledge.initialize();
-      if (configured) await app.agent.configure(settings);
+      app = await workspaceProvider(
+        storage: storage,
+        agentNativeClient: supportedPlatform
+            ? native.MemoryAgentCore().client
+            : null,
+      );
+      if (supportedPlatform) {
+        await app.agent.initialize();
+        await app.agent.knowledge.initialize();
+        if (configured) await app.agent.configure(settings);
+      }
     });
     addTearDown(() async {
       if (storage != null && !storage.resume.isCompleted) {
@@ -166,6 +177,29 @@ void main() {
     await tester.runAsync(tester.binding.handlePopRoute);
     await settleUi(tester);
   }
+
+  testWidgets(
+    'unsupported Agent settings explain availability and keep preferences writable',
+    (tester) async {
+      await mount(tester, supportedPlatform: false, height: 560);
+      final l = AppLocalizations.of(
+        tester.element(find.byType(AgentSettingsPage)),
+      );
+      expect(find.text(l.agentUnsupportedPlatform), findsOneWidget);
+      expect(key('agent-settings-connection'), findsNothing);
+      expect(key('agent-settings-skills'), findsNothing);
+      expect(key('agent-settings-memories'), findsNothing);
+      expect(app.agent.nativeClient.isInitialized, isFalse);
+      expect(app.agent.initializationError, isFalse);
+      expect(app.session.canWrite, isTrue);
+      await tap(tester, key('agent-settings-preferences'));
+      await tester.enterText(key('agent-history-retention'), '42');
+      await tap(tester, key('agent-save-preferences'));
+      expect(app.agent.settings.historyRetentionDays, 42);
+      expect(app.agent.nativeClient.isInitialized, isFalse);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'formal model editor preserves context metadata and saves user overrides',
@@ -585,20 +619,18 @@ void main() {
     'a delayed knowledge read cannot open from a covered settings source',
     (tester) async {
       await mount(tester);
-      final original = app.agent.knowledge.newRecord(
+      final delayed = (await tester.runAsync(
+        () async => _DelayedKnowledgeService(),
+      ))!;
+      final original = delayed.newRecord(
         KnowledgeKind.memory,
         title: 'Delayed memory',
         body: 'Synthetic source',
       );
-      await tester.runAsync(
-        () => app.agent.knowledge.saveFromUi(
-          app.agent.knowledge.prepareSave(original),
-        ),
-      );
-      final delayed = (await tester.runAsync(
-        () async =>
-            _DelayedKnowledgeService(repository: app.agent.knowledgeRepository),
-      ))!;
+      await tester.runAsync(() async {
+        await delayed.initialize();
+        await delayed.seed(original);
+      });
       addTearDown(() {
         if (!delayed.resumeRead.isCompleted) delayed.resumeRead.complete();
         delayed.dispose();
@@ -632,10 +664,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Newer knowledge route').hitTestable(), findsOneWidget);
       expect(find.byType(AgentKnowledgeEditor), findsNothing);
-      expect(
-        app.agent.knowledgeRepository.records.single.body,
-        'Synthetic source',
-      );
+      expect(delayed.records.single.body, 'Synthetic source');
       expect(tester.takeException(), isNull);
     },
   );
@@ -644,9 +673,7 @@ void main() {
     tester,
   ) async {
     await mount(tester, width: 390, height: 740);
-    final failed = _FailedKnowledgeService(
-      repository: app.agent.knowledgeRepository,
-    );
+    final failed = _FailedKnowledgeService();
     addTearDown(failed.dispose);
     final context = tester.element(find.byType(AgentSettingsPage));
     unawaited(

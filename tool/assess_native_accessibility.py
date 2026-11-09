@@ -263,7 +263,7 @@ for scenario in scenarios:
            for key, value in expected_configuration.items()):
         reasons.append(prefix + "the requested and observed framework configuration disagree.")
     if (
-        scenario.get("protocol") != "agent-msaa-v2" or scenario.get("status") != "passed"
+        scenario.get("protocol") != "agent-msaa-v3" or scenario.get("status") != "passed"
         or scenario.get("revision") != args.revision or scenario.get("processId") != process_id
     ):
         reasons.append(prefix + "source, native process or completion evidence is missing.")
@@ -397,9 +397,10 @@ for scenario in scenarios:
     provider = as_object(scenario.get("provider"))
     provider_result = as_object(provider.get("result"))
     if (
-        provider.get("requests") != (3 if accessible else 2) or provider.get("requestedTools") != [
+        provider.get("requests") != 3 or provider.get("requestedTools") != [
             "capabilities.describe", "mutation.apply"
-        ] or provider.get("transportAttempts") != 0 or provider.get("closed") is not True
+        ] or provider.get("modelTransport") != "native offline scripted transport"
+        or provider.get("closed") is not True
         or scenario.get("httpOperationAttempts") != 0
     ):
         reasons.append(prefix + "the controlled decision-specific tool flow or zero-HTTP/closed-provider evidence is incomplete.")
@@ -410,20 +411,20 @@ for scenario in scenarios:
     if (
         decision.get("toolCallId") != commit_call_id
         or terminal.get("runtimeActive") is not False
-        or terminal.get("phase") != ("idle" if accessible else "failed")
-        or terminal.get("errorCode") != (None if accessible else "operation.cancelled")
+        or terminal.get("phase") != "idle"
+        or terminal.get("errorCode") is not None
         or terminal.get("pendingApproval") is not False or terminal.get("recoveryRequired") is not False
-        or terminal.get("conversationStatus") != ("idle" if accessible else "interrupted")
+        or terminal.get("conversationStatus") != "idle"
         or not digest(terminal.get("conversationSha256"))
         or terminal.get("storedConversationSha256") != terminal.get("conversationSha256")
-        or terminal.get("runStatus") != ("completed" if accessible else "interrupted")
-        or terminal.get("settled") is not True or terminal.get("requestCount") != (3 if accessible else 2)
-        or terminal.get("requestOutcomes") != ["completed"] * (3 if accessible else 2)
-        or terminal.get("toolOutcomes") != ["completed", "completed" if accessible else "failed"]
-        or terminal.get("lastMessageRole") != ("assistant" if accessible else "tool")
-        or terminal.get("lastMessageToolCallId") != (None if accessible else commit_call_id)
-        or terminal.get("finalProviderReply") is not accessible
-        or (provider_result != tool_result if accessible else provider.get("result") is not None)
+        or terminal.get("runStatus") != "completed"
+        or terminal.get("settled") is not True or terminal.get("requestCount") != 3
+        or terminal.get("requestOutcomes") != ["completed"] * 3
+        or terminal.get("toolOutcomes") != ["completed", "completed" if accessible else "cancelled"]
+        or terminal.get("lastMessageRole") != "assistant"
+        or terminal.get("lastMessageToolCallId") is not None
+        or terminal.get("finalProviderReply") is not True
+        or provider_result != tool_result
     ):
         reasons.append(prefix + "the persisted commit tool result and completed runtime state are inconsistent.")
     after_hash = decision.get("afterStoredSha256")
@@ -458,14 +459,13 @@ for scenario in scenarios:
         reasons.append(prefix + "rejection must leave the whole main snapshot unchanged and create no receipt.")
     cleanup = as_object(scenario.get("cleanup"))
     owners = as_object(cleanup.get("owners"))
-    steps = as_objects(owners.get("steps"))
-    expected_steps = ["cancel-active-run", "quiesce", "dispose-runtime", "close-agent", "close-backup-staging",
-                      "close-session", "drain-main-writes", "flush-layout", "release-owned-preferences",
-                      "snapshot-agent-storage", "close-agent-store", "remove-agent-data"]
+    storage = as_object(scenario.get("storageAfterCleanup"))
     if (
         cleanup.get("unmount") != "complete" or cleanup.get("httpGuardRestored") is not True
-        or owners.get("status") != "complete" or [item.get("name") for item in steps] != expected_steps
-        or any(item.get("status") != "complete" for item in steps)
+        or owners.get("status") != "complete" or owners.get("nativeCoreClosed") is not True
+        or owners.get("businessSessionClosed") is not True or owners.get("providerClosed") is not True
+        or owners.get("temporaryDataRemoved") is not True
+        or storage.get("backend") != "native-jsonl-sqlite" or not digest(storage.get("archiveSha256"))
         or any(key.endswith("Failure") for key in cleanup)
     ):
         reasons.append(prefix + "UI unmount, owner draining or HTTP-guard restoration did not finish.")

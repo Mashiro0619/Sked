@@ -10,7 +10,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/agent_settings.dart';
 import '../../services/school_import_content_sanitizer.dart';
 import '../../utils/unique_id.dart';
-import '../conversations/conversation_repository.dart';
+import '../conversations/conversation_view_repository.dart';
 
 typedef SchoolWebContentPreparer =
     Future<SchoolImportSanitizationResult> Function(String source);
@@ -96,7 +96,7 @@ class SchoolWebHandoffController {
   }) : _clock = clock ?? DateTime.now,
        _id = idGenerator ?? generateUuidV4;
 
-  final ConversationRepository repository;
+  final ConversationViewRepository repository;
   final AgentSettings Function() readSettings;
   final Future<void> Function() initialize;
   final Future<void> Function(String conversationId) startHandoff;

@@ -35,9 +35,10 @@ counts the window frame as app controls. Direct UIA is compile-time gated in
 the default Flutter Windows embedder; a UIA container is not app-tree evidence.
 No controller assignment or direct business callback substitutes for input.
 
-All data and side stores are isolated memory fixtures, including layout and
-developer preferences, secrets, school sites, journal and disabled notification
-runtime. Pointer/key input is injected through Flutter in a real Windows
+The original workspace phases use isolated memory fixtures for data, layout,
+developer preferences, secrets, school sites, journal and notifications. Agent
+phases use temporary business files and native JSONL/SQLite stores on F:.
+Pointer/key input is injected through Flutter in a real Windows
 runner. This is not physical input, Android or complete screen-reader task
 acceptance. The native client must be at least 1100 x 600 logical pixels; no
 physical-size or DPR override is applied.
@@ -45,7 +46,8 @@ physical-size or DPR override is applied.
 ## Agent coverage
 
 After the original workspace tree is unmounted, each Agent scenario creates a
-fresh `AgentNativeSession` with explicit memory owners and production codecs.
+fresh `AgentNativeSession` with the real `AppRuntime`, FRB, temporary business
+files and native JSONL/SQLite stores.
 The real home side navigation opens the central Agent workspace; New
 conversation leads to the actual composer. The conversation menu opens the
 Agent settings overview. Its four category entrances must publish distinct
@@ -65,8 +67,8 @@ Hidden nodes and ambiguous controls fail the check.
 
 Both configurations test the exact composer value, Ask approve/reject buttons,
 Show more changes and expanded first/last change details through same-PID MSAA.
-A scripted provider requests real `capabilities.describe`, `mutation.prepare`
-and `mutation.commit` tools. The 21 synthetic events exceed the initial 20-row
+A native scripted transport requests real `capabilities.describe` and
+`mutation.apply` tools. The 21 synthetic events exceed the initial 20-row
 preview: Show more is observed through MSAA and tapped through Flutter to
 reveal the complete target list. A pointer drag on the actual transcript enters
 earlier-history reading before inspecting the rows; its offset and the visible
@@ -91,15 +93,16 @@ checks. Configuration observations, input diagnostics, pre-decision hashes,
 pagination, native roles and cleanup are retained separately from the original
 two editor-input diagnostics.
 
-Rejection ends the real host run after three provider requests, with the
-`cancelled` commit tool result persisted in the conversation and no subsequent
-provider reply. Approval makes a fourth request and must finish with the same
-stored tool result followed by the final reply. The v2 report checks the exact
+Both decisions complete three provider requests and a final assistant reply.
+Rejection first persists the cancelled tool result; approval persists the
+applied result and its business receipt. Both runs finish completed with an idle
+conversation. The v3 report checks the exact
 tool-call identity, saved/current conversation equality, settled request/tool
 accounting, terminal status and absence of pending approval for both outcomes.
 
-An HTTP guard and rejecting provider transport must observe zero network
-operations. Each UI tree is unmounted before all session owners are explicitly
+A Dart HTTP guard must observe zero network operations, and captured model
+requests use the native offline scripted transport. Each UI tree is unmounted
+before all session owners are explicitly
 closed; missing/failed cleanup fails the assessment. Native semantics remains
 enabled across both trees. These are Windows MSAA and framework-injected UI
 checks; the theme/text/motion settings are framework configuration, not changes

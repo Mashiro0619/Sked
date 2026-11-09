@@ -7,6 +7,7 @@ import 'package:sked/models/timetable_models.dart';
 import 'package:sked/screens/agent_page.dart';
 import 'package:sked/screens/settings_page.dart';
 
+import '../support/agent_native_fixture.dart' as native;
 import '../support/agent_workspace_navigation.dart';
 import '../support/workspace_harness.dart';
 
@@ -19,7 +20,10 @@ void main() {
       tester.view.devicePixelRatio = 1;
       tester.view.physicalSize = const Size(640, 900);
       addTearDown(tester.view.reset);
-      final app = await workspaceProvider(mode: AppMode.general);
+      final app = await workspaceProvider(
+        mode: AppMode.general,
+        agentNativeClient: native.MemoryAgentCore().client,
+      );
       addTearDown(() async {
         await tester.pumpWidget(const SizedBox.shrink());
         app.dispose();
@@ -34,6 +38,8 @@ void main() {
       expect(tester.widget<AgentPage>(find.byType(AgentPage)).embedded, isTrue);
       expect(app.agent.isInitialized, isTrue);
       expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await app.agent.quiesce();
     },
     variant: TargetPlatformVariant.only(TargetPlatform.windows),
   );
@@ -50,7 +56,10 @@ void main() {
         tester.view.devicePixelRatio = 1;
         tester.view.physicalSize = Size(width, 900);
         addTearDown(tester.view.reset);
-        final app = await workspaceProvider(mode: AppMode.general);
+        final app = await workspaceProvider(
+          mode: AppMode.general,
+          agentNativeClient: native.MemoryAgentCore().client,
+        );
         addTearDown(() async {
           await tester.pumpWidget(const SizedBox.shrink());
           app.dispose();
@@ -101,6 +110,8 @@ void main() {
           draft,
         );
         expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await app.agent.quiesce();
       },
       variant: TargetPlatformVariant.only(platform),
     );

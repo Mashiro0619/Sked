@@ -5,10 +5,11 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/conversations/conversation_repository.dart';
+
+import '../../support/agent_native_fixture.dart' as native;
+
 import 'package:sked/app_runtime.dart';
 import 'package:sked/l10n/app_localizations.dart';
-import 'package:sked/models/agent_settings.dart';
 import 'package:sked/models/timetable_models.dart';
 import 'package:sked/screens/agent_page.dart';
 import 'package:sked/services/desktop_window_bridge.dart';
@@ -121,11 +122,11 @@ class _ShellFixture {
   });
 
   final AppRuntime app;
-  final UiMemoryStorage storage;
+  final native.MemoryAgentCore storage;
   final String conversationId;
   final List<String> windowCalls;
 
-  ConversationRepository get repository => app.agent.conversations;
+  ConversationViewRepository get repository => app.agent.conversations;
 
   (String, double) reading(WidgetTester tester) {
     final viewport = tester.getRect(_key('agent-transcript-$conversationId'));
@@ -226,11 +227,33 @@ Future<_ShellFixture> _mountShell(
     expect(window.available, isTrue);
   }
 
-  final storage = UiMemoryStorage();
+  final storage = native.MemoryAgentCore(
+    snapshots: [
+      native.nativeConversationFixture(
+        id: 'shell-conversation',
+        title: _longTitle,
+        messages: [
+          for (var index = 0; index < 40; index++)
+            native.nativeMessageFixture(
+              id: 'shell-message-$index',
+              text:
+                  'Answer $index. Preserve this saved explanation when changing workspace.\n\nRead the plan, keep the draft, and return to this message.',
+              createdAt: DateTime.utc(
+                2026,
+                11,
+                5,
+                9,
+                index,
+              ).millisecondsSinceEpoch,
+            ),
+        ],
+      ),
+    ],
+  )..selectedId = 'shell-conversation';
   // Repository initialization and its queued fixture saves must share a real
   // async zone; their completion is independent of widget frames.
   final app = (await tester.runAsync(
-    () => workspaceProvider(agentConversationStorage: storage),
+    () => workspaceProvider(agentNativeClient: storage.client),
   ))!;
   addTearDown(() async {
     await tester.pumpWidget(const SizedBox.shrink());
@@ -257,25 +280,8 @@ Future<_ShellFixture> _mountShell(
         ],
       ),
     );
-    final conversation = await app.agent.conversations.create(
-      title: _longTitle,
-    );
-    await app.agent.conversations.update(
-      conversation.id,
-      (value) => value.copyWith(
-        messages: [
-          for (var index = 0; index < 40; index++)
-            ConversationMessage(
-              id: 'shell-message-$index',
-              role: ConversationRole.assistant,
-              text:
-                  'Answer $index. Preserve this saved explanation when changing '
-                  'workspace.\n\nRead the plan, keep the draft, and return to '
-                  'this message.',
-              createdAt: DateTime.utc(2026, 11, 5, 9, index),
-            ),
-        ],
-      ),
+    final conversation = await app.agent.conversations.read(
+      'shell-conversation',
     );
     return conversation;
   }))!;

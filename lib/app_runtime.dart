@@ -1,15 +1,14 @@
 import 'dart:async';
+import 'dart:io' show Directory;
 import 'dart:ui' show PlatformDispatcher;
 
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import 'agent/agent_application.dart';
-import 'agent/store/agent_store.dart';
+import 'agent/bridge/rust_agent_client.dart';
 import 'agent/attachments/attachment_storage.dart';
 import 'backup/selective_restore_coordinator.dart';
 import 'agent/connection/agent_credential_store.dart';
-import 'agent/conversations/conversation_storage.dart';
-import 'agent/knowledge/knowledge_storage.dart';
 import 'agent/provider/provider.dart';
 import 'controllers/app_backup_controller.dart';
 import 'controllers/app_data_clear_controller.dart';
@@ -63,12 +62,11 @@ final class AppRuntime {
     @visibleForTesting Duration? uiStateSaveDelay,
     @visibleForTesting
     Future<void> Function(Future<void> Function())? workspaceMutationLock,
-    @visibleForTesting ConversationStorage? agentConversationStorage,
-    @visibleForTesting AgentStore? agentStore,
-    @visibleForTesting AttachmentStorage? agentAttachmentStorage,
+    @visibleForTesting AgentRustClient? agentNativeClient,
+    @visibleForTesting Directory? agentAttachmentStagingDirectory,
+    @visibleForTesting bool? agentPlatformSupported,
     @visibleForTesting SelectiveRestoreJournal? selectiveRestoreJournal,
     @visibleForTesting AttachmentStorage? backupStagingStorage,
-    @visibleForTesting KnowledgeStorage? agentKnowledgeStorage,
     @visibleForTesting AgentCredentialStore? agentCredentialStore,
     @visibleForTesting ProviderClient? agentProvider,
     @visibleForTesting bool agentGenerateConversationTitles = true,
@@ -205,10 +203,9 @@ final class AppRuntime {
       legacySecrets: schoolImportSecrets,
       legacyStore: secrets,
       publishViews: publishViews,
-      conversationStorage: agentConversationStorage,
-      agentStore: agentStore,
-      attachmentStorage: agentAttachmentStorage,
-      knowledgeStorage: agentKnowledgeStorage,
+      nativeClient: agentNativeClient,
+      attachmentStagingDirectory: agentAttachmentStagingDirectory,
+      supportedPlatform: agentPlatformSupported,
       credentialStore: agentCredentialStore,
       provider: agentProvider,
       generateConversationTitles: agentGenerateConversationTitles,

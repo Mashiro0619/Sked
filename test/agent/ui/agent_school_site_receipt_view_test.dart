@@ -4,13 +4,10 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:sked/agent/knowledge/knowledge_storage.dart';
 import 'package:sked/agent/ui/agent_operation_card.dart';
-import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/l10n/app_localizations.dart';
 import 'package:sked/models/school_site_models.dart';
 
-import '../acceptance/acceptance_harness.dart';
 import 'agent_ui_test_support.dart';
 
 const _locales = [
@@ -58,49 +55,14 @@ const _after = [
 void main() {
   for (final locale in _locales) {
     testWidgets(
-      'real school-site import receipts show only identity-based changes in $locale',
+      'school-site snapshots show identity-based changes in $locale',
       (tester) async {
         addTearDown(tester.view.reset);
-        final h = AcceptanceHarness();
-        await _realAsync(
-          tester,
-          () => h.initialize(knowledgeStorage: MemoryKnowledgeStorage()),
-        );
-        addTearDown(h.close);
-        await _realAsync(tester, () => h.run(() => _replaceSites(h, _before)));
         for (final applied in [false, true]) {
-          late Map<String, Object?> receipt;
-          await _realAsync(tester, () async {
-            await h.run(() async {
-              h.scope.policy.update(
-                mode: applied
-                    ? AgentPermissionMode.full
-                    : AgentPermissionMode.plan,
-              );
-              receipt = await _applySites(h, _after);
-              if (applied) {
-                expect(receipt['effectStatus'], 'applied');
-              } else {
-                expect(receipt['status'], 'preview');
-                expect(receipt['effectStatus'], isNull);
-              }
-              expect(await _readSites(h), _json(applied ? _after : _before));
-            });
-          });
-          // Preparation counts the whole-list change; the committed external
-          // receipt carries the same snapshots without a top-level count.
-          expect(receipt['changeCount'], applied ? isNull : equals(1));
-          final change = (receipt['changes'] as List).single as Map;
-          expect(change['key'], 'schoolSites');
-          expect(change['before'], _json(_before));
-          expect(change['after'], _json(_after));
-          expect(change.containsKey('label'), isFalse);
-          expect(change.containsKey('action'), isFalse);
-          expect(change.containsKey('ref'), isFalse);
-          final originalReceipt = jsonEncode(receipt);
-          final originalData = h.saved.encode();
+          final receipt = _receipt(_before, _after, applied: applied);
+          final original = jsonEncode(receipt);
           final opened = <Map<String, Object?>>[];
-          await _mountCard(tester, h, receipt, locale: locale, opened: opened);
+          await _mountCard(tester, receipt, locale: locale, opened: opened);
           final l = AppLocalizations.of(
             tester.element(find.byType(AgentOperationCard)),
           );
@@ -108,7 +70,6 @@ void main() {
             find.text(applied ? l.agentActionApplied : l.agentPlanReady),
             findsOneWidget,
           );
-          // One stored whole-list change expands into three actual object rows.
           expect(find.text(l.agentChangeCount(3)), findsOneWidget);
           for (final item in [
             (name: 'Same campus', action: l.agentChangeCreated),
@@ -134,91 +95,37 @@ void main() {
           expect(find.byType(ExpansionTile), findsNothing);
           expect(find.byTooltip(l.agentViewObject), findsNothing);
           expect(opened, isEmpty);
-          expect(jsonEncode(receipt), originalReceipt);
-          expect(h.saved.encode(), originalData);
-          expect(h.writtenArtifacts, isEmpty);
+          expect(jsonEncode(receipt), original);
           expect(tester.takeException(), isNull);
           await tester.pumpWidget(const SizedBox());
         }
       },
     );
   }
-
   testWidgets(
-    'real school-site create patch and delete receipts retain unchanged siblings',
+    'school-site create patch and delete rows omit unchanged siblings',
     (tester) async {
       addTearDown(tester.view.reset);
-      final h = AcceptanceHarness();
-      await _realAsync(
-        tester,
-        () => h.initialize(knowledgeStorage: MemoryKnowledgeStorage()),
+      const first = SchoolSite(
+        id: 'temporary-campus',
+        name: 'Temporary campus',
+        loginUrl: 'https://temporary.invalid',
       );
-      addTearDown(h.close);
-      await _realAsync(tester, () => h.run(() => _replaceSites(h, _before)));
-      late String targetId;
-      for (final action in ['create', 'patch', 'delete']) {
-        late Map<String, Object?> receipt;
-        await _realAsync(tester, () async {
-          await h.run(() async {
-            final Map<String, Object?> arguments;
-            if (action == 'create') {
-              arguments = {
-                'action': action,
-                'site': {
-                  'name': 'Temporary campus',
-                  'loginUrl': 'https://temporary.invalid',
-                },
-              };
-            } else {
-              final listed = await h.call('school_sites.list');
-              final target = (listed['items'] as List).cast<Map>().singleWhere(
-                (site) => site['id'] == targetId,
-              );
-              arguments = {
-                'action': action,
-                'handle': target['handle'],
-                if (action == 'patch')
-                  'site': {'loginUrl': 'https://temporary-revised.invalid'},
-              };
-            }
-            final prepared = await h.call('school_sites.apply', arguments);
-            receipt = prepared;
-            expect(receipt['effectStatus'], 'applied');
-            final stored = await _readSites(h);
-            final originalIds = _before.map((site) => site.id).toSet();
-            expect(
-              stored.where((site) => originalIds.contains(site['id'])).toList(),
-              _json(_before),
-            );
-            if (action == 'create') {
-              targetId =
-                  stored.singleWhere(
-                        (site) => !originalIds.contains(site['id']),
-                      )['id']
-                      as String;
-              expect(validSchoolSiteId(targetId), isTrue);
-            } else if (action == 'delete') {
-              expect(stored.any((site) => site['id'] == targetId), isFalse);
-            } else {
-              expect(
-                stored.singleWhere((site) => site['id'] == targetId)['name'],
-                'Temporary campus',
-              );
-              expect(
-                stored.singleWhere(
-                  (site) => site['id'] == targetId,
-                )['loginUrl'],
-                'https://temporary-revised.invalid',
-              );
-            }
-          });
-        });
-        final originalReceipt = jsonEncode(receipt);
-        final originalData = h.saved.encode();
+      const revised = SchoolSite(
+        id: 'temporary-campus',
+        name: 'Temporary campus',
+        loginUrl: 'https://temporary-revised.invalid',
+      );
+      for (final (action, before, after) in [
+        ('create', _before, [..._before, first]),
+        ('patch', [..._before, first], [..._before, revised]),
+        ('delete', [..._before, revised], _before),
+      ]) {
+        final receipt = _receipt(before, after);
+        final original = jsonEncode(receipt);
         final opened = <Map<String, Object?>>[];
         await _mountCard(
           tester,
-          h,
           receipt,
           locale: const Locale('en'),
           opened: opened,
@@ -239,42 +146,25 @@ void main() {
         expect(find.byType(ExpansionTile), findsNothing);
         expect(find.byTooltip(l.agentViewObject), findsNothing);
         expect(opened, isEmpty);
-        expect(jsonEncode(receipt), originalReceipt);
-        expect(h.saved.encode(), originalData);
+        expect(jsonEncode(receipt), original);
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox());
       }
     },
   );
-
   testWidgets(
-    'identical school-site lists show zero changes and a reorder has one list result',
+    'identical school-site lists show zero changes and a reorder has one row',
     (tester) async {
       addTearDown(tester.view.reset);
-      final h = AcceptanceHarness();
-      await _realAsync(
-        tester,
-        () => h.initialize(knowledgeStorage: MemoryKnowledgeStorage()),
-      );
-      addTearDown(h.close);
-      await _realAsync(tester, () => h.run(() => _replaceSites(h, _before)));
       for (final reorder in [false, true]) {
-        late Map<String, Object?> receipt;
-        final target = reorder ? [_before[2], _before[0], _before[1]] : _before;
-        await _realAsync(tester, () async {
-          await h.run(() async {
-            receipt = await _applySites(h, target);
-            expect(receipt['effectStatus'], 'applied');
-            expect(await _readSites(h), _json(target));
-          });
-        });
-        expect(receipt['changeCount'], isNull);
-        final originalReceipt = jsonEncode(receipt);
-        final originalData = h.saved.encode();
+        final receipt = _receipt(
+          _before,
+          reorder ? [_before[2], _before[0], _before[1]] : _before,
+        );
+        final original = jsonEncode(receipt);
         final opened = <Map<String, Object?>>[];
         await _mountCard(
           tester,
-          h,
           receipt,
           locale: const Locale('en'),
           opened: opened,
@@ -296,8 +186,7 @@ void main() {
         expect(find.byType(ExpansionTile), findsNothing);
         expect(find.byTooltip(l.agentViewObject), findsNothing);
         expect(opened, isEmpty);
-        expect(jsonEncode(receipt), originalReceipt);
-        expect(h.saved.encode(), originalData);
+        expect(jsonEncode(receipt), original);
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox());
       }
@@ -305,41 +194,30 @@ void main() {
   );
 }
 
-List<Map<String, dynamic>> _json(List<SchoolSite> sites) =>
-    sites.map((site) => site.toJson()).toList();
-
-Future<Map<String, Object?>> _applySites(
-  AcceptanceHarness h,
-  List<SchoolSite> sites,
-) => h.call('school_sites.apply', {
-  'action': 'import',
-  'mode': 'replace',
-  'source': jsonEncode(_json(sites)),
-});
-
-Future<void> _replaceSites(AcceptanceHarness h, List<SchoolSite> sites) async {
-  final result = await _applySites(h, sites);
-  expect(result['effectStatus'], 'applied');
-  expect(await _readSites(h), _json(sites));
-}
-
-Future<List<Map<String, dynamic>>> _readSites(AcceptanceHarness h) async {
-  final exported = await h.call('school_sites.export');
-  return _json(decodeSchoolSitesStrict(exported['text'] as String));
-}
-
-Finder _completedRows(AppLocalizations l) {
-  final actions = [
-    l.agentChangeCreated,
-    l.agentChangeUpdated,
-    l.agentChangeDeleted,
-  ].map(RegExp.escape).join('|');
-  return find.textContaining(RegExp('^($actions) · '));
-}
-
+Map<String, Object?> _receipt(
+  List<SchoolSite> before,
+  List<SchoolSite> after, {
+  bool applied = true,
+}) => {
+  'operationId': 'ui-school-sites',
+  'kind': 'external',
+  'status': applied ? 'applied' : 'preview',
+  if (applied) 'effectStatus': 'applied',
+  'changes': [
+    {
+      'key': 'schoolSites',
+      'before': before.map((value) => value.toJson()).toList(),
+      'after': after.map((value) => value.toJson()).toList(),
+    },
+  ],
+};
+Finder _completedRows(AppLocalizations l) => find.textContaining(
+  RegExp(
+    '^(${[l.agentChangeCreated, l.agentChangeUpdated, l.agentChangeDeleted].map(RegExp.escape).join('|')}) · ',
+  ),
+);
 Future<void> _mountCard(
   WidgetTester tester,
-  AcceptanceHarness h,
   Map<String, Object?> receipt, {
   required Locale locale,
   required List<Map<String, Object?>> opened,
@@ -347,9 +225,7 @@ Future<void> _mountCard(
   tester,
   SingleChildScrollView(
     child: AgentOperationCard(
-      outcome: ToolOutcome.fromResult(
-        h.app.agent.tools.describeCommitResult(receipt),
-      ),
+      outcome: ToolOutcome.fromResult(receipt),
       onOpenResource: opened.add,
     ),
   ),
@@ -357,20 +233,3 @@ Future<void> _mountCard(
   scale: 2,
   size: const Size(390, 844),
 );
-
-Future<void> _realAsync(
-  WidgetTester tester,
-  Future<void> Function() action,
-) async {
-  Object? failure;
-  StackTrace? failureStack;
-  await tester.runAsync(() async {
-    try {
-      await action();
-    } catch (error, stack) {
-      failure = error;
-      failureStack = stack;
-    }
-  });
-  if (failure != null) Error.throwWithStackTrace(failure!, failureStack!);
-}
