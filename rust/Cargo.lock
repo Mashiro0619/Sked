@@ -6107,12 +6107,14 @@ checksum = "33f4fe9184a62d842c9ef383018f3306d8ba224fd9d836f56d7288308847c256"
 name = "sked_agent_core"
 version = "0.1.0"
 dependencies = [
+ "async-stream",
  "async-trait",
  "base64 0.22.1",
  "flutter_rust_bridge",
  "futures",
  "jni",
  "regex",
+ "reqwest 0.13.5",
  "rig",
  "rusqlite",
  "rustls-platform-verifier",

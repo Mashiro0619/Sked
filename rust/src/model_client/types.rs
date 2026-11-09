@@ -105,6 +105,16 @@ pub trait ModelToolExecutor: Send + Sync {
         cancellation: CancellationToken,
     ) -> BoxFuture<'static, Result<Value, String>>;
 
+    /// Resolve application-owned attachment markers after the request gate.
+    fn prepare_request_body(
+        &self,
+        body: Value,
+        _protocol: ProviderProtocol,
+        _cancellation: CancellationToken,
+    ) -> BoxFuture<'static, Result<super::PreparedRequestBody, String>> {
+        Box::pin(async move { super::PreparedRequestBody::json(body) })
+    }
+
     fn pause_before_model(&self) -> bool {
         false
     }

@@ -1,8 +1,10 @@
 mod credentials;
 pub mod offline;
+mod request_body;
 mod transport;
 mod types;
 
+pub use request_body::{PreparedRequestBody, RequestFile};
 pub use types::*;
 
 use std::sync::{Arc, Mutex};
@@ -34,19 +36,32 @@ use transport::EndpointTransport;
 #[derive(Clone)]
 pub struct RigModelClient {
     transport: DynHttpClient,
+    network: Option<Result<reqwest::Client, String>>,
 }
 
 impl Default for RigModelClient {
     fn default() -> Self {
+        let network = reqwest::Client::builder()
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .map_err(|error| error.to_string());
+        let adapter = match &network {
+            Ok(client) => ReqwestClient::from(client.clone()),
+            Err(_) => ReqwestClient::default(),
+        };
         Self {
-            transport: DynHttpClient::new(ReqwestClient::default()),
+            transport: DynHttpClient::new(adapter),
+            network: Some(network),
         }
     }
 }
 
 impl RigModelClient {
     pub fn with_transport(transport: DynHttpClient) -> Self {
-        Self { transport }
+        Self {
+            transport,
+            network: None,
+        }
     }
 
     pub async fn run(
@@ -191,6 +206,9 @@ impl RigModelClient {
             inner: self.transport.clone(),
             endpoint,
             cancellation: cancellation.clone(),
+            executor: executor.clone(),
+            protocol: config.protocol,
+            network: self.network.clone(),
         };
         let client = OpenAIConfig::new(config.api_key.clone()).connect(transport);
         let model: DynModel<Completion> = match config.protocol {
