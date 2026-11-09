@@ -713,7 +713,7 @@ class _MsaaScenario {
       expect(changes, hasLength(_changeCount));
       final titles = <String>{};
       for (final change in changes) {
-        expect(change['before'], isNull);
+        expect(change, containsPair('before', null));
         final ref = change['ref'] as Map;
         final after = change['after'] as Map;
         expect(ref['kind'], 'event');

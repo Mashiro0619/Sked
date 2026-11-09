@@ -307,6 +307,9 @@ class RustAgentBusinessHost {
     try {
       await _progress(request, native.HostPhase.approvalRequired, {
         ...plan.summary(),
+        'changes': [for (final change in plan.changes) change.toJson()],
+        if (plan case final ApprovalReferencePreview preview)
+          'references': preview.referencePreview(),
         'planId': plan.id,
         'toolName': request.toolName,
       });

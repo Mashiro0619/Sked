@@ -204,6 +204,20 @@ Future<void> runRustAgentOfflineJourney(
     await journey.delegate.setMode(journey.id, AgentPermissionMode.ask);
     final allowedRun = await journey.send('再创建一个需要确认的日程');
     await journey.approval('create-allowed');
+    final approvalDetails = journey.delegate.state.value
+        .runFor(journey.id)
+        .pendingApproval!
+        .details;
+    final approvalChange = (approvalDetails['changes'] as List).single as Map;
+    expect(approvalChange, containsPair('before', null));
+    final approvalAfter = Map<String, Object?>.from(
+      approvalChange['after'] as Map,
+    );
+    expect(approvalAfter['title'], '已批准的安排');
+    expect(
+      approvalDetails,
+      containsPair('references', const <String, Object?>{}),
+    );
     expect(journey.eventTitles, ['课后复习']);
     await tester.pump();
     expect(find.byType(AgentPlanPreview), findsOneWidget);
@@ -211,7 +225,13 @@ Future<void> runRustAgentOfflineJourney(
     await journey.finishUiAction();
     await journey.settled(allowedRun);
     expect(journey.eventTitles, unorderedEquals(['课后复习', '已批准的安排']));
-    checkpoints.add('真实审批按钮允许后保存');
+    expect(
+      journey.session.committedData.generalMode.schedules.single.events
+          .singleWhere((event) => event.id == approvalAfter['id'])
+          .toJson(),
+      approvalAfter,
+    );
+    checkpoints.add('真实审批传递完整候选，允许后保存相同对象');
 
     final rejectedRun = await journey.send('提出一个随后拒绝的日程');
     await journey.approval('create-rejected');
