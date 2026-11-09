@@ -124,7 +124,7 @@ def agent_scenario(name):
     before_hash = "a" * 64
     after_hash = "b" * 64 if accessible else before_hash
     result = ({"status": "committed", "operationId": "fixture-operation"} if accessible
-              else {"status": "not_executed", "error": {"code": "cancelled"}})
+              else {"status": "cancelled", "error": {"code": "cancelled"}})
     tool_result = result
     configuration = {
         "name": name, "brightness": "dark" if accessible else "light",
@@ -205,7 +205,7 @@ def agent_scenario(name):
     for index, suffix in enumerate(["connection", "preferences", "skills", "memory"]):
         probes.append(native_probe(f"agent-{name}-settings-{suffix}", settings[index]["title"], "button", 43, name))
     for suffix, label, purpose, role in [
-        ("ask-approve-control", "Approve these changes", "button", 43),
+        ("ask-approve-control", "Allow", "button", 43),
         ("ask-reject-control", "Reject", "button", 43),
         ("preview-pagination", "Show more changes", "button", 43),
         ("preview-first-detail", events[0]["notes"], "detail", 41),
@@ -424,6 +424,20 @@ class NativeAccessibilityAssessorTest(unittest.TestCase):
                 fixture = valid_report()
                 fixture["nativeAccessibility"]["agentScenarios"][0]["settingsReturn"][field] = value
                 self.assert_rejected(fixture, "settings navigation did not preserve")
+
+    def test_approval_native_probe_requires_the_current_allow_label(self):
+        fixture = valid_report()
+        probe = next(item for item in fixture["nativeAccessibility"]["nativeProbes"]
+                     if item["phase"] == "agent-baseline-ask-approve-control")
+        probe["expectedText"] = "Approve these changes"
+        probe["roots"][0]["matches"][0]["value"] = "Approve these changes"
+        self.assert_rejected(fixture, "MSAA button evidence is missing for ask-approve-control")
+
+    def test_rejection_requires_the_native_cancelled_status(self):
+        fixture = valid_report()
+        scenario = fixture["nativeAccessibility"]["agentScenarios"][0]
+        scenario["decision"]["toolResult"]["status"] = "not_executed"
+        self.assert_rejected(fixture, "rejection must leave the whole main snapshot unchanged")
 
     def test_existing_source_and_native_error_gates_remain_required(self):
         fixture = valid_report()

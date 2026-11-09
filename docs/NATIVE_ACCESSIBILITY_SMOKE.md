@@ -73,11 +73,12 @@ preview: Show more is observed through MSAA and tapped through Flutter to
 reveal the complete target list. A pointer drag on the actual transcript enters
 earlier-history reading before inspecting the rows; its offset and the visible
 Jump to latest control confirm that ordinary follow-latest behavior is paused.
-The first and last displayed records are expanded through the product UI; their
-complete before/after JSON is checked against the host plan, and their detail
-sentinels must appear as native text rather than a window/container match.
-Each detail waits for its own expansion clip to expose the full body with
-stable geometry before it is scrolled into view. The active approval spinner
+The first and last displayed records are expanded through the row disclosure.
+Their readable fields are checked before the nested Details control opens the
+complete before/after JSON, which must match the host plan. The native detail
+sentinel must match a text node whose captured name/value prefix identifies that
+same JSON. Each nested detail waits for its expansion clip to expose the full
+body with stable geometry before it is scrolled into view. The active approval spinner
 does not need to settle. Before/after clip geometry and the actual text node's
 label, value, hidden flag and root reachability remain in the report; a local
 debug semantics node alone is not proof that native clients can read it.
@@ -86,15 +87,16 @@ The baseline configuration is light with 1× text and normal motion. It rejects
 the plan and requires the entire committed and persisted main snapshots to stay
 identical. The accessible configuration uses dark theme, 2× text and the
 framework reduced-motion policy, with animations still enabled. It approves
-the plan and checks every new event's full content, all original data, the
-21-change stored receipt and the corresponding receipt card. No controller
-assignment, direct approval callback or model prose substitutes for those
-checks. Configuration observations, input diagnostics, pre-decision hashes,
+the plan and checks every new event's full content, all original data and the
+21-change stored receipt, then opens the completed operation to inspect its
+receipt card. No controller assignment, direct approval callback or model prose
+substitutes for those checks. Configuration observations, input diagnostics, pre-decision hashes,
 pagination, native roles and cleanup are retained separately from the original
 two editor-input diagnostics.
 
-Both decisions complete three provider requests and a final assistant reply.
-Rejection first persists the cancelled tool result; approval persists the
+The approval controls are labelled Allow and Reject. Both decisions complete
+three provider requests and a final assistant reply. Rejection persists a tool
+result with `status: cancelled` and `error.code: cancelled`; approval persists the
 applied result and its business receipt. Both runs finish completed with an idle
 conversation. The v3 report checks the exact
 tool-call identity, saved/current conversation equality, settled request/tool

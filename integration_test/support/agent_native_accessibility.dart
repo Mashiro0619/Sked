@@ -6,7 +6,9 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sked/agent/knowledge/knowledge_models.dart';
+import 'package:sked/agent/ui/agent_inline_disclosure_header.dart';
 import 'package:sked/agent/ui/agent_knowledge_view.dart';
+import 'package:sked/agent/ui/agent_operation_activity.dart';
 import 'package:sked/agent/ui/agent_operation_card.dart';
 import 'package:sked/agent/ui/agent_plan_preview.dart';
 import 'package:sked/application/operation_contracts.dart';
@@ -264,8 +266,14 @@ class _MsaaScenario {
   Finder key(String value) => find.byKey(ValueKey(value));
   Finder get composer => key('agent-composer').hitTestable();
   Finder get preview => find.byType(AgentPlanPreview);
-  Finder get previewRows =>
-      find.descendant(of: preview, matching: find.byType(ExpansionTile));
+  Finder get previewRows => find.descendant(
+    of: preview,
+    matching: find.byWidgetPredicate((widget) {
+      final rowKey = widget.key;
+      return rowKey is ValueKey<String> &&
+          rowKey.value.startsWith('agent-plan-preview-change-');
+    }),
+  );
   AppLocalizations get l => AppLocalizations.of(tester.element(composer));
   String stage(String suffix) => 'agent-${config.name}-$suffix';
 
@@ -425,7 +433,12 @@ class _MsaaScenario {
     );
   }
 
-  Future<void> native(String suffix, String expected, String purpose) async {
+  Future<void> native(
+    String suffix,
+    String expected,
+    String purpose, {
+    String? fullText,
+  }) async {
     await tester.pump(
       const Duration(milliseconds: 16),
       EnginePhase.sendSemanticsUpdate,
@@ -435,6 +448,7 @@ class _MsaaScenario {
       'phase': stage(suffix),
       'configuration': config.name,
       'purpose': purpose,
+      if (fullText != null) 'fullTextSha256': agentNativeDigest(fullText),
       ...result,
     });
     expect(result['nativeApi'], 'MSAA');
@@ -448,15 +462,27 @@ class _MsaaScenario {
       expect(result['matchedEditableValues'], greaterThan(0));
     } else {
       final roles = purpose == 'button' ? {43, 56, 57, 58, 62} : {41, 42};
+      bool matchesText(Map match, String field) {
+        if (match['${field}Matched'] != true) return false;
+        if (fullText == null) return true;
+        // The probe retains compact name/value prefixes. Bind its sentinel
+        // match to the complete JSON instead of a separate readable field.
+        final value = match[field];
+        return value is String &&
+            value.isNotEmpty &&
+            fullText.startsWith(value);
+      }
+
       expect(
         matches.any(
           (match) =>
               roles.contains(match['role']) &&
-              (match['nameMatched'] == true || match['valueMatched'] == true),
+              (matchesText(match, 'name') || matchesText(match, 'value')),
         ),
         isTrue,
-        reason:
-            'A matching container is insufficient for the $purpose observation.',
+        reason: fullText == null
+            ? 'A matching container is insufficient for the $purpose observation.'
+            : 'The native text match must identify the complete expanded JSON.',
       );
     }
   }
@@ -797,10 +823,14 @@ class _MsaaScenario {
       observation['orderedIds'] = [
         for (final change in changes) (change['after'] as Map)['id'],
       ];
-      for (final change in changes) {
+      expect(previewRows.evaluate().map((element) => element.widget.key), [
+        for (var index = 0; index < changes.length; index++)
+          ValueKey('agent-plan-preview-change-$index'),
+      ]);
+      for (final (index, change) in changes.indexed) {
         expect(
           find.descendant(
-            of: preview,
+            of: key('agent-plan-preview-change-$index'),
             matching: find.text((change['after'] as Map)['title'] as String),
           ),
           findsOneWidget,
@@ -842,23 +872,70 @@ class _MsaaScenario {
       };
       unchanged();
     });
-    for (final (position, change) in [
-      ('first', changes.first),
-      ('last', changes.last),
+    for (final (position, index, change) in [
+      ('first', 0, changes.first),
+      ('last', changes.length - 1, changes.last),
     ]) {
       await at('preview-$position-detail', () async {
         final after = change['after'] as Map;
+        final row = key('agent-plan-preview-change-$index');
+        final header = find.descendant(
+          of: row,
+          matching: find.byType(AgentInlineDisclosureHeader),
+        );
         final label = find.descendant(
-          of: preview,
+          of: header,
           matching: find.text(after['title'] as String),
         );
+        expect(
+          tester.widget<AgentInlineDisclosureHeader>(header).expanded,
+          isFalse,
+        );
         await tap(label);
-        final detail = find.descendant(
-          of: preview,
+        final readableNotes = find.descendant(
+          of: row,
           matching: find.byWidgetPredicate(
             (widget) =>
-                widget is SelectableText &&
-                (widget.data?.contains(after['notes'] as String) ?? false),
+                widget is SelectableText && widget.data == after['notes'],
+          ),
+        );
+        final fullDetails = find.descendant(
+          of: row,
+          matching: find.widgetWithText(ExpansionTile, l.agentPlanDetails),
+        );
+        await until(
+          () =>
+              readableNotes.evaluate().length == 1 &&
+              fullDetails.evaluate().length == 1,
+          'the $position readable fields and full detail control',
+        );
+        expect(
+          tester.widget<AgentInlineDisclosureHeader>(header).expanded,
+          isTrue,
+        );
+        await reveal(readableNotes);
+        final readableText = textEvidence(
+          tester.state<EditableTextState>(
+            find.descendant(
+              of: readableNotes,
+              matching: find.byType(EditableText),
+            ),
+          ),
+        );
+        expect(readableText['isHidden'], isFalse);
+        expect(readableText['isReadOnly'], isTrue);
+        expect(readableText['reachableFromRoot'], isTrue);
+        expect(readableText['label'], contains(after['notes']));
+        expect(readableText['value'], after['notes']);
+        final detail = find.descendant(
+          of: fullDetails,
+          matching: find.byType(SelectableText),
+        );
+        expect(detail, findsNothing);
+        await tap(
+          find.descendant(
+            of: fullDetails,
+            matching: find.text(l.agentPlanDetails),
           ),
         );
         await until(
@@ -870,20 +947,17 @@ class _MsaaScenario {
           const Duration(milliseconds: 16),
           EnginePhase.sendSemanticsUpdate,
         );
-        final row = find.ancestor(
-          of: detail,
-          matching: find.byType(ExpansionTile),
-        );
-        expect(row, findsOneWidget);
         final editable = tester.state<EditableTextState>(
           find.descendant(of: detail, matching: find.byType(EditableText)),
         );
-        final initialExpansion = expansionEvidence(detail, row);
+        final initialExpansion = expansionEvidence(detail, fullDetails);
         final initialText = textEvidence(editable);
         final detailObservation = <String, Object?>{
           'position': position,
           'id': after['id'],
           'notes': after['notes'],
+          'readableText': readableText,
+          'detailPath': 'change row / full details',
           'framePolicy': (tester.binding as LiveTestWidgetsFlutterBinding)
               .framePolicy
               .name,
@@ -894,9 +968,9 @@ class _MsaaScenario {
         Map<String, Object?>? previousExpansion;
         var stableExpandedPumps = 0;
         // The active approval spinner never settles the whole tree. Wait for
-        // this row's real clipping animation, then reveal the final geometry.
+        // the full-detail tile's clipping animation, then reveal its geometry.
         await until(() {
-          final current = expansionEvidence(detail, row);
+          final current = expansionEvidence(detail, fullDetails);
           final stable =
               current['complete'] == true &&
               previousExpansion?['complete'] == true &&
@@ -915,7 +989,7 @@ class _MsaaScenario {
         final decoded = jsonDecode(rendered) as Map;
         expect(decoded[l.agentValueBefore], isNull);
         expect(decoded[l.agentValueAfter], after);
-        final finalExpansion = expansionEvidence(detail, row);
+        final finalExpansion = expansionEvidence(detail, fullDetails);
         final finalText = textEvidence(editable);
         detailObservation.addAll({
           'expansionAfterWait': finalExpansion,
@@ -937,13 +1011,18 @@ class _MsaaScenario {
           'preview-$position-detail',
           after['notes'] as String,
           'detail',
+          fullText: rendered,
         );
         unchanged();
         // Collapse through the actual row before revealing the next large item.
         await tap(label);
         await until(
-          () => detail.evaluate().isEmpty,
+          () => detail.evaluate().isEmpty && readableNotes.evaluate().isEmpty,
           'the collapsed $position change detail',
+        );
+        expect(
+          tester.widget<AgentInlineDisclosureHeader>(header).expanded,
+          isFalse,
         );
       });
     }
@@ -1054,7 +1133,7 @@ class _MsaaScenario {
       report['decision'] = result;
       if (!approve) {
         unchanged();
-        expect(toolResult['status'], 'not_executed');
+        expect(toolResult['status'], 'cancelled');
         expect(
           toolResult['error'],
           isA<Map>().having((error) => error['code'], 'code', 'cancelled'),
@@ -1109,6 +1188,27 @@ class _MsaaScenario {
         ];
         expect(receiptIds, hasLength(_changeCount));
         expect(receiptIds.toSet(), verifiedCreatedIds.toSet());
+        final jumpToLatest = key('agent-jump-latest');
+        if (jumpToLatest.hitTestable().evaluate().length == 1) {
+          await tap(jumpToLatest);
+        }
+        final activity = find.byWidgetPredicate(
+          (widget) =>
+              widget is AgentOperationActivity &&
+              widget.operation.operationId == receipt.operationId,
+        );
+        await until(
+          () => activity.evaluate().length == 1,
+          'the actual committed operation activity',
+        );
+        final operation = tester
+            .widget<AgentOperationActivity>(activity)
+            .operation;
+        expect(operation.receipt?['operationId'], receipt.operationId);
+        expect(operation.receipt?['status'], 'committed');
+        // The automatic approval expansion ends with the decision. Open the
+        // saved operation through its actual disclosure to inspect the card.
+        await tap(key('agent-activity-toggle-operation-${operation.id}'));
         final card = find.byWidgetPredicate(
           (widget) =>
               widget is AgentOperationCard &&

@@ -378,7 +378,7 @@ for scenario in scenarios:
         "settings-preferences": (titles[1], "button"),
         "settings-skills": (titles[2], "button"),
         "settings-memory": (titles[3], "button"),
-        "ask-approve-control": ("Approve these changes", "button"),
+        "ask-approve-control": ("Allow", "button"),
         "ask-reject-control": ("Reject", "button"),
         "preview-pagination": ("Show more changes", "button"),
         "preview-first-detail": (planned[0].get("notes") if planned else None, "detail"),
@@ -453,7 +453,7 @@ for scenario in scenarios:
     elif (
         after_hash != decision.get("beforeStoredSha256") or decision.get("eventCountAfter") != 1
         or decision.get("receiptCount") != 0 or decision.get("errorCode") != "cancelled"
-        or tool_result.get("status") != "not_executed"
+        or tool_result.get("status") != "cancelled"
         or as_object(tool_result.get("error")).get("code") != "cancelled"
     ):
         reasons.append(prefix + "rejection must leave the whole main snapshot unchanged and create no receipt.")
