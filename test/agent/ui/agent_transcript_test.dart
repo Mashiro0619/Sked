@@ -95,6 +95,37 @@ void main() {
   }
 
   testWidgets(
+    'content refresh after a restore waits for the new reading geometry',
+    (tester) async {
+      final position = AgentReadingPosition();
+      await tester.pumpWidget(host(position, full: true, revision: 0));
+      await tester.pumpAndSettle();
+      final state = tester.state<AgentTranscriptState>(find.byKey(fullKey));
+      expect(
+        state.reveal(const ValueKey('message-120'), fraction: 0.6),
+        isTrue,
+      );
+      // The restore jumps after layout. Refresh content in the next build,
+      // before that jump has updated the message's geometry.
+      await tester.pump();
+      await tester.pumpWidget(host(position, full: true, revision: 1));
+      await tester.pumpAndSettle();
+      expect(position.anchor, const ValueKey('message-120'));
+      expect(position.fraction, closeTo(0.6, 0.03));
+      final restored = visibleMessage(tester, fullScrollKey);
+      expect(restored.$1, 'message-120');
+      expect(restored.$2, closeTo(0.6, 0.03));
+
+      await tester.pumpWidget(
+        host(position, full: false, paneWidth: 320, revision: 2),
+      );
+      await tester.pumpAndSettle();
+      expectSameReading(visibleMessage(tester, paneScrollKey), restored);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'returning to latest clears a late reading origin and aligns the actual end',
     (tester) async {
       final position = AgentReadingPosition();

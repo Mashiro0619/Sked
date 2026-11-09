@@ -177,15 +177,26 @@ class AgentTranscriptState extends State<AgentTranscript> {
         final item = _itemKeys[_center]?.currentContext?.findRenderObject();
         if (item is RenderBox && item.hasSize) {
           target = fraction * item.size.height;
-          _restoreFraction = null;
         }
       }
       if (target != null) {
+        final restoring = _restoreFraction != null;
+        final controller = _controller;
         _moving = true;
-        _controller.jumpTo(
+        controller.jumpTo(
           target.clamp(scroll.minScrollExtent, scroll.maxScrollExtent),
         );
         _moving = false;
+        if (restoring) {
+          // jumpTo updates pixels before layout. Keep the saved reading until
+          // this controller's new geometry can be observed by _remember.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && identical(_controller, controller)) {
+              _restoreFraction = null;
+            }
+          });
+          WidgetsBinding.instance.ensureVisualUpdate();
+        }
       }
     });
   }
