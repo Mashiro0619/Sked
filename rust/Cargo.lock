@@ -6108,9 +6108,11 @@ name = "sked_agent_core"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "base64 0.22.1",
  "flutter_rust_bridge",
  "futures",
  "jni",
+ "regex",
  "rig",
  "rusqlite",
  "rustls-platform-verifier",

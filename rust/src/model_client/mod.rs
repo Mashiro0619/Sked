@@ -1,3 +1,4 @@
+mod credentials;
 pub mod offline;
 mod transport;
 mod types;
@@ -23,10 +24,11 @@ use rig::{
     tool::{DynamicTool, ToolExecutionError, ToolOutput},
 };
 use serde_json::{Value, json};
-use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::mpsc::{UnboundedSender, unbounded_channel};
 use tokio_util::sync::CancellationToken;
 
 use crate::{runtime::ToolDescriptor, storage::models::TokenUsage};
+use credentials::{CredentialGuard, CredentialStream};
 use transport::EndpointTransport;
 
 #[derive(Clone)]
@@ -58,19 +60,90 @@ impl RigModelClient {
         cancellation: CancellationToken,
         events: UnboundedSender<ModelEvent>,
     ) -> ModelRunResult {
-        match self
-            .run_inner(
-                config,
-                preamble,
-                prompt,
-                history.clone(),
-                tools,
-                executor,
-                cancellation.clone(),
-                events,
-            )
-            .await
-        {
+        let guard = CredentialGuard::new(&config.api_key);
+        let (raw_events, mut receiver) = unbounded_channel();
+        let event_guard = guard.clone();
+        let forward = async move {
+            let mut text = CredentialStream::new(event_guard.clone());
+            let mut reasoning = CredentialStream::new(event_guard.clone());
+            while let Some(mut event) = receiver.recv().await {
+                match &mut event {
+                    ModelEvent::Text(delta) => {
+                        let delta = text.push(delta);
+                        if !delta.is_empty() {
+                            let _ = events.send(ModelEvent::Text(delta));
+                        }
+                        continue;
+                    }
+                    ModelEvent::Reasoning(delta) => {
+                        let delta = reasoning.push(delta);
+                        if !delta.is_empty() {
+                            let _ = events.send(ModelEvent::Reasoning(delta));
+                        }
+                        continue;
+                    }
+                    ModelEvent::Reset => {
+                        text.clear();
+                        reasoning.clear();
+                    }
+                    ModelEvent::RequestStarted { history, .. } => history
+                        .iter_mut()
+                        .for_each(|value| event_guard.value(value)),
+                    ModelEvent::AssistantCommitted { message } => {
+                        for delta in [text.finish()] {
+                            if !delta.is_empty() {
+                                let _ = events.send(ModelEvent::Text(delta));
+                            }
+                        }
+                        for delta in [reasoning.finish()] {
+                            if !delta.is_empty() {
+                                let _ = events.send(ModelEvent::Reasoning(delta));
+                            }
+                        }
+                        event_guard.value(message);
+                        text.clear();
+                        reasoning.clear();
+                    }
+                    ModelEvent::ToolCall {
+                        id,
+                        name,
+                        arguments,
+                    } => {
+                        *id = event_guard.text(id);
+                        *name = event_guard.text(name);
+                        event_guard.value(arguments);
+                    }
+                    ModelEvent::ToolResult { id, message } => {
+                        *id = event_guard.text(id);
+                        event_guard.value(message);
+                    }
+                    ModelEvent::Usage { raw, .. } => event_guard.value(raw),
+                }
+                let _ = events.send(event);
+            }
+            for delta in [text.finish()] {
+                if !delta.is_empty() {
+                    let _ = events.send(ModelEvent::Text(delta));
+                }
+            }
+            for delta in [reasoning.finish()] {
+                if !delta.is_empty() {
+                    let _ = events.send(ModelEvent::Reasoning(delta));
+                }
+            }
+        };
+        let run = self.run_inner(
+            config,
+            preamble,
+            prompt,
+            history.clone(),
+            tools,
+            executor,
+            cancellation.clone(),
+            raw_events,
+        );
+        let (result, ()) = tokio::join!(run, forward);
+        let mut result = match result {
             Ok(result) => result,
             Err(error) => ModelRunResult {
                 history,
@@ -78,7 +151,14 @@ impl RigModelClient {
                 error: Some(error),
                 ..Default::default()
             },
-        }
+        };
+        result
+            .history
+            .iter_mut()
+            .for_each(|value| guard.value(value));
+        result.text = guard.text(&result.text);
+        result.error = result.error.map(|error| guard.error(&error));
+        result
     }
 
     async fn run_inner(
@@ -92,6 +172,7 @@ impl RigModelClient {
         cancellation: CancellationToken,
         events: UnboundedSender<ModelEvent>,
     ) -> Result<ModelRunResult, String> {
+        let guard = CredentialGuard::new(&config.api_key);
         let endpoint: Uri = config
             .full_endpoint
             .parse()
@@ -100,6 +181,11 @@ impl RigModelClient {
             || endpoint.authority().is_none()
         {
             return Err("模型接口必须是完整 HTTP 或 HTTPS 地址".into());
+        }
+        let mut input = history.clone();
+        input.push(serde_json::to_value(&prompt).map_err(|error| error.to_string())?);
+        if input.iter().any(|value| guard.contains_value(value)) {
+            return Err("会话内容包含当前连接凭据，已停止请求".into());
         }
         let transport = EndpointTransport {
             inner: self.transport.clone(),
@@ -128,6 +214,7 @@ impl RigModelClient {
             let state = state.clone();
             let executor = executor.clone();
             let cancellation = cancellation.clone();
+            let tool_guard = guard.clone();
             dynamic_tools.push(DynamicTool::new(
                 name,
                 tool.description,
@@ -141,6 +228,7 @@ impl RigModelClient {
                     let executor = executor.clone();
                     let cancellation = cancellation.clone();
                     let logical_name = logical_name.clone();
+                    let guard = tool_guard.clone();
                     Box::pin(async move {
                         let (_, call_id) = dispatch.ok_or_else(|| {
                             ToolExecutionError::invalid_args("工具调度缺少调用标识")
@@ -150,13 +238,21 @@ impl RigModelClient {
                                 json!({"status":"cancelled", "message":"用户已停止本次运行"}),
                             ));
                         }
+                        if guard.contains_value(&arguments) {
+                            return Err(ToolExecutionError::invalid_args(
+                                "工具参数包含当前连接凭据，已拒绝执行",
+                            ));
+                        }
                         // Await the native receipt even after cancellation. The host
                         // decides whether a transaction was already accepted.
                         executor
                             .execute(logical_name, call_id, arguments, cancellation)
                             .await
-                            .map(ToolOutput::json)
-                            .map_err(ToolExecutionError::invalid_args)
+                            .map(|mut value| {
+                                guard.value(&mut value);
+                                ToolOutput::json(value)
+                            })
+                            .map_err(|error| ToolExecutionError::invalid_args(guard.error(&error)))
                     })
                 },
             ));
@@ -170,6 +266,7 @@ impl RigModelClient {
                 events: events.clone(),
                 cancellation: cancellation.clone(),
                 executor,
+                guard,
             });
         if let Some(effort) = config.reasoning_effort.as_ref().filter(|e| !e.is_empty()) {
             builder = builder.additional_params(match config.protocol {
@@ -289,6 +386,7 @@ struct RunHook {
     events: UnboundedSender<ModelEvent>,
     cancellation: CancellationToken,
     executor: Arc<dyn ModelToolExecutor>,
+    guard: CredentialGuard,
 }
 
 impl AgentHook for RunHook {
@@ -312,7 +410,11 @@ impl AgentHook for RunHook {
         }
         let serialized: Vec<Value> = history
             .iter()
-            .map(|message| serde_json::to_value(message).expect("message serialization"))
+            .map(|message| {
+                let mut value = serde_json::to_value(message).expect("message serialization");
+                self.guard.value(&mut value);
+                value
+            })
             .collect();
         match self
             .executor

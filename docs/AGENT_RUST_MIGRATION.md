@@ -63,6 +63,8 @@ Rust 存储切换后删除 drift、drift_dev、build_runner、Agent 数据库生
 
 `RustAgentBusinessHost` 为每次运行持有业务作用域，复用 `ApplicationToolHost` 和 `MutationCoordinator`。准备记录持久化后才进入业务保存；待审批对象建立后才发布允许／拒绝入口。历史主库撤销通过 `RustAgentMainUndo` 读取原始回执并复用领域撤销入口。
 
+原生模型客户端在发送前检查会话与工具参数中的当前连接凭据，并对流式正文、思考、工具结果和错误执行脱敏。流式输出保留可能属于凭据的尾部，避免分片泄露；短凭据按敏感字段和授权语法识别，保留普通正文。
+
 `RustAgentUiDelegate` 消费原生会话及运行投影，当前上下文计量、压缩状态、重生成目标与实际活动状态均来自 Rust。立即补充交接期间保持运行状态，旧保存收尾之后才开放继续。页面释放订阅不关闭核心。
 
 原生入口为 `integration_test/agent_rust_offline_journey_test.dart`：模型使用预置回包，FRB、Rust 核心、业务工具、主库文件和 JSONL 使用正式实现。流程覆盖工具发现、三种权限、流式回复、已接纳保存期间的页面关闭、排队、停止继续、退出及重新打开数据。
