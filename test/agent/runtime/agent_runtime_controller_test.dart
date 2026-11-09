@@ -2234,10 +2234,18 @@ void main() {
         '/custom/responses',
       );
       expect(
-        () => resolveAgentEndpoint(
-          const AgentSettings(endpoint: 'https://a.example/v1?key=x'),
-        ),
-        throwsA(isA<AgentRuntimeException>()),
+        resolveAgentEndpoint(
+          const AgentSettings(endpoint: 'https://a.example/v1?tenant=x'),
+        ).toString(),
+        'https://a.example/v1/chat/completions?tenant=x',
+      );
+      expect(
+        resolveAgentEndpoint(
+          const AgentSettings(
+            endpoint: 'https://a.example/custom/generate/?tenant=x',
+          ),
+        ).toString(),
+        'https://a.example/custom/generate/?tenant=x',
       );
     },
   );

@@ -8,15 +8,12 @@ Uri resolveConfiguredAgentEndpoint(AgentSettings settings) {
       !uri.isAbsolute ||
       uri.host.isEmpty ||
       uri.userInfo.isNotEmpty ||
-      uri.hasQuery ||
       uri.hasFragment ||
       !{'http', 'https'}.contains(uri.scheme)) {
     throw const FormatException('The model endpoint is not configured.');
   }
   final path = uri.path.replaceFirst(RegExp(r'/+$'), '');
-  if (path.endsWith('/chat/completions') || path.endsWith('/responses')) {
-    return uri.replace(path: path);
-  }
+  if (path.isNotEmpty && !path.endsWith('/v1')) return uri;
   final suffix = settings.protocol == AgentModelProtocol.responses
       ? '/responses'
       : '/chat/completions';
