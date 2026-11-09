@@ -1073,6 +1073,7 @@ class RunLoop {
             ConversationRole.user => ProviderRole.user,
             ConversationRole.assistant => ProviderRole.assistant,
             ConversationRole.tool => ProviderRole.tool,
+            ConversationRole.system => ProviderRole.system,
             ConversationRole.notice => throw StateError('unreachable'),
           },
           text: text,

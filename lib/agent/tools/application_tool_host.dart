@@ -160,6 +160,11 @@ class ApplicationToolHost {
 
   Set<String> get registeredNames => Set.unmodifiable(_tools.keys);
 
+  /// Rust keeps the per-conversation discovery state; these are the host's
+  /// current public definitions, including tools that have not been discovered.
+  List<ToolDefinition> get registeredDefinitions =>
+      List.unmodifiable(_tools.values.map((tool) => tool.$1));
+
   bool isReadOnlyTool(String name) => _readOnlyTools.contains(name);
 
   void registerCandidateDisposer(

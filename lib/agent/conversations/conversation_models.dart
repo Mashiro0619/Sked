@@ -21,12 +21,13 @@ export '../attachments/attachment_models.dart';
 enum ConversationStatus {
   idle,
   running,
+  stopping,
   waitingApproval,
   waitingUser,
   interrupted,
 }
 
-enum ConversationRole { user, assistant, tool, notice }
+enum ConversationRole { user, assistant, tool, system, notice }
 
 enum ConversationQueuedInputMode { followUp, steering }
 

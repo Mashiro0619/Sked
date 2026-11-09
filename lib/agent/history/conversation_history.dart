@@ -6,7 +6,7 @@ import '../conversations/conversation_models.dart';
 
 /// The host records a binding before accepting a write. A model's summary or
 /// a timestamp cannot establish which conversation owns an operation.
-enum ConversationOperationStore { main, external }
+enum ConversationOperationStore { main, external, knowledge }
 
 class ConversationOperationBinding {
   ConversationOperationBinding({
@@ -317,6 +317,8 @@ enum ConversationRedoPhase {
   running,
   completed,
   abandoned,
+  failed,
+  cancelled,
 }
 
 class ConversationRedoBatch {
@@ -371,7 +373,13 @@ class ConversationRedoBatch {
         ) ||
         phase == ConversationRedoPhase.prepared &&
             this.completedOwners.isNotEmpty ||
-        phase.index >= ConversationRedoPhase.undone.index &&
+        const {
+              ConversationRedoPhase.undone,
+              ConversationRedoPhase.ready,
+              ConversationRedoPhase.running,
+              ConversationRedoPhase.completed,
+              ConversationRedoPhase.abandoned,
+            }.contains(phase) &&
             this.completedOwners.length != this.tickets.length) {
       throw const FormatException('Invalid history redo progress.');
     }
@@ -395,7 +403,10 @@ class ConversationRedoBatch {
   final String? lastError;
 
   bool get isComplete => phase == ConversationRedoPhase.completed;
-  bool get isTerminal => isComplete || phase == ConversationRedoPhase.abandoned;
+  bool get isTerminal =>
+      isComplete ||
+      phase == ConversationRedoPhase.abandoned ||
+      phase == ConversationRedoPhase.cancelled;
 
   ConversationRedoBatch copyWith({
     ConversationRedoPhase? phase,

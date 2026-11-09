@@ -5,3 +5,9 @@
 -keep class androidx.work.impl.WorkDatabase_Impl {
     <init>();
 }
+
+# Rust calls the platform verifier through JNI, outside R8's call graph.
+-keep,includedescriptorclasses class org.rustls.platformverifier.** { *; }
+-keepclassmembers class com.mashiro.sked.SkedApplication {
+    native <methods>;
+}

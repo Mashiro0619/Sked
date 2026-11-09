@@ -3,7 +3,7 @@ import '../../models/agent_settings.dart' show AgentReasoningEffort;
 
 enum ConversationRunKind { model, host }
 
-enum ConversationRequestKind { response, contextCompaction }
+enum ConversationRequestKind { response, contextCompaction, title }
 
 enum ConversationRunStatus { running, completed, interrupted }
 
@@ -14,6 +14,7 @@ enum ConversationAttemptOutcome {
   notStarted,
   completed,
   failed,
+  cancelled,
   unknown,
 }
 

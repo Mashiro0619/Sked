@@ -79,7 +79,8 @@ class _AgentConversationRowState extends State<AgentConversationRow> {
           live?.phase ??
           switch (widget.conversation.status) {
             ConversationStatus.idle => AgentUiPhase.idle,
-            ConversationStatus.running => AgentUiPhase.running,
+            ConversationStatus.running ||
+            ConversationStatus.stopping => AgentUiPhase.running,
             ConversationStatus.waitingApproval => AgentUiPhase.waitingApproval,
             ConversationStatus.waitingUser => AgentUiPhase.waitingUser,
             ConversationStatus.interrupted => AgentUiPhase.stopped,

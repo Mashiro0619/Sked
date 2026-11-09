@@ -510,6 +510,8 @@ List<AgentTimelineEntry> projectAgentConversationTimeline(
               AgentToolActivityStatus.uncertain,
             ConversationAttemptOutcome.notStarted =>
               AgentToolActivityStatus.notStarted,
+            ConversationAttemptOutcome.cancelled =>
+              AgentToolActivityStatus.notStarted,
             ConversationAttemptOutcome.pending =>
               active
                   ? AgentToolActivityStatus.running

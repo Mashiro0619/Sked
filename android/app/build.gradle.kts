@@ -1,9 +1,56 @@
 import java.util.Properties
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ValueSource
+import org.gradle.api.provider.ValueSourceParameters
 
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+abstract class RustlsAndroidVersion : ValueSource<String, RustlsAndroidVersion.Parameters> {
+    interface Parameters : ValueSourceParameters {
+        val cargoLock: RegularFileProperty
+    }
+
+    override fun obtain(): String {
+        val lines = parameters.cargoLock.get().asFile.readLines()
+        val packageIndex = lines.indexOfFirst {
+            it.trim() == "name = \"rustls-platform-verifier-android\""
+        }
+        check(packageIndex >= 0) {
+            "rustls-platform-verifier-android is missing from rust/Cargo.lock"
+        }
+        return lines.drop(packageIndex + 1)
+            .takeWhile { it.trim() != "[[package]]" }
+            .first { it.trimStart().startsWith("version = ") }
+            .substringAfter('"')
+            .substringBefore('"')
+    }
+}
+
+val rustlsAndroidVersion = providers.of(RustlsAndroidVersion::class.java) {
+    parameters.cargoLock.set(layout.projectDirectory.file("../../rust/Cargo.lock"))
+}
+
+repositories {
+    maven {
+        url = uri(
+            "https://github.com/rustls/rustls-platform-verifier/raw/" +
+                "maven-archive/android-release-support/maven/",
+        )
+        content { includeGroup("org.rustls") }
+    }
+}
+
+configurations.configureEach {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "org.rustls" && requested.name == "rustls-platform-verifier") {
+            useVersion(rustlsAndroidVersion.get())
+            because("The Android verifier must match rust/Cargo.lock")
+        }
+    }
 }
 
 val keystoreProperties =
@@ -88,6 +135,7 @@ tasks.matching { isReleaseBuildTask(it.name) }.configureEach {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    implementation("org.rustls:rustls-platform-verifier")
     testImplementation("junit:junit:4.13.2")
     // Own the streaming JSON dependency used by the filtered D2D artifact.
     // This is already the version resolved by flutter_local_notifications.

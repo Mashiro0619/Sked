@@ -66,6 +66,20 @@ class ConversationHistoryReceipts {
   Future<ConversationHistoryOperation> read(
     ConversationOperationBinding binding,
   ) async {
+    if (binding.store == ConversationOperationStore.knowledge) {
+      final receipt = knowledge.receiptFor(binding.operationId);
+      if (!knowledge.isLoaded || knowledge.blocked || receipt == null) {
+        throw ConversationHistoryException(
+          ConversationHistoryError.missingReceipt,
+          operationId: binding.operationId,
+        );
+      }
+      return ConversationHistoryOperation(
+        binding: binding,
+        effect: ConversationHistoryEffect.knowledge,
+        digest: _digest(receipt.toJson()),
+      );
+    }
     OperationReceipt? receipt;
     try {
       receipt = binding.store == ConversationOperationStore.main
@@ -199,6 +213,7 @@ class ConversationHistoryPreflight {
       );
     }
     if (conversation.status == ConversationStatus.running ||
+        conversation.status == ConversationStatus.stopping ||
         conversation.status == ConversationStatus.waitingApproval ||
         conversation.status == ConversationStatus.waitingUser ||
         conversation.pendingQuestion != null) {
