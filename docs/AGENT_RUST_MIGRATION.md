@@ -5,7 +5,7 @@
 ## 已确定的方案
 
 - Rust、Rig 和 flutter_rust_bridge 在设备本地运行，使用现有连接配置调用模型 API。
-- 完整接通问答、计划、队列、压缩、历史编辑重做、知识、附件、标题、用量和备份后切换正式装配。
+- 问答、计划、队列、压缩、历史编辑重做、知识、附件、标题、用量和备份已接入 Rust，正式装配已完成切换。
 - Agent 尚未发布，直接重建聊天、附件、自定义 Skills 和记忆开发数据；删除旧 Agent 格式判断和迁移分支。业务数据、连接及密钥保留。
 - Windows、Android 完整接入；其他端保留编译和普通功能，未接通的 Agent 明确显示暂不可用。
 - 先完成离线验收；真实模型调用和性能对照继续暂停。
@@ -47,17 +47,21 @@ Flutter 3.47.7／Dart 3.13.5 和现有 Android 工具链保持。新增 Cargo.lo
 
 | 阶段 | 完成条件 | 状态 |
 | --- | --- | --- |
-| 1. 基线和依赖 | 三批依赖更新，相关分析、编译和功能检查 | 依赖更新已提交，原生构建随接入阶段验证 |
-| 2. Rust 与 FRB | Windows／Android 加载 Rust，命令、事件和宿主回调接通 | 核心加载与桥接已通过两端初始旅程，Android 系统证书初始化已接通 |
-| 3. 新存储 | JSONL、索引、知识、附件和新备份完整可用 | 正式仓储与选择性备份已接线，综合验证进行中 |
-| 4. Rig 与业务工具 | 离线模型回包驱动正式工具并取得真实业务结果 | 业务及平台适配已接线，原生基础旅程已通过，完整装配验证进行中 |
-| 5. 完整功能 | 现有 Agent 功能全部接入原界面 | 页面、知识、附件、HTTP 与历史维护已接线，正在校验完整行为 |
-| 6. 切换清理 | 等已接纳动作完成，重建开发数据，删除旧实现 | 正式装配已改用 Rust，旧核心已退役；开发数据与最终验收待收尾 |
-| 7. 离线收尾 | 两端安装包、完整功能旅程和文档完成 | 完整离线旅程进行中，安装包与原生读屏待验收 |
+| 1. 基线和依赖 | 三批依赖更新，相关分析、编译和功能检查 | 依赖及锁文件更新、旧 Agent 生成依赖清理已完成，平台构建结果见离线收尾阶段 |
+| 2. Rust 与 FRB | Windows／Android 加载 Rust，命令、事件和宿主回调接通 | 两端正式入口已接通 Rust 加载、命令、事件和业务宿主回调，Android 系统证书初始化已接通 |
+| 3. 新存储 | JSONL、索引、知识、附件和新备份完整可用 | 正式仓储、附件与选择性备份已通过 Windows／Android 完整离线旅程 |
+| 4. Rig 与业务工具 | 离线模型回包驱动正式工具并取得真实业务结果 | 两端正式装配已通过离线模型、真实业务保存与回执恢复旅程 |
+| 5. 完整功能 | 现有 Agent 功能全部接入原界面 | 页面、知识、附件、HTTP 与历史维护已接通，相关界面回归、两端离线旅程与 Windows 原生读屏通过 |
+| 6. 切换清理 | 等已接纳动作完成，重建开发数据，删除旧实现 | 正式装配已改用 Rust，旧核心与开发库已清理；业务、连接和凭据保留，新布局在原生核心首次初始化时创建 |
+| 7. 离线收尾 | 两端安装包、完整功能旅程和文档完成 | 两端完整离线旅程、Windows 原生读屏、普通／Store MSIX 和 Android APK／AAB 构建核对已通过，Android Release 正式入口已在模拟器启动，相关文档已同步 |
 
-接入阶段通过离线演示入口逐步完成，完整功能接通后切换；最终不保留旧 Dart harness 回退执行路径。
+其他平台的普通入口已通过 Web JavaScript 和 Linux Release 构建；macOS／iOS 构建需要 macOS 宿主。
 
-## 当前接入入口
+正式装配已使用 Rust 执行核心，旧 Dart harness 回退执行路径已删除。
+
+## 正式装配与验证入口
+
+正式入口为 `lib/main.dart`，由 `AppRuntime` 创建应用级 `AgentApplication`，通过 `AgentRustClient` 连接 Rust 核心。Windows、Android 启用该执行路径；其他平台保留普通应用功能，Agent 显示暂不可用。
 
 `rust/src/api` 提供生成桥接，`AgentRustClient` 等待原生事件订阅就绪后开放命令。停止或退出先关闭新请求入口，宿主仍可提交已接纳保存的最终回执；重复退出调用等待同一收尾过程。
 
@@ -71,9 +75,9 @@ Flutter 3.47.7／Dart 3.13.5 和现有 Android 工具链保持。新增 Cargo.lo
 
 `RustAgentUiDelegate` 消费原生会话及运行投影，当前上下文计量、压缩状态、重生成目标与实际活动状态均来自 Rust。立即补充交接期间保持运行状态，旧保存收尾之后才开放继续。页面释放订阅不关闭核心。
 
-原生入口为 `integration_test/agent_rust_offline_journey_test.dart`：模型使用预置回包，FRB、Rust 核心、业务工具、主库文件和 JSONL 使用正式实现。流程覆盖工具发现、三种权限、流式回复、已接纳保存期间的页面关闭、排队、停止继续、退出及重新打开数据。
+离线验证入口为 `integration_test/agent_rust_offline_journey_test.dart`：模型使用预置回包，FRB、Rust 核心、业务工具、主库文件和 JSONL 使用正式实现。流程覆盖工具发现、三种权限、流式回复、已接纳保存期间的页面关闭、排队、停止继续、退出及重新打开数据。
 
-Rust 工具链版本与目标维护在 `rust/rust-toolchain.toml`；手动 Cargo 命令从 `rust/` 目录运行。Flutter native assets hook 使用同一工具链，Android 编译使用项目当前最低 API，不提升 Android 基线。Android 的 `SkedApplication` 在启动时加载原生库并初始化系统证书验证器，AAR 版本取自 `Cargo.lock` 中的配套发布版本。正式 `AgentApplication` 已接入 Rust；本轮完整功能与安装包验收正在进行。
+Rust 工具链版本与目标维护在 `rust/rust-toolchain.toml`；手动 Cargo 命令从 `rust/` 目录运行。Flutter native assets hook 使用同一工具链，Android 编译使用项目当前最低 API，不提升 Android 基线。Android 的 `SkedApplication` 在启动时加载原生库并初始化系统证书验证器，AAR 版本取自 `Cargo.lock` 中的配套发布版本。Android Release 已在模拟器启动，确认原生库加载与系统证书初始化成功。
 
 ## 验收与提交
 
