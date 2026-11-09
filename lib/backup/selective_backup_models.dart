@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -82,6 +83,23 @@ class BackupCancellation {
         SelectiveBackupError.cancelled,
         'The backup operation was cancelled.',
       );
+    }
+  }
+
+  Future<T> guard<T>(Future<T> work) async {
+    final interrupted = Completer<T>();
+    final release = onCancel(() {
+      interrupted.completeError(
+        const SelectiveBackupException(
+          SelectiveBackupError.cancelled,
+          'The backup operation was cancelled.',
+        ),
+      );
+    });
+    try {
+      return await Future.any([work, interrupted.future]);
+    } finally {
+      release();
     }
   }
 }

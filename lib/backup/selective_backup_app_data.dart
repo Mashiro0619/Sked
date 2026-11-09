@@ -324,7 +324,10 @@ Future<SelectiveBackupBundle> exportSelectiveBackup({
     }
     final attachment = ConversationAttachment.fromJson(record.data);
     if (!binaries.containsKey(attachment.digest)) {
-      final bytes = await readAttachment(attachment, cancellation);
+      final reading = readAttachment(attachment, cancellation);
+      final bytes = cancellation == null
+          ? await reading
+          : await cancellation.guard(reading);
       cancellation?.check();
       if (bytes.length != attachment.byteLength ||
           backupDigest(bytes) != attachment.digest) {
