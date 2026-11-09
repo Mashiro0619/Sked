@@ -42,6 +42,7 @@ impl BridgeHost {
             conversation_id,
             run_id: None,
             tool_call_id: None,
+            history_batch_id: None,
             tool_name: None,
             arguments: None,
             mode: None,
@@ -49,6 +50,7 @@ impl BridgeHost {
             owner: None,
             operation_ids: vec![],
             ticket: None,
+            connection: None,
         }
     }
 
@@ -91,11 +93,18 @@ impl BridgeHost {
             tokio::select! {
                 result = &mut rx => result,
                 _ = cancellation.cancelled() => {
-                    // Dart cancels preparation, then still reports accepted saves.
+                    let transport = request.kind == HostRequestKind::AuthorizeConnection;
                     let mut cancel = request;
                     cancel.kind = HostRequestKind::Cancel;
                     self.publish(cancel);
-                    rx.await
+                    if transport {
+                        Ok(Ok(HostResult { request_id: id.clone(), model_payload: None,
+                            details: None, outcome: HostOutcome::Cancelled, ticket: None,
+                            error_code: None, error_message: None }))
+                    } else {
+                        // Accepted business saves still return their real receipt.
+                        rx.await
+                    }
                 }
             }
         } else {
@@ -177,6 +186,44 @@ fn tool_result(result: HostResult) -> Result<rt::HostToolResult, rt::HostError> 
 
 #[flutter_rust_bridge::frb(ignore)]
 impl rt::AgentHost for BridgeHost {
+    fn inspect_operation(
+        &self,
+        conversation_id: String,
+        operation: stored::OperationRecord,
+    ) -> BoxFuture<'static, Result<rt::HostToolResult, rt::HostError>> {
+        let host = self.clone();
+        let mut wire = Self::request(HostRequestKind::InspectOperation, conversation_id);
+        wire.run_id = Some(operation.run_id);
+        wire.tool_call_id = Some(operation.tool_call_id);
+        wire.tool_name = Some(operation.tool_name);
+        wire.arguments = Some(JsonPayload {
+            json: operation.details.to_string(),
+        });
+        if let Some(binding) = operation.binding {
+            wire.owner = Some(binding.store.into());
+            wire.operation_ids = vec![binding.operation_id];
+        }
+        Box::pin(async move { tool_result(host.invoke(wire, None, None).await?) })
+    }
+
+    fn authorize_connection(
+        &self,
+        request: rt::HostConnectionRequest,
+        cancellation: CancellationToken,
+    ) -> BoxFuture<'static, Result<bool, rt::HostError>> {
+        let host = self.clone();
+        let mut wire = Self::request(
+            HostRequestKind::AuthorizeConnection,
+            request.conversation_id,
+        );
+        wire.run_id = request.run_id;
+        wire.mode = Some(request.permission_mode.into());
+        wire.connection = Some(request.connection.into());
+        Box::pin(async move {
+            Ok(host.invoke(wire, None, Some(cancellation)).await?.outcome == HostOutcome::Success)
+        })
+    }
+
     fn execute(
         &self,
         request: rt::HostToolRequest,
@@ -221,6 +268,30 @@ impl rt::AgentHost for BridgeHost {
         let host = self.clone();
         let mut request = Self::request(HostRequestKind::SetMode, conversation_id);
         request.mode = Some(mode.into());
+        Box::pin(async move { host.invoke(request, None, None).await.map(|_| ()) })
+    }
+
+    fn begin_history(
+        &self,
+        conversation_id: String,
+        batch_id: String,
+    ) -> BoxFuture<'static, Result<(), rt::HostError>> {
+        let host = self.clone();
+        let mut request = Self::request(HostRequestKind::BeginHistory, conversation_id);
+        request.history_batch_id = Some(batch_id);
+        Box::pin(async move { host.invoke(request, None, None).await.map(|_| ()) })
+    }
+
+    fn end_history(
+        &self,
+        conversation_id: String,
+        batch_id: String,
+        release: bool,
+    ) -> BoxFuture<'static, Result<(), rt::HostError>> {
+        let host = self.clone();
+        let mut request = Self::request(HostRequestKind::EndHistory, conversation_id);
+        request.history_batch_id = Some(batch_id);
+        request.approved = Some(release);
         Box::pin(async move { host.invoke(request, None, None).await.map(|_| ()) })
     }
 

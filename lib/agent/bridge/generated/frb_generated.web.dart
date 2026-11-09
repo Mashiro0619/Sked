@@ -8,6 +8,8 @@
 
 import 'api.dart';
 import 'api/contracts.dart';
+import 'api/history.dart';
+import 'api/management_contracts.dart';
 import 'api/models.dart';
 
 import 'dart:async';
@@ -61,6 +63,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   dco_decode_Map_String_Map_String_json_payload_None_None(dynamic raw);
 
   @protected
+  Map<String, String> dco_decode_Map_String_String_None(dynamic raw);
+
+  @protected
   Map<String, JsonPayload> dco_decode_Map_String_json_payload_None(dynamic raw);
 
   @protected
@@ -109,10 +114,31 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_box_autoadd_bool(dynamic raw);
 
   @protected
+  ConnectionIdentity dco_decode_box_autoadd_connection_identity(dynamic raw);
+
+  @protected
+  ConversationSelection dco_decode_box_autoadd_conversation_selection(
+    dynamic raw,
+  );
+
+  @protected
   CoreConfig dco_decode_box_autoadd_core_config(dynamic raw);
 
   @protected
+  DraftAttachmentAdmission dco_decode_box_autoadd_draft_attachment_admission(
+    dynamic raw,
+  );
+
+  @protected
+  DraftAttachmentTarget dco_decode_box_autoadd_draft_attachment_target(
+    dynamic raw,
+  );
+
+  @protected
   double dco_decode_box_autoadd_f_64(dynamic raw);
+
+  @protected
+  HandoffRequest dco_decode_box_autoadd_handoff_request(dynamic raw);
 
   @protected
   HostOutcome dco_decode_box_autoadd_host_outcome(dynamic raw);
@@ -125,6 +151,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   JsonPayload dco_decode_box_autoadd_json_payload(dynamic raw);
+
+  @protected
+  KnowledgeCatalog dco_decode_box_autoadd_knowledge_catalog(dynamic raw);
+
+  @protected
+  KnowledgeEdit dco_decode_box_autoadd_knowledge_edit(dynamic raw);
 
   @protected
   ModelConnection dco_decode_box_autoadd_model_connection(dynamic raw);
@@ -225,13 +257,31 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CommandResult dco_decode_command_result(dynamic raw);
 
   @protected
+  ConnectionIdentity dco_decode_connection_identity(dynamic raw);
+
+  @protected
+  ConversationSelection dco_decode_conversation_selection(dynamic raw);
+
+  @protected
   CoreConfig dco_decode_core_config(dynamic raw);
+
+  @protected
+  DraftAttachmentAdmission dco_decode_draft_attachment_admission(dynamic raw);
+
+  @protected
+  DraftAttachmentTarget dco_decode_draft_attachment_target(dynamic raw);
 
   @protected
   EventKind dco_decode_event_kind(dynamic raw);
 
   @protected
   double dco_decode_f_64(dynamic raw);
+
+  @protected
+  HandoffRequest dco_decode_handoff_request(dynamic raw);
+
+  @protected
+  HistoryRecoveryTarget dco_decode_history_recovery_target(dynamic raw);
 
   @protected
   HostOutcome dco_decode_host_outcome(dynamic raw);
@@ -258,7 +308,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   JsonPayload dco_decode_json_payload(dynamic raw);
 
   @protected
+  KnowledgeCatalog dco_decode_knowledge_catalog(dynamic raw);
+
+  @protected
+  KnowledgeEdit dco_decode_knowledge_edit(dynamic raw);
+
+  @protected
+  KnowledgeEditAction dco_decode_knowledge_edit_action(dynamic raw);
+
+  @protected
   List<String> dco_decode_list_String(dynamic raw);
+
+  @protected
+  List<HistoryRecoveryTarget> dco_decode_list_history_recovery_target(
+    dynamic raw,
+  );
 
   @protected
   List<JsonPayload> dco_decode_list_json_payload(dynamic raw);
@@ -287,6 +351,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   dco_decode_list_record_string_map_string_json_payload_none(dynamic raw);
 
   @protected
+  List<(String, String)> dco_decode_list_record_string_string(dynamic raw);
+
+  @protected
   List<ToolDefinition> dco_decode_list_tool_definition(dynamic raw);
 
   @protected
@@ -304,6 +371,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<ViewContextReference> dco_decode_list_view_context_reference(
+    dynamic raw,
+  );
+
+  @protected
+  List<ViewConversationHandoff> dco_decode_list_view_conversation_handoff(
     dynamic raw,
   );
 
@@ -437,7 +509,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool? dco_decode_opt_box_autoadd_bool(dynamic raw);
 
   @protected
+  ConnectionIdentity? dco_decode_opt_box_autoadd_connection_identity(
+    dynamic raw,
+  );
+
+  @protected
+  ConversationSelection? dco_decode_opt_box_autoadd_conversation_selection(
+    dynamic raw,
+  );
+
+  @protected
   double? dco_decode_opt_box_autoadd_f_64(dynamic raw);
+
+  @protected
+  HandoffRequest? dco_decode_opt_box_autoadd_handoff_request(dynamic raw);
 
   @protected
   HostOutcome? dco_decode_opt_box_autoadd_host_outcome(dynamic raw);
@@ -447,6 +532,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   JsonPayload? dco_decode_opt_box_autoadd_json_payload(dynamic raw);
+
+  @protected
+  KnowledgeCatalog? dco_decode_opt_box_autoadd_knowledge_catalog(dynamic raw);
 
   @protected
   ModelConnection? dco_decode_opt_box_autoadd_model_connection(dynamic raw);
@@ -596,6 +684,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   dco_decode_record_string_map_string_json_payload_none(dynamic raw);
 
   @protected
+  (String, String) dco_decode_record_string_string(dynamic raw);
+
+  @protected
   RunPresentation dco_decode_run_presentation(dynamic raw);
 
   @protected
@@ -654,6 +745,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ViewConversation dco_decode_view_conversation(dynamic raw);
+
+  @protected
+  ViewConversationHandoff dco_decode_view_conversation_handoff(dynamic raw);
 
   @protected
   ViewConversationSnapshot dco_decode_view_conversation_snapshot(dynamic raw);
@@ -832,6 +926,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  Map<String, String> sse_decode_Map_String_String_None(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   Map<String, JsonPayload> sse_decode_Map_String_json_payload_None(
     SseDeserializer deserializer,
   );
@@ -894,10 +993,35 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_box_autoadd_bool(SseDeserializer deserializer);
 
   @protected
+  ConnectionIdentity sse_decode_box_autoadd_connection_identity(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ConversationSelection sse_decode_box_autoadd_conversation_selection(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreConfig sse_decode_box_autoadd_core_config(SseDeserializer deserializer);
 
   @protected
+  DraftAttachmentAdmission sse_decode_box_autoadd_draft_attachment_admission(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  DraftAttachmentTarget sse_decode_box_autoadd_draft_attachment_target(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   double sse_decode_box_autoadd_f_64(SseDeserializer deserializer);
+
+  @protected
+  HandoffRequest sse_decode_box_autoadd_handoff_request(
+    SseDeserializer deserializer,
+  );
 
   @protected
   HostOutcome sse_decode_box_autoadd_host_outcome(SseDeserializer deserializer);
@@ -910,6 +1034,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   JsonPayload sse_decode_box_autoadd_json_payload(SseDeserializer deserializer);
+
+  @protected
+  KnowledgeCatalog sse_decode_box_autoadd_knowledge_catalog(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  KnowledgeEdit sse_decode_box_autoadd_knowledge_edit(
+    SseDeserializer deserializer,
+  );
 
   @protected
   ModelConnection sse_decode_box_autoadd_model_connection(
@@ -1038,13 +1172,41 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CommandResult sse_decode_command_result(SseDeserializer deserializer);
 
   @protected
+  ConnectionIdentity sse_decode_connection_identity(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ConversationSelection sse_decode_conversation_selection(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CoreConfig sse_decode_core_config(SseDeserializer deserializer);
+
+  @protected
+  DraftAttachmentAdmission sse_decode_draft_attachment_admission(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  DraftAttachmentTarget sse_decode_draft_attachment_target(
+    SseDeserializer deserializer,
+  );
 
   @protected
   EventKind sse_decode_event_kind(SseDeserializer deserializer);
 
   @protected
   double sse_decode_f_64(SseDeserializer deserializer);
+
+  @protected
+  HandoffRequest sse_decode_handoff_request(SseDeserializer deserializer);
+
+  @protected
+  HistoryRecoveryTarget sse_decode_history_recovery_target(
+    SseDeserializer deserializer,
+  );
 
   @protected
   HostOutcome sse_decode_host_outcome(SseDeserializer deserializer);
@@ -1071,7 +1233,23 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   JsonPayload sse_decode_json_payload(SseDeserializer deserializer);
 
   @protected
+  KnowledgeCatalog sse_decode_knowledge_catalog(SseDeserializer deserializer);
+
+  @protected
+  KnowledgeEdit sse_decode_knowledge_edit(SseDeserializer deserializer);
+
+  @protected
+  KnowledgeEditAction sse_decode_knowledge_edit_action(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+  @protected
+  List<HistoryRecoveryTarget> sse_decode_list_history_recovery_target(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<JsonPayload> sse_decode_list_json_payload(SseDeserializer deserializer);
@@ -1104,6 +1282,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<(String, String)> sse_decode_list_record_string_string(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<ToolDefinition> sse_decode_list_tool_definition(
     SseDeserializer deserializer,
   );
@@ -1125,6 +1308,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<ViewContextReference> sse_decode_list_view_context_reference(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<ViewConversationHandoff> sse_decode_list_view_conversation_handoff(
     SseDeserializer deserializer,
   );
 
@@ -1294,7 +1482,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool? sse_decode_opt_box_autoadd_bool(SseDeserializer deserializer);
 
   @protected
+  ConnectionIdentity? sse_decode_opt_box_autoadd_connection_identity(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ConversationSelection? sse_decode_opt_box_autoadd_conversation_selection(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer);
+
+  @protected
+  HandoffRequest? sse_decode_opt_box_autoadd_handoff_request(
+    SseDeserializer deserializer,
+  );
 
   @protected
   HostOutcome? sse_decode_opt_box_autoadd_host_outcome(
@@ -1308,6 +1511,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   JsonPayload? sse_decode_opt_box_autoadd_json_payload(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  KnowledgeCatalog? sse_decode_opt_box_autoadd_knowledge_catalog(
     SseDeserializer deserializer,
   );
 
@@ -1481,6 +1689,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  (String, String) sse_decode_record_string_string(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   RunPresentation sse_decode_run_presentation(SseDeserializer deserializer);
 
   @protected
@@ -1559,6 +1772,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ViewConversation sse_decode_view_conversation(SseDeserializer deserializer);
+
+  @protected
+  ViewConversationHandoff sse_decode_view_conversation_handoff(
+    SseDeserializer deserializer,
+  );
 
   @protected
   ViewConversationSnapshot sse_decode_view_conversation_snapshot(
@@ -1801,6 +2019,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_Map_String_String_None(
+    Map<String, String> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_Map_String_json_payload_None(
     Map<String, JsonPayload> self,
     SseSerializer serializer,
@@ -1874,13 +2098,43 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_bool(bool self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_connection_identity(
+    ConnectionIdentity self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_conversation_selection(
+    ConversationSelection self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_core_config(
     CoreConfig self,
     SseSerializer serializer,
   );
 
   @protected
+  void sse_encode_box_autoadd_draft_attachment_admission(
+    DraftAttachmentAdmission self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_draft_attachment_target(
+    DraftAttachmentTarget self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_handoff_request(
+    HandoffRequest self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_box_autoadd_host_outcome(
@@ -1903,6 +2157,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_json_payload(
     JsonPayload self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_knowledge_catalog(
+    KnowledgeCatalog self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_knowledge_edit(
+    KnowledgeEdit self,
     SseSerializer serializer,
   );
 
@@ -2057,13 +2323,49 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_command_result(CommandResult self, SseSerializer serializer);
 
   @protected
+  void sse_encode_connection_identity(
+    ConnectionIdentity self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_conversation_selection(
+    ConversationSelection self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_core_config(CoreConfig self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_draft_attachment_admission(
+    DraftAttachmentAdmission self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_draft_attachment_target(
+    DraftAttachmentTarget self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_event_kind(EventKind self, SseSerializer serializer);
 
   @protected
   void sse_encode_f_64(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_handoff_request(
+    HandoffRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_history_recovery_target(
+    HistoryRecoveryTarget self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_host_outcome(HostOutcome self, SseSerializer serializer);
@@ -2093,7 +2395,28 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_json_payload(JsonPayload self, SseSerializer serializer);
 
   @protected
+  void sse_encode_knowledge_catalog(
+    KnowledgeCatalog self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_knowledge_edit(KnowledgeEdit self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_knowledge_edit_action(
+    KnowledgeEditAction self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_history_recovery_target(
+    List<HistoryRecoveryTarget> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_json_payload(
@@ -2135,6 +2458,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_record_string_string(
+    List<(String, String)> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_tool_definition(
     List<ToolDefinition> self,
     SseSerializer serializer,
@@ -2161,6 +2490,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_view_context_reference(
     List<ViewContextReference> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_view_conversation_handoff(
+    List<ViewConversationHandoff> self,
     SseSerializer serializer,
   );
 
@@ -2366,7 +2701,25 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_opt_box_autoadd_bool(bool? self, SseSerializer serializer);
 
   @protected
+  void sse_encode_opt_box_autoadd_connection_identity(
+    ConnectionIdentity? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_conversation_selection(
+    ConversationSelection? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_handoff_request(
+    HandoffRequest? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_opt_box_autoadd_host_outcome(
@@ -2383,6 +2736,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_json_payload(
     JsonPayload? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_knowledge_catalog(
+    KnowledgeCatalog? self,
     SseSerializer serializer,
   );
 
@@ -2588,6 +2947,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_record_string_string(
+    (String, String) self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_run_presentation(
     RunPresentation self,
     SseSerializer serializer,
@@ -2686,6 +3051,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_view_conversation(
     ViewConversation self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_view_conversation_handoff(
+    ViewConversationHandoff self,
     SseSerializer serializer,
   );
 

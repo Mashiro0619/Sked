@@ -29,6 +29,8 @@ class RustAgentUiDelegate extends AgentUiDelegate {
     this.resolveEndpoint = resolveRustAgentEndpoint,
     this.onSnapshot,
     this.onReasoningDelta,
+    this.validateComposerReferences,
+    this.readEnvironment,
   }) {
     _subscription = client.events.listen(_event, onError: _streamError);
     refreshSettings();
@@ -43,6 +45,12 @@ class RustAgentUiDelegate extends AgentUiDelegate {
   final void Function(native.ViewConversationSnapshot snapshot)? onSnapshot;
   final void Function(String conversationId, String runId, String text)?
   onReasoningDelta;
+  final Future<List<AgentComposerReference>> Function(
+    String conversationId,
+    List<AgentComposerReference> references,
+  )?
+  validateComposerReferences;
+  final Map<String, Object?> Function()? readEnvironment;
 
   final _state = ValueNotifier(AgentUiState());
   final _snapshots = <String, native.ViewConversationSnapshot>{};
@@ -55,6 +63,10 @@ class RustAgentUiDelegate extends AgentUiDelegate {
   final _errors = <String, String>{};
   final _approvals = <String, (String, AgentUiApproval)>{};
   final _loading = <String, Future<native.ViewConversationSnapshot?>>{};
+  final _transportRequests = <String, _TransportConsent>{};
+  final _transportGrants = <String>{};
+  String? _transportSettingsStamp;
+  int _transportEpoch = 0;
   late final StreamSubscription<bridge.AgentEvent> _subscription;
   bool _disposed = false;
 
@@ -123,6 +135,12 @@ class RustAgentUiDelegate extends AgentUiDelegate {
     final previous = _snapshots[id];
     if (previous != null && snapshot.sequence < previous.sequence) return;
     final runId = snapshot.conversation.runId;
+    if (previous != null &&
+        (previous.conversation.mode != snapshot.conversation.mode ||
+            previous.conversation.modelSelection !=
+                snapshot.conversation.modelSelection)) {
+      _invalidateTransport(conversationId: id);
+    }
     if (previous?.conversation.runId != runId) {
       _output.remove(id);
       _outputRuns.remove(id);
@@ -153,6 +171,7 @@ class RustAgentUiDelegate extends AgentUiDelegate {
   }
 
   void forgetConversation(String id) {
+    _invalidateTransport(conversationId: id);
     _snapshots.remove(id);
     _presentations.remove(id);
     _presentationEpochs.remove(id);
@@ -167,9 +186,20 @@ class RustAgentUiDelegate extends AgentUiDelegate {
     }
   }
 
+  void invalidateAfterDataBoundary() {
+    for (final id in _snapshots.keys.toList()) {
+      forgetConversation(id);
+    }
+  }
+
   /// The application calls this after connection, model or maintenance changes.
   void refreshSettings() {
     if (_disposed) return;
+    final stamp = jsonEncode([readSettings().toJson(), readMaintenance()]);
+    if (_transportSettingsStamp != null && _transportSettingsStamp != stamp) {
+      _invalidateTransport();
+    }
+    _transportSettingsStamp = stamp;
     for (final id in _snapshots.keys) {
       _publishConversation(id);
     }
@@ -245,12 +275,18 @@ class RustAgentUiDelegate extends AgentUiDelegate {
         _errors[id] = _nativeErrorCode(event.errorCode);
         _publishConversation(id);
       case bridge.EventKind.resync:
+        _invalidateTransport();
         for (final conversationId in _snapshots.keys.toList()) {
           unawaited(_refreshConversation(conversationId));
         }
       case bridge.EventKind.toolProgress:
       case bridge.EventKind.usage:
+      case bridge.EventKind.knowledgeChanged:
+        break;
       case bridge.EventKind.hostRequest:
+        final request = event.hostRequest;
+        if (request != null) _transportRequest(request);
+        break;
       case bridge.EventKind.ready:
         // Progress and usage are persisted before their events. Their typed
         // snapshot has already updated this projection; the host owns requests.
@@ -273,9 +309,216 @@ class RustAgentUiDelegate extends AgentUiDelegate {
 
   void _streamError(Object error, StackTrace stackTrace) {
     if (_disposed) return;
+    _invalidateTransport();
     for (final id in _snapshots.keys) {
       _errors[id] = 'storageUnavailable';
       _publishConversation(id);
+    }
+  }
+
+  _TransportConsent? _transportApprovalFor(String id) => _transportRequests
+      .values
+      .where(
+        (pending) =>
+            pending.request.conversationId == id && pending.approval != null,
+      )
+      .firstOrNull;
+
+  void _transportRequest(bridge.HostRequest request) {
+    if (request.kind == bridge.HostRequestKind.cancel &&
+        request.connection != null) {
+      _transportRequests.remove(request.id);
+      _publishConversation(request.conversationId);
+      return;
+    }
+    if (request.kind != bridge.HostRequestKind.authorizeConnection ||
+        _transportRequests.containsKey(request.id)) {
+      return;
+    }
+    final pending = _TransportConsent(request, _transportEpoch);
+    _transportRequests[request.id] = pending;
+    unawaited(_evaluateTransport(pending));
+  }
+
+  Future<void> _evaluateTransport(_TransportConsent pending) async {
+    if (pending.resolving || !_transportCurrent(pending)) return;
+    pending.resolving = true;
+    try {
+      final current = await _validateTransport(pending);
+      if (!_transportCurrent(pending)) return;
+      if (current == null) {
+        await _submitTransport(pending, false);
+      } else if (current.automatic || _transportGrants.contains(current.key)) {
+        await _submitTransport(pending, true);
+      } else {
+        final endpoint = Uri.parse(pending.request.connection!.endpoint);
+        pending.approval ??= AgentUiApproval(
+          id: pending.request.id,
+          summary:
+              'Allow sending this conversation and API credential over HTTP?',
+          details: {
+            'kind': 'httpTransport',
+            'endpoint': Uri(
+              scheme: endpoint.scheme,
+              host: endpoint.host,
+              port: endpoint.hasPort ? endpoint.port : null,
+              path: endpoint.path,
+            ).toString(),
+          },
+        );
+        _publishConversation(pending.request.conversationId);
+      }
+    } catch (_) {
+      await _submitTransport(pending, false);
+    } finally {
+      pending.resolving = false;
+    }
+  }
+
+  bool _transportCurrent(_TransportConsent pending) =>
+      !_disposed &&
+      pending.epoch == _transportEpoch &&
+      identical(_transportRequests[pending.request.id], pending);
+
+  Future<({String key, bool automatic})?> _validateTransport(
+    _TransportConsent pending,
+  ) async {
+    if (!_transportCurrent(pending)) return null;
+    final request = pending.request;
+    final identity = request.connection;
+    final configured = readSettings();
+    if (identity == null || !configured.enabled || readMaintenance()) {
+      return null;
+    }
+    final snapshot = await loadConversation(request.conversationId);
+    if (snapshot == null ||
+        snapshot.conversation.archived ||
+        (request.runId != null &&
+            request.runId != snapshot.conversation.runId)) {
+      return null;
+    }
+    final selection =
+        modelSelectionFromRust(snapshot.conversation.modelSelection) ??
+        configured.defaultModelSelection;
+    if (selection == null ||
+        !configured.allowsSelection(selection) ||
+        selection.modelId != identity.model) {
+      return null;
+    }
+    final settings = configured.copyWith(model: selection.modelId);
+    final endpoint = resolveEndpoint(settings);
+    if (endpoint.toString() != identity.endpoint ||
+        settings.protocol.name != identity.protocol.name) {
+      return null;
+    }
+    final settingsStamp = jsonEncode([configured.toJson(), readMaintenance()]);
+    final apiKey = await readApiKey(settings);
+    if (!_transportCurrent(pending) ||
+        settingsStamp !=
+            jsonEncode([readSettings().toJson(), readMaintenance()]) ||
+        sha256.convert(utf8.encode(apiKey)).toString() !=
+            identity.fingerprint) {
+      return null;
+    }
+    final mode = _snapshots[request.conversationId]?.conversation.mode;
+    if (mode != native.ViewPermissionMode.full && mode != request.mode) {
+      return null;
+    }
+    return (
+      key: jsonEncode([
+        identity.endpoint,
+        identity.protocol.name,
+        identity.model,
+        identity.fingerprint,
+      ]),
+      automatic:
+          endpoint.scheme == 'https' || mode == native.ViewPermissionMode.full,
+    );
+  }
+
+  Future<void> _transportDecision(
+    String id,
+    String target,
+    bool approved,
+  ) async {
+    final pending = _transportRequests[target];
+    if (pending == null ||
+        pending.request.conversationId != id ||
+        !pending.presented ||
+        pending.resolving ||
+        !_transportCurrent(pending)) {
+      throw const OperationProblem(
+        OperationErrorCode.invalidApproval,
+        'The HTTP approval is no longer current.',
+      );
+    }
+    pending.resolving = true;
+    String? granted;
+    try {
+      if (approved) {
+        final current = await _validateTransport(pending);
+        if (current == null || !_transportCurrent(pending)) {
+          await _submitTransport(pending, false);
+          throw const OperationProblem(
+            OperationErrorCode.invalidApproval,
+            'The connection changed before approval.',
+          );
+        }
+        if (!current.automatic) {
+          granted = current.key;
+          _transportGrants.add(granted);
+        }
+      }
+      if (!await _submitTransport(pending, approved)) {
+        if (granted != null) _transportGrants.remove(granted);
+        throw const OperationProblem(
+          OperationErrorCode.invalidApproval,
+          'The HTTP request is no longer pending.',
+        );
+      }
+      if (granted != null) {
+        for (final other in _transportRequests.values.toList()) {
+          unawaited(_evaluateTransport(other));
+        }
+      }
+    } finally {
+      pending.resolving = false;
+    }
+  }
+
+  Future<bool> _submitTransport(
+    _TransportConsent pending,
+    bool approved,
+  ) async {
+    if (identical(_transportRequests[pending.request.id], pending)) {
+      _transportRequests.remove(pending.request.id);
+    }
+    if (!_disposed) _publishConversation(pending.request.conversationId);
+    try {
+      await (await client.core).submitHostResult(
+        result: bridge.HostResult(
+          requestId: pending.request.id,
+          outcome: approved
+              ? bridge.HostOutcome.success
+              : bridge.HostOutcome.cancelled,
+        ),
+      );
+      return true;
+    } catch (_) {
+      // Native cancellation may already have removed this ephemeral request.
+      return false;
+    }
+  }
+
+  void _invalidateTransport({String? conversationId}) {
+    _transportGrants.clear();
+    if (conversationId == null) _transportEpoch++;
+    for (final pending in _transportRequests.values.toList()) {
+      if (conversationId == null ||
+          pending.request.conversationId == conversationId) {
+        _transportRequests.remove(pending.request.id);
+        unawaited(_submitTransport(pending, false));
+      }
     }
   }
 
@@ -312,7 +555,10 @@ class RustAgentUiDelegate extends AgentUiDelegate {
     final status =
         snapshot?.conversation.status ?? native.ViewConversationStatus.idle;
     final active = presentation?.active ?? _nativeActive(status);
-    final phase = active
+    final transport = _transportApprovalFor(id);
+    final phase = transport != null
+        ? AgentUiPhase.waitingApproval
+        : active
         ? switch (status) {
             native.ViewConversationStatus.waitingApproval =>
               AgentUiPhase.waitingApproval,
@@ -331,8 +577,10 @@ class RustAgentUiDelegate extends AgentUiDelegate {
         )
         .lastOrNull;
     final compacting = presentation?.compacting ?? false;
-    AgentUiApproval? approval;
-    if (phase == AgentUiPhase.waitingApproval && pending != null) {
+    AgentUiApproval? approval = transport?.approval;
+    if (transport != null) {
+      transport.presented = true;
+    } else if (phase == AgentUiPhase.waitingApproval && pending != null) {
       final key = jsonEncode([runId, pending.callId, pending.details]);
       final saved = _approvals[id];
       approval = saved?.$1 == key
@@ -436,6 +684,15 @@ class RustAgentUiDelegate extends AgentUiDelegate {
     final settings = configured.copyWith(model: selection.modelId);
     final endpoint = resolveEndpoint(settings);
     final apiKey = await readApiKey(settings);
+    if (_disposed ||
+        readMaintenance() ||
+        jsonEncode(readSettings().toJson()) !=
+            jsonEncode(configured.toJson())) {
+      throw const OperationProblem(
+        OperationErrorCode.expired,
+        'The Agent connection changed while its credential was being read.',
+      );
+    }
     final model = settings.modelConfig(selection.modelId)!;
     return bridge.ModelConnection(
       protocol: settings.protocol == AgentModelProtocol.responses
@@ -449,29 +706,73 @@ class RustAgentUiDelegate extends AgentUiDelegate {
       reasoningEffort: selection.wireReasoningEffort,
       maxContextTokens: model.effectiveContextTokens,
       autoCompactAtTokens: model.effectiveCompactAtTokens,
+      environment: native.JsonPayload(
+        json: jsonEncode(readEnvironment?.call() ?? const <String, Object?>{}),
+      ),
     );
   }
 
   Future<void> _input(bridge.CommandKind kind, String id, String text) async {
     final snapshot = await _conversation(id);
-    final connection = await _connection(snapshot);
     final compact = text.trim() == '/compact';
+    final references = compact
+        ? const <AgentComposerReference>[]
+        : await _validatedReferences(
+            id,
+            snapshot.conversation.draftReferences
+                .map(referenceFromRust)
+                .toList(),
+          );
+    final current = await _conversation(id);
+    if (!compact &&
+        (!listEquals(
+              snapshot.conversation.draftAttachmentIds,
+              current.conversation.draftAttachmentIds,
+            ) ||
+            _referenceDigest(snapshot.conversation.draftReferences) !=
+                _referenceDigest(current.conversation.draftReferences))) {
+      throw const OperationProblem(
+        OperationErrorCode.expired,
+        'The input references changed while they were being validated.',
+      );
+    }
+    final connection = await _connection(current);
     await _dispatch(
       bridge.AgentCommand(
         kind: compact ? bridge.CommandKind.compact : kind,
         conversationId: id,
         text: compact ? null : text,
         flag: compact,
-        attachmentIds: snapshot.conversation.draftAttachmentIds,
-        references: snapshot.conversation.draftReferences,
+        attachmentIds: current.conversation.draftAttachmentIds,
+        references: references.map(referenceToRust).toList(growable: false),
         connection: connection,
       ),
     );
   }
 
+  Future<List<AgentComposerReference>> _validatedReferences(
+    String id,
+    List<AgentComposerReference> references,
+  ) async {
+    final selected = AgentComposerReference.validatedList(references);
+    if (selected.isEmpty) return const [];
+    final validate = validateComposerReferences;
+    if (validate == null) {
+      throw const OperationProblem(
+        OperationErrorCode.unsupported,
+        'The application reference validator is unavailable.',
+        field: 'references',
+      );
+    }
+    return AgentComposerReference.validatedList(await validate(id, selected));
+  }
+
   @override
   Future<void> send(String conversationId, String text) =>
       _input(bridge.CommandKind.send, conversationId, text);
+
+  Future<void> startHandoff(String conversationId) =>
+      _modelCommand(bridge.CommandKind.startHandoff, conversationId);
 
   @override
   Future<void> queueFollowUp(String conversationId, String text) =>
@@ -516,6 +817,30 @@ class RustAgentUiDelegate extends AgentUiDelegate {
   Future<void> compactContext(String conversationId) =>
       _modelCommand(bridge.CommandKind.compact, conversationId);
 
+  Future<String> requestResume(
+    String conversationId, {
+    required String runId,
+  }) async {
+    final snapshot = await _conversation(conversationId);
+    if (snapshot.redoBatches.any((batch) => !_terminalRedo(batch.phase))) {
+      throw StateError(
+        'Complete the pending history operation before resuming.',
+      );
+    }
+    final connection = await _connection(snapshot);
+    final result = await client.dispatch(
+      bridge.AgentCommand(
+        kind: bridge.CommandKind.continue_,
+        conversationId: conversationId,
+        targetId: runId,
+        connection: connection,
+      ),
+    );
+    await loadConversation(conversationId);
+    return result.id ??
+        (throw StateError('Native resume did not return its run identity.'));
+  }
+
   Future<void> regenerateReply(String conversationId, String messageId) async {
     final snapshot = await _conversation(conversationId);
     await _dispatch(
@@ -528,6 +853,29 @@ class RustAgentUiDelegate extends AgentUiDelegate {
     );
   }
 
+  Future<Map<String, Object?>> runHostTool(
+    String conversationId, {
+    required String toolName,
+    required Map<String, Object?> arguments,
+  }) async {
+    if (_disposed || !readSettings().enabled || readMaintenance()) {
+      throw const OperationProblem(
+        OperationErrorCode.busy,
+        'Agent is unavailable during maintenance.',
+      );
+    }
+    final result = await (await client.ensureInitialized()).runHostTool(
+      conversationId: conversationId,
+      toolName: toolName,
+      arguments: native.JsonPayload(json: jsonEncode(arguments)),
+      environment: native.JsonPayload(
+        json: jsonEncode(readEnvironment?.call() ?? const <String, Object?>{}),
+      ),
+    );
+    await loadConversation(conversationId);
+    return (jsonDecode(result.json) as Map).cast<String, Object?>();
+  }
+
   Future<void> editAndRedo(
     String conversationId,
     String messageId,
@@ -535,6 +883,11 @@ class RustAgentUiDelegate extends AgentUiDelegate {
     required List<String> attachmentIds,
     required List<AgentComposerReference> references,
   }) async {
+    final fixedAttachments = List<String>.unmodifiable(attachmentIds);
+    final fixedReferences = await _validatedReferences(
+      conversationId,
+      references,
+    );
     final snapshot = await _conversation(conversationId);
     await _dispatch(
       bridge.AgentCommand(
@@ -542,8 +895,10 @@ class RustAgentUiDelegate extends AgentUiDelegate {
         conversationId: conversationId,
         targetId: messageId,
         text: text,
-        attachmentIds: attachmentIds,
-        references: references.map(referenceToRust).toList(growable: false),
+        attachmentIds: fixedAttachments,
+        references: fixedReferences
+            .map(referenceToRust)
+            .toList(growable: false),
         connection: await _connection(snapshot),
       ),
     );
@@ -575,9 +930,13 @@ class RustAgentUiDelegate extends AgentUiDelegate {
       _decision(bridge.CommandKind.reject, conversationId, planId);
 
   Future<void> _decision(bridge.CommandKind kind, String id, String target) =>
-      _dispatch(
-        bridge.AgentCommand(kind: kind, conversationId: id, targetId: target),
-      );
+      _transportRequests.containsKey(target) &&
+          (kind == bridge.CommandKind.approve ||
+              kind == bridge.CommandKind.reject)
+      ? _transportDecision(id, target, kind == bridge.CommandKind.approve)
+      : _dispatch(
+          bridge.AgentCommand(kind: kind, conversationId: id, targetId: target),
+        );
 
   @override
   Future<void> answerQuestion(
@@ -687,7 +1046,14 @@ class RustAgentUiDelegate extends AgentUiDelegate {
   /// Native ownership remains with AgentRustClient's application owner.
   Future<void> dispose() async {
     if (_disposed) return;
+    final pending = _transportRequests.values.toList();
+    _transportRequests.clear();
+    _transportGrants.clear();
+    _transportEpoch++;
     _disposed = true;
+    await Future.wait(
+      pending.map((request) => _submitTransport(request, false)),
+    );
     await _subscription.cancel();
     for (final view in _views.values) {
       view.dispose();
@@ -696,6 +1062,21 @@ class RustAgentUiDelegate extends AgentUiDelegate {
     _state.dispose();
   }
 }
+
+class _TransportConsent {
+  _TransportConsent(this.request, this.epoch);
+
+  final bridge.HostRequest request;
+  final int epoch;
+  AgentUiApproval? approval;
+  bool presented = false;
+  bool resolving = false;
+}
+
+String _referenceDigest(Iterable<native.ViewContextReference> references) =>
+    jsonEncode(
+      references.map(referenceFromRust).map((value) => value.toJson()).toList(),
+    );
 
 AgentOperationUpdate _operation(native.ViewOperationRecord operation) {
   final value = jsonDecode(operation.details.json);

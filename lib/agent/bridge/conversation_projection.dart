@@ -7,6 +7,7 @@ import '../history/conversation_history.dart';
 import '../interactions/agent_question.dart';
 import '../references/agent_composer_reference.dart';
 import 'generated/api/models.dart' as native;
+import 'generated/api/management_contracts.dart' as management;
 
 DateTime _date(int value) =>
     DateTime.fromMillisecondsSinceEpoch(value, isUtc: true);
@@ -201,6 +202,8 @@ ConversationSource sourceFromRust(native.ViewConversationSource value) =>
       truncated: value.truncated,
       attachedAfterRunId: value.attachedAfterRunId,
       attachedAfterMessageId: value.attachedAfterMessageId,
+      boundInputId: value.boundInputId,
+      boundMessageId: value.boundMessageId,
       provenance: value.provenance == null
           ? null
           : ConversationSourceProvenance(
@@ -223,6 +226,8 @@ native.ViewConversationSource sourceToRust(ConversationSource value) =>
       truncated: value.truncated,
       attachedAfterRunId: value.attachedAfterRunId,
       attachedAfterMessageId: value.attachedAfterMessageId,
+      boundInputId: value.boundInputId,
+      boundMessageId: value.boundMessageId,
       provenance: value.provenance == null
           ? null
           : native.ViewSourceProvenance(
@@ -337,8 +342,23 @@ ConversationRedoBatch redoFromRust(
   completedOwners: value.completedOwners.map(_undoOwner),
 );
 
-AgentConversation conversationFromRust(native.ViewConversationSnapshot value) {
+AgentConversation conversationFromRust(
+  native.ViewConversationSnapshot value, {
+  List<ConversationMessage>? projectedMessages,
+  int messageStart = 0,
+}) {
   final metadata = value.conversation;
+  final messages =
+      projectedMessages ??
+      value.messages.map(conversationMessageFromRust).toList();
+  final visibleIds = messages.map((message) => message.id).toSet();
+  final turns = projectedMessages == null
+      ? value.turns
+      : value.turns.where(
+          (turn) =>
+              visibleIds.contains(turn.requestMessageId) &&
+              turn.messageIds.every(visibleIds.contains),
+        );
   return AgentConversation(
     id: metadata.id,
     title: metadata.title,
@@ -354,14 +374,19 @@ AgentConversation conversationFromRust(native.ViewConversationSnapshot value) {
     runId: metadata.runId,
     modelSelection: modelSelectionFromRust(metadata.modelSelection),
     titleGeneration: titleFromRust(metadata.titleGeneration),
-    executionHistoryStart: metadata.executionHistoryStart.toInt(),
-    messages: value.messages.map(conversationMessageFromRust),
+    executionHistoryStart: projectedMessages == null
+        ? metadata.executionHistoryStart.toInt()
+        : (metadata.executionHistoryStart - messageStart).clamp(
+            0,
+            messages.length,
+          ),
+    messages: messages,
     sources: value.sources.map(sourceFromRust),
     runs: value.runs.map(runFromRust),
     attachments: value.attachments.map(attachmentFromRust),
     draftAttachmentIds: metadata.draftAttachmentIds,
     draftReferences: metadata.draftReferences.map(referenceFromRust),
-    turns: value.turns.map(turnFromRust),
+    turns: turns.map(turnFromRust),
     historyVersions: value.historyVersions.map(
       (version) => ConversationHistoryVersion(
         id: version.id,
@@ -408,9 +433,21 @@ AgentConversation conversationFromRust(native.ViewConversationSnapshot value) {
         errorMessage: control.errorMessage,
       ),
     ),
-    pendingQuestion: questionFromRust(value.currentQuestion),
+    pendingQuestion:
+        projectedMessages == null ||
+            visibleIds.contains(value.currentQuestion?.requestMessageId)
+        ? questionFromRust(value.currentQuestion)
+        : null,
   );
 }
+
+ConversationHandoff handoffFromRust(management.ViewConversationHandoff value) =>
+    ConversationHandoff(
+      id: value.id,
+      conversationId: value.conversationId,
+      sourceDigest: value.sourceDigest,
+      messageId: value.messageId,
+    );
 
 AgentConversation conversationSummaryFromRust(
   native.ViewConversationSummary value,

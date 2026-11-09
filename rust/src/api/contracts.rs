@@ -1,5 +1,6 @@
 //! The application bridge carries generated records; JSON is limited to dynamic
 //! model/tool payloads and portable archive bytes.
+pub use super::management_contracts::*;
 use super::models::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -19,6 +20,7 @@ pub struct ModelConnection {
     pub reasoning_effort: Option<String>,
     pub max_context_tokens: Option<u64>,
     pub auto_compact_at_tokens: Option<u64>,
+    pub environment: Option<JsonPayload>,
 }
 
 #[derive(Debug, Clone)]
@@ -47,6 +49,10 @@ pub struct CoreConfig {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CommandKind {
     CreateConversation,
+    CreateManagedConversation,
+    CreateHandoff,
+    StartHandoff,
+    SelectConversation,
     Rename,
     Pin,
     Archive,
@@ -74,6 +80,7 @@ pub enum CommandKind {
     RemoveSource,
     DeleteConversation,
     ClearConversations,
+    DiscardDrafts,
     ClearAll,
     Quiesce,
     SaveKnowledge,
@@ -103,6 +110,7 @@ pub struct AgentCommand {
     pub knowledge_mutation: Option<ViewKnowledgeMutation>,
     pub archive: Option<ViewAgentArchiveParts>,
     pub tools: Option<Vec<ToolDefinition>>,
+    pub handoff: Option<HandoffRequest>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -110,14 +118,18 @@ pub struct CommandResult {
     pub id: Option<String>,
     pub snapshot: Option<ViewConversationSnapshot>,
     pub knowledge_receipt: Option<ViewKnowledgeReceipt>,
+    pub created: Option<bool>,
+    pub selection: Option<ConversationSelection>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum QueryKind {
     Conversations,
+    ConversationSelection,
     ReadConversation,
     Messages,
     Knowledge,
+    KnowledgeCatalog,
     ReadKnowledgeRecord,
     ReadKnowledgeReceipt,
     KnowledgeRevision,
@@ -155,6 +167,7 @@ pub struct QueryResult {
     pub messages: Vec<ViewMessage>,
     pub total: usize,
     pub next_offset: Option<usize>,
+    pub page_start: Option<usize>,
     pub knowledge: Vec<ViewKnowledgeRecord>,
     pub knowledge_receipt: Option<ViewKnowledgeReceipt>,
     pub revision: Option<u64>,
@@ -166,6 +179,8 @@ pub struct QueryResult {
     pub flag: Option<bool>,
     pub operation: Option<ViewOperationRecord>,
     pub presentation: Option<RunPresentation>,
+    pub selection: Option<ConversationSelection>,
+    pub knowledge_catalog: Option<KnowledgeCatalog>,
 }
 
 #[derive(Debug, Clone)]
@@ -212,12 +227,40 @@ impl From<crate::runtime::RuntimePresentation> for RunPresentation {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HostRequestKind {
+    InspectOperation,
+    AuthorizeConnection,
     Execute,
     Cancel,
     ResolveApproval,
     SetMode,
+    BeginHistory,
+    EndHistory,
     PrepareUndo,
     CommitUndo,
+}
+
+#[derive(Debug, Clone)]
+pub struct ConnectionIdentity {
+    pub endpoint: String,
+    pub protocol: ModelProtocol,
+    pub model: String,
+    pub fingerprint: String,
+}
+
+impl From<crate::model_client::ConnectionIdentity> for ConnectionIdentity {
+    fn from(value: crate::model_client::ConnectionIdentity) -> Self {
+        Self {
+            endpoint: value.endpoint,
+            protocol: match value.protocol {
+                crate::model_client::ProviderProtocol::ChatCompletions => {
+                    ModelProtocol::ChatCompletions
+                }
+                crate::model_client::ProviderProtocol::Responses => ModelProtocol::Responses,
+            },
+            model: value.model,
+            fingerprint: value.fingerprint,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -227,6 +270,7 @@ pub struct HostRequest {
     pub conversation_id: String,
     pub run_id: Option<String>,
     pub tool_call_id: Option<String>,
+    pub history_batch_id: Option<String>,
     pub tool_name: Option<String>,
     pub arguments: Option<JsonPayload>,
     pub mode: Option<ViewPermissionMode>,
@@ -234,6 +278,7 @@ pub struct HostRequest {
     pub owner: Option<ViewOperationStore>,
     pub operation_ids: Vec<String>,
     pub ticket: Option<ViewUndoTicket>,
+    pub connection: Option<ConnectionIdentity>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -288,6 +333,7 @@ pub enum EventKind {
     Resync,
     Presentation,
     Ready,
+    KnowledgeChanged,
 }
 
 #[derive(Debug, Clone)]
@@ -304,6 +350,7 @@ pub struct AgentEvent {
     pub error_code: Option<String>,
     pub host_request: Option<HostRequest>,
     pub presentation: Option<RunPresentation>,
+    pub knowledge_revision: Option<u64>,
 }
 
 impl AgentEvent {
@@ -321,13 +368,15 @@ impl AgentEvent {
             error_code: None,
             host_request: None,
             presentation: None,
+            knowledge_revision: None,
         }
     }
 }
 
-impl From<ModelConnection> for crate::model_client::ConnectionConfig {
-    fn from(value: ModelConnection) -> Self {
-        Self {
+impl TryFrom<ModelConnection> for crate::model_client::ConnectionConfig {
+    type Error = String;
+    fn try_from(value: ModelConnection) -> Result<Self, String> {
+        Ok(Self {
             protocol: match value.protocol {
                 ModelProtocol::ChatCompletions => {
                     crate::model_client::ProviderProtocol::ChatCompletions
@@ -342,6 +391,11 @@ impl From<ModelConnection> for crate::model_client::ConnectionConfig {
             reasoning_effort: value.reasoning_effort,
             max_context_tokens: value.max_context_tokens,
             auto_compact_at_tokens: value.auto_compact_at_tokens,
-        }
+            environment: value
+                .environment
+                .map(JsonPayload::parse)
+                .transpose()?
+                .unwrap_or(serde_json::Value::Null),
+        })
     }
 }

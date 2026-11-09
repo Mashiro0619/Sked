@@ -434,6 +434,8 @@ class ConversationSource {
     this.provenance,
     this.attachedAfterRunId,
     this.attachedAfterMessageId,
+    this.boundInputId,
+    this.boundMessageId,
   });
 
   final String id;
@@ -445,9 +447,15 @@ class ConversationSource {
   final ConversationSourceProvenance? provenance;
   final String? attachedAfterRunId;
   final String? attachedAfterMessageId;
+  final String? boundInputId;
+  final String? boundMessageId;
 
-  String get digest =>
-      sha256.convert(utf8.encode(jsonEncode(toJson()))).toString();
+  String get digest {
+    final data = toJson()
+      ..remove('boundInputId')
+      ..remove('boundMessageId');
+    return sha256.convert(utf8.encode(jsonEncode(data))).toString();
+  }
 
   Map<String, Object?> toJson() => {
     'id': id,
@@ -460,6 +468,8 @@ class ConversationSource {
     if (attachedAfterRunId != null) 'attachedAfterRunId': attachedAfterRunId,
     if (attachedAfterMessageId != null)
       'attachedAfterMessageId': attachedAfterMessageId,
+    if (boundInputId != null) 'boundInputId': boundInputId,
+    if (boundMessageId != null) 'boundMessageId': boundMessageId,
   };
 
   factory ConversationSource.fromJson(Map<String, dynamic> json) {
@@ -491,6 +501,8 @@ class ConversationSource {
       targetId: _optionalString(json, 'targetId', max: 256),
       truncated: json['truncated'] as bool,
       attachedAfterRunId: _optionalString(json, 'attachedAfterRunId', max: 256),
+      boundInputId: _optionalString(json, 'boundInputId', max: 256),
+      boundMessageId: _optionalString(json, 'boundMessageId', max: 256),
       attachedAfterMessageId: _optionalString(
         json,
         'attachedAfterMessageId',

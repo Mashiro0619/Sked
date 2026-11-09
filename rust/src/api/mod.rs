@@ -1,5 +1,9 @@
+pub mod archive;
 pub mod contracts;
+pub mod history;
 mod host;
+pub mod management;
+pub mod management_contracts;
 pub mod models;
 
 use crate::frb_generated::StreamSink;
@@ -15,6 +19,7 @@ use contracts::*;
 use host::BridgeHost;
 use models::*;
 use std::{
+    collections::HashMap,
     path::PathBuf,
     sync::{Arc, Mutex},
 };
@@ -28,6 +33,7 @@ pub struct AgentCore {
     worker: Mutex<Option<StorageWorker>>,
     events: broadcast::Sender<AgentEvent>,
     closed: CancellationToken,
+    attachment_imports: Mutex<HashMap<String, CancellationToken>>,
 }
 
 fn required<T>(value: Option<T>, field: &str) -> Result<T, String> {
@@ -74,6 +80,10 @@ impl AgentCore {
         manager.set_tools(tools);
         manager.set_preamble(config.preamble);
         manager.set_title_generation_enabled(config.generate_titles);
+        manager
+            .recover_interrupted()
+            .await
+            .map_err(|e| e.to_string())?;
         let closed = CancellationToken::new();
         let mut source = manager.subscribe();
         let target = events.clone();
@@ -96,6 +106,7 @@ impl AgentCore {
             worker: Mutex::new(Some(worker)),
             events,
             closed,
+            attachment_imports: Mutex::new(HashMap::new()),
         })
     }
 
@@ -105,14 +116,16 @@ impl AgentCore {
         }
         let id = command.conversation_id.clone().unwrap_or_default();
         let target = command.target_id.clone().unwrap_or_default();
-        let attachments = command.attachment_ids.unwrap_or_default();
+        let attachments = command.attachment_ids.clone().unwrap_or_default();
+        let references_provided = command.references.is_some();
         let refs = command
             .references
             .unwrap_or_default()
             .into_iter()
             .map(TryInto::try_into)
             .collect::<Result<Vec<stored::ContextReference>, String>>()?;
-        let connection = || required(command.connection.clone(), "connection").map(Into::into);
+        let connection =
+            || required(command.connection.clone(), "connection").and_then(TryInto::try_into);
         let text = || required(command.text.clone(), "text");
         let mut result = CommandResult::default();
         use CommandKind::*;
@@ -130,6 +143,83 @@ impl AgentCore {
                     .map_err(|e| e.to_string())?;
                 result.id = Some(snapshot.conversation.id.clone());
                 result.snapshot = Some(snapshot.into());
+                result.selection = Some(
+                    self.storage()
+                        .call(|store| store.selection())
+                        .await
+                        .map_err(|e| e.to_string())?
+                        .into(),
+                );
+            }
+            CreateManagedConversation => {
+                let selection = command.selection.map(TryInto::try_into).transpose()?;
+                let managed_id = if target.is_empty() {
+                    uuid::Uuid::new_v4().to_string()
+                } else {
+                    target
+                };
+                let snapshot = self
+                    .storage()
+                    .call(move |store| {
+                        store.create_managed_conversation(
+                            managed_id,
+                            command.text.unwrap_or_default(),
+                            command.mode.unwrap_or(ViewPermissionMode::Ask).into(),
+                            selection,
+                        )
+                    })
+                    .await
+                    .map_err(|e| e.to_string())?;
+                result.id = Some(snapshot.conversation.id.clone());
+                self.publish_snapshot(snapshot.clone());
+                result.snapshot = Some(snapshot.into());
+            }
+            CreateHandoff => {
+                let request = required(command.handoff, "handoff")?;
+                let source = request.source.try_into()?;
+                let selection = request.selection.map(TryInto::try_into).transpose()?;
+                let (snapshot, created) = self
+                    .storage()
+                    .call(move |store| {
+                        store.create_handoff(
+                            request.handoff_id,
+                            source,
+                            request.title,
+                            request.prompt,
+                            request.mode.into(),
+                            selection,
+                        )
+                    })
+                    .await
+                    .map_err(|e| e.to_string())?;
+                result.id = Some(snapshot.conversation.id.clone());
+                self.publish_snapshot(snapshot.clone());
+                result.snapshot = Some(snapshot.into());
+                result.created = Some(created);
+                result.selection = Some(
+                    self.storage()
+                        .call(|store| store.selection())
+                        .await
+                        .map_err(|e| e.to_string())?
+                        .into(),
+                );
+            }
+            StartHandoff => {
+                result.id = self
+                    .manager
+                    .accept_handoff(&id, connection()?)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+            SelectConversation => {
+                result.selection = Some(
+                    self.storage()
+                        .call(move |store| store.select_conversation(&id))
+                        .await
+                        .map_err(|e| e.to_string())?
+                        .into(),
+                );
+                self.resync();
             }
             Send => {
                 result.id = Some(
@@ -166,7 +256,7 @@ impl AgentCore {
             Continue => {
                 result.id = Some(
                     self.manager
-                        .continue_conversation(&id, connection()?)
+                        .continue_with_run_id(&id, connection()?, command.target_id.clone())
                         .await
                         .map_err(|e| e.to_string())?,
                 )
@@ -229,7 +319,12 @@ impl AgentCore {
                 .map_err(|e| e.to_string())?,
             UpdateDraft => self
                 .manager
-                .update_draft(&id, text()?, attachments, refs)
+                .update_draft(
+                    &id,
+                    command.text,
+                    command.attachment_ids,
+                    references_provided.then_some(refs),
+                )
                 .await
                 .map_err(|e| e.to_string())?,
             CancelInput => self
@@ -288,25 +383,40 @@ impl AgentCore {
             }
             AddSource => {
                 let source = required(command.source, "source")?.try_into()?;
-                self.change(id, move |_| {
-                    vec![stored::JournalChange::SourceUpserted { source }]
-                })
-                .await?;
+                let snapshot = self
+                    .storage()
+                    .call(move |store| store.add_source(&id, source))
+                    .await
+                    .map_err(|e| e.to_string())?;
+                self.publish_snapshot(snapshot.clone());
+                result.snapshot = Some(snapshot.into());
             }
             RemoveSource => {
-                self.change(id, move |_| {
-                    vec![stored::JournalChange::SourceRemoved { id: target }]
-                })
-                .await?;
+                let snapshot = self
+                    .storage()
+                    .call(move |store| store.remove_source(&id, &target))
+                    .await
+                    .map_err(|e| e.to_string())?;
+                self.publish_snapshot(snapshot.clone());
+                result.snapshot = Some(snapshot.into());
             }
             DeleteConversation => {
-                self.manager.stop(&id).await.map_err(|e| e.to_string())?;
-                self.manager.wait_until_idle(&id).await;
+                self.manager
+                    .set_archived(&id, true)
+                    .await
+                    .map_err(|e| e.to_string())?;
                 self.storage()
                     .call(move |store| store.delete(&id))
                     .await
                     .map_err(|e| e.to_string())?;
                 self.resync();
+                result.selection = Some(
+                    self.storage()
+                        .call(|store| store.selection())
+                        .await
+                        .map_err(|e| e.to_string())?
+                        .into(),
+                );
             }
             Quiesce => {
                 self.quiesce((!id.is_empty()).then_some(id)).await?;
@@ -326,6 +436,13 @@ impl AgentCore {
                     .map_err(|e| e.to_string())?;
                 self.resync();
             }
+            DiscardDrafts => {
+                self.storage()
+                    .call(|store| store.discard_drafts())
+                    .await
+                    .map_err(|e| e.to_string())?;
+                self.resync();
+            }
             SaveKnowledge => {
                 let mutation =
                     required(command.knowledge_mutation, "knowledgeMutation")?.try_into()?;
@@ -333,10 +450,16 @@ impl AgentCore {
                     self.storage()
                         .call(move |store| store.apply_knowledge(mutation, now()))
                         .await
-                        .map_err(|e| e.to_string())?
+                        .map_err(management::knowledge_error)?
                         .into(),
                 );
-                self.resync();
+                self.publish_knowledge(
+                    result
+                        .knowledge_receipt
+                        .as_ref()
+                        .expect("saved receipt")
+                        .revision,
+                );
             }
             UndoKnowledge => {
                 result.knowledge_receipt = Some(
@@ -351,10 +474,16 @@ impl AgentCore {
                             store.commit_knowledge_undo(&batch_id, now())
                         })
                         .await
-                        .map_err(|e| e.to_string())?
+                        .map_err(management::knowledge_error)?
                         .into(),
                 );
-                self.resync();
+                self.publish_knowledge(
+                    result
+                        .knowledge_receipt
+                        .as_ref()
+                        .expect("saved receipt")
+                        .revision,
+                );
             }
             ImportArchive => {
                 let parts = required(command.archive, "archive")?.try_into()?;
@@ -379,6 +508,22 @@ impl AgentCore {
     }
 
     pub async fn query(&self, query: AgentQuery) -> Result<QueryResult, String> {
+        if self.closed.is_cancelled() {
+            return Err("unavailable: Agent core is closed".into());
+        }
+        let attachment_query = matches!(
+            query.kind,
+            QueryKind::AttachmentBytes | QueryKind::AttachmentPath
+        );
+        let knowledge_query = matches!(
+            query.kind,
+            QueryKind::Knowledge
+                | QueryKind::KnowledgeCatalog
+                | QueryKind::ReadKnowledgeRecord
+                | QueryKind::ReadKnowledgeReceipt
+                | QueryKind::KnowledgeRevision
+                | QueryKind::KnowledgeState
+        );
         if query.kind == QueryKind::CanContinue {
             let id = query.conversation_id.as_deref().unwrap_or_default();
             return Ok(QueryResult {
@@ -408,6 +553,7 @@ impl AgentCore {
                 };
                 use QueryKind::*;
                 match query.kind {
+                    ConversationSelection => result.selection = Some(store.selection()?.into()),
                     Conversations => {
                         let page = store.list(stored::ConversationQuery {
                             archived: query.archived,
@@ -420,7 +566,34 @@ impl AgentCore {
                         result.total = page.total;
                         result.next_offset = page.next_offset;
                     }
-                    ReadConversation => result.snapshot = store.read(&id)?.map(Into::into),
+                    ReadConversation => {
+                        if let Some(mut snapshot) = store.read(&id)? {
+                            result.total = snapshot.messages.len();
+                            if let Some(limit) = query.limit {
+                                let page = store.messages(
+                                    &id,
+                                    stored::MessageQuery {
+                                        before: query.before,
+                                        limit,
+                                        search: None,
+                                    },
+                                )?;
+                                result.page_start = Some(
+                                    page.items
+                                        .first()
+                                        .and_then(|first| {
+                                            snapshot.messages.iter().position(|m| m.id == first.id)
+                                        })
+                                        .unwrap_or(snapshot.messages.len()),
+                                );
+                                result.next_offset = page.next_offset;
+                                snapshot.messages = page.items;
+                            } else {
+                                result.page_start = Some(0);
+                            }
+                            result.snapshot = Some(snapshot.into());
+                        }
+                    }
                     Messages => {
                         let page = store.messages(
                             &id,
@@ -440,6 +613,9 @@ impl AgentCore {
                             .into_iter()
                             .map(Into::into)
                             .collect()
+                    }
+                    KnowledgeCatalog => {
+                        result.knowledge_catalog = Some(store.knowledge_catalog()?.into())
                     }
                     ReadKnowledgeRecord => {
                         result.knowledge = store
@@ -516,7 +692,15 @@ impl AgentCore {
                 Ok(result)
             })
             .await
-            .map_err(|e| e.to_string())
+            .map_err(move |error| {
+                if attachment_query {
+                    management::attachment_error(error)
+                } else if knowledge_query {
+                    management::knowledge_error(error)
+                } else {
+                    error.to_string()
+                }
+            })
     }
 
     pub async fn add_attachment(
@@ -697,6 +881,11 @@ impl AgentCore {
 
 fn runtime_event(event: RuntimeEvent) -> AgentEvent {
     match event {
+        RuntimeEvent::KnowledgeChanged { revision } => {
+            let mut e = AgentEvent::empty(EventKind::KnowledgeChanged, String::new());
+            e.knowledge_revision = Some(revision);
+            e
+        }
         RuntimeEvent::Presentation {
             conversation_id,
             presentation,

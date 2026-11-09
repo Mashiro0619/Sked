@@ -10,6 +10,7 @@ import '../provider/provider_models.dart';
 import '../tools/application_tool_host.dart';
 import 'conversation_projection.dart';
 import 'generated/api/contracts.dart' as native;
+import 'generated/api.dart' show AgentCore;
 import 'generated/api/models.dart' as view;
 import 'rust_agent_client.dart';
 
@@ -22,8 +23,11 @@ class RustAgentBusinessHost {
     required this.tools,
     required this.readEnvironment,
     this.onScopeSettled,
+    this.beginHistory,
+    this.endHistory,
     this.prepareUndo,
     this.commitUndo,
+    this.readOperation,
   }) {
     tools.onOperationPrepared = _prepared;
     tools.onOperationUpdate = _updated;
@@ -34,13 +38,18 @@ class RustAgentBusinessHost {
   final ApplicationToolHost tools;
   final Map<String, Object?> Function(String conversationId) readEnvironment;
   final void Function(OperationScope scope)? onScopeSettled;
+  final Future<void> Function(native.HostRequest request)? beginHistory;
+  final Future<void> Function(native.HostRequest request)? endHistory;
   final Future<view.ViewUndoTicket> Function(native.HostRequest request)?
   prepareUndo;
   final Future<Map<String, Object?>> Function(native.HostRequest request)?
   commitUndo;
+  final Future<Map<String, Object?>> Function(native.HostRequest request)?
+  readOperation;
   late final StreamSubscription<native.AgentEvent> _subscription;
   final _runs = <String, _HostRun>{};
   final _requests = <String, native.HostRequest>{};
+  final _requestCores = <String, AgentCore>{};
   final _tasks = <String, Future<void>>{};
   final _completed = <String, Set<String>>{};
   final _cancelledRequests = <String>{};
@@ -63,7 +72,7 @@ class RustAgentBusinessHost {
 
   Map<String, Object?>? environmentForScope(OperationScope scope) {
     final run = _runs[scope.id];
-    return run == null ? null : readEnvironment(run.conversationId);
+    return run?.environment;
   }
 
   Future<void> _event(native.AgentEvent event) async {
@@ -81,6 +90,10 @@ class RustAgentBusinessHost {
     }
     final request = event.hostRequest;
     if (request == null) return;
+    if (request.kind == native.HostRequestKind.authorizeConnection ||
+        request.connection != null) {
+      return;
+    }
     if (request.kind == native.HostRequestKind.cancel) {
       _cancelledRequests.add(request.id);
       final active = _requests[request.id];
@@ -97,6 +110,7 @@ class RustAgentBusinessHost {
     await task.whenComplete(() {
       unawaited(_tasks.remove(request.id));
       _requests.remove(request.id);
+      _requestCores.remove(request.id);
       _cancelledRequests.remove(request.id);
       if (request.runId != null && _runs.containsKey(request.runId)) {
         (_completed[request.runId!] ??= {}).add(request.id);
@@ -115,12 +129,22 @@ class RustAgentBusinessHost {
   }
 
   Future<void> _handle(native.HostRequest request) async {
+    final owner = await client.core;
+    _requestCores[request.id] = owner;
     native.HostResult result;
     try {
       result = switch (request.kind) {
         native.HostRequestKind.execute => await _execute(request),
         native.HostRequestKind.resolveApproval => _resolveApproval(request),
         native.HostRequestKind.setMode => _setMode(request),
+        native.HostRequestKind.beginHistory => await _historyBarrier(
+          request,
+          beginHistory,
+        ),
+        native.HostRequestKind.endHistory => await _historyBarrier(
+          request,
+          endHistory,
+        ),
         native.HostRequestKind.prepareUndo => native.HostResult(
           requestId: request.id,
           outcome: native.HostOutcome.success,
@@ -130,8 +154,13 @@ class RustAgentBusinessHost {
           request.id,
           await _commitUndo(request),
         ),
-        native.HostRequestKind.cancel => throw StateError(
-          'Cancellation is handled before dispatch.',
+        native.HostRequestKind.inspectOperation => _result(
+          request.id,
+          await _readOperation(request),
+        ),
+        native.HostRequestKind.cancel ||
+        native.HostRequestKind.authorizeConnection => throw StateError(
+          'Cancellation and transport approval are handled before dispatch.',
         ),
       };
     } on OperationProblem catch (error) {
@@ -152,7 +181,7 @@ class RustAgentBusinessHost {
       );
     }
     try {
-      await (await client.core).submitHostResult(result: result);
+      await owner.submitHostResult(result: result);
     } catch (error, stack) {
       _streamError(error, stack);
     }
@@ -187,6 +216,11 @@ class RustAgentBusinessHost {
         conversationId: request.conversationId,
         scope: OperationScope(id: runId, policy: policy),
         conversation: conversationFromRust(snapshot),
+        environment: _environmentForRun(
+          snapshot,
+          runId,
+          readEnvironment(request.conversationId),
+        ),
       );
       _runs[runId] = run;
     }
@@ -248,14 +282,18 @@ class RustAgentBusinessHost {
     native.HostRequest request,
     native.HostPhase phase,
     Map<String, Object?> details,
-  ) async => (await client.core).submitHostProgress(
-    progress: native.AgentHostProgress(
-      requestId: request.id,
-      toolCallId: request.toolCallId!,
-      phase: phase,
-      details: _json(details),
-    ),
-  );
+  ) async {
+    final owner = _requestCores[request.id];
+    if (owner == null) return;
+    await owner.submitHostProgress(
+      progress: native.AgentHostProgress(
+        requestId: request.id,
+        toolCallId: request.toolCallId!,
+        phase: phase,
+        details: _json(details),
+      ),
+    );
+  }
 
   Future<MutationApproval?> _requestApproval(
     native.HostRequest request,
@@ -319,6 +357,23 @@ class RustAgentBusinessHost {
     );
   }
 
+  Future<native.HostResult> _historyBarrier(
+    native.HostRequest request,
+    Future<void> Function(native.HostRequest request)? callback,
+  ) async {
+    if (callback == null) {
+      throw const OperationProblem(
+        OperationErrorCode.unsupported,
+        'History maintenance is not connected to the business host.',
+      );
+    }
+    await callback(request);
+    return native.HostResult(
+      requestId: request.id,
+      outcome: native.HostOutcome.success,
+    );
+  }
+
   Future<view.ViewUndoTicket> _prepareUndo(native.HostRequest request) {
     final prepare = prepareUndo;
     if (prepare == null) {
@@ -339,6 +394,17 @@ class RustAgentBusinessHost {
       );
     }
     return commit(request);
+  }
+
+  Future<Map<String, Object?>> _readOperation(native.HostRequest request) {
+    final read = readOperation;
+    if (read == null) {
+      return Future.value({
+        'status': 'outcome_unknown',
+        'recoveryRequired': true,
+      });
+    }
+    return read(request);
   }
 
   void _cancelRun(String? runId) {
@@ -374,10 +440,24 @@ class _HostRun {
     required this.conversationId,
     required this.scope,
     required this.conversation,
+    required this.environment,
   });
   final String conversationId;
   final OperationScope scope;
   AgentConversation conversation;
+  final Map<String, Object?> environment;
+}
+
+Map<String, Object?> _environmentForRun(
+  view.ViewConversationSnapshot snapshot,
+  String runId,
+  Map<String, Object?> fallback,
+) {
+  final run = snapshot.runs.where((run) => run.id == runId).firstOrNull;
+  final value = run == null ? null : jsonDecode(run.environment.json);
+  return Map.unmodifiable(
+    value is Map && value.isNotEmpty ? value.cast<String, Object?>() : fallback,
+  );
 }
 
 class _PendingApproval {

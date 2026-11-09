@@ -7,9 +7,19 @@ use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::oneshot;
 use tokio_util::sync::CancellationToken;
 
+use crate::model_client::ConnectionIdentity;
 use crate::storage::models::{
-    ConversationSnapshot, OperationStore, PermissionMode, QuestionAnswer, TokenUsage, UndoTicket,
+    ConversationSnapshot, OperationRecord, OperationStore, PermissionMode, QuestionAnswer,
+    TokenUsage, UndoTicket,
 };
+
+#[derive(Debug, Clone)]
+pub struct HostConnectionRequest {
+    pub conversation_id: String,
+    pub run_id: Option<String>,
+    pub connection: ConnectionIdentity,
+    pub permission_mode: PermissionMode,
+}
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -77,6 +87,33 @@ pub struct HostError {
 /// The native business host owns transaction acceptance and its final receipt.
 /// Cancellation may dismiss preparation, but an accepted save must settle.
 pub trait AgentHost: Send + Sync {
+    /// Reads an existing receipt without re-executing the original operation.
+    fn inspect_operation(
+        &self,
+        _conversation_id: String,
+        _operation: OperationRecord,
+    ) -> BoxFuture<'static, Result<HostToolResult, HostError>> {
+        Box::pin(async {
+            Err(HostError {
+                code: "inspection_unavailable".into(),
+                message: "业务宿主未提供操作回执核对".into(),
+            })
+        })
+    }
+
+    fn authorize_connection(
+        &self,
+        _request: HostConnectionRequest,
+        _cancellation: CancellationToken,
+    ) -> BoxFuture<'static, Result<bool, HostError>> {
+        Box::pin(async {
+            Err(HostError {
+                code: "transport_authorization_unavailable".into(),
+                message: "HTTP 传输确认界面不可用".into(),
+            })
+        })
+    }
+
     fn execute(
         &self,
         request: HostToolRequest,
@@ -102,6 +139,23 @@ pub trait AgentHost: Send + Sync {
         &self,
         _conversation_id: String,
         _mode: PermissionMode,
+    ) -> BoxFuture<'static, Result<(), HostError>> {
+        Box::pin(async { Ok(()) })
+    }
+
+    fn begin_history(
+        &self,
+        _conversation_id: String,
+        _batch_id: String,
+    ) -> BoxFuture<'static, Result<(), HostError>> {
+        Box::pin(async { Ok(()) })
+    }
+
+    fn end_history(
+        &self,
+        _conversation_id: String,
+        _batch_id: String,
+        _release: bool,
     ) -> BoxFuture<'static, Result<(), HostError>> {
         Box::pin(async { Ok(()) })
     }
@@ -139,6 +193,9 @@ pub type SharedHost = Arc<dyn AgentHost>;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", content = "data", rename_all = "camelCase")]
 pub enum RuntimeEvent {
+    KnowledgeChanged {
+        revision: u64,
+    },
     Snapshot {
         snapshot: Box<ConversationSnapshot>,
     },

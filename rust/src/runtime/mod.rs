@@ -1,8 +1,11 @@
 mod context;
 mod history;
+mod host_actions;
 #[cfg(test)]
 mod journey;
+mod maintenance;
 mod tools;
+mod transport;
 mod types;
 
 pub use types::*;
@@ -58,6 +61,8 @@ struct ManagerInner {
     events: broadcast::Sender<RuntimeEvent>,
     shutdown: CancellationToken,
     auto_title: AtomicBool,
+    #[cfg(test)]
+    fail_next_tool_record: AtomicBool,
 }
 
 #[derive(Default)]
@@ -66,7 +71,7 @@ struct Session {
     queued_connections: HashMap<String, ConnectionConfig>,
     question: Option<(String, oneshot::Sender<QuestionResolution>)>,
     approval: Option<(String, oneshot::Sender<bool>)>,
-    title: Option<CancellationToken>,
+    title: Option<Arc<CancellationToken>>,
     presentation: RuntimePresentation,
     calibration: Option<(u64, u64)>,
     archiving: bool,
@@ -116,7 +121,8 @@ pub(crate) fn new_id() -> String {
 impl RuntimeManager {
     pub fn new(storage: StorageHandle, host: SharedHost, model_client: RigModelClient) -> Self {
         let (events, _) = broadcast::channel(1024);
-        Self { inner: Arc::new(ManagerInner { storage, host, model_client, sessions: Mutex::new(HashMap::new()), tools: StdMutex::new(Vec::new()), preamble: StdMutex::new("You are Sked's task assistant. Use the available tools for current application facts. Follow the user's permission mode. A tool receipt determines whether an operation completed. Ask for missing information with ask_user and maintain a plan with update_plan when useful.".into()), events, shutdown: CancellationToken::new(), auto_title: AtomicBool::new(true) }) }
+        Self { inner: Arc::new(ManagerInner { storage, host, model_client, sessions: Mutex::new(HashMap::new()), tools: StdMutex::new(Vec::new()), preamble: StdMutex::new("You are Sked's task assistant. Use the available tools for current application facts. Follow the user's permission mode. A tool receipt determines whether an operation completed. Ask for missing information with ask_user and maintain a plan with update_plan when useful.".into()), events, shutdown: CancellationToken::new(), auto_title: AtomicBool::new(true),
+#[cfg(test)] fail_next_tool_record: AtomicBool::new(false) }) }
     }
 
     pub fn subscribe(&self) -> broadcast::Receiver<RuntimeEvent> {
@@ -131,6 +137,18 @@ impl RuntimeManager {
             .tools
             .lock()
             .expect("tool registry mutex poisoned") = tools;
+    }
+
+    pub fn tool_catalog(&self) -> Vec<ToolDescriptor> {
+        let mut catalog = self
+            .inner
+            .tools
+            .lock()
+            .expect("tools mutex poisoned")
+            .clone();
+        catalog.retain(|tool| !tools::is_internal(&tool.name));
+        catalog.extend(tools::descriptors());
+        catalog
     }
     pub fn set_preamble(&self, text: String) {
         *self.inner.preamble.lock().expect("preamble mutex poisoned") = text;
@@ -343,29 +361,10 @@ impl RuntimeManager {
         mode: PermissionMode,
         model_selection: Option<ModelSelection>,
     ) -> Result<ConversationSnapshot> {
-        let id = new_id();
-        let created_at = now_ms();
-        let conversation = Conversation {
-            id: id.clone(),
-            title,
-            mode,
-            model_selection,
-            created_at,
-            updated_at: created_at,
-            ..Default::default()
-        };
         let snapshot = self
             .inner
             .storage
-            .call(move |store| {
-                store.append(
-                    &id,
-                    0,
-                    created_at,
-                    vec![JournalChange::ConversationCreated { conversation }],
-                )?;
-                store.read(&id)?.ok_or(StorageError::NotFound(id))
-            })
+            .call(move |store| store.create_draft(title, mode, model_selection))
             .await?;
         self.publish(&snapshot);
         Ok(snapshot)
@@ -379,6 +378,7 @@ impl RuntimeManager {
         context_references: Vec<ContextReference>,
         config: ConnectionConfig,
     ) -> Result<String> {
+        self.recover_operations(Some(id)).await?;
         let session = self.session(id).await;
         let mut session = session.lock().await;
         if session.active.is_some() {
@@ -417,14 +417,23 @@ impl RuntimeManager {
         self.spawn_run(accepted);
         if first && self.inner.auto_title.load(Ordering::Acquire) {
             if let Some(message) = first_message {
-                let cancellation = self.inner.shutdown.child_token();
+                let cancellation = Arc::new(self.inner.shutdown.child_token());
                 session.title = Some(cancellation.clone());
                 let manager = self.clone();
                 let id = id.to_owned();
                 tokio::spawn(async move {
                     manager
-                        .generate_title(id, message, config, cancellation)
+                        .generate_title(id.clone(), message, config, cancellation.as_ref().clone())
                         .await;
+                    let session = manager.session(&id).await;
+                    let mut session = session.lock().await;
+                    if session
+                        .title
+                        .as_ref()
+                        .is_some_and(|current| Arc::ptr_eq(current, &cancellation))
+                    {
+                        session.title = None;
+                    }
                 });
             }
         }
@@ -440,6 +449,7 @@ impl RuntimeManager {
         mode: QueueMode,
         config: ConnectionConfig,
     ) -> Result<String> {
+        self.recover_operations(Some(id)).await?;
         let session = self.session(id).await;
         let mut session = session.lock().await;
         self.enqueue_locked(
@@ -464,9 +474,14 @@ impl RuntimeManager {
         mode: QueueMode,
         config: ConnectionConfig,
     ) -> Result<String> {
-        if session.archiving || self.read(id).await?.conversation.archived {
+        let snapshot = self.read(id).await?;
+        if session.archiving || snapshot.conversation.archived {
             return Err(RuntimeError::Invalid("请先恢复已归档的会话".into()));
         }
+        if session.active.is_none() {
+            validate_execution_admission(&snapshot, false)?;
+        }
+        let context_references = self.freeze_selected_references(context_references).await?;
         let input = QueuedInput {
             id: new_id(),
             text,
@@ -477,8 +492,19 @@ impl RuntimeManager {
             context_references,
         };
         let input_id = input.id.clone();
-        self.change(id, move |_| Ok(vec![JournalChange::InputQueued { input }]))
-            .await?;
+        self.change(id, move |snapshot| {
+            let mut changes = bind_sources_to_input(snapshot, &input.id);
+            changes.push(JournalChange::InputQueued { input });
+            snapshot.conversation.draft_only = false;
+            snapshot.conversation.draft.clear();
+            snapshot.conversation.draft_attachment_ids.clear();
+            snapshot.conversation.draft_references.clear();
+            changes.push(JournalChange::ConversationUpdated {
+                conversation: snapshot.conversation.clone(),
+            });
+            Ok(changes)
+        })
+        .await?;
         session.queued_connections.insert(input_id.clone(), config);
         if mode == QueueMode::Steering {
             if let Some(active) = &session.active {
@@ -496,6 +522,7 @@ impl RuntimeManager {
         references: Vec<ContextReference>,
         config: ConnectionConfig,
     ) -> Result<String> {
+        self.recover_operations(Some(id)).await?;
         let session = self.session(id).await;
         let mut session = session.lock().await;
         if session.active.is_none() {
@@ -532,21 +559,42 @@ impl RuntimeManager {
         id: &str,
         config: ConnectionConfig,
     ) -> Result<String> {
+        self.continue_with_run_id(id, config, None).await
+    }
+
+    pub async fn continue_with_run_id(
+        &self,
+        id: &str,
+        config: ConnectionConfig,
+        reserved_run_id: Option<String>,
+    ) -> Result<String> {
+        self.recover_operations(Some(id)).await?;
         let session = self.session(id).await;
         let mut session = session.lock().await;
+        let snapshot = self.read(id).await?;
+        if let Some(run_id) = &reserved_run_id {
+            if run_id.trim().is_empty() {
+                return Err(RuntimeError::Invalid("运行身份不能为空".into()));
+            }
+            if snapshot.runs.iter().any(|run| &run.id == run_id) {
+                return Ok(run_id.clone());
+            }
+        }
         if session.active.is_some() {
             return Err(RuntimeError::Busy);
         }
-        let snapshot = self.read(id).await?;
-        if snapshot
-            .operations
-            .iter()
-            .any(|operation| operation.phase == OperationPhase::Unresolved)
+        if snapshot.queued_inputs.is_empty()
+            && !snapshot
+                .messages
+                .iter()
+                .skip(snapshot.conversation.execution_history_start)
+                .any(|message| message.role == MessageRole::User)
         {
             return Err(RuntimeError::Invalid(
-                "请先核对未决业务回执，再继续会话".into(),
+                "导入的历史记录需要新的用户输入才能开始处理".into(),
             ));
         }
+        validate_execution_admission(&snapshot, false)?;
         let input = next_input(&snapshot);
         let config = match input
             .as_ref()
@@ -559,11 +607,63 @@ impl RuntimeManager {
             )?,
         };
         let accepted = self
-            .accept_locked(id, &mut session, input, config, true, false)
+            .accept_input_locked(
+                id,
+                &mut session,
+                input,
+                config,
+                true,
+                false,
+                None,
+                reserved_run_id,
+            )
             .await?;
         let run_id = accepted.run_id.clone();
         self.spawn_run(accepted);
         Ok(run_id)
+    }
+
+    pub async fn accept_handoff(
+        &self,
+        id: &str,
+        config: ConnectionConfig,
+    ) -> Result<Option<String>> {
+        self.recover_operations(Some(id)).await?;
+        let session = self.session(id).await;
+        let mut session = session.lock().await;
+        let snapshot = self.read(id).await?;
+        let handoff = snapshot
+            .handoffs
+            .iter()
+            .find(|handoff| handoff.conversation_id == id)
+            .ok_or_else(|| RuntimeError::Invalid("会话没有待接纳的来源交接".into()))?;
+        if !snapshot.runs.is_empty() {
+            return Ok(None);
+        }
+        if session.active.is_some() {
+            return Err(RuntimeError::Busy);
+        }
+        let prompt = snapshot
+            .messages
+            .iter()
+            .find(|message| message.id == handoff.message_id && message.role == MessageRole::User)
+            .cloned()
+            .ok_or_else(|| RuntimeError::Invalid("来源交接的原始请求不存在".into()))?;
+        let accepted = self
+            .accept_input_locked(
+                id,
+                &mut session,
+                None,
+                config,
+                false,
+                false,
+                Some(prompt),
+                None,
+            )
+            .await?;
+        let run_id = accepted.run_id.clone();
+        self.spawn_run(accepted);
+        Ok(Some(run_id))
     }
 
     pub async fn stop(&self, id: &str) -> Result<()> {
@@ -745,14 +845,35 @@ impl RuntimeManager {
     pub async fn update_draft(
         &self,
         id: &str,
-        text: String,
-        attachments: Vec<String>,
-        references: Vec<ContextReference>,
+        text: Option<String>,
+        attachments: Option<Vec<String>>,
+        references: Option<Vec<ContextReference>>,
     ) -> Result<()> {
         self.change(id, move |snapshot| {
-            snapshot.conversation.draft = text;
-            snapshot.conversation.draft_attachment_ids = attachments;
-            snapshot.conversation.draft_references = references;
+            if let Some(text) = text {
+                snapshot.conversation.draft = text;
+            }
+            if let Some(attachments) = attachments {
+                snapshot.conversation.draft_attachment_ids = attachments;
+            }
+            if let Some(references) = references {
+                for attachment_id in references
+                    .iter()
+                    .filter_map(|reference| reference.attachment_id.as_ref())
+                {
+                    if !snapshot
+                        .conversation
+                        .draft_attachment_ids
+                        .contains(attachment_id)
+                    {
+                        snapshot
+                            .conversation
+                            .draft_attachment_ids
+                            .push(attachment_id.clone());
+                    }
+                }
+                snapshot.conversation.draft_references = references;
+            }
             Ok(vec![JournalChange::ConversationUpdated {
                 conversation: snapshot.conversation.clone(),
             }])
@@ -769,7 +890,9 @@ impl RuntimeManager {
             if !snapshot.queued_inputs.iter().any(|i| i.id == key) {
                 return Err(StorageError::NotFound(key));
             }
-            Ok(vec![JournalChange::InputRemoved { id: key }])
+            let mut changes = release_input_sources(snapshot, &key);
+            changes.push(JournalChange::InputRemoved { id: key });
+            Ok(changes)
         })
         .await?;
         session.queued_connections.remove(input_id);
@@ -785,10 +908,14 @@ impl RuntimeManager {
                 .queued_inputs
                 .iter()
                 .find(|i| i.id == key)
-                .ok_or_else(|| StorageError::NotFound(key.clone()))?;
+                .ok_or_else(|| StorageError::NotFound(key.clone()))?
+                .clone();
             if !snapshot.conversation.draft.is_empty()
                 || !snapshot.conversation.draft_attachment_ids.is_empty()
                 || !snapshot.conversation.draft_references.is_empty()
+                || snapshot.sources.iter().any(|source| {
+                    source.bound_input_id.is_none() && source.bound_message_id.is_none()
+                })
             {
                 return Err(StorageError::Conflict("输入框已有草稿".into()));
             }
@@ -796,12 +923,12 @@ impl RuntimeManager {
             snapshot.conversation.draft_attachment_ids = input.attachment_ids.clone();
             snapshot.conversation.draft_references = input.context_references.clone();
             snapshot.conversation.model_selection = input.model_selection.clone();
-            Ok(vec![
-                JournalChange::InputRemoved { id: key },
-                JournalChange::ConversationUpdated {
-                    conversation: snapshot.conversation.clone(),
-                },
-            ])
+            let mut changes = release_input_sources(snapshot, &key);
+            changes.push(JournalChange::InputRemoved { id: key });
+            changes.push(JournalChange::ConversationUpdated {
+                conversation: snapshot.conversation.clone(),
+            });
+            Ok(changes)
         })
         .await?;
         session.queued_connections.remove(input_id);
@@ -887,12 +1014,16 @@ impl RuntimeManager {
     }
 
     pub async fn shutdown(&self) {
+        self.shutdown_except(None).await;
+    }
+
+    pub async fn shutdown_except(&self, except: Option<&str>) {
         self.inner.shutdown.cancel();
         let sessions: Vec<_> = self.inner.sessions.lock().await.keys().cloned().collect();
         for id in &sessions {
             let _ = self.stop(id).await;
         }
-        for id in &sessions {
+        for id in sessions.iter().filter(|id| Some(id.as_str()) != except) {
             self.wait_until_idle(id).await;
         }
     }
@@ -906,24 +1037,68 @@ impl RuntimeManager {
         continuing: bool,
         compact_only: bool,
     ) -> Result<AcceptedRun> {
+        self.accept_input_locked(
+            id,
+            session,
+            input,
+            config,
+            continuing,
+            compact_only,
+            None,
+            None,
+        )
+        .await
+    }
+
+    async fn accept_input_locked(
+        &self,
+        id: &str,
+        session: &mut Session,
+        mut input: Option<QueuedInput>,
+        config: ConnectionConfig,
+        continuing: bool,
+        compact_only: bool,
+        existing_prompt: Option<Message>,
+        reserved_run_id: Option<String>,
+    ) -> Result<AcceptedRun> {
         if self.inner.shutdown.is_cancelled() {
             return Err(RuntimeError::Invalid("Agent 正在退出".into()));
         }
         if session.archiving {
             return Err(RuntimeError::Busy);
         }
-        let run_id = new_id();
+        let run_id = reserved_run_id.unwrap_or_else(new_id);
         let rid = run_id.clone();
         let selected = config.selection();
         let connection_fingerprint = config.connection_fingerprint.clone();
-        if input.is_some() {
-            self.preserve_answered_question(id, &connection_fingerprint, true)
-                .await?;
-        }
-        let source = self.read(id).await?;
+        let environment = config.environment.clone();
+        let mut source = self.read(id).await?;
         if source.conversation.archived {
             return Err(RuntimeError::Invalid("请先恢复已归档的会话".into()));
         }
+        validate_execution_admission(&source, input.is_none() && existing_prompt.is_none())?;
+        if input.is_some() {
+            self.preserve_answered_question(id, &connection_fingerprint, true)
+                .await?;
+            source = self.read(id).await?;
+        }
+        if let Some(input) = &mut input {
+            if !source
+                .queued_inputs
+                .iter()
+                .any(|queued| queued.id == input.id)
+            {
+                input.context_references = self
+                    .freeze_selected_references(input.context_references.clone())
+                    .await?;
+            }
+        }
+        let selected_skills = input
+            .as_ref()
+            .map(|input| self.frozen_selected_skills(&input.context_references))
+            .transpose()?
+            .unwrap_or_default();
+        let available_tools = self.available_tool_names();
         let model_changed = source
             .runs
             .last()
@@ -934,7 +1109,9 @@ impl RuntimeManager {
                 .connection_fingerprint
                 .as_ref()
                 .is_some_and(|previous| previous != &connection_fingerprint);
-        let rebuilt_history = if model_changed {
+        let rebuild_handoff =
+            continuing && source.provider_history.is_empty() && !source.handoffs.is_empty();
+        let rebuilt_history = if model_changed || rebuild_handoff {
             if let Some(cancellation) = session.title.take() {
                 cancellation.cancel();
             }
@@ -947,21 +1124,72 @@ impl RuntimeManager {
         } else {
             None
         };
-        let prompt = input.as_ref().map(|input| Message {
-            id: new_id(),
-            role: MessageRole::User,
-            text: input.text.clone(),
-            created_at: now_ms(),
-            attachment_ids: input.attachment_ids.clone(),
-            context_references: input.context_references.clone(),
-            model_selection: Some(selected.clone()),
-            provider_protocol: Some(config.protocol.as_str().into()),
-            ..Default::default()
+        let prompt_is_existing = existing_prompt.is_some();
+        let mut prompt = existing_prompt.or_else(|| {
+            input.as_ref().map(|input| Message {
+                id: new_id(),
+                role: MessageRole::User,
+                text: input.text.clone(),
+                created_at: now_ms(),
+                attachment_ids: input.attachment_ids.clone(),
+                context_references: input.context_references.clone(),
+                model_selection: Some(selected.clone()),
+                provider_protocol: Some(config.protocol.as_str().into()),
+                ..Default::default()
+            })
         });
+        if let Some(message) = &mut prompt {
+            message.model_selection = Some(selected.clone());
+            message.provider_protocol = Some(config.protocol.as_str().into());
+        }
         let stored_prompt = prompt.clone();
         let snapshot = self
             .change(id, move |snapshot| {
                 let mut changes = Vec::new();
+                if input.is_some() {
+                    if let Some(loaded) = snapshot.extensions.get("loadedSkills") {
+                        changes.extend(loaded.keys().map(|id| JournalChange::ExtensionSet {
+                            namespace: "loadedSkills".into(),
+                            id: id.clone(),
+                            value: None,
+                        }));
+                    }
+                    let mut exposed = snapshot
+                        .extensions
+                        .get("runtime")
+                        .and_then(|values| values.get("exposedTools"))
+                        .and_then(Value::as_array)
+                        .map(|values| {
+                            values
+                                .iter()
+                                .filter_map(Value::as_str)
+                                .map(str::to_owned)
+                                .collect::<HashSet<_>>()
+                        })
+                        .unwrap_or_else(tools::bootstrap_names);
+                    for skill in selected_skills {
+                        exposed.extend(
+                            skill
+                                .required_tools
+                                .iter()
+                                .chain(&skill.optional_tools)
+                                .filter(|name| available_tools.contains(*name))
+                                .cloned(),
+                        );
+                        changes.push(JournalChange::ExtensionSet {
+                            namespace: "loadedSkills".into(),
+                            id: skill.id.clone(),
+                            value: Some(serde_json::to_value(skill)?),
+                        });
+                    }
+                    let mut exposed: Vec<_> = exposed.into_iter().collect();
+                    exposed.sort();
+                    changes.push(JournalChange::ExtensionSet {
+                        namespace: "runtime".into(),
+                        id: "exposedTools".into(),
+                        value: Some(serde_json::to_value(exposed)?),
+                    });
+                }
                 if let Some(messages) = rebuilt_history {
                     changes.push(JournalChange::ProviderHistoryReplaced { messages });
                     changes.push(JournalChange::CheckpointSet { checkpoint: None });
@@ -974,28 +1202,58 @@ impl RuntimeManager {
                     started_at: now_ms(),
                     model: Some(selected.clone()),
                     continued_from_run_id,
+                    environment,
                     ..Default::default()
                 };
-                if let Some(input) = input {
-                    if snapshot.queued_inputs.iter().any(|i| i.id == input.id) {
-                        changes.push(JournalChange::InputRemoved { id: input.id });
-                    }
-                }
-                if let Some(message) = stored_prompt {
-                    snapshot.conversation.draft_only = false;
-                    changes.push(JournalChange::TurnUpserted {
-                        turn: Turn {
-                            id: new_id(),
-                            request_message_id: message.id.clone(),
-                            message_ids: vec![message.id.clone()],
-                            run_ids: vec![rid.clone()],
-                            ..Default::default()
-                        },
+                let input_was_queued = input.as_ref().is_some_and(|input| {
+                    snapshot
+                        .queued_inputs
+                        .iter()
+                        .any(|queued| queued.id == input.id)
+                });
+                if let Some(input) = input.as_ref().filter(|_| input_was_queued) {
+                    changes.push(JournalChange::InputRemoved {
+                        id: input.id.clone(),
                     });
+                }
+                if let Some(mut message) = stored_prompt {
+                    snapshot.conversation.draft_only = false;
+                    message.model_selection = Some(selected.clone());
+                    if prompt_is_existing {
+                        let turn = snapshot
+                            .turns
+                            .iter_mut()
+                            .find(|turn| turn.request_message_id == message.id)
+                            .ok_or_else(|| {
+                                StorageError::Invalid("来源交接的原始轮次不存在".into())
+                            })?;
+                        turn.run_ids.push(rid.clone());
+                        changes.push(JournalChange::TurnUpserted { turn: turn.clone() });
+                    } else {
+                        changes.push(JournalChange::TurnUpserted {
+                            turn: Turn {
+                                id: new_id(),
+                                request_message_id: message.id.clone(),
+                                message_ids: vec![message.id.clone()],
+                                run_ids: vec![rid.clone()],
+                                ..Default::default()
+                            },
+                        });
+                    }
+                    if let Some(input) = &input {
+                        changes.extend(bind_sources_to_message(
+                            snapshot,
+                            &input.id,
+                            &message.id,
+                            input_was_queued,
+                        ));
+                    }
                     changes.push(JournalChange::MessageUpserted { message });
-                    snapshot.conversation.draft.clear();
-                    snapshot.conversation.draft_attachment_ids.clear();
-                    snapshot.conversation.draft_references.clear();
+                    if !input_was_queued && !prompt_is_existing {
+                        snapshot.conversation.draft.clear();
+                        snapshot.conversation.draft_attachment_ids.clear();
+                        snapshot.conversation.draft_references.clear();
+                    }
                     if let Some(question) = snapshot.current_question.as_mut() {
                         if !question.consumed {
                             question.status = QuestionStatus::Retired;
@@ -1234,11 +1492,16 @@ impl RuntimeManager {
                         .filter(|request| request.kind == RequestKind::Response)
                         .count()
                 });
-            let executor = Arc::new(tools::RuntimeToolExecutor {
-                manager: self.clone(),
-                accepted: accepted.clone(),
-                request_base,
-            });
+            let executor = self.transport_executor(
+                accepted.conversation_id.clone(),
+                Some(accepted.run_id.clone()),
+                accepted.config.clone(),
+                Arc::new(tools::RuntimeToolExecutor {
+                    manager: self.clone(),
+                    accepted: accepted.clone(),
+                    request_base,
+                }),
+            );
             let preamble = self.request_preamble(&self.read(&accepted.conversation_id).await?);
             let (sender, mut receiver) = mpsc::unbounded_channel();
             let model = self.inner.model_client.run(
@@ -1486,6 +1749,9 @@ impl RuntimeManager {
                             )
                     }) {
                         operation.phase = OperationPhase::Unresolved;
+                        let details = tools::unknown_operation_details(operation);
+                        operation.details =
+                            serde_json::json!({"modelPayload":details,"details":details});
                         changes.push(JournalChange::OperationUpserted {
                             operation: operation.clone(),
                         });
@@ -1636,6 +1902,94 @@ impl RuntimeManager {
         self.publish_presentation(accepted);
         accepted.control.settled.notify_waiters();
     }
+}
+
+fn bind_sources_to_input(
+    snapshot: &mut ConversationSnapshot,
+    input_id: &str,
+) -> Vec<JournalChange> {
+    snapshot
+        .sources
+        .iter_mut()
+        .filter(|source| source.bound_input_id.is_none() && source.bound_message_id.is_none())
+        .map(|source| {
+            source.bound_input_id = Some(input_id.to_owned());
+            JournalChange::SourceUpserted {
+                source: source.clone(),
+            }
+        })
+        .collect()
+}
+
+fn bind_sources_to_message(
+    snapshot: &mut ConversationSnapshot,
+    input_id: &str,
+    message_id: &str,
+    input_was_queued: bool,
+) -> Vec<JournalChange> {
+    snapshot
+        .sources
+        .iter_mut()
+        .filter(|source| {
+            source.bound_message_id.is_none()
+                && (source.bound_input_id.as_deref() == Some(input_id)
+                    || (!input_was_queued && source.bound_input_id.is_none()))
+        })
+        .map(|source| {
+            source.bound_input_id = None;
+            source.bound_message_id = Some(message_id.to_owned());
+            JournalChange::SourceUpserted {
+                source: source.clone(),
+            }
+        })
+        .collect()
+}
+
+fn release_input_sources(
+    snapshot: &mut ConversationSnapshot,
+    input_id: &str,
+) -> Vec<JournalChange> {
+    let run_id = snapshot.conversation.run_id.clone();
+    let message_id = snapshot.messages.last().map(|message| message.id.clone());
+    snapshot
+        .sources
+        .iter_mut()
+        .filter(|source| source.bound_input_id.as_deref() == Some(input_id))
+        .map(|source| {
+            source.bound_input_id = None;
+            source.attached_after_run_id = run_id.clone();
+            source.attached_after_message_id = message_id.clone();
+            JournalChange::SourceUpserted {
+                source: source.clone(),
+            }
+        })
+        .collect()
+}
+
+fn validate_execution_admission(
+    snapshot: &ConversationSnapshot,
+    allow_pending_redo: bool,
+) -> Result<()> {
+    if snapshot
+        .operations
+        .iter()
+        .any(|operation| operation.phase == OperationPhase::Unresolved)
+    {
+        return Err(RuntimeError::Invalid(
+            "请先核对未决业务回执，再继续会话".into(),
+        ));
+    }
+    if !allow_pending_redo
+        && snapshot
+            .redo_batches
+            .iter()
+            .any(|batch| !matches!(batch.phase, RedoPhase::Completed | RedoPhase::Cancelled))
+    {
+        return Err(RuntimeError::Invalid(
+            "请先完成或结束当前重做，再接纳新的输入".into(),
+        ));
+    }
+    Ok(())
 }
 
 fn idle_can_continue(snapshot: &ConversationSnapshot) -> bool {

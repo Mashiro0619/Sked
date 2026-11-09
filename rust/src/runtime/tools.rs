@@ -15,6 +15,50 @@ pub(super) struct RuntimeToolExecutor {
     pub request_base: usize,
 }
 
+fn knowledge_details(
+    proposal_id: &str,
+    tool_name: &str,
+    operation_id: &str,
+    changes: &[KnowledgeChange],
+    committed: bool,
+) -> Value {
+    json!({
+        "proposalId": proposal_id,
+        "toolName": tool_name,
+        "operationId": operation_id,
+        "status": if committed { "committed" } else { "preview" },
+        "kind": "external",
+        "effectStatus": if committed { "applied" } else { "not_executed" },
+        "dataStatus": if committed { "committed" } else { "unchanged" },
+        "changeCount": changes.len(),
+        "changes": changes.iter().map(|change| json!({
+            "key": format!("knowledge.{}", change.key),
+            "before": change.before,
+            "after": change.after,
+        })).collect::<Vec<_>>(),
+    })
+}
+
+pub(super) fn unknown_operation_details(operation: &OperationRecord) -> Value {
+    let mut details = operation
+        .details
+        .get("details")
+        .unwrap_or(&operation.details)
+        .clone();
+    if !details.is_object() {
+        details = json!({});
+    }
+    let fields = details.as_object_mut().unwrap();
+    fields.insert("status".into(), json!("outcome_unknown"));
+    fields.insert("effectStatus".into(), json!("unknown"));
+    fields.insert("dataStatus".into(), json!("unknown"));
+    fields.insert("recoveryRequired".into(), json!(true));
+    if let Some(binding) = &operation.binding {
+        fields.insert("operationId".into(), json!(binding.operation_id));
+    }
+    details
+}
+
 impl ModelToolExecutor for RuntimeToolExecutor {
     fn execute(
         &self,
@@ -53,13 +97,27 @@ impl ModelToolExecutor for RuntimeToolExecutor {
                         .await
                 }
             };
-            if let Some(error) = accepted
+            let abort_error = accepted
                 .control
                 .abort_error
                 .lock()
                 .expect("runtime error mutex poisoned")
-                .clone()
-            {
+                .clone();
+            if let Some(error) = abort_error {
+                if accepted.control.unknown_outcome.load(Ordering::Acquire) {
+                    if let Some(operation) = manager
+                        .read(&accepted.conversation_id)
+                        .await
+                        .map_err(|error| error.to_string())?
+                        .operations
+                        .iter()
+                        .find(|operation| {
+                            operation.run_id == accepted.run_id && operation.tool_call_id == call_id
+                        })
+                    {
+                        return Ok(unknown_operation_details(operation));
+                    }
+                }
                 return Err(error);
             }
             let payload = match result {
@@ -395,28 +453,41 @@ impl RuntimeManager {
             if let Some(name) = stored.details.get("toolName").and_then(Value::as_str) {
                 operation.tool_name = name.into();
             }
-            if let Some(operation_id) = stored.details.get("operationId").and_then(Value::as_str) {
-                let receipt_tool = stored
-                    .details
-                    .get("receiptTool")
-                    .and_then(Value::as_str)
-                    .unwrap_or(&operation.tool_name);
-                let store = if receipt_tool.starts_with("external.") {
-                    OperationStore::External
-                } else if operation.tool_name.starts_with("skills.")
-                    || operation.tool_name.starts_with("memories.")
-                    || operation.tool_name.starts_with("knowledge.")
-                {
-                    OperationStore::Knowledge
+            match (&mut operation.details, stored.details) {
+                (Value::Object(existing), Value::Object(incoming)) => existing.extend(incoming),
+                (existing, incoming) => *existing = incoming,
+            }
+            if let Some(operation_id) = operation.details.get("operationId").and_then(Value::as_str)
+            {
+                if let Some(binding) = &operation.binding {
+                    if binding.operation_id != operation_id {
+                        return Err(StorageError::Conflict(
+                            "工具进度的操作身份与已接纳操作不一致".into(),
+                        ));
+                    }
                 } else {
-                    OperationStore::Main
-                };
-                operation.binding = Some(OperationBinding {
-                    operation_id: operation_id.into(),
-                    store,
-                    run_id: rid.clone(),
-                    tool_call_id: stored.tool_call_id.clone(),
-                });
+                    let receipt_tool = operation
+                        .details
+                        .get("receiptTool")
+                        .and_then(Value::as_str)
+                        .unwrap_or(&operation.tool_name);
+                    let store = if receipt_tool.starts_with("external.") {
+                        OperationStore::External
+                    } else if operation.tool_name.starts_with("skills.")
+                        || operation.tool_name.starts_with("memories.")
+                        || operation.tool_name.starts_with("knowledge.")
+                    {
+                        OperationStore::Knowledge
+                    } else {
+                        OperationStore::Main
+                    };
+                    operation.binding = Some(OperationBinding {
+                        operation_id: operation_id.into(),
+                        store,
+                        run_id: rid.clone(),
+                        tool_call_id: stored.tool_call_id.clone(),
+                    });
+                }
             }
             operation.phase = match stored.phase {
                 HostProgressPhase::Prepared => OperationPhase::Preparing,
@@ -427,10 +498,6 @@ impl RuntimeManager {
                 HostProgressPhase::Failed => OperationPhase::Failed,
                 HostProgressPhase::Unresolved => OperationPhase::Unresolved,
             };
-            match (&mut operation.details, stored.details) {
-                (Value::Object(existing), Value::Object(incoming)) => existing.extend(incoming),
-                (existing, incoming) => *existing = incoming,
-            }
             if snapshot.conversation.status != ConversationStatus::Stopping {
                 snapshot.conversation.status =
                     if matches!(stored.phase, HostProgressPhase::ApprovalRequired) {
@@ -462,15 +529,27 @@ impl RuntimeManager {
         call_id: &str,
         result: &HostToolResult,
     ) -> Result<()> {
-        let saved = self
-            .save_tool_result(
+        #[cfg(test)]
+        let inject_failure = self
+            .inner
+            .fail_next_tool_record
+            .swap(false, Ordering::AcqRel);
+        #[cfg(not(test))]
+        let inject_failure = false;
+        let saved = if inject_failure {
+            Err(RuntimeError::Invalid(
+                "Synthetic tool journal reply failure".into(),
+            ))
+        } else {
+            self.save_tool_result(
                 &accepted.conversation_id,
                 &accepted.run_id,
                 name,
                 call_id,
                 result,
             )
-            .await;
+            .await
+        };
         if let Err(error) = &saved {
             *accepted
                 .control
@@ -519,6 +598,16 @@ impl RuntimeManager {
                 .or_else(|| result.model_payload.get("operationId"))
                 .and_then(Value::as_str)
                 .map(str::to_owned);
+            if let Some(binding) = previous.and_then(|operation| operation.binding.as_ref()) {
+                if operation_id
+                    .as_ref()
+                    .is_some_and(|id| id != &binding.operation_id)
+                {
+                    return Err(StorageError::Conflict(
+                        "工具回执的操作身份与已接纳操作不一致".into(),
+                    ));
+                }
+            }
             let store = if name.starts_with("skills.")
                 || name.starts_with("memories.")
                 || name.starts_with("knowledge.")
@@ -609,6 +698,73 @@ impl RuntimeManager {
         Ok(())
     }
 
+    pub(super) async fn recover_knowledge_operations(&self, id: &str) -> Result<usize> {
+        let snapshot = self.read(id).await?;
+        let mut recovered = 0;
+        for operation in snapshot.operations.into_iter().filter(|operation| {
+            matches!(
+                operation.phase,
+                OperationPhase::Preparing
+                    | OperationPhase::WaitingApproval
+                    | OperationPhase::Executing
+                    | OperationPhase::Unresolved
+            ) && operation
+                .binding
+                .as_ref()
+                .is_some_and(|binding| binding.store == OperationStore::Knowledge)
+        }) {
+            let operation_id = operation.binding.as_ref().unwrap().operation_id.clone();
+            let receipt_id = operation_id.clone();
+            let receipt = self
+                .inner
+                .storage
+                .call(move |store| store.knowledge_receipt(&receipt_id))
+                .await?;
+            let result = if let Some(receipt) = receipt {
+                HostToolResult {
+                    model_payload: json!({"status":"committed","operationId":receipt.operation_id,"revision":receipt.revision}),
+                    details: knowledge_details(
+                        &operation.tool_call_id,
+                        &operation.tool_name,
+                        &receipt.operation_id,
+                        &receipt.changes,
+                        true,
+                    ),
+                    outcome: ToolOutcome::Success,
+                }
+            } else {
+                let mut details = operation
+                    .details
+                    .get("details")
+                    .unwrap_or(&operation.details)
+                    .clone();
+                if !details.is_object() {
+                    details = json!({});
+                }
+                let fields = details.as_object_mut().unwrap();
+                fields.insert("operationId".into(), json!(operation_id));
+                fields.insert("status".into(), json!("cancelled"));
+                fields.insert("kind".into(), json!("external"));
+                fields.insert("effectStatus".into(), json!("not_executed"));
+                fields.insert("dataStatus".into(), json!("unchanged"));
+                HostToolResult {
+                    model_payload: json!({"status":"cancelled","operationId":operation_id,"dataStatus":"unchanged"}),
+                    details,
+                    outcome: ToolOutcome::Cancelled,
+                }
+            };
+            match self
+                .reconcile_operation(id, &operation.tool_call_id, result)
+                .await
+            {
+                Ok(()) => recovered += 1,
+                Err(RuntimeError::Busy) => break,
+                Err(error) => return Err(error),
+            }
+        }
+        Ok(recovered)
+    }
+
     pub async fn reconcile_operation(
         &self,
         id: &str,
@@ -616,15 +772,28 @@ impl RuntimeManager {
         result: HostToolResult,
     ) -> Result<()> {
         let session = self.session(id).await;
-        let session = session.lock().await;
+        let mut session = session.lock().await;
         if session.active.is_some() {
             return Err(RuntimeError::Busy);
         }
         let snapshot = self.read(id).await?;
+        let received_id = result
+            .details
+            .get("operationId")
+            .or_else(|| result.model_payload.get("operationId"))
+            .and_then(Value::as_str);
         let operation = snapshot
             .operations
             .iter()
-            .find(|operation| operation.tool_call_id == tool_call_id)
+            .find(|operation| {
+                operation.tool_call_id == tool_call_id
+                    && (received_id.is_none()
+                        || operation
+                            .binding
+                            .as_ref()
+                            .map(|binding| binding.operation_id.as_str())
+                            == received_id)
+            })
             .cloned()
             .ok_or_else(|| RuntimeError::Invalid("原操作记录不存在".into()))?;
         let expected_id = operation
@@ -678,17 +847,29 @@ impl RuntimeManager {
                 .cloned()
                 .map(serde_json::from_value)
                 .collect::<std::result::Result<_, _>>()?;
+            let call_index = history.iter().rposition(|message| matches!(message,
+                ProviderMessage::Assistant(assistant) if assistant.tool_calls().any(|call| call.id.to_string() == key)));
             let mut native = None;
-            for message in &mut history {
-                if let ProviderMessage::User { content } = message {
-                    for item in content {
-                        if let rig::message::UserContent::ToolResult(result) = item {
-                            if result.call.to_string() == key {
-                                result.content =
-                                    vec![rig::message::ToolResultContent::text(payload.clone())];
-                                native = Some(ProviderMessage::tool_results(vec![result.clone()]));
+            if let Some(index) = call_index {
+                for message in history.iter_mut().skip(index + 1) {
+                    if let ProviderMessage::Assistant(_) = message { break; }
+                    if let ProviderMessage::User { content } = message {
+                        for item in content {
+                            if let rig::message::UserContent::ToolResult(result) = item {
+                                if result.call.to_string() == key {
+                                    result.content = vec![rig::message::ToolResultContent::text(payload.clone())];
+                                    native = Some(ProviderMessage::tool_results(vec![result.clone()]));
+                                }
                             }
                         }
+                    }
+                }
+                if native.is_none() {
+                    if let ProviderMessage::Assistant(assistant) = &history[index] {
+                        let call = assistant.tool_calls().find(|call| call.id.to_string() == key).unwrap();
+                        let message = ProviderMessage::tool_results(vec![call.result(vec![rig::message::ToolResultContent::text(payload.clone())])]);
+                        history.insert(index + 1, message.clone());
+                        native = Some(message);
                     }
                 }
             }
@@ -703,28 +884,25 @@ impl RuntimeManager {
                         .collect::<std::result::Result<_, _>>()?,
                 },
             ];
+            let mut recovered_messages = Vec::new();
             if let Some(native) = native {
-                if let Some(message) = snapshot
-                    .messages
-                    .iter_mut()
-                    .find(|message| message.id == format!("{run_id}:tool:{key}"))
-                {
-                    message.text = payload;
-                    message.response_items = vec![serde_json::to_value(native)?];
-                    changes.push(JournalChange::MessageUpserted {
-                        message: message.clone(),
-                    });
+                for mut message in project_provider_message(&native, &run_id, now_ms()) {
+                    if let Some(before) = snapshot.messages.iter().find(|before| before.id == message.id) {
+                        message.created_at = before.created_at;
+                    }
+                    recovered_messages.push(message.id.clone());
+                    changes.push(JournalChange::MessageUpserted { message });
                 }
             }
             if let Some(run) = snapshot.runs.iter_mut().find(|run| run.id == run_id) {
-                if let Some(tool) = run.tools.iter_mut().find(|tool| tool.id == key) {
-                    tool.outcome = match result.outcome {
+                let outcome = match result.outcome {
                         ToolOutcome::Success => AttemptOutcome::Completed,
                         ToolOutcome::Cancelled => AttemptOutcome::Cancelled,
                         ToolOutcome::Error => AttemptOutcome::Failed,
                         ToolOutcome::Unknown => AttemptOutcome::Unknown,
                     };
-                }
+                if let Some(tool) = run.tools.iter_mut().find(|tool| tool.id == key) { tool.outcome = outcome; }
+                else { run.tools.push(ToolUsage { id:key.clone(), name:operation.tool_name.clone(), outcome }); }
                 changes.push(JournalChange::RunUpserted { run: run.clone() });
             }
             for turn in snapshot
@@ -732,6 +910,9 @@ impl RuntimeManager {
                 .iter_mut()
                 .filter(|turn| turn.run_ids.contains(&run_id))
             {
+                for message_id in &recovered_messages {
+                    if !turn.message_ids.contains(message_id) { turn.message_ids.push(message_id.clone()); }
+                }
                 turn.ownership_complete = !snapshot.operations.iter().any(|operation| {
                     turn.run_ids.contains(&operation.run_id)
                         && operation.phase == OperationPhase::Unresolved
@@ -751,6 +932,7 @@ impl RuntimeManager {
             Ok(changes)
         })
         .await?;
+        session.settlement_failed = false;
         Ok(())
     }
 
@@ -1135,6 +1317,18 @@ impl RuntimeManager {
         }
         if name.ends_with(".get") || name == "skills.load" {
             let id = required_string(&args, "id")?;
+            if name == "skills.load" {
+                if let Some(loaded) = self
+                    .read(&accepted.conversation_id)
+                    .await?
+                    .extensions
+                    .get("loadedSkills")
+                    .and_then(|skills| skills.get(&id))
+                    .cloned()
+                {
+                    return Ok(loaded);
+                }
+            }
             let key = format!(
                 "{}:{id}",
                 if kind == KnowledgeKind::Skill {
@@ -1189,21 +1383,36 @@ impl RuntimeManager {
                     store.prepare_knowledge_undo(batch_id, vec![operation_id], inverse)
                 })
                 .await?;
-            let details = json!({"proposalId":call_id,"toolName":name,"operationId":prepared.mutation.operation_id,"changes":prepared.mutation.changes});
+            let details = knowledge_details(
+                call_id,
+                name,
+                &prepared.mutation.operation_id,
+                &prepared.mutation.changes,
+                false,
+            );
             if !self
                 .authorize_internal(accepted, call_id, details.clone())
                 .await?
             {
-                return Ok(json!({"status":"previewed","changes":prepared.mutation.changes}));
+                return Ok(details);
             }
             let receipt = self
                 .inner
                 .storage
                 .call(move |store| store.commit_knowledge_undo(&prepared.id, now_ms()))
                 .await?;
+            self.emit(RuntimeEvent::KnowledgeChanged {
+                revision: receipt.revision,
+            });
             let result = HostToolResult {
                 model_payload: json!({"status":"committed","operationId":receipt.operation_id,"revision":receipt.revision}),
-                details: json!(receipt),
+                details: knowledge_details(
+                    call_id,
+                    name,
+                    &receipt.operation_id,
+                    &receipt.changes,
+                    true,
+                ),
                 outcome: ToolOutcome::Success,
             };
             self.record_tool_result(accepted, name, call_id, &result)
@@ -1213,26 +1422,27 @@ impl RuntimeManager {
         let action = required_string(&args, "action")?;
         let id = if action == "create" {
             args.get("id")
-                .and_then(Value::as_str)
-                .map(str::to_owned)
-                .unwrap_or_else(new_id)
+                .map(|_| required_string(&args, "id"))
+                .transpose()?
         } else {
-            required_string(&args, "id")?
+            Some(required_string(&args, "id")?)
         };
-        let key = format!(
-            "{}:{id}",
-            if kind == KnowledgeKind::Skill {
-                "skill"
-            } else {
-                "memory"
-            }
-        );
-        let read_key = key.clone();
-        let before = self
-            .inner
-            .storage
-            .call(move |store| store.read_knowledge(&read_key))
-            .await?;
+        let before = if let Some(id) = &id {
+            let key = format!(
+                "{}:{id}",
+                if kind == KnowledgeKind::Skill {
+                    "skill"
+                } else {
+                    "memory"
+                }
+            );
+            self.inner
+                .storage
+                .call(move |store| store.read_knowledge(&key))
+                .await?
+        } else {
+            None
+        };
         if action != "create" && before.is_none() {
             return Err(RuntimeError::Invalid("id: 知识记录不存在".into()));
         }
@@ -1252,7 +1462,7 @@ impl RuntimeManager {
             ));
         }
         let mut after = before.clone().unwrap_or_else(|| KnowledgeRecord {
-            id,
+            id: id.clone().unwrap_or_default(),
             kind,
             enabled: true,
             ..Default::default()
@@ -1287,7 +1497,21 @@ impl RuntimeManager {
                             .map_err(|e| RuntimeError::Invalid(format!("{field}: {e}")))?;
                     }
                 }
+                if let Some(enabled) = args.get("enabled") {
+                    after.enabled = enabled
+                        .as_bool()
+                        .ok_or_else(|| RuntimeError::Invalid("enabled: 必须为布尔值".into()))?;
+                }
                 after.uses_original = false;
+                after.source_conversation_id = Some(accepted.conversation_id.clone());
+                after.source_message_id = self
+                    .read(&accepted.conversation_id)
+                    .await?
+                    .messages
+                    .iter()
+                    .rev()
+                    .find(|message| message.role == MessageRole::User)
+                    .map(|message| message.id.clone());
             }
             "setEnabled" => {
                 after.enabled = args
@@ -1295,53 +1519,60 @@ impl RuntimeManager {
                     .and_then(Value::as_bool)
                     .ok_or_else(|| RuntimeError::Invalid("enabled: 必须为布尔值".into()))?
             }
-            "delete" => {
-                if after.built_in {
-                    return Err(RuntimeError::Invalid(
-                        "action: 内置 Skill 可停用，不能删除".into(),
-                    ));
-                }
-            }
-            "restoreOriginal" => {
-                let builtin_key = format!("builtin:{}", after.key());
-                let original = self
-                    .inner
-                    .storage
-                    .call(move |store| store.knowledge_metadata(&builtin_key))
-                    .await?
-                    .ok_or_else(|| RuntimeError::Invalid("action: 没有内置原文可恢复".into()))?;
-                after = serde_json::from_str(&original)
-                    .map_err(|e| RuntimeError::Invalid(e.to_string()))?;
-                after.uses_original = true;
-            }
+            "delete" | "restoreOriginal" => {}
             _ => return Err(RuntimeError::Invalid("action: 不支持的知识动作".into())),
         }
-        after.source_conversation_id = Some(accepted.conversation_id.clone());
-        let mutation = KnowledgeMutation {
-            operation_id: format!("{}:{call_id}", accepted.run_id),
-            changes: vec![KnowledgeChange {
-                key,
-                expected_revision: revision,
-                before,
-                after: (action != "delete").then_some(after),
-            }],
-            ..Default::default()
+        let edit_action = match action.as_str() {
+            "delete" => KnowledgeEditAction::Delete,
+            "restoreOriginal" => KnowledgeEditAction::RestoreOriginal,
+            _ => KnowledgeEditAction::Save,
         };
-        let details = json!({"proposalId":call_id,"toolName":name,"operationId":mutation.operation_id,"changes":mutation.changes});
+        let operation_id = format!("{}:{call_id}", accepted.run_id);
+        let mutation = self
+            .inner
+            .storage
+            .call(move |store| {
+                store.prepare_knowledge_edit(
+                    edit_action,
+                    kind,
+                    id,
+                    revision,
+                    (edit_action == KnowledgeEditAction::Save).then_some(after),
+                    operation_id,
+                    None,
+                )
+            })
+            .await?;
+        let details = knowledge_details(
+            call_id,
+            name,
+            &mutation.operation_id,
+            &mutation.changes,
+            false,
+        );
         if !self
             .authorize_internal(accepted, call_id, details.clone())
             .await?
         {
-            return Ok(json!({"status":"previewed","changes":mutation.changes}));
+            return Ok(details);
         }
         let receipt = self
             .inner
             .storage
             .call(move |store| store.apply_knowledge(mutation, now_ms()))
             .await?;
+        self.emit(RuntimeEvent::KnowledgeChanged {
+            revision: receipt.revision,
+        });
         let result = HostToolResult {
             model_payload: json!({"status":"committed","operationId":receipt.operation_id,"revision":receipt.revision}),
-            details: json!(receipt),
+            details: knowledge_details(
+                call_id,
+                name,
+                &receipt.operation_id,
+                &receipt.changes,
+                true,
+            ),
             outcome: ToolOutcome::Success,
         };
         self.record_tool_result(accepted, name, call_id, &result)

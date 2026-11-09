@@ -15,6 +15,7 @@ impl RuntimeManager {
         references: Vec<ContextReference>,
         config: ConnectionConfig,
     ) -> Result<()> {
+        let references = self.freeze_selected_references(references).await?;
         let session = self.session(id).await;
         let mut session = session.lock().await;
         let key = input_id.to_owned();
@@ -43,17 +44,22 @@ impl RuntimeManager {
         message_id: &str,
         config: ConnectionConfig,
     ) -> Result<String> {
+        self.recover_operations(Some(id)).await?;
         let session = self.session(id).await;
         let mut session = session.lock().await;
         if session.active.is_some() {
             return Err(RuntimeError::Busy);
         }
         let snapshot = self.read(id).await?;
+        validate_execution_admission(&snapshot, false)?;
         let index = snapshot
             .messages
             .iter()
             .position(|m| m.id == message_id && m.role == MessageRole::Assistant)
             .ok_or_else(|| RuntimeError::Invalid("找不到要重新生成的回复".into()))?;
+        if index < snapshot.conversation.execution_history_start {
+            return Err(RuntimeError::Invalid("导入历史中的回复不能重新生成".into()));
+        }
         let accepted = self
             .accept_locked(id, &mut session, None, config, true, false)
             .await?;
@@ -100,7 +106,7 @@ impl RuntimeManager {
             .provider_history_for(&snapshot, &snapshot.messages[..index])
             .await?;
         let (sender, mut receiver) = mpsc::unbounded_channel();
-        let model = self.inner.model_client.run(&accepted.config, "Regenerate the assistant's reply from the supplied conversation. Give the replacement text only. Do not run business operations or claim new changes occurred.".into(), ProviderMessage::user("请重新生成对此前请求的回复文字。"), history, Vec::new(), Arc::new(context::NoTools), accepted.control.cancellation.clone(), sender);
+        let model = self.inner.model_client.run(&accepted.config, "Regenerate the assistant's reply from the supplied conversation. Give the replacement text only. Do not run business operations or claim new changes occurred.".into(), ProviderMessage::user("请重新生成对此前请求的回复文字。"), history, Vec::new(), self.transport_executor(accepted.conversation_id.clone(), Some(accepted.run_id.clone()), accepted.config.clone(), Arc::new(context::NoTools)), accepted.control.cancellation.clone(), sender);
         tokio::pin!(model);
         let result = loop {
             tokio::select! {
@@ -223,11 +229,14 @@ impl RuntimeManager {
         references: Vec<ContextReference>,
         config: ConnectionConfig,
     ) -> Result<String> {
+        self.recover_operations(Some(id)).await?;
+        let references = self.freeze_selected_references(references).await?;
         let session = self.session(id).await;
         let mut session = session.lock().await;
         if session.active.is_some() {
             return Err(RuntimeError::Busy);
         }
+        validate_execution_admission(&self.read(id).await?, false)?;
         self.preserve_answered_question(id, &config.connection_fingerprint, true)
             .await?;
         let snapshot = self.read(id).await?;
@@ -236,6 +245,16 @@ impl RuntimeManager {
             .iter()
             .find(|m| m.id == message_id && m.role == MessageRole::User)
             .ok_or_else(|| RuntimeError::Invalid("找不到要编辑的用户请求".into()))?;
+        if snapshot
+            .messages
+            .iter()
+            .position(|message| message.id == source.id)
+            .is_some_and(|index| index < snapshot.conversation.execution_history_start)
+        {
+            return Err(RuntimeError::Invalid(
+                "导入历史中的请求不能编辑并重做".into(),
+            ));
+        }
         let first_turn = snapshot
             .turns
             .iter()
@@ -308,11 +327,21 @@ impl RuntimeManager {
         snapshot: ConversationSnapshot,
         batch: RedoBatch,
     ) {
-        match self
-            .prepare_and_apply_redo(&accepted, snapshot, batch.clone())
-            .await
-        {
+        let result = self
+            .apply_redo_with_barrier(
+                &accepted.conversation_id,
+                &accepted.run_id,
+                &accepted.control.cancellation,
+                snapshot,
+                batch.clone(),
+            )
+            .await;
+        match result {
             Ok(prompt) => {
+                if let Err(error) = self.activate_redo_replay(&accepted, &batch.id).await {
+                    self.fail_redo(accepted, batch.id, error).await;
+                    return;
+                }
                 let accepted = AcceptedRun {
                     prompt: Some(prompt),
                     ..accepted
@@ -320,41 +349,99 @@ impl RuntimeManager {
                 self.drive(accepted).await;
             }
             Err(error) => {
-                let batch_id = batch.id;
-                let message = error.to_string();
-                let stored_error = message.clone();
-                let _ = self
-                    .change(&accepted.conversation_id, move |snapshot| {
-                        let mut batch = snapshot
-                            .redo_batches
-                            .iter()
-                            .find(|b| b.id == batch_id)
-                            .cloned()
-                            .ok_or(StorageError::NotFound(batch_id))?;
-                        batch.phase = RedoPhase::Failed;
-                        batch.last_error = Some(stored_error);
-                        Ok(vec![JournalChange::RedoBatchUpserted { batch }])
-                    })
-                    .await;
-                let session = self.session(&accepted.conversation_id).await;
-                let mut session = session.lock().await;
-                match self
-                    .finish_run(&accepted, Err(RuntimeError::Invalid(message)))
-                    .await
-                {
-                    Ok(snapshot) => self.settle_session(&accepted, &snapshot, &mut session),
-                    Err(_) => self.failed_settlement(&accepted, &mut session),
-                }
+                self.fail_redo(accepted, batch.id, error).await;
             }
+        }
+    }
+
+    async fn fail_redo(&self, accepted: AcceptedRun, batch_id: String, error: RuntimeError) {
+        let message = error.to_string();
+        let stored_error = message.clone();
+        let _ = self
+            .change(&accepted.conversation_id, move |snapshot| {
+                let mut batch = snapshot
+                    .redo_batches
+                    .iter()
+                    .find(|b| b.id == batch_id)
+                    .cloned()
+                    .ok_or(StorageError::NotFound(batch_id))?;
+                // Preserve Prepared/Undoing: recovery must know whether an inverse
+                // could have started, even when the last acknowledgement was lost.
+                batch.last_error = Some(stored_error);
+                Ok(vec![JournalChange::RedoBatchUpserted { batch }])
+            })
+            .await;
+        let session = self.session(&accepted.conversation_id).await;
+        let mut session = session.lock().await;
+        match self
+            .finish_run(&accepted, Err(RuntimeError::Invalid(message)))
+            .await
+        {
+            Ok(snapshot) => self.settle_session(&accepted, &snapshot, &mut session),
+            Err(_) => self.failed_settlement(&accepted, &mut session),
+        }
+    }
+
+    async fn apply_redo_with_barrier(
+        &self,
+        id: &str,
+        run_id: &str,
+        cancellation: &CancellationToken,
+        source: ConversationSnapshot,
+        batch: RedoBatch,
+    ) -> Result<Message> {
+        self.inner
+            .host
+            .begin_history(id.into(), batch.id.clone())
+            .await?;
+        let batch_id = batch.id.clone();
+        let result = self
+            .prepare_and_apply_redo(id, run_id, cancellation, source, batch)
+            .await;
+        let release = result.is_ok()
+            || self.read(id).await.is_ok_and(|snapshot| {
+                snapshot
+                    .redo_batches
+                    .iter()
+                    .find(|batch| batch.id == batch_id)
+                    .is_some_and(|batch| {
+                        batch.phase == RedoPhase::Prepared
+                            || snapshot
+                                .history_versions
+                                .iter()
+                                .any(|version| version.id == batch.history_version_id)
+                    })
+            });
+        let end = self
+            .inner
+            .host
+            .end_history(id.into(), batch_id, release)
+            .await;
+        match (result, end) {
+            (Ok(prompt), Ok(())) => Ok(prompt),
+            (Err(error), _) => Err(error),
+            (_, Err(error)) => Err(error.into()),
         }
     }
 
     async fn prepare_and_apply_redo(
         &self,
-        accepted: &AcceptedRun,
+        id: &str,
+        run_id: &str,
+        cancellation: &CancellationToken,
         source: ConversationSnapshot,
         mut batch: RedoBatch,
     ) -> Result<Message> {
+        if format!(
+            "{:x}",
+            Sha256::digest(
+                serde_json::to_vec(&self.read(id).await?.messages)
+                    .map_err(|error| RuntimeError::Invalid(error.to_string()))?
+            )
+        ) != batch.context_digest
+        {
+            return Err(RuntimeError::Invalid("历史来源已改变".into()));
+        }
         let affected: Vec<_> = source
             .turns
             .iter()
@@ -415,13 +502,13 @@ impl RuntimeManager {
                 } else {
                     self.inner
                         .host
-                        .prepare_undo(accepted.conversation_id.clone(), owner, operation_ids)
+                        .prepare_undo(id.to_owned(), owner, operation_ids)
                         .await?
                 };
                 batch.tickets.push(ticket);
             }
             let stored = batch.clone();
-            self.change(&accepted.conversation_id, move |_| {
+            self.change(id, move |_| {
                 Ok(vec![JournalChange::RedoBatchUpserted { batch: stored }])
             })
             .await?;
@@ -430,28 +517,32 @@ impl RuntimeManager {
             if batch.completed_owners.contains(&ticket.owner) {
                 continue;
             }
-            if accepted.control.cancellation.is_cancelled() {
+            if cancellation.is_cancelled() {
                 return Err(RuntimeError::Invalid("历史重做已停止".into()));
             }
             batch.phase = RedoPhase::Undoing;
             let stored = batch.clone();
-            self.change(&accepted.conversation_id, move |_| {
+            self.change(id, move |_| {
                 Ok(vec![JournalChange::RedoBatchUpserted { batch: stored }])
             })
             .await?;
             if ticket.owner == OperationStore::Knowledge {
                 let token = ticket.token.clone();
-                self.inner
+                let receipt = self
+                    .inner
                     .storage
                     .call(move |store| store.commit_knowledge_undo(&token, now_ms()))
                     .await?;
+                let _ = self.inner.events.send(RuntimeEvent::KnowledgeChanged {
+                    revision: receipt.revision,
+                });
             } else {
                 // Once accepted, a native inverse is awaited through its actual
                 // terminal receipt. A stop only prevents the next phase.
                 let result = self
                     .inner
                     .host
-                    .commit_undo(accepted.conversation_id.clone(), ticket.clone())
+                    .commit_undo(id.to_owned(), ticket.clone())
                     .await?;
                 if result.outcome != ToolOutcome::Success {
                     return Err(RuntimeError::Invalid(format!(
@@ -462,7 +553,7 @@ impl RuntimeManager {
             }
             batch.completed_owners.push(ticket.owner);
             let stored = batch.clone();
-            self.change(&accepted.conversation_id, move |_| {
+            self.change(id, move |_| {
                 Ok(vec![JournalChange::RedoBatchUpserted { batch: stored }])
             })
             .await?;
@@ -493,7 +584,7 @@ impl RuntimeManager {
             id: batch.source_turn_id.clone(),
             request_message_id: prompt.id.clone(),
             message_ids: vec![prompt.id.clone()],
-            run_ids: vec![accepted.run_id.clone()],
+            run_ids: vec![run_id.to_owned()],
             ..Default::default()
         });
         let version = HistoryVersion {
@@ -505,8 +596,9 @@ impl RuntimeManager {
             turns: source.turns.clone(),
             provider_history: source.provider_history.clone(),
         };
-        batch.phase = RedoPhase::Running;
-        self.change(&accepted.conversation_id, move |snapshot| {
+        batch.phase = RedoPhase::Ready;
+        batch.last_error = None;
+        self.change(id, move |snapshot| {
             if format!(
                 "{:x}",
                 Sha256::digest(serde_json::to_vec(&snapshot.messages)?)
@@ -529,12 +621,230 @@ impl RuntimeManager {
         Ok(prompt)
     }
 
+    async fn activate_redo_replay(&self, accepted: &AcceptedRun, batch_id: &str) -> Result<()> {
+        let source = self.read(&accepted.conversation_id).await?;
+        let batch = source
+            .redo_batches
+            .iter()
+            .find(|batch| batch.id == batch_id)
+            .ok_or_else(|| RuntimeError::Invalid("重做批次不存在".into()))?;
+        let selected_skills = (batch.phase == RedoPhase::Ready)
+            .then(|| self.frozen_selected_skills(&batch.context_references))
+            .transpose()?;
+        let available = self.available_tool_names();
+        let mut exposed = accepted
+            .control
+            .exposed
+            .lock()
+            .expect("runtime tools mutex poisoned")
+            .clone();
+        if let Some(skills) = &selected_skills {
+            for skill in skills {
+                exposed.extend(
+                    skill
+                        .required_tools
+                        .iter()
+                        .chain(&skill.optional_tools)
+                        .filter(|name| available.contains(*name))
+                        .cloned(),
+                );
+            }
+        }
+        let mut exposed_names: Vec<_> = exposed.iter().cloned().collect();
+        exposed_names.sort();
+        let batch_id = batch_id.to_owned();
+        let run_id = accepted.run_id.clone();
+        self.change(&accepted.conversation_id, move |snapshot| {
+            let mut batch = snapshot
+                .redo_batches
+                .iter()
+                .find(|batch| batch.id == batch_id)
+                .cloned()
+                .ok_or(StorageError::NotFound(batch_id))?;
+            if !snapshot
+                .history_versions
+                .iter()
+                .any(|version| version.id == batch.history_version_id)
+            {
+                return Err(StorageError::Conflict("历史逆变更尚未完成".into()));
+            }
+            batch.phase = RedoPhase::Running;
+            batch.replay_run_id = run_id;
+            batch.last_error = None;
+            let mut changes = vec![JournalChange::RedoBatchUpserted { batch }];
+            if let Some(skills) = selected_skills {
+                if let Some(loaded) = snapshot.extensions.get("loadedSkills") {
+                    changes.extend(loaded.keys().map(|id| JournalChange::ExtensionSet {
+                        namespace: "loadedSkills".into(),
+                        id: id.clone(),
+                        value: None,
+                    }));
+                }
+                for skill in skills {
+                    changes.push(JournalChange::ExtensionSet {
+                        namespace: "loadedSkills".into(),
+                        id: skill.id.clone(),
+                        value: Some(serde_json::to_value(skill)?),
+                    });
+                }
+                changes.push(JournalChange::ExtensionSet {
+                    namespace: "runtime".into(),
+                    id: "exposedTools".into(),
+                    value: Some(serde_json::to_value(exposed_names)?),
+                });
+            }
+            Ok(changes)
+        })
+        .await?;
+        *accepted
+            .control
+            .exposed
+            .lock()
+            .expect("runtime tools mutex poisoned") = exposed;
+        Ok(())
+    }
+
+    /// Completes admitted inverses after reopening without starting a model run.
+    pub async fn recover_history_undo(&self, id: &str, batch_id: &str) -> Result<()> {
+        let session = self.session(id).await;
+        let session = session.lock().await;
+        if session.active.is_some() {
+            return Err(RuntimeError::Busy);
+        }
+        let snapshot = self.read(id).await?;
+        let batch = snapshot
+            .redo_batches
+            .iter()
+            .find(|batch| batch.id == batch_id)
+            .cloned()
+            .ok_or_else(|| RuntimeError::Invalid("重做批次不存在".into()))?;
+        if matches!(
+            batch.phase,
+            RedoPhase::Prepared | RedoPhase::Completed | RedoPhase::Cancelled
+        ) || snapshot
+            .history_versions
+            .iter()
+            .any(|version| version.id == batch.history_version_id)
+        {
+            self.inner
+                .host
+                .end_history(id.into(), batch.id, true)
+                .await?;
+            return Ok(());
+        }
+        let run_id = batch.replay_run_id.clone();
+        self.apply_redo_with_barrier(id, &run_id, &CancellationToken::new(), snapshot, batch)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn replace_pending_redo_references(
+        &self,
+        id: &str,
+        batch_id: &str,
+        expected_sequence: u64,
+        references: Vec<ContextReference>,
+    ) -> Result<ConversationSnapshot> {
+        let session = self.session(id).await;
+        let session = session.lock().await;
+        if session.active.is_some() {
+            return Err(RuntimeError::Busy);
+        }
+        let references = self.freeze_selected_references(references).await?;
+        let mut source = self.read(id).await?;
+        if source.sequence != expected_sequence || source.conversation.archived {
+            return Err(RuntimeError::Invalid("重做请求已经改变".into()));
+        }
+        let mut batch = source
+            .redo_batches
+            .iter()
+            .find(|batch| batch.id == batch_id)
+            .cloned()
+            .ok_or_else(|| RuntimeError::Invalid("重做批次不存在".into()))?;
+        if matches!(batch.phase, RedoPhase::Completed | RedoPhase::Cancelled)
+            || !source
+                .history_versions
+                .iter()
+                .any(|version| version.id == batch.history_version_id)
+        {
+            return Err(RuntimeError::Invalid("历史逆变更尚未完成".into()));
+        }
+        let index = source
+            .messages
+            .iter()
+            .position(|message| message.id == batch.source_message_id)
+            .ok_or_else(|| RuntimeError::Invalid("重做来源请求不存在".into()))?;
+        let mut prompt = source.messages[index].clone();
+        let mut attachments: HashSet<_> = prompt.attachment_ids.iter().cloned().collect();
+        attachments.extend(
+            references
+                .iter()
+                .filter_map(|reference| reference.attachment_id.clone()),
+        );
+        let mut attachment_ids: Vec<_> = attachments.into_iter().collect();
+        attachment_ids.sort();
+        prompt.context_references = references.clone();
+        prompt.attachment_ids = attachment_ids.clone();
+        prompt.attachment_delivery = AttachmentDelivery::Local;
+        batch.context_references = references;
+        batch.attachment_ids = attachment_ids;
+        source.messages[index] = prompt.clone();
+        let history_messages = if batch.phase == RedoPhase::Ready {
+            &source.messages[..index]
+        } else {
+            source.messages.as_slice()
+        };
+        let history = self.provider_history_for(&source, history_messages).await?;
+        let history = context::archive_history(history, &source.attachments)?;
+        self.change(id, move |snapshot| {
+            if snapshot.sequence != expected_sequence {
+                return Err(StorageError::Conflict("重做请求已经改变".into()));
+            }
+            Ok(vec![
+                JournalChange::MessageUpserted { message: prompt },
+                JournalChange::RedoBatchUpserted { batch },
+                JournalChange::ProviderHistoryReplaced { messages: history },
+                JournalChange::CheckpointSet { checkpoint: None },
+            ])
+        })
+        .await
+    }
+
+    pub async fn cancel_prepared_redo(&self, id: &str, batch_id: &str) -> Result<()> {
+        let session = self.session(id).await;
+        let session = session.lock().await;
+        if session.active.is_some() {
+            return Err(RuntimeError::Busy);
+        }
+        let batch_id = batch_id.to_owned();
+        let owner = batch_id.clone();
+        self.change(id, move |snapshot| {
+            let mut batch = snapshot
+                .redo_batches
+                .iter()
+                .find(|batch| batch.id == batch_id)
+                .cloned()
+                .ok_or(StorageError::NotFound(batch_id))?;
+            if batch.phase != RedoPhase::Prepared || !batch.completed_owners.is_empty() {
+                return Err(StorageError::Conflict(
+                    "历史逆变更已经开始，须先完成恢复".into(),
+                ));
+            }
+            batch.phase = RedoPhase::Cancelled;
+            Ok(vec![JournalChange::RedoBatchUpserted { batch }])
+        })
+        .await?;
+        self.inner.host.end_history(id.into(), owner, true).await?;
+        Ok(())
+    }
+
     pub async fn resume_redo(
         &self,
         id: &str,
         batch_id: &str,
         config: ConnectionConfig,
     ) -> Result<String> {
+        self.recover_operations(Some(id)).await?;
         let session = self.session(id).await;
         let mut session = session.lock().await;
         if session.active.is_some() {
@@ -550,6 +860,25 @@ impl RuntimeManager {
         if matches!(batch.phase, RedoPhase::Completed | RedoPhase::Cancelled) {
             return Err(RuntimeError::Invalid("重做批次已结束".into()));
         }
+        let ready_input = if batch.phase == RedoPhase::Ready {
+            self.frozen_selected_skills(&batch.context_references)?;
+            let index = snapshot
+                .messages
+                .iter()
+                .position(|message| message.id == batch.source_message_id)
+                .ok_or_else(|| RuntimeError::Invalid("重做来源请求不存在".into()))?;
+            let mut prompt = snapshot.messages[index].clone();
+            prompt.model_selection = Some(config.selection());
+            prompt.provider_protocol = Some(config.protocol.as_str().into());
+            let prefix = context::archive_history(
+                self.provider_history_for(&snapshot, &snapshot.messages[..index])
+                    .await?,
+                &snapshot.attachments,
+            )?;
+            Some((prompt, prefix))
+        } else {
+            None
+        };
         let accepted = self
             .accept_locked(id, &mut session, None, config, true, false)
             .await?;
@@ -566,7 +895,26 @@ impl RuntimeManager {
             .iter()
             .any(|v| v.id == batch.history_version_id)
         {
-            self.spawn_run(accepted);
+            self.inner
+                .host
+                .end_history(id.into(), batch.id.clone(), true)
+                .await?;
+            let prompt = if let Some((prompt, prefix)) = ready_input {
+                let stored = prompt.clone();
+                self.change(id, move |_| {
+                    Ok(vec![
+                        JournalChange::MessageUpserted { message: stored },
+                        JournalChange::ProviderHistoryReplaced { messages: prefix },
+                        JournalChange::CheckpointSet { checkpoint: None },
+                    ])
+                })
+                .await?;
+                Some(prompt)
+            } else {
+                None
+            };
+            self.activate_redo_replay(&accepted, &batch.id).await?;
+            self.spawn_run(AcceptedRun { prompt, ..accepted });
         } else {
             tokio::spawn(async move {
                 manager.redo_worker(accepted, snapshot, batch).await;
@@ -612,6 +960,15 @@ impl RuntimeManager {
                     .find(|b| b.id == key)
                     .cloned()
                     .ok_or(StorageError::NotFound(key))?;
+                if !snapshot
+                    .history_versions
+                    .iter()
+                    .any(|version| version.id == batch.history_version_id)
+                {
+                    return Err(StorageError::Conflict(
+                        "历史逆变更尚未完成，不能结束重做".into(),
+                    ));
+                }
                 batch.phase = RedoPhase::Cancelled;
                 Ok(vec![JournalChange::RedoBatchUpserted { batch }])
             })
@@ -622,6 +979,10 @@ impl RuntimeManager {
             conversation_id: id.into(),
             presentation: session.presentation.clone(),
         });
+        self.inner
+            .host
+            .end_history(id.into(), batch_id.into(), true)
+            .await?;
         Ok(())
     }
 

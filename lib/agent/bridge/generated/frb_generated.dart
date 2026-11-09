@@ -5,6 +5,8 @@
 
 import 'api.dart';
 import 'api/contracts.dart';
+import 'api/history.dart';
+import 'api/management_contracts.dart';
 import 'api/models.dart';
 
 import 'dart:async';
@@ -69,7 +71,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -649331833;
+  int get rustContentHash => -1998305564;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -89,9 +91,57 @@ abstract class RustLibApi extends BaseApi {
     required String mediaType,
   });
 
+  Future<ViewConversationSnapshot> crateApiAgentCoreAdmitDraftAttachment({
+    required AgentCore that,
+    required DraftAttachmentAdmission request,
+  });
+
+  Future<bool> crateApiAgentCoreArchiveRestoreState({
+    required AgentCore that,
+    required String json,
+    required String restoreId,
+  });
+
+  Future<bool> crateApiAgentCoreAttachmentRestoreState({
+    required AgentCore that,
+    required ViewAttachmentMetadata metadata,
+  });
+
+  Future<void> crateApiAgentCoreCancelAttachmentImport({
+    required AgentCore that,
+    required String importId,
+  });
+
+  Future<void> crateApiAgentCoreCancelPreparedRedo({
+    required AgentCore that,
+    required String conversationId,
+    required String batchId,
+  });
+
   Future<CommandResult> crateApiAgentCoreDispatch({
     required AgentCore that,
     required AgentCommand command,
+  });
+
+  Future<ViewKnowledgeReceipt> crateApiAgentCoreEditKnowledge({
+    required AgentCore that,
+    required KnowledgeEdit request,
+  });
+
+  Future<String> crateApiAgentCoreExportArchiveJson({
+    required AgentCore that,
+    List<String>? conversationIds,
+    List<String>? knowledgeKeys,
+  });
+
+  Future<List<HistoryRecoveryTarget>> crateApiAgentCoreHistoryRecoveryTargets({
+    required AgentCore that,
+  });
+
+  Future<void> crateApiAgentCoreImportArchiveJson({
+    required AgentCore that,
+    required String json,
+    required String restoreId,
   });
 
   Future<ViewAttachmentMetadata> crateApiAgentCoreImportAttachment({
@@ -102,9 +152,25 @@ abstract class RustLibApi extends BaseApi {
 
   Future<AgentCore> crateApiAgentCoreInitialize({required CoreConfig config});
 
+  Future<List<String>> crateApiAgentCorePruneHistory({
+    required AgentCore that,
+    required int cutoffMs,
+  });
+
   Future<QueryResult> crateApiAgentCoreQuery({
     required AgentCore that,
     required AgentQuery query,
+  });
+
+  Future<void> crateApiAgentCoreRecoverHistoryUndo({
+    required AgentCore that,
+    required String conversationId,
+    required String batchId,
+  });
+
+  Future<List<String>> crateApiAgentCoreRecoverOperations({
+    required AgentCore that,
+    String? conversationId,
   });
 
   Future<ViewKnowledgeState> crateApiAgentCoreRegisterBuiltinSkills({
@@ -112,7 +178,35 @@ abstract class RustLibApi extends BaseApi {
     required List<ViewKnowledgeRecord> records,
   });
 
+  Future<ViewConversationSnapshot> crateApiAgentCoreRemoveDraftAttachment({
+    required AgentCore that,
+    required DraftAttachmentTarget target,
+    required String attachmentId,
+  });
+
+  Future<ViewConversationSnapshot>
+  crateApiAgentCoreReplacePendingRedoReferences({
+    required AgentCore that,
+    required String conversationId,
+    required String batchId,
+    required int expectedSequence,
+    required List<ViewContextReference> references,
+  });
+
+  Future<JsonPayload> crateApiAgentCoreRunHostTool({
+    required AgentCore that,
+    required String conversationId,
+    required String toolName,
+    required JsonPayload arguments,
+    JsonPayload? environment,
+  });
+
   Future<void> crateApiAgentCoreShutdown({required AgentCore that});
+
+  Future<void> crateApiAgentCoreShutdownForDataClear({
+    required AgentCore that,
+    String? conversationId,
+  });
 
   Future<void> crateApiAgentCoreSubmitHostProgress({
     required AgentCore that,
@@ -124,6 +218,21 @@ abstract class RustLibApi extends BaseApi {
     required HostResult result,
   });
 
+  Future<List<ToolDefinition>> crateApiAgentCoreToolDefinitions({
+    required AgentCore that,
+  });
+
+  Future<ViewConversationSnapshot> crateApiAgentCoreUseDraftAttachment({
+    required AgentCore that,
+    required DraftAttachmentTarget target,
+    required String attachmentId,
+  });
+
+  Future<void> crateApiAgentCoreVerifyAttachment({
+    required AgentCore that,
+    required ViewAttachmentMetadata metadata,
+  });
+
   Stream<AgentEvent> crateApiAgentCoreWatchEvents({required AgentCore that});
 
   Future<ViewAttachmentMetadata> crateApiAgentCoreWriteAttachment({
@@ -133,6 +242,9 @@ abstract class RustLibApi extends BaseApi {
   });
 
   Future<CommandResult> crateApiContractsCommandResultDefault();
+
+  Future<ConversationSelection>
+  crateApiManagementContractsConversationSelectionDefault();
 
   Future<QueryResult> crateApiContractsQueryResultDefault();
 
@@ -198,6 +310,203 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<ViewConversationSnapshot> crateApiAgentCoreAdmitDraftAttachment({
+    required AgentCore that,
+    required DraftAttachmentAdmission request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_draft_attachment_admission(
+            request,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 2,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_view_conversation_snapshot,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiAgentCoreAdmitDraftAttachmentConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCoreAdmitDraftAttachmentConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_admit_draft_attachment",
+        argNames: ["that", "request"],
+      );
+
+  @override
+  Future<bool> crateApiAgentCoreArchiveRestoreState({
+    required AgentCore that,
+    required String json,
+    required String restoreId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          sse_encode_String(json, serializer);
+          sse_encode_String(restoreId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 3,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiAgentCoreArchiveRestoreStateConstMeta,
+        argValues: [that, json, restoreId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCoreArchiveRestoreStateConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_archive_restore_state",
+        argNames: ["that", "json", "restoreId"],
+      );
+
+  @override
+  Future<bool> crateApiAgentCoreAttachmentRestoreState({
+    required AgentCore that,
+    required ViewAttachmentMetadata metadata,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_view_attachment_metadata(metadata, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 4,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_bool,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiAgentCoreAttachmentRestoreStateConstMeta,
+        argValues: [that, metadata],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCoreAttachmentRestoreStateConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_attachment_restore_state",
+        argNames: ["that", "metadata"],
+      );
+
+  @override
+  Future<void> crateApiAgentCoreCancelAttachmentImport({
+    required AgentCore that,
+    required String importId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          sse_encode_String(importId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 5,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiAgentCoreCancelAttachmentImportConstMeta,
+        argValues: [that, importId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCoreCancelAttachmentImportConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_cancel_attachment_import",
+        argNames: ["that", "importId"],
+      );
+
+  @override
+  Future<void> crateApiAgentCoreCancelPreparedRedo({
+    required AgentCore that,
+    required String conversationId,
+    required String batchId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          sse_encode_String(conversationId, serializer);
+          sse_encode_String(batchId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 6,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiAgentCoreCancelPreparedRedoConstMeta,
+        argValues: [that, conversationId, batchId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCoreCancelPreparedRedoConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_cancel_prepared_redo",
+        argNames: ["that", "conversationId", "batchId"],
+      );
+
+  @override
   Future<CommandResult> crateApiAgentCoreDispatch({
     required AgentCore that,
     required AgentCommand command,
@@ -214,7 +523,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 2,
+            funcId: 7,
             port: port_,
           );
         },
@@ -235,6 +544,160 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   );
 
   @override
+  Future<ViewKnowledgeReceipt> crateApiAgentCoreEditKnowledge({
+    required AgentCore that,
+    required KnowledgeEdit request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_knowledge_edit(request, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 8,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_view_knowledge_receipt,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiAgentCoreEditKnowledgeConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCoreEditKnowledgeConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_edit_knowledge",
+        argNames: ["that", "request"],
+      );
+
+  @override
+  Future<String> crateApiAgentCoreExportArchiveJson({
+    required AgentCore that,
+    List<String>? conversationIds,
+    List<String>? knowledgeKeys,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          sse_encode_opt_list_String(conversationIds, serializer);
+          sse_encode_opt_list_String(knowledgeKeys, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 9,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiAgentCoreExportArchiveJsonConstMeta,
+        argValues: [that, conversationIds, knowledgeKeys],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCoreExportArchiveJsonConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_export_archive_json",
+        argNames: ["that", "conversationIds", "knowledgeKeys"],
+      );
+
+  @override
+  Future<List<HistoryRecoveryTarget>> crateApiAgentCoreHistoryRecoveryTargets({
+    required AgentCore that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 10,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_history_recovery_target,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiAgentCoreHistoryRecoveryTargetsConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCoreHistoryRecoveryTargetsConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_history_recovery_targets",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<void> crateApiAgentCoreImportArchiveJson({
+    required AgentCore that,
+    required String json,
+    required String restoreId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          sse_encode_String(json, serializer);
+          sse_encode_String(restoreId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 11,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiAgentCoreImportArchiveJsonConstMeta,
+        argValues: [that, json, restoreId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCoreImportArchiveJsonConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_import_archive_json",
+        argNames: ["that", "json", "restoreId"],
+      );
+
+  @override
   Future<ViewAttachmentMetadata> crateApiAgentCoreImportAttachment({
     required AgentCore that,
     required ViewAttachmentMetadata metadata,
@@ -253,7 +716,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 3,
+            funcId: 12,
             port: port_,
           );
         },
@@ -284,7 +747,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 4,
+            funcId: 13,
             port: port_,
           );
         },
@@ -307,6 +770,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<List<String>> crateApiAgentCorePruneHistory({
+    required AgentCore that,
+    required int cutoffMs,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          sse_encode_CastedPrimitive_i_64(cutoffMs, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 14,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiAgentCorePruneHistoryConstMeta,
+        argValues: [that, cutoffMs],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCorePruneHistoryConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_prune_history",
+        argNames: ["that", "cutoffMs"],
+      );
+
+  @override
   Future<QueryResult> crateApiAgentCoreQuery({
     required AgentCore that,
     required AgentQuery query,
@@ -323,7 +824,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 5,
+            funcId: 15,
             port: port_,
           );
         },
@@ -344,6 +845,84 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   );
 
   @override
+  Future<void> crateApiAgentCoreRecoverHistoryUndo({
+    required AgentCore that,
+    required String conversationId,
+    required String batchId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          sse_encode_String(conversationId, serializer);
+          sse_encode_String(batchId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 16,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiAgentCoreRecoverHistoryUndoConstMeta,
+        argValues: [that, conversationId, batchId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCoreRecoverHistoryUndoConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_recover_history_undo",
+        argNames: ["that", "conversationId", "batchId"],
+      );
+
+  @override
+  Future<List<String>> crateApiAgentCoreRecoverOperations({
+    required AgentCore that,
+    String? conversationId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          sse_encode_opt_String(conversationId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 17,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiAgentCoreRecoverOperationsConstMeta,
+        argValues: [that, conversationId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCoreRecoverOperationsConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_recover_operations",
+        argNames: ["that", "conversationId"],
+      );
+
+  @override
   Future<ViewKnowledgeState> crateApiAgentCoreRegisterBuiltinSkills({
     required AgentCore that,
     required List<ViewKnowledgeRecord> records,
@@ -360,7 +939,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 18,
             port: port_,
           );
         },
@@ -382,6 +961,153 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<ViewConversationSnapshot> crateApiAgentCoreRemoveDraftAttachment({
+    required AgentCore that,
+    required DraftAttachmentTarget target,
+    required String attachmentId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_draft_attachment_target(target, serializer);
+          sse_encode_String(attachmentId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 19,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_view_conversation_snapshot,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiAgentCoreRemoveDraftAttachmentConstMeta,
+        argValues: [that, target, attachmentId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCoreRemoveDraftAttachmentConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_remove_draft_attachment",
+        argNames: ["that", "target", "attachmentId"],
+      );
+
+  @override
+  Future<ViewConversationSnapshot>
+  crateApiAgentCoreReplacePendingRedoReferences({
+    required AgentCore that,
+    required String conversationId,
+    required String batchId,
+    required int expectedSequence,
+    required List<ViewContextReference> references,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          sse_encode_String(conversationId, serializer);
+          sse_encode_String(batchId, serializer);
+          sse_encode_CastedPrimitive_u_64(expectedSequence, serializer);
+          sse_encode_list_view_context_reference(references, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 20,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_view_conversation_snapshot,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiAgentCoreReplacePendingRedoReferencesConstMeta,
+        argValues: [
+          that,
+          conversationId,
+          batchId,
+          expectedSequence,
+          references,
+        ],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCoreReplacePendingRedoReferencesConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_replace_pending_redo_references",
+        argNames: [
+          "that",
+          "conversationId",
+          "batchId",
+          "expectedSequence",
+          "references",
+        ],
+      );
+
+  @override
+  Future<JsonPayload> crateApiAgentCoreRunHostTool({
+    required AgentCore that,
+    required String conversationId,
+    required String toolName,
+    required JsonPayload arguments,
+    JsonPayload? environment,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          sse_encode_String(conversationId, serializer);
+          sse_encode_String(toolName, serializer);
+          sse_encode_box_autoadd_json_payload(arguments, serializer);
+          sse_encode_opt_box_autoadd_json_payload(environment, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 21,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_json_payload,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiAgentCoreRunHostToolConstMeta,
+        argValues: [that, conversationId, toolName, arguments, environment],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCoreRunHostToolConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_run_host_tool",
+        argNames: [
+          "that",
+          "conversationId",
+          "toolName",
+          "arguments",
+          "environment",
+        ],
+      );
+
+  @override
   Future<void> crateApiAgentCoreShutdown({required AgentCore that}) {
     return handler.executeNormal(
       NormalTask(
@@ -394,7 +1120,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 22,
             port: port_,
           );
         },
@@ -413,6 +1139,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "AgentCore_shutdown", argNames: ["that"]);
 
   @override
+  Future<void> crateApiAgentCoreShutdownForDataClear({
+    required AgentCore that,
+    String? conversationId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          sse_encode_opt_String(conversationId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 23,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiAgentCoreShutdownForDataClearConstMeta,
+        argValues: [that, conversationId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCoreShutdownForDataClearConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_shutdown_for_data_clear",
+        argNames: ["that", "conversationId"],
+      );
+
+  @override
   Future<void> crateApiAgentCoreSubmitHostProgress({
     required AgentCore that,
     required AgentHostProgress progress,
@@ -429,7 +1193,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 8,
+            funcId: 24,
             port: port_,
           );
         },
@@ -467,7 +1231,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 9,
+            funcId: 25,
             port: port_,
           );
         },
@@ -489,6 +1253,120 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<List<ToolDefinition>> crateApiAgentCoreToolDefinitions({
+    required AgentCore that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 26,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_tool_definition,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiAgentCoreToolDefinitionsConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCoreToolDefinitionsConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_tool_definitions",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<ViewConversationSnapshot> crateApiAgentCoreUseDraftAttachment({
+    required AgentCore that,
+    required DraftAttachmentTarget target,
+    required String attachmentId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_draft_attachment_target(target, serializer);
+          sse_encode_String(attachmentId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 27,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_view_conversation_snapshot,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiAgentCoreUseDraftAttachmentConstMeta,
+        argValues: [that, target, attachmentId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCoreUseDraftAttachmentConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_use_draft_attachment",
+        argNames: ["that", "target", "attachmentId"],
+      );
+
+  @override
+  Future<void> crateApiAgentCoreVerifyAttachment({
+    required AgentCore that,
+    required ViewAttachmentMetadata metadata,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_view_attachment_metadata(metadata, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 28,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiAgentCoreVerifyAttachmentConstMeta,
+        argValues: [that, metadata],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCoreVerifyAttachmentConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_verify_attachment",
+        argNames: ["that", "metadata"],
+      );
+
+  @override
   Stream<AgentEvent> crateApiAgentCoreWatchEvents({required AgentCore that}) {
     final sink = RustStreamSink<AgentEvent>();
     unawaited(
@@ -504,7 +1382,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 10,
+              funcId: 29,
               port: port_,
             );
           },
@@ -546,7 +1424,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 30,
             port: port_,
           );
         },
@@ -576,7 +1454,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 12,
+            funcId: 31,
             port: port_,
           );
         },
@@ -595,6 +1473,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "command_result_default", argNames: []);
 
   @override
+  Future<ConversationSelection>
+  crateApiManagementContractsConversationSelectionDefault() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 32,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_conversation_selection,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiManagementContractsConversationSelectionDefaultConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiManagementContractsConversationSelectionDefaultConstMeta =>
+      const TaskConstMeta(
+        debugName: "conversation_selection_default",
+        argNames: [],
+      );
+
+  @override
   Future<QueryResult> crateApiContractsQueryResultDefault() {
     return handler.executeNormal(
       NormalTask(
@@ -603,7 +1514,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 13,
+            funcId: 33,
             port: port_,
           );
         },
@@ -699,6 +1610,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  Map<String, String> dco_decode_Map_String_String_None(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return Map.fromEntries(
+      dco_decode_list_record_string_string(raw)
+          .map((e) => MapEntry(e.$1, e.$2)),
+    );
+  }
+
+  @protected
   Map<String, JsonPayload> dco_decode_Map_String_json_payload_None(
     dynamic raw,
   ) {
@@ -736,8 +1656,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   AgentCommand dco_decode_agent_command(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 15)
-      throw Exception('unexpected arr length: expect 15 but see ${arr.length}');
+    if (arr.length != 16)
+      throw Exception('unexpected arr length: expect 16 but see ${arr.length}');
     return AgentCommand(
       kind: dco_decode_command_kind(arr[0]),
       conversationId: dco_decode_opt_String(arr[1]),
@@ -756,6 +1676,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       ),
       archive: dco_decode_opt_box_autoadd_view_agent_archive_parts(arr[13]),
       tools: dco_decode_opt_list_tool_definition(arr[14]),
+      handoff: dco_decode_opt_box_autoadd_handoff_request(arr[15]),
     );
   }
 
@@ -781,8 +1702,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   AgentEvent dco_decode_agent_event(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 12)
-      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
+    if (arr.length != 13)
+      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
     return AgentEvent(
       kind: dco_decode_event_kind(arr[0]),
       conversationId: dco_decode_String(arr[1]),
@@ -796,6 +1717,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       errorCode: dco_decode_opt_String(arr[9]),
       hostRequest: dco_decode_opt_box_autoadd_host_request(arr[10]),
       presentation: dco_decode_opt_box_autoadd_run_presentation(arr[11]),
+      knowledgeRevision: dco_decode_opt_CastedPrimitive_u_64(arr[12]),
     );
   }
 
@@ -873,15 +1795,51 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ConnectionIdentity dco_decode_box_autoadd_connection_identity(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_connection_identity(raw);
+  }
+
+  @protected
+  ConversationSelection dco_decode_box_autoadd_conversation_selection(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_conversation_selection(raw);
+  }
+
+  @protected
   CoreConfig dco_decode_box_autoadd_core_config(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_core_config(raw);
   }
 
   @protected
+  DraftAttachmentAdmission dco_decode_box_autoadd_draft_attachment_admission(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_draft_attachment_admission(raw);
+  }
+
+  @protected
+  DraftAttachmentTarget dco_decode_box_autoadd_draft_attachment_target(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_draft_attachment_target(raw);
+  }
+
+  @protected
   double dco_decode_box_autoadd_f_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as double;
+  }
+
+  @protected
+  HandoffRequest dco_decode_box_autoadd_handoff_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_handoff_request(raw);
   }
 
   @protected
@@ -906,6 +1864,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   JsonPayload dco_decode_box_autoadd_json_payload(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_json_payload(raw);
+  }
+
+  @protected
+  KnowledgeCatalog dco_decode_box_autoadd_knowledge_catalog(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_knowledge_catalog(raw);
+  }
+
+  @protected
+  KnowledgeEdit dco_decode_box_autoadd_knowledge_edit(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_knowledge_edit(raw);
   }
 
   @protected
@@ -1090,14 +2060,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CommandResult dco_decode_command_result(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
     return CommandResult(
       id: dco_decode_opt_String(arr[0]),
       snapshot: dco_decode_opt_box_autoadd_view_conversation_snapshot(arr[1]),
       knowledgeReceipt: dco_decode_opt_box_autoadd_view_knowledge_receipt(
         arr[2],
       ),
+      created: dco_decode_opt_box_autoadd_bool(arr[3]),
+      selection: dco_decode_opt_box_autoadd_conversation_selection(arr[4]),
+    );
+  }
+
+  @protected
+  ConnectionIdentity dco_decode_connection_identity(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return ConnectionIdentity(
+      endpoint: dco_decode_String(arr[0]),
+      protocol: dco_decode_model_protocol(arr[1]),
+      model: dco_decode_String(arr[2]),
+      fingerprint: dco_decode_String(arr[3]),
+    );
+  }
+
+  @protected
+  ConversationSelection dco_decode_conversation_selection(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return ConversationSelection(
+      selectedId: dco_decode_opt_String(arr[0]),
+      draftId: dco_decode_opt_String(arr[1]),
     );
   }
 
@@ -1117,6 +2115,35 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  DraftAttachmentAdmission dco_decode_draft_attachment_admission(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return DraftAttachmentAdmission(
+      importId: dco_decode_String(arr[0]),
+      target: dco_decode_draft_attachment_target(arr[1]),
+      sourcePath: dco_decode_String(arr[2]),
+      name: dco_decode_String(arr[3]),
+      mediaType: dco_decode_String(arr[4]),
+      byteLength: dco_decode_CastedPrimitive_u_64(arr[5]),
+    );
+  }
+
+  @protected
+  DraftAttachmentTarget dco_decode_draft_attachment_target(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return DraftAttachmentTarget(
+      conversationId: dco_decode_String(arr[0]),
+      expectedAfterRunId: dco_decode_opt_String(arr[1]),
+      expectedAfterInputId: dco_decode_opt_String(arr[2]),
+    );
+  }
+
+  @protected
   EventKind dco_decode_event_kind(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return EventKind.values[raw as int];
@@ -1126,6 +2153,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   double dco_decode_f_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as double;
+  }
+
+  @protected
+  HandoffRequest dco_decode_handoff_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return HandoffRequest(
+      handoffId: dco_decode_String(arr[0]),
+      source: dco_decode_view_conversation_source(arr[1]),
+      title: dco_decode_String(arr[2]),
+      prompt: dco_decode_String(arr[3]),
+      mode: dco_decode_view_permission_mode(arr[4]),
+      selection: dco_decode_opt_box_autoadd_view_model_selection(arr[5]),
+    );
+  }
+
+  @protected
+  HistoryRecoveryTarget dco_decode_history_recovery_target(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return HistoryRecoveryTarget(
+      conversationId: dco_decode_String(arr[0]),
+      batchId: dco_decode_String(arr[1]),
+    );
   }
 
   @protected
@@ -1144,21 +2199,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   HostRequest dco_decode_host_request(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 12)
-      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
+    if (arr.length != 14)
+      throw Exception('unexpected arr length: expect 14 but see ${arr.length}');
     return HostRequest(
       id: dco_decode_String(arr[0]),
       kind: dco_decode_host_request_kind(arr[1]),
       conversationId: dco_decode_String(arr[2]),
       runId: dco_decode_opt_String(arr[3]),
       toolCallId: dco_decode_opt_String(arr[4]),
-      toolName: dco_decode_opt_String(arr[5]),
-      arguments: dco_decode_opt_box_autoadd_json_payload(arr[6]),
-      mode: dco_decode_opt_box_autoadd_view_permission_mode(arr[7]),
-      approved: dco_decode_opt_box_autoadd_bool(arr[8]),
-      owner: dco_decode_opt_box_autoadd_view_operation_store(arr[9]),
-      operationIds: dco_decode_list_String(arr[10]),
-      ticket: dco_decode_opt_box_autoadd_view_undo_ticket(arr[11]),
+      historyBatchId: dco_decode_opt_String(arr[5]),
+      toolName: dco_decode_opt_String(arr[6]),
+      arguments: dco_decode_opt_box_autoadd_json_payload(arr[7]),
+      mode: dco_decode_opt_box_autoadd_view_permission_mode(arr[8]),
+      approved: dco_decode_opt_box_autoadd_bool(arr[9]),
+      owner: dco_decode_opt_box_autoadd_view_operation_store(arr[10]),
+      operationIds: dco_decode_list_String(arr[11]),
+      ticket: dco_decode_opt_box_autoadd_view_undo_ticket(arr[12]),
+      connection: dco_decode_opt_box_autoadd_connection_identity(arr[13]),
     );
   }
 
@@ -1207,9 +2264,55 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  KnowledgeCatalog dco_decode_knowledge_catalog(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return KnowledgeCatalog(
+      revision: dco_decode_CastedPrimitive_u_64(arr[0]),
+      storageRevision: dco_decode_CastedPrimitive_u_64(arr[1]),
+      records: dco_decode_list_view_knowledge_record(arr[2]),
+      originalDigests: dco_decode_Map_String_String_None(arr[3]),
+    );
+  }
+
+  @protected
+  KnowledgeEdit dco_decode_knowledge_edit(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return KnowledgeEdit(
+      action: dco_decode_knowledge_edit_action(arr[0]),
+      kind: dco_decode_view_knowledge_kind(arr[1]),
+      id: dco_decode_opt_String(arr[2]),
+      expectedRevision: dco_decode_CastedPrimitive_u_64(arr[3]),
+      generation: dco_decode_String(arr[4]),
+      desired: dco_decode_opt_box_autoadd_view_knowledge_record(arr[5]),
+    );
+  }
+
+  @protected
+  KnowledgeEditAction dco_decode_knowledge_edit_action(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return KnowledgeEditAction.values[raw as int];
+  }
+
+  @protected
   List<String> dco_decode_list_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_String).toList();
+  }
+
+  @protected
+  List<HistoryRecoveryTarget> dco_decode_list_history_recovery_target(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_history_recovery_target)
+        .toList();
   }
 
   @protected
@@ -1266,6 +2369,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<(String, String)> dco_decode_list_record_string_string(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_record_string_string).toList();
+  }
+
+  @protected
   List<ToolDefinition> dco_decode_list_tool_definition(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_tool_definition).toList();
@@ -1304,6 +2413,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>)
         .map(dco_decode_view_context_reference)
+        .toList();
+  }
+
+  @protected
+  List<ViewConversationHandoff> dco_decode_list_view_conversation_handoff(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_view_conversation_handoff)
         .toList();
   }
 
@@ -1507,8 +2626,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ModelConnection dco_decode_model_connection(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 9)
-      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
     return ModelConnection(
       protocol: dco_decode_model_protocol(arr[0]),
       endpoint: dco_decode_String(arr[1]),
@@ -1519,6 +2638,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       reasoningEffort: dco_decode_opt_String(arr[6]),
       maxContextTokens: dco_decode_opt_CastedPrimitive_u_64(arr[7]),
       autoCompactAtTokens: dco_decode_opt_CastedPrimitive_u_64(arr[8]),
+      environment: dco_decode_opt_box_autoadd_json_payload(arr[9]),
     );
   }
 
@@ -1588,9 +2708,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ConnectionIdentity? dco_decode_opt_box_autoadd_connection_identity(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_connection_identity(raw);
+  }
+
+  @protected
+  ConversationSelection? dco_decode_opt_box_autoadd_conversation_selection(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_conversation_selection(raw);
+  }
+
+  @protected
   double? dco_decode_opt_box_autoadd_f_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_f_64(raw);
+  }
+
+  @protected
+  HandoffRequest? dco_decode_opt_box_autoadd_handoff_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_handoff_request(raw);
   }
 
   @protected
@@ -1609,6 +2753,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   JsonPayload? dco_decode_opt_box_autoadd_json_payload(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_json_payload(raw);
+  }
+
+  @protected
+  KnowledgeCatalog? dco_decode_opt_box_autoadd_knowledge_catalog(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_knowledge_catalog(raw);
   }
 
   @protected
@@ -1880,27 +3030,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   QueryResult dco_decode_query_result(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 16)
-      throw Exception('unexpected arr length: expect 16 but see ${arr.length}');
+    if (arr.length != 19)
+      throw Exception('unexpected arr length: expect 19 but see ${arr.length}');
     return QueryResult(
       conversations: dco_decode_list_view_conversation_summary(arr[0]),
       snapshot: dco_decode_opt_box_autoadd_view_conversation_snapshot(arr[1]),
       messages: dco_decode_list_view_message(arr[2]),
       total: dco_decode_CastedPrimitive_usize(arr[3]),
       nextOffset: dco_decode_opt_CastedPrimitive_usize(arr[4]),
-      knowledge: dco_decode_list_view_knowledge_record(arr[5]),
+      pageStart: dco_decode_opt_CastedPrimitive_usize(arr[5]),
+      knowledge: dco_decode_list_view_knowledge_record(arr[6]),
       knowledgeReceipt: dco_decode_opt_box_autoadd_view_knowledge_receipt(
-        arr[6],
+        arr[7],
       ),
-      revision: dco_decode_opt_CastedPrimitive_u_64(arr[7]),
-      knowledgeState: dco_decode_opt_box_autoadd_view_knowledge_state(arr[8]),
-      attachments: dco_decode_list_view_attachment_metadata(arr[9]),
-      archive: dco_decode_opt_box_autoadd_view_agent_archive_parts(arr[10]),
-      bytes: dco_decode_opt_list_prim_u_8_strict(arr[11]),
-      text: dco_decode_opt_String(arr[12]),
-      flag: dco_decode_opt_box_autoadd_bool(arr[13]),
-      operation: dco_decode_opt_box_autoadd_view_operation_record(arr[14]),
-      presentation: dco_decode_opt_box_autoadd_run_presentation(arr[15]),
+      revision: dco_decode_opt_CastedPrimitive_u_64(arr[8]),
+      knowledgeState: dco_decode_opt_box_autoadd_view_knowledge_state(arr[9]),
+      attachments: dco_decode_list_view_attachment_metadata(arr[10]),
+      archive: dco_decode_opt_box_autoadd_view_agent_archive_parts(arr[11]),
+      bytes: dco_decode_opt_list_prim_u_8_strict(arr[12]),
+      text: dco_decode_opt_String(arr[13]),
+      flag: dco_decode_opt_box_autoadd_bool(arr[14]),
+      operation: dco_decode_opt_box_autoadd_view_operation_record(arr[15]),
+      presentation: dco_decode_opt_box_autoadd_run_presentation(arr[16]),
+      selection: dco_decode_opt_box_autoadd_conversation_selection(arr[17]),
+      knowledgeCatalog: dco_decode_opt_box_autoadd_knowledge_catalog(arr[18]),
     );
   }
 
@@ -1936,6 +3089,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       dco_decode_String(arr[0]),
       dco_decode_Map_String_json_payload_None(arr[1]),
     );
+  }
+
+  @protected
+  (String, String) dco_decode_record_string_string(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2) {
+      throw Exception('Expected 2 elements, got ${arr.length}');
+    }
+    return (dco_decode_String(arr[0]), dco_decode_String(arr[1]));
   }
 
   @protected
@@ -2166,11 +3329,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewConversationHandoff dco_decode_view_conversation_handoff(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return ViewConversationHandoff(
+      id: dco_decode_String(arr[0]),
+      conversationId: dco_decode_String(arr[1]),
+      sourceDigest: dco_decode_String(arr[2]),
+      messageId: dco_decode_String(arr[3]),
+    );
+  }
+
+  @protected
   ViewConversationSnapshot dco_decode_view_conversation_snapshot(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 20)
-      throw Exception('unexpected arr length: expect 20 but see ${arr.length}');
+    if (arr.length != 21)
+      throw Exception('unexpected arr length: expect 21 but see ${arr.length}');
     return ViewConversationSnapshot(
       conversation: dco_decode_view_conversation(arr[0]),
       sequence: dco_decode_CastedPrimitive_u_64(arr[1]),
@@ -2190,9 +3367,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       attachments: dco_decode_list_view_attachment_metadata(arr[15]),
       attachmentReferences: dco_decode_list_view_attachment_reference(arr[16]),
       sources: dco_decode_list_view_conversation_source(arr[17]),
-      providerHistory: dco_decode_list_json_payload(arr[18]),
+      handoffs: dco_decode_list_view_conversation_handoff(arr[18]),
+      providerHistory: dco_decode_list_json_payload(arr[19]),
       extensions: dco_decode_Map_String_Map_String_json_payload_None_None(
-        arr[19],
+        arr[20],
       ),
     );
   }
@@ -2201,8 +3379,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ViewConversationSource dco_decode_view_conversation_source(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 9)
-      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
     return ViewConversationSource(
       id: dco_decode_String(arr[0]),
       text: dco_decode_String(arr[1]),
@@ -2213,6 +3391,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       provenance: dco_decode_opt_box_autoadd_view_source_provenance(arr[6]),
       attachedAfterRunId: dco_decode_opt_String(arr[7]),
       attachedAfterMessageId: dco_decode_opt_String(arr[8]),
+      boundInputId: dco_decode_opt_String(arr[9]),
+      boundMessageId: dco_decode_opt_String(arr[10]),
     );
   }
 
@@ -2909,6 +4089,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  Map<String, String> sse_decode_Map_String_String_None(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_list_record_string_string(deserializer);
+    return Map.fromEntries(inner.map((e) => MapEntry(e.$1, e.$2)));
+  }
+
+  @protected
   Map<String, JsonPayload> sse_decode_Map_String_json_payload_None(
     SseDeserializer deserializer,
   ) {
@@ -2975,6 +4164,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       deserializer,
     );
     var var_tools = sse_decode_opt_list_tool_definition(deserializer);
+    var var_handoff = sse_decode_opt_box_autoadd_handoff_request(deserializer);
     return AgentCommand(
       kind: var_kind,
       conversationId: var_conversationId,
@@ -2991,6 +4181,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       knowledgeMutation: var_knowledgeMutation,
       archive: var_archive,
       tools: var_tools,
+      handoff: var_handoff,
     );
   }
 
@@ -3044,6 +4235,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_presentation = sse_decode_opt_box_autoadd_run_presentation(
       deserializer,
     );
+    var var_knowledgeRevision = sse_decode_opt_CastedPrimitive_u_64(
+      deserializer,
+    );
     return AgentEvent(
       kind: var_kind,
       conversationId: var_conversationId,
@@ -3057,6 +4251,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       errorCode: var_errorCode,
       hostRequest: var_hostRequest,
       presentation: var_presentation,
+      knowledgeRevision: var_knowledgeRevision,
     );
   }
 
@@ -3157,15 +4352,55 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ConnectionIdentity sse_decode_box_autoadd_connection_identity(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_connection_identity(deserializer));
+  }
+
+  @protected
+  ConversationSelection sse_decode_box_autoadd_conversation_selection(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_conversation_selection(deserializer));
+  }
+
+  @protected
   CoreConfig sse_decode_box_autoadd_core_config(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_core_config(deserializer));
   }
 
   @protected
+  DraftAttachmentAdmission sse_decode_box_autoadd_draft_attachment_admission(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_draft_attachment_admission(deserializer));
+  }
+
+  @protected
+  DraftAttachmentTarget sse_decode_box_autoadd_draft_attachment_target(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_draft_attachment_target(deserializer));
+  }
+
+  @protected
   double sse_decode_box_autoadd_f_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_f_64(deserializer));
+  }
+
+  @protected
+  HandoffRequest sse_decode_box_autoadd_handoff_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_handoff_request(deserializer));
   }
 
   @protected
@@ -3196,6 +4431,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_json_payload(deserializer));
+  }
+
+  @protected
+  KnowledgeCatalog sse_decode_box_autoadd_knowledge_catalog(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_knowledge_catalog(deserializer));
+  }
+
+  @protected
+  KnowledgeEdit sse_decode_box_autoadd_knowledge_edit(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_knowledge_edit(deserializer));
   }
 
   @protected
@@ -3406,10 +4657,46 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     );
     var var_knowledgeReceipt =
         sse_decode_opt_box_autoadd_view_knowledge_receipt(deserializer);
+    var var_created = sse_decode_opt_box_autoadd_bool(deserializer);
+    var var_selection = sse_decode_opt_box_autoadd_conversation_selection(
+      deserializer,
+    );
     return CommandResult(
       id: var_id,
       snapshot: var_snapshot,
       knowledgeReceipt: var_knowledgeReceipt,
+      created: var_created,
+      selection: var_selection,
+    );
+  }
+
+  @protected
+  ConnectionIdentity sse_decode_connection_identity(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_endpoint = sse_decode_String(deserializer);
+    var var_protocol = sse_decode_model_protocol(deserializer);
+    var var_model = sse_decode_String(deserializer);
+    var var_fingerprint = sse_decode_String(deserializer);
+    return ConnectionIdentity(
+      endpoint: var_endpoint,
+      protocol: var_protocol,
+      model: var_model,
+      fingerprint: var_fingerprint,
+    );
+  }
+
+  @protected
+  ConversationSelection sse_decode_conversation_selection(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_selectedId = sse_decode_opt_String(deserializer);
+    var var_draftId = sse_decode_opt_String(deserializer);
+    return ConversationSelection(
+      selectedId: var_selectedId,
+      draftId: var_draftId,
     );
   }
 
@@ -3433,6 +4720,42 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  DraftAttachmentAdmission sse_decode_draft_attachment_admission(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_importId = sse_decode_String(deserializer);
+    var var_target = sse_decode_draft_attachment_target(deserializer);
+    var var_sourcePath = sse_decode_String(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_mediaType = sse_decode_String(deserializer);
+    var var_byteLength = sse_decode_CastedPrimitive_u_64(deserializer);
+    return DraftAttachmentAdmission(
+      importId: var_importId,
+      target: var_target,
+      sourcePath: var_sourcePath,
+      name: var_name,
+      mediaType: var_mediaType,
+      byteLength: var_byteLength,
+    );
+  }
+
+  @protected
+  DraftAttachmentTarget sse_decode_draft_attachment_target(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_conversationId = sse_decode_String(deserializer);
+    var var_expectedAfterRunId = sse_decode_opt_String(deserializer);
+    var var_expectedAfterInputId = sse_decode_opt_String(deserializer);
+    return DraftAttachmentTarget(
+      conversationId: var_conversationId,
+      expectedAfterRunId: var_expectedAfterRunId,
+      expectedAfterInputId: var_expectedAfterInputId,
+    );
+  }
+
+  @protected
   EventKind sse_decode_event_kind(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_i_32(deserializer);
@@ -3443,6 +4766,40 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   double sse_decode_f_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getFloat64();
+  }
+
+  @protected
+  HandoffRequest sse_decode_handoff_request(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_handoffId = sse_decode_String(deserializer);
+    var var_source = sse_decode_view_conversation_source(deserializer);
+    var var_title = sse_decode_String(deserializer);
+    var var_prompt = sse_decode_String(deserializer);
+    var var_mode = sse_decode_view_permission_mode(deserializer);
+    var var_selection = sse_decode_opt_box_autoadd_view_model_selection(
+      deserializer,
+    );
+    return HandoffRequest(
+      handoffId: var_handoffId,
+      source: var_source,
+      title: var_title,
+      prompt: var_prompt,
+      mode: var_mode,
+      selection: var_selection,
+    );
+  }
+
+  @protected
+  HistoryRecoveryTarget sse_decode_history_recovery_target(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_conversationId = sse_decode_String(deserializer);
+    var var_batchId = sse_decode_String(deserializer);
+    return HistoryRecoveryTarget(
+      conversationId: var_conversationId,
+      batchId: var_batchId,
+    );
   }
 
   @protected
@@ -3467,6 +4824,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_conversationId = sse_decode_String(deserializer);
     var var_runId = sse_decode_opt_String(deserializer);
     var var_toolCallId = sse_decode_opt_String(deserializer);
+    var var_historyBatchId = sse_decode_opt_String(deserializer);
     var var_toolName = sse_decode_opt_String(deserializer);
     var var_arguments = sse_decode_opt_box_autoadd_json_payload(deserializer);
     var var_mode = sse_decode_opt_box_autoadd_view_permission_mode(
@@ -3478,12 +4836,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     );
     var var_operationIds = sse_decode_list_String(deserializer);
     var var_ticket = sse_decode_opt_box_autoadd_view_undo_ticket(deserializer);
+    var var_connection = sse_decode_opt_box_autoadd_connection_identity(
+      deserializer,
+    );
     return HostRequest(
       id: var_id,
       kind: var_kind,
       conversationId: var_conversationId,
       runId: var_runId,
       toolCallId: var_toolCallId,
+      historyBatchId: var_historyBatchId,
       toolName: var_toolName,
       arguments: var_arguments,
       mode: var_mode,
@@ -3491,6 +4853,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       owner: var_owner,
       operationIds: var_operationIds,
       ticket: var_ticket,
+      connection: var_connection,
     );
   }
 
@@ -3544,6 +4907,51 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  KnowledgeCatalog sse_decode_knowledge_catalog(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_revision = sse_decode_CastedPrimitive_u_64(deserializer);
+    var var_storageRevision = sse_decode_CastedPrimitive_u_64(deserializer);
+    var var_records = sse_decode_list_view_knowledge_record(deserializer);
+    var var_originalDigests = sse_decode_Map_String_String_None(deserializer);
+    return KnowledgeCatalog(
+      revision: var_revision,
+      storageRevision: var_storageRevision,
+      records: var_records,
+      originalDigests: var_originalDigests,
+    );
+  }
+
+  @protected
+  KnowledgeEdit sse_decode_knowledge_edit(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_action = sse_decode_knowledge_edit_action(deserializer);
+    var var_kind = sse_decode_view_knowledge_kind(deserializer);
+    var var_id = sse_decode_opt_String(deserializer);
+    var var_expectedRevision = sse_decode_CastedPrimitive_u_64(deserializer);
+    var var_generation = sse_decode_String(deserializer);
+    var var_desired = sse_decode_opt_box_autoadd_view_knowledge_record(
+      deserializer,
+    );
+    return KnowledgeEdit(
+      action: var_action,
+      kind: var_kind,
+      id: var_id,
+      expectedRevision: var_expectedRevision,
+      generation: var_generation,
+      desired: var_desired,
+    );
+  }
+
+  @protected
+  KnowledgeEditAction sse_decode_knowledge_edit_action(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return KnowledgeEditAction.values[inner];
+  }
+
+  @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -3551,6 +4959,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <String>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_String(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<HistoryRecoveryTarget> sse_decode_list_history_recovery_target(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <HistoryRecoveryTarget>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_history_recovery_target(deserializer));
     }
     return ans_;
   }
@@ -3641,6 +5063,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<(String, String)> sse_decode_list_record_string_string(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <(String, String)>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_record_string_string(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<ToolDefinition> sse_decode_list_tool_definition(
     SseDeserializer deserializer,
   ) {
@@ -3706,6 +5142,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <ViewContextReference>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_view_context_reference(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<ViewConversationHandoff> sse_decode_list_view_conversation_handoff(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ViewConversationHandoff>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_view_conversation_handoff(deserializer));
     }
     return ans_;
   }
@@ -4098,6 +5548,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_autoCompactAtTokens = sse_decode_opt_CastedPrimitive_u_64(
       deserializer,
     );
+    var var_environment = sse_decode_opt_box_autoadd_json_payload(deserializer);
     return ModelConnection(
       protocol: var_protocol,
       endpoint: var_endpoint,
@@ -4108,6 +5559,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       reasoningEffort: var_reasoningEffort,
       maxContextTokens: var_maxContextTokens,
       autoCompactAtTokens: var_autoCompactAtTokens,
+      environment: var_environment,
     );
   }
 
@@ -4215,11 +5667,50 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ConnectionIdentity? sse_decode_opt_box_autoadd_connection_identity(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_connection_identity(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  ConversationSelection? sse_decode_opt_box_autoadd_conversation_selection(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_conversation_selection(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_box_autoadd_f_64(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  HandoffRequest? sse_decode_opt_box_autoadd_handoff_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_handoff_request(deserializer));
     } else {
       return null;
     }
@@ -4259,6 +5750,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_box_autoadd_json_payload(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  KnowledgeCatalog? sse_decode_opt_box_autoadd_knowledge_catalog(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_knowledge_catalog(deserializer));
     } else {
       return null;
     }
@@ -4670,6 +6174,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_messages = sse_decode_list_view_message(deserializer);
     var var_total = sse_decode_CastedPrimitive_usize(deserializer);
     var var_nextOffset = sse_decode_opt_CastedPrimitive_usize(deserializer);
+    var var_pageStart = sse_decode_opt_CastedPrimitive_usize(deserializer);
     var var_knowledge = sse_decode_list_view_knowledge_record(deserializer);
     var var_knowledgeReceipt =
         sse_decode_opt_box_autoadd_view_knowledge_receipt(deserializer);
@@ -4692,12 +6197,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_presentation = sse_decode_opt_box_autoadd_run_presentation(
       deserializer,
     );
+    var var_selection = sse_decode_opt_box_autoadd_conversation_selection(
+      deserializer,
+    );
+    var var_knowledgeCatalog = sse_decode_opt_box_autoadd_knowledge_catalog(
+      deserializer,
+    );
     return QueryResult(
       conversations: var_conversations,
       snapshot: var_snapshot,
       messages: var_messages,
       total: var_total,
       nextOffset: var_nextOffset,
+      pageStart: var_pageStart,
       knowledge: var_knowledge,
       knowledgeReceipt: var_knowledgeReceipt,
       revision: var_revision,
@@ -4709,6 +6221,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       flag: var_flag,
       operation: var_operation,
       presentation: var_presentation,
+      selection: var_selection,
+      knowledgeCatalog: var_knowledgeCatalog,
     );
   }
 
@@ -4740,6 +6254,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_field0 = sse_decode_String(deserializer);
     var var_field1 = sse_decode_Map_String_json_payload_None(deserializer);
+    return (var_field0, var_field1);
+  }
+
+  @protected
+  (String, String) sse_decode_record_string_string(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_field0 = sse_decode_String(deserializer);
+    var var_field1 = sse_decode_String(deserializer);
     return (var_field0, var_field1);
   }
 
@@ -5055,6 +6579,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewConversationHandoff sse_decode_view_conversation_handoff(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_conversationId = sse_decode_String(deserializer);
+    var var_sourceDigest = sse_decode_String(deserializer);
+    var var_messageId = sse_decode_String(deserializer);
+    return ViewConversationHandoff(
+      id: var_id,
+      conversationId: var_conversationId,
+      sourceDigest: var_sourceDigest,
+      messageId: var_messageId,
+    );
+  }
+
+  @protected
   ViewConversationSnapshot sse_decode_view_conversation_snapshot(
     SseDeserializer deserializer,
   ) {
@@ -5089,6 +6630,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       deserializer,
     );
     var var_sources = sse_decode_list_view_conversation_source(deserializer);
+    var var_handoffs = sse_decode_list_view_conversation_handoff(deserializer);
     var var_providerHistory = sse_decode_list_json_payload(deserializer);
     var var_extensions =
         sse_decode_Map_String_Map_String_json_payload_None_None(deserializer);
@@ -5111,6 +6653,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       attachments: var_attachments,
       attachmentReferences: var_attachmentReferences,
       sources: var_sources,
+      handoffs: var_handoffs,
       providerHistory: var_providerHistory,
       extensions: var_extensions,
     );
@@ -5132,6 +6675,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     );
     var var_attachedAfterRunId = sse_decode_opt_String(deserializer);
     var var_attachedAfterMessageId = sse_decode_opt_String(deserializer);
+    var var_boundInputId = sse_decode_opt_String(deserializer);
+    var var_boundMessageId = sse_decode_opt_String(deserializer);
     return ViewConversationSource(
       id: var_id,
       text: var_text,
@@ -5142,6 +6687,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       provenance: var_provenance,
       attachedAfterRunId: var_attachedAfterRunId,
       attachedAfterMessageId: var_attachedAfterMessageId,
+      boundInputId: var_boundInputId,
+      boundMessageId: var_boundMessageId,
     );
   }
 
@@ -6062,6 +7609,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_Map_String_String_None(
+    Map<String, String> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_record_string_string(
+      self.entries.map((e) => (e.key, e.value)).toList(),
+      serializer,
+    );
+  }
+
+  @protected
   void sse_encode_Map_String_json_payload_None(
     Map<String, JsonPayload> self,
     SseSerializer serializer,
@@ -6136,6 +7695,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       serializer,
     );
     sse_encode_opt_list_tool_definition(self.tools, serializer);
+    sse_encode_opt_box_autoadd_handoff_request(self.handoff, serializer);
   }
 
   @protected
@@ -6172,6 +7732,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_String(self.errorCode, serializer);
     sse_encode_opt_box_autoadd_host_request(self.hostRequest, serializer);
     sse_encode_opt_box_autoadd_run_presentation(self.presentation, serializer);
+    sse_encode_opt_CastedPrimitive_u_64(self.knowledgeRevision, serializer);
   }
 
   @protected
@@ -6259,6 +7820,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_connection_identity(
+    ConnectionIdentity self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_connection_identity(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_conversation_selection(
+    ConversationSelection self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_conversation_selection(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_core_config(
     CoreConfig self,
     SseSerializer serializer,
@@ -6268,9 +7847,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_draft_attachment_admission(
+    DraftAttachmentAdmission self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_draft_attachment_admission(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_draft_attachment_target(
+    DraftAttachmentTarget self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_draft_attachment_target(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_f_64(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_handoff_request(
+    HandoffRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_handoff_request(self, serializer);
   }
 
   @protected
@@ -6307,6 +7913,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_json_payload(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_knowledge_catalog(
+    KnowledgeCatalog self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_knowledge_catalog(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_knowledge_edit(
+    KnowledgeEdit self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_knowledge_edit(self, serializer);
   }
 
   @protected
@@ -6543,6 +8167,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       self.knowledgeReceipt,
       serializer,
     );
+    sse_encode_opt_box_autoadd_bool(self.created, serializer);
+    sse_encode_opt_box_autoadd_conversation_selection(
+      self.selection,
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_connection_identity(
+    ConnectionIdentity self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.endpoint, serializer);
+    sse_encode_model_protocol(self.protocol, serializer);
+    sse_encode_String(self.model, serializer);
+    sse_encode_String(self.fingerprint, serializer);
+  }
+
+  @protected
+  void sse_encode_conversation_selection(
+    ConversationSelection self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_opt_String(self.selectedId, serializer);
+    sse_encode_opt_String(self.draftId, serializer);
   }
 
   @protected
@@ -6556,6 +8207,31 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_draft_attachment_admission(
+    DraftAttachmentAdmission self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.importId, serializer);
+    sse_encode_draft_attachment_target(self.target, serializer);
+    sse_encode_String(self.sourcePath, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_String(self.mediaType, serializer);
+    sse_encode_CastedPrimitive_u_64(self.byteLength, serializer);
+  }
+
+  @protected
+  void sse_encode_draft_attachment_target(
+    DraftAttachmentTarget self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.conversationId, serializer);
+    sse_encode_opt_String(self.expectedAfterRunId, serializer);
+    sse_encode_opt_String(self.expectedAfterInputId, serializer);
+  }
+
+  @protected
   void sse_encode_event_kind(EventKind self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.index, serializer);
@@ -6565,6 +8241,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_f_64(double self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putFloat64(self);
+  }
+
+  @protected
+  void sse_encode_handoff_request(
+    HandoffRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.handoffId, serializer);
+    sse_encode_view_conversation_source(self.source, serializer);
+    sse_encode_String(self.title, serializer);
+    sse_encode_String(self.prompt, serializer);
+    sse_encode_view_permission_mode(self.mode, serializer);
+    sse_encode_opt_box_autoadd_view_model_selection(self.selection, serializer);
+  }
+
+  @protected
+  void sse_encode_history_recovery_target(
+    HistoryRecoveryTarget self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.conversationId, serializer);
+    sse_encode_String(self.batchId, serializer);
   }
 
   @protected
@@ -6587,6 +8287,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.conversationId, serializer);
     sse_encode_opt_String(self.runId, serializer);
     sse_encode_opt_String(self.toolCallId, serializer);
+    sse_encode_opt_String(self.historyBatchId, serializer);
     sse_encode_opt_String(self.toolName, serializer);
     sse_encode_opt_box_autoadd_json_payload(self.arguments, serializer);
     sse_encode_opt_box_autoadd_view_permission_mode(self.mode, serializer);
@@ -6594,6 +8295,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_box_autoadd_view_operation_store(self.owner, serializer);
     sse_encode_list_String(self.operationIds, serializer);
     sse_encode_opt_box_autoadd_view_undo_ticket(self.ticket, serializer);
+    sse_encode_opt_box_autoadd_connection_identity(self.connection, serializer);
   }
 
   @protected
@@ -6636,11 +8338,55 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_knowledge_catalog(
+    KnowledgeCatalog self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_CastedPrimitive_u_64(self.revision, serializer);
+    sse_encode_CastedPrimitive_u_64(self.storageRevision, serializer);
+    sse_encode_list_view_knowledge_record(self.records, serializer);
+    sse_encode_Map_String_String_None(self.originalDigests, serializer);
+  }
+
+  @protected
+  void sse_encode_knowledge_edit(KnowledgeEdit self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_knowledge_edit_action(self.action, serializer);
+    sse_encode_view_knowledge_kind(self.kind, serializer);
+    sse_encode_opt_String(self.id, serializer);
+    sse_encode_CastedPrimitive_u_64(self.expectedRevision, serializer);
+    sse_encode_String(self.generation, serializer);
+    sse_encode_opt_box_autoadd_view_knowledge_record(self.desired, serializer);
+  }
+
+  @protected
+  void sse_encode_knowledge_edit_action(
+    KnowledgeEditAction self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_String(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_history_recovery_target(
+    List<HistoryRecoveryTarget> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_history_recovery_target(item, serializer);
     }
   }
 
@@ -6727,6 +8473,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_record_string_string(
+    List<(String, String)> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_record_string_string(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_tool_definition(
     List<ToolDefinition> self,
     SseSerializer serializer,
@@ -6783,6 +8541,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_view_context_reference(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_view_conversation_handoff(
+    List<ViewConversationHandoff> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_view_conversation_handoff(item, serializer);
     }
   }
 
@@ -7122,6 +8892,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_String(self.reasoningEffort, serializer);
     sse_encode_opt_CastedPrimitive_u_64(self.maxContextTokens, serializer);
     sse_encode_opt_CastedPrimitive_u_64(self.autoCompactAtTokens, serializer);
+    sse_encode_opt_box_autoadd_json_payload(self.environment, serializer);
   }
 
   @protected
@@ -7227,12 +8998,51 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_connection_identity(
+    ConnectionIdentity? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_connection_identity(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_conversation_selection(
+    ConversationSelection? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_conversation_selection(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_f_64(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_handoff_request(
+    HandoffRequest? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_handoff_request(self, serializer);
     }
   }
 
@@ -7272,6 +9082,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_json_payload(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_knowledge_catalog(
+    KnowledgeCatalog? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_knowledge_catalog(self, serializer);
     }
   }
 
@@ -7682,6 +9505,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_list_view_message(self.messages, serializer);
     sse_encode_CastedPrimitive_usize(self.total, serializer);
     sse_encode_opt_CastedPrimitive_usize(self.nextOffset, serializer);
+    sse_encode_opt_CastedPrimitive_usize(self.pageStart, serializer);
     sse_encode_list_view_knowledge_record(self.knowledge, serializer);
     sse_encode_opt_box_autoadd_view_knowledge_receipt(
       self.knowledgeReceipt,
@@ -7705,6 +9529,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       serializer,
     );
     sse_encode_opt_box_autoadd_run_presentation(self.presentation, serializer);
+    sse_encode_opt_box_autoadd_conversation_selection(
+      self.selection,
+      serializer,
+    );
+    sse_encode_opt_box_autoadd_knowledge_catalog(
+      self.knowledgeCatalog,
+      serializer,
+    );
   }
 
   @protected
@@ -7735,6 +9567,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.$1, serializer);
     sse_encode_Map_String_json_payload_None(self.$2, serializer);
+  }
+
+  @protected
+  void sse_encode_record_string_string(
+    (String, String) self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.$1, serializer);
+    sse_encode_String(self.$2, serializer);
   }
 
   @protected
@@ -7971,6 +9813,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_view_conversation_handoff(
+    ViewConversationHandoff self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.conversationId, serializer);
+    sse_encode_String(self.sourceDigest, serializer);
+    sse_encode_String(self.messageId, serializer);
+  }
+
+  @protected
   void sse_encode_view_conversation_snapshot(
     ViewConversationSnapshot self,
     SseSerializer serializer,
@@ -8003,6 +9857,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       serializer,
     );
     sse_encode_list_view_conversation_source(self.sources, serializer);
+    sse_encode_list_view_conversation_handoff(self.handoffs, serializer);
     sse_encode_list_json_payload(self.providerHistory, serializer);
     sse_encode_Map_String_Map_String_json_payload_None_None(
       self.extensions,
@@ -8028,6 +9883,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     );
     sse_encode_opt_String(self.attachedAfterRunId, serializer);
     sse_encode_opt_String(self.attachedAfterMessageId, serializer);
+    sse_encode_opt_String(self.boundInputId, serializer);
+    sse_encode_opt_String(self.boundMessageId, serializer);
   }
 
   @protected
@@ -8649,10 +10506,82 @@ class AgentCoreImpl extends RustOpaque implements AgentCore {
     mediaType: mediaType,
   );
 
+  Future<ViewConversationSnapshot> admitDraftAttachment({
+    required DraftAttachmentAdmission request,
+  }) => RustLib.instance.api.crateApiAgentCoreAdmitDraftAttachment(
+    that: this,
+    request: request,
+  );
+
+  /// Confirms every target's durable marker using the native serializer.
+  Future<bool> archiveRestoreState({
+    required String json,
+    required String restoreId,
+  }) => RustLib.instance.api.crateApiAgentCoreArchiveRestoreState(
+    that: this,
+    json: json,
+    restoreId: restoreId,
+  );
+
+  /// Distinguishes an absent restore binary from a corrupt or unreadable one.
+  Future<bool> attachmentRestoreState({
+    required ViewAttachmentMetadata metadata,
+  }) => RustLib.instance.api.crateApiAgentCoreAttachmentRestoreState(
+    that: this,
+    metadata: metadata,
+  );
+
+  /// Registration is race-safe even if cancellation arrives before admission.
+  Future<void> cancelAttachmentImport({required String importId}) => RustLib
+      .instance
+      .api
+      .crateApiAgentCoreCancelAttachmentImport(that: this, importId: importId);
+
+  Future<void> cancelPreparedRedo({
+    required String conversationId,
+    required String batchId,
+  }) => RustLib.instance.api.crateApiAgentCoreCancelPreparedRedo(
+    that: this,
+    conversationId: conversationId,
+    batchId: batchId,
+  );
+
   Future<CommandResult> dispatch({required AgentCommand command}) => RustLib
       .instance
       .api
       .crateApiAgentCoreDispatch(that: this, command: command);
+
+  Future<ViewKnowledgeReceipt> editKnowledge({
+    required KnowledgeEdit request,
+  }) => RustLib.instance.api.crateApiAgentCoreEditKnowledge(
+    that: this,
+    request: request,
+  );
+
+  /// Exports native portable records for the shared Dart backup transport.
+  /// Omitted selections include all saved records; empty selections include none.
+  Future<String> exportArchiveJson({
+    List<String>? conversationIds,
+    List<String>? knowledgeKeys,
+  }) => RustLib.instance.api.crateApiAgentCoreExportArchiveJson(
+    that: this,
+    conversationIds: conversationIds,
+    knowledgeKeys: knowledgeKeys,
+  );
+
+  /// Reads summary flags first, loading journals only for pending conversations.
+  Future<List<HistoryRecoveryTarget>> historyRecoveryTargets() =>
+      RustLib.instance.api.crateApiAgentCoreHistoryRecoveryTargets(that: this);
+
+  /// Restores fixed new-format targets under the application's maintenance lease.
+  Future<void> importArchiveJson({
+    required String json,
+    required String restoreId,
+  }) => RustLib.instance.api.crateApiAgentCoreImportArchiveJson(
+    that: this,
+    json: json,
+    restoreId: restoreId,
+  );
 
   Future<ViewAttachmentMetadata> importAttachment({
     required ViewAttachmentMetadata metadata,
@@ -8663,8 +10592,30 @@ class AgentCoreImpl extends RustOpaque implements AgentCore {
     sourcePath: sourcePath,
   );
 
+  Future<List<String>> pruneHistory({required int cutoffMs}) => RustLib
+      .instance
+      .api
+      .crateApiAgentCorePruneHistory(that: this, cutoffMs: cutoffMs);
+
   Future<QueryResult> query({required AgentQuery query}) =>
       RustLib.instance.api.crateApiAgentCoreQuery(that: this, query: query);
+
+  /// Finishes the inverse transaction; the user explicitly starts model replay.
+  Future<void> recoverHistoryUndo({
+    required String conversationId,
+    required String batchId,
+  }) => RustLib.instance.api.crateApiAgentCoreRecoverHistoryUndo(
+    that: this,
+    conversationId: conversationId,
+    batchId: batchId,
+  );
+
+  /// Called after the native event subscription is ready for host reads.
+  Future<List<String>> recoverOperations({String? conversationId}) =>
+      RustLib.instance.api.crateApiAgentCoreRecoverOperations(
+        that: this,
+        conversationId: conversationId,
+      );
 
   Future<ViewKnowledgeState> registerBuiltinSkills({
     required List<ViewKnowledgeRecord> records,
@@ -8673,8 +10624,51 @@ class AgentCoreImpl extends RustOpaque implements AgentCore {
     records: records,
   );
 
+  Future<ViewConversationSnapshot> removeDraftAttachment({
+    required DraftAttachmentTarget target,
+    required String attachmentId,
+  }) => RustLib.instance.api.crateApiAgentCoreRemoveDraftAttachment(
+    that: this,
+    target: target,
+    attachmentId: attachmentId,
+  );
+
+  Future<ViewConversationSnapshot> replacePendingRedoReferences({
+    required String conversationId,
+    required String batchId,
+    required int expectedSequence,
+    required List<ViewContextReference> references,
+  }) => RustLib.instance.api.crateApiAgentCoreReplacePendingRedoReferences(
+    that: this,
+    conversationId: conversationId,
+    batchId: batchId,
+    expectedSequence: expectedSequence,
+    references: references,
+  );
+
+  Future<JsonPayload> runHostTool({
+    required String conversationId,
+    required String toolName,
+    required JsonPayload arguments,
+    JsonPayload? environment,
+  }) => RustLib.instance.api.crateApiAgentCoreRunHostTool(
+    that: this,
+    conversationId: conversationId,
+    toolName: toolName,
+    arguments: arguments,
+    environment: environment,
+  );
+
   Future<void> shutdown() =>
       RustLib.instance.api.crateApiAgentCoreShutdown(that: this);
+
+  /// The clear effect owns the one excluded run; its late receipt cannot
+  /// reopen this storage worker after the application removes the files.
+  Future<void> shutdownForDataClear({String? conversationId}) =>
+      RustLib.instance.api.crateApiAgentCoreShutdownForDataClear(
+        that: this,
+        conversationId: conversationId,
+      );
 
   /// Completes only after the runtime durably records the preparation/binding.
   Future<void> submitHostProgress({required AgentHostProgress progress}) =>
@@ -8687,6 +10681,24 @@ class AgentCoreImpl extends RustOpaque implements AgentCore {
       .instance
       .api
       .crateApiAgentCoreSubmitHostResult(that: this, result: result);
+
+  Future<List<ToolDefinition>> toolDefinitions() =>
+      RustLib.instance.api.crateApiAgentCoreToolDefinitions(that: this);
+
+  Future<ViewConversationSnapshot> useDraftAttachment({
+    required DraftAttachmentTarget target,
+    required String attachmentId,
+  }) => RustLib.instance.api.crateApiAgentCoreUseDraftAttachment(
+    that: this,
+    target: target,
+    attachmentId: attachmentId,
+  );
+
+  Future<void> verifyAttachment({required ViewAttachmentMetadata metadata}) =>
+      RustLib.instance.api.crateApiAgentCoreVerifyAttachment(
+        that: this,
+        metadata: metadata,
+      );
 
   Stream<AgentEvent> watchEvents() =>
       RustLib.instance.api.crateApiAgentCoreWatchEvents(that: this);

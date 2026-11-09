@@ -14,8 +14,11 @@ class AgentRustClient {
   StreamSubscription<AgentEvent>? _subscription;
   Future<void>? _shutdownFuture;
   bool _closed = false;
+  bool _suspended = false;
+  Future<void>? _suspending;
 
   Stream<AgentEvent> get events => _events.stream;
+  bool get isInitialized => _openedCore != null;
   // Host callbacks must remain able to return an accepted save while shutdown
   // rejects new UI commands and waits for that save to finish.
   Future<AgentCore> get core {
@@ -24,7 +27,9 @@ class AgentRustClient {
   }
 
   Future<AgentCore> ensureInitialized() {
-    if (_closed) return Future.error(StateError('Agent core is closed.'));
+    if (_closed || _suspended) {
+      return Future.error(StateError('Agent core is closed.'));
+    }
     return _initializing ??= _open();
   }
 
@@ -67,8 +72,35 @@ class AgentRustClient {
 
   Future<void> shutdown() => _shutdownFuture ??= _shutdown();
 
+  Future<void> suspendForDataClear({String? conversationId}) =>
+      _suspending ??= _suspendForDataClear(conversationId);
+
+  Future<void> _suspendForDataClear(String? conversationId) async {
+    _suspended = true;
+    final opening = _initializing;
+    try {
+      if (opening != null) {
+        await (await opening).shutdownForDataClear(
+          conversationId: conversationId,
+        );
+      }
+    } finally {
+      await _subscription?.cancel();
+      _subscription = null;
+      _openedCore = null;
+      _initializing = null;
+    }
+  }
+
+  void resumeAfterFailedDataClear() {
+    if (_closed) return;
+    _suspended = false;
+    _suspending = null;
+  }
+
   Future<void> _shutdown() async {
     _closed = true;
+    await _suspending;
     final opening = _initializing;
     try {
       if (opening != null) await (await opening).shutdown();

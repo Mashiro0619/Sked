@@ -1,6 +1,7 @@
 use futures::future::BoxFuture;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use sha2::{Digest, Sha256};
 use tokio_util::sync::CancellationToken;
 
 use crate::storage::models::{ModelSelection, TokenUsage};
@@ -35,6 +36,7 @@ pub struct ConnectionConfig {
     pub reasoning_effort: Option<String>,
     pub max_context_tokens: Option<u64>,
     pub auto_compact_at_tokens: Option<u64>,
+    pub environment: Value,
 }
 
 impl std::fmt::Debug for ConnectionConfig {
@@ -53,6 +55,26 @@ impl ConnectionConfig {
             model_id: self.model_config_id.clone(),
             reasoning_effort: self.reasoning_effort.clone(),
             protocol: Some(self.protocol.as_str().into()),
+        }
+    }
+}
+
+/// Ephemeral transport identity. Credentials are represented only by a digest.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConnectionIdentity {
+    pub endpoint: String,
+    pub protocol: ProviderProtocol,
+    pub model: String,
+    pub fingerprint: String,
+}
+
+impl ConnectionIdentity {
+    pub fn from_config(config: &ConnectionConfig) -> Self {
+        Self {
+            endpoint: config.full_endpoint.clone(),
+            protocol: config.protocol,
+            model: config.model.clone(),
+            fingerprint: format!("{:x}", Sha256::digest(config.api_key.as_bytes())),
         }
     }
 }
@@ -97,6 +119,14 @@ pub struct ModelRunResult {
 }
 
 pub trait ModelToolExecutor: Send + Sync {
+    fn validate_input(
+        &self,
+        _input: Vec<Value>,
+        _protocol: ProviderProtocol,
+    ) -> BoxFuture<'static, Result<(), String>> {
+        Box::pin(async { Ok(()) })
+    }
+
     fn execute(
         &self,
         name: String,
@@ -104,6 +134,20 @@ pub trait ModelToolExecutor: Send + Sync {
         arguments: Value,
         cancellation: CancellationToken,
     ) -> BoxFuture<'static, Result<Value, String>>;
+
+    fn authorize_request(
+        &self,
+        connection: ConnectionIdentity,
+        _cancellation: CancellationToken,
+    ) -> BoxFuture<'static, Result<(), String>> {
+        Box::pin(async move {
+            if connection.endpoint.starts_with("https://") {
+                Ok(())
+            } else {
+                Err("HTTP 传输没有有效的用户许可".into())
+            }
+        })
+    }
 
     /// Resolve application-owned attachment markers after the request gate.
     fn prepare_request_body(

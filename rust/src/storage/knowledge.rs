@@ -59,7 +59,226 @@ fn receipt(connection: &Connection, operation_id: &str) -> Result<Option<Knowled
         .transpose()
 }
 
+fn validate_knowledge_id(id: &str) -> Result<()> {
+    if !id.as_bytes().first().is_some_and(u8::is_ascii_lowercase)
+        || !id
+            .bytes()
+            .all(|value| value.is_ascii_lowercase() || value.is_ascii_digit() || value == b'-')
+    {
+        return Err(StorageError::Invalid(
+            "knowledge_invalid: 知识标识须以小写字母开头，只能包含小写字母、数字或连字符".into(),
+        ));
+    }
+    Ok(())
+}
+
+pub(super) fn validate_knowledge_record(record: &KnowledgeRecord) -> Result<()> {
+    validate_knowledge_id(&record.id)?;
+    if record.title.trim().is_empty()
+        || (record.body.trim().is_empty() && !(record.built_in && record.uses_original))
+    {
+        return Err(StorageError::Invalid(
+            "knowledge_invalid: 标题和正文不能为空".into(),
+        ));
+    }
+    if record.built_in != (record.base_version.is_some() && record.base_sha256.is_some())
+        || record.base_version.is_some() != record.base_sha256.is_some()
+        || (record.uses_original && !record.built_in)
+        || (record.kind == KnowledgeKind::Memory && record.built_in)
+        || record.base_sha256.as_ref().is_some_and(|value| {
+            value.len() != 64
+                || !value
+                    .bytes()
+                    .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
+        })
+    {
+        return Err(StorageError::Invalid(
+            "knowledge_invalid: 内置知识来源无效".into(),
+        ));
+    }
+    for reference in &record.references {
+        if reference.kind.trim().is_empty()
+            || reference.id.trim().is_empty()
+            || reference
+                .generation
+                .as_ref()
+                .is_none_or(|value| value.trim().is_empty())
+        {
+            return Err(StorageError::Invalid(
+                "knowledge_invalid: 引用需要对象身份和数据世代".into(),
+            ));
+        }
+    }
+    for values in [
+        &record.triggers,
+        &record.source_kinds,
+        &record.required_tools,
+        &record.optional_tools,
+    ] {
+        let mut seen = HashSet::new();
+        if values
+            .iter()
+            .any(|value| value.trim().is_empty() || !seen.insert(value))
+        {
+            return Err(StorageError::Invalid(
+                "knowledge_invalid: 列表条目必须非空且不能重复".into(),
+            ));
+        }
+    }
+    let mut tools = HashSet::new();
+    for tool in record.required_tools.iter().chain(&record.optional_tools) {
+        if !tools.insert(tool)
+            || tool.split('.').any(|part| {
+                !part.as_bytes().first().is_some_and(u8::is_ascii_lowercase)
+                    || !part
+                        .bytes()
+                        .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'_')
+            })
+        {
+            return Err(StorageError::Invalid(
+                "knowledge_invalid: 工具名称无效或重复".into(),
+            ));
+        }
+    }
+    Ok(())
+}
+
 impl AgentStorage {
+    pub fn knowledge_catalog(&self) -> Result<KnowledgeCatalog> {
+        let records = self.list_knowledge(None)?;
+        let mut original_digests = BTreeMap::new();
+        for record in &records {
+            if record.built_in {
+                if let Some(original) =
+                    self.knowledge_metadata(&format!("builtin:{}", record.key()))?
+                {
+                    let original: KnowledgeRecord = serde_json::from_str(&original)?;
+                    if let Some(digest) = original.base_sha256 {
+                        original_digests.insert(record.id.clone(), digest);
+                    }
+                }
+            }
+        }
+        Ok(KnowledgeCatalog {
+            revision: self.knowledge_revision()?,
+            storage_revision: self.knowledge_storage_revision()?,
+            records,
+            original_digests,
+        })
+    }
+
+    /// Builds the exact versioned change before the runtime requests approval.
+    /// Applying it rechecks the same before image and revision transactionally.
+    pub fn prepare_knowledge_edit(
+        &self,
+        action: KnowledgeEditAction,
+        kind: KnowledgeKind,
+        id: Option<String>,
+        expected_revision: u64,
+        desired: Option<KnowledgeRecord>,
+        operation_id: String,
+        generation: Option<String>,
+    ) -> Result<KnowledgeMutation> {
+        if generation
+            .as_ref()
+            .is_some_and(|value| value.trim().is_empty())
+        {
+            return Err(StorageError::Invalid(
+                "knowledge_invalid: 数据世代不能为空".into(),
+            ));
+        }
+        let id = id.unwrap_or_else(|| {
+            format!(
+                "{}-{}",
+                if kind == KnowledgeKind::Skill {
+                    "custom"
+                } else {
+                    "memory"
+                },
+                uuid::Uuid::new_v4()
+            )
+        });
+        validate_knowledge_id(&id)?;
+        let key = format!(
+            "{}:{id}",
+            if kind == KnowledgeKind::Skill {
+                "skill"
+            } else {
+                "memory"
+            }
+        );
+        let before = self.read_knowledge(&key)?;
+        if self.knowledge_record_revision(&key)? != expected_revision {
+            return Err(StorageError::Conflict(
+                "knowledge_conflict: 知识已被其他操作修改".into(),
+            ));
+        }
+        let original = self
+            .knowledge_metadata(&format!("builtin:{key}"))?
+            .map(|raw| serde_json::from_str::<KnowledgeRecord>(&raw))
+            .transpose()?;
+        let after = match action {
+            KnowledgeEditAction::Delete => {
+                let current = before
+                    .as_ref()
+                    .ok_or_else(|| StorageError::Invalid("knowledge_invalid: 知识不存在".into()))?;
+                if current.built_in {
+                    return Err(StorageError::Invalid(
+                        "knowledge_invalid: 内置 Skill 可以停用或恢复原文".into(),
+                    ));
+                }
+                None
+            }
+            KnowledgeEditAction::RestoreOriginal => {
+                let current = before.as_ref().filter(|r| r.built_in).ok_or_else(|| {
+                    StorageError::Invalid("knowledge_invalid: 该记录没有内置原文".into())
+                })?;
+                let mut restored = original.ok_or_else(|| {
+                    StorageError::Invalid("knowledge_invalid: 内置原文不可用".into())
+                })?;
+                restored.enabled = current.enabled;
+                restored.revision = current.revision;
+                Some(restored)
+            }
+            KnowledgeEditAction::Save => {
+                let mut after = desired.ok_or_else(|| {
+                    StorageError::Invalid("knowledge_invalid: 缺少知识内容".into())
+                })?;
+                after.id = id;
+                after.kind = kind;
+                after.revision = expected_revision;
+                after.built_in = before.as_ref().is_some_and(|r| r.built_in);
+                if after.built_in {
+                    let mut original = original.ok_or_else(|| {
+                        StorageError::Invalid("knowledge_invalid: 内置原文不可用".into())
+                    })?;
+                    after.base_version = original.base_version.clone();
+                    after.base_sha256 = original.base_sha256.clone();
+                    after.uses_original = true;
+                    original.enabled = after.enabled;
+                    original.revision = after.revision;
+                    after.uses_original = after == original;
+                } else {
+                    after.uses_original = false;
+                    after.base_version = None;
+                    after.base_sha256 = None;
+                }
+                validate_knowledge_record(&after)?;
+                Some(after)
+            }
+        };
+        Ok(KnowledgeMutation {
+            operation_id,
+            changes: vec![KnowledgeChange {
+                key,
+                expected_revision,
+                before,
+                after,
+            }],
+            ..Default::default()
+        })
+    }
+
     pub fn read_knowledge(&self, key: &str) -> Result<Option<KnowledgeRecord>> {
         record(&self.knowledge, key)
     }
@@ -275,7 +494,7 @@ impl AgentStorage {
         let mut changes = mutation.changes;
         for change in &mut changes {
             if let Some(after) = &mut change.after {
-                required(&after.id, "knowledge.id")?;
+                validate_knowledge_record(after)?;
                 after.revision = revision;
                 transaction.execute("INSERT INTO records(key,revision,payload) VALUES(?1,?2,?3) ON CONFLICT(key) DO UPDATE SET revision=excluded.revision,payload=excluded.payload",
                     params![change.key,sqlite::integer(revision)?,serde_json::to_string(after)?])?;

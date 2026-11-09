@@ -4,6 +4,7 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import 'management_contracts.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
@@ -415,6 +416,7 @@ class ViewConversationSnapshot {
   final List<ViewAttachmentMetadata> attachments;
   final List<ViewAttachmentReference> attachmentReferences;
   final List<ViewConversationSource> sources;
+  final List<ViewConversationHandoff> handoffs;
   final List<JsonPayload> providerHistory;
   final Map<String, Map<String, JsonPayload>> extensions;
 
@@ -437,6 +439,7 @@ class ViewConversationSnapshot {
     required this.attachments,
     required this.attachmentReferences,
     required this.sources,
+    required this.handoffs,
     required this.providerHistory,
     required this.extensions,
   });
@@ -461,6 +464,7 @@ class ViewConversationSnapshot {
       attachments.hashCode ^
       attachmentReferences.hashCode ^
       sources.hashCode ^
+      handoffs.hashCode ^
       providerHistory.hashCode ^
       extensions.hashCode;
 
@@ -487,6 +491,7 @@ class ViewConversationSnapshot {
           attachments == other.attachments &&
           attachmentReferences == other.attachmentReferences &&
           sources == other.sources &&
+          handoffs == other.handoffs &&
           providerHistory == other.providerHistory &&
           extensions == other.extensions;
 }
@@ -501,6 +506,8 @@ class ViewConversationSource {
   final ViewSourceProvenance? provenance;
   final String? attachedAfterRunId;
   final String? attachedAfterMessageId;
+  final String? boundInputId;
+  final String? boundMessageId;
 
   const ViewConversationSource({
     required this.id,
@@ -512,6 +519,8 @@ class ViewConversationSource {
     this.provenance,
     this.attachedAfterRunId,
     this.attachedAfterMessageId,
+    this.boundInputId,
+    this.boundMessageId,
   });
 
   @override
@@ -524,7 +533,9 @@ class ViewConversationSource {
       truncated.hashCode ^
       provenance.hashCode ^
       attachedAfterRunId.hashCode ^
-      attachedAfterMessageId.hashCode;
+      attachedAfterMessageId.hashCode ^
+      boundInputId.hashCode ^
+      boundMessageId.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -539,7 +550,9 @@ class ViewConversationSource {
           truncated == other.truncated &&
           provenance == other.provenance &&
           attachedAfterRunId == other.attachedAfterRunId &&
-          attachedAfterMessageId == other.attachedAfterMessageId;
+          attachedAfterMessageId == other.attachedAfterMessageId &&
+          boundInputId == other.boundInputId &&
+          boundMessageId == other.boundMessageId;
 }
 
 enum ViewConversationStatus {

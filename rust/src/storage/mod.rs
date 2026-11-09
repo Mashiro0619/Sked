@@ -4,6 +4,7 @@
 
 mod archive;
 mod attachments;
+mod conversation;
 mod error;
 mod index;
 mod journal;
@@ -33,6 +34,10 @@ pub struct AgentStorage {
     index: Connection,
     knowledge: Connection,
     snapshots: HashMap<String, ConversationSnapshot>,
+    drafts: HashMap<String, ConversationSnapshot>,
+    navigation: conversation::NavigationState,
+    selected_id: Option<String>,
+    draft_id: Option<String>,
     index_dirty: bool,
 }
 
@@ -41,14 +46,20 @@ impl AgentStorage {
         fs::create_dir_all(root.join("conversations"))?;
         fs::create_dir_all(root.join("attachments"))?;
         let root = fs::canonicalize(root)?;
+        let navigation = conversation::read_navigation(&root)?;
         let mut storage = Self {
             index: open_index(&root)?,
             knowledge: knowledge::open(&root.join("knowledge.sqlite"))?,
             root,
             snapshots: HashMap::new(),
+            drafts: HashMap::new(),
+            selected_id: navigation.selected_id.clone(),
+            draft_id: None,
+            navigation,
             index_dirty: false,
         };
         storage.sync_index()?;
+        storage.reconcile_selection()?;
         Ok(storage)
     }
 
@@ -65,45 +76,91 @@ impl AgentStorage {
         timestamp_ms: i64,
         changes: Vec<JournalChange>,
     ) -> Result<AppendOutcome> {
-        self.ensure_index()?;
-        self.load_snapshot(conversation_id)?;
-        let before = self.snapshots.entry(conversation_id.into()).or_default();
+        let is_draft = self.drafts.contains_key(conversation_id);
+        if !is_draft {
+            self.ensure_index()?;
+            self.load_snapshot(conversation_id)?;
+        }
+        let before = self
+            .drafts
+            .get(conversation_id)
+            .or_else(|| self.snapshots.get(conversation_id))
+            .cloned()
+            .unwrap_or_default();
         if before.sequence != expected_sequence {
             return Err(StorageError::Conflict(format!(
                 "Conversation {conversation_id} is at sequence {}, expected {expected_sequence}",
                 before.sequence
             )));
         }
-        projection::validate_changes(before, conversation_id, &changes)?;
+        projection::validate_changes(&before, conversation_id, &changes)?;
         let sequence = expected_sequence
             .checked_add(1)
             .filter(|v| *v <= i64::MAX as u64)
             .ok_or_else(|| StorageError::Invalid("Conversation sequence overflow".into()))?;
-        let commit = JournalCommit {
+        let mut commit = JournalCommit {
             id: Uuid::new_v4().to_string(),
             conversation_id: conversation_id.into(),
             sequence,
             timestamp_ms,
             changes,
         };
+        let mut snapshot = before.clone();
+        projection::apply(&mut snapshot, &commit);
+        if snapshot.conversation.draft_only {
+            if !before.conversation.id.is_empty() && !is_draft {
+                return Err(StorageError::Invalid(
+                    "A saved conversation cannot become an unsent draft".into(),
+                ));
+            }
+            self.drafts.insert(conversation_id.into(), snapshot);
+            return Ok(AppendOutcome {
+                commit,
+                index_updated: true,
+            });
+        }
+        if is_draft {
+            commit.changes = projection::initial_changes(&snapshot);
+            projection::validate_changes(
+                &ConversationSnapshot::default(),
+                conversation_id,
+                &commit.changes,
+            )?;
+        }
         let file_name = journal_name(conversation_id);
         let path = self.root.join("conversations").join(&file_name);
-        let length = index::head(&self.index, conversation_id)?.map_or(0, |h| h.byte_length);
+        let length = if is_draft {
+            0
+        } else {
+            index::head(&self.index, conversation_id)?.map_or(0, |h| h.byte_length)
+        };
         let location = match journal::append(&path, length, &commit) {
             Ok(location) => location,
             Err(error) => {
-                self.snapshots.remove(conversation_id);
+                if !is_draft {
+                    self.snapshots.remove(conversation_id);
+                }
                 self.index_dirty = true;
                 return Err(error);
             }
         };
-        let snapshot = self
-            .snapshots
-            .get_mut(conversation_id)
-            .expect("loaded projection");
-        projection::apply(snapshot, &commit);
         let index_updated =
-            index::record(&mut self.index, &file_name, &commit, location, snapshot).is_ok();
+            index::record(&mut self.index, &file_name, &commit, location, &snapshot).is_ok();
+        self.snapshots.insert(conversation_id.into(), snapshot);
+        if is_draft {
+            self.drafts.remove(conversation_id);
+            if self.draft_id.as_deref() == Some(conversation_id) {
+                self.draft_id = None;
+            }
+            // The accepted journal remains authoritative if persisting navigation fails.
+            if self.selected_id.as_deref() == Some(conversation_id) {
+                let mut navigation = self.navigation.clone();
+                navigation.selected_id = Some(conversation_id.into());
+                if self.persist_navigation(&navigation).is_ok() {
+                    self.navigation = navigation;
+                }
+            }
+        }
         self.index_dirty |= !index_updated;
         Ok(AppendOutcome {
             commit,
@@ -112,6 +169,9 @@ impl AgentStorage {
     }
 
     pub fn read(&mut self, conversation_id: &str) -> Result<Option<ConversationSnapshot>> {
+        if let Some(draft) = self.drafts.get(conversation_id) {
+            return Ok(Some(draft.clone()));
+        }
         self.ensure_index()?;
         self.load_snapshot(conversation_id)?;
         Ok(self
@@ -128,7 +188,10 @@ impl AgentStorage {
 
     pub fn list(&mut self, query: ConversationQuery) -> Result<Page<ConversationSummary>> {
         self.ensure_index()?;
-        index::list(&self.index, &query)
+        if !query.include_drafts || self.drafts.is_empty() {
+            return index::list(&self.index, &query);
+        }
+        self.list_with_drafts(query)
     }
 
     pub fn read_journal(
@@ -152,6 +215,9 @@ impl AgentStorage {
         conversation_id: &str,
         query: MessageQuery,
     ) -> Result<Page<Message>> {
+        if let Some(draft) = self.drafts.get(conversation_id) {
+            return Ok(conversation::message_page(&draft.messages, query));
+        }
         self.ensure_index()?;
         let locations = index::message_locations(&self.index, conversation_id)?;
         let before = query.before.unwrap_or(locations.len());
@@ -244,6 +310,10 @@ impl AgentStorage {
     }
 
     pub fn delete(&mut self, conversation_id: &str) -> Result<bool> {
+        self.prepare_conversation_deletion(conversation_id)?;
+        if self.drafts.remove(conversation_id).is_some() {
+            return Ok(true);
+        }
         let path = self.journal_path(conversation_id);
         let existed = match fs::remove_file(&path) {
             Ok(()) => true,
@@ -258,6 +328,7 @@ impl AgentStorage {
     }
 
     pub fn clear_conversations(&mut self) -> Result<()> {
+        self.prepare_conversations_clear()?;
         for entry in fs::read_dir(self.root.join("conversations"))? {
             let path = entry?.path();
             if path.extension().and_then(|s| s.to_str()) == Some("jsonl") {
@@ -265,6 +336,8 @@ impl AgentStorage {
             }
         }
         self.snapshots.clear();
+        self.drafts.clear();
+        self.draft_id = None;
         index::clear(&self.index)?;
         self.index_dirty = false;
         Ok(())
@@ -395,7 +468,9 @@ fn validate_replay(
     commit: &JournalCommit,
     offset: u64,
 ) -> Result<()> {
-    if commit.sequence != snapshot.sequence + 1
+    let starts_history = snapshot.conversation.id.is_empty() && snapshot.sequence == 0;
+    if (starts_history && (commit.sequence == 0 || commit.sequence > i64::MAX as u64))
+        || (!starts_history && commit.sequence != snapshot.sequence + 1)
         || (!snapshot.conversation.id.is_empty()
             && snapshot.conversation.id != commit.conversation_id)
     {

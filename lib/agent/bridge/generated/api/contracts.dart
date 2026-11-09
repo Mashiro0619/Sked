@@ -4,12 +4,13 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import 'management_contracts.dart';
 import 'models.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `empty`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `try_from`
 
 /// Fields are selected by kind and validated at dispatch. This is a generated
 /// record, so adding an action never introduces an untyped command envelope.
@@ -29,6 +30,7 @@ class AgentCommand {
   final ViewKnowledgeMutation? knowledgeMutation;
   final ViewAgentArchiveParts? archive;
   final List<ToolDefinition>? tools;
+  final HandoffRequest? handoff;
 
   const AgentCommand({
     required this.kind,
@@ -46,6 +48,7 @@ class AgentCommand {
     this.knowledgeMutation,
     this.archive,
     this.tools,
+    this.handoff,
   });
 
   @override
@@ -64,7 +67,8 @@ class AgentCommand {
       source.hashCode ^
       knowledgeMutation.hashCode ^
       archive.hashCode ^
-      tools.hashCode;
+      tools.hashCode ^
+      handoff.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -85,7 +89,8 @@ class AgentCommand {
           source == other.source &&
           knowledgeMutation == other.knowledgeMutation &&
           archive == other.archive &&
-          tools == other.tools;
+          tools == other.tools &&
+          handoff == other.handoff;
 }
 
 class AgentContextUsage {
@@ -148,6 +153,7 @@ class AgentEvent {
   final String? errorCode;
   final HostRequest? hostRequest;
   final RunPresentation? presentation;
+  final int? knowledgeRevision;
 
   const AgentEvent({
     required this.kind,
@@ -162,6 +168,7 @@ class AgentEvent {
     this.errorCode,
     this.hostRequest,
     this.presentation,
+    this.knowledgeRevision,
   });
 
   @override
@@ -177,7 +184,8 @@ class AgentEvent {
       outcome.hashCode ^
       errorCode.hashCode ^
       hostRequest.hashCode ^
-      presentation.hashCode;
+      presentation.hashCode ^
+      knowledgeRevision.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -195,7 +203,8 @@ class AgentEvent {
           outcome == other.outcome &&
           errorCode == other.errorCode &&
           hostRequest == other.hostRequest &&
-          presentation == other.presentation;
+          presentation == other.presentation &&
+          knowledgeRevision == other.knowledgeRevision;
 }
 
 class AgentHostProgress {
@@ -298,6 +307,10 @@ class AgentQuery {
 
 enum CommandKind {
   createConversation,
+  createManagedConversation,
+  createHandoff,
+  startHandoff,
+  selectConversation,
   rename,
   pin,
   archive,
@@ -325,6 +338,7 @@ enum CommandKind {
   removeSource,
   deleteConversation,
   clearConversations,
+  discardDrafts,
   clearAll,
   quiesce,
   saveKnowledge,
@@ -339,15 +353,27 @@ class CommandResult {
   final String? id;
   final ViewConversationSnapshot? snapshot;
   final ViewKnowledgeReceipt? knowledgeReceipt;
+  final bool? created;
+  final ConversationSelection? selection;
 
-  const CommandResult({this.id, this.snapshot, this.knowledgeReceipt});
+  const CommandResult({
+    this.id,
+    this.snapshot,
+    this.knowledgeReceipt,
+    this.created,
+    this.selection,
+  });
 
   static Future<CommandResult> default_() =>
       RustLib.instance.api.crateApiContractsCommandResultDefault();
 
   @override
   int get hashCode =>
-      id.hashCode ^ snapshot.hashCode ^ knowledgeReceipt.hashCode;
+      id.hashCode ^
+      snapshot.hashCode ^
+      knowledgeReceipt.hashCode ^
+      created.hashCode ^
+      selection.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -356,7 +382,40 @@ class CommandResult {
           runtimeType == other.runtimeType &&
           id == other.id &&
           snapshot == other.snapshot &&
-          knowledgeReceipt == other.knowledgeReceipt;
+          knowledgeReceipt == other.knowledgeReceipt &&
+          created == other.created &&
+          selection == other.selection;
+}
+
+class ConnectionIdentity {
+  final String endpoint;
+  final ModelProtocol protocol;
+  final String model;
+  final String fingerprint;
+
+  const ConnectionIdentity({
+    required this.endpoint,
+    required this.protocol,
+    required this.model,
+    required this.fingerprint,
+  });
+
+  @override
+  int get hashCode =>
+      endpoint.hashCode ^
+      protocol.hashCode ^
+      model.hashCode ^
+      fingerprint.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ConnectionIdentity &&
+          runtimeType == other.runtimeType &&
+          endpoint == other.endpoint &&
+          protocol == other.protocol &&
+          model == other.model &&
+          fingerprint == other.fingerprint;
 }
 
 class CoreConfig {
@@ -407,6 +466,7 @@ enum EventKind {
   resync,
   presentation,
   ready,
+  knowledgeChanged,
 }
 
 enum HostOutcome { success, cancelled, error, unknown }
@@ -427,6 +487,7 @@ class HostRequest {
   final String conversationId;
   final String? runId;
   final String? toolCallId;
+  final String? historyBatchId;
   final String? toolName;
   final JsonPayload? arguments;
   final ViewPermissionMode? mode;
@@ -434,6 +495,7 @@ class HostRequest {
   final ViewOperationStore? owner;
   final List<String> operationIds;
   final ViewUndoTicket? ticket;
+  final ConnectionIdentity? connection;
 
   const HostRequest({
     required this.id,
@@ -441,6 +503,7 @@ class HostRequest {
     required this.conversationId,
     this.runId,
     this.toolCallId,
+    this.historyBatchId,
     this.toolName,
     this.arguments,
     this.mode,
@@ -448,6 +511,7 @@ class HostRequest {
     this.owner,
     required this.operationIds,
     this.ticket,
+    this.connection,
   });
 
   @override
@@ -457,13 +521,15 @@ class HostRequest {
       conversationId.hashCode ^
       runId.hashCode ^
       toolCallId.hashCode ^
+      historyBatchId.hashCode ^
       toolName.hashCode ^
       arguments.hashCode ^
       mode.hashCode ^
       approved.hashCode ^
       owner.hashCode ^
       operationIds.hashCode ^
-      ticket.hashCode;
+      ticket.hashCode ^
+      connection.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -475,20 +541,26 @@ class HostRequest {
           conversationId == other.conversationId &&
           runId == other.runId &&
           toolCallId == other.toolCallId &&
+          historyBatchId == other.historyBatchId &&
           toolName == other.toolName &&
           arguments == other.arguments &&
           mode == other.mode &&
           approved == other.approved &&
           owner == other.owner &&
           operationIds == other.operationIds &&
-          ticket == other.ticket;
+          ticket == other.ticket &&
+          connection == other.connection;
 }
 
 enum HostRequestKind {
+  inspectOperation,
+  authorizeConnection,
   execute,
   cancel,
   resolveApproval,
   setMode,
+  beginHistory,
+  endHistory,
   prepareUndo,
   commitUndo,
 }
@@ -546,6 +618,7 @@ class ModelConnection {
   final String? reasoningEffort;
   final int? maxContextTokens;
   final int? autoCompactAtTokens;
+  final JsonPayload? environment;
 
   const ModelConnection({
     required this.protocol,
@@ -557,6 +630,7 @@ class ModelConnection {
     this.reasoningEffort,
     this.maxContextTokens,
     this.autoCompactAtTokens,
+    this.environment,
   });
 
   @override
@@ -569,7 +643,8 @@ class ModelConnection {
       apiKey.hashCode ^
       reasoningEffort.hashCode ^
       maxContextTokens.hashCode ^
-      autoCompactAtTokens.hashCode;
+      autoCompactAtTokens.hashCode ^
+      environment.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -584,7 +659,8 @@ class ModelConnection {
           apiKey == other.apiKey &&
           reasoningEffort == other.reasoningEffort &&
           maxContextTokens == other.maxContextTokens &&
-          autoCompactAtTokens == other.autoCompactAtTokens;
+          autoCompactAtTokens == other.autoCompactAtTokens &&
+          environment == other.environment;
 }
 
 enum ModelProtocol { chatCompletions, responses }
@@ -615,9 +691,11 @@ class OfflineModelReply {
 
 enum QueryKind {
   conversations,
+  conversationSelection,
   readConversation,
   messages,
   knowledge,
+  knowledgeCatalog,
   readKnowledgeRecord,
   readKnowledgeReceipt,
   knowledgeRevision,
@@ -637,6 +715,7 @@ class QueryResult {
   final List<ViewMessage> messages;
   final int total;
   final int? nextOffset;
+  final int? pageStart;
   final List<ViewKnowledgeRecord> knowledge;
   final ViewKnowledgeReceipt? knowledgeReceipt;
   final int? revision;
@@ -648,6 +727,8 @@ class QueryResult {
   final bool? flag;
   final ViewOperationRecord? operation;
   final RunPresentation? presentation;
+  final ConversationSelection? selection;
+  final KnowledgeCatalog? knowledgeCatalog;
 
   const QueryResult({
     required this.conversations,
@@ -655,6 +736,7 @@ class QueryResult {
     required this.messages,
     required this.total,
     this.nextOffset,
+    this.pageStart,
     required this.knowledge,
     this.knowledgeReceipt,
     this.revision,
@@ -666,6 +748,8 @@ class QueryResult {
     this.flag,
     this.operation,
     this.presentation,
+    this.selection,
+    this.knowledgeCatalog,
   });
 
   static Future<QueryResult> default_() =>
@@ -678,6 +762,7 @@ class QueryResult {
       messages.hashCode ^
       total.hashCode ^
       nextOffset.hashCode ^
+      pageStart.hashCode ^
       knowledge.hashCode ^
       knowledgeReceipt.hashCode ^
       revision.hashCode ^
@@ -688,7 +773,9 @@ class QueryResult {
       text.hashCode ^
       flag.hashCode ^
       operation.hashCode ^
-      presentation.hashCode;
+      presentation.hashCode ^
+      selection.hashCode ^
+      knowledgeCatalog.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -700,6 +787,7 @@ class QueryResult {
           messages == other.messages &&
           total == other.total &&
           nextOffset == other.nextOffset &&
+          pageStart == other.pageStart &&
           knowledge == other.knowledge &&
           knowledgeReceipt == other.knowledgeReceipt &&
           revision == other.revision &&
@@ -710,7 +798,9 @@ class QueryResult {
           text == other.text &&
           flag == other.flag &&
           operation == other.operation &&
-          presentation == other.presentation;
+          presentation == other.presentation &&
+          selection == other.selection &&
+          knowledgeCatalog == other.knowledgeCatalog;
 }
 
 class RunPresentation {

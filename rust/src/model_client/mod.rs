@@ -202,6 +202,7 @@ impl RigModelClient {
         if input.iter().any(|value| guard.contains_value(value)) {
             return Err("会话内容包含当前连接凭据，已停止请求".into());
         }
+        executor.validate_input(input, config.protocol).await?;
         let transport = EndpointTransport {
             inner: self.transport.clone(),
             endpoint,
@@ -284,6 +285,7 @@ impl RigModelClient {
                 events: events.clone(),
                 cancellation: cancellation.clone(),
                 executor,
+                connection: ConnectionIdentity::from_config(config),
                 guard,
             });
         if let Some(effort) = config.reasoning_effort.as_ref().filter(|e| !e.is_empty()) {
@@ -404,6 +406,7 @@ struct RunHook {
     events: UnboundedSender<ModelEvent>,
     cancellation: CancellationToken,
     executor: Arc<dyn ModelToolExecutor>,
+    connection: ConnectionIdentity,
     guard: CredentialGuard,
 }
 
@@ -445,6 +448,16 @@ impl AgentHook for RunHook {
         }
         if self.executor.pause_before_model() {
             return CompletionCallAction::stop("sked_context_compaction");
+        }
+        if let Err(error) = self
+            .executor
+            .authorize_request(self.connection.clone(), self.cancellation.clone())
+            .await
+        {
+            return CompletionCallAction::stop(error);
+        }
+        if self.cancellation.is_cancelled() {
+            return CompletionCallAction::stop("用户已停止本次运行");
         }
         let _ = self.events.send(ModelEvent::RequestStarted {
             index: event.turn - 1,

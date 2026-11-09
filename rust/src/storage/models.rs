@@ -497,6 +497,24 @@ pub struct ConversationSource {
     pub provenance: Option<SourceProvenance>,
     pub attached_after_run_id: Option<String>,
     pub attached_after_message_id: Option<String>,
+    pub bound_input_id: Option<String>,
+    pub bound_message_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct ConversationHandoff {
+    pub id: String,
+    pub conversation_id: String,
+    pub source_digest: String,
+    pub message_id: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct ConversationSelection {
+    pub selected_id: Option<String>,
+    pub draft_id: Option<String>,
 }
 
 /// A line is a committed transaction: related changes are never replayed alone.
@@ -599,6 +617,9 @@ pub enum JournalChange {
     SourceRemoved {
         id: String,
     },
+    HandoffStored {
+        handoff: ConversationHandoff,
+    },
     ProviderHistoryAppended {
         messages: Vec<Value>,
     },
@@ -633,6 +654,7 @@ pub struct ConversationSnapshot {
     pub attachments: Vec<AttachmentMetadata>,
     pub attachment_references: Vec<AttachmentReference>,
     pub sources: Vec<ConversationSource>,
+    pub handoffs: Vec<ConversationHandoff>,
     pub provider_history: Vec<Value>,
     pub extensions: BTreeMap<String, BTreeMap<String, Value>>,
 }
@@ -770,6 +792,21 @@ pub struct KnowledgeState {
     pub tombstones: BTreeMap<String, u64>,
     pub receipts: Vec<KnowledgeReceipt>,
     pub undo_batches: Vec<KnowledgeUndoBatch>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum KnowledgeEditAction {
+    Save,
+    Delete,
+    RestoreOriginal,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct KnowledgeCatalog {
+    pub revision: u64,
+    pub storage_revision: u64,
+    pub records: Vec<KnowledgeRecord>,
+    pub original_digests: BTreeMap<String, String>,
 }
 
 /// New-format portable data. Binaries are transferred separately by digest.

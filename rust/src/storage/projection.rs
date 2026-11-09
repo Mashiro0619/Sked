@@ -63,6 +63,14 @@ pub(crate) fn validate_changes(
                 required(&attachment.id, "attachment.id")?
             }
             JournalChange::SourceUpserted { source } => required(&source.id, "source.id")?,
+            JournalChange::HandoffStored { handoff } => {
+                required(&handoff.id, "handoff.id")?;
+                if handoff.conversation_id != id {
+                    return Err(StorageError::Invalid(
+                        "Handoff conversation identity differs".into(),
+                    ));
+                }
+            }
             JournalChange::ExtensionSet { namespace, id, .. } => {
                 required(namespace, "extension.namespace")?;
                 required(id, "extension.id")?;
@@ -158,6 +166,9 @@ pub(crate) fn apply(snapshot: &mut ConversationSnapshot, commit: &JournalCommit)
                 upsert(&mut snapshot.sources, source, |s| &s.id)
             }
             JournalChange::SourceRemoved { id } => snapshot.sources.retain(|s| s.id != *id),
+            JournalChange::HandoffStored { handoff } => {
+                upsert(&mut snapshot.handoffs, handoff, |h| &h.id)
+            }
             JournalChange::ProviderHistoryAppended { messages } => {
                 snapshot.provider_history.extend(messages.iter().cloned())
             }
@@ -193,6 +204,15 @@ pub(crate) fn summary(snapshot: &ConversationSnapshot) -> ConversationSummary {
         updated_at: c.updated_at,
         status: c.status,
         has_pending_work: c.status != ConversationStatus::Idle
+            || snapshot.operations.iter().any(|operation| {
+                matches!(
+                    operation.phase,
+                    OperationPhase::Preparing
+                        | OperationPhase::WaitingApproval
+                        | OperationPhase::Executing
+                        | OperationPhase::Unresolved
+                )
+            })
             || !snapshot.queued_inputs.is_empty()
             || snapshot
                 .queued_controls
@@ -218,18 +238,42 @@ pub(crate) fn referenced_attachments(snapshot: &ConversationSnapshot) -> HashSet
         .iter()
         .map(String::as_str)
         .collect();
+    ids.extend(
+        snapshot
+            .conversation
+            .draft_references
+            .iter()
+            .filter_map(|reference| reference.attachment_id.as_deref()),
+    );
     for message in snapshot
         .messages
         .iter()
         .chain(snapshot.history_versions.iter().flat_map(|v| &v.messages))
     {
         ids.extend(message.attachment_ids.iter().map(String::as_str));
+        ids.extend(
+            message
+                .context_references
+                .iter()
+                .filter_map(|reference| reference.attachment_id.as_deref()),
+        );
     }
     for queued in &snapshot.queued_inputs {
         ids.extend(queued.attachment_ids.iter().map(String::as_str));
+        ids.extend(
+            queued
+                .context_references
+                .iter()
+                .filter_map(|reference| reference.attachment_id.as_deref()),
+        );
     }
     for redo in &snapshot.redo_batches {
         ids.extend(redo.attachment_ids.iter().map(String::as_str));
+        ids.extend(
+            redo.context_references
+                .iter()
+                .filter_map(|reference| reference.attachment_id.as_deref()),
+        );
     }
     ids.extend(
         snapshot
@@ -238,4 +282,123 @@ pub(crate) fn referenced_attachments(snapshot: &ConversationSnapshot) -> HashSet
             .map(|r| r.attachment_id.as_str()),
     );
     ids
+}
+
+/// Captures every current field when an in-memory draft first becomes durable.
+pub(crate) fn initial_changes(snapshot: &ConversationSnapshot) -> Vec<JournalChange> {
+    let mut changes = vec![
+        JournalChange::ConversationCreated {
+            conversation: snapshot.conversation.clone(),
+        },
+        JournalChange::MessagesReplaced {
+            messages: snapshot.messages.clone(),
+        },
+        JournalChange::TurnsReplaced {
+            turns: snapshot.turns.clone(),
+        },
+        JournalChange::QuestionSet {
+            question: snapshot.current_question.clone(),
+        },
+        JournalChange::PlanSet {
+            plan: snapshot.plan.clone(),
+        },
+        JournalChange::CheckpointSet {
+            checkpoint: snapshot.checkpoint.clone(),
+        },
+        JournalChange::AttachmentReferencesSet {
+            references: snapshot.attachment_references.clone(),
+        },
+        JournalChange::ProviderHistoryReplaced {
+            messages: snapshot.provider_history.clone(),
+        },
+    ];
+    changes.extend(
+        snapshot
+            .runs
+            .iter()
+            .cloned()
+            .map(|run| JournalChange::RunUpserted { run }),
+    );
+    changes.extend(
+        snapshot
+            .operations
+            .iter()
+            .cloned()
+            .map(|operation| JournalChange::OperationUpserted { operation }),
+    );
+    changes.extend(
+        snapshot
+            .queued_inputs
+            .iter()
+            .cloned()
+            .map(|input| JournalChange::InputQueued { input }),
+    );
+    changes.extend(
+        snapshot
+            .queued_controls
+            .iter()
+            .cloned()
+            .map(|control| JournalChange::ControlUpserted { control }),
+    );
+    changes.extend(
+        snapshot
+            .context_failures
+            .iter()
+            .cloned()
+            .map(|failure| JournalChange::ContextFailureSet { failure }),
+    );
+    changes.extend(
+        snapshot
+            .history_versions
+            .iter()
+            .cloned()
+            .map(|version| JournalChange::HistoryVersionStored { version }),
+    );
+    changes.extend(
+        snapshot
+            .reply_revisions
+            .iter()
+            .cloned()
+            .map(|revision| JournalChange::ReplyRevisionStored { revision }),
+    );
+    changes.extend(
+        snapshot
+            .redo_batches
+            .iter()
+            .cloned()
+            .map(|batch| JournalChange::RedoBatchUpserted { batch }),
+    );
+    changes.extend(
+        snapshot
+            .attachments
+            .iter()
+            .cloned()
+            .map(|attachment| JournalChange::AttachmentUpserted { attachment }),
+    );
+    changes.extend(
+        snapshot
+            .sources
+            .iter()
+            .cloned()
+            .map(|source| JournalChange::SourceUpserted { source }),
+    );
+    changes.extend(
+        snapshot
+            .handoffs
+            .iter()
+            .cloned()
+            .map(|handoff| JournalChange::HandoffStored { handoff }),
+    );
+    for (namespace, entries) in &snapshot.extensions {
+        changes.extend(
+            entries
+                .iter()
+                .map(|(id, value)| JournalChange::ExtensionSet {
+                    namespace: namespace.clone(),
+                    id: id.clone(),
+                    value: Some(value.clone()),
+                }),
+        );
+    }
+    changes
 }

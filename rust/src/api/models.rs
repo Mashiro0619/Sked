@@ -1,4 +1,5 @@
 //! Typed Flutter view records. JSON fields contain only dynamic tool/protocol data.
+use super::management_contracts::ViewConversationHandoff;
 use crate::storage::models as stored;
 use std::collections::HashMap;
 
@@ -2129,6 +2130,8 @@ pub struct ViewConversationSource {
     pub provenance: Option<ViewSourceProvenance>,
     pub attached_after_run_id: Option<String>,
     pub attached_after_message_id: Option<String>,
+    pub bound_input_id: Option<String>,
+    pub bound_message_id: Option<String>,
 }
 impl From<stored::ConversationSource> for ViewConversationSource {
     fn from(value: stored::ConversationSource) -> Self {
@@ -2142,6 +2145,8 @@ impl From<stored::ConversationSource> for ViewConversationSource {
             provenance: value.provenance.map(|value| value.into()),
             attached_after_run_id: value.attached_after_run_id.map(|value| value),
             attached_after_message_id: value.attached_after_message_id.map(|value| value),
+            bound_input_id: value.bound_input_id,
+            bound_message_id: value.bound_message_id,
         }
     }
 }
@@ -2170,6 +2175,8 @@ impl TryFrom<ViewConversationSource> for stored::ConversationSource {
                 .attached_after_message_id
                 .map(|value| Ok::<_, String>(value))
                 .transpose()?,
+            bound_input_id: value.bound_input_id,
+            bound_message_id: value.bound_message_id,
         })
     }
 }
@@ -2195,6 +2202,7 @@ pub struct ViewConversationSnapshot {
     pub attachments: Vec<ViewAttachmentMetadata>,
     pub attachment_references: Vec<ViewAttachmentReference>,
     pub sources: Vec<ViewConversationSource>,
+    pub handoffs: Vec<ViewConversationHandoff>,
     pub provider_history: Vec<JsonPayload>,
     pub extensions: HashMap<String, HashMap<String, JsonPayload>>,
 }
@@ -2263,6 +2271,7 @@ impl From<stored::ConversationSnapshot> for ViewConversationSnapshot {
                 .into_iter()
                 .map(|value| value.into())
                 .collect(),
+            handoffs: value.handoffs.into_iter().map(Into::into).collect(),
             provider_history: value
                 .provider_history
                 .into_iter()
@@ -2376,6 +2385,7 @@ impl TryFrom<ViewConversationSnapshot> for stored::ConversationSnapshot {
                 .into_iter()
                 .map(|value| Ok(value.try_into()?))
                 .collect::<Result<_, String>>()?,
+            handoffs: value.handoffs.into_iter().map(Into::into).collect(),
             provider_history: value
                 .provider_history
                 .into_iter()

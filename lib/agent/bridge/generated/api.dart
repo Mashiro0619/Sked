@@ -4,6 +4,8 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import 'api/contracts.dart';
+import 'api/history.dart';
+import 'api/management_contracts.dart';
 import 'api/models.dart';
 import 'frb_generated.dart';
 
@@ -20,7 +22,48 @@ abstract class AgentCore implements RustOpaqueInterface {
     required String mediaType,
   });
 
+  Future<ViewConversationSnapshot> admitDraftAttachment({
+    required DraftAttachmentAdmission request,
+  });
+
+  /// Confirms every target's durable marker using the native serializer.
+  Future<bool> archiveRestoreState({
+    required String json,
+    required String restoreId,
+  });
+
+  /// Distinguishes an absent restore binary from a corrupt or unreadable one.
+  Future<bool> attachmentRestoreState({
+    required ViewAttachmentMetadata metadata,
+  });
+
+  /// Registration is race-safe even if cancellation arrives before admission.
+  Future<void> cancelAttachmentImport({required String importId});
+
+  Future<void> cancelPreparedRedo({
+    required String conversationId,
+    required String batchId,
+  });
+
   Future<CommandResult> dispatch({required AgentCommand command});
+
+  Future<ViewKnowledgeReceipt> editKnowledge({required KnowledgeEdit request});
+
+  /// Exports native portable records for the shared Dart backup transport.
+  /// Omitted selections include all saved records; empty selections include none.
+  Future<String> exportArchiveJson({
+    List<String>? conversationIds,
+    List<String>? knowledgeKeys,
+  });
+
+  /// Reads summary flags first, loading journals only for pending conversations.
+  Future<List<HistoryRecoveryTarget>> historyRecoveryTargets();
+
+  /// Restores fixed new-format targets under the application's maintenance lease.
+  Future<void> importArchiveJson({
+    required String json,
+    required String restoreId,
+  });
 
   Future<ViewAttachmentMetadata> importAttachment({
     required ViewAttachmentMetadata metadata,
@@ -30,18 +73,61 @@ abstract class AgentCore implements RustOpaqueInterface {
   static Future<AgentCore> initialize({required CoreConfig config}) =>
       RustLib.instance.api.crateApiAgentCoreInitialize(config: config);
 
+  Future<List<String>> pruneHistory({required int cutoffMs});
+
   Future<QueryResult> query({required AgentQuery query});
+
+  /// Finishes the inverse transaction; the user explicitly starts model replay.
+  Future<void> recoverHistoryUndo({
+    required String conversationId,
+    required String batchId,
+  });
+
+  /// Called after the native event subscription is ready for host reads.
+  Future<List<String>> recoverOperations({String? conversationId});
 
   Future<ViewKnowledgeState> registerBuiltinSkills({
     required List<ViewKnowledgeRecord> records,
   });
 
+  Future<ViewConversationSnapshot> removeDraftAttachment({
+    required DraftAttachmentTarget target,
+    required String attachmentId,
+  });
+
+  Future<ViewConversationSnapshot> replacePendingRedoReferences({
+    required String conversationId,
+    required String batchId,
+    required int expectedSequence,
+    required List<ViewContextReference> references,
+  });
+
+  Future<JsonPayload> runHostTool({
+    required String conversationId,
+    required String toolName,
+    required JsonPayload arguments,
+    JsonPayload? environment,
+  });
+
   Future<void> shutdown();
+
+  /// The clear effect owns the one excluded run; its late receipt cannot
+  /// reopen this storage worker after the application removes the files.
+  Future<void> shutdownForDataClear({String? conversationId});
 
   /// Completes only after the runtime durably records the preparation/binding.
   Future<void> submitHostProgress({required AgentHostProgress progress});
 
   Future<void> submitHostResult({required HostResult result});
+
+  Future<List<ToolDefinition>> toolDefinitions();
+
+  Future<ViewConversationSnapshot> useDraftAttachment({
+    required DraftAttachmentTarget target,
+    required String attachmentId,
+  });
+
+  Future<void> verifyAttachment({required ViewAttachmentMetadata metadata});
 
   Stream<AgentEvent> watchEvents();
 
