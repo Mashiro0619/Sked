@@ -34,8 +34,10 @@ use tokio::sync::{Mutex, Notify, broadcast, mpsc, oneshot, watch};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
+#[cfg(test)]
+use crate::model_client::RigModelClient;
 use crate::{
-    model_client::{ConnectionConfig, ModelEvent, ModelRunResult, RigModelClient},
+    model_client::{ConnectionConfig, ModelEvent, ModelRunResult, services::ModelService},
     storage::{ConversationState, StorageError, models::*, services::PersistenceService},
 };
 
@@ -65,7 +67,7 @@ pub struct RuntimeManager {
 struct ManagerInner {
     storage: PersistenceService,
     host: SharedHost,
-    model_client: RigModelClient,
+    model_client: ModelService,
     sessions: Mutex<HashMap<String, Arc<Mutex<Session>>>>,
     /// Cache ownership follows admitted execution, including queued handoff.
     /// Read-only inspection and metadata updates do not acquire ownership.
@@ -136,9 +138,10 @@ impl RuntimeManager {
     pub fn new(
         storage: impl Into<PersistenceService>,
         host: SharedHost,
-        model_client: RigModelClient,
+        model_client: impl Into<ModelService>,
     ) -> Self {
         let storage = storage.into();
+        let model_client = model_client.into();
         let (events, _) = broadcast::channel(1024);
         Self { inner: Arc::new(ManagerInner { storage, host, model_client, sessions: Mutex::new(HashMap::new()), cache_owners: StdMutex::new(HashSet::new()), tools: StdMutex::new(Vec::new()), preamble: StdMutex::new("You are Sked's task assistant. Use the available tools for current application facts. Follow the user's permission mode. A tool receipt determines whether an operation completed. Ask for missing information with ask_user and maintain a plan with update_plan when useful.".into()), events, shutdown: CancellationToken::new(), auto_title: AtomicBool::new(true),
 #[cfg(test)] fail_next_tool_record: AtomicBool::new(false) }) }

@@ -5,8 +5,8 @@
 use super::{contracts::*, descriptors, host::BridgeHost, runtime_event};
 use crate::{
     model_client::{
-        RigModelClient,
-        offline::{ScriptedReply, ScriptedTransport},
+        offline::ScriptedReply,
+        services::{DefaultModelPlugin, MODEL_SERVICE as MODEL},
     },
     plugins::{
         AgentProfile, Plugin, PluginContainer, PluginContext, PluginDescriptor, PluginError,
@@ -22,7 +22,6 @@ use tokio::sync::{broadcast, watch};
 use tokio_util::sync::CancellationToken;
 
 const HOST: ServiceDefinition<BridgeHost> = ServiceDefinition::new("sked.business-host", 1);
-const MODEL: ServiceDefinition<RigModelClient> = ServiceDefinition::new("sked.model", 1);
 const RUNTIME: ServiceDefinition<RuntimeManager> = ServiceDefinition::new("sked.runtime", 1);
 const EVENT_RELAY: ServiceDefinition<()> = ServiceDefinition::new("sked.runtime-events", 1);
 
@@ -72,7 +71,7 @@ impl DefaultAgentProfile {
                 ),
                 PluginSpec::new(
                     "default.model",
-                    Arc::new(ModelPlugin { offline_replies }),
+                    Arc::new(DefaultModelPlugin::new(offline_replies)),
                     Value::Null,
                 ),
                 PluginSpec::new(
@@ -162,32 +161,6 @@ impl Plugin for HostPlugin {
 
     async fn setup(&self, context: PluginContext) -> Result<(), PluginError> {
         context.provide(HOST, BridgeHost::new(self.events.clone()))
-    }
-}
-
-struct ModelPlugin {
-    offline_replies: Option<Vec<ScriptedReply>>,
-}
-
-#[async_trait]
-impl Plugin for ModelPlugin {
-    fn descriptor(&self) -> PluginDescriptor {
-        PluginDescriptor {
-            id: "sked.default.model",
-            contract_version: 1,
-            provides: vec![MODEL.key()],
-            dependencies: vec![],
-        }
-    }
-
-    async fn setup(&self, context: PluginContext) -> Result<(), PluginError> {
-        let client = match &self.offline_replies {
-            Some(replies) => RigModelClient::with_transport(rig::http_client::DynHttpClient::new(
-                ScriptedTransport::new(replies.clone()),
-            )),
-            None => RigModelClient::default(),
-        };
-        context.provide(MODEL, client)
     }
 }
 

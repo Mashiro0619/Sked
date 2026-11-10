@@ -2,6 +2,7 @@ mod credentials;
 pub mod offline;
 mod provider_failure;
 mod request_body;
+pub mod services;
 #[cfg(test)]
 mod tests;
 mod transport;
@@ -30,11 +31,13 @@ use rig::{
 };
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
-use tokio::sync::mpsc::{UnboundedSender, unbounded_channel};
+use tokio::sync::mpsc::UnboundedSender;
+#[cfg(test)]
+use tokio::sync::mpsc::unbounded_channel;
 use tokio_util::sync::CancellationToken;
 
 use crate::{runtime::ToolDescriptor, storage::models::TokenUsage};
-use credentials::{CredentialGuard, CredentialStream};
+use credentials::CredentialGuard;
 use transport::EndpointTransport;
 
 #[derive(Clone)]
@@ -79,114 +82,18 @@ impl RigModelClient {
         cancellation: CancellationToken,
         events: UnboundedSender<ModelEvent>,
     ) -> ModelRunResult {
-        let guard = CredentialGuard::new(&config.api_key);
-        let (raw_events, mut receiver) = unbounded_channel();
-        let event_guard = guard.clone();
-        let forward = async move {
-            let mut text = CredentialStream::new(event_guard.clone());
-            let mut reasoning = CredentialStream::new(event_guard.clone());
-            while let Some(mut event) = receiver.recv().await {
-                match &mut event {
-                    ModelEvent::Text(delta) => {
-                        let delta = text.push(delta);
-                        if !delta.is_empty() {
-                            let _ = events.send(ModelEvent::Text(delta));
-                        }
-                        continue;
-                    }
-                    ModelEvent::Reasoning(delta) => {
-                        let delta = reasoning.push(delta);
-                        if !delta.is_empty() {
-                            let _ = events.send(ModelEvent::Reasoning(delta));
-                        }
-                        continue;
-                    }
-                    ModelEvent::Reset => {
-                        text.clear();
-                        reasoning.clear();
-                    }
-                    ModelEvent::RequestStarted { history, .. } => history
-                        .iter_mut()
-                        .for_each(|value| event_guard.value(value)),
-                    ModelEvent::AssistantCommitted {
-                        message,
-                        tool_call_ids,
-                    } => {
-                        for delta in [text.finish()] {
-                            if !delta.is_empty() {
-                                let _ = events.send(ModelEvent::Text(delta));
-                            }
-                        }
-                        for delta in [reasoning.finish()] {
-                            if !delta.is_empty() {
-                                let _ = events.send(ModelEvent::Reasoning(delta));
-                            }
-                        }
-                        event_guard.value(message);
-                        for id in tool_call_ids {
-                            *id = event_guard.text(id);
-                        }
-                        text.clear();
-                        reasoning.clear();
-                    }
-                    ModelEvent::ToolCall {
-                        id,
-                        name,
-                        arguments,
-                    } => {
-                        *id = event_guard.text(id);
-                        *name = event_guard.text(name);
-                        event_guard.value(arguments);
-                    }
-                    ModelEvent::ToolResult { id, message } => {
-                        *id = event_guard.text(id);
-                        event_guard.value(message);
-                    }
-                    ModelEvent::Usage { raw, .. } => event_guard.value(raw),
-                }
-                let _ = events.send(event);
-            }
-            for delta in [text.finish()] {
-                if !delta.is_empty() {
-                    let _ = events.send(ModelEvent::Text(delta));
-                }
-            }
-            for delta in [reasoning.finish()] {
-                if !delta.is_empty() {
-                    let _ = events.send(ModelEvent::Reasoning(delta));
-                }
-            }
-        };
-        let run = self.run_inner(
-            config,
-            preamble,
-            prompt,
-            history.clone(),
-            tools,
-            executor,
-            cancellation.clone(),
-            raw_events,
-        );
-        let (result, ()) = tokio::join!(run, forward);
-        let mut result = match result {
-            Ok(result) => result,
-            Err(error) => ModelRunResult {
+        services::ModelService::from(self.clone())
+            .run(
+                config,
+                preamble,
+                prompt,
                 history,
-                cancelled: cancellation.is_cancelled(),
-                error: Some(error),
-                ..Default::default()
-            },
-        };
-        result
-            .history
-            .iter_mut()
-            .for_each(|value| guard.value(value));
-        result.text = guard.text(&result.text);
-        result.error = match &result.provider_failure {
-            Some(failure) => Some(failure.code.clone()),
-            None => result.error.map(|error| guard.error(&error)),
-        };
-        result
+                tools,
+                executor,
+                cancellation,
+                events,
+            )
+            .await
     }
 
     async fn run_inner(
