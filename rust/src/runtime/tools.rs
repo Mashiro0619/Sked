@@ -846,68 +846,43 @@ impl RuntimeManager {
             {
                 *stored = operation.clone();
             }
-            let mut history: Vec<ProviderMessage> = snapshot
-                .provider_history
-                .iter()
-                .cloned()
-                .map(serde_json::from_value)
-                .collect::<std::result::Result<_, _>>()?;
-            let call_index = history.iter().rposition(|message| matches!(message,
-                ProviderMessage::Assistant(assistant) if assistant.tool_calls().any(|call| call.id.to_string() == key)));
-            let mut native = None;
-            if let Some(index) = call_index {
-                for message in history.iter_mut().skip(index + 1) {
-                    if let ProviderMessage::Assistant(_) = message { break; }
-                    if let ProviderMessage::User { content } = message {
-                        for item in content {
-                            if let rig::message::UserContent::ToolResult(result) = item {
-                                if result.call.to_string() == key {
-                                    result.content = vec![rig::message::ToolResultContent::text(payload.clone())];
-                                    native = Some(ProviderMessage::tool_results(vec![result.clone()]));
-                                }
-                            }
-                        }
-                    }
-                }
-                if native.is_none() {
-                    if let ProviderMessage::Assistant(assistant) = &history[index] {
-                        let call = assistant.tool_calls().find(|call| call.id.to_string() == key).unwrap();
-                        let message = ProviderMessage::tool_results(vec![call.result(vec![rig::message::ToolResultContent::text(payload.clone())])]);
-                        history.insert(index + 1, message.clone());
-                        native = Some(message);
-                    }
-                }
-            }
+            let native = tool_identity::result_for_local_call(snapshot, &key, payload.clone())?;
+            let history = tool_identity::upsert_local_tool_result(snapshot, &key, &native)?;
             let mut changes = vec![
                 JournalChange::OperationUpserted {
                     operation: operation.clone(),
                 },
-                JournalChange::ProviderHistoryReplaced {
-                    messages: history
-                        .into_iter()
-                        .map(serde_json::to_value)
-                        .collect::<std::result::Result<_, _>>()?,
-                },
+                JournalChange::ProviderHistoryReplaced { messages: history },
             ];
             let mut recovered_messages = Vec::new();
-            if let Some(native) = native {
-                for mut message in project_provider_message(&native, &run_id, now_ms()) {
-                    if let Some(before) = snapshot.messages.iter().find(|before| before.id == message.id) {
-                        message.created_at = before.created_at;
-                    }
-                    recovered_messages.push(message.id.clone());
-                    changes.push(JournalChange::MessageUpserted { message });
+            for mut message in project_provider_message(&native, &run_id, now_ms()) {
+                tool_identity::localize_tool_message(&mut message, &run_id, &key);
+                if let Some(before) = snapshot
+                    .messages
+                    .iter()
+                    .find(|before| before.id == message.id)
+                {
+                    message.created_at = before.created_at;
                 }
+                recovered_messages.push(message.id.clone());
+                changes.push(JournalChange::MessageUpserted { message });
             }
             if let Some(run) = snapshot.runs.iter_mut().find(|run| run.id == run_id) {
                 let outcome = match result.outcome {
-                        ToolOutcome::Success => AttemptOutcome::Completed,
-                        ToolOutcome::Cancelled => AttemptOutcome::Cancelled,
-                        ToolOutcome::Error => AttemptOutcome::Failed,
-                        ToolOutcome::Unknown => AttemptOutcome::Unknown,
-                    };
-                if let Some(tool) = run.tools.iter_mut().find(|tool| tool.id == key) { tool.outcome = outcome; }
-                else { run.tools.push(ToolUsage { id:key.clone(), name:operation.tool_name.clone(), outcome }); }
+                    ToolOutcome::Success => AttemptOutcome::Completed,
+                    ToolOutcome::Cancelled => AttemptOutcome::Cancelled,
+                    ToolOutcome::Error => AttemptOutcome::Failed,
+                    ToolOutcome::Unknown => AttemptOutcome::Unknown,
+                };
+                if let Some(tool) = run.tools.iter_mut().find(|tool| tool.id == key) {
+                    tool.outcome = outcome;
+                } else {
+                    run.tools.push(ToolUsage {
+                        id: key.clone(),
+                        name: operation.tool_name.clone(),
+                        outcome,
+                    });
+                }
                 changes.push(JournalChange::RunUpserted { run: run.clone() });
             }
             for turn in snapshot
@@ -916,7 +891,9 @@ impl RuntimeManager {
                 .filter(|turn| turn.run_ids.contains(&run_id))
             {
                 for message_id in &recovered_messages {
-                    if !turn.message_ids.contains(message_id) { turn.message_ids.push(message_id.clone()); }
+                    if !turn.message_ids.contains(message_id) {
+                        turn.message_ids.push(message_id.clone());
+                    }
                 }
                 turn.ownership_complete = !snapshot.operations.iter().any(|operation| {
                     turn.run_ids.contains(&operation.run_id)
@@ -1198,57 +1175,76 @@ impl RuntimeManager {
     ) -> Result<ConversationSnapshot> {
         self.change(id, move |snapshot| {
             let call_id = question.tool_call_id.clone();
-            let mut history: Vec<ProviderMessage> = snapshot.provider_history.iter().cloned().map(serde_json::from_value).collect::<std::result::Result<_, _>>()?;
-            let mut native_result = None;
-            let mut present = false;
-            for message in &mut history {
-                if let ProviderMessage::User { content } = message { for item in content { if let rig::message::UserContent::ToolResult(result) = item {
-                    if result.call.to_string() == call_id {
-                        result.content = vec![rig::message::ToolResultContent::text(payload.to_string())];
-                        native_result = Some(ProviderMessage::tool_results(vec![result.clone()]));
-                        present = true;
-                    }
-                } } }
-            }
-            if native_result.is_none() {
-                let call = history.iter().filter_map(|message| match message { ProviderMessage::Assistant(assistant) => Some(assistant), _ => None })
-                    .flat_map(|assistant| assistant.tool_calls()).find(|call| call.id.to_string() == call_id).cloned();
-                if let Some(call) = call {
-                    native_result = Some(ProviderMessage::tool_results(vec![call.result(vec![rig::message::ToolResultContent::text(payload.to_string())])]));
-                }
-            }
-            let native = native_result.ok_or_else(|| StorageError::Conflict("原问题的工具调用记录不存在".into()))?;
-            if !present {
-                let position = history.iter().rposition(|message| matches!(message, ProviderMessage::Assistant(assistant) if assistant.tool_calls().any(|call| call.id.to_string() == call_id)))
-                    .ok_or_else(|| StorageError::Conflict("原问题的工具调用记录不存在".into()))? + 1;
-                history.insert(position, native.clone());
-            }
-            let mut changes = vec![JournalChange::ProviderHistoryReplaced { messages: history.into_iter().map(serde_json::to_value).collect::<std::result::Result<_, _>>()? }];
+            let native =
+                tool_identity::result_for_local_call(snapshot, &call_id, payload.to_string())?;
+            let history = tool_identity::upsert_local_tool_result(snapshot, &call_id, &native)?;
+            let mut changes = vec![JournalChange::ProviderHistoryReplaced { messages: history }];
             let message_id = format!("{}:tool:{call_id}", question.run_id);
-            let mut message = snapshot.messages.iter().find(|message| message.id == message_id).cloned().unwrap_or_else(|| Message { id: message_id.clone(), role: MessageRole::Tool, tool_call_id: Some(call_id.clone()), created_at: question.answered_at.unwrap_or_else(now_ms), ..Default::default() });
+            let mut message = snapshot
+                .messages
+                .iter()
+                .find(|message| message.id == message_id)
+                .cloned()
+                .unwrap_or_else(|| Message {
+                    id: message_id.clone(),
+                    role: MessageRole::Tool,
+                    tool_call_id: Some(call_id.clone()),
+                    created_at: question.answered_at.unwrap_or_else(now_ms),
+                    ..Default::default()
+                });
             message.text = payload.to_string();
             message.response_items = vec![serde_json::to_value(native)?];
             changes.push(JournalChange::MessageUpserted { message });
-            let mut operation = snapshot.operations.iter().find(|operation| operation.run_id == question.run_id && operation.tool_call_id == call_id).cloned()
-                .unwrap_or_else(|| OperationRecord { run_id: question.run_id.clone(), tool_call_id: call_id.clone(), tool_name: "ask_user".into(), ..Default::default() });
+            let mut operation = snapshot
+                .operations
+                .iter()
+                .find(|operation| {
+                    operation.run_id == question.run_id && operation.tool_call_id == call_id
+                })
+                .cloned()
+                .unwrap_or_else(|| OperationRecord {
+                    run_id: question.run_id.clone(),
+                    tool_call_id: call_id.clone(),
+                    tool_name: "ask_user".into(),
+                    ..Default::default()
+                });
             operation.phase = OperationPhase::Committed;
             operation.details = json!({"modelPayload":payload,"details":payload});
             changes.push(JournalChange::OperationUpserted { operation });
-            if let Some(run) = snapshot.runs.iter_mut().find(|run| run.id == question.run_id) {
-                if let Some(tool) = run.tools.iter_mut().find(|tool| tool.id == call_id) { tool.outcome = AttemptOutcome::Completed; }
+            if let Some(run) = snapshot
+                .runs
+                .iter_mut()
+                .find(|run| run.id == question.run_id)
+            {
+                if let Some(tool) = run.tools.iter_mut().find(|tool| tool.id == call_id) {
+                    tool.outcome = AttemptOutcome::Completed;
+                }
                 changes.push(JournalChange::RunUpserted { run: run.clone() });
             }
-            if let Some(turn) = snapshot.turns.iter_mut().find(|turn| turn.run_ids.contains(&question.run_id)) {
-                if !turn.message_ids.contains(&message_id) { turn.message_ids.push(message_id); }
+            if let Some(turn) = snapshot
+                .turns
+                .iter_mut()
+                .find(|turn| turn.run_ids.contains(&question.run_id))
+            {
+                if !turn.message_ids.contains(&message_id) {
+                    turn.message_ids.push(message_id);
+                }
                 changes.push(JournalChange::TurnUpserted { turn: turn.clone() });
             }
-            if let Some(current) = snapshot.current_question.as_mut().filter(|current| current.id == question.id) {
+            if let Some(current) = snapshot
+                .current_question
+                .as_mut()
+                .filter(|current| current.id == question.id)
+            {
                 current.status = question.status;
                 current.consumed = true;
-                changes.push(JournalChange::QuestionSet { question: Some(current.clone()) });
+                changes.push(JournalChange::QuestionSet {
+                    question: Some(current.clone()),
+                });
             }
             Ok(changes)
-        }).await
+        })
+        .await
     }
 
     async fn update_plan(&self, accepted: &AcceptedRun, arguments: Value) -> Result<Value> {

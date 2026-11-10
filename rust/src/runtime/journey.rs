@@ -34,6 +34,24 @@ struct JourneyHost {
     lose_undo_reply: AtomicBool,
 }
 
+fn local_call_id<'a>(snapshot: &'a ConversationSnapshot, wire_id: &str) -> &'a str {
+    snapshot
+        .messages
+        .iter()
+        .find_map(|message| {
+            let native: ProviderMessage =
+                serde_json::from_value(message.response_items.first()?.clone()).ok()?;
+            let ProviderMessage::Assistant(assistant) = native else {
+                return None;
+            };
+            let position = assistant
+                .tool_calls()
+                .position(|call| call.id.to_string() == wire_id)?;
+            Some(message.tool_calls[position].id.as_str())
+        })
+        .expect("the provider call must have a display identity")
+}
+
 impl AgentHost for Arc<JourneyHost> {
     fn begin_history(
         &self,
@@ -475,11 +493,12 @@ async fn offline_business_queue_question_context_and_history_journey() {
                 == crate::model_client::wire_tool_name("mutation.apply"))
     );
     assert_eq!(pending.runs[0].environment, config().environment);
+    let save_call_id = local_call_id(&pending, "save-event").to_owned();
     assert!(
         pending
             .operations
             .iter()
-            .any(|o| o.tool_call_id == "save-event"
+            .any(|o| o.tool_call_id == save_call_id
                 && o.details["operationId"] == "journey-operation")
     );
     manager
@@ -554,7 +573,7 @@ async fn offline_business_queue_question_context_and_history_journey() {
     let saved_tool = stopped
         .messages
         .iter()
-        .find(|message| message.tool_call_id.as_deref() == Some("save-event"))
+        .find(|message| message.tool_call_id.as_deref() == Some(save_call_id.as_str()))
         .unwrap();
     let displayed_result: Value = serde_json::from_str(&saved_tool.text).unwrap();
     assert_eq!(displayed_result["status"], "committed");
@@ -568,7 +587,7 @@ async fn offline_business_queue_question_context_and_history_journey() {
         stopped
             .operations
             .iter()
-            .any(|o| o.tool_call_id == "save-event" && o.phase == OperationPhase::Committed)
+            .any(|o| o.tool_call_id == save_call_id && o.phase == OperationPhase::Committed)
     );
     assert_eq!(host.commits.load(Ordering::SeqCst), 1);
     assert!(host.receipt.exists());
@@ -698,12 +717,13 @@ async fn offline_business_queue_question_context_and_history_journey() {
         .unwrap();
     manager.wait_until_idle(&qid).await;
     let answered = manager.read(&qid).await.unwrap();
+    let question_call_id = local_call_id(&answered, "question").to_owned();
     assert!(answered.current_question.unwrap().consumed);
     assert_eq!(answered.plan.unwrap().steps.len(), 1);
     let answer = answered
         .messages
         .iter()
-        .find(|message| message.tool_call_id.as_deref() == Some("question"))
+        .find(|message| message.tool_call_id.as_deref() == Some(question_call_id.as_str()))
         .unwrap();
     assert!(answer.text.contains("周二"));
     assert!(answer.text.contains("\"contextChanged\":true"));
@@ -1066,8 +1086,10 @@ async fn offline_business_queue_question_context_and_history_journey() {
         corrected
             .operations
             .iter()
-            .any(|operation| operation.tool_call_id == "preview"
-                && operation.phase == OperationPhase::Previewed)
+            .any(
+                |operation| operation.tool_call_id == local_call_id(&corrected, "preview")
+                    && operation.phase == OperationPhase::Previewed
+            )
     );
     assert_eq!(host.commits.load(Ordering::SeqCst), 1);
     assert_eq!(correction_transport.requests().len(), 4);

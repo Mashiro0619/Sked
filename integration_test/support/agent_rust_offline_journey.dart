@@ -39,6 +39,31 @@ import 'agent_rust_backup_journey.dart';
 import 'agent_rust_history_journey.dart';
 import 'agent_rust_clear_journey.dart';
 
+String? _findLocalCallId(
+  view.ViewConversationSnapshot snapshot,
+  String wireId,
+) {
+  for (final message in snapshot.messages) {
+    if (message.toolCalls.isEmpty) continue;
+    final raw =
+        jsonDecode(message.responseItems.first.json) as Map<String, dynamic>;
+    final calls = (raw['content'] as List<dynamic>)
+        .cast<Map<String, dynamic>>()
+        .where((part) => part['type'] == 'toolcall')
+        .toList();
+    for (var index = 0; index < calls.length; index++) {
+      if ((calls[index]['id'] as Map<String, dynamic>)['provider'] == wireId) {
+        return message.toolCalls[index].id;
+      }
+    }
+  }
+  return null;
+}
+
+String _localCallId(view.ViewConversationSnapshot snapshot, String wireId) =>
+    _findLocalCallId(snapshot, wireId) ??
+    (throw StateError('No display identity for provider call $wireId'));
+
 const _calendarId = 'rust-offline-calendar';
 const _model = 'offline-model';
 const _settings = AgentSettings(
@@ -92,18 +117,22 @@ Future<void> runRustAgentOfflineJourney(
     expect(
       first.operations.any(
         (operation) =>
-            operation.toolCallId == 'create-first' &&
+            operation.toolCallId == _localCallId(first, 'create-first') &&
             operation.phase == view.ViewOperationPhase.committed &&
             operation.binding != null,
       ),
       isTrue,
     );
-    final savedToolMessage = conversationFromRust(first).messages
-        .singleWhere((message) => message.toolCallId == 'create-first');
+    final savedToolMessage = conversationFromRust(first).messages.singleWhere(
+      (message) => message.toolCallId == _localCallId(first, 'create-first'),
+    );
     expect(
       savedToolMessage.toolOutcome?.operationId,
       first.operations
-          .singleWhere((operation) => operation.toolCallId == 'create-first')
+          .singleWhere(
+            (operation) =>
+                operation.toolCallId == _localCallId(first, 'create-first'),
+          )
           .binding!
           .operationId,
     );
@@ -243,7 +272,11 @@ Future<void> runRustAgentOfflineJourney(
     final rejected = await journey.snapshot();
     expect(
       rejected.operations
-          .singleWhere((operation) => operation.toolCallId == 'create-rejected')
+          .singleWhere(
+            (operation) =>
+                operation.toolCallId ==
+                _localCallId(rejected, 'create-rejected'),
+          )
           .phase,
       view.ViewOperationPhase.cancelled,
     );
@@ -256,7 +289,10 @@ Future<void> runRustAgentOfflineJourney(
     final preview = await journey.snapshot();
     expect(
       preview.operations
-          .singleWhere((operation) => operation.toolCallId == 'create-preview')
+          .singleWhere(
+            (operation) =>
+                operation.toolCallId == _localCallId(preview, 'create-preview'),
+          )
           .phase,
       view.ViewOperationPhase.previewed,
     );
@@ -268,7 +304,7 @@ Future<void> runRustAgentOfflineJourney(
 
     await journey.delegate.setMode(journey.id, AgentPermissionMode.ask);
     final replacedRun = await journey.send('先提议一个待审批安排');
-    await journey.approval('create-steer-approval');
+    final steeringApprovalId = await journey.approval('create-steer-approval');
     const steeringText = '改为只解释安排，不保存这项提议';
     await journey.delegate.steer(journey.id, steeringText);
     final steered = await journey.events.wait(
@@ -281,14 +317,16 @@ Future<void> runRustAgentOfflineJourney(
     );
     await journey.settled(steered.snapshot!.conversation.runId!);
     await expectLater(
-      journey.delegate.approve(journey.id, 'create-steer-approval'),
+      journey.delegate.approve(journey.id, steeringApprovalId),
       throwsA(isA<Object>()),
     );
     final afterSteer = await journey.snapshot();
     expect(
       afterSteer.operations
           .singleWhere(
-            (operation) => operation.toolCallId == 'create-steer-approval',
+            (operation) =>
+                operation.toolCallId ==
+                _localCallId(afterSteer, 'create-steer-approval'),
           )
           .phase,
       view.ViewOperationPhase.cancelled,
@@ -344,7 +382,10 @@ Future<void> runRustAgentOfflineJourney(
     expect(stopped.queuedInputs.single.text, '保存完成后总结');
     expect(
       stopped.operations
-          .singleWhere((operation) => operation.toolCallId == 'create-held')
+          .singleWhere(
+            (operation) =>
+                operation.toolCallId == _localCallId(stopped, 'create-held'),
+          )
           .phase,
       view.ViewOperationPhase.committed,
     );
@@ -460,7 +501,8 @@ Future<void> runRustAgentOfflineJourney(
       ], savedMessages);
       expect(restored.messages.length, greaterThan(savedMessages.length));
       final shutdownOperation = restored.operations.singleWhere(
-        (operation) => operation.toolCallId == 'create-shutdown',
+        (operation) =>
+            operation.toolCallId == _localCallId(restored, 'create-shutdown'),
       );
       expect(shutdownOperation.phase, view.ViewOperationPhase.committed);
       expect(shutdownOperation.binding?.operationId, isNotNull);
@@ -626,18 +668,21 @@ class _Journey {
     await delegate.loadConversation(id);
   }
 
-  Future<void> approval(String toolCallId) async {
+  Future<String> approval(String wireCallId) async {
     await events.wait(
       (event) =>
           event.snapshot?.operations.any(
             (operation) =>
-                operation.toolCallId == toolCallId &&
+                operation.toolCallId ==
+                    _findLocalCallId(event.snapshot!, wireCallId) &&
                 operation.phase == view.ViewOperationPhase.waitingApproval,
           ) ==
           true,
     );
     await delegate.loadConversation(id);
-    expect(delegate.state.value.runFor(id).pendingApproval!.id, toolCallId);
+    final localId = _localCallId(await snapshot(), wireCallId);
+    expect(delegate.state.value.runFor(id).pendingApproval!.id, localId);
+    return localId;
   }
 
   Future<void> show(WidgetTester tester) => tester.pumpWidget(

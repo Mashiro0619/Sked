@@ -90,6 +90,7 @@ pub enum ModelEvent {
     },
     AssistantCommitted {
         message: Value,
+        tool_call_ids: Vec<String>,
     },
     ToolCall {
         id: String,

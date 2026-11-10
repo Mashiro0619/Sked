@@ -29,6 +29,7 @@ use rig::{
     tool::{DynamicTool, ToolExecutionError, ToolOutput},
 };
 use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
 use tokio::sync::mpsc::{UnboundedSender, unbounded_channel};
 use tokio_util::sync::CancellationToken;
 
@@ -107,7 +108,10 @@ impl RigModelClient {
                     ModelEvent::RequestStarted { history, .. } => history
                         .iter_mut()
                         .for_each(|value| event_guard.value(value)),
-                    ModelEvent::AssistantCommitted { message } => {
+                    ModelEvent::AssistantCommitted {
+                        message,
+                        tool_call_ids,
+                    } => {
                         for delta in [text.finish()] {
                             if !delta.is_empty() {
                                 let _ = events.send(ModelEvent::Text(delta));
@@ -119,6 +123,9 @@ impl RigModelClient {
                             }
                         }
                         event_guard.value(message);
+                        for id in tool_call_ids {
+                            *id = event_guard.text(id);
+                        }
                         text.clear();
                         reasoning.clear();
                     }
@@ -231,6 +238,7 @@ impl RigModelClient {
         let state = Arc::new(Mutex::new(RunObservation {
             history: native_history.clone(),
             dispatch: None,
+            call_scope: String::new(),
         }));
         let mut dynamic_tools = Vec::with_capacity(tools.len());
         for tool in tools {
@@ -325,13 +333,19 @@ impl RigModelClient {
                 }
                 Ok(MultiTurnStreamItem::ToolCall { tool_call }) => {
                     let _ = events.send(ModelEvent::ToolCall {
-                        id: tool_call.id.to_string(),
+                        id: state
+                            .lock()
+                            .expect("model observation mutex poisoned")
+                            .local_call_id(&tool_call.id.to_string()),
                         name: logical_tool_name(tool_call.function.name.as_str()),
                         arguments: Value::Object(tool_call.function.arguments),
                     });
                 }
                 Ok(MultiTurnStreamItem::ToolResult { tool_result }) => {
-                    let id = tool_result.call.to_string();
+                    let id = state
+                        .lock()
+                        .expect("model observation mutex poisoned")
+                        .local_call_id(&tool_result.call.to_string());
                     let message = serde_json::to_value(Message::tool_results(vec![tool_result]))
                         .map_err(|e| e.to_string())?;
                     let _ = events.send(ModelEvent::ToolResult { id, message });
@@ -409,9 +423,22 @@ impl RigModelClient {
 
 struct RunObservation {
     history: Vec<Message>,
+    /// Provider call IDs are scoped to one Rig model turn. Only application
+    /// identities carry this scope; native messages keep the original IDs.
+    call_scope: String,
     /// Rig dispatch is sequential, so the hook and the following DynamicTool
     /// callback share exactly one model-issued call identity.
     dispatch: Option<(String, String)>,
+}
+
+impl RunObservation {
+    fn local_call_id(&self, wire_id: &str) -> String {
+        scoped_call_id(&self.call_scope, wire_id)
+    }
+}
+
+fn scoped_call_id(scope: &str, wire_id: &str) -> String {
+    format!("{scope}:{:x}", Sha256::digest(wire_id.as_bytes()))
 }
 
 struct RunHook {
@@ -426,7 +453,7 @@ struct RunHook {
 impl AgentHook for RunHook {
     async fn on_completion_call(
         &self,
-        _ctx: &HookContext,
+        ctx: &HookContext,
         event: CompletionCallEvent<'_>,
     ) -> CompletionCallAction {
         let history: Vec<Message> = event
@@ -435,10 +462,11 @@ impl AgentHook for RunHook {
             .map(|message| (**message).clone())
             .chain(std::iter::once(event.prompt.clone()))
             .collect();
-        self.state
-            .lock()
-            .expect("model observation mutex poisoned")
-            .history = history.clone();
+        {
+            let mut state = self.state.lock().expect("model observation mutex poisoned");
+            state.history = history.clone();
+            state.call_scope = format!("{}:{}", ctx.run_id(), event.turn);
+        }
         if self.cancellation.is_cancelled() {
             return CompletionCallAction::stop("用户已停止本次运行");
         }
@@ -490,19 +518,25 @@ impl AgentHook for RunHook {
         }
     }
 
-    async fn on_dispatch(&self, _ctx: &HookContext, event: DispatchEvent<'_>) -> DispatchAction {
+    async fn on_dispatch(&self, ctx: &HookContext, event: DispatchEvent<'_>) -> DispatchAction {
         if let (Some(name), Some(call)) = (event.tool_name(), event.call_id) {
             self.state
                 .lock()
                 .expect("model observation mutex poisoned")
-                .dispatch = Some((name.into(), call.to_string()));
+                .dispatch = Some((
+                name.into(),
+                scoped_call_id(
+                    &format!("{}:{}", ctx.run_id(), event.turn),
+                    &call.to_string(),
+                ),
+            ));
         }
         DispatchAction::Proceed
     }
 
     async fn on_invalid_tool_call(
         &self,
-        _ctx: &HookContext,
+        ctx: &HookContext,
         event: &InvalidToolCallContext,
     ) -> Option<InvalidToolCallAction> {
         if matches!(
@@ -510,6 +544,25 @@ impl AgentHook for RunHook {
             InvalidToolCallReason::MalformedArguments { .. }
         ) {
             return None;
+        }
+        // Rig's streamed skip commits this partial assistant and synthetic
+        // results directly; that path never invokes ModelTurnFinished.
+        if event.is_streaming {
+            if let Some(message @ Message::Assistant(assistant)) = event.chat_history.last() {
+                let tool_call_ids = {
+                    let mut state = self.state.lock().expect("model observation mutex poisoned");
+                    state.call_scope = format!("{}:{}", ctx.run_id(), ctx.turn());
+                    state.history = event.chat_history.clone();
+                    assistant
+                        .tool_calls()
+                        .map(|call| state.local_call_id(&call.id.to_string()))
+                        .collect()
+                };
+                let _ = self.events.send(ModelEvent::AssistantCommitted {
+                    message: serde_json::to_value(message).expect("message serialization"),
+                    tool_call_ids,
+                });
+            }
         }
         Some(InvalidToolCallAction::skip(format!(
             "toolName: {} 不是本次请求已公开的工具。请按 capabilities.describe 或 skills.load 发现工具后纠正调用。当前可用：{}。本组尚未执行的调用须在纠正后重新提出。",
@@ -525,7 +578,7 @@ impl AgentHook for RunHook {
 
     async fn on_model_turn_finished(
         &self,
-        _ctx: &HookContext,
+        ctx: &HookContext,
         event: ModelTurnFinished<'_>,
     ) -> ModelTurnAction {
         let has_content = event.content.iter().any(|content| match content {
@@ -537,13 +590,24 @@ impl AgentHook for RunHook {
             return ModelTurnAction::stop("模型返回了空回复");
         }
         let message = Message::Assistant(AssistantMessage::new(event.content.clone()));
-        self.state
-            .lock()
-            .expect("model observation mutex poisoned")
-            .history
-            .push(message.clone());
+        let tool_call_ids = {
+            let mut state = self.state.lock().expect("model observation mutex poisoned");
+            state.call_scope = format!("{}:{}", ctx.run_id(), event.turn);
+            state.history.push(message.clone());
+            event
+                .content
+                .iter()
+                .filter_map(|content| match content {
+                    AssistantContent::ToolCall(call) => {
+                        Some(state.local_call_id(&call.id.to_string()))
+                    }
+                    _ => None,
+                })
+                .collect()
+        };
         let _ = self.events.send(ModelEvent::AssistantCommitted {
             message: serde_json::to_value(message).expect("message serialization"),
+            tool_call_ids,
         });
         ModelTurnAction::Continue
     }

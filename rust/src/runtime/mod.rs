@@ -10,6 +10,7 @@ mod recovered_context_tests;
 mod reply_revision_tests;
 #[cfg(test)]
 mod steering_tests;
+mod tool_identity;
 mod tools;
 mod transport;
 mod types;
@@ -1655,11 +1656,21 @@ impl RuntimeManager {
                 })
                 .await?;
             }
-            ModelEvent::AssistantCommitted { message } => {
+            ModelEvent::AssistantCommitted {
+                message,
+                tool_call_ids,
+            } => {
                 let parsed: ProviderMessage = serde_json::from_value(message.clone())
                     .map_err(|e| RuntimeError::Invalid(e.to_string()))?;
-                let projected =
+                let mut projected =
                     project_model_message(&parsed, &rid, now_ms(), &accepted.config.selection());
+                for (call, local_id) in projected
+                    .iter_mut()
+                    .flat_map(|message| &mut message.tool_calls)
+                    .zip(tool_call_ids)
+                {
+                    call.id = local_id;
+                }
                 self.change(id, move |snapshot| {
                     let mut changes = projected
                         .iter()
@@ -1692,24 +1703,37 @@ impl RuntimeManager {
             } => {
                 let parsed: ProviderMessage = serde_json::from_value(message.clone())
                     .map_err(|e| RuntimeError::Invalid(e.to_string()))?;
-                let projected =
+                let mut projected =
                     project_model_message(&parsed, &rid, now_ms(), &accepted.config.selection());
+                for message in &mut projected {
+                    tool_identity::localize_tool_message(message, &rid, &call_id);
+                }
                 self.change(id, move |snapshot| {
-                    let mut changes = projected.iter().cloned().map(|message| JournalChange::MessageUpserted { message }).collect::<Vec<_>>();
-                    if let Some(turn) = snapshot.turns.iter_mut().find(|turn| turn.run_ids.contains(&rid)) { for message in &projected { if !turn.message_ids.contains(&message.id) { turn.message_ids.push(message.id.clone()); } } changes.push(JournalChange::TurnUpserted { turn: turn.clone() }); }
-                    let mut replaced = false;
-                    let mut history: Vec<ProviderMessage> = snapshot.provider_history.iter().cloned().map(serde_json::from_value).collect::<std::result::Result<_, _>>()?;
-                    if let ProviderMessage::User { content: incoming } = &parsed {
-                        for previous in &mut history { if let ProviderMessage::User { content } = previous { for item in content {
-                            if matches!(item, rig::message::UserContent::ToolResult(result) if result.call.to_string() == call_id) {
-                                if let Some(replacement) = incoming.iter().find(|item| matches!(item, rig::message::UserContent::ToolResult(result) if result.call.to_string() == call_id)) { *item = replacement.clone(); replaced = true; }
+                    let mut changes = projected
+                        .iter()
+                        .cloned()
+                        .map(|message| JournalChange::MessageUpserted { message })
+                        .collect::<Vec<_>>();
+                    if let Some(turn) = snapshot
+                        .turns
+                        .iter_mut()
+                        .find(|turn| turn.run_ids.contains(&rid))
+                    {
+                        for message in &projected {
+                            if !turn.message_ids.contains(&message.id) {
+                                turn.message_ids.push(message.id.clone());
                             }
-                        } } }
+                        }
+                        changes.push(JournalChange::TurnUpserted { turn: turn.clone() });
                     }
-                    if replaced { changes.push(JournalChange::ProviderHistoryReplaced { messages: history.into_iter().map(serde_json::to_value).collect::<std::result::Result<_, _>>()? }); }
-                    else { changes.push(JournalChange::ProviderHistoryAppended { messages: vec![message] }); }
+                    changes.push(JournalChange::ProviderHistoryReplaced {
+                        messages: tool_identity::upsert_local_tool_result(
+                            snapshot, &call_id, &parsed,
+                        )?,
+                    });
                     Ok(changes)
-                }).await?;
+                })
+                .await?;
             }
             ModelEvent::Usage { index, usage, .. } => {
                 let request_id = format!("{rid}:response:{index}");
