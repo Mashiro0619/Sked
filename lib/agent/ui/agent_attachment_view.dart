@@ -3,9 +3,11 @@ import 'dart:typed_data';
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../widgets/desktop_context_menu.dart';
 import '../../widgets/expressive_dialog.dart';
 import '../../widgets/sked_popup_menu.dart';
 import '../../widgets/sked_task_session.dart';
+import '../../widgets/workbench_chrome_metrics.dart';
 import '../attachments/agent_attachment_controller.dart';
 import 'agent_selectable_text.dart';
 
@@ -157,6 +159,36 @@ class _AgentAttachmentListState extends State<AgentAttachmentList> {
     }
   }
 
+  List<DesktopAction> _actionsFor(
+    String id,
+    int generation, {
+    DesktopActionContext? invocation,
+  }) {
+    final l = AppLocalizations.of(context);
+    DesktopAction action(String actionId, String label, IconData icon) =>
+        DesktopAction(
+          id: actionId,
+          label: label,
+          icon: icon,
+          enabled: _enabled && generation == _generation,
+          onInvoke: () async {
+            if (invocation != null) {
+              if (!invocation.isCurrent()) return;
+              _openMenu(id, generation);
+            }
+            await _select(id, actionId, generation);
+          },
+        );
+    return [
+      if (_attachment(id) != null)
+        action('preview', l.agentFilePreview, Icons.visibility_outlined),
+      if (widget.onUseAgain != null)
+        action('reuse', l.agentFileUseAgain, Icons.add_circle_outline),
+      if (widget.onRemove != null)
+        action('remove', l.agentRemoveAttachment, Icons.remove_circle_outline),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -179,87 +211,106 @@ class _AgentAttachmentListState extends State<AgentAttachmentList> {
                 Padding(
                   key: ValueKey('agent-attachment-$id'),
                   padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Card.outlined(
-                    margin: EdgeInsets.zero,
-                    child: Padding(
-                      padding: const EdgeInsetsDirectional.fromSTEB(
-                        12,
-                        8,
-                        4,
-                        8,
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(_icon(byId[id]?.mediaType), size: 22),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Tooltip(
-                                  message: byId[id]?.name ?? l.agentFileMissing,
-                                  excludeFromSemantics: true,
-                                  child: Text(
-                                    byId[id]?.name ?? l.agentFileMissing,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleSmall,
+                  child: DesktopContextMenuRegion(
+                    target: (
+                      widget.conversationId,
+                      widget.repository,
+                      id,
+                      generation,
+                      byId[id]?.name,
+                      byId[id]?.mediaType,
+                      byId[id]?.byteLength,
+                      byId[id]?.digest,
+                    ),
+                    enabled:
+                        WorkbenchChromeMetrics.of(context).desktop && _enabled,
+                    isOwnerCurrent: () =>
+                        _enabled &&
+                        generation == _generation &&
+                        widget.ids.contains(id) &&
+                        _sameAttachment(byId[id], _attachment(id)),
+                    actionsBuilder: (invocation) =>
+                        _actionsFor(id, generation, invocation: invocation),
+                    child: Card.outlined(
+                      margin: EdgeInsets.zero,
+                      child: Padding(
+                        padding: const EdgeInsetsDirectional.fromSTEB(
+                          12,
+                          8,
+                          4,
+                          8,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(_icon(byId[id]?.mediaType), size: 22),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Tooltip(
+                                    message:
+                                        byId[id]?.name ?? l.agentFileMissing,
+                                    excludeFromSemantics: true,
+                                    child: Text(
+                                      byId[id]?.name ?? l.agentFileMissing,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleSmall,
+                                    ),
                                   ),
-                                ),
-                                Wrap(
-                                  spacing: 8,
-                                  children: [
-                                    if (byId[id] case final attachment?)
+                                  Wrap(
+                                    spacing: 8,
+                                    children: [
+                                      if (byId[id] case final attachment?)
+                                        Text(
+                                          _size(attachment.byteLength),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall,
+                                        ),
                                       Text(
-                                        _size(attachment.byteLength),
+                                        agentAttachmentStatus(
+                                          l,
+                                          widget.delivery,
+                                        ),
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodySmall,
                                       ),
-                                    Text(
-                                      agentAttachmentStatus(l, widget.delivery),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall,
-                                    ),
-                                  ],
-                                ),
-                              ],
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          SkedPopupMenuButton<String>(
-                            key: ValueKey('agent-attachment-menu-$id'),
-                            tooltip: l.agentFilePreview,
-                            enabled:
-                                _enabled &&
-                                (byId[id] != null ||
-                                    widget.onUseAgain != null ||
-                                    widget.onRemove != null),
-                            onOpened: () => _openMenu(id, generation),
-                            onCanceled: () => _cancelMenu(id, generation),
-                            itemBuilder: (context) => [
-                              if (byId[id] != null)
-                                SkedPopupMenuItem(
-                                  value: 'preview',
-                                  child: Text(l.agentFilePreview),
-                                ),
-                              if (widget.onUseAgain != null)
-                                SkedPopupMenuItem(
-                                  value: 'reuse',
-                                  child: Text(l.agentFileUseAgain),
-                                ),
-                              if (widget.onRemove != null)
-                                SkedPopupMenuItem(
-                                  value: 'remove',
-                                  child: Text(l.agentRemoveAttachment),
-                                ),
-                            ],
-                            onSelected: (action) =>
-                                _select(id, action, generation),
-                          ),
-                        ],
+                            SkedPopupMenuButton<String>(
+                              key: ValueKey('agent-attachment-menu-$id'),
+                              tooltip: l.agentFilePreview,
+                              enabled:
+                                  _enabled &&
+                                  (byId[id] != null ||
+                                      widget.onUseAgain != null ||
+                                      widget.onRemove != null),
+                              onOpened: () => _openMenu(id, generation),
+                              onCanceled: () => _cancelMenu(id, generation),
+                              itemBuilder: (context) => [
+                                for (final action in _actionsFor(
+                                  id,
+                                  generation,
+                                ))
+                                  SkedPopupMenuItem(
+                                    value: action.id,
+                                    enabled: action.enabled,
+                                    child: Text(action.label),
+                                  ),
+                              ],
+                              onSelected: (action) =>
+                                  _select(id, action, generation),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
