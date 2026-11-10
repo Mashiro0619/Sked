@@ -12,7 +12,10 @@ use crate::{
         AgentProfile, Plugin, PluginContainer, PluginContext, PluginDescriptor, PluginError,
         PluginSpec, ServiceDefinition,
     },
-    runtime::{RuntimeManager, ToolDescriptor},
+    runtime::{
+        RuntimeManager, ToolDescriptor,
+        services::{RUNTIME_SERVICE as RUNTIME, RuntimeService},
+    },
     storage::services::{DefaultPersistencePlugin, PERSISTENCE_SERVICE as STORAGE},
 };
 use async_trait::async_trait;
@@ -22,7 +25,6 @@ use tokio::sync::{broadcast, watch};
 use tokio_util::sync::CancellationToken;
 
 const HOST: ServiceDefinition<BridgeHost> = ServiceDefinition::new("sked.business-host", 1);
-const RUNTIME: ServiceDefinition<RuntimeManager> = ServiceDefinition::new("sked.runtime", 1);
 const EVENT_RELAY: ServiceDefinition<()> = ServiceDefinition::new("sked.runtime-events", 1);
 
 /// A clear operation can reach shutdown after ordinary shutdown has begun.
@@ -32,7 +34,7 @@ type ShutdownExclusions = watch::Sender<HashSet<String>>;
 pub(super) struct DefaultAgentProfile {
     plugins: PluginContainer,
     shutdown_exclusions: ShutdownExclusions,
-    pub(super) manager: RuntimeManager,
+    pub(super) manager: RuntimeService,
     pub(super) host: BridgeHost,
     pub(super) events: broadcast::Sender<AgentEvent>,
     pub(super) events_closed: CancellationToken,
@@ -186,11 +188,11 @@ impl Plugin for RuntimePlugin {
         let storage = context.require(STORAGE)?;
         let host = context.require(HOST)?;
         let model = context.require(MODEL)?;
-        let manager = RuntimeManager::new(
+        let manager = RuntimeService::from(RuntimeManager::new(
             (*storage).clone(),
             Arc::new((*host).clone()),
             (*model).clone(),
-        );
+        ));
         let draining = manager.clone();
         let exclusions = self.shutdown_exclusions.subscribe();
         context.on_quiesce(move || {

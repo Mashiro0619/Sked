@@ -13,9 +13,9 @@ mod view_tests;
 
 use crate::frb_generated::StreamSink;
 #[cfg(test)]
-use crate::{model_client::RigModelClient, storage::StorageWorker};
+use crate::{model_client::RigModelClient, runtime::RuntimeManager, storage::StorageWorker};
 use crate::{
-    runtime::{RuntimeEvent, RuntimeManager, ToolDescriptor},
+    runtime::{RuntimeEvent, ToolDescriptor, services::RuntimeService},
     storage::{StorageError, models as stored, services::PersistenceService},
 };
 use contracts::*;
@@ -30,7 +30,7 @@ use tokio_util::sync::CancellationToken;
 
 #[flutter_rust_bridge::frb(opaque)]
 pub struct AgentCore {
-    manager: RuntimeManager,
+    manager: RuntimeService,
     host: BridgeHost,
     profile: DefaultAgentProfile,
     events: broadcast::Sender<AgentEvent>,

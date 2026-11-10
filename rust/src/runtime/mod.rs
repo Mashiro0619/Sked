@@ -8,6 +8,7 @@ mod maintenance;
 mod recovered_context_tests;
 #[cfg(test)]
 mod reply_revision_tests;
+pub mod services;
 #[cfg(test)]
 mod steering_tests;
 mod tool_identity;
