@@ -6,6 +6,7 @@
 pub mod api;
 mod frb_generated;
 pub mod model_client;
+pub mod plugins;
 pub mod runtime;
 pub mod storage;
 

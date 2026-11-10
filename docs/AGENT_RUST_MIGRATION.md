@@ -65,6 +65,8 @@ Flutter 3.47.7／Dart 3.13.5 和现有 Android 工具链保持。新增 Cargo.lo
 
 `rust/src/api` 提供生成桥接，`AgentRustClient` 等待原生事件订阅就绪后开放命令。停止或退出先关闭新请求入口，宿主仍可提交已接纳保存的最终回执；重复退出调用等待同一收尾过程。
 
+后续插件化已将默认装配迁入 `rust/src/api/default_profile.rs`，由 `rust/src/plugins` 管理服务租约与异步清理，公开 FRB 命令保持一致。该次改造的实施与验收状态单独记录在[插件架构计划](AGENT_PLUGIN_ARCHITECTURE.md)。
+
 `RustAgentBusinessHost` 为每次运行持有业务作用域，复用 `ApplicationToolHost` 和 `MutationCoordinator`。准备记录持久化后才进入业务保存；待审批对象建立后才发布允许／拒绝入口。历史主库撤销通过 `RustAgentMainUndo` 读取原始回执并复用领域撤销入口。
 
 原生模型客户端在发送前检查会话与工具参数中的当前连接凭据，并对流式正文、思考、工具结果和错误执行脱敏。流式输出保留可能属于凭据的尾部，避免分片泄露；短凭据按敏感字段和授权语法识别，保留普通正文。

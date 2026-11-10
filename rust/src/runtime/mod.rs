@@ -30,7 +30,7 @@ use std::{
 
 use rig::message::Message as ProviderMessage;
 use serde_json::Value;
-use tokio::sync::{Mutex, Notify, broadcast, mpsc, oneshot};
+use tokio::sync::{Mutex, Notify, broadcast, mpsc, oneshot, watch};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
@@ -1162,13 +1162,38 @@ impl RuntimeManager {
     }
 
     pub async fn shutdown_except(&self, except: Option<&str>) {
+        let excluded = except.into_iter().map(str::to_owned).collect();
+        let (_sender, exclusions) = watch::channel(excluded);
+        self.shutdown_with_exclusions(exclusions).await;
+    }
+
+    /// A data-clear host request may join a shutdown that is already waiting
+    /// for its run. Observe newly registered exclusions while draining so that
+    /// request can close the old store and return its own final host result.
+    pub(crate) async fn shutdown_with_exclusions(
+        &self,
+        mut exclusions: watch::Receiver<HashSet<String>>,
+    ) {
         self.inner.shutdown.cancel();
         let sessions: Vec<_> = self.inner.sessions.lock().await.keys().cloned().collect();
         for id in &sessions {
             let _ = self.stop(id).await;
         }
-        for id in sessions.iter().filter(|id| Some(id.as_str()) != except) {
-            self.wait_until_idle(id).await;
+        for id in &sessions {
+            loop {
+                if exclusions.borrow().contains(id) {
+                    break;
+                }
+                tokio::select! {
+                    _ = self.wait_until_idle(id) => break,
+                    changed = exclusions.changed() => {
+                        if changed.is_err() {
+                            self.wait_until_idle(id).await;
+                            break;
+                        }
+                    }
+                }
+            }
         }
     }
 

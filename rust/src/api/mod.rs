@@ -1,5 +1,6 @@
 pub mod archive;
 pub mod contracts;
+mod default_profile;
 pub mod history;
 mod host;
 pub mod management;
@@ -11,22 +12,19 @@ mod provider_failure_tests;
 mod view_tests;
 
 use crate::frb_generated::StreamSink;
+#[cfg(test)]
+use crate::{model_client::RigModelClient, storage::StorageWorker};
 use crate::{
-    model_client::{
-        RigModelClient,
-        offline::{ScriptedReply, ScriptedTransport},
-    },
     runtime::{RuntimeEvent, RuntimeManager, ToolDescriptor},
-    storage::{StorageError, StorageHandle, StorageWorker, models as stored},
+    storage::{StorageError, StorageHandle, models as stored},
 };
 use contracts::*;
+use default_profile::DefaultAgentProfile;
 use host::BridgeHost;
 use models::*;
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-    sync::{Arc, Mutex},
-};
+#[cfg(test)]
+use std::sync::Arc;
+use std::{collections::HashMap, path::PathBuf, sync::Mutex};
 use tokio::sync::broadcast;
 use tokio_util::sync::CancellationToken;
 
@@ -34,9 +32,10 @@ use tokio_util::sync::CancellationToken;
 pub struct AgentCore {
     manager: RuntimeManager,
     host: BridgeHost,
-    worker: Mutex<Option<StorageWorker>>,
+    profile: DefaultAgentProfile,
     events: broadcast::Sender<AgentEvent>,
     closed: CancellationToken,
+    closing: CancellationToken,
     attachment_imports: Mutex<HashMap<String, CancellationToken>>,
 }
 
@@ -61,61 +60,20 @@ fn descriptors(tools: Vec<ToolDefinition>) -> Result<Vec<ToolDescriptor>, String
 
 impl AgentCore {
     pub async fn initialize(config: CoreConfig) -> Result<AgentCore, String> {
-        let tools = descriptors(config.tools)?;
-        let root = PathBuf::from(config.data_directory);
-        let worker = tokio::task::spawn_blocking(move || StorageWorker::open(root))
-            .await
-            .map_err(|e| e.to_string())?
-            .map_err(|e| e.to_string())?;
-        let (events, _) = broadcast::channel(2048);
-        let host = BridgeHost::new(events.clone());
-        let model_client = if let Some(replies) = config.offline_replies {
-            RigModelClient::with_transport(rig::http_client::DynHttpClient::new(
-                ScriptedTransport::new(replies.into_iter().map(|r| ScriptedReply {
-                    status: r.status,
-                    content_type: r.content_type,
-                    body: r.body,
-                })),
-            ))
-        } else {
-            RigModelClient::default()
-        };
-        let manager = RuntimeManager::new(worker.handle(), Arc::new(host.clone()), model_client);
-        manager.set_tools(tools);
-        manager.set_preamble(config.preamble);
-        manager.set_title_generation_enabled(config.generate_titles);
-        manager
-            .recover_interrupted()
-            .await
-            .map_err(|e| e.to_string())?;
-        let closed = CancellationToken::new();
-        let mut source = manager.subscribe();
-        let target = events.clone();
-        let stop = closed.clone();
-        tokio::spawn(async move {
-            loop {
-                tokio::select! {
-                    _ = stop.cancelled() => break,
-                    event = source.recv() => match event {
-                        Ok(event) => { let _ = target.send(runtime_event(event)); }
-                        Err(broadcast::error::RecvError::Lagged(_)) => { let _ = target.send(AgentEvent::empty(EventKind::Resync, String::new())); }
-                        Err(broadcast::error::RecvError::Closed) => break,
-                    }
-                }
-            }
-        });
+        let profile = DefaultAgentProfile::open(config).await?;
         Ok(Self {
-            manager,
-            host,
-            worker: Mutex::new(Some(worker)),
-            events,
-            closed,
+            manager: profile.manager.clone(),
+            host: profile.host.clone(),
+            events: profile.events.clone(),
+            closed: profile.events_closed.clone(),
+            profile,
+            closing: CancellationToken::new(),
             attachment_imports: Mutex::new(HashMap::new()),
         })
     }
 
     pub async fn dispatch(&self, command: AgentCommand) -> Result<CommandResult, String> {
-        if self.closed.is_cancelled() {
+        if self.closing.is_cancelled() {
             return Err("Agent core is closed".into());
         }
         let id = command.conversation_id.clone().unwrap_or_default();
@@ -892,7 +850,17 @@ impl AgentCore {
         }
         loop {
             tokio::select! {
-                _ = self.closed.cancelled() => return Ok(()),
+                _ = self.closed.cancelled() => {
+                    loop {
+                        match events.try_recv() {
+                            Ok(event) => if sink.add(event).is_err() { return Ok(()); },
+                            Err(broadcast::error::TryRecvError::Lagged(_)) => {
+                                if sink.add(AgentEvent::empty(EventKind::Resync, String::new())).is_err() { return Ok(()); }
+                            }
+                            Err(broadcast::error::TryRecvError::Empty | broadcast::error::TryRecvError::Closed) => return Ok(()),
+                        }
+                    }
+                },
                 event = events.recv() => match event {
                     Ok(event) => if sink.add(event).is_err() { return Ok(()); },
                     Err(broadcast::error::RecvError::Lagged(_)) => { if sink.add(AgentEvent::empty(EventKind::Resync, String::new())).is_err() { return Ok(()); } }
@@ -903,24 +871,18 @@ impl AgentCore {
     }
 
     pub async fn shutdown(&self) -> Result<(), String> {
-        self.manager.shutdown().await;
-        self.closed.cancel();
-        let worker = self
-            .worker
-            .lock()
-            .expect("storage owner mutex poisoned")
-            .take();
-        if let Some(worker) = worker {
-            tokio::task::spawn_blocking(move || worker.shutdown())
-                .await
-                .map_err(|e| e.to_string())?
-                .map_err(|e| e.to_string())?;
-        }
-        Ok(())
+        self.shutdown_with_exclusion(None).await
     }
 }
 
 impl AgentCore {
+    async fn shutdown_with_exclusion(&self, except: Option<String>) -> Result<(), String> {
+        // Existing host calls may still read their source and return receipts.
+        // Block new commands now; close their original providers after drain.
+        self.closing.cancel();
+        self.profile.shutdown(except).await
+    }
+
     fn storage(&self) -> StorageHandle {
         self.manager.storage()
     }

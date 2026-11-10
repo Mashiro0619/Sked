@@ -73,7 +73,7 @@ impl AgentCore {
         arguments: JsonPayload,
         environment: Option<JsonPayload>,
     ) -> Result<JsonPayload, String> {
-        if self.closed.is_cancelled() {
+        if self.closing.is_cancelled() {
             return Err("Agent core is closed".into());
         }
         let result = self
@@ -99,22 +99,7 @@ impl AgentCore {
         &self,
         conversation_id: Option<String>,
     ) -> Result<(), String> {
-        self.manager
-            .shutdown_except(conversation_id.as_deref())
-            .await;
-        self.closed.cancel();
-        let worker = self
-            .worker
-            .lock()
-            .expect("storage owner mutex poisoned")
-            .take();
-        if let Some(worker) = worker {
-            tokio::task::spawn_blocking(move || worker.shutdown())
-                .await
-                .map_err(|e| e.to_string())?
-                .map_err(|e| e.to_string())?;
-        }
-        Ok(())
+        self.shutdown_with_exclusion(conversation_id).await
     }
     pub async fn tool_definitions(&self) -> Result<Vec<ToolDefinition>, String> {
         Ok(self
@@ -162,7 +147,7 @@ impl AgentCore {
         &self,
         request: DraftAttachmentAdmission,
     ) -> Result<ViewConversationState, String> {
-        if self.closed.is_cancelled() {
+        if self.closing.is_cancelled() {
             return Err("unavailable: Agent core is closed".into());
         }
         let token = self
