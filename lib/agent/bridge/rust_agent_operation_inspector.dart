@@ -13,11 +13,14 @@ class RustAgentOperationInspector {
     required this.session,
     required this.mutations,
     required this.external,
+    this.reconcileExternal,
   });
 
   final AppSession session;
   final MutationCoordinator mutations;
   final ExternalOperationCoordinator external;
+  final Future<Map<String, Object?>?> Function(String operationId)?
+  reconcileExternal;
 
   Future<Map<String, Object?>> read(native.HostRequest request) async {
     final id = request.operationIds.singleOrNull;
@@ -67,6 +70,12 @@ class RustAgentOperationInspector {
           id,
           'The durable receipt belongs to an external operation.',
         );
+      }
+      if (request.owner == view.ViewOperationStore.external_) {
+        final recovered = await reconcileExternal?.call(id);
+        if (recovered != null) {
+          return {...recovered, 'operationId': id, 'recovered': true};
+        }
       }
       return {
         ...receipt.result,

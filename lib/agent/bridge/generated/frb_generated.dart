@@ -5,6 +5,8 @@
 
 import 'api.dart';
 import 'api/contracts.dart';
+import 'api/execution.dart';
+import 'api/execution_contracts.dart';
 import 'api/history.dart';
 import 'api/management_contracts.dart';
 import 'api/models.dart';
@@ -73,7 +75,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -239045674;
+  int get rustContentHash => 2108187593;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -130,6 +132,10 @@ abstract class RustLibApi extends BaseApi {
     required KnowledgeEdit request,
   });
 
+  ExecutionAvailability crateApiAgentCoreExecutionAvailability({
+    required AgentCore that,
+  });
+
   Future<String> crateApiAgentCoreExportArchiveJson({
     required AgentCore that,
     List<String>? conversationIds,
@@ -154,8 +160,24 @@ abstract class RustLibApi extends BaseApi {
 
   Future<AgentCore> crateApiAgentCoreInitialize({required CoreConfig config});
 
+  Future<ExecutionReceipt> crateApiAgentCoreInspectExecution({
+    required AgentCore that,
+    required ExecutionIdentity identity,
+  });
+
   UiContributionSubscription crateApiAgentCoreOpenUiContributions({
     required AgentCore that,
+  });
+
+  Future<PreparedExecutionHandle>
+  crateApiAgentCorePrepareControlledReadExecution({
+    required AgentCore that,
+    required ControlledReadExecutionRequest request,
+  });
+
+  Future<PreparedExecutionHandle> crateApiAgentCorePreparePythonExecution({
+    required AgentCore that,
+    required PythonExecutionRequest request,
   });
 
   Future<List<String>> crateApiAgentCorePruneHistory({
@@ -246,6 +268,40 @@ abstract class RustLibApi extends BaseApi {
     required List<int> bytes,
   });
 
+  void crateApiExecutionExecutionEventSubscriptionClose({
+    required ExecutionEventSubscription that,
+  });
+
+  Stream<ExecutionEvent> crateApiExecutionExecutionEventSubscriptionWatch({
+    required ExecutionEventSubscription that,
+  });
+
+  void crateApiExecutionPreparedExecutionHandleCancel({
+    required PreparedExecutionHandle that,
+  });
+
+  String crateApiExecutionPreparedExecutionHandleExecutionId({
+    required PreparedExecutionHandle that,
+  });
+
+  ExecutionEventSubscription
+  crateApiExecutionPreparedExecutionHandleOpenEvents({
+    required PreparedExecutionHandle that,
+  });
+
+  ExecutionPreview crateApiExecutionPreparedExecutionHandlePreview({
+    required PreparedExecutionHandle that,
+  });
+
+  ExecutionReceipt? crateApiExecutionPreparedExecutionHandleReceipt({
+    required PreparedExecutionHandle that,
+  });
+
+  Future<ExecutionReceipt> crateApiExecutionPreparedExecutionHandleStartOnce({
+    required PreparedExecutionHandle that,
+    required String operationId,
+  });
+
   void crateApiUiUiContributionSubscriptionClose({
     required UiContributionSubscription that,
   });
@@ -268,6 +324,24 @@ abstract class RustLibApi extends BaseApi {
   get rust_arc_decrement_strong_count_AgentCore;
 
   CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_AgentCorePtr;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_ExecutionEventSubscription;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_ExecutionEventSubscription;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_ExecutionEventSubscriptionPtr;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_PreparedExecutionHandle;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_PreparedExecutionHandle;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_PreparedExecutionHandlePtr;
 
   RustArcIncrementStrongCountFnType
   get rust_arc_increment_strong_count_UiContributionSubscription;
@@ -604,6 +678,37 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  ExecutionAvailability crateApiAgentCoreExecutionAvailability({
+    required AgentCore that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_execution_availability,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiAgentCoreExecutionAvailabilityConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCoreExecutionAvailabilityConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_execution_availability",
+        argNames: ["that"],
+      );
+
+  @override
   Future<String> crateApiAgentCoreExportArchiveJson({
     required AgentCore that,
     List<String>? conversationIds,
@@ -622,7 +727,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 9,
+            funcId: 10,
             port: port_,
           );
         },
@@ -658,7 +763,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 10,
+            funcId: 11,
             port: port_,
           );
         },
@@ -698,7 +803,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 12,
             port: port_,
           );
         },
@@ -738,7 +843,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 12,
+            funcId: 13,
             port: port_,
           );
         },
@@ -769,7 +874,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 13,
+            funcId: 14,
             port: port_,
           );
         },
@@ -792,6 +897,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<ExecutionReceipt> crateApiAgentCoreInspectExecution({
+    required AgentCore that,
+    required ExecutionIdentity identity,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_execution_identity(identity, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 15,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_execution_receipt,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiAgentCoreInspectExecutionConstMeta,
+        argValues: [that, identity],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCoreInspectExecutionConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_inspect_execution",
+        argNames: ["that", "identity"],
+      );
+
+  @override
   UiContributionSubscription crateApiAgentCoreOpenUiContributions({
     required AgentCore that,
   }) {
@@ -803,7 +946,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
         },
         codec: SseCodec(
           decodeSuccessData:
@@ -824,6 +967,88 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<PreparedExecutionHandle>
+  crateApiAgentCorePrepareControlledReadExecution({
+    required AgentCore that,
+    required ControlledReadExecutionRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_controlled_read_execution_request(
+            request,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 17,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiAgentCorePrepareControlledReadExecutionConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCorePrepareControlledReadExecutionConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_prepare_controlled_read_execution",
+        argNames: ["that", "request"],
+      );
+
+  @override
+  Future<PreparedExecutionHandle> crateApiAgentCorePreparePythonExecution({
+    required AgentCore that,
+    required PythonExecutionRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_python_execution_request(request, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 18,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiAgentCorePreparePythonExecutionConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCorePreparePythonExecutionConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_prepare_python_execution",
+        argNames: ["that", "request"],
+      );
+
+  @override
   Future<List<String>> crateApiAgentCorePruneHistory({
     required AgentCore that,
     required int cutoffMs,
@@ -840,7 +1065,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 15,
+            funcId: 19,
             port: port_,
           );
         },
@@ -878,7 +1103,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 16,
+            funcId: 20,
             port: port_,
           );
         },
@@ -917,7 +1142,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 17,
+            funcId: 21,
             port: port_,
           );
         },
@@ -955,7 +1180,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 18,
+            funcId: 22,
             port: port_,
           );
         },
@@ -993,7 +1218,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 19,
+            funcId: 23,
             port: port_,
           );
         },
@@ -1033,7 +1258,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 20,
+            funcId: 24,
             port: port_,
           );
         },
@@ -1077,7 +1302,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 21,
+            funcId: 25,
             port: port_,
           );
         },
@@ -1133,7 +1358,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 22,
+            funcId: 26,
             port: port_,
           );
         },
@@ -1173,7 +1398,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 23,
+            funcId: 27,
             port: port_,
           );
         },
@@ -1208,7 +1433,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 24,
+            funcId: 28,
             port: port_,
           );
         },
@@ -1246,7 +1471,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 25,
+            funcId: 29,
             port: port_,
           );
         },
@@ -1284,7 +1509,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 26,
+            funcId: 30,
             port: port_,
           );
         },
@@ -1320,7 +1545,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 27,
+            funcId: 31,
             port: port_,
           );
         },
@@ -1360,7 +1585,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 28,
+            funcId: 32,
             port: port_,
           );
         },
@@ -1398,7 +1623,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 29,
+            funcId: 33,
             port: port_,
           );
         },
@@ -1435,7 +1660,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 30,
+              funcId: 34,
               port: port_,
             );
           },
@@ -1477,7 +1702,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 31,
+            funcId: 35,
             port: port_,
           );
         },
@@ -1499,6 +1724,279 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  void crateApiExecutionExecutionEventSubscriptionClose({
+    required ExecutionEventSubscription that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 36)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiExecutionExecutionEventSubscriptionCloseConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiExecutionExecutionEventSubscriptionCloseConstMeta =>
+      const TaskConstMeta(
+        debugName: "ExecutionEventSubscription_close",
+        argNames: ["that"],
+      );
+
+  @override
+  Stream<ExecutionEvent> crateApiExecutionExecutionEventSubscriptionWatch({
+    required ExecutionEventSubscription that,
+  }) {
+    final sink = RustStreamSink<ExecutionEvent>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+              that,
+              serializer,
+            );
+            sse_encode_StreamSink_execution_event_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 37,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_String,
+          ),
+          constMeta: kCrateApiExecutionExecutionEventSubscriptionWatchConstMeta,
+          argValues: [that, sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta
+  get kCrateApiExecutionExecutionEventSubscriptionWatchConstMeta =>
+      const TaskConstMeta(
+        debugName: "ExecutionEventSubscription_watch",
+        argNames: ["that", "sink"],
+      );
+
+  @override
+  void crateApiExecutionPreparedExecutionHandleCancel({
+    required PreparedExecutionHandle that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 38)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiExecutionPreparedExecutionHandleCancelConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiExecutionPreparedExecutionHandleCancelConstMeta =>
+      const TaskConstMeta(
+        debugName: "PreparedExecutionHandle_cancel",
+        argNames: ["that"],
+      );
+
+  @override
+  String crateApiExecutionPreparedExecutionHandleExecutionId({
+    required PreparedExecutionHandle that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 39)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta:
+            kCrateApiExecutionPreparedExecutionHandleExecutionIdConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiExecutionPreparedExecutionHandleExecutionIdConstMeta =>
+      const TaskConstMeta(
+        debugName: "PreparedExecutionHandle_execution_id",
+        argNames: ["that"],
+      );
+
+  @override
+  ExecutionEventSubscription
+  crateApiExecutionPreparedExecutionHandleOpenEvents({
+    required PreparedExecutionHandle that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 40)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiExecutionPreparedExecutionHandleOpenEventsConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiExecutionPreparedExecutionHandleOpenEventsConstMeta =>
+      const TaskConstMeta(
+        debugName: "PreparedExecutionHandle_open_events",
+        argNames: ["that"],
+      );
+
+  @override
+  ExecutionPreview crateApiExecutionPreparedExecutionHandlePreview({
+    required PreparedExecutionHandle that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 41)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_execution_preview,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiExecutionPreparedExecutionHandlePreviewConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiExecutionPreparedExecutionHandlePreviewConstMeta =>
+      const TaskConstMeta(
+        debugName: "PreparedExecutionHandle_preview",
+        argNames: ["that"],
+      );
+
+  @override
+  ExecutionReceipt? crateApiExecutionPreparedExecutionHandleReceipt({
+    required PreparedExecutionHandle that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 42)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_execution_receipt,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiExecutionPreparedExecutionHandleReceiptConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiExecutionPreparedExecutionHandleReceiptConstMeta =>
+      const TaskConstMeta(
+        debugName: "PreparedExecutionHandle_receipt",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<ExecutionReceipt> crateApiExecutionPreparedExecutionHandleStartOnce({
+    required PreparedExecutionHandle that,
+    required String operationId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+            that,
+            serializer,
+          );
+          sse_encode_String(operationId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 43,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_execution_receipt,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiExecutionPreparedExecutionHandleStartOnceConstMeta,
+        argValues: [that, operationId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateApiExecutionPreparedExecutionHandleStartOnceConstMeta =>
+      const TaskConstMeta(
+        debugName: "PreparedExecutionHandle_start_once",
+        argNames: ["that", "operationId"],
+      );
+
+  @override
   void crateApiUiUiContributionSubscriptionClose({
     required UiContributionSubscription that,
   }) {
@@ -1510,7 +2008,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 32)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 44)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1550,7 +2048,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 33,
+              funcId: 45,
               port: port_,
             );
           },
@@ -1582,7 +2080,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 34,
+            funcId: 46,
             port: port_,
           );
         },
@@ -1610,7 +2108,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 35,
+            funcId: 47,
             port: port_,
           );
         },
@@ -1642,7 +2140,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 36,
+            funcId: 48,
             port: port_,
           );
         },
@@ -1669,6 +2167,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore;
 
   RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_ExecutionEventSubscription => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_ExecutionEventSubscription => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_PreparedExecutionHandle => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_PreparedExecutionHandle => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle;
+
+  RustArcIncrementStrongCountFnType
   get rust_arc_increment_strong_count_UiContributionSubscription => wire
       .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription;
 
@@ -1692,6 +2206,28 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ExecutionEventSubscription
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ExecutionEventSubscriptionImpl.frbInternalDcoDecode(
+      raw as List<dynamic>,
+    );
+  }
+
+  @protected
+  PreparedExecutionHandle
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return PreparedExecutionHandleImpl.frbInternalDcoDecode(
+      raw as List<dynamic>,
+    );
+  }
+
+  @protected
   UiContributionSubscription
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
     dynamic raw,
@@ -1709,6 +2245,28 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return AgentCoreImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  ExecutionEventSubscription
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ExecutionEventSubscriptionImpl.frbInternalDcoDecode(
+      raw as List<dynamic>,
+    );
+  }
+
+  @protected
+  PreparedExecutionHandle
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return PreparedExecutionHandleImpl.frbInternalDcoDecode(
+      raw as List<dynamic>,
+    );
   }
 
   @protected
@@ -1797,6 +2355,28 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ExecutionEventSubscription
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ExecutionEventSubscriptionImpl.frbInternalDcoDecode(
+      raw as List<dynamic>,
+    );
+  }
+
+  @protected
+  PreparedExecutionHandle
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return PreparedExecutionHandleImpl.frbInternalDcoDecode(
+      raw as List<dynamic>,
+    );
+  }
+
+  @protected
   UiContributionSubscription
   dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
     dynamic raw,
@@ -1809,6 +2389,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   RustStreamSink<AgentEvent> dco_decode_StreamSink_agent_event_Sse(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
+  RustStreamSink<ExecutionEvent> dco_decode_StreamSink_execution_event_Sse(
     dynamic raw,
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
@@ -1984,6 +2572,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ControlledReadExecutionRequest
+  dco_decode_box_autoadd_controlled_read_execution_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_controlled_read_execution_request(raw);
+  }
+
+  @protected
   ConversationSelection dco_decode_box_autoadd_conversation_selection(
     dynamic raw,
   ) {
@@ -2011,6 +2606,46 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_draft_attachment_target(raw);
+  }
+
+  @protected
+  ExecutionError dco_decode_box_autoadd_execution_error(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_execution_error(raw);
+  }
+
+  @protected
+  ExecutionIdentity dco_decode_box_autoadd_execution_identity(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_execution_identity(raw);
+  }
+
+  @protected
+  ExecutionOutputStream dco_decode_box_autoadd_execution_output_stream(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_execution_output_stream(raw);
+  }
+
+  @protected
+  ExecutionProviderIdentity dco_decode_box_autoadd_execution_provider_identity(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_execution_provider_identity(raw);
+  }
+
+  @protected
+  ExecutionReceipt dco_decode_box_autoadd_execution_receipt(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_execution_receipt(raw);
+  }
+
+  @protected
+  ExecutionTerminal dco_decode_box_autoadd_execution_terminal(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_execution_terminal(raw);
   }
 
   @protected
@@ -2044,6 +2679,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int dco_decode_box_autoadd_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
   JsonPayload dco_decode_box_autoadd_json_payload(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_json_payload(raw);
@@ -2065,6 +2706,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ModelConnection dco_decode_box_autoadd_model_connection(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_model_connection(raw);
+  }
+
+  @protected
+  PythonExecutionRequest dco_decode_box_autoadd_python_execution_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_python_execution_request(raw);
   }
 
   @protected
@@ -2356,6 +3005,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ControlledReadExecutionRequest dco_decode_controlled_read_execution_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return ControlledReadExecutionRequest(
+      readerId: dco_decode_String(arr[0]),
+      arguments: dco_decode_json_payload(arr[1]),
+      inputs: dco_decode_list_execution_input_snapshot(arr[2]),
+    );
+  }
+
+  @protected
   ConversationSelection dco_decode_conversation_selection(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -2415,6 +3079,293 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   EventKind dco_decode_event_kind(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return EventKind.values[raw as int];
+  }
+
+  @protected
+  ExecutionAvailability dco_decode_execution_availability(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return ExecutionAvailability(
+      available: dco_decode_bool(arr[0]),
+      provider: dco_decode_opt_box_autoadd_execution_provider_identity(arr[1]),
+      python: dco_decode_bool(arr[2]),
+      controlledReaders: dco_decode_list_execution_controlled_reader(arr[3]),
+    );
+  }
+
+  @protected
+  ExecutionControlledReader dco_decode_execution_controlled_reader(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return ExecutionControlledReader(
+      readerId: dco_decode_String(arr[0]),
+      registrationDigest: dco_decode_String(arr[1]),
+      argumentsSchema: dco_decode_json_payload(arr[2]),
+    );
+  }
+
+  @protected
+  ExecutionDependency dco_decode_execution_dependency(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return ExecutionDependency(
+      name: dco_decode_String(arr[0]),
+      version: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
+  ExecutionEffectsObservation dco_decode_execution_effects_observation(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return ExecutionEffectsObservation(
+      state: dco_decode_execution_effects_state(arr[0]),
+      artifacts: dco_decode_list_execution_resource_version(arr[1]),
+      detail: dco_decode_json_payload(arr[2]),
+    );
+  }
+
+  @protected
+  ExecutionEffectsState dco_decode_execution_effects_state(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ExecutionEffectsState.values[raw as int];
+  }
+
+  @protected
+  ExecutionEnvironmentSnapshot dco_decode_execution_environment_snapshot(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return ExecutionEnvironmentSnapshot(
+      provider: dco_decode_execution_provider_identity(arr[0]),
+      platform: dco_decode_String(arr[1]),
+      architecture: dco_decode_String(arr[2]),
+      interpreter: dco_decode_String(arr[3]),
+      interpreterVersion: dco_decode_String(arr[4]),
+      dependencies: dco_decode_list_execution_dependency(arr[5]),
+      environmentDigest: dco_decode_String(arr[6]),
+    );
+  }
+
+  @protected
+  ExecutionEnvironmentValueKind dco_decode_execution_environment_value_kind(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ExecutionEnvironmentValueKind.values[raw as int];
+  }
+
+  @protected
+  ExecutionEnvironmentVariable dco_decode_execution_environment_variable(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return ExecutionEnvironmentVariable(
+      name: dco_decode_String(arr[0]),
+      kind: dco_decode_execution_environment_value_kind(arr[1]),
+      value: dco_decode_opt_String(arr[2]),
+      secretHandle: dco_decode_opt_String(arr[3]),
+      secretRevision: dco_decode_opt_String(arr[4]),
+    );
+  }
+
+  @protected
+  ExecutionError dco_decode_execution_error(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return ExecutionError(
+      code: dco_decode_execution_error_code(arr[0]),
+      message: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
+  ExecutionErrorCode dco_decode_execution_error_code(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ExecutionErrorCode.values[raw as int];
+  }
+
+  @protected
+  ExecutionEvent dco_decode_execution_event(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 13)
+      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
+    return ExecutionEvent(
+      executionId: dco_decode_String(arr[0]),
+      operationId: dco_decode_String(arr[1]),
+      specDigest: dco_decode_String(arr[2]),
+      provider: dco_decode_execution_provider_identity(arr[3]),
+      sequence: dco_decode_opt_CastedPrimitive_u_64(arr[4]),
+      atMs: dco_decode_opt_CastedPrimitive_i_64(arr[5]),
+      kind: dco_decode_execution_event_kind(arr[6]),
+      stream: dco_decode_opt_box_autoadd_execution_output_stream(arr[7]),
+      offset: dco_decode_opt_CastedPrimitive_u_64(arr[8]),
+      bytes: dco_decode_list_prim_u_8_strict(arr[9]),
+      phase: dco_decode_opt_String(arr[10]),
+      message: dco_decode_opt_String(arr[11]),
+      receipt: dco_decode_opt_box_autoadd_execution_receipt(arr[12]),
+    );
+  }
+
+  @protected
+  ExecutionEventKind dco_decode_execution_event_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ExecutionEventKind.values[raw as int];
+  }
+
+  @protected
+  ExecutionIdentity dco_decode_execution_identity(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return ExecutionIdentity(
+      executionId: dco_decode_String(arr[0]),
+      operationId: dco_decode_String(arr[1]),
+      specDigest: dco_decode_String(arr[2]),
+      provider: dco_decode_execution_provider_identity(arr[3]),
+    );
+  }
+
+  @protected
+  ExecutionInputSnapshot dco_decode_execution_input_snapshot(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return ExecutionInputSnapshot(
+      source: dco_decode_execution_resource_version(arr[0]),
+      snapshot: dco_decode_execution_resource_version(arr[1]),
+      mountedPath: dco_decode_String(arr[2]),
+    );
+  }
+
+  @protected
+  ExecutionKind dco_decode_execution_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ExecutionKind.values[raw as int];
+  }
+
+  @protected
+  ExecutionOutputReference dco_decode_execution_output_reference(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return ExecutionOutputReference(
+      stream: dco_decode_execution_output_stream(arr[0]),
+      resource: dco_decode_execution_resource_version(arr[1]),
+      truncated: dco_decode_bool(arr[2]),
+    );
+  }
+
+  @protected
+  ExecutionOutputStream dco_decode_execution_output_stream(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ExecutionOutputStream.values[raw as int];
+  }
+
+  @protected
+  ExecutionPreview dco_decode_execution_preview(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 14)
+      throw Exception('unexpected arr length: expect 14 but see ${arr.length}');
+    return ExecutionPreview(
+      executionId: dco_decode_String(arr[0]),
+      kind: dco_decode_execution_kind(arr[1]),
+      code: dco_decode_opt_String(arr[2]),
+      codeDigest: dco_decode_opt_String(arr[3]),
+      readerId: dco_decode_opt_String(arr[4]),
+      readerRegistrationDigest: dco_decode_opt_String(arr[5]),
+      arguments: dco_decode_opt_box_autoadd_json_payload(arr[6]),
+      argumentsDigest: dco_decode_opt_String(arr[7]),
+      argv: dco_decode_list_String(arr[8]),
+      cwd: dco_decode_execution_resource_version(arr[9]),
+      environment: dco_decode_execution_environment_snapshot(arr[10]),
+      variables: dco_decode_list_execution_environment_variable(arr[11]),
+      inputs: dco_decode_list_execution_input_snapshot(arr[12]),
+      specDigest: dco_decode_String(arr[13]),
+    );
+  }
+
+  @protected
+  ExecutionProviderIdentity dco_decode_execution_provider_identity(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return ExecutionProviderIdentity(
+      providerId: dco_decode_String(arr[0]),
+      instanceId: dco_decode_String(arr[1]),
+      generation: dco_decode_CastedPrimitive_u_64(arr[2]),
+      contractVersion: dco_decode_u_32(arr[3]),
+    );
+  }
+
+  @protected
+  ExecutionReceipt dco_decode_execution_receipt(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 12)
+      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
+    return ExecutionReceipt(
+      executionId: dco_decode_String(arr[0]),
+      operationId: dco_decode_String(arr[1]),
+      specDigest: dco_decode_String(arr[2]),
+      provider: dco_decode_execution_provider_identity(arr[3]),
+      acceptedAtMs: dco_decode_opt_CastedPrimitive_i_64(arr[4]),
+      startedAtMs: dco_decode_opt_CastedPrimitive_i_64(arr[5]),
+      terminal: dco_decode_opt_box_autoadd_execution_terminal(arr[6]),
+      finishedAtMs: dco_decode_opt_CastedPrimitive_i_64(arr[7]),
+      exitCode: dco_decode_opt_box_autoadd_i_32(arr[8]),
+      effects: dco_decode_execution_effects_observation(arr[9]),
+      outputs: dco_decode_list_execution_output_reference(arr[10]),
+      error: dco_decode_opt_box_autoadd_execution_error(arr[11]),
+    );
+  }
+
+  @protected
+  ExecutionResourceVersion dco_decode_execution_resource_version(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return ExecutionResourceVersion(
+      resourceId: dco_decode_String(arr[0]),
+      version: dco_decode_String(arr[1]),
+      digest: dco_decode_opt_String(arr[2]),
+      byteLength: dco_decode_opt_CastedPrimitive_u_64(arr[3]),
+    );
+  }
+
+  @protected
+  ExecutionTerminal dco_decode_execution_terminal(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return ExecutionTerminal.values[raw as int];
   }
 
   @protected
@@ -2571,6 +3522,61 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<String> dco_decode_list_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_String).toList();
+  }
+
+  @protected
+  List<ExecutionControlledReader> dco_decode_list_execution_controlled_reader(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_execution_controlled_reader)
+        .toList();
+  }
+
+  @protected
+  List<ExecutionDependency> dco_decode_list_execution_dependency(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_execution_dependency).toList();
+  }
+
+  @protected
+  List<ExecutionEnvironmentVariable>
+  dco_decode_list_execution_environment_variable(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_execution_environment_variable)
+        .toList();
+  }
+
+  @protected
+  List<ExecutionInputSnapshot> dco_decode_list_execution_input_snapshot(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_execution_input_snapshot)
+        .toList();
+  }
+
+  @protected
+  List<ExecutionOutputReference> dco_decode_list_execution_output_reference(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_execution_output_reference)
+        .toList();
+  }
+
+  @protected
+  List<ExecutionResourceVersion> dco_decode_list_execution_resource_version(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_execution_resource_version)
+        .toList();
   }
 
   @protected
@@ -3066,6 +4072,45 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ExecutionError? dco_decode_opt_box_autoadd_execution_error(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_execution_error(raw);
+  }
+
+  @protected
+  ExecutionOutputStream? dco_decode_opt_box_autoadd_execution_output_stream(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_execution_output_stream(raw);
+  }
+
+  @protected
+  ExecutionProviderIdentity?
+  dco_decode_opt_box_autoadd_execution_provider_identity(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_execution_provider_identity(raw);
+  }
+
+  @protected
+  ExecutionReceipt? dco_decode_opt_box_autoadd_execution_receipt(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_execution_receipt(raw);
+  }
+
+  @protected
+  ExecutionTerminal? dco_decode_opt_box_autoadd_execution_terminal(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_execution_terminal(raw);
+  }
+
+  @protected
   double? dco_decode_opt_box_autoadd_f_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_f_64(raw);
@@ -3087,6 +4132,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   HostRequest? dco_decode_opt_box_autoadd_host_request(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_host_request(raw);
+  }
+
+  @protected
+  int? dco_decode_opt_box_autoadd_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_i_32(raw);
   }
 
   @protected
@@ -3456,6 +4507,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_list_view_question_answer(raw);
+  }
+
+  @protected
+  PythonExecutionRequest dco_decode_python_execution_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return PythonExecutionRequest(
+      code: dco_decode_String(arr[0]),
+      argv: dco_decode_list_String(arr[1]),
+      cwd: dco_decode_execution_resource_version(arr[2]),
+      environment: dco_decode_list_execution_environment_variable(arr[3]),
+      inputs: dco_decode_list_execution_input_snapshot(arr[4]),
+    );
   }
 
   @protected
@@ -4808,6 +5874,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ExecutionEventSubscription
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return ExecutionEventSubscriptionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  PreparedExecutionHandle
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return PreparedExecutionHandleImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
   UiContributionSubscription
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
     SseDeserializer deserializer,
@@ -4826,6 +5916,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return AgentCoreImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  ExecutionEventSubscription
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return ExecutionEventSubscriptionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  PreparedExecutionHandle
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return PreparedExecutionHandleImpl.frbInternalSseDecode(
       sse_decode_usize(deserializer),
       sse_decode_i_32(deserializer),
     );
@@ -4918,6 +6032,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ExecutionEventSubscription
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return ExecutionEventSubscriptionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  PreparedExecutionHandle
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return PreparedExecutionHandleImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
   UiContributionSubscription
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
     SseDeserializer deserializer,
@@ -4931,6 +6069,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   RustStreamSink<AgentEvent> sse_decode_StreamSink_agent_event_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
+  RustStreamSink<ExecutionEvent> sse_decode_StreamSink_execution_event_Sse(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -5194,6 +6340,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ControlledReadExecutionRequest
+  sse_decode_box_autoadd_controlled_read_execution_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_controlled_read_execution_request(deserializer));
+  }
+
+  @protected
   ConversationSelection sse_decode_box_autoadd_conversation_selection(
     SseDeserializer deserializer,
   ) {
@@ -5221,6 +6376,54 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_draft_attachment_target(deserializer));
+  }
+
+  @protected
+  ExecutionError sse_decode_box_autoadd_execution_error(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_execution_error(deserializer));
+  }
+
+  @protected
+  ExecutionIdentity sse_decode_box_autoadd_execution_identity(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_execution_identity(deserializer));
+  }
+
+  @protected
+  ExecutionOutputStream sse_decode_box_autoadd_execution_output_stream(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_execution_output_stream(deserializer));
+  }
+
+  @protected
+  ExecutionProviderIdentity sse_decode_box_autoadd_execution_provider_identity(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_execution_provider_identity(deserializer));
+  }
+
+  @protected
+  ExecutionReceipt sse_decode_box_autoadd_execution_receipt(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_execution_receipt(deserializer));
+  }
+
+  @protected
+  ExecutionTerminal sse_decode_box_autoadd_execution_terminal(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_execution_terminal(deserializer));
   }
 
   @protected
@@ -5260,6 +6463,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int sse_decode_box_autoadd_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_i_32(deserializer));
+  }
+
+  @protected
   JsonPayload sse_decode_box_autoadd_json_payload(
     SseDeserializer deserializer,
   ) {
@@ -5289,6 +6498,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_model_connection(deserializer));
+  }
+
+  @protected
+  PythonExecutionRequest sse_decode_box_autoadd_python_execution_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_python_execution_request(deserializer));
   }
 
   @protected
@@ -5618,6 +6835,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ControlledReadExecutionRequest sse_decode_controlled_read_execution_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_readerId = sse_decode_String(deserializer);
+    var var_arguments = sse_decode_json_payload(deserializer);
+    var var_inputs = sse_decode_list_execution_input_snapshot(deserializer);
+    return ControlledReadExecutionRequest(
+      readerId: var_readerId,
+      arguments: var_arguments,
+      inputs: var_inputs,
+    );
+  }
+
+  @protected
   ConversationSelection sse_decode_conversation_selection(
     SseDeserializer deserializer,
   ) {
@@ -5690,6 +6922,370 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_i_32(deserializer);
     return EventKind.values[inner];
+  }
+
+  @protected
+  ExecutionAvailability sse_decode_execution_availability(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_available = sse_decode_bool(deserializer);
+    var var_provider = sse_decode_opt_box_autoadd_execution_provider_identity(
+      deserializer,
+    );
+    var var_python = sse_decode_bool(deserializer);
+    var var_controlledReaders = sse_decode_list_execution_controlled_reader(
+      deserializer,
+    );
+    return ExecutionAvailability(
+      available: var_available,
+      provider: var_provider,
+      python: var_python,
+      controlledReaders: var_controlledReaders,
+    );
+  }
+
+  @protected
+  ExecutionControlledReader sse_decode_execution_controlled_reader(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_readerId = sse_decode_String(deserializer);
+    var var_registrationDigest = sse_decode_String(deserializer);
+    var var_argumentsSchema = sse_decode_json_payload(deserializer);
+    return ExecutionControlledReader(
+      readerId: var_readerId,
+      registrationDigest: var_registrationDigest,
+      argumentsSchema: var_argumentsSchema,
+    );
+  }
+
+  @protected
+  ExecutionDependency sse_decode_execution_dependency(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_name = sse_decode_String(deserializer);
+    var var_version = sse_decode_String(deserializer);
+    return ExecutionDependency(name: var_name, version: var_version);
+  }
+
+  @protected
+  ExecutionEffectsObservation sse_decode_execution_effects_observation(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_state = sse_decode_execution_effects_state(deserializer);
+    var var_artifacts = sse_decode_list_execution_resource_version(
+      deserializer,
+    );
+    var var_detail = sse_decode_json_payload(deserializer);
+    return ExecutionEffectsObservation(
+      state: var_state,
+      artifacts: var_artifacts,
+      detail: var_detail,
+    );
+  }
+
+  @protected
+  ExecutionEffectsState sse_decode_execution_effects_state(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return ExecutionEffectsState.values[inner];
+  }
+
+  @protected
+  ExecutionEnvironmentSnapshot sse_decode_execution_environment_snapshot(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_provider = sse_decode_execution_provider_identity(deserializer);
+    var var_platform = sse_decode_String(deserializer);
+    var var_architecture = sse_decode_String(deserializer);
+    var var_interpreter = sse_decode_String(deserializer);
+    var var_interpreterVersion = sse_decode_String(deserializer);
+    var var_dependencies = sse_decode_list_execution_dependency(deserializer);
+    var var_environmentDigest = sse_decode_String(deserializer);
+    return ExecutionEnvironmentSnapshot(
+      provider: var_provider,
+      platform: var_platform,
+      architecture: var_architecture,
+      interpreter: var_interpreter,
+      interpreterVersion: var_interpreterVersion,
+      dependencies: var_dependencies,
+      environmentDigest: var_environmentDigest,
+    );
+  }
+
+  @protected
+  ExecutionEnvironmentValueKind sse_decode_execution_environment_value_kind(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return ExecutionEnvironmentValueKind.values[inner];
+  }
+
+  @protected
+  ExecutionEnvironmentVariable sse_decode_execution_environment_variable(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_name = sse_decode_String(deserializer);
+    var var_kind = sse_decode_execution_environment_value_kind(deserializer);
+    var var_value = sse_decode_opt_String(deserializer);
+    var var_secretHandle = sse_decode_opt_String(deserializer);
+    var var_secretRevision = sse_decode_opt_String(deserializer);
+    return ExecutionEnvironmentVariable(
+      name: var_name,
+      kind: var_kind,
+      value: var_value,
+      secretHandle: var_secretHandle,
+      secretRevision: var_secretRevision,
+    );
+  }
+
+  @protected
+  ExecutionError sse_decode_execution_error(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_code = sse_decode_execution_error_code(deserializer);
+    var var_message = sse_decode_String(deserializer);
+    return ExecutionError(code: var_code, message: var_message);
+  }
+
+  @protected
+  ExecutionErrorCode sse_decode_execution_error_code(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return ExecutionErrorCode.values[inner];
+  }
+
+  @protected
+  ExecutionEvent sse_decode_execution_event(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_executionId = sse_decode_String(deserializer);
+    var var_operationId = sse_decode_String(deserializer);
+    var var_specDigest = sse_decode_String(deserializer);
+    var var_provider = sse_decode_execution_provider_identity(deserializer);
+    var var_sequence = sse_decode_opt_CastedPrimitive_u_64(deserializer);
+    var var_atMs = sse_decode_opt_CastedPrimitive_i_64(deserializer);
+    var var_kind = sse_decode_execution_event_kind(deserializer);
+    var var_stream = sse_decode_opt_box_autoadd_execution_output_stream(
+      deserializer,
+    );
+    var var_offset = sse_decode_opt_CastedPrimitive_u_64(deserializer);
+    var var_bytes = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_phase = sse_decode_opt_String(deserializer);
+    var var_message = sse_decode_opt_String(deserializer);
+    var var_receipt = sse_decode_opt_box_autoadd_execution_receipt(
+      deserializer,
+    );
+    return ExecutionEvent(
+      executionId: var_executionId,
+      operationId: var_operationId,
+      specDigest: var_specDigest,
+      provider: var_provider,
+      sequence: var_sequence,
+      atMs: var_atMs,
+      kind: var_kind,
+      stream: var_stream,
+      offset: var_offset,
+      bytes: var_bytes,
+      phase: var_phase,
+      message: var_message,
+      receipt: var_receipt,
+    );
+  }
+
+  @protected
+  ExecutionEventKind sse_decode_execution_event_kind(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return ExecutionEventKind.values[inner];
+  }
+
+  @protected
+  ExecutionIdentity sse_decode_execution_identity(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_executionId = sse_decode_String(deserializer);
+    var var_operationId = sse_decode_String(deserializer);
+    var var_specDigest = sse_decode_String(deserializer);
+    var var_provider = sse_decode_execution_provider_identity(deserializer);
+    return ExecutionIdentity(
+      executionId: var_executionId,
+      operationId: var_operationId,
+      specDigest: var_specDigest,
+      provider: var_provider,
+    );
+  }
+
+  @protected
+  ExecutionInputSnapshot sse_decode_execution_input_snapshot(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_source = sse_decode_execution_resource_version(deserializer);
+    var var_snapshot = sse_decode_execution_resource_version(deserializer);
+    var var_mountedPath = sse_decode_String(deserializer);
+    return ExecutionInputSnapshot(
+      source: var_source,
+      snapshot: var_snapshot,
+      mountedPath: var_mountedPath,
+    );
+  }
+
+  @protected
+  ExecutionKind sse_decode_execution_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return ExecutionKind.values[inner];
+  }
+
+  @protected
+  ExecutionOutputReference sse_decode_execution_output_reference(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_stream = sse_decode_execution_output_stream(deserializer);
+    var var_resource = sse_decode_execution_resource_version(deserializer);
+    var var_truncated = sse_decode_bool(deserializer);
+    return ExecutionOutputReference(
+      stream: var_stream,
+      resource: var_resource,
+      truncated: var_truncated,
+    );
+  }
+
+  @protected
+  ExecutionOutputStream sse_decode_execution_output_stream(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return ExecutionOutputStream.values[inner];
+  }
+
+  @protected
+  ExecutionPreview sse_decode_execution_preview(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_executionId = sse_decode_String(deserializer);
+    var var_kind = sse_decode_execution_kind(deserializer);
+    var var_code = sse_decode_opt_String(deserializer);
+    var var_codeDigest = sse_decode_opt_String(deserializer);
+    var var_readerId = sse_decode_opt_String(deserializer);
+    var var_readerRegistrationDigest = sse_decode_opt_String(deserializer);
+    var var_arguments = sse_decode_opt_box_autoadd_json_payload(deserializer);
+    var var_argumentsDigest = sse_decode_opt_String(deserializer);
+    var var_argv = sse_decode_list_String(deserializer);
+    var var_cwd = sse_decode_execution_resource_version(deserializer);
+    var var_environment = sse_decode_execution_environment_snapshot(
+      deserializer,
+    );
+    var var_variables = sse_decode_list_execution_environment_variable(
+      deserializer,
+    );
+    var var_inputs = sse_decode_list_execution_input_snapshot(deserializer);
+    var var_specDigest = sse_decode_String(deserializer);
+    return ExecutionPreview(
+      executionId: var_executionId,
+      kind: var_kind,
+      code: var_code,
+      codeDigest: var_codeDigest,
+      readerId: var_readerId,
+      readerRegistrationDigest: var_readerRegistrationDigest,
+      arguments: var_arguments,
+      argumentsDigest: var_argumentsDigest,
+      argv: var_argv,
+      cwd: var_cwd,
+      environment: var_environment,
+      variables: var_variables,
+      inputs: var_inputs,
+      specDigest: var_specDigest,
+    );
+  }
+
+  @protected
+  ExecutionProviderIdentity sse_decode_execution_provider_identity(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_providerId = sse_decode_String(deserializer);
+    var var_instanceId = sse_decode_String(deserializer);
+    var var_generation = sse_decode_CastedPrimitive_u_64(deserializer);
+    var var_contractVersion = sse_decode_u_32(deserializer);
+    return ExecutionProviderIdentity(
+      providerId: var_providerId,
+      instanceId: var_instanceId,
+      generation: var_generation,
+      contractVersion: var_contractVersion,
+    );
+  }
+
+  @protected
+  ExecutionReceipt sse_decode_execution_receipt(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_executionId = sse_decode_String(deserializer);
+    var var_operationId = sse_decode_String(deserializer);
+    var var_specDigest = sse_decode_String(deserializer);
+    var var_provider = sse_decode_execution_provider_identity(deserializer);
+    var var_acceptedAtMs = sse_decode_opt_CastedPrimitive_i_64(deserializer);
+    var var_startedAtMs = sse_decode_opt_CastedPrimitive_i_64(deserializer);
+    var var_terminal = sse_decode_opt_box_autoadd_execution_terminal(
+      deserializer,
+    );
+    var var_finishedAtMs = sse_decode_opt_CastedPrimitive_i_64(deserializer);
+    var var_exitCode = sse_decode_opt_box_autoadd_i_32(deserializer);
+    var var_effects = sse_decode_execution_effects_observation(deserializer);
+    var var_outputs = sse_decode_list_execution_output_reference(deserializer);
+    var var_error = sse_decode_opt_box_autoadd_execution_error(deserializer);
+    return ExecutionReceipt(
+      executionId: var_executionId,
+      operationId: var_operationId,
+      specDigest: var_specDigest,
+      provider: var_provider,
+      acceptedAtMs: var_acceptedAtMs,
+      startedAtMs: var_startedAtMs,
+      terminal: var_terminal,
+      finishedAtMs: var_finishedAtMs,
+      exitCode: var_exitCode,
+      effects: var_effects,
+      outputs: var_outputs,
+      error: var_error,
+    );
+  }
+
+  @protected
+  ExecutionResourceVersion sse_decode_execution_resource_version(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_resourceId = sse_decode_String(deserializer);
+    var var_version = sse_decode_String(deserializer);
+    var var_digest = sse_decode_opt_String(deserializer);
+    var var_byteLength = sse_decode_opt_CastedPrimitive_u_64(deserializer);
+    return ExecutionResourceVersion(
+      resourceId: var_resourceId,
+      version: var_version,
+      digest: var_digest,
+      byteLength: var_byteLength,
+    );
+  }
+
+  @protected
+  ExecutionTerminal sse_decode_execution_terminal(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return ExecutionTerminal.values[inner];
   }
 
   @protected
@@ -5889,6 +7485,89 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <String>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_String(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<ExecutionControlledReader> sse_decode_list_execution_controlled_reader(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ExecutionControlledReader>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_execution_controlled_reader(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<ExecutionDependency> sse_decode_list_execution_dependency(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ExecutionDependency>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_execution_dependency(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<ExecutionEnvironmentVariable>
+  sse_decode_list_execution_environment_variable(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ExecutionEnvironmentVariable>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_execution_environment_variable(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<ExecutionInputSnapshot> sse_decode_list_execution_input_snapshot(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ExecutionInputSnapshot>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_execution_input_snapshot(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<ExecutionOutputReference> sse_decode_list_execution_output_reference(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ExecutionOutputReference>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_execution_output_reference(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<ExecutionResourceVersion> sse_decode_list_execution_resource_version(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ExecutionResourceVersion>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_execution_resource_version(deserializer));
     }
     return ans_;
   }
@@ -6749,6 +8428,72 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ExecutionError? sse_decode_opt_box_autoadd_execution_error(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_execution_error(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  ExecutionOutputStream? sse_decode_opt_box_autoadd_execution_output_stream(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_execution_output_stream(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  ExecutionProviderIdentity?
+  sse_decode_opt_box_autoadd_execution_provider_identity(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_execution_provider_identity(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  ExecutionReceipt? sse_decode_opt_box_autoadd_execution_receipt(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_execution_receipt(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  ExecutionTerminal? sse_decode_opt_box_autoadd_execution_terminal(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_execution_terminal(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -6793,6 +8538,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_box_autoadd_host_request(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  int? sse_decode_opt_box_autoadd_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_i_32(deserializer));
     } else {
       return null;
     }
@@ -7361,6 +9117,27 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     } else {
       return null;
     }
+  }
+
+  @protected
+  PythonExecutionRequest sse_decode_python_execution_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_code = sse_decode_String(deserializer);
+    var var_argv = sse_decode_list_String(deserializer);
+    var var_cwd = sse_decode_execution_resource_version(deserializer);
+    var var_environment = sse_decode_list_execution_environment_variable(
+      deserializer,
+    );
+    var var_inputs = sse_decode_list_execution_input_snapshot(deserializer);
+    return PythonExecutionRequest(
+      code: var_code,
+      argv: var_argv,
+      cwd: var_cwd,
+      environment: var_environment,
+      inputs: var_inputs,
+    );
   }
 
   @protected
@@ -9266,6 +11043,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    ExecutionEventSubscription self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as ExecutionEventSubscriptionImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+    PreparedExecutionHandle self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as PreparedExecutionHandleImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
     UiContributionSubscription self,
     SseSerializer serializer,
@@ -9286,6 +11089,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
       (self as AgentCoreImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    ExecutionEventSubscription self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as ExecutionEventSubscriptionImpl).frbInternalSseEncode(
+        move: false,
+      ),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+    PreparedExecutionHandle self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as PreparedExecutionHandleImpl).frbInternalSseEncode(move: false),
       serializer,
     );
   }
@@ -9386,6 +11217,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    ExecutionEventSubscription self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as ExecutionEventSubscriptionImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+    PreparedExecutionHandle self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as PreparedExecutionHandleImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
+  }
+
+  @protected
+  void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
     UiContributionSubscription self,
     SseSerializer serializer,
@@ -9407,6 +11264,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       self.setupAndSerialize(
         codec: SseCodec(
           decodeSuccessData: sse_decode_agent_event,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_StreamSink_execution_event_Sse(
+    RustStreamSink<ExecutionEvent> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_execution_event,
           decodeErrorData: sse_decode_AnyhowException,
         ),
       ),
@@ -9606,6 +11480,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_controlled_read_execution_request(
+    ControlledReadExecutionRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_controlled_read_execution_request(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_conversation_selection(
     ConversationSelection self,
     SseSerializer serializer,
@@ -9639,6 +11522,60 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_draft_attachment_target(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_execution_error(
+    ExecutionError self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_execution_error(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_execution_identity(
+    ExecutionIdentity self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_execution_identity(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_execution_output_stream(
+    ExecutionOutputStream self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_execution_output_stream(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_execution_provider_identity(
+    ExecutionProviderIdentity self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_execution_provider_identity(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_execution_receipt(
+    ExecutionReceipt self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_execution_receipt(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_execution_terminal(
+    ExecutionTerminal self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_execution_terminal(self, serializer);
   }
 
   @protected
@@ -9684,6 +11621,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_i_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_json_payload(
     JsonPayload self,
     SseSerializer serializer,
@@ -9717,6 +11660,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_model_connection(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_python_execution_request(
+    PythonExecutionRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_python_execution_request(self, serializer);
   }
 
   @protected
@@ -10067,6 +12019,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_controlled_read_execution_request(
+    ControlledReadExecutionRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.readerId, serializer);
+    sse_encode_json_payload(self.arguments, serializer);
+    sse_encode_list_execution_input_snapshot(self.inputs, serializer);
+  }
+
+  @protected
   void sse_encode_conversation_selection(
     ConversationSelection self,
     SseSerializer serializer,
@@ -10113,6 +12076,275 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void sse_encode_event_kind(EventKind self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_execution_availability(
+    ExecutionAvailability self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.available, serializer);
+    sse_encode_opt_box_autoadd_execution_provider_identity(
+      self.provider,
+      serializer,
+    );
+    sse_encode_bool(self.python, serializer);
+    sse_encode_list_execution_controlled_reader(
+      self.controlledReaders,
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_execution_controlled_reader(
+    ExecutionControlledReader self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.readerId, serializer);
+    sse_encode_String(self.registrationDigest, serializer);
+    sse_encode_json_payload(self.argumentsSchema, serializer);
+  }
+
+  @protected
+  void sse_encode_execution_dependency(
+    ExecutionDependency self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.name, serializer);
+    sse_encode_String(self.version, serializer);
+  }
+
+  @protected
+  void sse_encode_execution_effects_observation(
+    ExecutionEffectsObservation self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_execution_effects_state(self.state, serializer);
+    sse_encode_list_execution_resource_version(self.artifacts, serializer);
+    sse_encode_json_payload(self.detail, serializer);
+  }
+
+  @protected
+  void sse_encode_execution_effects_state(
+    ExecutionEffectsState self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_execution_environment_snapshot(
+    ExecutionEnvironmentSnapshot self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_execution_provider_identity(self.provider, serializer);
+    sse_encode_String(self.platform, serializer);
+    sse_encode_String(self.architecture, serializer);
+    sse_encode_String(self.interpreter, serializer);
+    sse_encode_String(self.interpreterVersion, serializer);
+    sse_encode_list_execution_dependency(self.dependencies, serializer);
+    sse_encode_String(self.environmentDigest, serializer);
+  }
+
+  @protected
+  void sse_encode_execution_environment_value_kind(
+    ExecutionEnvironmentValueKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_execution_environment_variable(
+    ExecutionEnvironmentVariable self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.name, serializer);
+    sse_encode_execution_environment_value_kind(self.kind, serializer);
+    sse_encode_opt_String(self.value, serializer);
+    sse_encode_opt_String(self.secretHandle, serializer);
+    sse_encode_opt_String(self.secretRevision, serializer);
+  }
+
+  @protected
+  void sse_encode_execution_error(
+    ExecutionError self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_execution_error_code(self.code, serializer);
+    sse_encode_String(self.message, serializer);
+  }
+
+  @protected
+  void sse_encode_execution_error_code(
+    ExecutionErrorCode self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_execution_event(
+    ExecutionEvent self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.executionId, serializer);
+    sse_encode_String(self.operationId, serializer);
+    sse_encode_String(self.specDigest, serializer);
+    sse_encode_execution_provider_identity(self.provider, serializer);
+    sse_encode_opt_CastedPrimitive_u_64(self.sequence, serializer);
+    sse_encode_opt_CastedPrimitive_i_64(self.atMs, serializer);
+    sse_encode_execution_event_kind(self.kind, serializer);
+    sse_encode_opt_box_autoadd_execution_output_stream(self.stream, serializer);
+    sse_encode_opt_CastedPrimitive_u_64(self.offset, serializer);
+    sse_encode_list_prim_u_8_strict(self.bytes, serializer);
+    sse_encode_opt_String(self.phase, serializer);
+    sse_encode_opt_String(self.message, serializer);
+    sse_encode_opt_box_autoadd_execution_receipt(self.receipt, serializer);
+  }
+
+  @protected
+  void sse_encode_execution_event_kind(
+    ExecutionEventKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_execution_identity(
+    ExecutionIdentity self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.executionId, serializer);
+    sse_encode_String(self.operationId, serializer);
+    sse_encode_String(self.specDigest, serializer);
+    sse_encode_execution_provider_identity(self.provider, serializer);
+  }
+
+  @protected
+  void sse_encode_execution_input_snapshot(
+    ExecutionInputSnapshot self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_execution_resource_version(self.source, serializer);
+    sse_encode_execution_resource_version(self.snapshot, serializer);
+    sse_encode_String(self.mountedPath, serializer);
+  }
+
+  @protected
+  void sse_encode_execution_kind(ExecutionKind self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_execution_output_reference(
+    ExecutionOutputReference self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_execution_output_stream(self.stream, serializer);
+    sse_encode_execution_resource_version(self.resource, serializer);
+    sse_encode_bool(self.truncated, serializer);
+  }
+
+  @protected
+  void sse_encode_execution_output_stream(
+    ExecutionOutputStream self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_execution_preview(
+    ExecutionPreview self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.executionId, serializer);
+    sse_encode_execution_kind(self.kind, serializer);
+    sse_encode_opt_String(self.code, serializer);
+    sse_encode_opt_String(self.codeDigest, serializer);
+    sse_encode_opt_String(self.readerId, serializer);
+    sse_encode_opt_String(self.readerRegistrationDigest, serializer);
+    sse_encode_opt_box_autoadd_json_payload(self.arguments, serializer);
+    sse_encode_opt_String(self.argumentsDigest, serializer);
+    sse_encode_list_String(self.argv, serializer);
+    sse_encode_execution_resource_version(self.cwd, serializer);
+    sse_encode_execution_environment_snapshot(self.environment, serializer);
+    sse_encode_list_execution_environment_variable(self.variables, serializer);
+    sse_encode_list_execution_input_snapshot(self.inputs, serializer);
+    sse_encode_String(self.specDigest, serializer);
+  }
+
+  @protected
+  void sse_encode_execution_provider_identity(
+    ExecutionProviderIdentity self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.providerId, serializer);
+    sse_encode_String(self.instanceId, serializer);
+    sse_encode_CastedPrimitive_u_64(self.generation, serializer);
+    sse_encode_u_32(self.contractVersion, serializer);
+  }
+
+  @protected
+  void sse_encode_execution_receipt(
+    ExecutionReceipt self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.executionId, serializer);
+    sse_encode_String(self.operationId, serializer);
+    sse_encode_String(self.specDigest, serializer);
+    sse_encode_execution_provider_identity(self.provider, serializer);
+    sse_encode_opt_CastedPrimitive_i_64(self.acceptedAtMs, serializer);
+    sse_encode_opt_CastedPrimitive_i_64(self.startedAtMs, serializer);
+    sse_encode_opt_box_autoadd_execution_terminal(self.terminal, serializer);
+    sse_encode_opt_CastedPrimitive_i_64(self.finishedAtMs, serializer);
+    sse_encode_opt_box_autoadd_i_32(self.exitCode, serializer);
+    sse_encode_execution_effects_observation(self.effects, serializer);
+    sse_encode_list_execution_output_reference(self.outputs, serializer);
+    sse_encode_opt_box_autoadd_execution_error(self.error, serializer);
+  }
+
+  @protected
+  void sse_encode_execution_resource_version(
+    ExecutionResourceVersion self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.resourceId, serializer);
+    sse_encode_String(self.version, serializer);
+    sse_encode_opt_String(self.digest, serializer);
+    sse_encode_opt_CastedPrimitive_u_64(self.byteLength, serializer);
+  }
+
+  @protected
+  void sse_encode_execution_terminal(
+    ExecutionTerminal self,
+    SseSerializer serializer,
+  ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.index, serializer);
   }
@@ -10255,6 +12487,78 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_String(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_execution_controlled_reader(
+    List<ExecutionControlledReader> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_execution_controlled_reader(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_execution_dependency(
+    List<ExecutionDependency> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_execution_dependency(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_execution_environment_variable(
+    List<ExecutionEnvironmentVariable> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_execution_environment_variable(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_execution_input_snapshot(
+    List<ExecutionInputSnapshot> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_execution_input_snapshot(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_execution_output_reference(
+    List<ExecutionOutputReference> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_execution_output_reference(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_execution_resource_version(
+    List<ExecutionResourceVersion> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_execution_resource_version(item, serializer);
     }
   }
 
@@ -11012,6 +13316,71 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_execution_error(
+    ExecutionError? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_execution_error(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_execution_output_stream(
+    ExecutionOutputStream? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_execution_output_stream(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_execution_provider_identity(
+    ExecutionProviderIdentity? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_execution_provider_identity(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_execution_receipt(
+    ExecutionReceipt? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_execution_receipt(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_execution_terminal(
+    ExecutionTerminal? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_execution_terminal(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -11057,6 +13426,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_host_request(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_i_32(int? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_i_32(self, serializer);
     }
   }
 
@@ -11627,6 +14006,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     if (self != null) {
       sse_encode_list_view_question_answer(self, serializer);
     }
+  }
+
+  @protected
+  void sse_encode_python_execution_request(
+    PythonExecutionRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.code, serializer);
+    sse_encode_list_String(self.argv, serializer);
+    sse_encode_execution_resource_version(self.cwd, serializer);
+    sse_encode_list_execution_environment_variable(
+      self.environment,
+      serializer,
+    );
+    sse_encode_list_execution_input_snapshot(self.inputs, serializer);
   }
 
   @protected
@@ -13034,6 +15429,10 @@ class AgentCoreImpl extends RustOpaque implements AgentCore {
     request: request,
   );
 
+  /// Only an installed platform provider can advertise execution support.
+  ExecutionAvailability executionAvailability() =>
+      RustLib.instance.api.crateApiAgentCoreExecutionAvailability(that: this);
+
   /// Exports native portable records for the shared Dart backup transport.
   /// Omitted selections include all saved records; empty selections include none.
   Future<String> exportArchiveJson({
@@ -13068,10 +15467,35 @@ class AgentCoreImpl extends RustOpaque implements AgentCore {
     sourcePath: sourcePath,
   );
 
+  /// Reconcile original provider evidence without preparing or starting code.
+  Future<ExecutionReceipt> inspectExecution({
+    required ExecutionIdentity identity,
+  }) => RustLib.instance.api.crateApiAgentCoreInspectExecution(
+    that: this,
+    identity: identity,
+  );
+
   /// The caller owns this subscription and closes it when unsubscribing.
   /// The handle contains value snapshots and cancellation signals only.
   UiContributionSubscription openUiContributions() =>
       RustLib.instance.api.crateApiAgentCoreOpenUiContributions(that: this);
+
+  /// The provider resolves this fixed reader and validates its closed schema.
+  Future<PreparedExecutionHandle> prepareControlledReadExecution({
+    required ControlledReadExecutionRequest request,
+  }) => RustLib.instance.api.crateApiAgentCorePrepareControlledReadExecution(
+    that: this,
+    request: request,
+  );
+
+  /// Captures a preview; the Dart operation coordinator owns approval and
+  /// calls the returned handle only after its existing admission checks.
+  Future<PreparedExecutionHandle> preparePythonExecution({
+    required PythonExecutionRequest request,
+  }) => RustLib.instance.api.crateApiAgentCorePreparePythonExecution(
+    that: this,
+    request: request,
+  );
 
   Future<List<String>> pruneHistory({required int cutoffMs}) => RustLib
       .instance
@@ -13192,6 +15616,97 @@ class AgentCoreImpl extends RustOpaque implements AgentCore {
     metadata: metadata,
     bytes: bytes,
   );
+}
+
+@sealed
+class ExecutionEventSubscriptionImpl extends RustOpaque
+    implements ExecutionEventSubscription {
+  // Not to be used by end users
+  ExecutionEventSubscriptionImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  ExecutionEventSubscriptionImpl.frbInternalSseDecode(
+    BigInt ptr,
+    int externalSizeOnNative,
+  ) : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount: RustLib
+        .instance
+        .api
+        .rust_arc_increment_strong_count_ExecutionEventSubscription,
+    rustArcDecrementStrongCount: RustLib
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_ExecutionEventSubscription,
+    rustArcDecrementStrongCountPtr: RustLib
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_ExecutionEventSubscriptionPtr,
+  );
+
+  /// Retiring a listener never cancels an admitted process or its settlement.
+  void close() => RustLib.instance.api
+      .crateApiExecutionExecutionEventSubscriptionClose(that: this);
+
+  /// One watcher consumes the receiver registered by open_events. Snapshots
+  /// fill late-subscription, lag and completion gaps; output references in a
+  /// receipt remain the source for complete persisted output.
+  Stream<ExecutionEvent> watch() => RustLib.instance.api
+      .crateApiExecutionExecutionEventSubscriptionWatch(that: this);
+}
+
+@sealed
+class PreparedExecutionHandleImpl extends RustOpaque
+    implements PreparedExecutionHandle {
+  // Not to be used by end users
+  PreparedExecutionHandleImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  PreparedExecutionHandleImpl.frbInternalSseDecode(
+    BigInt ptr,
+    int externalSizeOnNative,
+  ) : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount: RustLib
+        .instance
+        .api
+        .rust_arc_increment_strong_count_PreparedExecutionHandle,
+    rustArcDecrementStrongCount: RustLib
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_PreparedExecutionHandle,
+    rustArcDecrementStrongCountPtr: RustLib
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_PreparedExecutionHandlePtr,
+  );
+
+  void cancel() => RustLib.instance.api
+      .crateApiExecutionPreparedExecutionHandleCancel(that: this);
+
+  String executionId() => RustLib.instance.api
+      .crateApiExecutionPreparedExecutionHandleExecutionId(that: this);
+
+  /// Register before reading receipt, so admission/completion during setup
+  /// remains observable. The event handle owns only this subscription.
+  ExecutionEventSubscription openEvents() => RustLib.instance.api
+      .crateApiExecutionPreparedExecutionHandleOpenEvents(that: this);
+
+  ExecutionPreview preview() => RustLib.instance.api
+      .crateApiExecutionPreparedExecutionHandlePreview(that: this);
+
+  ExecutionReceipt? receipt() => RustLib.instance.api
+      .crateApiExecutionPreparedExecutionHandleReceipt(that: this);
+
+  Future<ExecutionReceipt> startOnce({required String operationId}) =>
+      RustLib.instance.api.crateApiExecutionPreparedExecutionHandleStartOnce(
+        that: this,
+        operationId: operationId,
+      );
 }
 
 @sealed

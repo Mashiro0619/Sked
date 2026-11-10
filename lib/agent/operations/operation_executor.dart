@@ -50,7 +50,7 @@ class OperationExecutor {
       String planId,
     )
     commit,
-    void Function(String commitTool, String planId)? discardCandidate,
+    FutureOr<void> Function(String commitTool, String planId)? discardCandidate,
     OperationPrepared? onPrepared,
     FutureOr<void> Function(AgentOperationUpdate)? onUpdate,
   }) async {
@@ -149,7 +149,7 @@ class OperationExecutor {
       rethrow;
     } finally {
       if (ownedPlanId != null) {
-        discardCandidate?.call(ownedCommitTool!, ownedPlanId);
+        await discardCandidate?.call(ownedCommitTool!, ownedPlanId);
       }
     }
   }

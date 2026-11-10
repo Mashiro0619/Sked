@@ -5,13 +5,14 @@
 use super::{contracts::*, descriptors, host::BridgeHost, runtime_event};
 use crate::{
     context::{CONTEXT_SERVICE as CONTEXT, DefaultContextPlugin},
+    execution::{EXECUTION_SERVICE as EXECUTION, ExecutionService},
     model_client::{
         offline::ScriptedReply,
         services::{DefaultModelPlugin, MODEL_SERVICE as MODEL},
     },
     plugins::{
         AgentProfile, Plugin, PluginContainer, PluginContext, PluginDescriptor, PluginError,
-        PluginSpec, ServiceDefinition, UiContributionDefinition, UiContributionSlot,
+        PluginSpec, ServiceDefinition, ServiceLease, UiContributionDefinition, UiContributionSlot,
     },
     runtime::{
         RuntimeManager,
@@ -155,6 +156,11 @@ impl DefaultAgentProfile {
         &self,
     ) -> watch::Receiver<crate::plugins::UiContributionSnapshot> {
         self.plugins.ui_contributions()
+    }
+
+    /// Execution is optional until a real platform provider is installed.
+    pub(super) fn execution_service(&self) -> Option<ServiceLease<ExecutionService>> {
+        self.plugins.lease(EXECUTION).ok()
     }
 
     pub(super) async fn shutdown(&self, except: Option<String>) -> Result<(), String> {

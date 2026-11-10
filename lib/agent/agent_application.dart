@@ -22,6 +22,8 @@ import '../services/school_web_session_service.dart';
 import 'connection/agent_connection_manager.dart';
 import 'connection/agent_connection_diagnostics.dart';
 import 'connection/agent_endpoint.dart';
+import 'execution/agent_execution_coordinator.dart';
+import 'execution/execution_evidence.dart' show pythonExecutionAction;
 import 'conversations/conversation_models.dart';
 import 'knowledge/knowledge_models.dart';
 import 'provider/provider.dart';
@@ -108,6 +110,11 @@ class AgentApplication extends ChangeNotifier {
             generateTitles: generateConversationTitles,
           ),
         );
+    execution = AgentExecutionCoordinator(
+      client: this.nativeClient,
+      external: external,
+      isAvailable: () => platformSupported && _knowledgeAvailable(),
+    );
     uiContributions.replaceProfileOwner(
       AgentUiContributionOwner(
         lifetime: AgentUiContributionLifetime.profile,
@@ -163,6 +170,7 @@ class AgentApplication extends ChangeNotifier {
       schoolWebSessionSupported: platformSupported,
       connectionManager: connections,
     );
+    platformTools.registerReadBack(pythonExecutionAction, execution.readBack);
     registerSchoolImportTools(tools);
     workflowTools = registerWorkflowTools(
       tools,
@@ -208,6 +216,7 @@ class AgentApplication extends ChangeNotifier {
         session: session,
         mutations: mutations,
         external: external,
+        reconcileExternal: execution.reconcileIfOwned,
       ).read,
       beginHistory: historyMaintenance.begin,
       endHistory: historyMaintenance.end,
@@ -216,6 +225,7 @@ class AgentApplication extends ChangeNotifier {
       commitUndo: (request) =>
           historyMaintenance.runWithOwner(request, () => undo.commit(request)),
       onScopeSettled: (scope) {
+        execution.discardScope(scope);
         external.discardScope(scope);
         controlTools.discardScope(scope);
         _pruneHistory().ignore();
@@ -265,6 +275,7 @@ class AgentApplication extends ChangeNotifier {
   late final AgentHistoryController history;
   late final MutationCoordinator mutations;
   late final ExternalOperationCoordinator external;
+  late final AgentExecutionCoordinator execution;
   late final PlatformToolAdapters platformTools;
   late final WorkflowToolAdapters workflowTools;
   late final ConversationToolAdapters conversationTools;
@@ -841,6 +852,7 @@ class AgentApplication extends ChangeNotifier {
     if (_disposed) return;
     final generation = mutations.generation;
     if (generation != _attachmentDataGeneration) {
+      execution.invalidate();
       _attachmentDataGeneration = generation;
       if (!_maintenance.isReserved) {
         binaryAttachments.invalidatePendingAfterDataBoundary();
@@ -873,6 +885,7 @@ class AgentApplication extends ChangeNotifier {
     if (_maintenance.isReserved) {
       conversations.setMaintenance(true);
       if (!historyMaintenance.ownsMaintenance) {
+        execution.invalidate();
         _stopNative().ignore();
         mutations.invalidate();
         external.invalidate();
@@ -902,11 +915,13 @@ class AgentApplication extends ChangeNotifier {
   }
 
   Future<void> quiesce() async {
+    execution.invalidate();
     for (final token in _diagnosticTokens) {
       token.cancel();
     }
     await _stopNative();
     await _configurationTail;
+    await execution.waitForPending();
     await mutations.waitForPendingWrites();
     if (_maintenanceScope == null) await external.waitForPendingWrites();
     if (_maintenanceScope == null) {
@@ -925,6 +940,7 @@ class AgentApplication extends ChangeNotifier {
 
   void freeze({bool drainAcceptedRuns = false}) {
     _suspended = true;
+    execution.invalidate();
     _syncUiContributions();
     for (final token in _diagnosticTokens) {
       token.cancel();
@@ -998,6 +1014,7 @@ class AgentApplication extends ChangeNotifier {
 
   Future<void> close() => _closing ??= _close();
   Future<void> _close() async {
+    execution.invalidate();
     if (nativeClient.isInitialized && !_clearSuspended) {
       await nativeClient.dispatch(
         const native.AgentCommand(kind: native.CommandKind.quiesce),
@@ -1005,6 +1022,7 @@ class AgentApplication extends ChangeNotifier {
     }
     await quiesce();
     await historyMaintenance.close();
+    await execution.close();
     await nativeClient.shutdown();
     await businessHost.dispose();
     await runtime.dispose();

@@ -4,6 +4,8 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import 'api/contracts.dart';
+import 'api/execution.dart';
+import 'api/execution_contracts.dart';
 import 'api/history.dart';
 import 'api/management_contracts.dart';
 import 'api/models.dart';
@@ -50,6 +52,9 @@ abstract class AgentCore implements RustOpaqueInterface {
 
   Future<ViewKnowledgeReceipt> editKnowledge({required KnowledgeEdit request});
 
+  /// Only an installed platform provider can advertise execution support.
+  ExecutionAvailability executionAvailability();
+
   /// Exports native portable records for the shared Dart backup transport.
   /// Omitted selections include all saved records; empty selections include none.
   Future<String> exportArchiveJson({
@@ -74,9 +79,25 @@ abstract class AgentCore implements RustOpaqueInterface {
   static Future<AgentCore> initialize({required CoreConfig config}) =>
       RustLib.instance.api.crateApiAgentCoreInitialize(config: config);
 
+  /// Reconcile original provider evidence without preparing or starting code.
+  Future<ExecutionReceipt> inspectExecution({
+    required ExecutionIdentity identity,
+  });
+
   /// The caller owns this subscription and closes it when unsubscribing.
   /// The handle contains value snapshots and cancellation signals only.
   UiContributionSubscription openUiContributions();
+
+  /// The provider resolves this fixed reader and validates its closed schema.
+  Future<PreparedExecutionHandle> prepareControlledReadExecution({
+    required ControlledReadExecutionRequest request,
+  });
+
+  /// Captures a preview; the Dart operation coordinator owns approval and
+  /// calls the returned handle only after its existing admission checks.
+  Future<PreparedExecutionHandle> preparePythonExecution({
+    required PythonExecutionRequest request,
+  });
 
   Future<List<String>> pruneHistory({required int cutoffMs});
 

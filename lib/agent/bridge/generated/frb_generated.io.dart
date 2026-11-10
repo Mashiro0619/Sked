@@ -5,6 +5,8 @@
 
 import 'api.dart';
 import 'api/contracts.dart';
+import 'api/execution.dart';
+import 'api/execution_contracts.dart';
 import 'api/history.dart';
 import 'api/management_contracts.dart';
 import 'api/models.dart';
@@ -32,6 +34,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCorePtr;
 
   CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_ExecutionEventSubscriptionPtr => wire
+      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscriptionPtr;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_PreparedExecutionHandlePtr => wire
+      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandlePtr;
+
+  CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_UiContributionSubscriptionPtr => wire
       ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscriptionPtr;
 
@@ -45,6 +55,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ExecutionEventSubscription
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    dynamic raw,
+  );
+
+  @protected
+  PreparedExecutionHandle
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+    dynamic raw,
+  );
+
+  @protected
   UiContributionSubscription
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
     dynamic raw,
@@ -53,6 +75,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   AgentCore
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+    dynamic raw,
+  );
+
+  @protected
+  ExecutionEventSubscription
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    dynamic raw,
+  );
+
+  @protected
+  PreparedExecutionHandle
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
     dynamic raw,
   );
 
@@ -91,6 +125,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ExecutionEventSubscription
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    dynamic raw,
+  );
+
+  @protected
+  PreparedExecutionHandle
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+    dynamic raw,
+  );
+
+  @protected
   UiContributionSubscription
   dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
     dynamic raw,
@@ -98,6 +144,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RustStreamSink<AgentEvent> dco_decode_StreamSink_agent_event_Sse(dynamic raw);
+
+  @protected
+  RustStreamSink<ExecutionEvent> dco_decode_StreamSink_execution_event_Sse(
+    dynamic raw,
+  );
 
   @protected
   RustStreamSink<UiContributionSnapshot>
@@ -143,6 +194,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ConnectionIdentity dco_decode_box_autoadd_connection_identity(dynamic raw);
 
   @protected
+  ControlledReadExecutionRequest
+  dco_decode_box_autoadd_controlled_read_execution_request(dynamic raw);
+
+  @protected
   ConversationSelection dco_decode_box_autoadd_conversation_selection(
     dynamic raw,
   );
@@ -161,6 +216,28 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ExecutionError dco_decode_box_autoadd_execution_error(dynamic raw);
+
+  @protected
+  ExecutionIdentity dco_decode_box_autoadd_execution_identity(dynamic raw);
+
+  @protected
+  ExecutionOutputStream dco_decode_box_autoadd_execution_output_stream(
+    dynamic raw,
+  );
+
+  @protected
+  ExecutionProviderIdentity dco_decode_box_autoadd_execution_provider_identity(
+    dynamic raw,
+  );
+
+  @protected
+  ExecutionReceipt dco_decode_box_autoadd_execution_receipt(dynamic raw);
+
+  @protected
+  ExecutionTerminal dco_decode_box_autoadd_execution_terminal(dynamic raw);
+
+  @protected
   double dco_decode_box_autoadd_f_64(dynamic raw);
 
   @protected
@@ -176,6 +253,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   HostResult dco_decode_box_autoadd_host_result(dynamic raw);
 
   @protected
+  int dco_decode_box_autoadd_i_32(dynamic raw);
+
+  @protected
   JsonPayload dco_decode_box_autoadd_json_payload(dynamic raw);
 
   @protected
@@ -186,6 +266,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ModelConnection dco_decode_box_autoadd_model_connection(dynamic raw);
+
+  @protected
+  PythonExecutionRequest dco_decode_box_autoadd_python_execution_request(
+    dynamic raw,
+  );
 
   @protected
   RunPresentation dco_decode_box_autoadd_run_presentation(dynamic raw);
@@ -330,6 +415,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ConnectionIdentity dco_decode_connection_identity(dynamic raw);
 
   @protected
+  ControlledReadExecutionRequest dco_decode_controlled_read_execution_request(
+    dynamic raw,
+  );
+
+  @protected
   ConversationSelection dco_decode_conversation_selection(dynamic raw);
 
   @protected
@@ -343,6 +433,80 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   EventKind dco_decode_event_kind(dynamic raw);
+
+  @protected
+  ExecutionAvailability dco_decode_execution_availability(dynamic raw);
+
+  @protected
+  ExecutionControlledReader dco_decode_execution_controlled_reader(dynamic raw);
+
+  @protected
+  ExecutionDependency dco_decode_execution_dependency(dynamic raw);
+
+  @protected
+  ExecutionEffectsObservation dco_decode_execution_effects_observation(
+    dynamic raw,
+  );
+
+  @protected
+  ExecutionEffectsState dco_decode_execution_effects_state(dynamic raw);
+
+  @protected
+  ExecutionEnvironmentSnapshot dco_decode_execution_environment_snapshot(
+    dynamic raw,
+  );
+
+  @protected
+  ExecutionEnvironmentValueKind dco_decode_execution_environment_value_kind(
+    dynamic raw,
+  );
+
+  @protected
+  ExecutionEnvironmentVariable dco_decode_execution_environment_variable(
+    dynamic raw,
+  );
+
+  @protected
+  ExecutionError dco_decode_execution_error(dynamic raw);
+
+  @protected
+  ExecutionErrorCode dco_decode_execution_error_code(dynamic raw);
+
+  @protected
+  ExecutionEvent dco_decode_execution_event(dynamic raw);
+
+  @protected
+  ExecutionEventKind dco_decode_execution_event_kind(dynamic raw);
+
+  @protected
+  ExecutionIdentity dco_decode_execution_identity(dynamic raw);
+
+  @protected
+  ExecutionInputSnapshot dco_decode_execution_input_snapshot(dynamic raw);
+
+  @protected
+  ExecutionKind dco_decode_execution_kind(dynamic raw);
+
+  @protected
+  ExecutionOutputReference dco_decode_execution_output_reference(dynamic raw);
+
+  @protected
+  ExecutionOutputStream dco_decode_execution_output_stream(dynamic raw);
+
+  @protected
+  ExecutionPreview dco_decode_execution_preview(dynamic raw);
+
+  @protected
+  ExecutionProviderIdentity dco_decode_execution_provider_identity(dynamic raw);
+
+  @protected
+  ExecutionReceipt dco_decode_execution_receipt(dynamic raw);
+
+  @protected
+  ExecutionResourceVersion dco_decode_execution_resource_version(dynamic raw);
+
+  @protected
+  ExecutionTerminal dco_decode_execution_terminal(dynamic raw);
 
   @protected
   double dco_decode_f_64(dynamic raw);
@@ -388,6 +552,33 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<String> dco_decode_list_String(dynamic raw);
+
+  @protected
+  List<ExecutionControlledReader> dco_decode_list_execution_controlled_reader(
+    dynamic raw,
+  );
+
+  @protected
+  List<ExecutionDependency> dco_decode_list_execution_dependency(dynamic raw);
+
+  @protected
+  List<ExecutionEnvironmentVariable>
+  dco_decode_list_execution_environment_variable(dynamic raw);
+
+  @protected
+  List<ExecutionInputSnapshot> dco_decode_list_execution_input_snapshot(
+    dynamic raw,
+  );
+
+  @protected
+  List<ExecutionOutputReference> dco_decode_list_execution_output_reference(
+    dynamic raw,
+  );
+
+  @protected
+  List<ExecutionResourceVersion> dco_decode_list_execution_resource_version(
+    dynamic raw,
+  );
 
   @protected
   List<HistoryRecoveryTarget> dco_decode_list_history_recovery_target(
@@ -624,6 +815,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ExecutionError? dco_decode_opt_box_autoadd_execution_error(dynamic raw);
+
+  @protected
+  ExecutionOutputStream? dco_decode_opt_box_autoadd_execution_output_stream(
+    dynamic raw,
+  );
+
+  @protected
+  ExecutionProviderIdentity?
+  dco_decode_opt_box_autoadd_execution_provider_identity(dynamic raw);
+
+  @protected
+  ExecutionReceipt? dco_decode_opt_box_autoadd_execution_receipt(dynamic raw);
+
+  @protected
+  ExecutionTerminal? dco_decode_opt_box_autoadd_execution_terminal(dynamic raw);
+
+  @protected
   double? dco_decode_opt_box_autoadd_f_64(dynamic raw);
 
   @protected
@@ -634,6 +843,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   HostRequest? dco_decode_opt_box_autoadd_host_request(dynamic raw);
+
+  @protected
+  int? dco_decode_opt_box_autoadd_i_32(dynamic raw);
 
   @protected
   JsonPayload? dco_decode_opt_box_autoadd_json_payload(dynamic raw);
@@ -821,6 +1033,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<ViewQuestionAnswer>? dco_decode_opt_list_view_question_answer(
     dynamic raw,
   );
+
+  @protected
+  PythonExecutionRequest dco_decode_python_execution_request(dynamic raw);
 
   @protected
   QueryKind dco_decode_query_kind(dynamic raw);
@@ -1114,6 +1329,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ExecutionEventSubscription
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  PreparedExecutionHandle
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   UiContributionSubscription
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
     SseDeserializer deserializer,
@@ -1122,6 +1349,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   AgentCore
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionEventSubscription
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  PreparedExecutionHandle
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
     SseDeserializer deserializer,
   );
 
@@ -1168,6 +1407,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ExecutionEventSubscription
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  PreparedExecutionHandle
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   UiContributionSubscription
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
     SseDeserializer deserializer,
@@ -1175,6 +1426,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RustStreamSink<AgentEvent> sse_decode_StreamSink_agent_event_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  RustStreamSink<ExecutionEvent> sse_decode_StreamSink_execution_event_Sse(
     SseDeserializer deserializer,
   );
 
@@ -1236,6 +1492,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ControlledReadExecutionRequest
+  sse_decode_box_autoadd_controlled_read_execution_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ConversationSelection sse_decode_box_autoadd_conversation_selection(
     SseDeserializer deserializer,
   );
@@ -1250,6 +1512,36 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   DraftAttachmentTarget sse_decode_box_autoadd_draft_attachment_target(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionError sse_decode_box_autoadd_execution_error(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionIdentity sse_decode_box_autoadd_execution_identity(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionOutputStream sse_decode_box_autoadd_execution_output_stream(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionProviderIdentity sse_decode_box_autoadd_execution_provider_identity(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionReceipt sse_decode_box_autoadd_execution_receipt(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionTerminal sse_decode_box_autoadd_execution_terminal(
     SseDeserializer deserializer,
   );
 
@@ -1271,6 +1563,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   HostResult sse_decode_box_autoadd_host_result(SseDeserializer deserializer);
 
   @protected
+  int sse_decode_box_autoadd_i_32(SseDeserializer deserializer);
+
+  @protected
   JsonPayload sse_decode_box_autoadd_json_payload(SseDeserializer deserializer);
 
   @protected
@@ -1285,6 +1580,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ModelConnection sse_decode_box_autoadd_model_connection(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  PythonExecutionRequest sse_decode_box_autoadd_python_execution_request(
     SseDeserializer deserializer,
   );
 
@@ -1469,6 +1769,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ControlledReadExecutionRequest sse_decode_controlled_read_execution_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ConversationSelection sse_decode_conversation_selection(
     SseDeserializer deserializer,
   );
@@ -1488,6 +1793,102 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   EventKind sse_decode_event_kind(SseDeserializer deserializer);
+
+  @protected
+  ExecutionAvailability sse_decode_execution_availability(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionControlledReader sse_decode_execution_controlled_reader(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionDependency sse_decode_execution_dependency(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionEffectsObservation sse_decode_execution_effects_observation(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionEffectsState sse_decode_execution_effects_state(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionEnvironmentSnapshot sse_decode_execution_environment_snapshot(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionEnvironmentValueKind sse_decode_execution_environment_value_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionEnvironmentVariable sse_decode_execution_environment_variable(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionError sse_decode_execution_error(SseDeserializer deserializer);
+
+  @protected
+  ExecutionErrorCode sse_decode_execution_error_code(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionEvent sse_decode_execution_event(SseDeserializer deserializer);
+
+  @protected
+  ExecutionEventKind sse_decode_execution_event_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionIdentity sse_decode_execution_identity(SseDeserializer deserializer);
+
+  @protected
+  ExecutionInputSnapshot sse_decode_execution_input_snapshot(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionKind sse_decode_execution_kind(SseDeserializer deserializer);
+
+  @protected
+  ExecutionOutputReference sse_decode_execution_output_reference(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionOutputStream sse_decode_execution_output_stream(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionPreview sse_decode_execution_preview(SseDeserializer deserializer);
+
+  @protected
+  ExecutionProviderIdentity sse_decode_execution_provider_identity(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionReceipt sse_decode_execution_receipt(SseDeserializer deserializer);
+
+  @protected
+  ExecutionResourceVersion sse_decode_execution_resource_version(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionTerminal sse_decode_execution_terminal(SseDeserializer deserializer);
 
   @protected
   double sse_decode_f_64(SseDeserializer deserializer);
@@ -1537,6 +1938,35 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+  @protected
+  List<ExecutionControlledReader> sse_decode_list_execution_controlled_reader(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<ExecutionDependency> sse_decode_list_execution_dependency(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<ExecutionEnvironmentVariable>
+  sse_decode_list_execution_environment_variable(SseDeserializer deserializer);
+
+  @protected
+  List<ExecutionInputSnapshot> sse_decode_list_execution_input_snapshot(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<ExecutionOutputReference> sse_decode_list_execution_output_reference(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<ExecutionResourceVersion> sse_decode_list_execution_resource_version(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<HistoryRecoveryTarget> sse_decode_list_history_recovery_target(
@@ -1829,6 +2259,32 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ExecutionError? sse_decode_opt_box_autoadd_execution_error(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionOutputStream? sse_decode_opt_box_autoadd_execution_output_stream(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionProviderIdentity?
+  sse_decode_opt_box_autoadd_execution_provider_identity(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionReceipt? sse_decode_opt_box_autoadd_execution_receipt(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionTerminal? sse_decode_opt_box_autoadd_execution_terminal(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer);
 
   @protected
@@ -1845,6 +2301,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   HostRequest? sse_decode_opt_box_autoadd_host_request(
     SseDeserializer deserializer,
   );
+
+  @protected
+  int? sse_decode_opt_box_autoadd_i_32(SseDeserializer deserializer);
 
   @protected
   JsonPayload? sse_decode_opt_box_autoadd_json_payload(
@@ -2056,6 +2515,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<ViewQuestionAnswer>? sse_decode_opt_list_view_question_answer(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  PythonExecutionRequest sse_decode_python_execution_request(
     SseDeserializer deserializer,
   );
 
@@ -2472,6 +2936,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    ExecutionEventSubscription self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+    PreparedExecutionHandle self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
     UiContributionSubscription self,
     SseSerializer serializer,
@@ -2481,6 +2959,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
     AgentCore self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    ExecutionEventSubscription self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+    PreparedExecutionHandle self,
     SseSerializer serializer,
   );
 
@@ -2533,6 +3025,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    ExecutionEventSubscription self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+    PreparedExecutionHandle self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
     UiContributionSubscription self,
     SseSerializer serializer,
@@ -2541,6 +3047,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_StreamSink_agent_event_Sse(
     RustStreamSink<AgentEvent> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_StreamSink_execution_event_Sse(
+    RustStreamSink<ExecutionEvent> self,
     SseSerializer serializer,
   );
 
@@ -2611,6 +3123,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_controlled_read_execution_request(
+    ControlledReadExecutionRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_conversation_selection(
     ConversationSelection self,
     SseSerializer serializer,
@@ -2631,6 +3149,42 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_draft_attachment_target(
     DraftAttachmentTarget self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_execution_error(
+    ExecutionError self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_execution_identity(
+    ExecutionIdentity self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_execution_output_stream(
+    ExecutionOutputStream self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_execution_provider_identity(
+    ExecutionProviderIdentity self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_execution_receipt(
+    ExecutionReceipt self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_execution_terminal(
+    ExecutionTerminal self,
     SseSerializer serializer,
   );
 
@@ -2662,6 +3216,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_i_32(int self, SseSerializer serializer);
+
+  @protected
   void sse_encode_box_autoadd_json_payload(
     JsonPayload self,
     SseSerializer serializer,
@@ -2682,6 +3239,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_model_connection(
     ModelConnection self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_python_execution_request(
+    PythonExecutionRequest self,
     SseSerializer serializer,
   );
 
@@ -2902,6 +3465,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_controlled_read_execution_request(
+    ControlledReadExecutionRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_conversation_selection(
     ConversationSelection self,
     SseSerializer serializer,
@@ -2924,6 +3493,135 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_event_kind(EventKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_execution_availability(
+    ExecutionAvailability self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_execution_controlled_reader(
+    ExecutionControlledReader self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_execution_dependency(
+    ExecutionDependency self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_execution_effects_observation(
+    ExecutionEffectsObservation self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_execution_effects_state(
+    ExecutionEffectsState self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_execution_environment_snapshot(
+    ExecutionEnvironmentSnapshot self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_execution_environment_value_kind(
+    ExecutionEnvironmentValueKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_execution_environment_variable(
+    ExecutionEnvironmentVariable self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_execution_error(
+    ExecutionError self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_execution_error_code(
+    ExecutionErrorCode self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_execution_event(
+    ExecutionEvent self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_execution_event_kind(
+    ExecutionEventKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_execution_identity(
+    ExecutionIdentity self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_execution_input_snapshot(
+    ExecutionInputSnapshot self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_execution_kind(ExecutionKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_execution_output_reference(
+    ExecutionOutputReference self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_execution_output_stream(
+    ExecutionOutputStream self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_execution_preview(
+    ExecutionPreview self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_execution_provider_identity(
+    ExecutionProviderIdentity self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_execution_receipt(
+    ExecutionReceipt self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_execution_resource_version(
+    ExecutionResourceVersion self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_execution_terminal(
+    ExecutionTerminal self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_f_64(double self, SseSerializer serializer);
@@ -2984,6 +3682,42 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_execution_controlled_reader(
+    List<ExecutionControlledReader> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_execution_dependency(
+    List<ExecutionDependency> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_execution_environment_variable(
+    List<ExecutionEnvironmentVariable> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_execution_input_snapshot(
+    List<ExecutionInputSnapshot> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_execution_output_reference(
+    List<ExecutionOutputReference> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_execution_resource_version(
+    List<ExecutionResourceVersion> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_history_recovery_target(
@@ -3340,6 +4074,36 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_execution_error(
+    ExecutionError? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_execution_output_stream(
+    ExecutionOutputStream? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_execution_provider_identity(
+    ExecutionProviderIdentity? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_execution_receipt(
+    ExecutionReceipt? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_execution_terminal(
+    ExecutionTerminal? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer);
 
   @protected
@@ -3359,6 +4123,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     HostRequest? self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_opt_box_autoadd_i_32(int? self, SseSerializer serializer);
 
   @protected
   void sse_encode_opt_box_autoadd_json_payload(
@@ -3615,6 +4382,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_list_view_question_answer(
     List<ViewQuestionAnswer>? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_python_execution_request(
+    PythonExecutionRequest self,
     SseSerializer serializer,
   );
 
@@ -4163,6 +4936,74 @@ class RustLibWire implements BaseWire {
       );
   late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore =
       _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCorePtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscriptionPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_sked_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription',
+      );
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription =
+      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscriptionPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscriptionPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_sked_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription',
+      );
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription =
+      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscriptionPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandlePtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_sked_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle',
+      );
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle =
+      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandlePtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandlePtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_sked_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle',
+      );
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle =
+      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandlePtr
           .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
   void
