@@ -235,57 +235,74 @@ class RustConversationRepository extends ChangeNotifier
 
   Future<void> _loadPage(String id, {int? before}) async {
     final generation = _generation;
-    final result = await client.query(
-      bridge.AgentQuery(
-        kind: bridge.QueryKind.readConversation,
-        conversationId: id,
-        before: before,
-        limit: _pageSize,
-      ),
-    );
-    if (_disposed || generation != _generation) return;
-    final snapshot = result.snapshot;
-    if (snapshot == null) throw StateError('Conversation does not exist.');
-    if ((_sequence[id] ?? -1) > snapshot.sequence && _full.contains(id)) {
-      final messages = _views[id]!.messages;
-      final anchor = visibleMessages(id).firstOrNull?.id;
-      final anchorIndex = anchor == null
-          ? -1
-          : messages.indexWhere((message) => message.id == anchor);
-      final end = before == null
-          ? messages.length
-          : (anchorIndex < 0 ? math.min(before, messages.length) : anchorIndex);
-      final start = _pageStart(messages, end);
-      _visible[id] = List.unmodifiable(
-        before == null
-            ? messages.skip(start)
-            : [...messages.sublist(start, end), ...visibleMessages(id)],
+    final previous = visibleMessages(id);
+    final anchor = previous.firstOrNull?.id;
+    final previousTotal = (_before[id] ?? 0) + previous.length;
+    final extension = before == null ? 0 : _pageSize;
+    var limit = math.max(_pageSize, previous.length + extension);
+    while (true) {
+      final result = await client.query(
+        bridge.AgentQuery(
+          kind: bridge.QueryKind.readConversation,
+          conversationId: id,
+          limit: limit,
+        ),
       );
-      _before[id] = start == 0 ? null : start;
-      return;
-    }
-    final page = snapshot.messages.map(conversationMessageFromRust).toList();
-    final seen = <String>{};
-    final messages = [
-      ...page,
-      if (before != null) ...visibleMessages(id),
-    ].where((message) => seen.add(message.id)).toList();
-    final start = result.pageStart ?? 0;
-    final view = conversationFromRust(
-      snapshot,
-      projectedMessages: messages,
-      messageStart: start,
-    );
-    if ((_sequence[id] ?? -1) <= snapshot.sequence) {
+      if (_disposed || generation != _generation) return;
+      final snapshot = result.snapshot;
+      if (snapshot == null) throw StateError('Conversation does not exist.');
+      if ((_sequence[id] ?? -1) > snapshot.sequence) {
+        if (_full.contains(id)) {
+          final messages = _views[id]!.messages;
+          final anchorIndex = messages.indexWhere(
+            (message) => message.id == anchor,
+          );
+          final start = anchorIndex < 0
+              ? _pageStart(messages, messages.length)
+              : before == null
+              ? anchorIndex
+              : _pageStart(messages, anchorIndex);
+          _visible[id] = List.unmodifiable(messages.skip(start));
+          _before[id] = start == 0 ? null : start;
+          _notify();
+        }
+        return;
+      }
+      // Read one continuous window from the current snapshot. Combining an
+      // older page with cached messages can restore a suffix removed by redo.
+      final requiredCount = previous.isEmpty
+          ? _pageSize
+          : previous.length +
+                extension +
+                math.max<int>(0, result.total - previousTotal);
+      if (requiredCount > limit && result.nextOffset != null) {
+        limit = requiredCount;
+        continue;
+      }
+      final page = snapshot.messages.map(conversationMessageFromRust).toList();
+      final anchorIndex = page.indexWhere((message) => message.id == anchor);
+      final offset = anchorIndex < 0
+          ? 0
+          : before == null
+          ? anchorIndex
+          : _pageStart(page, anchorIndex);
+      final messages = page.sublist(offset);
+      final start = (result.pageStart ?? 0) + offset;
+      final view = conversationFromRust(
+        snapshot,
+        projectedMessages: messages,
+        messageStart: start,
+      );
       _ingest(
         snapshot,
         view,
         full: start == 0 && messages.length == result.total,
       );
       _visible[id] = List.unmodifiable(messages);
-      _before[id] = result.nextOffset;
+      _before[id] = start == 0 ? null : start;
+      _notify();
+      return;
     }
-    _notify();
   }
 
   @override
