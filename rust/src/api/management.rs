@@ -161,7 +161,7 @@ impl AgentCore {
     pub async fn admit_draft_attachment(
         &self,
         request: DraftAttachmentAdmission,
-    ) -> Result<ViewConversationSnapshot, String> {
+    ) -> Result<ViewConversationState, String> {
         if self.closed.is_cancelled() {
             return Err("unavailable: Agent core is closed".into());
         }
@@ -173,10 +173,11 @@ impl AgentCore {
             .or_insert_with(|| self.closed.child_token())
             .clone();
         let import_id = request.import_id.clone();
+        let release_id = request.target.conversation_id.clone();
         let result = self
             .storage()
             .call(move |store| {
-                store.admit_draft_attachment(
+                let snapshot = store.admit_draft_attachment(
                     &request.target.conversation_id,
                     request.import_id,
                     request.target.expected_after_run_id.as_deref(),
@@ -187,16 +188,20 @@ impl AgentCore {
                     request.byte_length,
                     &token,
                     now(),
-                )
+                )?;
+                store
+                    .conversation_state(&snapshot.conversation.id)?
+                    .ok_or(StorageError::NotFound(snapshot.conversation.id))
             })
             .await;
         self.attachment_imports
             .lock()
             .expect("attachment imports mutex poisoned")
             .remove(&import_id);
-        let snapshot = result.map_err(attachment_error)?;
-        self.publish_snapshot(snapshot.clone());
-        Ok(snapshot.into())
+        self.manager.release_if_unowned(&release_id).await;
+        let state: ViewConversationState = result.map_err(attachment_error)?.into();
+        self.publish_state(state.clone());
+        Ok(state)
     }
 
     /// Registration is race-safe even if cancellation arrives before admission.
@@ -214,7 +219,7 @@ impl AgentCore {
         &self,
         target: DraftAttachmentTarget,
         attachment_id: String,
-    ) -> Result<ViewConversationSnapshot, String> {
+    ) -> Result<ViewConversationState, String> {
         self.change_draft_attachment(target, attachment_id, false)
             .await
     }
@@ -223,7 +228,7 @@ impl AgentCore {
         &self,
         target: DraftAttachmentTarget,
         attachment_id: String,
-    ) -> Result<ViewConversationSnapshot, String> {
+    ) -> Result<ViewConversationState, String> {
         self.change_draft_attachment(target, attachment_id, true)
             .await
     }
@@ -243,31 +248,37 @@ impl AgentCore {
         target: DraftAttachmentTarget,
         attachment_id: String,
         include: bool,
-    ) -> Result<ViewConversationSnapshot, String> {
+    ) -> Result<ViewConversationState, String> {
         if self.closed.is_cancelled() {
             return Err("unavailable: Agent core is closed".into());
         }
-        let snapshot = self
+        let release_id = target.conversation_id.clone();
+        let result = self
             .storage()
             .call(move |store| {
-                store.change_draft_attachment(
+                let snapshot = store.change_draft_attachment(
                     &target.conversation_id,
                     &attachment_id,
                     target.expected_after_run_id.as_deref(),
                     target.expected_after_input_id.as_deref(),
                     include,
                     now(),
-                )
+                )?;
+                store
+                    .conversation_state(&snapshot.conversation.id)?
+                    .ok_or(StorageError::NotFound(snapshot.conversation.id))
             })
             .await
-            .map_err(attachment_error)?;
-        self.publish_snapshot(snapshot.clone());
-        Ok(snapshot.into())
+            .map_err(attachment_error);
+        self.manager.release_if_unowned(&release_id).await;
+        let state: ViewConversationState = result?.into();
+        self.publish_state(state.clone());
+        Ok(state)
     }
 
-    pub(super) fn publish_snapshot(&self, snapshot: crate::storage::models::ConversationSnapshot) {
-        let mut event = AgentEvent::empty(EventKind::Snapshot, snapshot.conversation.id.clone());
-        event.snapshot = Some(snapshot.into());
+    pub(super) fn publish_state(&self, state: ViewConversationState) {
+        let mut event = AgentEvent::empty(EventKind::Snapshot, state.conversation.id.clone());
+        event.state = Some(state);
         let _ = self.events.send(event);
     }
 

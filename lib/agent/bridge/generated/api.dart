@@ -22,7 +22,7 @@ abstract class AgentCore implements RustOpaqueInterface {
     required String mediaType,
   });
 
-  Future<ViewConversationSnapshot> admitDraftAttachment({
+  Future<ViewConversationState> admitDraftAttachment({
     required DraftAttachmentAdmission request,
   });
 
@@ -90,12 +90,12 @@ abstract class AgentCore implements RustOpaqueInterface {
     required List<ViewKnowledgeRecord> records,
   });
 
-  Future<ViewConversationSnapshot> removeDraftAttachment({
+  Future<ViewConversationState> removeDraftAttachment({
     required DraftAttachmentTarget target,
     required String attachmentId,
   });
 
-  Future<ViewConversationSnapshot> replacePendingRedoReferences({
+  Future<ViewConversationState> replacePendingRedoReferences({
     required String conversationId,
     required String batchId,
     required int expectedSequence,
@@ -122,7 +122,7 @@ abstract class AgentCore implements RustOpaqueInterface {
 
   Future<List<ToolDefinition>> toolDefinitions();
 
-  Future<ViewConversationSnapshot> useDraftAttachment({
+  Future<ViewConversationState> useDraftAttachment({
     required DraftAttachmentTarget target,
     required String attachmentId,
   });

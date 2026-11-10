@@ -494,6 +494,9 @@ class _RoutedAgentDelegate implements AgentUiDelegate {
   @override
   ValueListenable<AgentUiState> get state => runtime.state;
   @override
+  Future<void> setConversationActive(Object owner, String? conversationId) =>
+      runtime.setConversationActive(owner, conversationId);
+  @override
   ValueListenable<AgentUiRunState> watchConversation(String conversationId) =>
       runtime.watchConversation(conversationId);
   @override

@@ -230,7 +230,7 @@ class _Application extends ChangeNotifier implements AgentApplication {
     app.binaryAttachments = RustConversationAttachments(
       client: app.provider.client,
       readConversation: app.conversations.find,
-      publishSnapshot: app.conversations.ingestSnapshot,
+      publishState: app.conversations.ingestState,
     );
     app.knowledge = RustKnowledgeEditorController(
       client: app.provider.client,
@@ -242,7 +242,7 @@ class _Application extends ChangeNotifier implements AgentApplication {
       readSettings: () => app.settings,
       readApiKey: (_) async => 'fixture-key',
       onOpenSettings: () => throw StateError('Host must route settings'),
-      onSnapshot: app.conversations.ingestSnapshot,
+      onState: app.conversations.ingestState,
     );
     await app.runtime.loadConversation('first');
     return app;

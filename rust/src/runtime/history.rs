@@ -81,14 +81,18 @@ impl RuntimeManager {
             let session = manager.session(&accepted.conversation_id).await;
             let mut session = session.lock().await;
             match manager.finish_run(&accepted, result).await {
-                Ok(snapshot) => manager.settle_session(&accepted, &snapshot, &mut session),
+                Ok(snapshot) => {
+                    manager
+                        .settle_session(&accepted, &snapshot, &mut session)
+                        .await
+                }
                 Err(error) => {
                     manager.emit(RuntimeEvent::Error {
                         conversation_id: accepted.conversation_id.clone(),
                         code: "reply_save_failed".into(),
                         message: error.to_string(),
                     });
-                    manager.failed_settlement(&accepted, &mut session);
+                    manager.failed_settlement(&accepted, &mut session).await;
                 }
             }
         });
@@ -310,10 +314,16 @@ impl RuntimeManager {
         let mut batch = batch;
         batch.replay_run_id = accepted.run_id.clone();
         let stored = batch.clone();
-        self.change(id, move |_| {
-            Ok(vec![JournalChange::RedoBatchUpserted { batch: stored }])
-        })
-        .await?;
+        if let Err(error) = self
+            .change(id, move |_| {
+                Ok(vec![JournalChange::RedoBatchUpserted { batch: stored }])
+            })
+            .await
+        {
+            self.fail_redo_admission(&accepted, &batch.id, &mut session, &error)
+                .await;
+            return Err(error);
+        }
         let batch_id = batch.id.clone();
         let manager = self.clone();
         tokio::spawn(async move {
@@ -378,8 +388,46 @@ impl RuntimeManager {
             .finish_run(&accepted, Err(RuntimeError::Invalid(message)))
             .await
         {
-            Ok(snapshot) => self.settle_session(&accepted, &snapshot, &mut session),
-            Err(_) => self.failed_settlement(&accepted, &mut session),
+            Ok(snapshot) => {
+                self.settle_session(&accepted, &snapshot, &mut session)
+                    .await
+            }
+            Err(_) => self.failed_settlement(&accepted, &mut session).await,
+        }
+    }
+
+    /// Admission has already persisted a run, but no worker owns it yet. A
+    /// failed setup must retire that run before the command returns its error.
+    async fn fail_redo_admission(
+        &self,
+        accepted: &AcceptedRun,
+        batch_id: &str,
+        session: &mut Session,
+        error: &RuntimeError,
+    ) {
+        let batch_id = batch_id.to_owned();
+        let message = error.to_string();
+        let stored_error = message.clone();
+        let _ = self
+            .change(&accepted.conversation_id, move |snapshot| {
+                let Some(mut batch) = snapshot
+                    .redo_batches
+                    .iter()
+                    .find(|batch| batch.id == batch_id)
+                    .cloned()
+                else {
+                    return Ok(vec![]);
+                };
+                batch.last_error = Some(stored_error);
+                Ok(vec![JournalChange::RedoBatchUpserted { batch }])
+            })
+            .await;
+        match self
+            .finish_run(accepted, Err(RuntimeError::Invalid(message)))
+            .await
+        {
+            Ok(snapshot) => self.settle_session(accepted, &snapshot, session).await,
+            Err(_) => self.failed_settlement(accepted, session).await,
         }
     }
 
@@ -885,17 +933,20 @@ impl RuntimeManager {
             .await?;
         batch.replay_run_id = accepted.run_id.clone();
         let stored = batch.clone();
-        self.change(id, move |_| {
-            Ok(vec![JournalChange::RedoBatchUpserted { batch: stored }])
-        })
-        .await?;
         let run_id = accepted.run_id.clone();
         let manager = self.clone();
-        if snapshot
+        let has_history = snapshot
             .history_versions
             .iter()
-            .any(|v| v.id == batch.history_version_id)
-        {
+            .any(|v| v.id == batch.history_version_id);
+        let setup: Result<Option<Message>> = async {
+            self.change(id, move |_| {
+                Ok(vec![JournalChange::RedoBatchUpserted { batch: stored }])
+            })
+            .await?;
+            if !has_history {
+                return Ok(None);
+            }
             self.inner
                 .host
                 .end_history(id.into(), batch.id.clone(), true)
@@ -915,6 +966,18 @@ impl RuntimeManager {
                 None
             };
             self.activate_redo_replay(&accepted, &batch.id).await?;
+            Ok(prompt)
+        }
+        .await;
+        let prompt = match setup {
+            Ok(prompt) => prompt,
+            Err(error) => {
+                self.fail_redo_admission(&accepted, &batch.id, &mut session, &error)
+                    .await;
+                return Err(error);
+            }
+        };
+        if has_history {
             self.spawn_run(AcceptedRun { prompt, ..accepted });
         } else {
             tokio::spawn(async move {

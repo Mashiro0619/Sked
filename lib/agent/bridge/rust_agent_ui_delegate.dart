@@ -27,7 +27,7 @@ class RustAgentUiDelegate extends AgentUiDelegate {
     required this.onOpenSettings,
     this.readMaintenance = _notInMaintenance,
     this.resolveEndpoint = resolveRustAgentEndpoint,
-    this.onSnapshot,
+    this.onState,
     this.onReasoningDelta,
     this.validateComposerReferences,
     this.readEnvironment,
@@ -42,7 +42,7 @@ class RustAgentUiDelegate extends AgentUiDelegate {
   final VoidCallback onOpenSettings;
   final bool Function() readMaintenance;
   final Uri Function(AgentSettings settings) resolveEndpoint;
-  final void Function(native.ViewConversationSnapshot snapshot)? onSnapshot;
+  final void Function(native.ViewConversationState snapshot)? onState;
   final void Function(String conversationId, String runId, String text)?
   onReasoningDelta;
   final Future<List<AgentComposerReference>> Function(
@@ -53,7 +53,8 @@ class RustAgentUiDelegate extends AgentUiDelegate {
   final Map<String, Object?> Function()? readEnvironment;
 
   final _state = ValueNotifier(AgentUiState());
-  final _snapshots = <String, native.ViewConversationSnapshot>{};
+  final _states = <String, native.ViewConversationState>{};
+  final _conversationEpochs = <String, int>{};
   final _presentations = <String, bridge.RunPresentation>{};
   final _presentationEpochs = <String, int>{};
   final _runs = <String, AgentUiRunState>{};
@@ -62,8 +63,11 @@ class RustAgentUiDelegate extends AgentUiDelegate {
   final _outputRuns = <String, String>{};
   final _errors = <String, String>{};
   final _providerFailures = <String, native.ViewProviderFailure>{};
+  final _interactions = <String, native.ViewInteractionDetails>{};
+  final _detailLoads = <String, Future<void>>{};
+  final _owners = <Object, String>{};
   final _approvals = <String, (String, AgentUiApproval)>{};
-  final _loading = <String, Future<native.ViewConversationSnapshot?>>{};
+  final _loading = <String, Future<native.ViewConversationState?>>{};
   final _transportRequests = <String, _TransportConsent>{};
   final _transportGrants = <String>{};
   String? _transportSettingsStamp;
@@ -81,17 +85,17 @@ class RustAgentUiDelegate extends AgentUiDelegate {
       conversationId,
       () => ValueNotifier(_runs[conversationId] ?? const AgentUiRunState()),
     );
-    if (!_snapshots.containsKey(conversationId)) {
+    if (!_states.containsKey(conversationId)) {
       unawaited(_refreshConversation(conversationId));
     }
     return view;
   }
 
   /// Loads existing history without starting or resuming a model request.
-  Future<native.ViewConversationSnapshot?> loadConversation(String id) {
+  Future<native.ViewConversationState?> loadConversation(String id) {
     final loading = _loading[id];
     if (loading != null) return loading;
-    late final Future<native.ViewConversationSnapshot?> request;
+    late final Future<native.ViewConversationState?> request;
     request = _loadConversation(id).whenComplete(() {
       if (identical(_loading[id], request)) unawaited(_loading.remove(id));
     });
@@ -99,21 +103,26 @@ class RustAgentUiDelegate extends AgentUiDelegate {
     return request;
   }
 
-  Future<native.ViewConversationSnapshot?> _loadConversation(String id) async {
+  Future<native.ViewConversationState?> _loadConversation(String id) async {
     final dataEpoch = _dataEpoch;
+    final conversationEpoch = _conversationEpochs[id] ?? 0;
     final presentationEpoch = _presentationEpochs[id] ?? 0;
     final result = await client.query(
       bridge.AgentQuery(
-        kind: bridge.QueryKind.readConversation,
+        kind: bridge.QueryKind.conversationState,
         conversationId: id,
       ),
     );
-    if (_disposed || dataEpoch != _dataEpoch) return null;
-    final snapshot = result.snapshot;
+    if (_disposed ||
+        dataEpoch != _dataEpoch ||
+        conversationEpoch != (_conversationEpochs[id] ?? 0)) {
+      return null;
+    }
+    final snapshot = result.state;
     if (snapshot == null) {
       forgetConversation(id);
     } else {
-      ingestSnapshot(
+      ingestState(
         snapshot,
         presentation: (_presentationEpochs[id] ?? 0) == presentationEpoch
             ? result.presentation
@@ -124,10 +133,16 @@ class RustAgentUiDelegate extends AgentUiDelegate {
   }
 
   Future<void> _refreshConversation(String id) async {
+    final dataEpoch = _dataEpoch;
+    final conversationEpoch = _conversationEpochs[id] ?? 0;
     try {
       await loadConversation(id);
     } catch (_) {
-      if (_disposed) return;
+      if (_disposed ||
+          dataEpoch != _dataEpoch ||
+          conversationEpoch != (_conversationEpochs[id] ?? 0)) {
+        return;
+      }
       _errors[id] = 'storageUnavailable';
       _publishConversation(id);
     }
@@ -135,13 +150,13 @@ class RustAgentUiDelegate extends AgentUiDelegate {
 
   /// Receives the same persisted projection used by the conversation repository.
   /// Sequence checks also prevent a slower history query replacing a live event.
-  void ingestSnapshot(
-    native.ViewConversationSnapshot snapshot, {
+  void ingestState(
+    native.ViewConversationState snapshot, {
     bridge.RunPresentation? presentation,
   }) {
     if (_disposed) return;
     final id = snapshot.conversation.id;
-    final previous = _snapshots[id];
+    final previous = _states[id];
     if (previous != null && snapshot.sequence < previous.sequence) return;
     final runId = snapshot.conversation.runId;
     if (previous != null &&
@@ -155,24 +170,21 @@ class RustAgentUiDelegate extends AgentUiDelegate {
       _outputRuns.remove(id);
       _errors.remove(id);
       _providerFailures.remove(id);
+      _interactions.remove(id);
       _presentations.remove(id);
     }
     if (presentation != null) _presentations[id] = presentation;
-    final lastAssistant = snapshot.messages
-        .where((message) => message.role == native.ViewMessageRole.assistant)
-        .lastOrNull;
-    final previousAssistant = previous?.messages
-        .where((message) => message.role == native.ViewMessageRole.assistant)
-        .lastOrNull;
-    if (lastAssistant != null &&
-        (lastAssistant.id != previousAssistant?.id ||
-            lastAssistant.text != previousAssistant?.text)) {
+    if (snapshot.lastCommittedAssistantId !=
+            previous?.lastCommittedAssistantId ||
+        snapshot.lastCommittedAssistantRevision !=
+            previous?.lastCommittedAssistantRevision) {
       _output.remove(id);
     }
-    _snapshots[id] = snapshot;
+    _states[id] = snapshot;
     if (!_nativeActive(snapshot.conversation.status)) _output.remove(id);
     _publishConversation(id);
-    onSnapshot?.call(snapshot);
+    onState?.call(snapshot);
+    if (_owners.containsValue(id)) unawaited(_loadDetails(id));
     if (previous == null ||
         previous.conversation.modelSelection !=
             snapshot.conversation.modelSelection) {
@@ -182,7 +194,10 @@ class RustAgentUiDelegate extends AgentUiDelegate {
 
   void forgetConversation(String id) {
     _invalidateTransport(conversationId: id);
-    _snapshots.remove(id);
+    _conversationEpochs.update(id, (value) => value + 1, ifAbsent: () => 1);
+    _owners.removeWhere((_, conversationId) => conversationId == id);
+    unawaited(_loading.remove(id));
+    _states.remove(id);
     _presentations.remove(id);
     _presentationEpochs.remove(id);
     _runs.remove(id);
@@ -190,6 +205,8 @@ class RustAgentUiDelegate extends AgentUiDelegate {
     _outputRuns.remove(id);
     _errors.remove(id);
     _providerFailures.remove(id);
+    _interactions.remove(id);
+    unawaited(_detailLoads.remove(id));
     _approvals.remove(id);
     if (!_disposed) {
       _views[id]?.value = const AgentUiRunState();
@@ -201,7 +218,7 @@ class RustAgentUiDelegate extends AgentUiDelegate {
     _dataEpoch++;
     _loading.clear();
     _invalidateTransport();
-    for (final id in _snapshots.keys.toList()) {
+    for (final id in _states.keys.toList()) {
       forgetConversation(id);
     }
   }
@@ -214,7 +231,7 @@ class RustAgentUiDelegate extends AgentUiDelegate {
       _invalidateTransport();
     }
     _transportSettingsStamp = stamp;
-    for (final id in _snapshots.keys) {
+    for (final id in _states.keys) {
       _publishConversation(id);
     }
     _publishSettings();
@@ -238,7 +255,7 @@ class RustAgentUiDelegate extends AgentUiDelegate {
       availableModels: settings.availableModels,
       defaultModelSelection: settings.defaultModelSelection,
       modelSelections: {
-        for (final snapshot in _snapshots.values)
+        for (final snapshot in _states.values)
           if (snapshot.conversation.modelSelection != null)
             snapshot.conversation.id: modelSelectionFromRust(
               snapshot.conversation.modelSelection,
@@ -259,9 +276,9 @@ class RustAgentUiDelegate extends AgentUiDelegate {
       case bridge.EventKind.presentation:
         _publishConversation(id);
       case bridge.EventKind.snapshot:
-        final snapshot = event.snapshot;
+        final snapshot = event.state;
         if (snapshot != null) {
-          ingestSnapshot(snapshot, presentation: event.presentation);
+          ingestState(snapshot, presentation: event.presentation);
         }
       case bridge.EventKind.textDelta:
         if (!_acceptOutput(event)) return;
@@ -275,11 +292,13 @@ class RustAgentUiDelegate extends AgentUiDelegate {
         _output.remove(id);
         _publishConversation(id);
       case bridge.EventKind.runSettled:
-        if (event.runId != _snapshots[id]?.conversation.runId) return;
+        if (event.runId != _states[id]?.conversation.runId) return;
         _output.remove(id);
         if (event.outcome == bridge.HostOutcome.error) {
           final failure = event.providerFailure;
-          if (failure != null) _providerFailures[id] = failure;
+          if (failure != null && _owners.containsValue(id)) {
+            _providerFailures[id] = failure;
+          }
           _errors[id] = failure?.code ?? _nativeErrorCode(event.errorCode);
         } else if (event.outcome == bridge.HostOutcome.unknown) {
           _errors[id] = 'interruptedRunNeedsReview';
@@ -291,7 +310,7 @@ class RustAgentUiDelegate extends AgentUiDelegate {
         _errors[id] = _nativeErrorCode(event.errorCode);
         _publishConversation(id);
       case bridge.EventKind.resync:
-        for (final conversationId in _snapshots.keys.toList()) {
+        for (final conversationId in _states.keys.toList()) {
           unawaited(_refreshConversation(conversationId));
         }
       case bridge.EventKind.toolProgress:
@@ -312,7 +331,7 @@ class RustAgentUiDelegate extends AgentUiDelegate {
   bool _acceptOutput(bridge.AgentEvent event) {
     final runId = event.runId;
     if (runId == null ||
-        runId != _snapshots[event.conversationId]?.conversation.runId) {
+        runId != _states[event.conversationId]?.conversation.runId) {
       return false;
     }
     if (_outputRuns[event.conversationId] != runId) {
@@ -325,7 +344,7 @@ class RustAgentUiDelegate extends AgentUiDelegate {
   void _streamError(Object error, StackTrace stackTrace) {
     if (_disposed) return;
     _invalidateTransport();
-    for (final id in _snapshots.keys) {
+    for (final id in _states.keys) {
       _errors[id] = 'storageUnavailable';
       _publishConversation(id);
     }
@@ -435,7 +454,7 @@ class RustAgentUiDelegate extends AgentUiDelegate {
             identity.fingerprint) {
       return null;
     }
-    final mode = _snapshots[request.conversationId]?.conversation.mode;
+    final mode = _states[request.conversationId]?.conversation.mode;
     if (mode != native.ViewPermissionMode.full && mode != request.mode) {
       return null;
     }
@@ -539,7 +558,7 @@ class RustAgentUiDelegate extends AgentUiDelegate {
 
   void _publishConversation(String id) {
     if (_disposed) return;
-    final snapshot = _snapshots[id];
+    final snapshot = _states[id];
     final presentation = _presentations[id];
     final context = presentation?.contextUsage;
     final runId = snapshot?.conversation.runId;
@@ -547,15 +566,24 @@ class RustAgentUiDelegate extends AgentUiDelegate {
     final selected =
         modelSelectionFromRust(snapshot?.conversation.modelSelection) ??
         settings.defaultModelSelection;
-    final run = snapshot?.runs.where((run) => run.id == runId).lastOrNull;
+    final run = snapshot?.currentRun;
     final selection = modelSelectionFromRust(run?.model) ?? selected;
     final contextModelId = context?.modelId ?? selected?.modelId;
     final model = contextModelId == null
         ? null
         : settings.modelConfig(contextModelId);
     final operations =
-        snapshot?.operations
-            .where((operation) => operation.runId == runId)
+        _interactions[id]?.pendingOperations
+            .where(
+              (operation) =>
+                  operation.runId == runId &&
+                  (snapshot?.pendingOperations.any(
+                        (summary) =>
+                            summary.toolCallId == operation.toolCallId &&
+                            summary.phase == operation.phase,
+                      ) ??
+                      false),
+            )
             .map(_operation)
             .toList(growable: false) ??
         const <AgentOperationUpdate>[];
@@ -567,7 +595,7 @@ class RustAgentUiDelegate extends AgentUiDelegate {
     final error =
         _errors[id] ??
         (run?.errorCode == null ? null : _nativeErrorCode(run!.errorCode));
-    final savedFailure = _providerFailures[id] ?? run?.providerFailure;
+    final savedFailure = _providerFailures[id];
     final providerFailure = savedFailure?.code == error ? savedFailure : null;
     final status =
         snapshot?.conversation.status ?? native.ViewConversationStatus.idle;
@@ -622,6 +650,11 @@ class RustAgentUiDelegate extends AgentUiDelegate {
       providerErrorMetadata: _providerErrorMetadata(providerFailure),
       pendingApproval: approval,
       recoveryRequired:
+          (snapshot?.pendingOperations.any(
+                (operation) =>
+                    operation.phase == native.ViewOperationPhase.unresolved,
+              ) ??
+              false) ||
           operations.any(
             (operation) => operation.phase == AgentOperationPhase.unresolved,
           ) ||
@@ -660,15 +693,115 @@ class RustAgentUiDelegate extends AgentUiDelegate {
   Future<void> _dispatch(bridge.AgentCommand command) async {
     final result = await client.dispatch(command);
     if (_disposed) return;
-    final snapshot = result.snapshot;
+    final snapshot = result.state;
     if (snapshot != null) {
-      ingestSnapshot(snapshot);
+      ingestState(snapshot);
     } else if (command.conversationId != null) {
       await loadConversation(command.conversationId!);
     }
   }
 
-  Future<native.ViewConversationSnapshot> _conversation(String id) async =>
+  @override
+  Future<void> setConversationActive(
+    Object owner,
+    String? conversationId,
+  ) async {
+    final previous = _owners.remove(owner);
+    if (conversationId != null) _owners[owner] = conversationId;
+    if (previous != null && !_owners.containsValue(previous)) {
+      _interactions.remove(previous);
+      _providerFailures.remove(previous);
+      _publishConversation(previous);
+    }
+    if (conversationId == null) return;
+    if (!_states.containsKey(conversationId)) {
+      await loadConversation(conversationId);
+    }
+    await _loadDetails(conversationId);
+  }
+
+  Future<void> _loadDetails(String id) {
+    final pending = _detailLoads[id];
+    if (pending != null) return pending;
+    final dataEpoch = _dataEpoch;
+    final conversationEpoch = _conversationEpochs[id] ?? 0;
+    late final Future<void> request;
+    request = _readDetails(id)
+        .catchError((Object error, StackTrace stack) {
+          if (!_disposed &&
+              dataEpoch == _dataEpoch &&
+              conversationEpoch == (_conversationEpochs[id] ?? 0) &&
+              _owners.containsValue(id)) {
+            _errors[id] = 'storageUnavailable';
+            _publishConversation(id);
+          }
+        })
+        .whenComplete(() {
+          if (identical(_detailLoads[id], request)) {
+            unawaited(_detailLoads.remove(id));
+          }
+        });
+    _detailLoads[id] = request;
+    return request;
+  }
+
+  Future<void> _readDetails(String id) async {
+    final epoch = _dataEpoch;
+    final conversationEpoch = _conversationEpochs[id] ?? 0;
+    bool current() =>
+        !_disposed &&
+        epoch == _dataEpoch &&
+        conversationEpoch == (_conversationEpochs[id] ?? 0) &&
+        _owners.containsValue(id);
+    while (current()) {
+      var state = _states[id];
+      if (state == null) return;
+      native.ViewInteractionDetails? details;
+      if (state.question != null ||
+          state.planRevision != null ||
+          state.pendingOperations.isNotEmpty ||
+          state.pendingRedos.isNotEmpty) {
+        final result = await client.query(
+          bridge.AgentQuery(
+            kind: bridge.QueryKind.interactionDetails,
+            conversationId: id,
+          ),
+        );
+        if (!current()) return;
+        if (result.state == null || result.interactionDetails == null) return;
+        if ((_states[id]?.sequence ?? 0) > result.state!.sequence) continue;
+        state = result.state!;
+        details = result.interactionDetails;
+      }
+      native.ViewProviderFailure? failure = _providerFailures[id];
+      final run = state.currentRun;
+      if (failure == null &&
+          run != null &&
+          (run.errorCode?.startsWith('provider.') ?? false)) {
+        final result = await client.query(
+          bridge.AgentQuery(
+            kind: bridge.QueryKind.run,
+            conversationId: id,
+            targetId: run.id,
+          ),
+        );
+        if (!current()) return;
+        failure = result.run?.providerFailure;
+      }
+      if ((_states[id]?.sequence ?? 0) > state.sequence) continue;
+      _states[id] = state;
+      if (details == null) {
+        _interactions.remove(id);
+      } else {
+        _interactions[id] = details;
+      }
+      if (failure != null) _providerFailures[id] = failure;
+      _publishConversation(id);
+      return;
+    }
+  }
+
+  Future<native.ViewConversationState> _conversation(String id) async =>
       await loadConversation(id) ??
       (throw const OperationProblem(
         OperationErrorCode.notFound,
@@ -676,7 +809,7 @@ class RustAgentUiDelegate extends AgentUiDelegate {
       ));
 
   Future<bridge.ModelConnection> _connection(
-    native.ViewConversationSnapshot snapshot,
+    native.ViewConversationState snapshot,
   ) async {
     final configured = readSettings();
     if (_disposed || !configured.enabled) {
@@ -818,7 +951,7 @@ class RustAgentUiDelegate extends AgentUiDelegate {
   Future<void> continueConversation(String conversationId) async {
     final snapshot = await _conversation(conversationId);
     final connection = await _connection(snapshot);
-    final redo = snapshot.redoBatches
+    final redo = snapshot.pendingRedos
         .where((batch) => !_terminalRedo(batch.phase))
         .lastOrNull;
     await _dispatch(
@@ -842,7 +975,7 @@ class RustAgentUiDelegate extends AgentUiDelegate {
     required String runId,
   }) async {
     final snapshot = await _conversation(conversationId);
-    if (snapshot.redoBatches.any((batch) => !_terminalRedo(batch.phase))) {
+    if (snapshot.pendingRedos.any((batch) => !_terminalRedo(batch.phase))) {
       throw StateError(
         'Complete the pending history operation before resuming.',
       );
@@ -1026,16 +1159,16 @@ class RustAgentUiDelegate extends AgentUiDelegate {
 
   @override
   int pendingInputCount(String conversationId) =>
-      _snapshots[conversationId]?.queuedInputs.length ?? 0;
+      _states[conversationId]?.queuedInputs.length ?? 0;
 
   @override
   bool canManageQueuedInput(String conversationId, String inputId) {
-    final snapshot = _snapshots[conversationId];
+    final snapshot = _states[conversationId];
     return !_disposed &&
         !readMaintenance() &&
         snapshot != null &&
         !snapshot.conversation.archived &&
-        !snapshot.redoBatches.any((batch) => !_terminalRedo(batch.phase)) &&
+        !snapshot.pendingRedos.any((batch) => !_terminalRedo(batch.phase)) &&
         snapshot.queuedInputs.any((input) => input.id == inputId);
   }
 

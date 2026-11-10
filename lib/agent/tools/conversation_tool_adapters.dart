@@ -8,6 +8,7 @@ import '../../application/operation_contracts.dart';
 import '../../utils/unique_id.dart';
 import '../bridge/conversation_projection.dart';
 import '../bridge/generated/api/contracts.dart' as native;
+import '../bridge/generated/api/models.dart' show ViewConversationState;
 import '../bridge/rust_agent_ui_delegate.dart';
 import '../bridge/rust_conversation_repository.dart';
 import '../conversations/conversation_models.dart';
@@ -231,7 +232,7 @@ class ConversationToolAdapters {
           _text(args, 'conversationId'),
         );
         await _runtime.loadConversation(conversation.id);
-        await _repository.read(conversation.id);
+        await _repository.refresh(conversation.id);
         return _describeRun(conversation.id);
       },
       required: ['conversationId'],
@@ -347,11 +348,13 @@ class ConversationToolAdapters {
       action.startsWith('runs.') ? 'conversationId' : 'id',
     );
     _requireConversation(id);
-    final target = await _repository.read(id);
-    scope.checkActive();
     if (action == 'conversations.export') {
+      final target = await _repository.read(id);
+      scope.checkActive();
       return _prepareExport(target, request, scope, operationId);
     }
+    final target = await _repository.refresh(id);
+    scope.checkActive();
     final title = action == 'conversations.rename'
         ? _title(args)
         : target.title;
@@ -369,9 +372,7 @@ class ConversationToolAdapters {
       if (target.archived) {
         _invalid('Restore the archived conversation before resuming it.');
       }
-      if (!target.executionMessages.any(
-        (message) => message.role == ConversationRole.user,
-      )) {
+      if (!_repository.stateFor(id)!.hasExecutionUserInput) {
         _invalid('Resume requires an existing user request.');
       }
     }
@@ -531,13 +532,13 @@ class ConversationToolAdapters {
     final id = args['conversationId'] as String;
     final result = await _repository.client.query(
       native.AgentQuery(
-        kind: native.QueryKind.readConversation,
+        kind: native.QueryKind.conversationState,
         conversationId: id,
       ),
     );
-    final target = result.snapshot == null
+    final target = result.state == null
         ? null
-        : conversationFromRust(result.snapshot!);
+        : conversationStateFromRust(result.state!);
     if (operation.action == 'conversations.delete') {
       return target == null
           ? _applied({
@@ -555,7 +556,15 @@ class ConversationToolAdapters {
       'runs.stop' =>
         result.presentation?.active == false ||
             target.status == ConversationStatus.stopping,
-      'runs.resume' => target.runs.any((run) => run.id == args['runId']),
+      'runs.resume' =>
+        (await _repository.client.query(
+              native.AgentQuery(
+                kind: native.QueryKind.run,
+                conversationId: id,
+                targetId: args['runId'] as String,
+              ),
+            )).run?.id ==
+            args['runId'],
       _ => false,
     };
     return applied
@@ -563,6 +572,7 @@ class ConversationToolAdapters {
             'conversation': _summary(
               target,
               active: result.presentation?.active,
+              state: result.state,
             ),
             if (operation.action.startsWith('runs.'))
               'run': {
@@ -584,25 +594,55 @@ class ConversationToolAdapters {
 
   Future<Map<String, Object?>> _readSummary(String id) async {
     _requireConversation(id);
-    final conversation = await _repository.read(id);
     await _runtime.loadConversation(id);
+    final conversation = await _repository.refresh(id);
     return _summary(conversation);
   }
 
-  Map<String, Object?> _summary(AgentConversation item, {bool? active}) => {
-    'id': item.id,
-    'title': item.title,
-    'archived': item.archived,
-    'status': item.status.name,
-    'permissionMode': item.mode.name,
-    'createdAt': item.createdAt.toUtc().toIso8601String(),
-    'updatedAt': item.updatedAt.toUtc().toIso8601String(),
-    'messageCount': item.messages.length,
-    'sourceCount': item.sources.length,
-    'hasDraft': item.draft.isNotEmpty,
-    'runActive': active ?? _isRunning(item.id),
-    'usage': summarizeConversationUsage(item.runs),
-  };
+  Map<String, Object?> _summary(
+    AgentConversation item, {
+    bool? active,
+    ViewConversationState? state,
+  }) {
+    final currentState = state ?? _repository.stateFor(item.id)!;
+    return {
+      'id': item.id,
+      'title': item.title,
+      'archived': item.archived,
+      'status': item.status.name,
+      'permissionMode': item.mode.name,
+      'createdAt': item.createdAt.toUtc().toIso8601String(),
+      'updatedAt': item.updatedAt.toUtc().toIso8601String(),
+      'messageCount': currentState.messageCount,
+      'sourceCount': currentState.sourceCount,
+      'hasDraft': item.draft.isNotEmpty,
+      'runActive': active ?? _isRunning(item.id),
+      'usage': item.usageSummary ?? summarizeConversationUsage(item.runs),
+    };
+  }
+
+  String _targetVersion(AgentConversation value, String action) =>
+      mutationDigest({
+        'id': value.id,
+        'createdAt': value.createdAt.toUtc().toIso8601String(),
+        'title': value.title,
+        'archived': value.archived,
+        if (action != 'conversations.rename') ...{
+          'mode': value.mode.name,
+          'runId': value.runId,
+          'draft': value.draft,
+          'queuedInputs': value.queuedInputs
+              .map((input) => input.toJson())
+              .toList(),
+          'draftAttachmentIds': value.draftAttachmentIds,
+          'draftReferences': value.draftReferences
+              .map((reference) => reference.toJson())
+              .toList(),
+          'managementContextDigest': _repository
+              .stateFor(value.id)!
+              .managementContextDigest,
+        },
+      });
 
   bool _isRunning(String id) => _runtime.state.value.runFor(id).isActive;
 
@@ -616,7 +656,9 @@ class ConversationToolAdapters {
       'status': conversation.status.name,
       'stopRequested': conversation.status == ConversationStatus.stopping,
       'queuedInputs': conversation.queuedInputs.length,
-      'usage': summarizeConversationUsage(conversation.runs),
+      'usage':
+          conversation.usageSummary ??
+          summarizeConversationUsage(conversation.runs),
     };
   }
 
@@ -670,7 +712,9 @@ class ConversationToolAdapters {
         'messages': conversation.messages.map((item) => item.toJson()).toList(),
         'sources': conversation.sources.map((item) => item.toJson()).toList(),
         'runs': conversation.runs.map((item) => item.toJson()).toList(),
-        'usage': summarizeConversationUsage(conversation.runs),
+        'usage':
+            conversation.usageSummary ??
+            summarizeConversationUsage(conversation.runs),
       },
     }),
   );
@@ -697,34 +741,6 @@ class ConversationToolAdapters {
   }
 }
 
-String _targetVersion(AgentConversation value, String action) =>
-    mutationDigest({
-      'id': value.id,
-      'createdAt': value.createdAt.toUtc().toIso8601String(),
-      'title': value.title,
-      'archived': value.archived,
-      if (action != 'conversations.rename') ...{
-        'mode': value.mode.name,
-        'runId': value.runId,
-        'draft': value.draft,
-        'queuedInputs': value.queuedInputs
-            .map((input) => input.toJson())
-            .toList(),
-        'draftAttachmentIds': value.draftAttachmentIds,
-        'draftReferences': value.draftReferences
-            .map((reference) => reference.toJson())
-            .toList(),
-        'inputs': value.messages
-            .where(
-              (item) =>
-                  item.role == ConversationRole.user ||
-                  item.role == ConversationRole.notice,
-            )
-            .map((item) => item.toJson())
-            .toList(),
-        'sources': value.sources.map((item) => item.digest).toList(),
-      },
-    });
 ExternalEffectResult _applied(Map<String, Object?> details) =>
     ExternalEffectResult(state: ExternalEffectState.applied, details: details);
 ExternalEffectResult _unknown() => ExternalEffectResult(

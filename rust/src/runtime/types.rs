@@ -8,9 +8,10 @@ use tokio::sync::oneshot;
 use tokio_util::sync::CancellationToken;
 
 use crate::model_client::ConnectionIdentity;
+use crate::storage::ConversationState;
 use crate::storage::models::{
-    ConversationSnapshot, OperationRecord, OperationStore, PermissionMode, ProviderFailure,
-    QuestionAnswer, TokenUsage, UndoTicket,
+    OperationRecord, OperationStore, PermissionMode, ProviderFailure, QuestionAnswer, TokenUsage,
+    UndoTicket,
 };
 
 #[derive(Debug, Clone)]
@@ -197,7 +198,7 @@ pub enum RuntimeEvent {
         revision: u64,
     },
     Snapshot {
-        snapshot: Box<ConversationSnapshot>,
+        state: Box<ConversationState>,
     },
     Presentation {
         conversation_id: String,

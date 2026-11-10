@@ -223,8 +223,8 @@ void main() {
         canContinue: false,
         compacting: false,
       );
-      app.agent.runtime.ingestSnapshot(
-        native.snapshots[value.id]!,
+      app.agent.runtime.ingestState(
+        nativeStateFixture(native.snapshots[value.id]!),
         presentation: native.presentations[value.id],
       );
       await app.agent.conversations.load();

@@ -1,6 +1,6 @@
 use super::{
     AgentCore,
-    models::{ViewContextReference, ViewConversationSnapshot},
+    models::{ViewContextReference, ViewConversationState},
 };
 use crate::storage::models::{ConversationQuery, RedoPhase};
 
@@ -27,17 +27,14 @@ impl AgentCore {
                         if !summary.has_pending_work {
                             continue;
                         }
-                        if let Some(snapshot) = store.read(&summary.id)? {
-                            for batch in snapshot.redo_batches {
+                        if let Some(state) = store.conversation_state(&summary.id)? {
+                            for batch in state.pending_redos {
                                 if !matches!(
                                     batch.phase,
                                     RedoPhase::Prepared
                                         | RedoPhase::Completed
                                         | RedoPhase::Cancelled
-                                ) && !snapshot
-                                    .history_versions
-                                    .iter()
-                                    .any(|version| version.id == batch.history_version_id)
+                                ) && !batch.has_history_version
                                 {
                                     targets.push(HistoryRecoveryTarget {
                                         conversation_id: summary.id.clone(),
@@ -87,18 +84,29 @@ impl AgentCore {
         batch_id: String,
         expected_sequence: u64,
         references: Vec<ViewContextReference>,
-    ) -> Result<ViewConversationSnapshot, String> {
+    ) -> Result<ViewConversationState, String> {
         let references = references
             .into_iter()
             .map(TryInto::try_into)
             .collect::<Result<Vec<_>, _>>()?;
-        self.manager
+        let result = self
+            .manager
             .replace_pending_redo_references(
                 &conversation_id,
                 &batch_id,
                 expected_sequence,
                 references,
             )
+            .await
+            .map_err(|error| error.to_string());
+        self.manager.release_if_unowned(&conversation_id).await;
+        result?;
+        self.storage()
+            .call(move |store| {
+                store
+                    .conversation_state(&conversation_id)?
+                    .ok_or(crate::storage::StorageError::NotFound(conversation_id))
+            })
             .await
             .map(Into::into)
             .map_err(|error| error.to_string())

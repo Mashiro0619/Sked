@@ -39,29 +39,31 @@ class RustHistoryController implements AgentHistoryController {
     if (ownsMaintenance || !_editing.add(conversationId)) _busy();
     StreamSubscription<native.AgentEvent>? subscription;
     try {
-      final conversation = await conversations.read(conversationId);
-      if (conversation.pendingRedo != null || conversation.archived) _busy();
-      final turn = conversation.turns
-          .where((turn) => turn.messageIds.contains(messageId))
-          .firstOrNull;
-      final message = conversation.messages
-          .where((message) => message.id == turn?.requestMessageId)
-          .firstOrNull;
-      if (message == null) {
+      final conversation = await conversations.refresh(
+        conversationId,
+        interaction: true,
+      );
+      if (conversation.hasPendingRedo || conversation.archived) _busy();
+      final message = await conversations.readMessage(
+        conversationId,
+        messageId,
+      );
+      if (message == null || message.role != ConversationRole.user) {
         throw const ConversationHistoryException(
           ConversationHistoryError.legacyOwnership,
         );
       }
-      final admission = Completer<view.ViewRedoBatch>();
-      final previousBatches = conversation.redoBatches
+      final admission = Completer<bool>();
+      final initial = conversations.stateFor(conversationId)!;
+      final previousBatches = initial.pendingRedos
           .map((batch) => batch.id)
           .toSet();
-      void observe(view.ViewConversationSnapshot? snapshot) {
+      void observe(view.ViewConversationState? snapshot) {
         if (snapshot?.conversation.id != conversationId ||
             admission.isCompleted) {
           return;
         }
-        final batch = snapshot!.redoBatches
+        final batch = snapshot!.pendingRedos
             .where(
               (batch) =>
                   batch.sourceMessageId == message.id &&
@@ -75,12 +77,17 @@ class RustHistoryController implements AgentHistoryController {
                         view.ViewConversationStatus.running &&
                     snapshot.conversation.status !=
                         view.ViewConversationStatus.stopping)) {
-          admission.complete(batch);
+          admission.complete(
+            batch.phase == view.ViewRedoPhase.prepared &&
+                batch.lastError != null,
+          );
+        } else if (snapshot.historyVersionCount > initial.historyVersionCount) {
+          admission.complete(false);
         }
       }
 
       subscription = conversations.client.events.listen(
-        (event) => observe(event.snapshot),
+        (event) => observe(event.state),
         onError: (Object error, StackTrace stack) {
           if (!admission.isCompleted) admission.completeError(error, stack);
         },
@@ -95,14 +102,13 @@ class RustHistoryController implements AgentHistoryController {
       observe(
         (await conversations.client.query(
           native.AgentQuery(
-            kind: native.QueryKind.readConversation,
+            kind: native.QueryKind.conversationState,
             conversationId: conversationId,
           ),
-        )).snapshot,
+        )).state,
       );
       final result = await admission.future;
-      if (result.phase == view.ViewRedoPhase.prepared &&
-          result.lastError != null) {
+      if (result) {
         throw const ConversationHistoryException(
           ConversationHistoryError.conflict,
         );
@@ -130,7 +136,10 @@ class RustHistoryController implements AgentHistoryController {
   Future<void> _continue(String conversationId) async {
     if (_editing.contains(conversationId) || _active(conversationId)) _busy();
     await maintenance.recoverBeforeWrites();
-    final conversation = await conversations.read(conversationId);
+    final conversation = await conversations.refresh(
+      conversationId,
+      interaction: true,
+    );
     if (conversation.pendingRedo == null) _busy();
     await runtime.continueConversation(conversationId);
   }
@@ -138,17 +147,37 @@ class RustHistoryController implements AgentHistoryController {
   @override
   ConversationMessage? pendingRedoRequest(String conversationId) {
     final conversation = conversations.find(conversationId);
-    final batch = conversation?.pendingRedo;
+    final state = conversations.stateFor(conversationId);
+    final interaction = conversations.interactionFor(conversationId);
+    final pending = conversation?.pendingRedo;
     if (conversation == null ||
-        batch == null ||
-        !conversation.historyVersions.any(
-          (version) => version.id == batch.historyVersionId,
+        pending == null ||
+        state == null ||
+        interaction?.sequence != state.sequence ||
+        !state.pendingRedos.any(
+          (item) => item.id == pending.id && item.hasHistoryVersion,
         )) {
       return null;
     }
-    return conversation.messages
-        .where((message) => message.id == batch.sourceMessageId)
+    final batch = interaction!.pendingRedos
+        .where(
+          (item) =>
+              item.id == pending.id && item.phase.name == pending.phase.name,
+        )
         .firstOrNull;
+    if (batch == null) return null;
+    return ConversationMessage(
+      id: batch.sourceMessageId,
+      role: ConversationRole.user,
+      text: batch.text,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(
+        batch.createdAt,
+        isUtc: true,
+      ),
+      attachmentIds: batch.attachmentIds,
+      contextReferences: batch.contextReferences.map(referenceFromRust),
+      modelSelection: modelSelectionFromRust(batch.modelSelection),
+    );
   }
 
   @override
@@ -160,18 +189,15 @@ class RustHistoryController implements AgentHistoryController {
     if (ownsMaintenance || !_editing.add(conversationId)) _busy();
     try {
       if (_active(conversationId)) _busy();
-      final snapshot = (await conversations.client.query(
-        native.AgentQuery(
-          kind: native.QueryKind.readConversation,
-          conversationId: conversationId,
-        ),
-      )).snapshot;
-      if (snapshot == null) _busy();
-      final current = conversationFromRust(snapshot);
+      final current = await conversations.refresh(
+        conversationId,
+        interaction: true,
+      );
+      final state = conversations.stateFor(conversationId)!;
       final batch = current.pendingRedo;
       if (batch == null ||
-          !current.historyVersions.any(
-            (version) => version.id == batch.historyVersionId,
+          !state.pendingRedos.any(
+            (item) => item.id == batch.id && item.hasHistoryVersion,
           )) {
         _busy();
       }
@@ -180,13 +206,13 @@ class RustHistoryController implements AgentHistoryController {
           .replacePendingRedoReferences(
             conversationId: conversationId,
             batchId: batch.id,
-            expectedSequence: snapshot.sequence,
+            expectedSequence: state.sequence,
             references: AgentComposerReference.validatedList(references)
                 .map(referenceToRust)
                 .toList(growable: false),
           );
-      conversations.ingestSnapshot(result);
-      return conversationFromRust(result);
+      conversations.ingestState(result);
+      return conversations.find(conversationId)!;
     } finally {
       _editing.remove(conversationId);
     }

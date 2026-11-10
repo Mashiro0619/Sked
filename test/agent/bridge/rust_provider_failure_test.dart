@@ -62,6 +62,7 @@ ViewConversationSnapshot _snapshot({
 
 class _FailureCore extends MemoryAgentCore {
   _FailureCore() : super(snapshots: [_snapshot()]);
+  Future<void> Function(AgentQuery)? afterQuery;
   late final StreamController<AgentEvent> _source =
       StreamController<AgentEvent>.broadcast(
         onListen: () => scheduleMicrotask(
@@ -78,6 +79,13 @@ class _FailureCore extends MemoryAgentCore {
   void emit(AgentEvent event) => _source.add(event);
 
   @override
+  Future<QueryResult> query({required AgentQuery query}) async {
+    final result = await super.query(query: query);
+    await afterQuery?.call(query);
+    return result;
+  }
+
+  @override
   Future<void> shutdown() async {
     unawaited(_source.close());
     await super.shutdown();
@@ -87,6 +95,7 @@ class _FailureCore extends MemoryAgentCore {
 void main() {
   late _FailureCore core;
   late RustAgentUiDelegate delegate;
+  final owner = Object();
 
   RustAgentUiDelegate openDelegate() => RustAgentUiDelegate(
     client: core.client,
@@ -99,6 +108,7 @@ void main() {
     core = _FailureCore();
     delegate = openDelegate();
     await delegate.loadConversation(_id);
+    await delegate.setConversationActive(owner, _id);
   });
 
   tearDown(() async {
@@ -119,6 +129,83 @@ void main() {
       'requestId': 'failed-request-401',
     });
   }
+
+  test(
+    'a deleted conversation rejects late state and run detail queries',
+    () async {
+      final captured = Completer<void>();
+      final release = Completer<void>();
+      core.snapshots[_id] = _snapshot(failure: _failure, sequence: 2);
+      core.afterQuery = (query) async {
+        if (query.kind != QueryKind.run) return;
+        core.afterQuery = null;
+        captured.complete();
+        await release.future;
+      };
+      final reload = delegate.loadConversation(_id);
+      await captured.future;
+      await reload;
+      final stateCaptured = Completer<void>();
+      core.afterQuery = (query) async {
+        if (query.kind != QueryKind.conversationState) return;
+        core.afterQuery = null;
+        stateCaptured.complete();
+        await release.future;
+      };
+      final metadata = delegate.loadConversation(_id);
+      await stateCaptured.future;
+      final details = delegate.setConversationActive(owner, _id);
+      delegate.forgetConversation(_id);
+      release.complete();
+      expect(await metadata, isNull);
+      await details;
+      expect(state().runId, isNull);
+      expect(state().providerErrorResponseBody, isNull);
+    },
+  );
+
+  test(
+    'pre-restore query failures cannot mark the restored conversation failed',
+    () async {
+      final captured = Completer<void>();
+      final stateCaptured = Completer<void>();
+      final release = Completer<void>();
+      core.snapshots[_id] = _snapshot(failure: _failure, sequence: 2);
+      core.afterQuery = (query) async {
+        if (query.kind != QueryKind.run) return;
+        core.afterQuery = null;
+        captured.complete();
+        await release.future;
+        throw StateError('Old run detail failed.');
+      };
+      final reload = delegate.loadConversation(_id);
+      await captured.future;
+      await reload;
+      core.afterQuery = (query) async {
+        if (query.kind != QueryKind.conversationState) return;
+        core.afterQuery = null;
+        stateCaptured.complete();
+        await release.future;
+        throw StateError('Old conversation state failed.');
+      };
+      core.emit(const AgentEvent(kind: EventKind.resync, conversationId: ''));
+      await stateCaptured.future;
+      final oldState = expectLater(
+        delegate.loadConversation(_id),
+        throwsStateError,
+      );
+      final oldDetails = delegate.setConversationActive(owner, _id);
+      delegate.invalidateAfterDataBoundary();
+      core.snapshots[_id] = _snapshot(runId: 'restored-run');
+      await delegate.setConversationActive(owner, _id);
+      release.complete();
+      await oldState;
+      await oldDetails;
+      expect(state().runId, 'restored-run');
+      expect(state().errorMessage, isNull);
+      expect(state().providerErrorResponseBody, isNull);
+    },
+  );
 
   test('settled provider diagnostics reach UI state and restore from the saved run', () async {
     final view = delegate.watchConversation(_id);
@@ -149,6 +236,7 @@ void main() {
     await delegate.dispose();
     delegate = openDelegate();
     await delegate.loadConversation(_id);
+    await delegate.setConversationActive(owner, _id);
     expectFailure();
 
     core.snapshots[_id] = _snapshot(runId: 'next-run', sequence: 3);

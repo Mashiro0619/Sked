@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 
@@ -7,6 +6,7 @@ import '../../application/operation_contracts.dart';
 
 import '../../models/agent_settings.dart';
 import '../conversations/conversation_view_repository.dart';
+import '../conversations/conversation_browse_repository.dart';
 import '../history/conversation_history.dart';
 import '../references/agent_composer_reference.dart';
 import 'conversation_projection.dart';
@@ -17,7 +17,7 @@ import 'rust_agent_client.dart';
 
 /// Caches native projections and sends explicit editing commands.
 class RustConversationRepository extends ChangeNotifier
-    implements ConversationViewRepository {
+    implements ConversationViewRepository, ConversationBrowseRepository {
   RustConversationRepository(this.client, {int pageSize = 50})
     : _pageSize = pageSize {
     if (pageSize < 1) throw ArgumentError.value(pageSize, 'pageSize');
@@ -28,10 +28,15 @@ class RustConversationRepository extends ChangeNotifier
   final int _pageSize;
   final _views = <String, AgentConversation>{};
   final _sequence = <String, int>{};
+  final _conversationEpochs = <String, int>{};
   final _draftIds = <String>{};
-  final _details = <String>{};
-  final _full = <String>{};
-  final _visible = <String, List<ConversationMessage>>{};
+  final _states = <String, native.ViewConversationState>{};
+  final _pages = <String, native.ViewConversationPage>{};
+  final _interactions = <String, native.ViewInteractionDetails>{};
+  final _owners = <Object, String>{};
+  final _anchors = <String, String>{};
+  final _windowSizes = <String, int>{};
+  final _refreshing = <String, Future<void>>{};
   final _before = <String, int?>{};
   final _handoffs = <String, ConversationHandoff>{};
   late final StreamSubscription<bridge.AgentEvent> _subscription;
@@ -68,10 +73,10 @@ class RustConversationRepository extends ChangeNotifier
   @override
   bool isDraft(String? id) => _draftIds.contains(id);
   @override
-  bool isConversationLoaded(String id) => _details.contains(id);
+  bool isConversationLoaded(String id) => false;
   @override
   List<ConversationMessage> visibleMessages(String id) =>
-      _visible[id] ?? const [];
+      _views[id]?.messages ?? const [];
   @override
   List<ConversationTurn> visibleTurns(String id) {
     final ids = visibleMessages(id).map((message) => message.id).toSet();
@@ -94,51 +99,81 @@ class RustConversationRepository extends ChangeNotifier
           )
           .firstOrNull;
 
-  void ingestSnapshot(native.ViewConversationSnapshot snapshot) {
+  void ingestState(native.ViewConversationState state) {
     if (_disposed ||
-        (_sequence[snapshot.conversation.id] ?? -1) > snapshot.sequence) {
+        (_states[state.conversation.id]?.sequence ?? -1) > state.sequence) {
       return;
     }
-    final id = snapshot.conversation.id;
-    final view = conversationFromRust(snapshot);
-    final anchor = _visible[id]?.firstOrNull?.id;
-    _ingest(snapshot, view, full: true);
-    if (_visible.containsKey(id)) {
-      final index = anchor == null
-          ? -1
-          : view.messages.indexWhere((message) => message.id == anchor);
-      final start = index < 0
-          ? _pageStart(view.messages, view.messages.length)
-          : index;
-      _visible[id] = List.unmodifiable(view.messages.skip(start));
-      _before[id] = start == 0 ? null : start;
-    }
+    final id = state.conversation.id;
+    _states[id] = state;
+    _sequence[id] = state.sequence;
+    _publish(id);
     _notify();
+    if (_isVisible(id) && _pages[id]?.sequence != state.sequence) {
+      unawaited(_refreshVisible(id).catchError(_eventError));
+    }
   }
 
-  void _ingest(
-    native.ViewConversationSnapshot snapshot,
-    AgentConversation view, {
-    required bool full,
-  }) {
-    final id = view.id;
-    _sequence[id] = snapshot.sequence;
-    _views[id] = view;
-    _details.add(id);
-    if (full) {
-      _full.add(id);
-    } else {
-      _full.remove(id);
-    }
-    if (snapshot.conversation.draftOnly) {
+  void _publish(String id) {
+    final state = _states[id];
+    if (state == null) return;
+    _views[id] = conversationStateFromRust(
+      state,
+      page: _pages[id],
+      interaction: _interactions[id],
+    );
+    if (state.conversation.draftOnly) {
       _draftIds.add(id);
     } else {
       _draftIds.remove(id);
     }
     _handoffs.removeWhere((_, handoff) => handoff.conversationId == id);
-    for (final handoff in snapshot.handoffs) {
+    for (final handoff
+        in _pages[id]?.handoffs ?? <management.ViewConversationHandoff>[]) {
       _handoffs[handoff.id] = handoffFromRust(handoff);
     }
+  }
+
+  bool _isVisible(String id) => _owners.containsValue(id);
+
+  native.ViewConversationState? stateFor(String id) => _states[id];
+  native.ViewInteractionDetails? interactionFor(String id) => _interactions[id];
+
+  Future<AgentConversation> refresh(
+    String id, {
+    bool interaction = false,
+  }) async {
+    final generation = _generation;
+    final conversationEpoch = _conversationEpochs[id] ?? 0;
+    final result = await client.query(
+      bridge.AgentQuery(
+        kind: interaction
+            ? bridge.QueryKind.interactionDetails
+            : bridge.QueryKind.conversationState,
+        conversationId: id,
+      ),
+    );
+    if (_disposed ||
+        generation != _generation ||
+        conversationEpoch != (_conversationEpochs[id] ?? 0)) {
+      throw StateError('Conversation data changed.');
+    }
+    final state = result.state;
+    if (state == null) throw StateError('Conversation does not exist.');
+    if (interaction && (_states[id]?.sequence ?? -1) > state.sequence) {
+      return refresh(id, interaction: true);
+    }
+    if (interaction && result.interactionDetails != null && _isVisible(id)) {
+      _interactions[id] = result.interactionDetails!;
+    }
+    ingestState(state);
+    if (interaction && !_isVisible(id)) {
+      return conversationStateFromRust(
+        state,
+        interaction: result.interactionDetails,
+      );
+    }
+    return _views[id]!;
   }
 
   @override
@@ -191,11 +226,12 @@ class RustConversationRepository extends ChangeNotifier
       );
       if (_disposed || generation != _generation) return;
       _selectedId = selection.selection?.selectedId;
-      if (_selectedId case final id?) await _loadPage(id);
+      if (_selectedId case final id?) await refresh(id);
       _loaded = true;
       _blocked = false;
       _notify();
     } catch (_) {
+      if (_disposed || generation != _generation) return;
       _blocked = true;
       _notify();
       rethrow;
@@ -212,7 +248,8 @@ class RustConversationRepository extends ChangeNotifier
       ),
     );
     _selectedId = result.selection?.selectedId ?? id;
-    await _loadPage(id);
+    await refresh(id);
+    if (_isVisible(id)) await _refreshVisible(id);
     _notify();
   });
 
@@ -221,94 +258,144 @@ class RustConversationRepository extends ChangeNotifier
 
   Future<AgentConversation> _read(String id) async {
     final generation = _generation;
+    final conversationEpoch = _conversationEpochs[id] ?? 0;
     final result = await client.query(
       bridge.AgentQuery(
         kind: bridge.QueryKind.readConversation,
         conversationId: id,
       ),
     );
+    if (_disposed ||
+        generation != _generation ||
+        conversationEpoch != (_conversationEpochs[id] ?? 0)) {
+      throw StateError('Conversation data changed.');
+    }
     final snapshot = result.snapshot;
     if (snapshot == null) throw StateError('Conversation does not exist.');
-    if (generation == _generation) ingestSnapshot(snapshot);
     return conversationFromRust(snapshot);
   }
 
-  Future<void> _loadPage(String id, {int? before}) async {
+  Future<void> _refreshVisible(String id, {bool earlier = false}) {
+    final existing = _refreshing[id];
+    if (existing != null) {
+      return earlier
+          ? existing.then((_) => _refreshVisible(id, earlier: true))
+          : existing;
+    }
+    late final Future<void> request;
+    request = _readVisible(id, earlier: earlier).whenComplete(() {
+      if (identical(_refreshing[id], request)) {
+        unawaited(_refreshing.remove(id));
+      }
+    });
+    _refreshing[id] = request;
+    return request;
+  }
+
+  Future<void> _readVisible(String id, {required bool earlier}) async {
     final generation = _generation;
-    final previous = visibleMessages(id);
-    final anchor = previous.firstOrNull?.id;
-    final previousTotal = (_before[id] ?? 0) + previous.length;
-    final extension = before == null ? 0 : _pageSize;
-    var limit = math.max(_pageSize, previous.length + extension);
-    while (true) {
-      final result = await client.query(
-        bridge.AgentQuery(
-          kind: bridge.QueryKind.readConversation,
-          conversationId: id,
-          limit: limit,
-        ),
-      );
-      if (_disposed || generation != _generation) return;
-      final snapshot = result.snapshot;
-      if (snapshot == null) throw StateError('Conversation does not exist.');
-      if ((_sequence[id] ?? -1) > snapshot.sequence) {
-        if (_full.contains(id)) {
-          final messages = _views[id]!.messages;
-          final anchorIndex = messages.indexWhere(
-            (message) => message.id == anchor,
-          );
-          final start = anchorIndex < 0
-              ? _pageStart(messages, messages.length)
-              : before == null
-              ? anchorIndex
-              : _pageStart(messages, anchorIndex);
-          _visible[id] = List.unmodifiable(messages.skip(start));
-          _before[id] = start == 0 ? null : start;
-          _notify();
+    final conversationEpoch = _conversationEpochs[id] ?? 0;
+    bool current() =>
+        !_disposed &&
+        generation == _generation &&
+        conversationEpoch == (_conversationEpochs[id] ?? 0) &&
+        _isVisible(id);
+    if (!current()) return;
+    try {
+      var anchor = _anchors[id];
+      if (earlier && anchor != null && hasEarlierMessages(id)) {
+        final older = await client.query(
+          bridge.AgentQuery(
+            kind: bridge.QueryKind.conversationPage,
+            conversationId: id,
+            beforeMessageId: anchor,
+            limit: _pageSize,
+          ),
+        );
+        if (!current()) return;
+        anchor = older.page?.messages.firstOrNull?.id ?? anchor;
+      }
+      while (current()) {
+        final result = await client.query(
+          bridge.AgentQuery(
+            kind: bridge.QueryKind.conversationPage,
+            conversationId: id,
+            fromMessageId: anchor,
+            limit: _windowSizes[id] ?? _pageSize,
+          ),
+        );
+        if (!current()) return;
+        var state = result.state;
+        final page = result.page;
+        if (state == null || page == null) {
+          throw StateError('Conversation does not exist.');
         }
+        if ((_states[id]?.sequence ?? -1) > page.sequence) continue;
+        native.ViewInteractionDetails? interaction;
+        if (state.question != null ||
+            state.planRevision != null ||
+            state.pendingOperations.isNotEmpty ||
+            state.pendingRedos.isNotEmpty) {
+          final details = await client.query(
+            bridge.AgentQuery(
+              kind: bridge.QueryKind.interactionDetails,
+              conversationId: id,
+            ),
+          );
+          if (!current()) return;
+          if (details.state == null || details.interactionDetails == null) {
+            throw StateError('Conversation interaction is unavailable.');
+          }
+          state = details.state!;
+          interaction = details.interactionDetails;
+          if (state.sequence != page.sequence ||
+              (_states[id]?.sequence ?? -1) > page.sequence) {
+            continue;
+          }
+        }
+        _states[id] = state;
+        _sequence[id] = state.sequence;
+        _pages[id] = page;
+        if (interaction == null) {
+          _interactions.remove(id);
+        } else {
+          _interactions[id] = interaction;
+        }
+        final first = page.messages.firstOrNull?.id;
+        if (first == null) {
+          _anchors.remove(id);
+        } else {
+          _anchors[id] = first;
+        }
+        _windowSizes[id] = page.messages.length < _pageSize
+            ? _pageSize
+            : page.messages.length;
+        _before[id] = page.nextOffset;
+        _publish(id);
+        _notify();
         return;
       }
-      // Read one continuous window from the current snapshot. Combining an
-      // older page with cached messages can restore a suffix removed by redo.
-      final requiredCount = previous.isEmpty
-          ? _pageSize
-          : previous.length +
-                extension +
-                math.max<int>(0, result.total - previousTotal);
-      if (requiredCount > limit && result.nextOffset != null) {
-        limit = requiredCount;
-        continue;
-      }
-      final page = snapshot.messages.map(conversationMessageFromRust).toList();
-      final anchorIndex = page.indexWhere((message) => message.id == anchor);
-      final offset = anchorIndex < 0
-          ? 0
-          : before == null
-          ? anchorIndex
-          : _pageStart(page, anchorIndex);
-      final messages = page.sublist(offset);
-      final start = (result.pageStart ?? 0) + offset;
-      final view = conversationFromRust(
-        snapshot,
-        projectedMessages: messages,
-        messageStart: start,
-      );
-      _ingest(
-        snapshot,
-        view,
-        full: start == 0 && messages.length == result.total,
-      );
-      _visible[id] = List.unmodifiable(messages);
-      _before[id] = start == 0 ? null : start;
-      _notify();
-      return;
+    } catch (_) {
+      if (current()) rethrow;
     }
   }
 
   @override
-  Future<void> loadEarlierMessages(String id) => _serialize(() async {
-    if (_before[id] case final before?) await _loadPage(id, before: before);
-  });
+  Future<void> setViewActive(Object owner, String? id) async {
+    final previous = _owners.remove(owner);
+    if (id != null) _owners[owner] = id;
+    if (previous != null && !_isVisible(previous)) {
+      _pages.remove(previous);
+      _interactions.remove(previous);
+      _publish(previous);
+      _notify();
+    }
+    if (id != null) await _refreshVisible(id);
+  }
+
+  @override
+  Future<void> loadEarlierMessages(String id) =>
+      _serialize(() => _refreshVisible(id, earlier: true));
 
   @override
   Future<AgentConversation> createDraft({
@@ -329,13 +416,12 @@ class RustConversationRepository extends ChangeNotifier
         selection: modelSelectionToRust(modelSelection),
       ),
     );
-    final snapshot = result.snapshot;
-    if (snapshot == null) throw StateError('Native draft was not returned.');
-    ingestSnapshot(snapshot);
-    _selectedId = result.selection?.selectedId ?? snapshot.conversation.id;
-    _visible.putIfAbsent(snapshot.conversation.id, () => const []);
+    final state = result.state;
+    if (state == null) throw StateError('Native draft was not returned.');
+    ingestState(state);
+    _selectedId = result.selection?.selectedId ?? state.conversation.id;
     _notify();
-    return find(snapshot.conversation.id)!;
+    return find(state.conversation.id)!;
   });
 
   @override
@@ -365,13 +451,12 @@ class RustConversationRepository extends ChangeNotifier
         selection: modelSelectionToRust(modelSelection),
       ),
     );
-    final snapshot = result.snapshot;
-    if (snapshot == null) {
+    final state = result.state;
+    if (state == null) {
       throw StateError('Native conversation was not returned.');
     }
-    ingestSnapshot(snapshot);
+    ingestState(state);
     _selectedId = result.selection?.selectedId ?? id;
-    _visible.putIfAbsent(id, () => const []);
     _notify();
     return find(id)!;
   });
@@ -418,6 +503,7 @@ class RustConversationRepository extends ChangeNotifier
       source: sourceToRust(source),
     ),
     validate: validate,
+    sourceBodyId: source.id,
   );
   @override
   Future<AgentConversation> removeSource(
@@ -436,18 +522,30 @@ class RustConversationRepository extends ChangeNotifier
   Future<AgentConversation> _edit(
     bridge.AgentCommand command, {
     void Function(AgentConversation current)? validate,
+    String? sourceBodyId,
   }) => _serialize(() async {
     _checkWritable();
     final id = command.conversationId!;
-    final current = find(id);
+    var current = find(id);
     if (current == null) throw StateError('Conversation does not exist.');
+    if (sourceBodyId != null) {
+      final source = await readSource(id, sourceBodyId);
+      if (source != null) {
+        current = current.copyWith(
+          sources: [
+            ...current.sources.where((item) => item.id != source.id),
+            source,
+          ],
+        );
+      }
+    }
     validate?.call(current);
     final result = await client.dispatch(command);
-    if (result.snapshot case final snapshot?) {
-      ingestSnapshot(snapshot);
+    if (result.state case final state?) {
+      ingestState(state);
       return find(id)!;
     }
-    return _read(id);
+    return refresh(id);
   });
 
   @override
@@ -467,7 +565,7 @@ class RustConversationRepository extends ChangeNotifier
     );
     _forget(id);
     _selectedId = result.selection?.selectedId;
-    if (_selectedId case final selected?) await _loadPage(selected);
+    if (_selectedId case final selected?) await refresh(selected);
     _notify();
   });
 
@@ -509,20 +607,200 @@ class RustConversationRepository extends ChangeNotifier
         ),
       ),
     );
-    final snapshot = result.snapshot;
-    if (snapshot == null) throw StateError('Native handoff was not returned.');
-    ingestSnapshot(snapshot);
-    _selectedId = result.selection?.selectedId ?? snapshot.conversation.id;
-    _visible.putIfAbsent(
-      snapshot.conversation.id,
-      () => List.unmodifiable(find(snapshot.conversation.id)!.messages),
-    );
+    final state = result.state;
+    if (state == null) throw StateError('Native handoff was not returned.');
+    ingestState(state);
+    _selectedId = result.selection?.selectedId ?? state.conversation.id;
     _notify();
     return (
-      conversation: find(snapshot.conversation.id)!,
+      conversation: find(state.conversation.id)!,
       created: result.created ?? false,
     );
   });
+
+  @override
+  int conversationRevision(String id) => _states[id]?.sequence ?? 0;
+
+  @override
+  bool hasVisiblePage(String id) => _pages.containsKey(id);
+
+  @override
+  Object historyRevision(String id) => (
+    _generation,
+    _states[id]?.historyVersionCount,
+    _states[id]?.replyRevisionCount,
+  );
+
+  @override
+  bool hasMessageHistory(String id) =>
+      (_states[id]?.historyVersionCount ?? 0) > 0 ||
+      (_states[id]?.replyRevisionCount ?? 0) > 0;
+
+  @override
+  List<ConversationHistoryEntry> replyVersions(String id, String messageId) => [
+    for (final revision
+        in _pages[id]?.replyRevisions ?? <native.ViewReplyRevisionSummary>[])
+      if (revision.messageId == messageId)
+        ConversationHistoryEntry(
+          id: revision.id,
+          createdAt: DateTime.fromMillisecondsSinceEpoch(
+            revision.createdAt,
+            isUtc: true,
+          ),
+          messageCount: 1,
+          messageId: messageId,
+        ),
+  ];
+
+  Future<bridge.QueryResult> _detail(bridge.AgentQuery query) async {
+    final generation = _generation;
+    final conversationEpoch = _conversationEpochs[query.conversationId] ?? 0;
+    final result = await client.query(query);
+    if (_disposed ||
+        generation != _generation ||
+        conversationEpoch != (_conversationEpochs[query.conversationId] ?? 0)) {
+      throw StateError('Conversation data changed.');
+    }
+    return result;
+  }
+
+  @override
+  Future<ConversationMessage?> readMessage(String id, String messageId) async {
+    final result = await _detail(
+      bridge.AgentQuery(
+        kind: bridge.QueryKind.message,
+        conversationId: id,
+        targetId: messageId,
+      ),
+    );
+    return result.message == null
+        ? null
+        : conversationMessageFromRust(result.message!);
+  }
+
+  @override
+  Future<ConversationSource?> readSource(String id, String sourceId) async {
+    final result = await _detail(
+      bridge.AgentQuery(
+        kind: bridge.QueryKind.source,
+        conversationId: id,
+        targetId: sourceId,
+      ),
+    );
+    return result.source == null ? null : sourceFromRust(result.source!);
+  }
+
+  @override
+  Future<ConversationReplyRevision?> readReplyVersion(
+    String id,
+    String revisionId,
+  ) async {
+    final result = await _detail(
+      bridge.AgentQuery(
+        kind: bridge.QueryKind.replyRevision,
+        conversationId: id,
+        targetId: revisionId,
+      ),
+    );
+    return result.replyRevision == null
+        ? null
+        : replyRevisionFromRust(result.replyRevision!);
+  }
+
+  @override
+  Future<ConversationRunUsage?> readRun(
+    String id,
+    String runId, {
+    String? versionId,
+  }) async {
+    final result = await _detail(
+      bridge.AgentQuery(
+        kind: versionId == null
+            ? bridge.QueryKind.run
+            : bridge.QueryKind.historyRun,
+        conversationId: id,
+        targetId: runId,
+        versionId: versionId,
+      ),
+    );
+    return result.run == null ? null : runFromRust(result.run!);
+  }
+
+  @override
+  Future<ConversationHistoryCatalogPage> readHistoryCatalog(
+    String id, {
+    required bool replies,
+    int offset = 0,
+  }) async {
+    final result = await _detail(
+      bridge.AgentQuery(
+        kind: replies
+            ? bridge.QueryKind.replyRevisions
+            : bridge.QueryKind.historyVersions,
+        conversationId: id,
+        offset: offset,
+        limit: _pageSize,
+      ),
+    );
+    return ConversationHistoryCatalogPage(
+      entries: [
+        if (replies)
+          for (final revision in result.replyRevisions)
+            ConversationHistoryEntry(
+              id: revision.id,
+              createdAt: DateTime.fromMillisecondsSinceEpoch(
+                revision.createdAt,
+                isUtc: true,
+              ),
+              messageCount: 1,
+              messageId: revision.messageId,
+            )
+        else
+          for (final version in result.historyVersions)
+            ConversationHistoryEntry(
+              id: version.id,
+              createdAt: DateTime.fromMillisecondsSinceEpoch(
+                version.createdAt,
+                isUtc: true,
+              ),
+              messageCount: version.messageCount,
+            ),
+      ],
+      nextOffset: result.nextOffset,
+    );
+  }
+
+  @override
+  Future<ConversationHistoryPage> readHistoryPage(
+    String id,
+    String versionId, {
+    String? beforeMessageId,
+  }) async {
+    final result = await _detail(
+      bridge.AgentQuery(
+        kind: bridge.QueryKind.historyVersionPage,
+        conversationId: id,
+        targetId: versionId,
+        beforeMessageId: beforeMessageId,
+        limit: _pageSize,
+      ),
+    );
+    final page = result.historyPage?.page;
+    if (page == null) {
+      throw StateError('Conversation history no longer exists.');
+    }
+    return ConversationHistoryPage(
+      messages: page.messages
+          .map(conversationMessageFromRust)
+          .toList(growable: false),
+      attachments: page.attachments
+          .map(attachmentFromRust)
+          .toList(growable: false),
+      nextBeforeMessageId: page.nextOffset == null
+          ? null
+          : page.messages.firstOrNull?.id,
+    );
+  }
 
   Future<T> _serialize<T>(Future<T> Function() action) {
     final result = _tail.then((_) => action());
@@ -531,7 +809,12 @@ class RustConversationRepository extends ChangeNotifier
   }
 
   @override
-  Future<void> waitForPendingWrites() => _tail;
+  Future<void> waitForPendingWrites() async {
+    await _tail;
+    while (_refreshing.isNotEmpty) {
+      await Future.wait(_refreshing.values.toList());
+    }
+  }
 
   void setMaintenance(bool value) {
     _maintenance = value;
@@ -540,6 +823,7 @@ class RustConversationRepository extends ChangeNotifier
 
   void invalidateAfterDataBoundary() {
     _generation++;
+    _refreshing.clear();
     for (final id in _views.keys.toList()) {
       _forget(id);
     }
@@ -548,24 +832,18 @@ class RustConversationRepository extends ChangeNotifier
     _notify();
   }
 
-  int _pageStart(List<ConversationMessage> messages, int end) {
-    final start = math.max(0, end - _pageSize);
-    if (start >= messages.length) return start;
-    final call = messages[start].toolCallId;
-    if (call == null) return start;
-    final owner = messages.indexWhere(
-      (message) => message.toolCalls.any((tool) => tool.id == call),
-    );
-    return owner < 0 ? start : owner;
-  }
-
   void _forget(String id) {
+    _conversationEpochs.update(id, (value) => value + 1, ifAbsent: () => 1);
+    _owners.removeWhere((_, conversationId) => conversationId == id);
+    unawaited(_refreshing.remove(id));
     _views.remove(id);
     _sequence.remove(id);
     _draftIds.remove(id);
-    _details.remove(id);
-    _full.remove(id);
-    _visible.remove(id);
+    _states.remove(id);
+    _pages.remove(id);
+    _interactions.remove(id);
+    _anchors.remove(id);
+    _windowSizes.remove(id);
     _before.remove(id);
     _handoffs.removeWhere((_, handoff) => handoff.conversationId == id);
   }
@@ -581,8 +859,8 @@ class RustConversationRepository extends ChangeNotifier
           (Object error, StackTrace stack) => _eventError(error, stack),
         ),
       );
-    } else if (event.snapshot case final snapshot?) {
-      ingestSnapshot(snapshot);
+    } else if (event.state case final state?) {
+      ingestState(state);
     }
   }
 

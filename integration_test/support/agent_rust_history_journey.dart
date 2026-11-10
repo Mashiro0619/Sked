@@ -42,6 +42,22 @@ Future<void> runRustHistoryJourney(
   );
   var workspace = OfflineAgentWorkspace(directory);
   var events = <native.AgentEvent>[];
+  final viewOwner = Object();
+  var viewAttached = false;
+  Future<void> refreshView(String id) async {
+    await workspace.app.agent.runtime.loadConversation(id);
+    await workspace.app.agent.conversations.setViewActive(viewOwner, id);
+    await workspace.app.agent.runtime.setConversationActive(viewOwner, id);
+    viewAttached = true;
+  }
+
+  Future<void> detachView() async {
+    if (!viewAttached) return;
+    viewAttached = false;
+    await workspace.app.agent.conversations.setViewActive(viewOwner, null);
+    await workspace.app.agent.runtime.setConversationActive(viewOwner, null);
+  }
+
   StreamSubscription<native.AgentEvent>? subscription;
   try {
     final seed =
@@ -96,11 +112,13 @@ Future<void> runRustHistoryJourney(
       mode: AgentPermissionMode.full,
     );
     final id = conversation.id;
+    await refreshView(id);
     await workspace.app.agent.runtime.send(id, '创建原始安排');
     final first = (await workspace.app.agent.runtime.loadConversation(id))!;
     final firstRun = first.conversation.runId!;
     await _settled(workspace, events, firstRun);
-    final original = (await workspace.app.agent.runtime.loadConversation(id))!;
+    await refreshView(id);
+    final original = await _snapshot(workspace, id);
     final user = original.messages.firstWhere(
       (message) => message.role == view.ViewMessageRole.user,
     );
@@ -134,9 +152,8 @@ Future<void> runRustHistoryJourney(
     workspace.writeGate.release();
     await redo;
     await _settled(workspace, events, inverseRun);
-    final interrupted = (await workspace.app.agent.runtime.loadConversation(
-      id,
-    ))!;
+    await refreshView(id);
+    final interrupted = await _snapshot(workspace, id);
     final batchId = interrupted.redoBatches.last.id;
     expect(interrupted.redoBatches.last.phase, view.ViewRedoPhase.undoing);
     expect(workspace.writeGate.lostReplies, 1);
@@ -157,12 +174,14 @@ Future<void> runRustHistoryJourney(
 
     await subscription.cancel();
     subscription = null;
+    await detachView();
     await workspace.close();
     workspace = OfflineAgentWorkspace(directory);
     await workspace.open(replies: [_reply(text: '已根据恢复后的状态继续处理。')]);
     events = [];
     subscription = workspace.client.events.listen(events.add);
-    final recovered = (await workspace.app.agent.runtime.loadConversation(id))!;
+    await refreshView(id);
+    final recovered = await _snapshot(workspace, id);
     expect(recovered.redoBatches.last.id, batchId);
     expect(recovered.redoBatches.last.phase, view.ViewRedoPhase.ready);
     expect(recovered.runs, hasLength(runCount));
@@ -186,6 +205,7 @@ Future<void> runRustHistoryJourney(
       ],
     );
     await workspace.app.agent.history.replacePendingReferences(id, references);
+    await refreshView(id);
     expect(
       workspace.app.agent.history.pendingRedoRequest(id)!.contextReferences,
       hasLength(1),
@@ -193,7 +213,8 @@ Future<void> runRustHistoryJourney(
     await workspace.app.agent.history.continueRedo(id);
     final continued = (await workspace.app.agent.runtime.loadConversation(id))!;
     await _settled(workspace, events, continued.conversation.runId!);
-    final completed = (await workspace.app.agent.runtime.loadConversation(id))!;
+    await refreshView(id);
+    final completed = await _snapshot(workspace, id);
     expect(completed.redoBatches.last.phase, view.ViewRedoPhase.completed);
     expect(
       workspace.app.session.committedData.applicationLedger!.receipts
@@ -205,9 +226,20 @@ Future<void> runRustHistoryJourney(
   } finally {
     workspace.writeGate.release();
     await subscription?.cancel();
+    await detachView();
     await workspace.close();
   }
 }
+
+Future<view.ViewConversationSnapshot> _snapshot(
+  OfflineAgentWorkspace workspace,
+  String id,
+) async => (await workspace.client.query(
+  native.AgentQuery(
+    kind: native.QueryKind.readConversation,
+    conversationId: id,
+  ),
+)).snapshot!;
 
 Future<void> _settled(
   OfflineAgentWorkspace workspace,

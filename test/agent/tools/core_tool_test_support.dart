@@ -1,5 +1,7 @@
 import 'package:sked/agent/tools/application_tool_host.dart';
+import 'package:sked/agent/conversations/conversation_models.dart';
 import 'package:sked/application/mutation_coordinator.dart';
+import 'package:sked/application/operation_contracts.dart';
 import 'package:sked/controllers/app_session.dart';
 import 'package:sked/data/app_repository.dart';
 import 'package:sked/models/timetable_models.dart';
@@ -13,7 +15,9 @@ class CoreToolHarness {
   late final MutationCoordinator mutations;
   late final ApplicationToolHost tools;
 
-  Future<void> initialize() async {
+  Future<void> initialize({
+    AgentConversation? Function(OperationScope)? conversationForScope,
+  }) async {
     final repository = AppRepository(
       storage: MemoryTimetableStorage(
         initialData: buildInitialAppData(buildDefaultPeriodTimes()),
@@ -32,7 +36,7 @@ class CoreToolHarness {
     tools = ApplicationToolHost(
       session: session,
       mutations: mutations,
-      conversationForScope: (_) => null,
+      conversationForScope: conversationForScope ?? (_) => null,
     );
   }
 

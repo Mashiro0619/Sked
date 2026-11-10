@@ -7,6 +7,8 @@ pub mod management_contracts;
 pub mod models;
 #[cfg(test)]
 mod provider_failure_tests;
+#[cfg(test)]
+mod view_tests;
 
 use crate::frb_generated::StreamSink;
 use crate::{
@@ -128,384 +130,413 @@ impl AgentCore {
             .collect::<Result<Vec<stored::ContextReference>, String>>()?;
         let connection =
             || required(command.connection.clone(), "connection").and_then(TryInto::try_into);
-        let text = || required(command.text.clone(), "text");
+        let command_text = command.text.clone();
+        let text = || required(command_text.clone(), "text");
         let mut result = CommandResult::default();
         use CommandKind::*;
-        match command.kind {
-            CreateConversation => {
-                let selection = command.selection.map(TryInto::try_into).transpose()?;
-                let snapshot = self
-                    .manager
-                    .create_conversation(
-                        command.text.unwrap_or_default(),
-                        command.mode.unwrap_or(ViewPermissionMode::Ask).into(),
-                        selection,
-                    )
-                    .await
-                    .map_err(|e| e.to_string())?;
-                result.id = Some(snapshot.conversation.id.clone());
-                result.snapshot = Some(snapshot.into());
-                result.selection = Some(
-                    self.storage()
-                        .call(|store| store.selection())
-                        .await
-                        .map_err(|e| e.to_string())?
-                        .into(),
-                );
-            }
-            CreateManagedConversation => {
-                let selection = command.selection.map(TryInto::try_into).transpose()?;
-                let managed_id = if target.is_empty() {
-                    uuid::Uuid::new_v4().to_string()
-                } else {
-                    target
-                };
-                let snapshot = self
-                    .storage()
-                    .call(move |store| {
-                        store.create_managed_conversation(
-                            managed_id,
+        let mut state_id = (!id.is_empty()
+            && !matches!(
+                command.kind,
+                DeleteConversation | ClearConversations | ClearAll | DiscardDrafts | ImportArchive
+            ))
+        .then(|| id.clone());
+        let mut publish_changed_state = false;
+        let outcome: Result<(), String> = async {
+            match command.kind {
+                CreateConversation => {
+                    let selection = command.selection.map(TryInto::try_into).transpose()?;
+                    let snapshot = self
+                        .manager
+                        .create_conversation(
                             command.text.unwrap_or_default(),
                             command.mode.unwrap_or(ViewPermissionMode::Ask).into(),
                             selection,
                         )
-                    })
-                    .await
-                    .map_err(|e| e.to_string())?;
-                result.id = Some(snapshot.conversation.id.clone());
-                self.publish_snapshot(snapshot.clone());
-                result.snapshot = Some(snapshot.into());
-            }
-            CreateHandoff => {
-                let request = required(command.handoff, "handoff")?;
-                let source = request.source.try_into()?;
-                let selection = request.selection.map(TryInto::try_into).transpose()?;
-                let (snapshot, created) = self
-                    .storage()
-                    .call(move |store| {
-                        store.create_handoff(
-                            request.handoff_id,
-                            source,
-                            request.title,
-                            request.prompt,
-                            request.mode.into(),
-                            selection,
-                        )
-                    })
-                    .await
-                    .map_err(|e| e.to_string())?;
-                result.id = Some(snapshot.conversation.id.clone());
-                self.publish_snapshot(snapshot.clone());
-                result.snapshot = Some(snapshot.into());
-                result.created = Some(created);
-                result.selection = Some(
-                    self.storage()
-                        .call(|store| store.selection())
                         .await
-                        .map_err(|e| e.to_string())?
-                        .into(),
-                );
-            }
-            StartHandoff => {
-                result.id = self
-                    .manager
-                    .accept_handoff(&id, connection()?)
-                    .await
-                    .map_err(|e| e.to_string())?;
-            }
-            SelectConversation => {
-                result.selection = Some(
-                    self.storage()
-                        .call(move |store| store.select_conversation(&id))
-                        .await
-                        .map_err(|e| e.to_string())?
-                        .into(),
-                );
-                self.resync();
-            }
-            Send => {
-                result.id = Some(
-                    self.manager
-                        .send(&id, text()?, attachments, refs, connection()?)
-                        .await
-                        .map_err(|e| e.to_string())?,
-                )
-            }
-            Queue => {
-                result.id = Some(
-                    self.manager
-                        .queue_follow_up(
-                            &id,
-                            text()?,
-                            attachments,
-                            refs,
-                            stored::QueueMode::FollowUp,
-                            connection()?,
-                        )
-                        .await
-                        .map_err(|e| e.to_string())?,
-                )
-            }
-            Steer => {
-                result.id = Some(
-                    self.manager
-                        .steer(&id, text()?, attachments, refs, connection()?)
-                        .await
-                        .map_err(|e| e.to_string())?,
-                )
-            }
-            Stop => self.manager.stop(&id).await.map_err(|e| e.to_string())?,
-            Continue => {
-                result.id = Some(
-                    self.manager
-                        .continue_with_run_id(&id, connection()?, command.target_id.clone())
-                        .await
-                        .map_err(|e| e.to_string())?,
-                )
-            }
-            Approve | Reject => self
-                .manager
-                .approve(&id, &target, command.kind == Approve)
-                .await
-                .map_err(|e| e.to_string())?,
-            AnswerQuestion => self
-                .manager
-                .answer_question(
-                    &id,
-                    &target,
-                    command
-                        .answers
-                        .unwrap_or_default()
-                        .into_iter()
-                        .map(TryInto::try_into)
-                        .collect::<Result<_, String>>()?,
-                )
-                .await
-                .map_err(|e| e.to_string())?,
-            DismissQuestion => self
-                .manager
-                .dismiss_question(&id, &target)
-                .await
-                .map_err(|e| e.to_string())?,
-            SetMode => self
-                .manager
-                .set_mode(&id, required(command.mode, "mode")?.into())
-                .await
-                .map_err(|e| e.to_string())?,
-            SetModel => self
-                .manager
-                .set_model_selection(&id, command.selection.map(TryInto::try_into).transpose()?)
-                .await
-                .map_err(|e| e.to_string())?,
-            Compact => {
-                result.id = Some(
-                    if command.flag == Some(true) {
-                        self.manager
-                            .compact_context_from_draft(&id, connection()?)
+                        .map_err(|e| e.to_string())?;
+                    result.id = Some(snapshot.conversation.id.clone());
+                    state_id = Some(snapshot.conversation.id);
+                    result.selection = Some(
+                        self.storage()
+                            .call(|store| store.selection())
                             .await
+                            .map_err(|e| e.to_string())?
+                            .into(),
+                    );
+                }
+                CreateManagedConversation => {
+                    let selection = command.selection.map(TryInto::try_into).transpose()?;
+                    let managed_id = if target.is_empty() {
+                        uuid::Uuid::new_v4().to_string()
                     } else {
-                        self.manager.compact_context(&id, connection()?).await
-                    }
-                    .map_err(|e| e.to_string())?,
-                )
-            }
-            Rename => self
-                .manager
-                .rename(&id, text()?)
-                .await
-                .map_err(|e| e.to_string())?,
-            Archive => self
-                .manager
-                .set_archived(&id, required(command.flag, "flag")?)
-                .await
-                .map_err(|e| e.to_string())?,
-            UpdateDraft => self
-                .manager
-                .update_draft(
-                    &id,
-                    command.text,
-                    command.attachment_ids,
-                    references_provided.then_some(refs),
-                )
-                .await
-                .map_err(|e| e.to_string())?,
-            CancelInput => self
-                .manager
-                .cancel_queued_input(&id, &target)
-                .await
-                .map_err(|e| e.to_string())?,
-            RestoreInput => self
-                .manager
-                .restore_queued_input(&id, &target)
-                .await
-                .map_err(|e| e.to_string())?,
-            EditInput => self
-                .manager
-                .edit_queued_input(&id, &target, text()?, attachments, refs, connection()?)
-                .await
-                .map_err(|e| e.to_string())?,
-            Regenerate => {
-                result.id = Some(
-                    self.manager
-                        .regenerate_reply(&id, &target, connection()?)
-                        .await
-                        .map_err(|e| e.to_string())?,
-                )
-            }
-            EditAndRedo => {
-                result.id = Some(
-                    self.manager
-                        .edit_and_redo(&id, &target, text()?, attachments, refs, connection()?)
-                        .await
-                        .map_err(|e| e.to_string())?,
-                )
-            }
-            ResumeRedo => {
-                result.id = Some(
-                    self.manager
-                        .resume_redo(&id, &target, connection()?)
-                        .await
-                        .map_err(|e| e.to_string())?,
-                )
-            }
-            EndRedo => self
-                .manager
-                .end_redo(&id, &target)
-                .await
-                .map_err(|e| e.to_string())?,
-            Pin => {
-                let pinned = required(command.flag, "flag")?;
-                self.change(id, move |snapshot| {
-                    snapshot.conversation.pinned = pinned;
-                    vec![stored::JournalChange::ConversationUpdated {
-                        conversation: snapshot.conversation.clone(),
-                    }]
-                })
-                .await?;
-            }
-            AddSource => {
-                let source = required(command.source, "source")?.try_into()?;
-                let snapshot = self
-                    .storage()
-                    .call(move |store| store.add_source(&id, source))
-                    .await
-                    .map_err(|e| e.to_string())?;
-                self.publish_snapshot(snapshot.clone());
-                result.snapshot = Some(snapshot.into());
-            }
-            RemoveSource => {
-                let snapshot = self
-                    .storage()
-                    .call(move |store| store.remove_source(&id, &target))
-                    .await
-                    .map_err(|e| e.to_string())?;
-                self.publish_snapshot(snapshot.clone());
-                result.snapshot = Some(snapshot.into());
-            }
-            DeleteConversation => {
-                self.manager
-                    .set_archived(&id, true)
-                    .await
-                    .map_err(|e| e.to_string())?;
-                self.storage()
-                    .call(move |store| store.delete(&id))
-                    .await
-                    .map_err(|e| e.to_string())?;
-                self.resync();
-                result.selection = Some(
-                    self.storage()
-                        .call(|store| store.selection())
-                        .await
-                        .map_err(|e| e.to_string())?
-                        .into(),
-                );
-            }
-            Quiesce => {
-                self.quiesce((!id.is_empty()).then_some(id)).await?;
-            }
-            ClearConversations | ClearAll => {
-                self.quiesce(None).await?;
-                let all = command.kind == ClearAll;
-                self.storage()
-                    .call(move |store| {
-                        if all {
-                            store.clear()
-                        } else {
-                            store.clear_conversations()
-                        }
-                    })
-                    .await
-                    .map_err(|e| e.to_string())?;
-                self.resync();
-            }
-            DiscardDrafts => {
-                self.storage()
-                    .call(|store| store.discard_drafts())
-                    .await
-                    .map_err(|e| e.to_string())?;
-                self.resync();
-            }
-            SaveKnowledge => {
-                let mutation =
-                    required(command.knowledge_mutation, "knowledgeMutation")?.try_into()?;
-                result.knowledge_receipt = Some(
-                    self.storage()
-                        .call(move |store| store.apply_knowledge(mutation, now()))
-                        .await
-                        .map_err(management::knowledge_error)?
-                        .into(),
-                );
-                self.publish_knowledge(
-                    result
-                        .knowledge_receipt
-                        .as_ref()
-                        .expect("saved receipt")
-                        .revision,
-                );
-            }
-            UndoKnowledge => {
-                result.knowledge_receipt = Some(
-                    self.storage()
+                        target
+                    };
+                    let snapshot = self
+                        .storage()
                         .call(move |store| {
-                            let batch_id = uuid::Uuid::new_v4().to_string();
-                            store.prepare_knowledge_undo(
-                                batch_id.clone(),
-                                vec![target],
-                                uuid::Uuid::new_v4().to_string(),
-                            )?;
-                            store.commit_knowledge_undo(&batch_id, now())
+                            store.create_managed_conversation(
+                                managed_id,
+                                command.text.unwrap_or_default(),
+                                command.mode.unwrap_or(ViewPermissionMode::Ask).into(),
+                                selection,
+                            )
                         })
                         .await
-                        .map_err(management::knowledge_error)?
-                        .into(),
-                );
-                self.publish_knowledge(
-                    result
-                        .knowledge_receipt
-                        .as_ref()
-                        .expect("saved receipt")
-                        .revision,
-                );
-            }
-            ImportArchive => {
-                let parts = required(command.archive, "archive")?.try_into()?;
-                self.storage()
-                    .call(move |store| store.import_archive(parts, &target, now()))
+                        .map_err(|e| e.to_string())?;
+                    result.id = Some(snapshot.conversation.id.clone());
+                    publish_changed_state = true;
+                    state_id = Some(snapshot.conversation.id);
+                }
+                CreateHandoff => {
+                    let request = required(command.handoff, "handoff")?;
+                    let source = request.source.try_into()?;
+                    let selection = request.selection.map(TryInto::try_into).transpose()?;
+                    let (snapshot, created) = self
+                        .storage()
+                        .call(move |store| {
+                            store.create_handoff(
+                                request.handoff_id,
+                                source,
+                                request.title,
+                                request.prompt,
+                                request.mode.into(),
+                                selection,
+                            )
+                        })
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    result.id = Some(snapshot.conversation.id.clone());
+                    publish_changed_state = true;
+                    state_id = Some(snapshot.conversation.id);
+                    result.created = Some(created);
+                    result.selection = Some(
+                        self.storage()
+                            .call(|store| store.selection())
+                            .await
+                            .map_err(|e| e.to_string())?
+                            .into(),
+                    );
+                }
+                StartHandoff => {
+                    result.id = self
+                        .manager
+                        .accept_handoff(&id, connection()?)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                }
+                SelectConversation => {
+                    result.selection = Some(
+                        self.storage()
+                            .call(move |store| store.select_conversation(&id))
+                            .await
+                            .map_err(|e| e.to_string())?
+                            .into(),
+                    );
+                    self.resync();
+                }
+                Send => {
+                    result.id = Some(
+                        self.manager
+                            .send(&id, text()?, attachments, refs, connection()?)
+                            .await
+                            .map_err(|e| e.to_string())?,
+                    )
+                }
+                Queue => {
+                    result.id = Some(
+                        self.manager
+                            .queue_follow_up(
+                                &id,
+                                text()?,
+                                attachments,
+                                refs,
+                                stored::QueueMode::FollowUp,
+                                connection()?,
+                            )
+                            .await
+                            .map_err(|e| e.to_string())?,
+                    )
+                }
+                Steer => {
+                    result.id = Some(
+                        self.manager
+                            .steer(&id, text()?, attachments, refs, connection()?)
+                            .await
+                            .map_err(|e| e.to_string())?,
+                    )
+                }
+                Stop => self.manager.stop(&id).await.map_err(|e| e.to_string())?,
+                Continue => {
+                    result.id = Some(
+                        self.manager
+                            .continue_with_run_id(&id, connection()?, command.target_id.clone())
+                            .await
+                            .map_err(|e| e.to_string())?,
+                    )
+                }
+                Approve | Reject => self
+                    .manager
+                    .approve(&id, &target, command.kind == Approve)
                     .await
-                    .map_err(|e| e.to_string())?;
-                self.resync();
-            }
-            CollectAttachments => {
-                self.storage()
-                    .call(|store| store.collect_unreferenced_attachments())
+                    .map_err(|e| e.to_string())?,
+                AnswerQuestion => self
+                    .manager
+                    .answer_question(
+                        &id,
+                        &target,
+                        command
+                            .answers
+                            .unwrap_or_default()
+                            .into_iter()
+                            .map(TryInto::try_into)
+                            .collect::<Result<_, String>>()?,
+                    )
                     .await
-                    .map_err(|e| e.to_string())?;
+                    .map_err(|e| e.to_string())?,
+                DismissQuestion => self
+                    .manager
+                    .dismiss_question(&id, &target)
+                    .await
+                    .map_err(|e| e.to_string())?,
+                SetMode => self
+                    .manager
+                    .set_mode(&id, required(command.mode, "mode")?.into())
+                    .await
+                    .map_err(|e| e.to_string())?,
+                SetModel => self
+                    .manager
+                    .set_model_selection(&id, command.selection.map(TryInto::try_into).transpose()?)
+                    .await
+                    .map_err(|e| e.to_string())?,
+                Compact => {
+                    result.id = Some(
+                        if command.flag == Some(true) {
+                            self.manager
+                                .compact_context_from_draft(&id, connection()?)
+                                .await
+                        } else {
+                            self.manager.compact_context(&id, connection()?).await
+                        }
+                        .map_err(|e| e.to_string())?,
+                    )
+                }
+                Rename => self
+                    .manager
+                    .rename(&id, text()?)
+                    .await
+                    .map_err(|e| e.to_string())?,
+                Archive => self
+                    .manager
+                    .set_archived(&id, required(command.flag, "flag")?)
+                    .await
+                    .map_err(|e| e.to_string())?,
+                UpdateDraft => self
+                    .manager
+                    .update_draft(
+                        &id,
+                        command.text,
+                        command.attachment_ids,
+                        references_provided.then_some(refs),
+                    )
+                    .await
+                    .map_err(|e| e.to_string())?,
+                CancelInput => self
+                    .manager
+                    .cancel_queued_input(&id, &target)
+                    .await
+                    .map_err(|e| e.to_string())?,
+                RestoreInput => self
+                    .manager
+                    .restore_queued_input(&id, &target)
+                    .await
+                    .map_err(|e| e.to_string())?,
+                EditInput => self
+                    .manager
+                    .edit_queued_input(&id, &target, text()?, attachments, refs, connection()?)
+                    .await
+                    .map_err(|e| e.to_string())?,
+                Regenerate => {
+                    result.id = Some(
+                        self.manager
+                            .regenerate_reply(&id, &target, connection()?)
+                            .await
+                            .map_err(|e| e.to_string())?,
+                    )
+                }
+                EditAndRedo => {
+                    result.id = Some(
+                        self.manager
+                            .edit_and_redo(&id, &target, text()?, attachments, refs, connection()?)
+                            .await
+                            .map_err(|e| e.to_string())?,
+                    )
+                }
+                ResumeRedo => {
+                    result.id = Some(
+                        self.manager
+                            .resume_redo(&id, &target, connection()?)
+                            .await
+                            .map_err(|e| e.to_string())?,
+                    )
+                }
+                EndRedo => self
+                    .manager
+                    .end_redo(&id, &target)
+                    .await
+                    .map_err(|e| e.to_string())?,
+                Pin => {
+                    let pinned = required(command.flag, "flag")?;
+                    self.change(id, move |snapshot| {
+                        snapshot.conversation.pinned = pinned;
+                        vec![stored::JournalChange::ConversationUpdated {
+                            conversation: snapshot.conversation.clone(),
+                        }]
+                    })
+                    .await?;
+                }
+                AddSource => {
+                    let source = required(command.source, "source")?.try_into()?;
+                    let snapshot = self
+                        .storage()
+                        .call(move |store| store.add_source(&id, source))
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    publish_changed_state = true;
+                    state_id = Some(snapshot.conversation.id);
+                }
+                RemoveSource => {
+                    let snapshot = self
+                        .storage()
+                        .call(move |store| store.remove_source(&id, &target))
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    publish_changed_state = true;
+                    state_id = Some(snapshot.conversation.id);
+                }
+                DeleteConversation => {
+                    self.manager
+                        .set_archived(&id, true)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    self.storage()
+                        .call(move |store| store.delete(&id))
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    self.resync();
+                    result.selection = Some(
+                        self.storage()
+                            .call(|store| store.selection())
+                            .await
+                            .map_err(|e| e.to_string())?
+                            .into(),
+                    );
+                }
+                Quiesce => {
+                    self.quiesce((!id.is_empty()).then_some(id)).await?;
+                }
+                ClearConversations | ClearAll => {
+                    self.quiesce(None).await?;
+                    let all = command.kind == ClearAll;
+                    self.storage()
+                        .call(move |store| {
+                            if all {
+                                store.clear()
+                            } else {
+                                store.clear_conversations()
+                            }
+                        })
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    self.resync();
+                }
+                DiscardDrafts => {
+                    self.storage()
+                        .call(|store| store.discard_drafts())
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    self.resync();
+                }
+                SaveKnowledge => {
+                    let mutation =
+                        required(command.knowledge_mutation, "knowledgeMutation")?.try_into()?;
+                    result.knowledge_receipt = Some(
+                        self.storage()
+                            .call(move |store| store.apply_knowledge(mutation, now()))
+                            .await
+                            .map_err(management::knowledge_error)?
+                            .into(),
+                    );
+                    self.publish_knowledge(
+                        result
+                            .knowledge_receipt
+                            .as_ref()
+                            .expect("saved receipt")
+                            .revision,
+                    );
+                }
+                UndoKnowledge => {
+                    result.knowledge_receipt = Some(
+                        self.storage()
+                            .call(move |store| {
+                                let batch_id = uuid::Uuid::new_v4().to_string();
+                                store.prepare_knowledge_undo(
+                                    batch_id.clone(),
+                                    vec![target],
+                                    uuid::Uuid::new_v4().to_string(),
+                                )?;
+                                store.commit_knowledge_undo(&batch_id, now())
+                            })
+                            .await
+                            .map_err(management::knowledge_error)?
+                            .into(),
+                    );
+                    self.publish_knowledge(
+                        result
+                            .knowledge_receipt
+                            .as_ref()
+                            .expect("saved receipt")
+                            .revision,
+                    );
+                }
+                ImportArchive => {
+                    let parts = required(command.archive, "archive")?.try_into()?;
+                    self.storage()
+                        .call(move |store| store.import_archive(parts, &target, now()))
+                        .await
+                        .map_err(|e| e.to_string())?;
+                    self.resync();
+                }
+                CollectAttachments => {
+                    self.storage()
+                        .call(|store| store.collect_unreferenced_attachments())
+                        .await
+                        .map_err(|e| e.to_string())?;
+                }
+                SetPreamble => self.manager.set_preamble(text()?),
+                SetTools => self
+                    .manager
+                    .set_tools(descriptors(required(command.tools, "tools")?)?),
             }
-            SetPreamble => self.manager.set_preamble(text()?),
-            SetTools => self
-                .manager
-                .set_tools(descriptors(required(command.tools, "tools")?)?),
+            if let Some(id) = state_id.clone() {
+                result.state = self
+                    .storage()
+                    .call(move |store| store.conversation_state(&id))
+                    .await
+                    .map_err(|error| error.to_string())?
+                    .map(Into::into);
+            }
+            if publish_changed_state {
+                if let Some(state) = &result.state {
+                    self.publish_state(state.clone());
+                }
+            }
+            Ok(())
         }
+        .await;
+        if let Some(id) = state_id.as_deref() {
+            self.manager.release_if_unowned(id).await;
+        }
+        outcome?;
         Ok(result)
     }
 
@@ -534,7 +565,10 @@ impl AgentCore {
                 ..Default::default()
             });
         }
-        let presentation = if query.kind == QueryKind::ReadConversation {
+        let presentation = if matches!(
+            query.kind,
+            QueryKind::ReadConversation | QueryKind::ConversationState
+        ) {
             Some(
                 self.manager
                     .presentation(query.conversation_id.as_deref().unwrap_or_default())
@@ -569,30 +603,9 @@ impl AgentCore {
                         result.next_offset = page.next_offset;
                     }
                     ReadConversation => {
-                        if let Some(mut snapshot) = store.read(&id)? {
+                        if let Some(snapshot) = store.read_uncached(&id)? {
                             result.total = snapshot.messages.len();
-                            if let Some(limit) = query.limit {
-                                let page = store.messages(
-                                    &id,
-                                    stored::MessageQuery {
-                                        before: query.before,
-                                        limit,
-                                        search: None,
-                                    },
-                                )?;
-                                result.page_start = Some(
-                                    page.items
-                                        .first()
-                                        .and_then(|first| {
-                                            snapshot.messages.iter().position(|m| m.id == first.id)
-                                        })
-                                        .unwrap_or(snapshot.messages.len()),
-                                );
-                                result.next_offset = page.next_offset;
-                                snapshot.messages = page.items;
-                            } else {
-                                result.page_start = Some(0);
-                            }
+                            result.page_start = Some(0);
                             result.snapshot = Some(snapshot.into());
                         }
                     }
@@ -605,9 +618,101 @@ impl AgentCore {
                                 search: query.search,
                             },
                         )?;
-                        result.messages = page.items.into_iter().map(Into::into).collect();
+                        result.messages = page.items.into_iter().map(display_message).collect();
                         result.total = page.total;
                         result.next_offset = page.next_offset;
+                    }
+                    ConversationState => {
+                        result.state = store.conversation_state(&id)?.map(Into::into);
+                    }
+                    ConversationPage => {
+                        result.state = store.conversation_state(&id)?.map(Into::into);
+                        result.page = store
+                            .conversation_page(
+                                &id,
+                                crate::storage::view::ConversationPageQuery {
+                                    before_message_id: query.before_message_id,
+                                    from_message_id: query.from_message_id,
+                                    before: query.before,
+                                    limit: query.limit.unwrap_or(50),
+                                },
+                            )?
+                            .map(Into::into);
+                    }
+                    Message => {
+                        result.message = store.message(&id, &target)?.map(display_message);
+                    }
+                    HistoryVersions => {
+                        let page = store.history_versions(
+                            &id,
+                            query.offset.unwrap_or(0),
+                            query.limit.unwrap_or(50),
+                        )?;
+                        result.history_versions = page.items.into_iter().map(Into::into).collect();
+                        result.total = page.total;
+                        result.next_offset = page.next_offset;
+                    }
+                    HistoryVersionPage => {
+                        result.history_page = store
+                            .history_version_page(
+                                &id,
+                                &target,
+                                stored::MessageQuery {
+                                    before: query.before,
+                                    limit: query.limit.unwrap_or(50),
+                                    search: None,
+                                },
+                            )?
+                            .map(Into::into);
+                    }
+                    ReplyRevision => {
+                        result.reply_revision = store
+                            .reply_revision(&id, &target)?
+                            .map(display_reply_revision);
+                    }
+                    ReplyRevisions => {
+                        let page = store.reply_revision_page(
+                            &id,
+                            (!target.is_empty()).then_some(target.as_str()),
+                            query.offset.unwrap_or(0),
+                            query.limit.unwrap_or(50),
+                        )?;
+                        result.reply_revisions = page.items.into_iter().map(Into::into).collect();
+                        result.total = page.total;
+                        result.next_offset = page.next_offset;
+                    }
+                    Source => {
+                        result.source = store.source(&id, &target)?.map(Into::into);
+                    }
+                    Run => {
+                        result.run = store.run(&id, &target)?.map(Into::into);
+                    }
+                    HistoryRun => {
+                        let version_id = query.version_id.ok_or_else(|| {
+                            StorageError::Invalid("Missing history version identity".into())
+                        })?;
+                        result.run = store
+                            .history_run(&id, &version_id, &target)?
+                            .map(Into::into);
+                    }
+                    InteractionDetails => {
+                        result.state = store.conversation_state(&id)?.map(Into::into);
+                        result.interaction_details =
+                            store.interaction_details(&id)?.map(Into::into);
+                    }
+                    BusinessContext => {
+                        result.state = store.conversation_state(&id)?.map(Into::into);
+                        result.run = store.run(&id, &target)?.map(Into::into);
+                        result.attachments = store
+                            .conversation_attachment_metadata(&id)?
+                            .into_iter()
+                            .map(Into::into)
+                            .collect();
+                        result.sources = store
+                            .conversation_sources(&id)?
+                            .into_iter()
+                            .map(Into::into)
+                            .collect();
                     }
                     Knowledge => {
                         result.knowledge = store
@@ -669,20 +774,10 @@ impl AgentCore {
                     }
                     CanContinue => unreachable!("handled by the runtime before entering storage"),
                     Operation => {
-                        result.operation = store
-                            .read(&id)?
-                            .and_then(|s| {
-                                s.operations.into_iter().find(|o| {
-                                    o.tool_call_id == target
-                                        || o.binding
-                                            .as_ref()
-                                            .is_some_and(|b| b.operation_id == target)
-                                })
-                            })
-                            .map(Into::into)
+                        result.operation = store.operation(&id, &target)?.map(Into::into);
                     }
                     RestoreMarker => {
-                        result.text = store.read(&id)?.and_then(|s| {
+                        result.text = store.read_uncached(&id)?.and_then(|s| {
                             s.extensions
                                 .get("restore")
                                 .and_then(|m| m.get(&target))
@@ -838,7 +933,8 @@ impl AgentCore {
     where
         F: FnOnce(&mut stored::ConversationSnapshot) -> Vec<stored::JournalChange> + Send + 'static,
     {
-        let snapshot = self
+        let release_id = id.clone();
+        let result = self
             .storage()
             .call(move |store| {
                 let mut snapshot = store
@@ -846,13 +942,14 @@ impl AgentCore {
                     .ok_or_else(|| StorageError::NotFound(id.clone()))?;
                 let changes = update(&mut snapshot);
                 store.append(&id, snapshot.sequence, now(), changes)?;
-                store.read(&id)?.ok_or(StorageError::NotFound(id))
+                store
+                    .conversation_state(&id)?
+                    .ok_or(StorageError::NotFound(id))
             })
             .await
-            .map_err(|e| e.to_string())?;
-        let mut event = AgentEvent::empty(EventKind::Snapshot, snapshot.conversation.id.clone());
-        event.snapshot = Some(snapshot.into());
-        let _ = self.events.send(event);
+            .map_err(|e| e.to_string());
+        self.manager.release_if_unowned(&release_id).await;
+        self.publish_state(result?.into());
         Ok(())
     }
     async fn quiesce(&self, except: Option<String>) -> Result<(), String> {
@@ -896,9 +993,9 @@ fn runtime_event(event: RuntimeEvent) -> AgentEvent {
             e.presentation = Some(presentation.into());
             e
         }
-        RuntimeEvent::Snapshot { snapshot } => {
-            let mut e = AgentEvent::empty(EventKind::Snapshot, snapshot.conversation.id.clone());
-            e.snapshot = Some((*snapshot).into());
+        RuntimeEvent::Snapshot { state } => {
+            let mut e = AgentEvent::empty(EventKind::Snapshot, state.conversation.id.clone());
+            e.state = Some((*state).into());
             e
         }
         RuntimeEvent::TextDelta {

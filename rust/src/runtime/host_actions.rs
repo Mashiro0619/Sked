@@ -124,6 +124,11 @@ impl RuntimeManager {
             },
             control: control.clone(),
         };
+        self.inner
+            .cache_owners
+            .lock()
+            .expect("cache ownership mutex poisoned")
+            .insert(id.into());
         session.active = Some(ActiveRun {
             id: run_id,
             control,
@@ -185,24 +190,42 @@ impl RuntimeManager {
         let snapshot = match self.finish_run(&accepted, outcome).await {
             Ok(snapshot) => snapshot,
             Err(error) => {
-                self.failed_settlement(&accepted, &mut session);
+                self.failed_settlement(&accepted, &mut session).await;
                 return Err(error);
             }
         };
-        self.settle_session(&accepted, &snapshot, &mut session);
         if !accepted.control.cancellation.is_cancelled()
             && !accepted.control.unknown_outcome.load(Ordering::Acquire)
             && payload.get("status").and_then(Value::as_str) != Some("error")
         {
             if let Some(input) = next_input(&snapshot) {
                 if let Some(config) = session.queued_connections.remove(&input.id) {
-                    let next = self
+                    session.presentation = accepted
+                        .control
+                        .presentation
+                        .lock()
+                        .expect("presentation mutex poisoned")
+                        .clone();
+                    session.active = None;
+                    accepted.control.settled.notify_waiters();
+                    let next = match self
                         .accept_locked(id, &mut session, Some(input), config, false, false)
-                        .await?;
+                        .await
+                    {
+                        Ok(next) => next,
+                        Err(error) => {
+                            self.settle_session(&accepted, &snapshot, &mut session)
+                                .await;
+                            return Err(error);
+                        }
+                    };
                     self.spawn_run(next);
+                    return Ok(payload);
                 }
             }
         }
+        self.settle_session(&accepted, &snapshot, &mut session)
+            .await;
         Ok(payload)
     }
 }

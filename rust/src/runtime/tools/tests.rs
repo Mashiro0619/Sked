@@ -124,9 +124,16 @@ async fn continue_after_data_restore(
         .unwrap();
     let question = tokio::time::timeout(std::time::Duration::from_secs(5), async {
         loop {
-            if let RuntimeEvent::Snapshot { snapshot } = events.recv().await.unwrap() {
-                if let Some(question) = snapshot.current_question {
-                    break question;
+            if let RuntimeEvent::Snapshot { state } = events.recv().await.unwrap() {
+                if state.question.is_some() {
+                    let id = state.conversation.id;
+                    break manager
+                        .storage()
+                        .call(move |store| {
+                            Ok(store.interaction_details(&id)?.unwrap().question.unwrap())
+                        })
+                        .await
+                        .unwrap();
                 }
             }
         }

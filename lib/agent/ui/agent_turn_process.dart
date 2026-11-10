@@ -162,7 +162,7 @@ extension _AgentTurnProcess on _AgentConversationViewState {
         _runtime.enabled &&
         !_runtime.maintenance;
     return [
-      if (conversation.pendingRedo != null) ...[
+      if (conversation.hasPendingRedo) ...[
         _notice(l.agentRedoPending),
         TextButton.icon(
           key: const ValueKey('agent-continue-history-redo'),

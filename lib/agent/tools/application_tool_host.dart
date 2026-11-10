@@ -1153,7 +1153,9 @@ class ApplicationToolHost {
           'title': conversation.title,
           'mode': conversation.mode.name,
           'status': conversation.status.name,
-          'usage': summarizeConversationUsage(conversation.runs),
+          'usage':
+              conversation.usageSummary ??
+              summarizeConversationUsage(conversation.runs),
           'sources': [
             for (final source in conversation.sources) _sourceSummary(source),
           ],

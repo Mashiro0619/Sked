@@ -280,7 +280,7 @@ Future<_ShellFixture> _mountShell(
         ],
       ),
     );
-    final conversation = await app.agent.conversations.read(
+    final conversation = await app.agent.conversations.refresh(
       'shell-conversation',
     );
     return conversation;
@@ -290,7 +290,7 @@ Future<_ShellFixture> _mountShell(
   );
   await tester.pumpAndSettle();
   await selectAgentShellDestination(tester, 'agent');
-  await tester.pumpAndSettle();
+  await _settleWrites(tester, app);
   expect(tester.widget<AgentPage>(find.byType(AgentPage)).embedded, isTrue);
   expect(
     tester.widget<WorkspaceFrame>(_key('agent-workspace-frame')).active,
@@ -299,6 +299,10 @@ Future<_ShellFixture> _mountShell(
   expect(find.byType(BackButton).hitTestable(), findsNothing);
   expect(app.workspaceView.activeMode, AppMode.student);
   expect(app.agent.conversations.selectedId, conversation.id);
+  expect(
+    app.agent.conversations.visibleMessages(conversation.id),
+    hasLength(40),
+  );
   return _ShellFixture(
     app: app,
     storage: storage,
@@ -400,7 +404,7 @@ Future<void> _cancelMenu(
   } else {
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
   }
-  await tester.pumpAndSettle();
+  await _settleWrites(tester, fixture.app);
   expect(_key('agent-settings').hitTestable(), findsNothing);
   expect(_key('agent-composer').hitTestable(), findsOneWidget);
   expect(fixture.repository.selectedId, selected);
@@ -574,7 +578,7 @@ void main() {
           tester.view.physicalSize = narrow.size;
           await tester.pumpAndSettle();
           await selectAgentShellDestination(tester, 'agent');
-          await tester.pumpAndSettle();
+          await _settleWrites(tester, fixture.app);
           expectDraft();
           _expectReading(tester, fixture, reading);
           _expectAlignedConversation(tester, fixture);
@@ -587,7 +591,7 @@ void main() {
           );
 
           tester.view.physicalSize = wide.size;
-          await tester.pumpAndSettle();
+          await _settleWrites(tester, fixture.app);
           expectDraft();
           _expectReading(tester, fixture, reading);
           _expectAlignedConversation(tester, fixture);

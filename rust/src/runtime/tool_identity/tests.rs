@@ -60,17 +60,25 @@ fn call(name: &str, arguments: Value) -> ScriptedReply {
 }
 
 async fn next_question(
+    manager: &RuntimeManager,
     events: &mut broadcast::Receiver<RuntimeEvent>,
     previous: Option<&str>,
 ) -> QuestionRequest {
     tokio::time::timeout(std::time::Duration::from_secs(5), async {
         loop {
-            if let RuntimeEvent::Snapshot { snapshot } = events.recv().await.unwrap() {
-                if let Some(question) = snapshot.current_question {
+            if let RuntimeEvent::Snapshot { state } = events.recv().await.unwrap() {
+                if let Some(question) = state.question {
                     if question.status == QuestionStatus::Pending
                         && Some(question.id.as_str()) != previous
                     {
-                        break question;
+                        let id = state.conversation.id;
+                        break manager
+                            .storage()
+                            .call(move |store| {
+                                Ok(store.interaction_details(&id)?.unwrap().question.unwrap())
+                            })
+                            .await
+                            .unwrap();
                     }
                 }
             }
@@ -124,9 +132,9 @@ async fn repeated_wire_ids_keep_results_usage_and_restored_question_groups() {
         .send(&id, "Plan and clarify.".into(), vec![], vec![], config())
         .await
         .unwrap();
-    let first_question = next_question(&mut events, None).await;
+    let first_question = next_question(&manager, &mut events, None).await;
     answer(&manager, &id, &first_question, "First target").await;
-    let second_question = next_question(&mut events, Some(&first_question.id)).await;
+    let second_question = next_question(&manager, &mut events, Some(&first_question.id)).await;
     assert_ne!(first_question.tool_call_id, second_question.tool_call_id);
     manager.stop(&id).await.unwrap();
     manager.wait_until_idle(&id).await;

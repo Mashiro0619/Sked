@@ -3,7 +3,12 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart'
-    show listEquals, mapEquals, ValueListenable;
+    show
+        listEquals,
+        mapEquals,
+        ValueListenable,
+        DiagnosticPropertiesBuilder,
+        IntProperty;
 import 'package:flutter/services.dart';
 import 'package:file_selector/file_selector.dart' show XFile;
 import 'package:material_ui/material_ui.dart';
@@ -35,6 +40,7 @@ import 'agent_turn_activity.dart';
 import 'agent_attachment_view.dart';
 import '../attachments/agent_attachment_controller.dart';
 import '../conversations/conversation_view_repository.dart';
+import '../conversations/conversation_browse_repository.dart';
 import '../history/conversation_history.dart';
 import '../history/conversation_history_errors.dart';
 import '../history/agent_history_controller.dart';
@@ -50,6 +56,7 @@ import 'agent_context_control.dart';
 import 'agent_inline_disclosure_header.dart';
 import 'agent_plan_preview.dart';
 import 'agent_question_view.dart';
+import 'agent_paged_history.dart';
 import 'agent_reference_picker.dart';
 import 'agent_task_plan_view.dart';
 import 'agent_task_inspector.dart';
@@ -186,6 +193,9 @@ class _AgentConversationViewState extends State<AgentConversationView> {
 
   void _invalidateUiSource() {
     _uiGeneration++;
+    _replyTexts.clear();
+    _transcriptVersions.clear();
+    _clearTimelineProjection();
     _invalidateReferences();
     _retireHistory();
     _messageHistorySession?.invalidate();
@@ -230,6 +240,66 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   final _transcriptVersions = <String, Object>{};
   final _replyRuns = <String, (String?, String)>{};
   final _replyBrowseRevisions = <String, int>{};
+  final _browseOwner = Object();
+  ConversationViewRepository? _browseRepository;
+  AgentUiDelegate? _browseDelegate;
+  String? _browseId;
+  int? _browseGeneration;
+  bool _browseScheduled = false;
+  final _replyTexts = <(String, String), ConversationReplyRevision>{};
+  final _replyLoads = <(String, String), Future<void>>{};
+
+  void _scheduleBrowse() {
+    if (_browseScheduled) return;
+    _browseScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _browseScheduled = false;
+      if (!mounted) return;
+      final id = widget.active && _hostActive ? _repository.selectedId : null;
+      if (identical(_browseRepository, _repository) &&
+          identical(_browseDelegate, widget.delegate) &&
+          _browseId == id &&
+          _browseGeneration == _uiGeneration) {
+        return;
+      }
+      if (!identical(_browseRepository, _repository)) {
+        final old = _browseRepository;
+        if (old is ConversationBrowseRepository) {
+          unawaited(
+            (old as ConversationBrowseRepository).setViewActive(
+              _browseOwner,
+              null,
+            ),
+          );
+        }
+      }
+      if (!identical(_browseDelegate, widget.delegate)) {
+        unawaited(_browseDelegate?.setConversationActive(_browseOwner, null));
+      }
+      _browseRepository = _repository;
+      _browseDelegate = widget.delegate;
+      _browseId = id;
+      _browseGeneration = _uiGeneration;
+      _replyTexts.clear();
+      _transcriptVersions.clear();
+      _clearTimelineProjection();
+      final generation = _uiGeneration;
+      final repository = _repository;
+      if (repository is ConversationBrowseRepository) {
+        unawaited(
+          (repository as ConversationBrowseRepository)
+              .setViewActive(_browseOwner, id)
+              .catchError((Object error) {
+                if (mounted && _browseId == id && generation == _uiGeneration) {
+                  setState(() => _failed = true);
+                }
+              }),
+        );
+      }
+      unawaited(widget.delegate.setConversationActive(_browseOwner, id));
+    });
+  }
+
   void _updateInspector(VoidCallback update) {
     if (mounted) setState(update);
   }
@@ -475,6 +545,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   }
 
   void _watchSelectedRun() {
+    _scheduleBrowse();
     final id = _repository.selectedId;
     if (_watchedConversation == id) return;
     _disposeRunWatch();
@@ -530,6 +601,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final becameActive = active && !_hostActive;
     _hostActive = active;
     if (becameActive) _restoreReading(_repository.selectedId);
+    _scheduleBrowse();
     _scheduleInitialDraft();
     _scheduleReferenceRefresh();
   }
@@ -575,6 +647,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       widget.binaryAttachments?.addListener(_changed);
     }
     _messageHistorySession?.check();
+    _scheduleBrowse();
     _scheduleInitialDraft();
     _scheduleReferenceRefresh();
   }
@@ -584,6 +657,16 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     _invalidateUiSource();
     _disposeRunWatch();
     _repository.removeListener(_changed);
+    final browsing = _browseRepository;
+    if (browsing is ConversationBrowseRepository) {
+      unawaited(
+        (browsing as ConversationBrowseRepository).setViewActive(
+          _browseOwner,
+          null,
+        ),
+      );
+    }
+    unawaited(_browseDelegate?.setConversationActive(_browseOwner, null));
     widget.delegate.state.removeListener(_runtimeChanged);
     widget.binaryAttachments?.removeListener(_changed);
     _composer.removeListener(_referenceInputChanged);
@@ -1018,7 +1101,13 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final history = widget.history!;
     final draftBuffer = _draftBuffer;
     final uiGeneration = _uiGeneration;
-    if (!repository.isConversationLoaded(conversation.id)) {
+    if (repository is ConversationBrowseRepository) {
+      final current = await (repository as ConversationBrowseRepository)
+          .readMessage(conversation.id, message.id);
+      if (current == null) return;
+      message = current;
+      if (!mounted || !_uiSessionCurrent(uiGeneration, conversation.id)) return;
+    } else if (!repository.isConversationLoaded(conversation.id)) {
       conversation = await repository.read(conversation.id);
       if (!mounted ||
           !_uiSessionCurrent(uiGeneration, conversation.id) ||
@@ -1149,7 +1238,11 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final attachments = widget.binaryAttachments;
     final dataGeneration = widget.readDatasetGeneration?.call();
     final generation = _uiGeneration;
-    if (!repository.isConversationLoaded(conversation.id)) {
+    final browsing = repository is ConversationBrowseRepository
+        ? repository as ConversationBrowseRepository
+        : null;
+    final historyRevision = browsing?.historyRevision(conversation.id);
+    if (browsing == null && !repository.isConversationLoaded(conversation.id)) {
       conversation = await repository.read(conversation.id);
       if (!mounted ||
           !_uiSessionCurrent(generation, conversation.id) ||
@@ -1157,21 +1250,31 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         return;
       }
     }
+    bool isCurrent() {
+      final current = repository.find(conversation.id);
+      return generation == _uiGeneration &&
+          identical(repository, _repository) &&
+          identical(attachments, widget.binaryAttachments) &&
+          dataGeneration == widget.readDatasetGeneration?.call() &&
+          repository.selectedId == conversation.id &&
+          current != null &&
+          (browsing != null
+              ? browsing.historyRevision(conversation.id) == historyRevision
+              : listEquals(
+                      current.historyVersions,
+                      conversation.historyVersions,
+                    ) &&
+                    listEquals(
+                      current.replyRevisions,
+                      conversation.replyRevisions,
+                    ));
+    }
+
     final session = SkedTaskSession(
       ownerRoute: ModalRoute.of(context),
       targetChanges: Listenable.merge([repository, attachments]),
       isOwnerActive: () => mounted && widget.active && widget.interactive,
-      isTargetCurrent: () {
-        final current = repository.find(conversation.id);
-        return generation == _uiGeneration &&
-            identical(repository, _repository) &&
-            identical(attachments, widget.binaryAttachments) &&
-            dataGeneration == widget.readDatasetGeneration?.call() &&
-            repository.selectedId == conversation.id &&
-            current != null &&
-            listEquals(current.historyVersions, conversation.historyVersions) &&
-            listEquals(current.replyRevisions, conversation.replyRevisions);
-      },
+      isTargetCurrent: isCurrent,
     );
     _messageHistorySession = session;
     try {
@@ -1182,80 +1285,100 @@ class _AgentConversationViewState extends State<AgentConversationView> {
           final l = AppLocalizations.of(context);
           return AlertDialog(
             title: Text(l.agentHistoryVersions),
-            content: SizedBox(
-              width: 600,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (final version in conversation.historyVersions)
-                      ExpansionTile(
-                        title: Text(version.createdAt.toLocal().toString()),
+            content: browsing != null
+                ? AgentPagedHistory(
+                    repository: browsing,
+                    conversationId: conversation.id,
+                    attachments: attachments,
+                    isCurrent: isCurrent,
+                    referencesBuilder: (references, key) =>
+                        _readonlyReferences(references, key: key),
+                  )
+                : SizedBox(
+                    width: 600,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          for (final message in version.messages)
-                            if (message.text.isNotEmpty ||
-                                message.attachmentIds.isNotEmpty ||
-                                message.contextReferences.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    if (message.text.isNotEmpty)
-                                      AgentSelectableText(message.text),
-                                    if (message.contextReferences.isNotEmpty)
-                                      _readonlyReferences(
-                                        message.contextReferences,
-                                        key: ValueKey((
-                                          'history-references',
-                                          conversation.id,
-                                          version.id,
-                                          message.id,
-                                        )),
-                                      ),
-                                    if (message.attachmentIds.isNotEmpty)
-                                      if (attachments != null)
-                                        AgentAttachmentList(
-                                          conversationId: conversation.id,
-                                          attachments: conversation.attachments,
-                                          ids: message.attachmentIds,
-                                          repository: attachments.repository,
-                                          delivery: message.attachmentDelivery,
-                                        )
-                                      else ...[
-                                        for (final id in message.attachmentIds)
-                                          AgentSelectableText(
-                                            conversation.attachments
-                                                    .where(
-                                                      (item) => item.id == id,
-                                                    )
-                                                    .firstOrNull
-                                                    ?.name ??
-                                                l.agentFileMissing,
-                                          ),
-                                        Text(l.agentFileUnavailable),
-                                      ],
-                                  ],
-                                ),
+                          for (final version in conversation.historyVersions)
+                            ExpansionTile(
+                              title: Text(
+                                version.createdAt.toLocal().toString(),
                               ),
+                              children: [
+                                for (final message in version.messages)
+                                  if (message.text.isNotEmpty ||
+                                      message.attachmentIds.isNotEmpty ||
+                                      message.contextReferences.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.all(12),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          if (message.text.isNotEmpty)
+                                            AgentSelectableText(message.text),
+                                          if (message
+                                              .contextReferences
+                                              .isNotEmpty)
+                                            _readonlyReferences(
+                                              message.contextReferences,
+                                              key: ValueKey((
+                                                'history-references',
+                                                conversation.id,
+                                                version.id,
+                                                message.id,
+                                              )),
+                                            ),
+                                          if (message.attachmentIds.isNotEmpty)
+                                            if (attachments != null)
+                                              AgentAttachmentList(
+                                                conversationId: conversation.id,
+                                                attachments:
+                                                    conversation.attachments,
+                                                ids: message.attachmentIds,
+                                                repository:
+                                                    attachments.repository,
+                                                delivery:
+                                                    message.attachmentDelivery,
+                                              )
+                                            else ...[
+                                              for (final id
+                                                  in message.attachmentIds)
+                                                AgentSelectableText(
+                                                  conversation.attachments
+                                                          .where(
+                                                            (item) =>
+                                                                item.id == id,
+                                                          )
+                                                          .firstOrNull
+                                                          ?.name ??
+                                                      l.agentFileMissing,
+                                                ),
+                                              Text(l.agentFileUnavailable),
+                                            ],
+                                        ],
+                                      ),
+                                    ),
+                              ],
+                            ),
+                          for (final revision in conversation.replyRevisions)
+                            ExpansionTile(
+                              title: Text(
+                                revision.createdAt.toLocal().toString(),
+                              ),
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: AgentSelectableText(revision.text),
+                                ),
+                              ],
+                            ),
                         ],
                       ),
-                    for (final revision in conversation.replyRevisions)
-                      ExpansionTile(
-                        title: Text(revision.createdAt.toLocal().toString()),
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: AgentSelectableText(revision.text),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
-            ),
+                    ),
+                  ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -1668,7 +1791,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                     writable &&
                         runtime.configured &&
                         !conversation.archived &&
-                        conversation.pendingRedo == null &&
+                        !conversation.hasPendingRedo &&
                         widget.binaryAttachments?.isImporting(
                               conversation.id,
                             ) !=
@@ -1688,7 +1811,11 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                     key: _transcripts.putIfAbsent(id, GlobalKey.new),
                     scrollViewKey: ValueKey('agent-transcript-$id'),
                     position: _reading(id),
-                    active: _hostActive,
+                    active:
+                        _hostActive &&
+                        (_repository is! ConversationBrowseRepository ||
+                            (_repository as ConversationBrowseRepository)
+                                .hasVisiblePage(id)),
                     contentRevision: (
                       _transcriptVersions[id],
                       _replyBrowseRevisions[id],
@@ -2027,7 +2154,10 @@ class _AgentConversationViewState extends State<AgentConversationView> {
               if (conversation != null &&
                   !_repository.isDraft(conversation.id)) ...[
                 const SkedPopupMenuDivider<String>(),
-                if (conversation.historyVersions.isNotEmpty ||
+                if ((_repository is ConversationBrowseRepository &&
+                        (_repository as ConversationBrowseRepository)
+                            .hasMessageHistory(conversation.id)) ||
+                    conversation.historyVersions.isNotEmpty ||
                     conversation.replyRevisions.isNotEmpty)
                   SkedPopupMenuItem(
                     value: 'message-history',
@@ -2166,6 +2296,23 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   Object? _projectedRunKey;
   List<AgentTimelineEntry> _projectedTimeline = const [];
 
+  void _clearTimelineProjection() {
+    _projectedConversation = null;
+    _projectedRunKey = null;
+    _projectedTimeline = const [];
+  }
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties.add(
+      IntProperty(
+        'cachedTimelineMessages',
+        _projectedConversation?.messages.length ?? 0,
+      ),
+    );
+  }
+
   List<AgentTimelineEntry> _timeline(
     AgentConversation conversation,
     AgentUiRunState state,
@@ -2231,35 +2378,60 @@ class _AgentConversationViewState extends State<AgentConversationView> {
           ),
         ),
       for (final source in conversation.sources)
-        ExpansionTile(
-          key: ValueKey('agent-source-${source.id}'),
-          title: Text(
-            source.provenance?.title.isNotEmpty == true
-                ? source.provenance!.title
-                : l.agentSourceMaterial,
-          ),
-          trailing:
-              _canModifyAttachments(conversation.id) &&
-                  ConversationFileAttachments.canRemove(conversation, source)
-              ? IconButton(
-                  tooltip: l.agentRemoveAttachment,
-                  icon: const Icon(Icons.close),
-                  onPressed: () => _perform(
-                    'remove-source-${source.id}',
-                    () => _attachments.remove(
-                      conversation.id,
-                      source.id,
-                      canModify: () => _canModifyAttachments(conversation.id),
+        if (_repository is ConversationBrowseRepository)
+          AgentPagedSource(
+            key: ValueKey('agent-source-${source.id}'),
+            source: source,
+            contextIdentity: _uiGeneration,
+            load: () => (_repository as ConversationBrowseRepository)
+                .readSource(conversation.id, source.id),
+            trailing:
+                _canModifyAttachments(conversation.id) &&
+                    ConversationFileAttachments.canRemove(conversation, source)
+                ? IconButton(
+                    tooltip: l.agentRemoveAttachment,
+                    icon: const Icon(Icons.close),
+                    onPressed: () => _perform(
+                      'remove-source-${source.id}',
+                      () => _attachments.remove(
+                        conversation.id,
+                        source.id,
+                        canModify: () => _canModifyAttachments(conversation.id),
+                      ),
                     ),
-                  ),
-                )
-              : null,
-          childrenPadding: const EdgeInsets.all(16),
-          children: [
-            if (source.truncated) Text(l.agentSourceTruncated),
-            AgentSelectableText(source.text),
-          ],
-        ),
+                  )
+                : null,
+          )
+        else
+          ExpansionTile(
+            key: ValueKey('agent-source-${source.id}'),
+            title: Text(
+              source.provenance?.title.isNotEmpty == true
+                  ? source.provenance!.title
+                  : l.agentSourceMaterial,
+            ),
+            trailing:
+                _canModifyAttachments(conversation.id) &&
+                    ConversationFileAttachments.canRemove(conversation, source)
+                ? IconButton(
+                    tooltip: l.agentRemoveAttachment,
+                    icon: const Icon(Icons.close),
+                    onPressed: () => _perform(
+                      'remove-source-${source.id}',
+                      () => _attachments.remove(
+                        conversation.id,
+                        source.id,
+                        canModify: () => _canModifyAttachments(conversation.id),
+                      ),
+                    ),
+                  )
+                : null,
+            childrenPadding: const EdgeInsets.all(16),
+            children: [
+              if (source.truncated) Text(l.agentSourceTruncated),
+              AgentSelectableText(source.text),
+            ],
+          ),
       for (final entry in _visibleProcessEntries(conversation, timeline))
         if (entry case _AgentProcessHeader(:final turnId, :final expanded))
           _processHeader(conversation, turnId, expanded, l)
@@ -2419,6 +2591,24 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     AgentConversation conversation,
     ConversationMessage message,
   ) {
+    final repository = _repository;
+    if (repository is ConversationBrowseRepository) {
+      final versions = (repository as ConversationBrowseRepository)
+          .replyVersions(conversation.id, message.id);
+      if (versions.isEmpty) return [('current-${message.id}', message.text)];
+      final saved = _replyTexts[(conversation.id, message.id)];
+      return [
+        for (final revision in versions)
+          (
+            revision.id,
+            revision.id == versions.last.id
+                ? message.text
+                : saved?.id == revision.id
+                ? saved!.text
+                : '',
+          ),
+      ];
+    }
     final choices = <(String, String)>[
       for (final revision in conversation.replyRevisions)
         if (revision.messageId == message.id) (revision.id, revision.text),
@@ -2427,6 +2617,58 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       choices.add(('current-${message.id}', message.text));
     }
     return choices;
+  }
+
+  Future<void> _loadReplyVersion(
+    AgentConversation conversation,
+    ConversationMessage message,
+    String revisionId,
+  ) {
+    final repository = _repository;
+    if (repository is! ConversationBrowseRepository) return Future.value();
+    final generation = _uiGeneration;
+    final key = (conversation.id, message.id);
+    late final Future<void> request;
+    request =
+        () async {
+          try {
+            final revision = await (repository as ConversationBrowseRepository)
+                .readReplyVersion(conversation.id, revisionId);
+            if (!mounted ||
+                !_uiSessionCurrent(generation, conversation.id) ||
+                !identical(repository, _repository) ||
+                _draftBuffer.replyVersions[key] != revisionId) {
+              return;
+            }
+            if (revision == null) {
+              throw StateError('Reply version no longer exists.');
+            }
+            setState(() {
+              _replyTexts[key] = revision;
+              _replyBrowseRevisions.update(
+                conversation.id,
+                (value) => value + 1,
+                ifAbsent: () => 1,
+              );
+            });
+            _revealReply(conversation.id, message.id);
+          } catch (_) {
+            if (mounted &&
+                _uiSessionCurrent(generation, conversation.id) &&
+                _draftBuffer.replyVersions[key] == revisionId) {
+              setState(() {
+                _failed = true;
+                _draftBuffer.replyVersions.remove(key);
+              });
+            }
+          }
+        }().whenComplete(() {
+          if (identical(_replyLoads[key], request)) {
+            unawaited(_replyLoads.remove(key));
+          }
+        });
+    _replyLoads[key] = request;
+    return request;
   }
 
   List<Widget> _runStatusWidgets(
@@ -2464,7 +2706,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     else if (state.phase == AgentUiPhase.failed || state.errorMessage != null)
       _requestFailure(state, l),
     if (conversation != null &&
-        conversation.pendingRedo == null &&
+        !conversation.hasPendingRedo &&
         !state.isActive &&
         (state.phase == AgentUiPhase.stopped ||
             state.phase == AgentUiPhase.failed ||
@@ -2519,11 +2761,28 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final selected = _draftBuffer.replyVersions[(conversation.id, message.id)];
     final savedIndex = choices.indexWhere((choice) => choice.$1 == selected);
     final index = savedIndex < 0 ? choices.length - 1 : savedIndex;
+    final loadingVersion =
+        _repository is ConversationBrowseRepository &&
+        index < choices.length - 1 &&
+        _replyTexts[(conversation.id, message.id)]?.id != choices[index].$1;
+    if (loadingVersion &&
+        !_replyLoads.containsKey((conversation.id, message.id))) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted &&
+            _draftBuffer.replyVersions[(conversation.id, message.id)] ==
+                choices[index].$1 &&
+            !_replyLoads.containsKey((conversation.id, message.id))) {
+          unawaited(
+            _loadReplyVersion(conversation, message, choices[index].$1),
+          );
+        }
+      });
+    }
     final text = replacing && state.streamingText.isNotEmpty
         ? state.streamingText
         : choices[index].$2;
     final canModifyHistory =
-        conversation.pendingRedo == null &&
+        !conversation.hasPendingRedo &&
         !conversation.archived &&
         !state.isActive &&
         !state.recoveryRequired &&
@@ -2573,6 +2832,12 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                   ifAbsent: () => 1,
                 );
               });
+              if (_repository is ConversationBrowseRepository &&
+                  next < choices.length - 1) {
+                unawaited(
+                  _loadReplyVersion(conversation, message, choices[next].$1),
+                );
+              }
               _revealReply(conversation.id, message.id);
             }
           : null,
@@ -2598,6 +2863,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (loadingVersion) const LinearProgressIndicator(),
           if (message.contextReferences.isNotEmpty)
             _readonlyReferences(
               message.contextReferences,

@@ -72,11 +72,13 @@ class _ReadingCore extends MemoryAgentCore {
 void main() {
   late _ReadingCore core;
   late RustConversationRepository repository;
+  final owner = Object();
 
   setUp(() async {
     core = _ReadingCore();
     repository = RustConversationRepository(core.client);
     await repository.load();
+    await repository.setViewActive(owner, _id);
   });
 
   tearDown(() async {
@@ -96,7 +98,7 @@ void main() {
     expect(visibleIds(), expectedIds(70, 120));
     expect(
       core.queries
-          .where((query) => query.kind == QueryKind.readConversation)
+          .where((query) => query.kind == QueryKind.conversationPage)
           .single
           .limit,
       50,
@@ -105,8 +107,10 @@ void main() {
     expect(visibleIds(), expectedIds(20, 120));
 
     await repository.select('other');
+    await repository.setViewActive(owner, 'other');
     await repository.waitForPendingWrites();
     await repository.select(_id);
+    await repository.setViewActive(owner, _id);
     await repository.waitForPendingWrites();
     expect(visibleIds(), expectedIds(20, 120));
 
@@ -155,16 +159,23 @@ void main() {
     final captured = Completer<void>();
     final release = Completer<void>();
     core.afterQuery = (query) async {
-      if (query.kind != QueryKind.readConversation) return;
+      if (query.kind != QueryKind.conversationPage) return;
       core.afterQuery = null;
       captured.complete();
       await release.future;
     };
-    final refresh = repository.load();
+    final refresh = repository.setViewActive(owner, _id);
     await captured.future;
     final newer = _snapshot(140, sequence: 2);
     core.snapshots[_id] = newer;
-    repository.ingestSnapshot(newer);
+    repository.ingestState(
+      (await core.query(
+        query: const AgentQuery(
+          kind: QueryKind.conversationState,
+          conversationId: _id,
+        ),
+      )).state!,
+    );
     release.complete();
     await refresh;
 
@@ -172,15 +183,16 @@ void main() {
   });
 
   test(
-    'a restore boundary discards the old window and its late page',
+    'a restore boundary discards the old window and its late page failure',
     () async {
       final captured = Completer<void>();
       final release = Completer<void>();
       core.afterQuery = (query) async {
-        if (query.kind != QueryKind.readConversation) return;
+        if (query.kind != QueryKind.conversationPage) return;
         core.afterQuery = null;
         captured.complete();
         await release.future;
+        throw StateError('Page failed before data restoration.');
       };
       final earlier = repository.loadEarlierMessages(_id);
       await captured.future;
@@ -191,7 +203,30 @@ void main() {
       expect(visibleIds(), isEmpty);
 
       await repository.load();
+      await repository.setViewActive(owner, _id);
+      await repository.waitForPendingWrites();
       expect(visibleIds(), expectedIds(10, 60));
+      expect(repository.blocked, isFalse);
     },
   );
+
+  test('hidden views release bodies and explicit full reads do not populate the window', () async {
+    final complete = await repository.read(_id);
+    expect(complete.messages, hasLength(120));
+    expect(visibleIds(), expectedIds(70, 120));
+    await repository.setViewActive(owner, null);
+    expect(repository.find(_id)!.messages, isEmpty);
+    final pageReads = core.queries
+        .where((query) => query.kind == QueryKind.conversationPage)
+        .length;
+    core.snapshots[_id] = _snapshot(140, sequence: 2);
+    await repository.refresh(_id);
+    expect(
+      core.queries.where((query) => query.kind == QueryKind.conversationPage),
+      hasLength(pageReads),
+    );
+    expect(repository.find(_id)!.messages, isEmpty);
+    await repository.setViewActive(owner, _id);
+    expect(visibleIds(), expectedIds(70, 140));
+  });
 }

@@ -104,7 +104,7 @@ class RustConversationAttachments extends ChangeNotifier
   RustConversationAttachments({
     required this.client,
     required this.readConversation,
-    required this.publishSnapshot,
+    required this.publishState,
     this.stagingDirectory,
     this.resolveStagingDirectory,
     this.isAvailable,
@@ -112,7 +112,7 @@ class RustConversationAttachments extends ChangeNotifier
 
   final AgentRustClient client;
   final AgentConversation? Function(String id) readConversation;
-  final void Function(view.ViewConversationSnapshot snapshot) publishSnapshot;
+  final void Function(view.ViewConversationState state) publishState;
   final Directory? stagingDirectory;
   final Future<Directory> Function()? resolveStagingDirectory;
   final bool Function()? isAvailable;
@@ -184,7 +184,7 @@ class RustConversationAttachments extends ChangeNotifier
     if (_pending.containsKey(conversationId)) {
       throw const AttachmentException(AttachmentError.conflict);
     }
-    final target = _target(conversationId);
+    final target = await _target(conversationId);
     final task = _AttachmentImport(generateUuidV4(), _epoch);
     _imports[conversationId] = task;
     _notify();
@@ -303,7 +303,7 @@ class RustConversationAttachments extends ChangeNotifier
     task.cancellation.check();
     _check(canModify);
     task.nativeStarted = true;
-    final snapshot = await core.admitDraftAttachment(
+    final state = await core.admitDraftAttachment(
       request: management.DraftAttachmentAdmission(
         importId: staged.id,
         target: staged.target,
@@ -314,13 +314,13 @@ class RustConversationAttachments extends ChangeNotifier
       ),
     );
     // A cancellation after native commit must not turn a saved attachment into
-    // a failed UI action. The returned snapshot is the commit result.
+    // a failed UI action. The returned state is the commit result.
     if (identical(_pending[staged.target.conversationId], staged)) {
       _pending.remove(staged.target.conversationId);
     }
     await _deleteStaged(staged.file);
     if (!_disposed && staged.epoch == _epoch) {
-      publishSnapshot(snapshot);
+      publishState(state);
       transferProgress(
         staged.target.conversationId,
         AttachmentProgress(
@@ -392,12 +392,12 @@ class RustConversationAttachments extends ChangeNotifier
     required bool reuse,
   }) => _enqueue(() async {
     _check(canModify);
-    final target = _target(conversationId);
+    final target = await _target(conversationId);
     final epoch = _epoch;
     try {
       final core = await client.ensureInitialized();
       _check(canModify);
-      final snapshot = reuse
+      final state = reuse
           ? await core.useDraftAttachment(
               target: target,
               attachmentId: attachmentId,
@@ -406,26 +406,34 @@ class RustConversationAttachments extends ChangeNotifier
               target: target,
               attachmentId: attachmentId,
             );
-      if (!_disposed && epoch == _epoch) publishSnapshot(snapshot);
+      if (!_disposed && epoch == _epoch) publishState(state);
     } catch (error) {
       throw attachmentErrorFromRust(error);
     }
   });
 
-  management.DraftAttachmentTarget _target(String conversationId) {
+  Future<management.DraftAttachmentTarget> _target(
+    String conversationId,
+  ) async {
     final conversation = readConversation(conversationId);
     if (conversation == null || conversation.archived) {
       throw const AttachmentException(AttachmentError.conflict);
     }
+    final epoch = _epoch;
+    final state = (await client.query(
+      native.AgentQuery(
+        kind: native.QueryKind.conversationState,
+        conversationId: conversationId,
+      ),
+    )).state;
+    if (epoch != _epoch || state == null || state.conversation.archived) {
+      throw const AttachmentException(AttachmentError.conflict);
+    }
     return management.DraftAttachmentTarget(
       conversationId: conversationId,
-      expectedAfterRunId: conversation.runId,
+      expectedAfterRunId: state.conversation.runId,
       expectedAfterInputId:
-          conversation.queuedInputs.lastOrNull?.id ??
-          conversation.messages
-              .where((message) => message.role == ConversationRole.user)
-              .lastOrNull
-              ?.id,
+          state.queuedInputs.lastOrNull?.id ?? state.lastUserMessageId,
     );
   }
 

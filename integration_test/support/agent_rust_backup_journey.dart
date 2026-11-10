@@ -5,6 +5,8 @@ import 'dart:typed_data';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as path;
+import 'package:sked/agent/bridge/conversation_projection.dart'
+    show attachmentFromRust;
 import 'package:sked/agent/bridge/generated/api/contracts.dart' as native;
 import 'package:sked/agent/bridge/generated/api/models.dart' as view;
 import 'package:sked/agent/connection/agent_credential_store.dart';
@@ -46,6 +48,7 @@ Future<void> runRustAgentBackupJourney({
   final nativeStore = NativeAgentBackupStore(workspace.client);
   final repository = app.agent.conversations;
   final service = app.backups.selective;
+  final approvalOwner = Object();
   late String draftId;
   late String operationId;
   late String generation;
@@ -86,7 +89,15 @@ Future<void> runRustAgentBackupJourney({
       XFile(draftSource.path, mimeType: 'application/octet-stream'),
       canModify: () => repository.canWrite,
     );
-    final draftAttachment = repository.find(draftId)!.attachments.single;
+    final draftAttachment = attachmentFromRust(
+      (await workspace.client.query(
+        native.AgentQuery(
+          kind: native.QueryKind.conversationPage,
+          conversationId: draftId,
+          limit: 1,
+        ),
+      )).page!.attachments.single,
+    );
 
     Future<void> assertDraftRetained() async {
       final actual = (await workspace.client.query(
@@ -222,7 +233,15 @@ Future<void> runRustAgentBackupJourney({
       XFile(backupSource.path, mimeType: 'application/zip'),
       canModify: () => repository.canWrite,
     );
-    final sourceAttachment = repository.find(keptId)!.attachments.single;
+    final sourceAttachment = attachmentFromRust(
+      (await workspace.client.query(
+        native.AgentQuery(
+          kind: native.QueryKind.conversationPage,
+          conversationId: keptId,
+          limit: 1,
+        ),
+      )).page!.attachments.single,
+    );
     final arguments = <String, Object?>{
       'sourceId': sourceAttachment.id,
       'objects': selection.objects.map((key) => key.toJson()).toList(),
@@ -247,11 +266,12 @@ Future<void> runRustAgentBackupJourney({
     journal.failClear = true;
     final approvalReady = workspace.client.events.firstWhere(
       (event) =>
-          event.snapshot?.operations.any(
-            (operation) =>
-                operation.phase == view.ViewOperationPhase.waitingApproval,
-          ) ==
-          true,
+          event.state?.conversation.id == keptId &&
+          event.state?.pendingOperations.any(
+                (operation) =>
+                    operation.phase == view.ViewOperationPhase.waitingApproval,
+              ) ==
+              true,
     );
     final restoring = app.agent.runtime.runHostTool(
       keptId,
@@ -260,6 +280,7 @@ Future<void> runRustAgentBackupJourney({
     );
     await approvalReady.timeout(const Duration(seconds: 20));
     await app.agent.runtime.loadConversation(keptId);
+    await app.agent.runtime.setConversationActive(approvalOwner, keptId);
     final approval = app.agent.runtime.state.value
         .runFor(keptId)
         .pendingApproval!;
@@ -497,6 +518,7 @@ Future<void> runRustAgentBackupJourney({
     );
     checkpoints.add('会话创建、重命名、归档、恢复与删除的回执绑定同一实际对象');
   } finally {
+    await app.agent.runtime.setConversationActive(approvalOwner, null);
     await workspace.close();
   }
 

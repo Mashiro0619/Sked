@@ -77,11 +77,14 @@ class RustAgentBusinessHost {
 
   Future<void> _event(native.AgentEvent event) async {
     if (_disposed) return;
-    if (event.kind == native.EventKind.snapshot && event.snapshot != null) {
-      final snapshot = event.snapshot!;
+    if (event.kind == native.EventKind.snapshot && event.state != null) {
+      final state = event.state!;
       for (final run in _runs.values) {
-        if (run.conversationId == snapshot.conversation.id) {
-          run.conversation = conversationFromRust(snapshot);
+        if (run.conversationId == state.conversation.id) {
+          run.conversation = conversationStateFromRust(state).copyWith(
+            sources: run.conversation.sources,
+            attachments: run.conversation.attachments,
+          );
         }
       }
     }
@@ -190,47 +193,59 @@ class RustAgentBusinessHost {
   Future<native.HostResult> _execute(native.HostRequest request) async {
     final runId = request.runId!;
     var run = _runs[runId];
-    while (run == null) {
+    late final _HostRun activeRun;
+    while (true) {
       final permissionRevision = _permissionRevision;
-      final snapshot = (await client.query(
+      final context = await client.query(
         native.AgentQuery(
-          kind: native.QueryKind.readConversation,
+          kind: native.QueryKind.businessContext,
           conversationId: request.conversationId,
+          targetId: runId,
         ),
-      )).snapshot;
+      );
       // A mode change can arrive while the initial native read is in flight.
       // Read again instead of carrying a mode across conversation lifetimes.
       if (permissionRevision != _permissionRevision) {
         run = _runs[runId];
         continue;
       }
-      if (snapshot == null) {
+      final state = context.state;
+      if (state == null) {
         throw const OperationProblem(
           OperationErrorCode.notFound,
           'The conversation no longer exists.',
         );
       }
-      final policy = OperationPolicy()
-        ..update(
-          enabled: true,
-          mode: AgentPermissionMode.values.byName(
-            snapshot.conversation.mode.name,
+      final conversation = conversationStateFromRust(state).copyWith(
+        sources: context.sources.map(sourceFromRust),
+        attachments: context.attachments.map(attachmentFromRust),
+      );
+      if (run == null) {
+        final policy = OperationPolicy()
+          ..update(
+            enabled: true,
+            mode: AgentPermissionMode.values.byName(
+              state.conversation.mode.name,
+            ),
+          );
+        run = _HostRun(
+          conversationId: request.conversationId,
+          scope: OperationScope(id: runId, policy: policy),
+          conversation: conversation,
+          environment: _environmentForRun(
+            context.run,
+            readEnvironment(request.conversationId),
           ),
         );
-      run = _HostRun(
-        conversationId: request.conversationId,
-        scope: OperationScope(id: runId, policy: policy),
-        conversation: conversationFromRust(snapshot),
-        environment: _environmentForRun(
-          snapshot,
-          runId,
-          readEnvironment(request.conversationId),
-        ),
-      );
-      _runs[runId] = run;
+        _runs[runId] = run;
+      } else {
+        run.conversation = conversation;
+      }
+      activeRun = run;
+      break;
     }
-    if (_cancelledRequests.contains(request.id)) run.scope.cancel();
-    run.scope.checkActive();
+    if (_cancelledRequests.contains(request.id)) activeRun.scope.cancel();
+    activeRun.scope.checkActive();
     final call = ProviderToolCall(
       id: request.toolCallId!,
       name: request.toolName!,
@@ -238,8 +253,8 @@ class RustAgentBusinessHost {
     );
     final result = await tools.execute(
       call,
-      run.scope,
-      (plan) => _requestApproval(request, run!.scope, plan),
+      activeRun.scope,
+      (plan) => _requestApproval(request, activeRun.scope, plan),
     );
     return _result(request.id, result);
   }
@@ -457,11 +472,9 @@ class _HostRun {
 }
 
 Map<String, Object?> _environmentForRun(
-  view.ViewConversationSnapshot snapshot,
-  String runId,
+  view.ViewRun? run,
   Map<String, Object?> fallback,
 ) {
-  final run = snapshot.runs.where((run) => run.id == runId).firstOrNull;
   final value = run == null ? null : jsonDecode(run.environment.json);
   return Map.unmodifiable(
     value is Map && value.isNotEmpty ? value.cast<String, Object?>() : fallback,

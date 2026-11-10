@@ -8,8 +8,8 @@ import 'management_contracts.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `parse`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`
+// These functions are ignored because they are not marked as `pub`: `display_message`, `display_reply_revision`, `parse`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`
 
 class JsonPayload {
   final String json;
@@ -397,6 +397,69 @@ class ViewConversation {
           titleGeneration == other.titleGeneration;
 }
 
+class ViewConversationPage {
+  final int sequence;
+  final int total;
+  final int start;
+  final int? nextOffset;
+  final List<ViewMessage> messages;
+  final List<ViewTurnContext> turns;
+  final List<ViewRunSummary> runs;
+  final List<ViewOperationSummary> operations;
+  final List<ViewAttachmentMetadata> attachments;
+  final List<ViewSourceSummary> sources;
+  final List<ViewReplyRevisionSummary> replyRevisions;
+  final List<ViewConversationHandoff> handoffs;
+
+  const ViewConversationPage({
+    required this.sequence,
+    required this.total,
+    required this.start,
+    this.nextOffset,
+    required this.messages,
+    required this.turns,
+    required this.runs,
+    required this.operations,
+    required this.attachments,
+    required this.sources,
+    required this.replyRevisions,
+    required this.handoffs,
+  });
+
+  @override
+  int get hashCode =>
+      sequence.hashCode ^
+      total.hashCode ^
+      start.hashCode ^
+      nextOffset.hashCode ^
+      messages.hashCode ^
+      turns.hashCode ^
+      runs.hashCode ^
+      operations.hashCode ^
+      attachments.hashCode ^
+      sources.hashCode ^
+      replyRevisions.hashCode ^
+      handoffs.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ViewConversationPage &&
+          runtimeType == other.runtimeType &&
+          sequence == other.sequence &&
+          total == other.total &&
+          start == other.start &&
+          nextOffset == other.nextOffset &&
+          messages == other.messages &&
+          turns == other.turns &&
+          runs == other.runs &&
+          operations == other.operations &&
+          attachments == other.attachments &&
+          sources == other.sources &&
+          replyRevisions == other.replyRevisions &&
+          handoffs == other.handoffs;
+}
+
 class ViewConversationSnapshot {
   final ViewConversation conversation;
   final int sequence;
@@ -555,6 +618,102 @@ class ViewConversationSource {
           boundMessageId == other.boundMessageId;
 }
 
+class ViewConversationState {
+  final ViewConversation conversation;
+  final int sequence;
+  final int messageCount;
+  final int sourceCount;
+  final bool hasExecutionUserInput;
+  final String managementContextDigest;
+  final String? lastUserMessageId;
+  final ViewRunSummary? currentRun;
+  final List<ViewQueuedInput> queuedInputs;
+  final List<ViewQueuedControl> queuedControls;
+  final List<ViewOperationSummary> pendingOperations;
+  final ViewQuestionSummary? question;
+  final int? planRevision;
+  final List<ViewRedoSummary> pendingRedos;
+  final int historyVersionCount;
+  final int replyRevisionCount;
+  final String? lastCommittedAssistantId;
+  final int lastCommittedAssistantRevision;
+  final bool idleCanContinue;
+  final ViewUsageSummary usage;
+
+  const ViewConversationState({
+    required this.conversation,
+    required this.sequence,
+    required this.messageCount,
+    required this.sourceCount,
+    required this.hasExecutionUserInput,
+    required this.managementContextDigest,
+    this.lastUserMessageId,
+    this.currentRun,
+    required this.queuedInputs,
+    required this.queuedControls,
+    required this.pendingOperations,
+    this.question,
+    this.planRevision,
+    required this.pendingRedos,
+    required this.historyVersionCount,
+    required this.replyRevisionCount,
+    this.lastCommittedAssistantId,
+    required this.lastCommittedAssistantRevision,
+    required this.idleCanContinue,
+    required this.usage,
+  });
+
+  @override
+  int get hashCode =>
+      conversation.hashCode ^
+      sequence.hashCode ^
+      messageCount.hashCode ^
+      sourceCount.hashCode ^
+      hasExecutionUserInput.hashCode ^
+      managementContextDigest.hashCode ^
+      lastUserMessageId.hashCode ^
+      currentRun.hashCode ^
+      queuedInputs.hashCode ^
+      queuedControls.hashCode ^
+      pendingOperations.hashCode ^
+      question.hashCode ^
+      planRevision.hashCode ^
+      pendingRedos.hashCode ^
+      historyVersionCount.hashCode ^
+      replyRevisionCount.hashCode ^
+      lastCommittedAssistantId.hashCode ^
+      lastCommittedAssistantRevision.hashCode ^
+      idleCanContinue.hashCode ^
+      usage.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ViewConversationState &&
+          runtimeType == other.runtimeType &&
+          conversation == other.conversation &&
+          sequence == other.sequence &&
+          messageCount == other.messageCount &&
+          sourceCount == other.sourceCount &&
+          hasExecutionUserInput == other.hasExecutionUserInput &&
+          managementContextDigest == other.managementContextDigest &&
+          lastUserMessageId == other.lastUserMessageId &&
+          currentRun == other.currentRun &&
+          queuedInputs == other.queuedInputs &&
+          queuedControls == other.queuedControls &&
+          pendingOperations == other.pendingOperations &&
+          question == other.question &&
+          planRevision == other.planRevision &&
+          pendingRedos == other.pendingRedos &&
+          historyVersionCount == other.historyVersionCount &&
+          replyRevisionCount == other.replyRevisionCount &&
+          lastCommittedAssistantId == other.lastCommittedAssistantId &&
+          lastCommittedAssistantRevision ==
+              other.lastCommittedAssistantRevision &&
+          idleCanContinue == other.idleCanContinue &&
+          usage == other.usage;
+}
+
 enum ViewConversationStatus {
   idle,
   running,
@@ -623,6 +782,24 @@ class ViewConversationSummary {
           messageCount == other.messageCount;
 }
 
+class ViewHistoryMessagePage {
+  final ViewHistoryVersionSummary version;
+  final ViewConversationPage page;
+
+  const ViewHistoryMessagePage({required this.version, required this.page});
+
+  @override
+  int get hashCode => version.hashCode ^ page.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ViewHistoryMessagePage &&
+          runtimeType == other.runtimeType &&
+          version == other.version &&
+          page == other.page;
+}
+
 class ViewHistoryVersion {
   final String id;
   final String batchId;
@@ -664,6 +841,72 @@ class ViewHistoryVersion {
           runs == other.runs &&
           turns == other.turns &&
           providerHistory == other.providerHistory;
+}
+
+class ViewHistoryVersionSummary {
+  final String id;
+  final String batchId;
+  final int createdAt;
+  final int messageCount;
+
+  const ViewHistoryVersionSummary({
+    required this.id,
+    required this.batchId,
+    required this.createdAt,
+    required this.messageCount,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      batchId.hashCode ^
+      createdAt.hashCode ^
+      messageCount.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ViewHistoryVersionSummary &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          batchId == other.batchId &&
+          createdAt == other.createdAt &&
+          messageCount == other.messageCount;
+}
+
+class ViewInteractionDetails {
+  final int sequence;
+  final ViewQuestionRequest? question;
+  final ViewTaskPlan? plan;
+  final List<ViewOperationRecord> pendingOperations;
+  final List<ViewRedoBatch> pendingRedos;
+
+  const ViewInteractionDetails({
+    required this.sequence,
+    this.question,
+    this.plan,
+    required this.pendingOperations,
+    required this.pendingRedos,
+  });
+
+  @override
+  int get hashCode =>
+      sequence.hashCode ^
+      question.hashCode ^
+      plan.hashCode ^
+      pendingOperations.hashCode ^
+      pendingRedos.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ViewInteractionDetails &&
+          runtimeType == other.runtimeType &&
+          sequence == other.sequence &&
+          question == other.question &&
+          plan == other.plan &&
+          pendingOperations == other.pendingOperations &&
+          pendingRedos == other.pendingRedos;
 }
 
 class ViewKnowledgeChange {
@@ -1104,6 +1347,80 @@ class ViewOperationRecord {
 
 enum ViewOperationStore { main, knowledge, external_ }
 
+class ViewOperationSummary {
+  final String toolCallId;
+  final String toolName;
+  final String runId;
+  final ViewOperationBinding? binding;
+  final ViewOperationPhase phase;
+
+  const ViewOperationSummary({
+    required this.toolCallId,
+    required this.toolName,
+    required this.runId,
+    this.binding,
+    required this.phase,
+  });
+
+  @override
+  int get hashCode =>
+      toolCallId.hashCode ^
+      toolName.hashCode ^
+      runId.hashCode ^
+      binding.hashCode ^
+      phase.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ViewOperationSummary &&
+          runtimeType == other.runtimeType &&
+          toolCallId == other.toolCallId &&
+          toolName == other.toolName &&
+          runId == other.runId &&
+          binding == other.binding &&
+          phase == other.phase;
+}
+
+class ViewOutcomeCounts {
+  final int pending;
+  final int completed;
+  final int failed;
+  final int cancelled;
+  final int unknown;
+  final int notStarted;
+
+  const ViewOutcomeCounts({
+    required this.pending,
+    required this.completed,
+    required this.failed,
+    required this.cancelled,
+    required this.unknown,
+    required this.notStarted,
+  });
+
+  @override
+  int get hashCode =>
+      pending.hashCode ^
+      completed.hashCode ^
+      failed.hashCode ^
+      cancelled.hashCode ^
+      unknown.hashCode ^
+      notStarted.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ViewOutcomeCounts &&
+          runtimeType == other.runtimeType &&
+          pending == other.pending &&
+          completed == other.completed &&
+          failed == other.failed &&
+          cancelled == other.cancelled &&
+          unknown == other.unknown &&
+          notStarted == other.notStarted;
+}
+
 enum ViewPermissionMode { ask, plan, full }
 
 class ViewPlanStep {
@@ -1342,6 +1659,45 @@ class ViewQuestionRequest {
 
 enum ViewQuestionStatus { pending, answered, skipped, retired }
 
+class ViewQuestionSummary {
+  final String id;
+  final String toolCallId;
+  final String runId;
+  final String requestMessageId;
+  final ViewQuestionStatus status;
+  final bool consumed;
+
+  const ViewQuestionSummary({
+    required this.id,
+    required this.toolCallId,
+    required this.runId,
+    required this.requestMessageId,
+    required this.status,
+    required this.consumed,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      toolCallId.hashCode ^
+      runId.hashCode ^
+      requestMessageId.hashCode ^
+      status.hashCode ^
+      consumed.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ViewQuestionSummary &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          toolCallId == other.toolCallId &&
+          runId == other.runId &&
+          requestMessageId == other.requestMessageId &&
+          status == other.status &&
+          consumed == other.consumed;
+}
+
 enum ViewQueueMode { followUp, steering }
 
 class ViewQueuedControl {
@@ -1511,6 +1867,53 @@ enum ViewRedoPhase {
   cancelled,
 }
 
+class ViewRedoSummary {
+  final String id;
+  final String sourceTurnId;
+  final String sourceMessageId;
+  final String historyVersionId;
+  final String replayRunId;
+  final ViewRedoPhase phase;
+  final bool hasHistoryVersion;
+  final String? lastError;
+
+  const ViewRedoSummary({
+    required this.id,
+    required this.sourceTurnId,
+    required this.sourceMessageId,
+    required this.historyVersionId,
+    required this.replayRunId,
+    required this.phase,
+    required this.hasHistoryVersion,
+    this.lastError,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      sourceTurnId.hashCode ^
+      sourceMessageId.hashCode ^
+      historyVersionId.hashCode ^
+      replayRunId.hashCode ^
+      phase.hashCode ^
+      hasHistoryVersion.hashCode ^
+      lastError.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ViewRedoSummary &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          sourceTurnId == other.sourceTurnId &&
+          sourceMessageId == other.sourceMessageId &&
+          historyVersionId == other.historyVersionId &&
+          replayRunId == other.replayRunId &&
+          phase == other.phase &&
+          hasHistoryVersion == other.hasHistoryVersion &&
+          lastError == other.lastError;
+}
+
 class ViewReplyRevision {
   final String id;
   final String messageId;
@@ -1556,6 +1959,45 @@ class ViewReplyRevision {
           model == other.model &&
           providerProtocol == other.providerProtocol &&
           responseItems == other.responseItems;
+}
+
+class ViewReplyRevisionSummary {
+  final String id;
+  final String messageId;
+  final String runId;
+  final int createdAt;
+  final ViewModelSelection? model;
+  final String? providerProtocol;
+
+  const ViewReplyRevisionSummary({
+    required this.id,
+    required this.messageId,
+    required this.runId,
+    required this.createdAt,
+    this.model,
+    this.providerProtocol,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      messageId.hashCode ^
+      runId.hashCode ^
+      createdAt.hashCode ^
+      model.hashCode ^
+      providerProtocol.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ViewReplyRevisionSummary &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          messageId == other.messageId &&
+          runId == other.runId &&
+          createdAt == other.createdAt &&
+          model == other.model &&
+          providerProtocol == other.providerProtocol;
 }
 
 enum ViewRequestKind { response, contextCompaction, title }
@@ -1698,6 +2140,69 @@ enum ViewRunKind { model, host }
 
 enum ViewRunStatus { running, completed, interrupted }
 
+class ViewRunSummary {
+  final String id;
+  final int startedAt;
+  final int? settledAt;
+  final ViewRunKind kind;
+  final ViewRunStatus status;
+  final ViewModelSelection? model;
+  final String? continuedFromRunId;
+  final int requestCount;
+  final int toolCount;
+  final ViewRequestUsage? lastRequest;
+  final String? errorCode;
+  final ViewUsageSummary usage;
+
+  const ViewRunSummary({
+    required this.id,
+    required this.startedAt,
+    this.settledAt,
+    required this.kind,
+    required this.status,
+    this.model,
+    this.continuedFromRunId,
+    required this.requestCount,
+    required this.toolCount,
+    this.lastRequest,
+    this.errorCode,
+    required this.usage,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      startedAt.hashCode ^
+      settledAt.hashCode ^
+      kind.hashCode ^
+      status.hashCode ^
+      model.hashCode ^
+      continuedFromRunId.hashCode ^
+      requestCount.hashCode ^
+      toolCount.hashCode ^
+      lastRequest.hashCode ^
+      errorCode.hashCode ^
+      usage.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ViewRunSummary &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          startedAt == other.startedAt &&
+          settledAt == other.settledAt &&
+          kind == other.kind &&
+          status == other.status &&
+          model == other.model &&
+          continuedFromRunId == other.continuedFromRunId &&
+          requestCount == other.requestCount &&
+          toolCount == other.toolCount &&
+          lastRequest == other.lastRequest &&
+          errorCode == other.errorCode &&
+          usage == other.usage;
+}
+
 class ViewSourceProvenance {
   final String title;
   final int capturedAt;
@@ -1739,6 +2244,61 @@ class ViewSourceProvenance {
           localeCode == other.localeCode &&
           revision == other.revision &&
           resourceReferences == other.resourceReferences;
+}
+
+class ViewSourceSummary {
+  final String id;
+  final String kind;
+  final String? url;
+  final String? targetId;
+  final bool truncated;
+  final ViewSourceProvenance? provenance;
+  final String? attachedAfterRunId;
+  final String? attachedAfterMessageId;
+  final String? boundInputId;
+  final String? boundMessageId;
+
+  const ViewSourceSummary({
+    required this.id,
+    required this.kind,
+    this.url,
+    this.targetId,
+    required this.truncated,
+    this.provenance,
+    this.attachedAfterRunId,
+    this.attachedAfterMessageId,
+    this.boundInputId,
+    this.boundMessageId,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      kind.hashCode ^
+      url.hashCode ^
+      targetId.hashCode ^
+      truncated.hashCode ^
+      provenance.hashCode ^
+      attachedAfterRunId.hashCode ^
+      attachedAfterMessageId.hashCode ^
+      boundInputId.hashCode ^
+      boundMessageId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ViewSourceSummary &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          kind == other.kind &&
+          url == other.url &&
+          targetId == other.targetId &&
+          truncated == other.truncated &&
+          provenance == other.provenance &&
+          attachedAfterRunId == other.attachedAfterRunId &&
+          attachedAfterMessageId == other.attachedAfterMessageId &&
+          boundInputId == other.boundInputId &&
+          boundMessageId == other.boundMessageId;
 }
 
 class ViewTaskPlan {
@@ -1953,6 +2513,49 @@ class ViewTurn {
           operations == other.operations;
 }
 
+class ViewTurnContext {
+  final String id;
+  final String requestMessageId;
+  final ViewMessage? request;
+  final bool ownershipComplete;
+  final List<String> visibleMessageIds;
+  final List<String> runIds;
+  final List<ViewOperationBinding> operations;
+
+  const ViewTurnContext({
+    required this.id,
+    required this.requestMessageId,
+    this.request,
+    required this.ownershipComplete,
+    required this.visibleMessageIds,
+    required this.runIds,
+    required this.operations,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      requestMessageId.hashCode ^
+      request.hashCode ^
+      ownershipComplete.hashCode ^
+      visibleMessageIds.hashCode ^
+      runIds.hashCode ^
+      operations.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ViewTurnContext &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          requestMessageId == other.requestMessageId &&
+          request == other.request &&
+          ownershipComplete == other.ownershipComplete &&
+          visibleMessageIds == other.visibleMessageIds &&
+          runIds == other.runIds &&
+          operations == other.operations;
+}
+
 class ViewUndoTicket {
   final ViewOperationStore owner;
   final String token;
@@ -1979,4 +2582,67 @@ class ViewUndoTicket {
           token == other.token &&
           digest == other.digest &&
           operationIds == other.operationIds;
+}
+
+class ViewUsageSummary {
+  final int recordedRuns;
+  final int continuedRuns;
+  final int modelRequests;
+  final ViewOutcomeCounts requestOutcomes;
+  final int toolAttempts;
+  final ViewOutcomeCounts toolOutcomes;
+  final int reportedUsageRequests;
+  final int completedUsageRequests;
+  final int cachedInputReportedRequests;
+  final int reasoningReportedRequests;
+  final ViewTokenUsage? reportedTokens;
+  final int settledDurationMs;
+
+  const ViewUsageSummary({
+    required this.recordedRuns,
+    required this.continuedRuns,
+    required this.modelRequests,
+    required this.requestOutcomes,
+    required this.toolAttempts,
+    required this.toolOutcomes,
+    required this.reportedUsageRequests,
+    required this.completedUsageRequests,
+    required this.cachedInputReportedRequests,
+    required this.reasoningReportedRequests,
+    this.reportedTokens,
+    required this.settledDurationMs,
+  });
+
+  @override
+  int get hashCode =>
+      recordedRuns.hashCode ^
+      continuedRuns.hashCode ^
+      modelRequests.hashCode ^
+      requestOutcomes.hashCode ^
+      toolAttempts.hashCode ^
+      toolOutcomes.hashCode ^
+      reportedUsageRequests.hashCode ^
+      completedUsageRequests.hashCode ^
+      cachedInputReportedRequests.hashCode ^
+      reasoningReportedRequests.hashCode ^
+      reportedTokens.hashCode ^
+      settledDurationMs.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ViewUsageSummary &&
+          runtimeType == other.runtimeType &&
+          recordedRuns == other.recordedRuns &&
+          continuedRuns == other.continuedRuns &&
+          modelRequests == other.modelRequests &&
+          requestOutcomes == other.requestOutcomes &&
+          toolAttempts == other.toolAttempts &&
+          toolOutcomes == other.toolOutcomes &&
+          reportedUsageRequests == other.reportedUsageRequests &&
+          completedUsageRequests == other.completedUsageRequests &&
+          cachedInputReportedRequests == other.cachedInputReportedRequests &&
+          reasoningReportedRequests == other.reasoningReportedRequests &&
+          reportedTokens == other.reportedTokens &&
+          settledDurationMs == other.settledDurationMs;
 }

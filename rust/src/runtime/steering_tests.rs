@@ -282,8 +282,8 @@ async fn stopped_steering_keeps_its_turn_and_rejects_a_changed_target() {
                 .unwrap();
             tokio::time::timeout(std::time::Duration::from_secs(5), async {
                 loop {
-                    if let RuntimeEvent::Snapshot { snapshot } = events.recv().await.unwrap() {
-                        if snapshot.conversation.status == ConversationStatus::WaitingUser {
+                    if let RuntimeEvent::Snapshot { state } = events.recv().await.unwrap() {
+                        if state.conversation.status == ConversationStatus::WaitingUser {
                             break;
                         }
                     }

@@ -461,3 +461,202 @@ AgentConversation conversationSummaryFromRust(
   updatedAt: _date(value.updatedAt.toInt()),
   status: ConversationStatus.values.byName(value.status.name),
 );
+
+Map<String, Object?> usageSummaryFromRust(native.ViewUsageSummary value) {
+  Map<String, int> outcomes(native.ViewOutcomeCounts counts) => {
+    'pending': counts.pending,
+    'notStarted': counts.notStarted,
+    'completed': counts.completed,
+    'failed': counts.failed,
+    'cancelled': counts.cancelled,
+    'unknown': counts.unknown,
+  };
+  final tokens = tokenUsageFromRust(value.reportedTokens);
+  return Map.unmodifiable({
+    'coverage': 'recordedRunsOnly',
+    'recordedRuns': value.recordedRuns,
+    'continuedRuns': value.continuedRuns,
+    'automaticRetries': 0,
+    'modelRequests': value.modelRequests,
+    'requestOutcomes': outcomes(value.requestOutcomes),
+    'toolAttempts': value.toolAttempts,
+    'toolOutcomes': outcomes(value.toolOutcomes),
+    'reportedUsageRequests': value.reportedUsageRequests,
+    'completedUsageRequests': value.completedUsageRequests,
+    'unreportedUsageRequests':
+        value.modelRequests - value.reportedUsageRequests,
+    'tokenUsageStatus': value.recordedRuns == 0
+        ? 'unavailable'
+        : value.modelRequests == 0
+        ? 'notRequested'
+        : value.reportedUsageRequests == 0
+        ? 'unreported'
+        : value.completedUsageRequests == value.modelRequests
+        ? 'reported'
+        : 'partial',
+    'reportedTokens': tokens == null
+        ? null
+        : {
+            ...tokens.toJson(),
+            'cachedInputReportedRequests': value.cachedInputReportedRequests,
+            'reasoningReportedRequests': value.reasoningReportedRequests,
+          },
+    'cost': null,
+    'costStatus': 'unknown',
+  });
+}
+
+ConversationRunUsage runSummaryFromRust(native.ViewRunSummary value) =>
+    ConversationRunUsage(
+      id: value.id,
+      startedAt: _date(value.startedAt),
+      settledAt: value.settledAt == null ? null : _date(value.settledAt!),
+      kind: ConversationRunKind.values.byName(value.kind.name),
+      status: ConversationRunStatus.values.byName(value.status.name),
+      model: value.model?.modelId,
+      protocol: value.model?.protocol,
+      reasoningEffort: value.model?.reasoningEffort == null
+          ? null
+          : AgentReasoningEffort.values.byName(value.model!.reasoningEffort!),
+      continuedFromRunId: value.continuedFromRunId,
+      usageSummary: usageSummaryFromRust(value.usage),
+    );
+
+ConversationReplyRevision replyRevisionFromRust(
+  native.ViewReplyRevision value,
+) => ConversationReplyRevision(
+  id: value.id,
+  messageId: value.messageId,
+  runId: value.runId,
+  createdAt: _date(value.createdAt),
+  text: value.text,
+  modelSelection: modelSelectionFromRust(value.model),
+  providerProtocol: value.providerProtocol == null
+      ? null
+      : AgentModelProtocol.values.byName(value.providerProtocol!),
+);
+
+ConversationSource sourceSummaryFromRust(native.ViewSourceSummary value) =>
+    sourceFromRust(
+      native.ViewConversationSource(
+        id: value.id,
+        kind: value.kind,
+        text: '',
+        url: value.url,
+        targetId: value.targetId,
+        truncated: value.truncated,
+        provenance: value.provenance,
+        attachedAfterRunId: value.attachedAfterRunId,
+        attachedAfterMessageId: value.attachedAfterMessageId,
+        boundInputId: value.boundInputId,
+        boundMessageId: value.boundMessageId,
+      ),
+    );
+
+AgentConversation conversationStateFromRust(
+  native.ViewConversationState state, {
+  native.ViewConversationPage? page,
+  native.ViewInteractionDetails? interaction,
+}) {
+  final value = state.conversation;
+  final messages =
+      page?.messages.map(conversationMessageFromRust).toList() ??
+      const <ConversationMessage>[];
+  final runs = <String, ConversationRunUsage>{
+    for (final run in page?.runs ?? <native.ViewRunSummary>[])
+      run.id: runSummaryFromRust(run),
+    if (state.currentRun != null)
+      state.currentRun!.id: runSummaryFromRust(state.currentRun!),
+  };
+  return AgentConversation(
+    id: value.id,
+    title: value.title,
+    titleWasEdited: value.titleWasEdited,
+    pinned: value.pinned,
+    archived: value.archived,
+    createdAt: _date(value.createdAt),
+    updatedAt: _date(value.updatedAt),
+    mode: AgentPermissionMode.values.byName(value.mode.name),
+    status: ConversationStatus.values.byName(value.status.name),
+    draft: value.draft,
+    connectionFingerprint: value.connectionFingerprint,
+    runId: value.runId,
+    modelSelection: modelSelectionFromRust(value.modelSelection),
+    titleGeneration: titleFromRust(value.titleGeneration),
+    isViewProjection: true,
+    usageSummary: usageSummaryFromRust(state.usage),
+    pendingRedoExists: state.pendingRedos.isNotEmpty,
+    executionHistoryStart: (value.executionHistoryStart - (page?.start ?? 0))
+        .clamp(0, messages.length),
+    messages: messages,
+    runs: runs.values,
+    sources: page?.sources.map(sourceSummaryFromRust) ?? const [],
+    attachments: page?.attachments.map(attachmentFromRust) ?? const [],
+    draftAttachmentIds: value.draftAttachmentIds,
+    draftReferences: value.draftReferences.map(referenceFromRust),
+    turns: [
+      for (final turn in page?.turns ?? <native.ViewTurnContext>[])
+        ConversationTurn(
+          id: turn.id,
+          requestMessageId: turn.requestMessageId,
+          ownershipComplete: turn.ownershipComplete,
+          messageIds: [
+            turn.requestMessageId,
+            ...turn.visibleMessageIds.where(
+              (id) => id != turn.requestMessageId,
+            ),
+          ],
+          runIds: turn.runIds,
+          operations: turn.operations.map(
+            (operation) => ConversationOperationBinding(
+              operationId: operation.operationId,
+              store: ConversationOperationStore.values.byName(
+                operation.store == native.ViewOperationStore.external_
+                    ? 'external'
+                    : operation.store.name,
+              ),
+              runId: operation.runId,
+              toolCallId: operation.toolCallId,
+            ),
+          ),
+        ),
+    ],
+    pendingQuestion:
+        state.question != null &&
+            state.question!.id == interaction?.question?.id &&
+            state.question!.status == interaction?.question?.status &&
+            !state.question!.consumed
+        ? questionFromRust(interaction?.question)
+        : null,
+    redoBatches:
+        interaction?.pendingRedos
+            .where(
+              (batch) => state.pendingRedos.any(
+                (summary) =>
+                    summary.id == batch.id && summary.phase == batch.phase,
+              ),
+            )
+            .map((batch) => redoFromRust(batch, value.id)) ??
+        const [],
+    queuedInputs: state.queuedInputs.map(
+      (input) => ConversationQueuedInput(
+        id: input.id,
+        text: input.text,
+        createdAt: _date(input.createdAt),
+        mode: ConversationQueuedInputMode.values.byName(input.mode.name),
+        modelSelection: modelSelectionFromRust(input.modelSelection),
+        attachmentIds: input.attachmentIds,
+        contextReferences: input.contextReferences.map(referenceFromRust),
+      ),
+    ),
+    queuedControls: state.queuedControls.map(
+      (control) => ConversationControlCommand(
+        id: control.id,
+        kind: ConversationControlKind.values.byName(control.kind.name),
+        createdAt: _date(control.createdAt),
+        status: ConversationControlStatus.values.byName(control.status.name),
+        errorMessage: control.errorMessage,
+      ),
+    ),
+  );
+}

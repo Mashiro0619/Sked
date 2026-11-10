@@ -111,7 +111,7 @@ void main() {
       readSettings: () => settings,
       readApiKey: (_) async => _key,
       onOpenSettings: () {},
-      onSnapshot: (snapshot) => titles.add(snapshot.conversation.title),
+      onState: (snapshot) => titles.add(snapshot.conversation.title),
     );
     await core.client.ensureInitialized();
     await delegate.loadConversation(_id);
@@ -147,7 +147,7 @@ void main() {
   Future<void> refreshFromNavigation() async {
     final reading = Completer<void>();
     core.beforeQuery = (query) async {
-      if (query.kind == QueryKind.readConversation && !reading.isCompleted) {
+      if (query.kind == QueryKind.conversationState && !reading.isCompleted) {
         reading.complete();
       }
     };

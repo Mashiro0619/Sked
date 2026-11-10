@@ -120,6 +120,7 @@ pub struct CommandResult {
     pub knowledge_receipt: Option<ViewKnowledgeReceipt>,
     pub created: Option<bool>,
     pub selection: Option<ConversationSelection>,
+    pub state: Option<ViewConversationState>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -141,6 +142,18 @@ pub enum QueryKind {
     CanContinue,
     Operation,
     RestoreMarker,
+    ConversationState,
+    ConversationPage,
+    Message,
+    HistoryVersions,
+    HistoryVersionPage,
+    ReplyRevision,
+    Source,
+    Run,
+    HistoryRun,
+    InteractionDetails,
+    ReplyRevisions,
+    BusinessContext,
 }
 
 #[derive(Debug, Clone)]
@@ -158,6 +171,9 @@ pub struct AgentQuery {
     pub conversation_ids: Option<Vec<String>>,
     pub knowledge_keys: Option<Vec<String>>,
     pub attachment: Option<ViewAttachmentMetadata>,
+    pub before_message_id: Option<String>,
+    pub from_message_id: Option<String>,
+    pub version_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -181,6 +197,17 @@ pub struct QueryResult {
     pub presentation: Option<RunPresentation>,
     pub selection: Option<ConversationSelection>,
     pub knowledge_catalog: Option<KnowledgeCatalog>,
+    pub state: Option<ViewConversationState>,
+    pub page: Option<ViewConversationPage>,
+    pub history_page: Option<ViewHistoryMessagePage>,
+    pub history_versions: Vec<ViewHistoryVersionSummary>,
+    pub reply_revisions: Vec<ViewReplyRevisionSummary>,
+    pub reply_revision: Option<ViewReplyRevision>,
+    pub source: Option<ViewConversationSource>,
+    pub run: Option<ViewRun>,
+    pub sources: Vec<ViewConversationSource>,
+    pub interaction_details: Option<ViewInteractionDetails>,
+    pub message: Option<ViewMessage>,
 }
 
 #[derive(Debug, Clone)]
@@ -343,6 +370,7 @@ pub struct AgentEvent {
     pub run_id: Option<String>,
     pub request_id: Option<String>,
     pub snapshot: Option<ViewConversationSnapshot>,
+    pub state: Option<ViewConversationState>,
     pub text: Option<String>,
     pub progress: Option<AgentHostProgress>,
     pub usage: Option<ViewTokenUsage>,
@@ -362,6 +390,7 @@ impl AgentEvent {
             run_id: None,
             request_id: None,
             snapshot: None,
+            state: None,
             text: None,
             progress: None,
             usage: None,

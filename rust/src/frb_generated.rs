@@ -2128,6 +2128,8 @@ impl SseDecode for crate::api::contracts::AgentEvent {
         let mut var_requestId = <Option<String>>::sse_decode(deserializer);
         let mut var_snapshot =
             <Option<crate::api::models::ViewConversationSnapshot>>::sse_decode(deserializer);
+        let mut var_state =
+            <Option<crate::api::models::ViewConversationState>>::sse_decode(deserializer);
         let mut var_text = <Option<String>>::sse_decode(deserializer);
         let mut var_progress =
             <Option<crate::api::contracts::AgentHostProgress>>::sse_decode(deserializer);
@@ -2148,6 +2150,7 @@ impl SseDecode for crate::api::contracts::AgentEvent {
             run_id: var_runId,
             request_id: var_requestId,
             snapshot: var_snapshot,
+            state: var_state,
             text: var_text,
             progress: var_progress,
             usage: var_usage,
@@ -2195,6 +2198,9 @@ impl SseDecode for crate::api::contracts::AgentQuery {
         let mut var_knowledgeKeys = <Option<Vec<String>>>::sse_decode(deserializer);
         let mut var_attachment =
             <Option<crate::api::models::ViewAttachmentMetadata>>::sse_decode(deserializer);
+        let mut var_beforeMessageId = <Option<String>>::sse_decode(deserializer);
+        let mut var_fromMessageId = <Option<String>>::sse_decode(deserializer);
+        let mut var_versionId = <Option<String>>::sse_decode(deserializer);
         return crate::api::contracts::AgentQuery {
             kind: var_kind,
             conversation_id: var_conversationId,
@@ -2209,6 +2215,9 @@ impl SseDecode for crate::api::contracts::AgentQuery {
             conversation_ids: var_conversationIds,
             knowledge_keys: var_knowledgeKeys,
             attachment: var_attachment,
+            before_message_id: var_beforeMessageId,
+            from_message_id: var_fromMessageId,
+            version_id: var_versionId,
         };
     }
 }
@@ -2284,12 +2293,15 @@ impl SseDecode for crate::api::contracts::CommandResult {
             <Option<crate::api::management_contracts::ConversationSelection>>::sse_decode(
                 deserializer,
             );
+        let mut var_state =
+            <Option<crate::api::models::ViewConversationState>>::sse_decode(deserializer);
         return crate::api::contracts::CommandResult {
             id: var_id,
             snapshot: var_snapshot,
             knowledge_receipt: var_knowledgeReceipt,
             created: var_created,
             selection: var_selection,
+            state: var_state,
         };
     }
 }
@@ -2891,6 +2903,20 @@ impl SseDecode for Vec<crate::api::models::ViewHistoryVersion> {
     }
 }
 
+impl SseDecode for Vec<crate::api::models::ViewHistoryVersionSummary> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::models::ViewHistoryVersionSummary>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::api::models::ViewKnowledgeChange> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -3001,6 +3027,20 @@ impl SseDecode for Vec<crate::api::models::ViewOperationStore> {
     }
 }
 
+impl SseDecode for Vec<crate::api::models::ViewOperationSummary> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::models::ViewOperationSummary>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::api::models::ViewPlanStep> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -3097,6 +3137,20 @@ impl SseDecode for Vec<crate::api::models::ViewRedoBatch> {
     }
 }
 
+impl SseDecode for Vec<crate::api::models::ViewRedoSummary> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::models::ViewRedoSummary>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::api::models::ViewReplyRevision> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -3104,6 +3158,20 @@ impl SseDecode for Vec<crate::api::models::ViewReplyRevision> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<crate::api::models::ViewReplyRevision>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::models::ViewReplyRevisionSummary> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::models::ViewReplyRevisionSummary>::sse_decode(
                 deserializer,
             ));
         }
@@ -3151,6 +3219,34 @@ impl SseDecode for Vec<crate::api::models::ViewRun> {
     }
 }
 
+impl SseDecode for Vec<crate::api::models::ViewRunSummary> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::models::ViewRunSummary>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::models::ViewSourceSummary> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::models::ViewSourceSummary>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::api::models::ViewToolCall> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -3184,6 +3280,20 @@ impl SseDecode for Vec<crate::api::models::ViewTurn> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<crate::api::models::ViewTurn>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::models::ViewTurnContext> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::models::ViewTurnContext>::sse_decode(
+                deserializer,
+            ));
         }
         return ans_;
     }
@@ -3515,6 +3625,19 @@ impl SseDecode for Option<crate::api::models::ViewContextCheckpoint> {
     }
 }
 
+impl SseDecode for Option<crate::api::models::ViewConversationPage> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::models::ViewConversationPage>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<crate::api::models::ViewConversationSnapshot> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -3533,6 +3656,45 @@ impl SseDecode for Option<crate::api::models::ViewConversationSource> {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         if (<bool>::sse_decode(deserializer)) {
             return Some(<crate::api::models::ViewConversationSource>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::models::ViewConversationState> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::models::ViewConversationState>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::models::ViewHistoryMessagePage> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::models::ViewHistoryMessagePage>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::models::ViewInteractionDetails> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::models::ViewInteractionDetails>::sse_decode(
                 deserializer,
             ));
         } else {
@@ -3600,6 +3762,17 @@ impl SseDecode for Option<crate::api::models::ViewKnowledgeState> {
             return Some(<crate::api::models::ViewKnowledgeState>::sse_decode(
                 deserializer,
             ));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::models::ViewMessage> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::models::ViewMessage>::sse_decode(deserializer));
         } else {
             return None;
         }
@@ -3697,11 +3870,74 @@ impl SseDecode for Option<crate::api::models::ViewQuestionRequest> {
     }
 }
 
+impl SseDecode for Option<crate::api::models::ViewQuestionSummary> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::models::ViewQuestionSummary>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::models::ViewReplyRevision> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::models::ViewReplyRevision>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::models::ViewRequestUsage> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::models::ViewRequestUsage>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<crate::api::models::ViewResourceReference> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         if (<bool>::sse_decode(deserializer)) {
             return Some(<crate::api::models::ViewResourceReference>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::models::ViewRun> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::models::ViewRun>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::models::ViewRunSummary> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::models::ViewRunSummary>::sse_decode(
                 deserializer,
             ));
         } else {
@@ -3869,6 +4105,18 @@ impl SseDecode for crate::api::contracts::QueryKind {
             14 => crate::api::contracts::QueryKind::CanContinue,
             15 => crate::api::contracts::QueryKind::Operation,
             16 => crate::api::contracts::QueryKind::RestoreMarker,
+            17 => crate::api::contracts::QueryKind::ConversationState,
+            18 => crate::api::contracts::QueryKind::ConversationPage,
+            19 => crate::api::contracts::QueryKind::Message,
+            20 => crate::api::contracts::QueryKind::HistoryVersions,
+            21 => crate::api::contracts::QueryKind::HistoryVersionPage,
+            22 => crate::api::contracts::QueryKind::ReplyRevision,
+            23 => crate::api::contracts::QueryKind::Source,
+            24 => crate::api::contracts::QueryKind::Run,
+            25 => crate::api::contracts::QueryKind::HistoryRun,
+            26 => crate::api::contracts::QueryKind::InteractionDetails,
+            27 => crate::api::contracts::QueryKind::ReplyRevisions,
+            28 => crate::api::contracts::QueryKind::BusinessContext,
             _ => unreachable!("Invalid variant for QueryKind: {}", inner),
         };
     }
@@ -3909,6 +4157,26 @@ impl SseDecode for crate::api::contracts::QueryResult {
             );
         let mut var_knowledgeCatalog =
             <Option<crate::api::management_contracts::KnowledgeCatalog>>::sse_decode(deserializer);
+        let mut var_state =
+            <Option<crate::api::models::ViewConversationState>>::sse_decode(deserializer);
+        let mut var_page =
+            <Option<crate::api::models::ViewConversationPage>>::sse_decode(deserializer);
+        let mut var_historyPage =
+            <Option<crate::api::models::ViewHistoryMessagePage>>::sse_decode(deserializer);
+        let mut var_historyVersions =
+            <Vec<crate::api::models::ViewHistoryVersionSummary>>::sse_decode(deserializer);
+        let mut var_replyRevisions =
+            <Vec<crate::api::models::ViewReplyRevisionSummary>>::sse_decode(deserializer);
+        let mut var_replyRevision =
+            <Option<crate::api::models::ViewReplyRevision>>::sse_decode(deserializer);
+        let mut var_source =
+            <Option<crate::api::models::ViewConversationSource>>::sse_decode(deserializer);
+        let mut var_run = <Option<crate::api::models::ViewRun>>::sse_decode(deserializer);
+        let mut var_sources =
+            <Vec<crate::api::models::ViewConversationSource>>::sse_decode(deserializer);
+        let mut var_interactionDetails =
+            <Option<crate::api::models::ViewInteractionDetails>>::sse_decode(deserializer);
+        let mut var_message = <Option<crate::api::models::ViewMessage>>::sse_decode(deserializer);
         return crate::api::contracts::QueryResult {
             conversations: var_conversations,
             snapshot: var_snapshot,
@@ -3929,6 +4197,17 @@ impl SseDecode for crate::api::contracts::QueryResult {
             presentation: var_presentation,
             selection: var_selection,
             knowledge_catalog: var_knowledgeCatalog,
+            state: var_state,
+            page: var_page,
+            history_page: var_historyPage,
+            history_versions: var_historyVersions,
+            reply_revisions: var_replyRevisions,
+            reply_revision: var_replyRevision,
+            source: var_source,
+            run: var_run,
+            sources: var_sources,
+            interaction_details: var_interactionDetails,
+            message: var_message,
         };
     }
 }
@@ -4323,6 +4602,45 @@ impl SseDecode for crate::api::management_contracts::ViewConversationHandoff {
     }
 }
 
+impl SseDecode for crate::api::models::ViewConversationPage {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_sequence = <u64>::sse_decode(deserializer);
+        let mut var_total = <usize>::sse_decode(deserializer);
+        let mut var_start = <usize>::sse_decode(deserializer);
+        let mut var_nextOffset = <Option<usize>>::sse_decode(deserializer);
+        let mut var_messages = <Vec<crate::api::models::ViewMessage>>::sse_decode(deserializer);
+        let mut var_turns = <Vec<crate::api::models::ViewTurnContext>>::sse_decode(deserializer);
+        let mut var_runs = <Vec<crate::api::models::ViewRunSummary>>::sse_decode(deserializer);
+        let mut var_operations =
+            <Vec<crate::api::models::ViewOperationSummary>>::sse_decode(deserializer);
+        let mut var_attachments =
+            <Vec<crate::api::models::ViewAttachmentMetadata>>::sse_decode(deserializer);
+        let mut var_sources =
+            <Vec<crate::api::models::ViewSourceSummary>>::sse_decode(deserializer);
+        let mut var_replyRevisions =
+            <Vec<crate::api::models::ViewReplyRevisionSummary>>::sse_decode(deserializer);
+        let mut var_handoffs =
+            <Vec<crate::api::management_contracts::ViewConversationHandoff>>::sse_decode(
+                deserializer,
+            );
+        return crate::api::models::ViewConversationPage {
+            sequence: var_sequence,
+            total: var_total,
+            start: var_start,
+            next_offset: var_nextOffset,
+            messages: var_messages,
+            turns: var_turns,
+            runs: var_runs,
+            operations: var_operations,
+            attachments: var_attachments,
+            sources: var_sources,
+            reply_revisions: var_replyRevisions,
+            handoffs: var_handoffs,
+        };
+    }
+}
+
 impl SseDecode for crate::api::models::ViewConversationSnapshot {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -4423,6 +4741,60 @@ impl SseDecode for crate::api::models::ViewConversationSource {
     }
 }
 
+impl SseDecode for crate::api::models::ViewConversationState {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_conversation = <crate::api::models::ViewConversation>::sse_decode(deserializer);
+        let mut var_sequence = <u64>::sse_decode(deserializer);
+        let mut var_messageCount = <usize>::sse_decode(deserializer);
+        let mut var_sourceCount = <usize>::sse_decode(deserializer);
+        let mut var_hasExecutionUserInput = <bool>::sse_decode(deserializer);
+        let mut var_managementContextDigest = <String>::sse_decode(deserializer);
+        let mut var_lastUserMessageId = <Option<String>>::sse_decode(deserializer);
+        let mut var_currentRun =
+            <Option<crate::api::models::ViewRunSummary>>::sse_decode(deserializer);
+        let mut var_queuedInputs =
+            <Vec<crate::api::models::ViewQueuedInput>>::sse_decode(deserializer);
+        let mut var_queuedControls =
+            <Vec<crate::api::models::ViewQueuedControl>>::sse_decode(deserializer);
+        let mut var_pendingOperations =
+            <Vec<crate::api::models::ViewOperationSummary>>::sse_decode(deserializer);
+        let mut var_question =
+            <Option<crate::api::models::ViewQuestionSummary>>::sse_decode(deserializer);
+        let mut var_planRevision = <Option<u64>>::sse_decode(deserializer);
+        let mut var_pendingRedos =
+            <Vec<crate::api::models::ViewRedoSummary>>::sse_decode(deserializer);
+        let mut var_historyVersionCount = <usize>::sse_decode(deserializer);
+        let mut var_replyRevisionCount = <usize>::sse_decode(deserializer);
+        let mut var_lastCommittedAssistantId = <Option<String>>::sse_decode(deserializer);
+        let mut var_lastCommittedAssistantRevision = <u64>::sse_decode(deserializer);
+        let mut var_idleCanContinue = <bool>::sse_decode(deserializer);
+        let mut var_usage = <crate::api::models::ViewUsageSummary>::sse_decode(deserializer);
+        return crate::api::models::ViewConversationState {
+            conversation: var_conversation,
+            sequence: var_sequence,
+            message_count: var_messageCount,
+            source_count: var_sourceCount,
+            has_execution_user_input: var_hasExecutionUserInput,
+            management_context_digest: var_managementContextDigest,
+            last_user_message_id: var_lastUserMessageId,
+            current_run: var_currentRun,
+            queued_inputs: var_queuedInputs,
+            queued_controls: var_queuedControls,
+            pending_operations: var_pendingOperations,
+            question: var_question,
+            plan_revision: var_planRevision,
+            pending_redos: var_pendingRedos,
+            history_version_count: var_historyVersionCount,
+            reply_revision_count: var_replyRevisionCount,
+            last_committed_assistant_id: var_lastCommittedAssistantId,
+            last_committed_assistant_revision: var_lastCommittedAssistantRevision,
+            idle_can_continue: var_idleCanContinue,
+            usage: var_usage,
+        };
+    }
+}
+
 impl SseDecode for crate::api::models::ViewConversationStatus {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -4469,6 +4841,19 @@ impl SseDecode for crate::api::models::ViewConversationSummary {
     }
 }
 
+impl SseDecode for crate::api::models::ViewHistoryMessagePage {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_version =
+            <crate::api::models::ViewHistoryVersionSummary>::sse_decode(deserializer);
+        let mut var_page = <crate::api::models::ViewConversationPage>::sse_decode(deserializer);
+        return crate::api::models::ViewHistoryMessagePage {
+            version: var_version,
+            page: var_page,
+        };
+    }
+}
+
 impl SseDecode for crate::api::models::ViewHistoryVersion {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -4488,6 +4873,43 @@ impl SseDecode for crate::api::models::ViewHistoryVersion {
             runs: var_runs,
             turns: var_turns,
             provider_history: var_providerHistory,
+        };
+    }
+}
+
+impl SseDecode for crate::api::models::ViewHistoryVersionSummary {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_id = <String>::sse_decode(deserializer);
+        let mut var_batchId = <String>::sse_decode(deserializer);
+        let mut var_createdAt = <i64>::sse_decode(deserializer);
+        let mut var_messageCount = <usize>::sse_decode(deserializer);
+        return crate::api::models::ViewHistoryVersionSummary {
+            id: var_id,
+            batch_id: var_batchId,
+            created_at: var_createdAt,
+            message_count: var_messageCount,
+        };
+    }
+}
+
+impl SseDecode for crate::api::models::ViewInteractionDetails {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_sequence = <u64>::sse_decode(deserializer);
+        let mut var_question =
+            <Option<crate::api::models::ViewQuestionRequest>>::sse_decode(deserializer);
+        let mut var_plan = <Option<crate::api::models::ViewTaskPlan>>::sse_decode(deserializer);
+        let mut var_pendingOperations =
+            <Vec<crate::api::models::ViewOperationRecord>>::sse_decode(deserializer);
+        let mut var_pendingRedos =
+            <Vec<crate::api::models::ViewRedoBatch>>::sse_decode(deserializer);
+        return crate::api::models::ViewInteractionDetails {
+            sequence: var_sequence,
+            question: var_question,
+            plan: var_plan,
+            pending_operations: var_pendingOperations,
+            pending_redos: var_pendingRedos,
         };
     }
 }
@@ -4782,6 +5204,45 @@ impl SseDecode for crate::api::models::ViewOperationStore {
     }
 }
 
+impl SseDecode for crate::api::models::ViewOperationSummary {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_toolCallId = <String>::sse_decode(deserializer);
+        let mut var_toolName = <String>::sse_decode(deserializer);
+        let mut var_runId = <String>::sse_decode(deserializer);
+        let mut var_binding =
+            <Option<crate::api::models::ViewOperationBinding>>::sse_decode(deserializer);
+        let mut var_phase = <crate::api::models::ViewOperationPhase>::sse_decode(deserializer);
+        return crate::api::models::ViewOperationSummary {
+            tool_call_id: var_toolCallId,
+            tool_name: var_toolName,
+            run_id: var_runId,
+            binding: var_binding,
+            phase: var_phase,
+        };
+    }
+}
+
+impl SseDecode for crate::api::models::ViewOutcomeCounts {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_pending = <usize>::sse_decode(deserializer);
+        let mut var_completed = <usize>::sse_decode(deserializer);
+        let mut var_failed = <usize>::sse_decode(deserializer);
+        let mut var_cancelled = <usize>::sse_decode(deserializer);
+        let mut var_unknown = <usize>::sse_decode(deserializer);
+        let mut var_notStarted = <usize>::sse_decode(deserializer);
+        return crate::api::models::ViewOutcomeCounts {
+            pending: var_pending,
+            completed: var_completed,
+            failed: var_failed,
+            cancelled: var_cancelled,
+            unknown: var_unknown,
+            not_started: var_notStarted,
+        };
+    }
+}
+
 impl SseDecode for crate::api::models::ViewPermissionMode {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -4948,6 +5409,26 @@ impl SseDecode for crate::api::models::ViewQuestionStatus {
     }
 }
 
+impl SseDecode for crate::api::models::ViewQuestionSummary {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_id = <String>::sse_decode(deserializer);
+        let mut var_toolCallId = <String>::sse_decode(deserializer);
+        let mut var_runId = <String>::sse_decode(deserializer);
+        let mut var_requestMessageId = <String>::sse_decode(deserializer);
+        let mut var_status = <crate::api::models::ViewQuestionStatus>::sse_decode(deserializer);
+        let mut var_consumed = <bool>::sse_decode(deserializer);
+        return crate::api::models::ViewQuestionSummary {
+            id: var_id,
+            tool_call_id: var_toolCallId,
+            run_id: var_runId,
+            request_message_id: var_requestMessageId,
+            status: var_status,
+            consumed: var_consumed,
+        };
+    }
+}
+
 impl SseDecode for crate::api::models::ViewQueueMode {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -5062,6 +5543,30 @@ impl SseDecode for crate::api::models::ViewRedoPhase {
     }
 }
 
+impl SseDecode for crate::api::models::ViewRedoSummary {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_id = <String>::sse_decode(deserializer);
+        let mut var_sourceTurnId = <String>::sse_decode(deserializer);
+        let mut var_sourceMessageId = <String>::sse_decode(deserializer);
+        let mut var_historyVersionId = <String>::sse_decode(deserializer);
+        let mut var_replayRunId = <String>::sse_decode(deserializer);
+        let mut var_phase = <crate::api::models::ViewRedoPhase>::sse_decode(deserializer);
+        let mut var_hasHistoryVersion = <bool>::sse_decode(deserializer);
+        let mut var_lastError = <Option<String>>::sse_decode(deserializer);
+        return crate::api::models::ViewRedoSummary {
+            id: var_id,
+            source_turn_id: var_sourceTurnId,
+            source_message_id: var_sourceMessageId,
+            history_version_id: var_historyVersionId,
+            replay_run_id: var_replayRunId,
+            phase: var_phase,
+            has_history_version: var_hasHistoryVersion,
+            last_error: var_lastError,
+        };
+    }
+}
+
 impl SseDecode for crate::api::models::ViewReplyRevision {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -5084,6 +5589,27 @@ impl SseDecode for crate::api::models::ViewReplyRevision {
             model: var_model,
             provider_protocol: var_providerProtocol,
             response_items: var_responseItems,
+        };
+    }
+}
+
+impl SseDecode for crate::api::models::ViewReplyRevisionSummary {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_id = <String>::sse_decode(deserializer);
+        let mut var_messageId = <String>::sse_decode(deserializer);
+        let mut var_runId = <String>::sse_decode(deserializer);
+        let mut var_createdAt = <i64>::sse_decode(deserializer);
+        let mut var_model =
+            <Option<crate::api::models::ViewModelSelection>>::sse_decode(deserializer);
+        let mut var_providerProtocol = <Option<String>>::sse_decode(deserializer);
+        return crate::api::models::ViewReplyRevisionSummary {
+            id: var_id,
+            message_id: var_messageId,
+            run_id: var_runId,
+            created_at: var_createdAt,
+            model: var_model,
+            provider_protocol: var_providerProtocol,
         };
     }
 }
@@ -5199,6 +5725,40 @@ impl SseDecode for crate::api::models::ViewRunStatus {
     }
 }
 
+impl SseDecode for crate::api::models::ViewRunSummary {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_id = <String>::sse_decode(deserializer);
+        let mut var_startedAt = <i64>::sse_decode(deserializer);
+        let mut var_settledAt = <Option<i64>>::sse_decode(deserializer);
+        let mut var_kind = <crate::api::models::ViewRunKind>::sse_decode(deserializer);
+        let mut var_status = <crate::api::models::ViewRunStatus>::sse_decode(deserializer);
+        let mut var_model =
+            <Option<crate::api::models::ViewModelSelection>>::sse_decode(deserializer);
+        let mut var_continuedFromRunId = <Option<String>>::sse_decode(deserializer);
+        let mut var_requestCount = <usize>::sse_decode(deserializer);
+        let mut var_toolCount = <usize>::sse_decode(deserializer);
+        let mut var_lastRequest =
+            <Option<crate::api::models::ViewRequestUsage>>::sse_decode(deserializer);
+        let mut var_errorCode = <Option<String>>::sse_decode(deserializer);
+        let mut var_usage = <crate::api::models::ViewUsageSummary>::sse_decode(deserializer);
+        return crate::api::models::ViewRunSummary {
+            id: var_id,
+            started_at: var_startedAt,
+            settled_at: var_settledAt,
+            kind: var_kind,
+            status: var_status,
+            model: var_model,
+            continued_from_run_id: var_continuedFromRunId,
+            request_count: var_requestCount,
+            tool_count: var_toolCount,
+            last_request: var_lastRequest,
+            error_code: var_errorCode,
+            usage: var_usage,
+        };
+    }
+}
+
 impl SseDecode for crate::api::models::ViewSourceProvenance {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -5218,6 +5778,35 @@ impl SseDecode for crate::api::models::ViewSourceProvenance {
             locale_code: var_localeCode,
             revision: var_revision,
             resource_references: var_resourceReferences,
+        };
+    }
+}
+
+impl SseDecode for crate::api::models::ViewSourceSummary {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_id = <String>::sse_decode(deserializer);
+        let mut var_kind = <String>::sse_decode(deserializer);
+        let mut var_url = <Option<String>>::sse_decode(deserializer);
+        let mut var_targetId = <Option<String>>::sse_decode(deserializer);
+        let mut var_truncated = <bool>::sse_decode(deserializer);
+        let mut var_provenance =
+            <Option<crate::api::models::ViewSourceProvenance>>::sse_decode(deserializer);
+        let mut var_attachedAfterRunId = <Option<String>>::sse_decode(deserializer);
+        let mut var_attachedAfterMessageId = <Option<String>>::sse_decode(deserializer);
+        let mut var_boundInputId = <Option<String>>::sse_decode(deserializer);
+        let mut var_boundMessageId = <Option<String>>::sse_decode(deserializer);
+        return crate::api::models::ViewSourceSummary {
+            id: var_id,
+            kind: var_kind,
+            url: var_url,
+            target_id: var_targetId,
+            truncated: var_truncated,
+            provenance: var_provenance,
+            attached_after_run_id: var_attachedAfterRunId,
+            attached_after_message_id: var_attachedAfterMessageId,
+            bound_input_id: var_boundInputId,
+            bound_message_id: var_boundMessageId,
         };
     }
 }
@@ -5336,6 +5925,29 @@ impl SseDecode for crate::api::models::ViewTurn {
     }
 }
 
+impl SseDecode for crate::api::models::ViewTurnContext {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_id = <String>::sse_decode(deserializer);
+        let mut var_requestMessageId = <String>::sse_decode(deserializer);
+        let mut var_request = <Option<crate::api::models::ViewMessage>>::sse_decode(deserializer);
+        let mut var_ownershipComplete = <bool>::sse_decode(deserializer);
+        let mut var_visibleMessageIds = <Vec<String>>::sse_decode(deserializer);
+        let mut var_runIds = <Vec<String>>::sse_decode(deserializer);
+        let mut var_operations =
+            <Vec<crate::api::models::ViewOperationBinding>>::sse_decode(deserializer);
+        return crate::api::models::ViewTurnContext {
+            id: var_id,
+            request_message_id: var_requestMessageId,
+            request: var_request,
+            ownership_complete: var_ownershipComplete,
+            visible_message_ids: var_visibleMessageIds,
+            run_ids: var_runIds,
+            operations: var_operations,
+        };
+    }
+}
+
 impl SseDecode for crate::api::models::ViewUndoTicket {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -5348,6 +5960,41 @@ impl SseDecode for crate::api::models::ViewUndoTicket {
             token: var_token,
             digest: var_digest,
             operation_ids: var_operationIds,
+        };
+    }
+}
+
+impl SseDecode for crate::api::models::ViewUsageSummary {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_recordedRuns = <usize>::sse_decode(deserializer);
+        let mut var_continuedRuns = <usize>::sse_decode(deserializer);
+        let mut var_modelRequests = <usize>::sse_decode(deserializer);
+        let mut var_requestOutcomes =
+            <crate::api::models::ViewOutcomeCounts>::sse_decode(deserializer);
+        let mut var_toolAttempts = <usize>::sse_decode(deserializer);
+        let mut var_toolOutcomes =
+            <crate::api::models::ViewOutcomeCounts>::sse_decode(deserializer);
+        let mut var_reportedUsageRequests = <usize>::sse_decode(deserializer);
+        let mut var_completedUsageRequests = <usize>::sse_decode(deserializer);
+        let mut var_cachedInputReportedRequests = <usize>::sse_decode(deserializer);
+        let mut var_reasoningReportedRequests = <usize>::sse_decode(deserializer);
+        let mut var_reportedTokens =
+            <Option<crate::api::models::ViewTokenUsage>>::sse_decode(deserializer);
+        let mut var_settledDurationMs = <i64>::sse_decode(deserializer);
+        return crate::api::models::ViewUsageSummary {
+            recorded_runs: var_recordedRuns,
+            continued_runs: var_continuedRuns,
+            model_requests: var_modelRequests,
+            request_outcomes: var_requestOutcomes,
+            tool_attempts: var_toolAttempts,
+            tool_outcomes: var_toolOutcomes,
+            reported_usage_requests: var_reportedUsageRequests,
+            completed_usage_requests: var_completedUsageRequests,
+            cached_input_reported_requests: var_cachedInputReportedRequests,
+            reasoning_reported_requests: var_reasoningReportedRequests,
+            reported_tokens: var_reportedTokens,
+            settled_duration_ms: var_settledDurationMs,
         };
     }
 }
@@ -5574,6 +6221,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::contracts::AgentEvent {
             self.run_id.into_into_dart().into_dart(),
             self.request_id.into_into_dart().into_dart(),
             self.snapshot.into_into_dart().into_dart(),
+            self.state.into_into_dart().into_dart(),
             self.text.into_into_dart().into_dart(),
             self.progress.into_into_dart().into_dart(),
             self.usage.into_into_dart().into_dart(),
@@ -5638,6 +6286,9 @@ impl flutter_rust_bridge::IntoDart for crate::api::contracts::AgentQuery {
             self.conversation_ids.into_into_dart().into_dart(),
             self.knowledge_keys.into_into_dart().into_dart(),
             self.attachment.into_into_dart().into_dart(),
+            self.before_message_id.into_into_dart().into_dart(),
+            self.from_message_id.into_into_dart().into_dart(),
+            self.version_id.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -5722,6 +6373,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::contracts::CommandResult {
             self.knowledge_receipt.into_into_dart().into_dart(),
             self.created.into_into_dart().into_dart(),
             self.selection.into_into_dart().into_dart(),
+            self.state.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -6247,6 +6899,18 @@ impl flutter_rust_bridge::IntoDart for crate::api::contracts::QueryKind {
             Self::CanContinue => 14.into_dart(),
             Self::Operation => 15.into_dart(),
             Self::RestoreMarker => 16.into_dart(),
+            Self::ConversationState => 17.into_dart(),
+            Self::ConversationPage => 18.into_dart(),
+            Self::Message => 19.into_dart(),
+            Self::HistoryVersions => 20.into_dart(),
+            Self::HistoryVersionPage => 21.into_dart(),
+            Self::ReplyRevision => 22.into_dart(),
+            Self::Source => 23.into_dart(),
+            Self::Run => 24.into_dart(),
+            Self::HistoryRun => 25.into_dart(),
+            Self::InteractionDetails => 26.into_dart(),
+            Self::ReplyRevisions => 27.into_dart(),
+            Self::BusinessContext => 28.into_dart(),
             _ => unreachable!(),
         }
     }
@@ -6285,6 +6949,17 @@ impl flutter_rust_bridge::IntoDart for crate::api::contracts::QueryResult {
             self.presentation.into_into_dart().into_dart(),
             self.selection.into_into_dart().into_dart(),
             self.knowledge_catalog.into_into_dart().into_dart(),
+            self.state.into_into_dart().into_dart(),
+            self.page.into_into_dart().into_dart(),
+            self.history_page.into_into_dart().into_dart(),
+            self.history_versions.into_into_dart().into_dart(),
+            self.reply_revisions.into_into_dart().into_dart(),
+            self.reply_revision.into_into_dart().into_dart(),
+            self.source.into_into_dart().into_dart(),
+            self.run.into_into_dart().into_dart(),
+            self.sources.into_into_dart().into_dart(),
+            self.interaction_details.into_into_dart().into_dart(),
+            self.message.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -6679,6 +7354,37 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::management_contracts::ViewCon
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::models::ViewConversationPage {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.sequence.into_into_dart().into_dart(),
+            self.total.into_into_dart().into_dart(),
+            self.start.into_into_dart().into_dart(),
+            self.next_offset.into_into_dart().into_dart(),
+            self.messages.into_into_dart().into_dart(),
+            self.turns.into_into_dart().into_dart(),
+            self.runs.into_into_dart().into_dart(),
+            self.operations.into_into_dart().into_dart(),
+            self.attachments.into_into_dart().into_dart(),
+            self.sources.into_into_dart().into_dart(),
+            self.reply_revisions.into_into_dart().into_dart(),
+            self.handoffs.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::models::ViewConversationPage
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewConversationPage>
+    for crate::api::models::ViewConversationPage
+{
+    fn into_into_dart(self) -> crate::api::models::ViewConversationPage {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::models::ViewConversationSnapshot {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -6749,6 +7455,49 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewConversationSourc
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::models::ViewConversationState {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.conversation.into_into_dart().into_dart(),
+            self.sequence.into_into_dart().into_dart(),
+            self.message_count.into_into_dart().into_dart(),
+            self.source_count.into_into_dart().into_dart(),
+            self.has_execution_user_input.into_into_dart().into_dart(),
+            self.management_context_digest.into_into_dart().into_dart(),
+            self.last_user_message_id.into_into_dart().into_dart(),
+            self.current_run.into_into_dart().into_dart(),
+            self.queued_inputs.into_into_dart().into_dart(),
+            self.queued_controls.into_into_dart().into_dart(),
+            self.pending_operations.into_into_dart().into_dart(),
+            self.question.into_into_dart().into_dart(),
+            self.plan_revision.into_into_dart().into_dart(),
+            self.pending_redos.into_into_dart().into_dart(),
+            self.history_version_count.into_into_dart().into_dart(),
+            self.reply_revision_count.into_into_dart().into_dart(),
+            self.last_committed_assistant_id
+                .into_into_dart()
+                .into_dart(),
+            self.last_committed_assistant_revision
+                .into_into_dart()
+                .into_dart(),
+            self.idle_can_continue.into_into_dart().into_dart(),
+            self.usage.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::models::ViewConversationState
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewConversationState>
+    for crate::api::models::ViewConversationState
+{
+    fn into_into_dart(self) -> crate::api::models::ViewConversationState {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::models::ViewConversationStatus {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
@@ -6804,6 +7553,27 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewConversationSumma
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::models::ViewHistoryMessagePage {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.version.into_into_dart().into_dart(),
+            self.page.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::models::ViewHistoryMessagePage
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewHistoryMessagePage>
+    for crate::api::models::ViewHistoryMessagePage
+{
+    fn into_into_dart(self) -> crate::api::models::ViewHistoryMessagePage {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::models::ViewHistoryVersion {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -6826,6 +7596,53 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewHistoryVersion>
     for crate::api::models::ViewHistoryVersion
 {
     fn into_into_dart(self) -> crate::api::models::ViewHistoryVersion {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::models::ViewHistoryVersionSummary {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.id.into_into_dart().into_dart(),
+            self.batch_id.into_into_dart().into_dart(),
+            self.created_at.into_into_dart().into_dart(),
+            self.message_count.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::models::ViewHistoryVersionSummary
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewHistoryVersionSummary>
+    for crate::api::models::ViewHistoryVersionSummary
+{
+    fn into_into_dart(self) -> crate::api::models::ViewHistoryVersionSummary {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::models::ViewInteractionDetails {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.sequence.into_into_dart().into_dart(),
+            self.question.into_into_dart().into_dart(),
+            self.plan.into_into_dart().into_dart(),
+            self.pending_operations.into_into_dart().into_dart(),
+            self.pending_redos.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::models::ViewInteractionDetails
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewInteractionDetails>
+    for crate::api::models::ViewInteractionDetails
+{
+    fn into_into_dart(self) -> crate::api::models::ViewInteractionDetails {
         self
     }
 }
@@ -7183,6 +8000,55 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewOperationStore>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::models::ViewOperationSummary {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.tool_call_id.into_into_dart().into_dart(),
+            self.tool_name.into_into_dart().into_dart(),
+            self.run_id.into_into_dart().into_dart(),
+            self.binding.into_into_dart().into_dart(),
+            self.phase.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::models::ViewOperationSummary
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewOperationSummary>
+    for crate::api::models::ViewOperationSummary
+{
+    fn into_into_dart(self) -> crate::api::models::ViewOperationSummary {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::models::ViewOutcomeCounts {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.pending.into_into_dart().into_dart(),
+            self.completed.into_into_dart().into_dart(),
+            self.failed.into_into_dart().into_dart(),
+            self.cancelled.into_into_dart().into_dart(),
+            self.unknown.into_into_dart().into_dart(),
+            self.not_started.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::models::ViewOutcomeCounts
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewOutcomeCounts>
+    for crate::api::models::ViewOutcomeCounts
+{
+    fn into_into_dart(self) -> crate::api::models::ViewOutcomeCounts {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::models::ViewPermissionMode {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
@@ -7402,6 +8268,31 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewQuestionStatus>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::models::ViewQuestionSummary {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.id.into_into_dart().into_dart(),
+            self.tool_call_id.into_into_dart().into_dart(),
+            self.run_id.into_into_dart().into_dart(),
+            self.request_message_id.into_into_dart().into_dart(),
+            self.status.into_into_dart().into_dart(),
+            self.consumed.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::models::ViewQuestionSummary
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewQuestionSummary>
+    for crate::api::models::ViewQuestionSummary
+{
+    fn into_into_dart(self) -> crate::api::models::ViewQuestionSummary {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::models::ViewQueueMode {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
@@ -7534,6 +8425,33 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewRedoPhase>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::models::ViewRedoSummary {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.id.into_into_dart().into_dart(),
+            self.source_turn_id.into_into_dart().into_dart(),
+            self.source_message_id.into_into_dart().into_dart(),
+            self.history_version_id.into_into_dart().into_dart(),
+            self.replay_run_id.into_into_dart().into_dart(),
+            self.phase.into_into_dart().into_dart(),
+            self.has_history_version.into_into_dart().into_dart(),
+            self.last_error.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::models::ViewRedoSummary
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewRedoSummary>
+    for crate::api::models::ViewRedoSummary
+{
+    fn into_into_dart(self) -> crate::api::models::ViewRedoSummary {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::models::ViewReplyRevision {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -7557,6 +8475,31 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewReplyRevision>
     for crate::api::models::ViewReplyRevision
 {
     fn into_into_dart(self) -> crate::api::models::ViewReplyRevision {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::models::ViewReplyRevisionSummary {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.id.into_into_dart().into_dart(),
+            self.message_id.into_into_dart().into_dart(),
+            self.run_id.into_into_dart().into_dart(),
+            self.created_at.into_into_dart().into_dart(),
+            self.model.into_into_dart().into_dart(),
+            self.provider_protocol.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::models::ViewReplyRevisionSummary
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewReplyRevisionSummary>
+    for crate::api::models::ViewReplyRevisionSummary
+{
+    fn into_into_dart(self) -> crate::api::models::ViewReplyRevisionSummary {
         self
     }
 }
@@ -7703,6 +8646,37 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewRunStatus>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::models::ViewRunSummary {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.id.into_into_dart().into_dart(),
+            self.started_at.into_into_dart().into_dart(),
+            self.settled_at.into_into_dart().into_dart(),
+            self.kind.into_into_dart().into_dart(),
+            self.status.into_into_dart().into_dart(),
+            self.model.into_into_dart().into_dart(),
+            self.continued_from_run_id.into_into_dart().into_dart(),
+            self.request_count.into_into_dart().into_dart(),
+            self.tool_count.into_into_dart().into_dart(),
+            self.last_request.into_into_dart().into_dart(),
+            self.error_code.into_into_dart().into_dart(),
+            self.usage.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::models::ViewRunSummary
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewRunSummary>
+    for crate::api::models::ViewRunSummary
+{
+    fn into_into_dart(self) -> crate::api::models::ViewRunSummary {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::models::ViewSourceProvenance {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -7725,6 +8699,35 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewSourceProvenance>
     for crate::api::models::ViewSourceProvenance
 {
     fn into_into_dart(self) -> crate::api::models::ViewSourceProvenance {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::models::ViewSourceSummary {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.id.into_into_dart().into_dart(),
+            self.kind.into_into_dart().into_dart(),
+            self.url.into_into_dart().into_dart(),
+            self.target_id.into_into_dart().into_dart(),
+            self.truncated.into_into_dart().into_dart(),
+            self.provenance.into_into_dart().into_dart(),
+            self.attached_after_run_id.into_into_dart().into_dart(),
+            self.attached_after_message_id.into_into_dart().into_dart(),
+            self.bound_input_id.into_into_dart().into_dart(),
+            self.bound_message_id.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::models::ViewSourceSummary
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewSourceSummary>
+    for crate::api::models::ViewSourceSummary
+{
+    fn into_into_dart(self) -> crate::api::models::ViewSourceSummary {
         self
     }
 }
@@ -7872,6 +8875,32 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewTurn>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::models::ViewTurnContext {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.id.into_into_dart().into_dart(),
+            self.request_message_id.into_into_dart().into_dart(),
+            self.request.into_into_dart().into_dart(),
+            self.ownership_complete.into_into_dart().into_dart(),
+            self.visible_message_ids.into_into_dart().into_dart(),
+            self.run_ids.into_into_dart().into_dart(),
+            self.operations.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::models::ViewTurnContext
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewTurnContext>
+    for crate::api::models::ViewTurnContext
+{
+    fn into_into_dart(self) -> crate::api::models::ViewTurnContext {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::models::ViewUndoTicket {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -7891,6 +8920,41 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewUndoTicket>
     for crate::api::models::ViewUndoTicket
 {
     fn into_into_dart(self) -> crate::api::models::ViewUndoTicket {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::models::ViewUsageSummary {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.recorded_runs.into_into_dart().into_dart(),
+            self.continued_runs.into_into_dart().into_dart(),
+            self.model_requests.into_into_dart().into_dart(),
+            self.request_outcomes.into_into_dart().into_dart(),
+            self.tool_attempts.into_into_dart().into_dart(),
+            self.tool_outcomes.into_into_dart().into_dart(),
+            self.reported_usage_requests.into_into_dart().into_dart(),
+            self.completed_usage_requests.into_into_dart().into_dart(),
+            self.cached_input_reported_requests
+                .into_into_dart()
+                .into_dart(),
+            self.reasoning_reported_requests
+                .into_into_dart()
+                .into_dart(),
+            self.reported_tokens.into_into_dart().into_dart(),
+            self.settled_duration_ms.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::models::ViewUsageSummary
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewUsageSummary>
+    for crate::api::models::ViewUsageSummary
+{
+    fn into_into_dart(self) -> crate::api::models::ViewUsageSummary {
         self
     }
 }
@@ -8031,6 +9095,7 @@ impl SseEncode for crate::api::contracts::AgentEvent {
             self.snapshot,
             serializer,
         );
+        <Option<crate::api::models::ViewConversationState>>::sse_encode(self.state, serializer);
         <Option<String>>::sse_encode(self.text, serializer);
         <Option<crate::api::contracts::AgentHostProgress>>::sse_encode(self.progress, serializer);
         <Option<crate::api::models::ViewTokenUsage>>::sse_encode(self.usage, serializer);
@@ -8078,6 +9143,9 @@ impl SseEncode for crate::api::contracts::AgentQuery {
             self.attachment,
             serializer,
         );
+        <Option<String>>::sse_encode(self.before_message_id, serializer);
+        <Option<String>>::sse_encode(self.from_message_id, serializer);
+        <Option<String>>::sse_encode(self.version_id, serializer);
     }
 }
 
@@ -8160,6 +9228,7 @@ impl SseEncode for crate::api::contracts::CommandResult {
             self.selection,
             serializer,
         );
+        <Option<crate::api::models::ViewConversationState>>::sse_encode(self.state, serializer);
     }
 }
 
@@ -8635,6 +9704,16 @@ impl SseEncode for Vec<crate::api::models::ViewHistoryVersion> {
     }
 }
 
+impl SseEncode for Vec<crate::api::models::ViewHistoryVersionSummary> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::models::ViewHistoryVersionSummary>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::api::models::ViewKnowledgeChange> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -8715,6 +9794,16 @@ impl SseEncode for Vec<crate::api::models::ViewOperationStore> {
     }
 }
 
+impl SseEncode for Vec<crate::api::models::ViewOperationSummary> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::models::ViewOperationSummary>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::api::models::ViewPlanStep> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -8785,12 +9874,32 @@ impl SseEncode for Vec<crate::api::models::ViewRedoBatch> {
     }
 }
 
+impl SseEncode for Vec<crate::api::models::ViewRedoSummary> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::models::ViewRedoSummary>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::api::models::ViewReplyRevision> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::models::ViewReplyRevision>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::models::ViewReplyRevisionSummary> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::models::ViewReplyRevisionSummary>::sse_encode(item, serializer);
         }
     }
 }
@@ -8825,6 +9934,26 @@ impl SseEncode for Vec<crate::api::models::ViewRun> {
     }
 }
 
+impl SseEncode for Vec<crate::api::models::ViewRunSummary> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::models::ViewRunSummary>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::models::ViewSourceSummary> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::models::ViewSourceSummary>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::api::models::ViewToolCall> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -8851,6 +9980,16 @@ impl SseEncode for Vec<crate::api::models::ViewTurn> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::models::ViewTurn>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::models::ViewTurnContext> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::models::ViewTurnContext>::sse_encode(item, serializer);
         }
     }
 }
@@ -9118,6 +10257,16 @@ impl SseEncode for Option<crate::api::models::ViewContextCheckpoint> {
     }
 }
 
+impl SseEncode for Option<crate::api::models::ViewConversationPage> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::models::ViewConversationPage>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<crate::api::models::ViewConversationSnapshot> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -9134,6 +10283,36 @@ impl SseEncode for Option<crate::api::models::ViewConversationSource> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <crate::api::models::ViewConversationSource>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::models::ViewConversationState> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::models::ViewConversationState>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::models::ViewHistoryMessagePage> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::models::ViewHistoryMessagePage>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::models::ViewInteractionDetails> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::models::ViewInteractionDetails>::sse_encode(value, serializer);
         }
     }
 }
@@ -9184,6 +10363,16 @@ impl SseEncode for Option<crate::api::models::ViewKnowledgeState> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <crate::api::models::ViewKnowledgeState>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::models::ViewMessage> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::models::ViewMessage>::sse_encode(value, serializer);
         }
     }
 }
@@ -9258,12 +10447,62 @@ impl SseEncode for Option<crate::api::models::ViewQuestionRequest> {
     }
 }
 
+impl SseEncode for Option<crate::api::models::ViewQuestionSummary> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::models::ViewQuestionSummary>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::models::ViewReplyRevision> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::models::ViewReplyRevision>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::models::ViewRequestUsage> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::models::ViewRequestUsage>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<crate::api::models::ViewResourceReference> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <crate::api::models::ViewResourceReference>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::models::ViewRun> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::models::ViewRun>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::models::ViewRunSummary> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::models::ViewRunSummary>::sse_encode(value, serializer);
         }
     }
 }
@@ -9400,6 +10639,18 @@ impl SseEncode for crate::api::contracts::QueryKind {
                 crate::api::contracts::QueryKind::CanContinue => 14,
                 crate::api::contracts::QueryKind::Operation => 15,
                 crate::api::contracts::QueryKind::RestoreMarker => 16,
+                crate::api::contracts::QueryKind::ConversationState => 17,
+                crate::api::contracts::QueryKind::ConversationPage => 18,
+                crate::api::contracts::QueryKind::Message => 19,
+                crate::api::contracts::QueryKind::HistoryVersions => 20,
+                crate::api::contracts::QueryKind::HistoryVersionPage => 21,
+                crate::api::contracts::QueryKind::ReplyRevision => 22,
+                crate::api::contracts::QueryKind::Source => 23,
+                crate::api::contracts::QueryKind::Run => 24,
+                crate::api::contracts::QueryKind::HistoryRun => 25,
+                crate::api::contracts::QueryKind::InteractionDetails => 26,
+                crate::api::contracts::QueryKind::ReplyRevisions => 27,
+                crate::api::contracts::QueryKind::BusinessContext => 28,
                 _ => {
                     unimplemented!("");
                 }
@@ -9449,6 +10700,32 @@ impl SseEncode for crate::api::contracts::QueryResult {
             self.knowledge_catalog,
             serializer,
         );
+        <Option<crate::api::models::ViewConversationState>>::sse_encode(self.state, serializer);
+        <Option<crate::api::models::ViewConversationPage>>::sse_encode(self.page, serializer);
+        <Option<crate::api::models::ViewHistoryMessagePage>>::sse_encode(
+            self.history_page,
+            serializer,
+        );
+        <Vec<crate::api::models::ViewHistoryVersionSummary>>::sse_encode(
+            self.history_versions,
+            serializer,
+        );
+        <Vec<crate::api::models::ViewReplyRevisionSummary>>::sse_encode(
+            self.reply_revisions,
+            serializer,
+        );
+        <Option<crate::api::models::ViewReplyRevision>>::sse_encode(
+            self.reply_revision,
+            serializer,
+        );
+        <Option<crate::api::models::ViewConversationSource>>::sse_encode(self.source, serializer);
+        <Option<crate::api::models::ViewRun>>::sse_encode(self.run, serializer);
+        <Vec<crate::api::models::ViewConversationSource>>::sse_encode(self.sources, serializer);
+        <Option<crate::api::models::ViewInteractionDetails>>::sse_encode(
+            self.interaction_details,
+            serializer,
+        );
+        <Option<crate::api::models::ViewMessage>>::sse_encode(self.message, serializer);
     }
 }
 
@@ -9772,6 +11049,30 @@ impl SseEncode for crate::api::management_contracts::ViewConversationHandoff {
     }
 }
 
+impl SseEncode for crate::api::models::ViewConversationPage {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u64>::sse_encode(self.sequence, serializer);
+        <usize>::sse_encode(self.total, serializer);
+        <usize>::sse_encode(self.start, serializer);
+        <Option<usize>>::sse_encode(self.next_offset, serializer);
+        <Vec<crate::api::models::ViewMessage>>::sse_encode(self.messages, serializer);
+        <Vec<crate::api::models::ViewTurnContext>>::sse_encode(self.turns, serializer);
+        <Vec<crate::api::models::ViewRunSummary>>::sse_encode(self.runs, serializer);
+        <Vec<crate::api::models::ViewOperationSummary>>::sse_encode(self.operations, serializer);
+        <Vec<crate::api::models::ViewAttachmentMetadata>>::sse_encode(self.attachments, serializer);
+        <Vec<crate::api::models::ViewSourceSummary>>::sse_encode(self.sources, serializer);
+        <Vec<crate::api::models::ViewReplyRevisionSummary>>::sse_encode(
+            self.reply_revisions,
+            serializer,
+        );
+        <Vec<crate::api::management_contracts::ViewConversationHandoff>>::sse_encode(
+            self.handoffs,
+            serializer,
+        );
+    }
+}
+
 impl SseEncode for crate::api::models::ViewConversationSnapshot {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -9837,6 +11138,35 @@ impl SseEncode for crate::api::models::ViewConversationSource {
     }
 }
 
+impl SseEncode for crate::api::models::ViewConversationState {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::models::ViewConversation>::sse_encode(self.conversation, serializer);
+        <u64>::sse_encode(self.sequence, serializer);
+        <usize>::sse_encode(self.message_count, serializer);
+        <usize>::sse_encode(self.source_count, serializer);
+        <bool>::sse_encode(self.has_execution_user_input, serializer);
+        <String>::sse_encode(self.management_context_digest, serializer);
+        <Option<String>>::sse_encode(self.last_user_message_id, serializer);
+        <Option<crate::api::models::ViewRunSummary>>::sse_encode(self.current_run, serializer);
+        <Vec<crate::api::models::ViewQueuedInput>>::sse_encode(self.queued_inputs, serializer);
+        <Vec<crate::api::models::ViewQueuedControl>>::sse_encode(self.queued_controls, serializer);
+        <Vec<crate::api::models::ViewOperationSummary>>::sse_encode(
+            self.pending_operations,
+            serializer,
+        );
+        <Option<crate::api::models::ViewQuestionSummary>>::sse_encode(self.question, serializer);
+        <Option<u64>>::sse_encode(self.plan_revision, serializer);
+        <Vec<crate::api::models::ViewRedoSummary>>::sse_encode(self.pending_redos, serializer);
+        <usize>::sse_encode(self.history_version_count, serializer);
+        <usize>::sse_encode(self.reply_revision_count, serializer);
+        <Option<String>>::sse_encode(self.last_committed_assistant_id, serializer);
+        <u64>::sse_encode(self.last_committed_assistant_revision, serializer);
+        <bool>::sse_encode(self.idle_can_continue, serializer);
+        <crate::api::models::ViewUsageSummary>::sse_encode(self.usage, serializer);
+    }
+}
+
 impl SseEncode for crate::api::models::ViewConversationStatus {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -9874,6 +11204,14 @@ impl SseEncode for crate::api::models::ViewConversationSummary {
     }
 }
 
+impl SseEncode for crate::api::models::ViewHistoryMessagePage {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::models::ViewHistoryVersionSummary>::sse_encode(self.version, serializer);
+        <crate::api::models::ViewConversationPage>::sse_encode(self.page, serializer);
+    }
+}
+
 impl SseEncode for crate::api::models::ViewHistoryVersion {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -9884,6 +11222,30 @@ impl SseEncode for crate::api::models::ViewHistoryVersion {
         <Vec<crate::api::models::ViewRun>>::sse_encode(self.runs, serializer);
         <Vec<crate::api::models::ViewTurn>>::sse_encode(self.turns, serializer);
         <Vec<crate::api::models::JsonPayload>>::sse_encode(self.provider_history, serializer);
+    }
+}
+
+impl SseEncode for crate::api::models::ViewHistoryVersionSummary {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.id, serializer);
+        <String>::sse_encode(self.batch_id, serializer);
+        <i64>::sse_encode(self.created_at, serializer);
+        <usize>::sse_encode(self.message_count, serializer);
+    }
+}
+
+impl SseEncode for crate::api::models::ViewInteractionDetails {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u64>::sse_encode(self.sequence, serializer);
+        <Option<crate::api::models::ViewQuestionRequest>>::sse_encode(self.question, serializer);
+        <Option<crate::api::models::ViewTaskPlan>>::sse_encode(self.plan, serializer);
+        <Vec<crate::api::models::ViewOperationRecord>>::sse_encode(
+            self.pending_operations,
+            serializer,
+        );
+        <Vec<crate::api::models::ViewRedoBatch>>::sse_encode(self.pending_redos, serializer);
     }
 }
 
@@ -10102,6 +11464,29 @@ impl SseEncode for crate::api::models::ViewOperationStore {
     }
 }
 
+impl SseEncode for crate::api::models::ViewOperationSummary {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.tool_call_id, serializer);
+        <String>::sse_encode(self.tool_name, serializer);
+        <String>::sse_encode(self.run_id, serializer);
+        <Option<crate::api::models::ViewOperationBinding>>::sse_encode(self.binding, serializer);
+        <crate::api::models::ViewOperationPhase>::sse_encode(self.phase, serializer);
+    }
+}
+
+impl SseEncode for crate::api::models::ViewOutcomeCounts {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <usize>::sse_encode(self.pending, serializer);
+        <usize>::sse_encode(self.completed, serializer);
+        <usize>::sse_encode(self.failed, serializer);
+        <usize>::sse_encode(self.cancelled, serializer);
+        <usize>::sse_encode(self.unknown, serializer);
+        <usize>::sse_encode(self.not_started, serializer);
+    }
+}
+
 impl SseEncode for crate::api::models::ViewPermissionMode {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -10228,6 +11613,18 @@ impl SseEncode for crate::api::models::ViewQuestionStatus {
     }
 }
 
+impl SseEncode for crate::api::models::ViewQuestionSummary {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.id, serializer);
+        <String>::sse_encode(self.tool_call_id, serializer);
+        <String>::sse_encode(self.run_id, serializer);
+        <String>::sse_encode(self.request_message_id, serializer);
+        <crate::api::models::ViewQuestionStatus>::sse_encode(self.status, serializer);
+        <bool>::sse_encode(self.consumed, serializer);
+    }
+}
+
 impl SseEncode for crate::api::models::ViewQueueMode {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -10326,6 +11723,20 @@ impl SseEncode for crate::api::models::ViewRedoPhase {
     }
 }
 
+impl SseEncode for crate::api::models::ViewRedoSummary {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.id, serializer);
+        <String>::sse_encode(self.source_turn_id, serializer);
+        <String>::sse_encode(self.source_message_id, serializer);
+        <String>::sse_encode(self.history_version_id, serializer);
+        <String>::sse_encode(self.replay_run_id, serializer);
+        <crate::api::models::ViewRedoPhase>::sse_encode(self.phase, serializer);
+        <bool>::sse_encode(self.has_history_version, serializer);
+        <Option<String>>::sse_encode(self.last_error, serializer);
+    }
+}
+
 impl SseEncode for crate::api::models::ViewReplyRevision {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -10337,6 +11748,18 @@ impl SseEncode for crate::api::models::ViewReplyRevision {
         <Option<crate::api::models::ViewModelSelection>>::sse_encode(self.model, serializer);
         <Option<String>>::sse_encode(self.provider_protocol, serializer);
         <Vec<crate::api::models::JsonPayload>>::sse_encode(self.response_items, serializer);
+    }
+}
+
+impl SseEncode for crate::api::models::ViewReplyRevisionSummary {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.id, serializer);
+        <String>::sse_encode(self.message_id, serializer);
+        <String>::sse_encode(self.run_id, serializer);
+        <i64>::sse_encode(self.created_at, serializer);
+        <Option<crate::api::models::ViewModelSelection>>::sse_encode(self.model, serializer);
+        <Option<String>>::sse_encode(self.provider_protocol, serializer);
     }
 }
 
@@ -10434,6 +11857,24 @@ impl SseEncode for crate::api::models::ViewRunStatus {
     }
 }
 
+impl SseEncode for crate::api::models::ViewRunSummary {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.id, serializer);
+        <i64>::sse_encode(self.started_at, serializer);
+        <Option<i64>>::sse_encode(self.settled_at, serializer);
+        <crate::api::models::ViewRunKind>::sse_encode(self.kind, serializer);
+        <crate::api::models::ViewRunStatus>::sse_encode(self.status, serializer);
+        <Option<crate::api::models::ViewModelSelection>>::sse_encode(self.model, serializer);
+        <Option<String>>::sse_encode(self.continued_from_run_id, serializer);
+        <usize>::sse_encode(self.request_count, serializer);
+        <usize>::sse_encode(self.tool_count, serializer);
+        <Option<crate::api::models::ViewRequestUsage>>::sse_encode(self.last_request, serializer);
+        <Option<String>>::sse_encode(self.error_code, serializer);
+        <crate::api::models::ViewUsageSummary>::sse_encode(self.usage, serializer);
+    }
+}
+
 impl SseEncode for crate::api::models::ViewSourceProvenance {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -10447,6 +11888,22 @@ impl SseEncode for crate::api::models::ViewSourceProvenance {
             self.resource_references,
             serializer,
         );
+    }
+}
+
+impl SseEncode for crate::api::models::ViewSourceSummary {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.id, serializer);
+        <String>::sse_encode(self.kind, serializer);
+        <Option<String>>::sse_encode(self.url, serializer);
+        <Option<String>>::sse_encode(self.target_id, serializer);
+        <bool>::sse_encode(self.truncated, serializer);
+        <Option<crate::api::models::ViewSourceProvenance>>::sse_encode(self.provenance, serializer);
+        <Option<String>>::sse_encode(self.attached_after_run_id, serializer);
+        <Option<String>>::sse_encode(self.attached_after_message_id, serializer);
+        <Option<String>>::sse_encode(self.bound_input_id, serializer);
+        <Option<String>>::sse_encode(self.bound_message_id, serializer);
     }
 }
 
@@ -10518,6 +11975,19 @@ impl SseEncode for crate::api::models::ViewTurn {
     }
 }
 
+impl SseEncode for crate::api::models::ViewTurnContext {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.id, serializer);
+        <String>::sse_encode(self.request_message_id, serializer);
+        <Option<crate::api::models::ViewMessage>>::sse_encode(self.request, serializer);
+        <bool>::sse_encode(self.ownership_complete, serializer);
+        <Vec<String>>::sse_encode(self.visible_message_ids, serializer);
+        <Vec<String>>::sse_encode(self.run_ids, serializer);
+        <Vec<crate::api::models::ViewOperationBinding>>::sse_encode(self.operations, serializer);
+    }
+}
+
 impl SseEncode for crate::api::models::ViewUndoTicket {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -10525,6 +11995,24 @@ impl SseEncode for crate::api::models::ViewUndoTicket {
         <String>::sse_encode(self.token, serializer);
         <String>::sse_encode(self.digest, serializer);
         <Vec<String>>::sse_encode(self.operation_ids, serializer);
+    }
+}
+
+impl SseEncode for crate::api::models::ViewUsageSummary {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <usize>::sse_encode(self.recorded_runs, serializer);
+        <usize>::sse_encode(self.continued_runs, serializer);
+        <usize>::sse_encode(self.model_requests, serializer);
+        <crate::api::models::ViewOutcomeCounts>::sse_encode(self.request_outcomes, serializer);
+        <usize>::sse_encode(self.tool_attempts, serializer);
+        <crate::api::models::ViewOutcomeCounts>::sse_encode(self.tool_outcomes, serializer);
+        <usize>::sse_encode(self.reported_usage_requests, serializer);
+        <usize>::sse_encode(self.completed_usage_requests, serializer);
+        <usize>::sse_encode(self.cached_input_reported_requests, serializer);
+        <usize>::sse_encode(self.reasoning_reported_requests, serializer);
+        <Option<crate::api::models::ViewTokenUsage>>::sse_encode(self.reported_tokens, serializer);
+        <i64>::sse_encode(self.settled_duration_ms, serializer);
     }
 }
 

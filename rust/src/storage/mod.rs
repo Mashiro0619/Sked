@@ -12,9 +12,11 @@ mod knowledge;
 pub mod models;
 mod projection;
 mod sqlite;
+pub mod view;
 mod worker;
 
 pub use error::{Result, StorageError};
+pub use view::*;
 pub use worker::{StorageHandle, StorageWorker};
 
 use std::{
@@ -181,9 +183,34 @@ impl AgentStorage {
             .cloned())
     }
 
+    /// Reads a complete archival or inspection value without retaining a decoded
+    /// execution snapshot. Existing active execution ownership is unaffected.
+    pub fn read_uncached(&mut self, conversation_id: &str) -> Result<Option<ConversationSnapshot>> {
+        if let Some(draft) = self.drafts.get(conversation_id) {
+            return Ok(Some(draft.clone()));
+        }
+        self.ensure_index()?;
+        if let Some(snapshot) = self.snapshots.get(conversation_id) {
+            return Ok(Some(snapshot.clone()));
+        }
+        let path = self.journal_path(conversation_id);
+        if !path.exists() {
+            return Ok(None);
+        }
+        let snapshot = replay(&path)?;
+        Ok((!snapshot.conversation.id.is_empty()).then_some(snapshot))
+    }
+
     /// Releases an inactive conversation's decoded projection without changing storage.
     pub fn release_conversation(&mut self, conversation_id: &str) {
         self.snapshots.remove(conversation_id);
+    }
+
+    #[cfg(test)]
+    pub(crate) fn cached_conversation_ids(&self) -> Vec<String> {
+        let mut ids: Vec<_> = self.snapshots.keys().cloned().collect();
+        ids.sort();
+        ids
     }
 
     pub fn list(&mut self, query: ConversationQuery) -> Result<Page<ConversationSummary>> {
@@ -219,80 +246,7 @@ impl AgentStorage {
             return Ok(conversation::message_page(&draft.messages, query));
         }
         self.ensure_index()?;
-        let locations = index::message_locations(&self.index, conversation_id)?;
-        let before = query.before.unwrap_or(locations.len());
-        let limit = if query.limit == 0 { 50 } else { query.limit };
-        let path = self.journal_path(conversation_id);
-        let mut commits = HashMap::new();
-        let mut read_message = |location: &index::MessageLocation| -> Result<Message> {
-            if let std::collections::hash_map::Entry::Vacant(entry) =
-                commits.entry(location.location.offset)
-            {
-                entry.insert(journal::read_at(&path, location.location)?);
-            }
-            let commit = &commits[&location.location.offset];
-            match (
-                commit.changes.get(location.change_index),
-                location.nested_index,
-            ) {
-                (Some(JournalChange::MessageUpserted { message }), None) => Ok(message.clone()),
-                (Some(JournalChange::MessagesReplaced { messages }), Some(index)) => {
-                    messages.get(index).cloned().ok_or_else(|| {
-                        StorageError::Invalid(
-                            "Message offset refers outside its transaction".into(),
-                        )
-                    })
-                }
-                _ => Err(StorageError::Invalid(
-                    "Message offset does not refer to a message".into(),
-                )),
-            }
-        };
-        if let Some(search) = query.search.filter(|s| !s.is_empty()) {
-            let search = search.to_lowercase();
-            let mut matches = Vec::new();
-            for location in &locations {
-                let message = read_message(location)?;
-                if message.text.to_lowercase().contains(&search) {
-                    matches.push((location.position, message));
-                }
-            }
-            let total = matches.len();
-            let mut selected: Vec<_> = matches
-                .into_iter()
-                .filter(|(position, _)| *position < before)
-                .collect();
-            let start = selected.len().saturating_sub(limit);
-            let selected = selected.split_off(start);
-            let next_offset = (start > 0).then(|| selected[0].0);
-            return Ok(Page {
-                items: selected.into_iter().map(|(_, message)| message).collect(),
-                total,
-                next_offset,
-            });
-        }
-        let eligible: Vec<_> = locations
-            .iter()
-            .filter(|location| location.position < before)
-            .collect();
-        let start = eligible.len().saturating_sub(limit);
-        let start_position = eligible
-            .get(start)
-            .map(|location| location.group_start)
-            .unwrap_or(before);
-        let chosen: Vec<_> = eligible
-            .into_iter()
-            .filter(|location| location.position >= start_position)
-            .collect();
-        let items = chosen
-            .into_iter()
-            .map(&mut read_message)
-            .collect::<Result<Vec<_>>>()?;
-        Ok(Page {
-            items,
-            total: locations.len(),
-            next_offset: (start_position > 0 && start_position < before).then_some(start_position),
-        })
+        self.read_message_page(conversation_id, "", query)
     }
 
     pub fn query(&mut self, conversation_id: &str, query: MessageQuery) -> Result<Page<Message>> {

@@ -181,12 +181,32 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ViewConversationPage dco_decode_box_autoadd_view_conversation_page(
+    dynamic raw,
+  );
+
+  @protected
   ViewConversationSnapshot dco_decode_box_autoadd_view_conversation_snapshot(
     dynamic raw,
   );
 
   @protected
   ViewConversationSource dco_decode_box_autoadd_view_conversation_source(
+    dynamic raw,
+  );
+
+  @protected
+  ViewConversationState dco_decode_box_autoadd_view_conversation_state(
+    dynamic raw,
+  );
+
+  @protected
+  ViewHistoryMessagePage dco_decode_box_autoadd_view_history_message_page(
+    dynamic raw,
+  );
+
+  @protected
+  ViewInteractionDetails dco_decode_box_autoadd_view_interaction_details(
     dynamic raw,
   );
 
@@ -208,6 +228,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ViewKnowledgeState dco_decode_box_autoadd_view_knowledge_state(dynamic raw);
+
+  @protected
+  ViewMessage dco_decode_box_autoadd_view_message(dynamic raw);
 
   @protected
   ViewModelSelection dco_decode_box_autoadd_view_model_selection(dynamic raw);
@@ -233,9 +256,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ViewQuestionRequest dco_decode_box_autoadd_view_question_request(dynamic raw);
 
   @protected
+  ViewQuestionSummary dco_decode_box_autoadd_view_question_summary(dynamic raw);
+
+  @protected
+  ViewReplyRevision dco_decode_box_autoadd_view_reply_revision(dynamic raw);
+
+  @protected
+  ViewRequestUsage dco_decode_box_autoadd_view_request_usage(dynamic raw);
+
+  @protected
   ViewResourceReference dco_decode_box_autoadd_view_resource_reference(
     dynamic raw,
   );
+
+  @protected
+  ViewRun dco_decode_box_autoadd_view_run(dynamic raw);
+
+  @protected
+  ViewRunSummary dco_decode_box_autoadd_view_run_summary(dynamic raw);
 
   @protected
   ViewSourceProvenance dco_decode_box_autoadd_view_source_provenance(
@@ -402,6 +440,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<ViewHistoryVersion> dco_decode_list_view_history_version(dynamic raw);
 
   @protected
+  List<ViewHistoryVersionSummary> dco_decode_list_view_history_version_summary(
+    dynamic raw,
+  );
+
+  @protected
   List<ViewKnowledgeChange> dco_decode_list_view_knowledge_change(dynamic raw);
 
   @protected
@@ -432,6 +475,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<ViewOperationStore> dco_decode_list_view_operation_store(dynamic raw);
 
   @protected
+  List<ViewOperationSummary> dco_decode_list_view_operation_summary(
+    dynamic raw,
+  );
+
+  @protected
   List<ViewPlanStep> dco_decode_list_view_plan_step(dynamic raw);
 
   @protected
@@ -453,7 +501,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<ViewRedoBatch> dco_decode_list_view_redo_batch(dynamic raw);
 
   @protected
+  List<ViewRedoSummary> dco_decode_list_view_redo_summary(dynamic raw);
+
+  @protected
   List<ViewReplyRevision> dco_decode_list_view_reply_revision(dynamic raw);
+
+  @protected
+  List<ViewReplyRevisionSummary> dco_decode_list_view_reply_revision_summary(
+    dynamic raw,
+  );
 
   @protected
   List<ViewRequestUsage> dco_decode_list_view_request_usage(dynamic raw);
@@ -467,6 +523,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<ViewRun> dco_decode_list_view_run(dynamic raw);
 
   @protected
+  List<ViewRunSummary> dco_decode_list_view_run_summary(dynamic raw);
+
+  @protected
+  List<ViewSourceSummary> dco_decode_list_view_source_summary(dynamic raw);
+
+  @protected
   List<ViewToolCall> dco_decode_list_view_tool_call(dynamic raw);
 
   @protected
@@ -474,6 +536,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<ViewTurn> dco_decode_list_view_turn(dynamic raw);
+
+  @protected
+  List<ViewTurnContext> dco_decode_list_view_turn_context(dynamic raw);
 
   @protected
   List<ViewUndoTicket> dco_decode_list_view_undo_ticket(dynamic raw);
@@ -565,11 +630,31 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ViewConversationPage? dco_decode_opt_box_autoadd_view_conversation_page(
+    dynamic raw,
+  );
+
+  @protected
   ViewConversationSnapshot?
   dco_decode_opt_box_autoadd_view_conversation_snapshot(dynamic raw);
 
   @protected
   ViewConversationSource? dco_decode_opt_box_autoadd_view_conversation_source(
+    dynamic raw,
+  );
+
+  @protected
+  ViewConversationState? dco_decode_opt_box_autoadd_view_conversation_state(
+    dynamic raw,
+  );
+
+  @protected
+  ViewHistoryMessagePage? dco_decode_opt_box_autoadd_view_history_message_page(
+    dynamic raw,
+  );
+
+  @protected
+  ViewInteractionDetails? dco_decode_opt_box_autoadd_view_interaction_details(
     dynamic raw,
   );
 
@@ -597,6 +682,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ViewKnowledgeState? dco_decode_opt_box_autoadd_view_knowledge_state(
     dynamic raw,
   );
+
+  @protected
+  ViewMessage? dco_decode_opt_box_autoadd_view_message(dynamic raw);
 
   @protected
   ViewModelSelection? dco_decode_opt_box_autoadd_view_model_selection(
@@ -634,9 +722,28 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ViewQuestionSummary? dco_decode_opt_box_autoadd_view_question_summary(
+    dynamic raw,
+  );
+
+  @protected
+  ViewReplyRevision? dco_decode_opt_box_autoadd_view_reply_revision(
+    dynamic raw,
+  );
+
+  @protected
+  ViewRequestUsage? dco_decode_opt_box_autoadd_view_request_usage(dynamic raw);
+
+  @protected
   ViewResourceReference? dco_decode_opt_box_autoadd_view_resource_reference(
     dynamic raw,
   );
+
+  @protected
+  ViewRun? dco_decode_opt_box_autoadd_view_run(dynamic raw);
+
+  @protected
+  ViewRunSummary? dco_decode_opt_box_autoadd_view_run_summary(dynamic raw);
 
   @protected
   ViewSourceProvenance? dco_decode_opt_box_autoadd_view_source_provenance(
@@ -762,10 +869,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ViewConversationHandoff dco_decode_view_conversation_handoff(dynamic raw);
 
   @protected
+  ViewConversationPage dco_decode_view_conversation_page(dynamic raw);
+
+  @protected
   ViewConversationSnapshot dco_decode_view_conversation_snapshot(dynamic raw);
 
   @protected
   ViewConversationSource dco_decode_view_conversation_source(dynamic raw);
+
+  @protected
+  ViewConversationState dco_decode_view_conversation_state(dynamic raw);
 
   @protected
   ViewConversationStatus dco_decode_view_conversation_status(dynamic raw);
@@ -774,7 +887,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ViewConversationSummary dco_decode_view_conversation_summary(dynamic raw);
 
   @protected
+  ViewHistoryMessagePage dco_decode_view_history_message_page(dynamic raw);
+
+  @protected
   ViewHistoryVersion dco_decode_view_history_version(dynamic raw);
+
+  @protected
+  ViewHistoryVersionSummary dco_decode_view_history_version_summary(
+    dynamic raw,
+  );
+
+  @protected
+  ViewInteractionDetails dco_decode_view_interaction_details(dynamic raw);
 
   @protected
   ViewKnowledgeChange dco_decode_view_knowledge_change(dynamic raw);
@@ -819,6 +943,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ViewOperationStore dco_decode_view_operation_store(dynamic raw);
 
   @protected
+  ViewOperationSummary dco_decode_view_operation_summary(dynamic raw);
+
+  @protected
+  ViewOutcomeCounts dco_decode_view_outcome_counts(dynamic raw);
+
+  @protected
   ViewPermissionMode dco_decode_view_permission_mode(dynamic raw);
 
   @protected
@@ -846,6 +976,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ViewQuestionStatus dco_decode_view_question_status(dynamic raw);
 
   @protected
+  ViewQuestionSummary dco_decode_view_question_summary(dynamic raw);
+
+  @protected
   ViewQueueMode dco_decode_view_queue_mode(dynamic raw);
 
   @protected
@@ -861,7 +994,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ViewRedoPhase dco_decode_view_redo_phase(dynamic raw);
 
   @protected
+  ViewRedoSummary dco_decode_view_redo_summary(dynamic raw);
+
+  @protected
   ViewReplyRevision dco_decode_view_reply_revision(dynamic raw);
+
+  @protected
+  ViewReplyRevisionSummary dco_decode_view_reply_revision_summary(dynamic raw);
 
   @protected
   ViewRequestKind dco_decode_view_request_kind(dynamic raw);
@@ -882,7 +1021,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ViewRunStatus dco_decode_view_run_status(dynamic raw);
 
   @protected
+  ViewRunSummary dco_decode_view_run_summary(dynamic raw);
+
+  @protected
   ViewSourceProvenance dco_decode_view_source_provenance(dynamic raw);
+
+  @protected
+  ViewSourceSummary dco_decode_view_source_summary(dynamic raw);
 
   @protected
   ViewTaskPlan dco_decode_view_task_plan(dynamic raw);
@@ -903,7 +1048,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ViewTurn dco_decode_view_turn(dynamic raw);
 
   @protected
+  ViewTurnContext dco_decode_view_turn_context(dynamic raw);
+
+  @protected
   ViewUndoTicket dco_decode_view_undo_ticket(dynamic raw);
+
+  @protected
+  ViewUsageSummary dco_decode_view_usage_summary(dynamic raw);
 
   @protected
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
@@ -1089,12 +1240,32 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ViewConversationPage sse_decode_box_autoadd_view_conversation_page(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ViewConversationSnapshot sse_decode_box_autoadd_view_conversation_snapshot(
     SseDeserializer deserializer,
   );
 
   @protected
   ViewConversationSource sse_decode_box_autoadd_view_conversation_source(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ViewConversationState sse_decode_box_autoadd_view_conversation_state(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ViewHistoryMessagePage sse_decode_box_autoadd_view_history_message_page(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ViewInteractionDetails sse_decode_box_autoadd_view_interaction_details(
     SseDeserializer deserializer,
   );
 
@@ -1122,6 +1293,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ViewKnowledgeState sse_decode_box_autoadd_view_knowledge_state(
     SseDeserializer deserializer,
   );
+
+  @protected
+  ViewMessage sse_decode_box_autoadd_view_message(SseDeserializer deserializer);
 
   @protected
   ViewModelSelection sse_decode_box_autoadd_view_model_selection(
@@ -1159,7 +1333,30 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ViewQuestionSummary sse_decode_box_autoadd_view_question_summary(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ViewReplyRevision sse_decode_box_autoadd_view_reply_revision(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ViewRequestUsage sse_decode_box_autoadd_view_request_usage(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ViewResourceReference sse_decode_box_autoadd_view_resource_reference(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ViewRun sse_decode_box_autoadd_view_run(SseDeserializer deserializer);
+
+  @protected
+  ViewRunSummary sse_decode_box_autoadd_view_run_summary(
     SseDeserializer deserializer,
   );
 
@@ -1360,6 +1557,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<ViewHistoryVersionSummary> sse_decode_list_view_history_version_summary(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<ViewKnowledgeChange> sse_decode_list_view_knowledge_change(
     SseDeserializer deserializer,
   );
@@ -1394,6 +1596,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<ViewOperationStore> sse_decode_list_view_operation_store(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<ViewOperationSummary> sse_decode_list_view_operation_summary(
     SseDeserializer deserializer,
   );
 
@@ -1433,7 +1640,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<ViewRedoSummary> sse_decode_list_view_redo_summary(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<ViewReplyRevision> sse_decode_list_view_reply_revision(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<ViewReplyRevisionSummary> sse_decode_list_view_reply_revision_summary(
     SseDeserializer deserializer,
   );
 
@@ -1451,6 +1668,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<ViewRun> sse_decode_list_view_run(SseDeserializer deserializer);
 
   @protected
+  List<ViewRunSummary> sse_decode_list_view_run_summary(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<ViewSourceSummary> sse_decode_list_view_source_summary(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<ViewToolCall> sse_decode_list_view_tool_call(
     SseDeserializer deserializer,
   );
@@ -1462,6 +1689,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<ViewTurn> sse_decode_list_view_turn(SseDeserializer deserializer);
+
+  @protected
+  List<ViewTurnContext> sse_decode_list_view_turn_context(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<ViewUndoTicket> sse_decode_list_view_undo_ticket(
@@ -1571,6 +1803,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ViewConversationPage? sse_decode_opt_box_autoadd_view_conversation_page(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ViewConversationSnapshot?
   sse_decode_opt_box_autoadd_view_conversation_snapshot(
     SseDeserializer deserializer,
@@ -1578,6 +1815,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ViewConversationSource? sse_decode_opt_box_autoadd_view_conversation_source(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ViewConversationState? sse_decode_opt_box_autoadd_view_conversation_state(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ViewHistoryMessagePage? sse_decode_opt_box_autoadd_view_history_message_page(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ViewInteractionDetails? sse_decode_opt_box_autoadd_view_interaction_details(
     SseDeserializer deserializer,
   );
 
@@ -1603,6 +1855,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ViewKnowledgeState? sse_decode_opt_box_autoadd_view_knowledge_state(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ViewMessage? sse_decode_opt_box_autoadd_view_message(
     SseDeserializer deserializer,
   );
 
@@ -1642,7 +1899,30 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ViewQuestionSummary? sse_decode_opt_box_autoadd_view_question_summary(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ViewReplyRevision? sse_decode_opt_box_autoadd_view_reply_revision(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ViewRequestUsage? sse_decode_opt_box_autoadd_view_request_usage(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ViewResourceReference? sse_decode_opt_box_autoadd_view_resource_reference(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ViewRun? sse_decode_opt_box_autoadd_view_run(SseDeserializer deserializer);
+
+  @protected
+  ViewRunSummary? sse_decode_opt_box_autoadd_view_run_summary(
     SseDeserializer deserializer,
   );
 
@@ -1810,12 +2090,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ViewConversationPage sse_decode_view_conversation_page(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ViewConversationSnapshot sse_decode_view_conversation_snapshot(
     SseDeserializer deserializer,
   );
 
   @protected
   ViewConversationSource sse_decode_view_conversation_source(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ViewConversationState sse_decode_view_conversation_state(
     SseDeserializer deserializer,
   );
 
@@ -1830,7 +2120,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ViewHistoryMessagePage sse_decode_view_history_message_page(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ViewHistoryVersion sse_decode_view_history_version(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ViewHistoryVersionSummary sse_decode_view_history_version_summary(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ViewInteractionDetails sse_decode_view_interaction_details(
     SseDeserializer deserializer,
   );
 
@@ -1901,6 +2206,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ViewOperationSummary sse_decode_view_operation_summary(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ViewOutcomeCounts sse_decode_view_outcome_counts(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ViewPermissionMode sse_decode_view_permission_mode(
     SseDeserializer deserializer,
   );
@@ -1944,6 +2259,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ViewQuestionSummary sse_decode_view_question_summary(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ViewQueueMode sse_decode_view_queue_mode(SseDeserializer deserializer);
 
   @protected
@@ -1961,7 +2281,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ViewRedoPhase sse_decode_view_redo_phase(SseDeserializer deserializer);
 
   @protected
+  ViewRedoSummary sse_decode_view_redo_summary(SseDeserializer deserializer);
+
+  @protected
   ViewReplyRevision sse_decode_view_reply_revision(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ViewReplyRevisionSummary sse_decode_view_reply_revision_summary(
     SseDeserializer deserializer,
   );
 
@@ -1986,7 +2314,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ViewRunStatus sse_decode_view_run_status(SseDeserializer deserializer);
 
   @protected
+  ViewRunSummary sse_decode_view_run_summary(SseDeserializer deserializer);
+
+  @protected
   ViewSourceProvenance sse_decode_view_source_provenance(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ViewSourceSummary sse_decode_view_source_summary(
     SseDeserializer deserializer,
   );
 
@@ -2011,7 +2347,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ViewTurn sse_decode_view_turn(SseDeserializer deserializer);
 
   @protected
+  ViewTurnContext sse_decode_view_turn_context(SseDeserializer deserializer);
+
+  @protected
   ViewUndoTicket sse_decode_view_undo_ticket(SseDeserializer deserializer);
+
+  @protected
+  ViewUsageSummary sse_decode_view_usage_summary(SseDeserializer deserializer);
 
   @protected
   void sse_encode_AnyhowException(
@@ -2242,6 +2584,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_view_conversation_page(
+    ViewConversationPage self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_view_conversation_snapshot(
     ViewConversationSnapshot self,
     SseSerializer serializer,
@@ -2250,6 +2598,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_view_conversation_source(
     ViewConversationSource self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_view_conversation_state(
+    ViewConversationState self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_view_history_message_page(
+    ViewHistoryMessagePage self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_view_interaction_details(
+    ViewInteractionDetails self,
     SseSerializer serializer,
   );
 
@@ -2280,6 +2646,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_view_knowledge_state(
     ViewKnowledgeState self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_view_message(
+    ViewMessage self,
     SseSerializer serializer,
   );
 
@@ -2326,8 +2698,35 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_view_question_summary(
+    ViewQuestionSummary self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_view_reply_revision(
+    ViewReplyRevision self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_view_request_usage(
+    ViewRequestUsage self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_view_resource_reference(
     ViewResourceReference self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_view_run(ViewRun self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_view_run_summary(
+    ViewRunSummary self,
     SseSerializer serializer,
   );
 
@@ -2569,6 +2968,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_view_history_version_summary(
+    List<ViewHistoryVersionSummary> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_view_knowledge_change(
     List<ViewKnowledgeChange> self,
     SseSerializer serializer,
@@ -2617,6 +3022,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_view_operation_summary(
+    List<ViewOperationSummary> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_view_plan_step(
     List<ViewPlanStep> self,
     SseSerializer serializer,
@@ -2659,8 +3070,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_view_redo_summary(
+    List<ViewRedoSummary> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_view_reply_revision(
     List<ViewReplyRevision> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_view_reply_revision_summary(
+    List<ViewReplyRevisionSummary> self,
     SseSerializer serializer,
   );
 
@@ -2680,6 +3103,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_view_run(List<ViewRun> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_view_run_summary(
+    List<ViewRunSummary> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_view_source_summary(
+    List<ViewSourceSummary> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_view_tool_call(
     List<ViewToolCall> self,
     SseSerializer serializer,
@@ -2693,6 +3128,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_list_view_turn(List<ViewTurn> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_view_turn_context(
+    List<ViewTurnContext> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_view_undo_ticket(
@@ -2824,6 +3265,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_view_conversation_page(
+    ViewConversationPage? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_view_conversation_snapshot(
     ViewConversationSnapshot? self,
     SseSerializer serializer,
@@ -2832,6 +3279,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_view_conversation_source(
     ViewConversationSource? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_view_conversation_state(
+    ViewConversationState? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_view_history_message_page(
+    ViewHistoryMessagePage? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_view_interaction_details(
+    ViewInteractionDetails? self,
     SseSerializer serializer,
   );
 
@@ -2862,6 +3327,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_view_knowledge_state(
     ViewKnowledgeState? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_view_message(
+    ViewMessage? self,
     SseSerializer serializer,
   );
 
@@ -2908,8 +3379,38 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_view_question_summary(
+    ViewQuestionSummary? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_view_reply_revision(
+    ViewReplyRevision? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_view_request_usage(
+    ViewRequestUsage? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_view_resource_reference(
     ViewResourceReference? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_view_run(
+    ViewRun? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_view_run_summary(
+    ViewRunSummary? self,
     SseSerializer serializer,
   );
 
@@ -3115,6 +3616,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_view_conversation_page(
+    ViewConversationPage self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_view_conversation_snapshot(
     ViewConversationSnapshot self,
     SseSerializer serializer,
@@ -3123,6 +3630,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_view_conversation_source(
     ViewConversationSource self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_view_conversation_state(
+    ViewConversationState self,
     SseSerializer serializer,
   );
 
@@ -3139,8 +3652,26 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_view_history_message_page(
+    ViewHistoryMessagePage self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_view_history_version(
     ViewHistoryVersion self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_view_history_version_summary(
+    ViewHistoryVersionSummary self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_view_interaction_details(
+    ViewInteractionDetails self,
     SseSerializer serializer,
   );
 
@@ -3226,6 +3757,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_view_operation_summary(
+    ViewOperationSummary self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_view_outcome_counts(
+    ViewOutcomeCounts self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_view_permission_mode(
     ViewPermissionMode self,
     SseSerializer serializer,
@@ -3277,6 +3820,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_view_question_summary(
+    ViewQuestionSummary self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_view_queue_mode(ViewQueueMode self, SseSerializer serializer);
 
   @protected
@@ -3298,8 +3847,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_view_redo_phase(ViewRedoPhase self, SseSerializer serializer);
 
   @protected
+  void sse_encode_view_redo_summary(
+    ViewRedoSummary self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_view_reply_revision(
     ViewReplyRevision self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_view_reply_revision_summary(
+    ViewReplyRevisionSummary self,
     SseSerializer serializer,
   );
 
@@ -3331,8 +3892,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_view_run_status(ViewRunStatus self, SseSerializer serializer);
 
   @protected
+  void sse_encode_view_run_summary(
+    ViewRunSummary self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_view_source_provenance(
     ViewSourceProvenance self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_view_source_summary(
+    ViewSourceSummary self,
     SseSerializer serializer,
   );
 
@@ -3361,8 +3934,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_view_turn(ViewTurn self, SseSerializer serializer);
 
   @protected
+  void sse_encode_view_turn_context(
+    ViewTurnContext self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_view_undo_ticket(
     ViewUndoTicket self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_view_usage_summary(
+    ViewUsageSummary self,
     SseSerializer serializer,
   );
 }

@@ -2914,3 +2914,408 @@ impl TryFrom<ViewAgentArchiveParts> for stored::AgentArchiveParts {
         })
     }
 }
+
+// Append this block to api/models.rs. It contains output-only read models.
+use crate::storage::view as view_stored;
+
+pub(crate) fn display_message(mut value: stored::Message) -> ViewMessage {
+    value.response_items.clear();
+    value.into()
+}
+
+pub(crate) fn display_reply_revision(mut value: stored::ReplyRevision) -> ViewReplyRevision {
+    value.response_items.clear();
+    value.into()
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[flutter_rust_bridge::frb(non_opaque)]
+pub struct ViewConversationState {
+    pub conversation: ViewConversation,
+    pub sequence: u64,
+    pub message_count: usize,
+    pub source_count: usize,
+    pub has_execution_user_input: bool,
+    pub management_context_digest: String,
+    pub last_user_message_id: Option<String>,
+    pub current_run: Option<ViewRunSummary>,
+    pub queued_inputs: Vec<ViewQueuedInput>,
+    pub queued_controls: Vec<ViewQueuedControl>,
+    pub pending_operations: Vec<ViewOperationSummary>,
+    pub question: Option<ViewQuestionSummary>,
+    pub plan_revision: Option<u64>,
+    pub pending_redos: Vec<ViewRedoSummary>,
+    pub history_version_count: usize,
+    pub reply_revision_count: usize,
+    pub last_committed_assistant_id: Option<String>,
+    pub last_committed_assistant_revision: u64,
+    pub idle_can_continue: bool,
+    pub usage: ViewUsageSummary,
+}
+impl From<view_stored::ConversationState> for ViewConversationState {
+    fn from(value: view_stored::ConversationState) -> Self {
+        Self {
+            conversation: value.conversation.into(),
+            sequence: value.sequence,
+            message_count: value.message_count,
+            source_count: value.source_count,
+            has_execution_user_input: value.has_execution_user_input,
+            management_context_digest: value.management_context_digest,
+            last_user_message_id: value.last_user_message_id,
+            current_run: value.current_run.map(Into::into),
+            queued_inputs: value.queued_inputs.into_iter().map(Into::into).collect(),
+            queued_controls: value.queued_controls.into_iter().map(Into::into).collect(),
+            pending_operations: value
+                .pending_operations
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+            question: value.question.map(Into::into),
+            plan_revision: value.plan_revision,
+            pending_redos: value.pending_redos.into_iter().map(Into::into).collect(),
+            history_version_count: value.history_version_count,
+            reply_revision_count: value.reply_revision_count,
+            last_committed_assistant_id: value.last_committed_assistant_id,
+            last_committed_assistant_revision: value.last_committed_assistant_revision,
+            idle_can_continue: value.idle_can_continue,
+            usage: value.usage.into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[flutter_rust_bridge::frb(non_opaque)]
+pub struct ViewConversationPage {
+    pub sequence: u64,
+    pub total: usize,
+    pub start: usize,
+    pub next_offset: Option<usize>,
+    pub messages: Vec<ViewMessage>,
+    pub turns: Vec<ViewTurnContext>,
+    pub runs: Vec<ViewRunSummary>,
+    pub operations: Vec<ViewOperationSummary>,
+    pub attachments: Vec<ViewAttachmentMetadata>,
+    pub sources: Vec<ViewSourceSummary>,
+    pub reply_revisions: Vec<ViewReplyRevisionSummary>,
+    pub handoffs: Vec<ViewConversationHandoff>,
+}
+impl From<view_stored::ConversationPage> for ViewConversationPage {
+    fn from(value: view_stored::ConversationPage) -> Self {
+        Self {
+            sequence: value.sequence,
+            total: value.total,
+            start: value.start,
+            next_offset: value.next_offset,
+            messages: value.messages.into_iter().map(display_message).collect(),
+            turns: value.turns.into_iter().map(Into::into).collect(),
+            runs: value.runs.into_iter().map(Into::into).collect(),
+            operations: value.operations.into_iter().map(Into::into).collect(),
+            attachments: value.attachments.into_iter().map(Into::into).collect(),
+            sources: value.sources.into_iter().map(Into::into).collect(),
+            reply_revisions: value.reply_revisions.into_iter().map(Into::into).collect(),
+            handoffs: value.handoffs.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[flutter_rust_bridge::frb(non_opaque)]
+pub struct ViewRunSummary {
+    pub id: String,
+    pub started_at: i64,
+    pub settled_at: Option<i64>,
+    pub kind: ViewRunKind,
+    pub status: ViewRunStatus,
+    pub model: Option<ViewModelSelection>,
+    pub continued_from_run_id: Option<String>,
+    pub request_count: usize,
+    pub tool_count: usize,
+    pub last_request: Option<ViewRequestUsage>,
+    pub error_code: Option<String>,
+    pub usage: ViewUsageSummary,
+}
+impl From<view_stored::RunSummary> for ViewRunSummary {
+    fn from(value: view_stored::RunSummary) -> Self {
+        Self {
+            id: value.id,
+            started_at: value.started_at,
+            settled_at: value.settled_at,
+            kind: value.kind.into(),
+            status: value.status.into(),
+            model: value.model.map(Into::into),
+            continued_from_run_id: value.continued_from_run_id,
+            request_count: value.request_count,
+            tool_count: value.tool_count,
+            last_request: value.last_request.map(Into::into),
+            error_code: value.error_code,
+            usage: value.usage.into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[flutter_rust_bridge::frb(non_opaque)]
+pub struct ViewUsageSummary {
+    pub recorded_runs: usize,
+    pub continued_runs: usize,
+    pub model_requests: usize,
+    pub request_outcomes: ViewOutcomeCounts,
+    pub tool_attempts: usize,
+    pub tool_outcomes: ViewOutcomeCounts,
+    pub reported_usage_requests: usize,
+    pub completed_usage_requests: usize,
+    pub cached_input_reported_requests: usize,
+    pub reasoning_reported_requests: usize,
+    pub reported_tokens: Option<ViewTokenUsage>,
+    pub settled_duration_ms: i64,
+}
+impl From<view_stored::UsageSummary> for ViewUsageSummary {
+    fn from(value: view_stored::UsageSummary) -> Self {
+        Self {
+            recorded_runs: value.recorded_runs,
+            continued_runs: value.continued_runs,
+            model_requests: value.model_requests,
+            request_outcomes: value.request_outcomes.into(),
+            tool_attempts: value.tool_attempts,
+            tool_outcomes: value.tool_outcomes.into(),
+            reported_usage_requests: value.reported_usage_requests,
+            completed_usage_requests: value.completed_usage_requests,
+            cached_input_reported_requests: value.cached_input_reported_requests,
+            reasoning_reported_requests: value.reasoning_reported_requests,
+            reported_tokens: value.reported_tokens.map(Into::into),
+            settled_duration_ms: value.settled_duration_ms,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[flutter_rust_bridge::frb(non_opaque)]
+pub struct ViewOutcomeCounts {
+    pub pending: usize,
+    pub completed: usize,
+    pub failed: usize,
+    pub cancelled: usize,
+    pub unknown: usize,
+    pub not_started: usize,
+}
+impl From<view_stored::OutcomeCounts> for ViewOutcomeCounts {
+    fn from(value: view_stored::OutcomeCounts) -> Self {
+        Self {
+            pending: value.pending,
+            completed: value.completed,
+            failed: value.failed,
+            cancelled: value.cancelled,
+            unknown: value.unknown,
+            not_started: value.not_started,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[flutter_rust_bridge::frb(non_opaque)]
+pub struct ViewTurnContext {
+    pub id: String,
+    pub request_message_id: String,
+    pub request: Option<ViewMessage>,
+    pub ownership_complete: bool,
+    pub visible_message_ids: Vec<String>,
+    pub run_ids: Vec<String>,
+    pub operations: Vec<ViewOperationBinding>,
+}
+impl From<view_stored::TurnContext> for ViewTurnContext {
+    fn from(value: view_stored::TurnContext) -> Self {
+        Self {
+            id: value.id,
+            request_message_id: value.request_message_id,
+            request: value.request.map(display_message),
+            ownership_complete: value.ownership_complete,
+            visible_message_ids: value.visible_message_ids,
+            run_ids: value.run_ids,
+            operations: value.operations.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[flutter_rust_bridge::frb(non_opaque)]
+pub struct ViewHistoryVersionSummary {
+    pub id: String,
+    pub batch_id: String,
+    pub created_at: i64,
+    pub message_count: usize,
+}
+impl From<view_stored::HistoryVersionSummary> for ViewHistoryVersionSummary {
+    fn from(value: view_stored::HistoryVersionSummary) -> Self {
+        Self {
+            id: value.id,
+            batch_id: value.batch_id,
+            created_at: value.created_at,
+            message_count: value.message_count,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[flutter_rust_bridge::frb(non_opaque)]
+pub struct ViewReplyRevisionSummary {
+    pub id: String,
+    pub message_id: String,
+    pub run_id: String,
+    pub created_at: i64,
+    pub model: Option<ViewModelSelection>,
+    pub provider_protocol: Option<String>,
+}
+impl From<view_stored::ReplyRevisionSummary> for ViewReplyRevisionSummary {
+    fn from(value: view_stored::ReplyRevisionSummary) -> Self {
+        Self {
+            id: value.id,
+            message_id: value.message_id,
+            run_id: value.run_id,
+            created_at: value.created_at,
+            model: value.model.map(Into::into),
+            provider_protocol: value.provider_protocol,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[flutter_rust_bridge::frb(non_opaque)]
+pub struct ViewSourceSummary {
+    pub id: String,
+    pub kind: String,
+    pub url: Option<String>,
+    pub target_id: Option<String>,
+    pub truncated: bool,
+    pub provenance: Option<ViewSourceProvenance>,
+    pub attached_after_run_id: Option<String>,
+    pub attached_after_message_id: Option<String>,
+    pub bound_input_id: Option<String>,
+    pub bound_message_id: Option<String>,
+}
+impl From<view_stored::SourceSummary> for ViewSourceSummary {
+    fn from(value: view_stored::SourceSummary) -> Self {
+        Self {
+            id: value.id,
+            kind: value.kind,
+            url: value.url,
+            target_id: value.target_id,
+            truncated: value.truncated,
+            provenance: value.provenance.map(Into::into),
+            attached_after_run_id: value.attached_after_run_id,
+            attached_after_message_id: value.attached_after_message_id,
+            bound_input_id: value.bound_input_id,
+            bound_message_id: value.bound_message_id,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[flutter_rust_bridge::frb(non_opaque)]
+pub struct ViewHistoryMessagePage {
+    pub version: ViewHistoryVersionSummary,
+    pub page: ViewConversationPage,
+}
+impl From<view_stored::HistoryMessagePage> for ViewHistoryMessagePage {
+    fn from(value: view_stored::HistoryMessagePage) -> Self {
+        Self {
+            version: value.version.into(),
+            page: value.page.into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[flutter_rust_bridge::frb(non_opaque)]
+pub struct ViewInteractionDetails {
+    pub sequence: u64,
+    pub question: Option<ViewQuestionRequest>,
+    pub plan: Option<ViewTaskPlan>,
+    pub pending_operations: Vec<ViewOperationRecord>,
+    pub pending_redos: Vec<ViewRedoBatch>,
+}
+impl From<view_stored::InteractionDetails> for ViewInteractionDetails {
+    fn from(value: view_stored::InteractionDetails) -> Self {
+        Self {
+            sequence: value.sequence,
+            question: value.question.map(Into::into),
+            plan: value.plan.map(Into::into),
+            pending_operations: value
+                .pending_operations
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+            pending_redos: value.pending_redos.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[flutter_rust_bridge::frb(non_opaque)]
+pub struct ViewOperationSummary {
+    pub tool_call_id: String,
+    pub tool_name: String,
+    pub run_id: String,
+    pub binding: Option<ViewOperationBinding>,
+    pub phase: ViewOperationPhase,
+}
+impl From<view_stored::OperationSummary> for ViewOperationSummary {
+    fn from(value: view_stored::OperationSummary) -> Self {
+        Self {
+            tool_call_id: value.tool_call_id,
+            tool_name: value.tool_name,
+            run_id: value.run_id,
+            binding: value.binding.map(Into::into),
+            phase: value.phase.into(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[flutter_rust_bridge::frb(non_opaque)]
+pub struct ViewQuestionSummary {
+    pub id: String,
+    pub tool_call_id: String,
+    pub run_id: String,
+    pub request_message_id: String,
+    pub status: ViewQuestionStatus,
+    pub consumed: bool,
+}
+impl From<view_stored::QuestionSummary> for ViewQuestionSummary {
+    fn from(value: view_stored::QuestionSummary) -> Self {
+        Self {
+            id: value.id,
+            tool_call_id: value.tool_call_id,
+            run_id: value.run_id,
+            request_message_id: value.request_message_id,
+            status: value.status.into(),
+            consumed: value.consumed,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[flutter_rust_bridge::frb(non_opaque)]
+pub struct ViewRedoSummary {
+    pub id: String,
+    pub source_turn_id: String,
+    pub source_message_id: String,
+    pub history_version_id: String,
+    pub replay_run_id: String,
+    pub phase: ViewRedoPhase,
+    pub has_history_version: bool,
+    pub last_error: Option<String>,
+}
+impl From<view_stored::RedoSummary> for ViewRedoSummary {
+    fn from(value: view_stored::RedoSummary) -> Self {
+        Self {
+            id: value.id,
+            source_turn_id: value.source_turn_id,
+            source_message_id: value.source_message_id,
+            history_version_id: value.history_version_id,
+            replay_run_id: value.replay_run_id,
+            phase: value.phase.into(),
+            has_history_version: value.has_history_version,
+            last_error: value.last_error,
+        }
+    }
+}

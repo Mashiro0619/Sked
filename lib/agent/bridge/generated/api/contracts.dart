@@ -146,6 +146,7 @@ class AgentEvent {
   final String? runId;
   final String? requestId;
   final ViewConversationSnapshot? snapshot;
+  final ViewConversationState? state;
   final String? text;
   final AgentHostProgress? progress;
   final ViewTokenUsage? usage;
@@ -162,6 +163,7 @@ class AgentEvent {
     this.runId,
     this.requestId,
     this.snapshot,
+    this.state,
     this.text,
     this.progress,
     this.usage,
@@ -180,6 +182,7 @@ class AgentEvent {
       runId.hashCode ^
       requestId.hashCode ^
       snapshot.hashCode ^
+      state.hashCode ^
       text.hashCode ^
       progress.hashCode ^
       usage.hashCode ^
@@ -200,6 +203,7 @@ class AgentEvent {
           runId == other.runId &&
           requestId == other.requestId &&
           snapshot == other.snapshot &&
+          state == other.state &&
           text == other.text &&
           progress == other.progress &&
           usage == other.usage &&
@@ -256,6 +260,9 @@ class AgentQuery {
   final List<String>? conversationIds;
   final List<String>? knowledgeKeys;
   final ViewAttachmentMetadata? attachment;
+  final String? beforeMessageId;
+  final String? fromMessageId;
+  final String? versionId;
 
   const AgentQuery({
     required this.kind,
@@ -271,6 +278,9 @@ class AgentQuery {
     this.conversationIds,
     this.knowledgeKeys,
     this.attachment,
+    this.beforeMessageId,
+    this.fromMessageId,
+    this.versionId,
   });
 
   @override
@@ -287,7 +297,10 @@ class AgentQuery {
       knowledgeKind.hashCode ^
       conversationIds.hashCode ^
       knowledgeKeys.hashCode ^
-      attachment.hashCode;
+      attachment.hashCode ^
+      beforeMessageId.hashCode ^
+      fromMessageId.hashCode ^
+      versionId.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -306,7 +319,10 @@ class AgentQuery {
           knowledgeKind == other.knowledgeKind &&
           conversationIds == other.conversationIds &&
           knowledgeKeys == other.knowledgeKeys &&
-          attachment == other.attachment;
+          attachment == other.attachment &&
+          beforeMessageId == other.beforeMessageId &&
+          fromMessageId == other.fromMessageId &&
+          versionId == other.versionId;
 }
 
 enum CommandKind {
@@ -359,6 +375,7 @@ class CommandResult {
   final ViewKnowledgeReceipt? knowledgeReceipt;
   final bool? created;
   final ConversationSelection? selection;
+  final ViewConversationState? state;
 
   const CommandResult({
     this.id,
@@ -366,6 +383,7 @@ class CommandResult {
     this.knowledgeReceipt,
     this.created,
     this.selection,
+    this.state,
   });
 
   static Future<CommandResult> default_() =>
@@ -377,7 +395,8 @@ class CommandResult {
       snapshot.hashCode ^
       knowledgeReceipt.hashCode ^
       created.hashCode ^
-      selection.hashCode;
+      selection.hashCode ^
+      state.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -388,7 +407,8 @@ class CommandResult {
           snapshot == other.snapshot &&
           knowledgeReceipt == other.knowledgeReceipt &&
           created == other.created &&
-          selection == other.selection;
+          selection == other.selection &&
+          state == other.state;
 }
 
 class ConnectionIdentity {
@@ -711,6 +731,18 @@ enum QueryKind {
   canContinue,
   operation,
   restoreMarker,
+  conversationState,
+  conversationPage,
+  message,
+  historyVersions,
+  historyVersionPage,
+  replyRevision,
+  source,
+  run,
+  historyRun,
+  interactionDetails,
+  replyRevisions,
+  businessContext,
 }
 
 class QueryResult {
@@ -733,6 +765,17 @@ class QueryResult {
   final RunPresentation? presentation;
   final ConversationSelection? selection;
   final KnowledgeCatalog? knowledgeCatalog;
+  final ViewConversationState? state;
+  final ViewConversationPage? page;
+  final ViewHistoryMessagePage? historyPage;
+  final List<ViewHistoryVersionSummary> historyVersions;
+  final List<ViewReplyRevisionSummary> replyRevisions;
+  final ViewReplyRevision? replyRevision;
+  final ViewConversationSource? source;
+  final ViewRun? run;
+  final List<ViewConversationSource> sources;
+  final ViewInteractionDetails? interactionDetails;
+  final ViewMessage? message;
 
   const QueryResult({
     required this.conversations,
@@ -754,6 +797,17 @@ class QueryResult {
     this.presentation,
     this.selection,
     this.knowledgeCatalog,
+    this.state,
+    this.page,
+    this.historyPage,
+    required this.historyVersions,
+    required this.replyRevisions,
+    this.replyRevision,
+    this.source,
+    this.run,
+    required this.sources,
+    this.interactionDetails,
+    this.message,
   });
 
   static Future<QueryResult> default_() =>
@@ -779,7 +833,18 @@ class QueryResult {
       operation.hashCode ^
       presentation.hashCode ^
       selection.hashCode ^
-      knowledgeCatalog.hashCode;
+      knowledgeCatalog.hashCode ^
+      state.hashCode ^
+      page.hashCode ^
+      historyPage.hashCode ^
+      historyVersions.hashCode ^
+      replyRevisions.hashCode ^
+      replyRevision.hashCode ^
+      source.hashCode ^
+      run.hashCode ^
+      sources.hashCode ^
+      interactionDetails.hashCode ^
+      message.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -804,7 +869,18 @@ class QueryResult {
           operation == other.operation &&
           presentation == other.presentation &&
           selection == other.selection &&
-          knowledgeCatalog == other.knowledgeCatalog;
+          knowledgeCatalog == other.knowledgeCatalog &&
+          state == other.state &&
+          page == other.page &&
+          historyPage == other.historyPage &&
+          historyVersions == other.historyVersions &&
+          replyRevisions == other.replyRevisions &&
+          replyRevision == other.replyRevision &&
+          source == other.source &&
+          run == other.run &&
+          sources == other.sources &&
+          interactionDetails == other.interactionDetails &&
+          message == other.message;
 }
 
 class RunPresentation {

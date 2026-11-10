@@ -14,6 +14,8 @@ mod tool_identity;
 mod tools;
 mod transport;
 mod types;
+#[cfg(test)]
+mod view_state_tests;
 
 pub use types::*;
 
@@ -34,7 +36,7 @@ use uuid::Uuid;
 
 use crate::{
     model_client::{ConnectionConfig, ModelEvent, ModelRunResult, RigModelClient},
-    storage::{StorageError, StorageHandle, models::*},
+    storage::{ConversationState, StorageError, StorageHandle, models::*},
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -65,6 +67,9 @@ struct ManagerInner {
     host: SharedHost,
     model_client: RigModelClient,
     sessions: Mutex<HashMap<String, Arc<Mutex<Session>>>>,
+    /// Cache ownership follows admitted execution, including queued handoff.
+    /// Read-only inspection and metadata updates do not acquire ownership.
+    cache_owners: StdMutex<HashSet<String>>,
     tools: StdMutex<Vec<ToolDescriptor>>,
     preamble: StdMutex<String>,
     events: broadcast::Sender<RuntimeEvent>,
@@ -130,7 +135,7 @@ pub(crate) fn new_id() -> String {
 impl RuntimeManager {
     pub fn new(storage: StorageHandle, host: SharedHost, model_client: RigModelClient) -> Self {
         let (events, _) = broadcast::channel(1024);
-        Self { inner: Arc::new(ManagerInner { storage, host, model_client, sessions: Mutex::new(HashMap::new()), tools: StdMutex::new(Vec::new()), preamble: StdMutex::new("You are Sked's task assistant. Use the available tools for current application facts. Follow the user's permission mode. A tool receipt determines whether an operation completed. Ask for missing information with ask_user and maintain a plan with update_plan when useful.".into()), events, shutdown: CancellationToken::new(), auto_title: AtomicBool::new(true),
+        Self { inner: Arc::new(ManagerInner { storage, host, model_client, sessions: Mutex::new(HashMap::new()), cache_owners: StdMutex::new(HashSet::new()), tools: StdMutex::new(Vec::new()), preamble: StdMutex::new("You are Sked's task assistant. Use the available tools for current application facts. Follow the user's permission mode. A tool receipt determines whether an operation completed. Ask for missing information with ask_user and maintain a plan with update_plan when useful.".into()), events, shutdown: CancellationToken::new(), auto_title: AtomicBool::new(true),
 #[cfg(test)] fail_next_tool_record: AtomicBool::new(false) }) }
     }
 
@@ -167,25 +172,34 @@ impl RuntimeManager {
     }
 
     pub async fn presentation(&self, id: &str) -> RuntimePresentation {
-        let session = self.session(id).await;
-        let session = session.lock().await;
-        let mut presentation = match &session.active {
+        let existing = self.inner.sessions.lock().await.get(id).cloned();
+        let session = match existing.as_ref() {
+            Some(session) => Some(session.lock().await),
+            None => None,
+        };
+        let active = session.as_ref().and_then(|session| session.active.as_ref());
+        let mut presentation = match active {
             Some(active) => active
                 .control
                 .presentation
                 .lock()
                 .expect("presentation mutex poisoned")
                 .clone(),
-            None => session.presentation.clone(),
+            None => session
+                .as_ref()
+                .map_or_else(RuntimePresentation::default, |session| {
+                    session.presentation.clone()
+                }),
         };
-        presentation.active = session.active.is_some();
+        presentation.active = active.is_some();
         presentation.can_continue = !presentation.active
-            && !session.archiving
-            && !session.settlement_failed
+            && session
+                .as_ref()
+                .is_none_or(|session| !session.archiving && !session.settlement_failed)
             && self
-                .read(id)
+                .conversation_state(id)
                 .await
-                .is_ok_and(|snapshot| idle_can_continue(&snapshot));
+                .is_ok_and(|state| state.idle_can_continue);
         presentation
     }
 
@@ -209,9 +223,9 @@ impl RuntimeManager {
     fn emit(&self, event: RuntimeEvent) {
         let _ = self.inner.events.send(event);
     }
-    fn publish(&self, snapshot: &ConversationSnapshot) {
+    fn publish(&self, state: ConversationState) {
         self.emit(RuntimeEvent::Snapshot {
-            snapshot: Box::new(snapshot.clone()),
+            state: Box::new(state),
         });
     }
 
@@ -227,11 +241,68 @@ impl RuntimeManager {
 
     pub async fn read(&self, id: &str) -> Result<ConversationSnapshot> {
         let id = id.to_owned();
+        let inner = self.inner.clone();
         Ok(self
             .inner
             .storage
-            .call(move |store| store.read(&id)?.ok_or(StorageError::NotFound(id)))
+            .call(move |store| {
+                let owned = inner
+                    .cache_owners
+                    .lock()
+                    .expect("cache ownership mutex poisoned")
+                    .contains(&id);
+                let snapshot = if owned {
+                    store.read(&id)?
+                } else {
+                    store.read_uncached(&id)?
+                };
+                snapshot.ok_or(StorageError::NotFound(id))
+            })
             .await?)
+    }
+
+    pub async fn conversation_state(&self, id: &str) -> Result<ConversationState> {
+        let id = id.to_owned();
+        Ok(self
+            .inner
+            .storage
+            .call(move |store| {
+                store
+                    .conversation_state(&id)?
+                    .ok_or(StorageError::NotFound(id))
+            })
+            .await?)
+    }
+
+    async fn release_execution_cache(&self, id: &str) {
+        self.inner
+            .cache_owners
+            .lock()
+            .expect("cache ownership mutex poisoned")
+            .remove(id);
+        self.release_if_unowned(id).await;
+    }
+
+    pub(crate) async fn release_if_unowned(&self, id: &str) {
+        let id = id.to_owned();
+        let inner = self.inner.clone();
+        // Release is infallible while the worker is open. A closed worker owns
+        // no reusable cache and already reports the operation's storage error.
+        let _ = self
+            .inner
+            .storage
+            .call(move |store| {
+                if !inner
+                    .cache_owners
+                    .lock()
+                    .expect("cache ownership mutex poisoned")
+                    .contains(&id)
+                {
+                    store.release_conversation(&id);
+                }
+                Ok(())
+            })
+            .await;
     }
 
     pub async fn recover_interrupted(&self) -> Result<Vec<String>> {
@@ -346,21 +417,39 @@ impl RuntimeManager {
             + 'static,
     {
         let id = id.to_owned();
-        let snapshot = self
+        let inner = self.inner.clone();
+        let (snapshot, state) = self
             .inner
             .storage
             .call(move |store| {
-                let mut snapshot = store
-                    .read(&id)?
-                    .ok_or_else(|| StorageError::NotFound(id.clone()))?;
-                let changes = update(&mut snapshot)?;
-                if !changes.is_empty() {
-                    store.append(&id, snapshot.sequence, now_ms(), changes)?;
+                let result = (|| {
+                    let mut snapshot = store
+                        .read(&id)?
+                        .ok_or_else(|| StorageError::NotFound(id.clone()))?;
+                    let changes = update(&mut snapshot)?;
+                    if !changes.is_empty() {
+                        store.append(&id, snapshot.sequence, now_ms(), changes)?;
+                    }
+                    let snapshot = store
+                        .read(&id)?
+                        .ok_or_else(|| StorageError::NotFound(id.clone()))?;
+                    let state = store
+                        .conversation_state(&id)?
+                        .ok_or_else(|| StorageError::NotFound(id.clone()))?;
+                    Ok((snapshot, state))
+                })();
+                if !inner
+                    .cache_owners
+                    .lock()
+                    .expect("cache ownership mutex poisoned")
+                    .contains(&id)
+                {
+                    store.release_conversation(&id);
                 }
-                store.read(&id)?.ok_or(StorageError::NotFound(id))
+                result
             })
             .await?;
-        self.publish(&snapshot);
+        self.publish(state);
         Ok(snapshot)
     }
 
@@ -370,12 +459,18 @@ impl RuntimeManager {
         mode: PermissionMode,
         model_selection: Option<ModelSelection>,
     ) -> Result<ConversationSnapshot> {
-        let snapshot = self
+        let (snapshot, state) = self
             .inner
             .storage
-            .call(move |store| store.create_draft(title, mode, model_selection))
+            .call(move |store| {
+                let snapshot = store.create_draft(title, mode, model_selection)?;
+                let state = store
+                    .conversation_state(&snapshot.conversation.id)?
+                    .ok_or_else(|| StorageError::NotFound(snapshot.conversation.id.clone()))?;
+                Ok((snapshot, state))
+            })
             .await?;
-        self.publish(&snapshot);
+        self.publish(state);
         Ok(snapshot)
     }
 
@@ -694,7 +789,9 @@ impl RuntimeManager {
     }
 
     pub async fn stop(&self, id: &str) -> Result<()> {
-        let session = self.session(id).await;
+        let Some(session) = self.inner.sessions.lock().await.get(id).cloned() else {
+            return Ok(());
+        };
         let session = session.lock().await;
         if let Some(active) = &session.active {
             active.control.stop_requested.store(true, Ordering::Release);
@@ -712,7 +809,9 @@ impl RuntimeManager {
 
     pub async fn wait_until_idle(&self, id: &str) {
         loop {
-            let session = self.session(id).await;
+            let Some(session) = self.inner.sessions.lock().await.get(id).cloned() else {
+                return;
+            };
             let control = session
                 .lock()
                 .await
@@ -755,11 +854,13 @@ impl RuntimeManager {
             self.stop(id).await?;
             return Err(error.into());
         }
-        let session = self.session(id).await;
-        let mut session = session.lock().await;
-        if mode != PermissionMode::Ask {
-            if let Some((_, sender)) = session.approval.take() {
-                let _ = sender.send(mode == PermissionMode::Full);
+        let existing = self.inner.sessions.lock().await.get(id).cloned();
+        if let Some(session) = existing {
+            let mut session = session.lock().await;
+            if mode != PermissionMode::Ask {
+                if let Some((_, sender)) = session.approval.take() {
+                    let _ = sender.send(mode == PermissionMode::Full);
+                }
             }
         }
         Ok(())
@@ -845,18 +946,34 @@ impl RuntimeManager {
             .await;
         state.archiving = false;
         let snapshot = result?;
-        state.presentation.active = false;
-        state.presentation.can_continue = !state.settlement_failed && idle_can_continue(&snapshot);
+        let mut presentation = state.active.as_ref().map_or_else(
+            || state.presentation.clone(),
+            |active| {
+                active
+                    .control
+                    .presentation
+                    .lock()
+                    .expect("presentation mutex poisoned")
+                    .clone()
+            },
+        );
+        presentation.active = state.active.is_some();
+        presentation.can_continue =
+            !presentation.active && !state.settlement_failed && idle_can_continue(&snapshot);
+        state.presentation = presentation.clone();
         self.emit(RuntimeEvent::Presentation {
             conversation_id: id.into(),
-            presentation: state.presentation.clone(),
+            presentation,
         });
         Ok(())
     }
 
     pub async fn rename(&self, id: &str, title: String) -> Result<()> {
-        if let Some(cancellation) = self.session(id).await.lock().await.title.take() {
-            cancellation.cancel();
+        let existing = self.inner.sessions.lock().await.get(id).cloned();
+        if let Some(session) = existing {
+            if let Some(cancellation) = session.lock().await.title.take() {
+                cancellation.cancel();
+            }
         }
         self.change(id, move |snapshot| {
             snapshot.conversation.title = title;
@@ -1388,6 +1505,11 @@ impl RuntimeManager {
             request_estimates: StdMutex::new(HashMap::new()),
             abort_error: StdMutex::new(None),
         });
+        self.inner
+            .cache_owners
+            .lock()
+            .expect("cache ownership mutex poisoned")
+            .insert(id.into());
         session.active = Some(ActiveRun {
             id: run_id.clone(),
             control: control.clone(),
@@ -1442,7 +1564,7 @@ impl RuntimeManager {
                         code: "run_save_failed".into(),
                         message: error.to_string(),
                     });
-                    self.failed_settlement(&accepted, &mut session);
+                    self.failed_settlement(&accepted, &mut session).await;
                     return;
                 }
             };
@@ -1464,7 +1586,8 @@ impl RuntimeManager {
                 && next.is_some()
                 && !failed;
             if !should_continue {
-                self.settle_session(&accepted, &snapshot, &mut session);
+                self.settle_session(&accepted, &snapshot, &mut session)
+                    .await;
                 return;
             }
             let input = next.expect("queued input selected");
@@ -1479,7 +1602,8 @@ impl RuntimeManager {
                                 code: "queued_model_unavailable".into(),
                                 message: error.to_string(),
                             });
-                            self.settle_session(&accepted, &snapshot, &mut session);
+                            self.settle_session(&accepted, &snapshot, &mut session)
+                                .await;
                             return;
                         }
                     }
@@ -1507,7 +1631,8 @@ impl RuntimeManager {
                         code: "queue_start_failed".into(),
                         message: error.to_string(),
                     });
-                    self.settle_session(&accepted, &snapshot, &mut session);
+                    self.settle_session(&accepted, &snapshot, &mut session)
+                        .await;
                     return;
                 }
             }
@@ -1966,7 +2091,7 @@ impl RuntimeManager {
         Ok(snapshot)
     }
 
-    fn settle_session(
+    async fn settle_session(
         &self,
         accepted: &AcceptedRun,
         snapshot: &ConversationSnapshot,
@@ -1989,12 +2114,14 @@ impl RuntimeManager {
             .calibration
             .lock()
             .expect("context calibration mutex poisoned");
+        self.release_execution_cache(&accepted.conversation_id)
+            .await;
         session.active = None;
         self.publish_presentation(accepted);
         accepted.control.settled.notify_waiters();
     }
 
-    fn failed_settlement(&self, accepted: &AcceptedRun, session: &mut Session) {
+    async fn failed_settlement(&self, accepted: &AcceptedRun, session: &mut Session) {
         {
             let mut presentation = accepted
                 .control
@@ -2007,6 +2134,8 @@ impl RuntimeManager {
             presentation.reply_target_message_id = None;
             session.presentation = presentation.clone();
         }
+        self.release_execution_cache(&accepted.conversation_id)
+            .await;
         session.active = None;
         session.settlement_failed = true;
         self.publish_presentation(accepted);

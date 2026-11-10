@@ -19,6 +19,7 @@ class _HostCore extends MemoryAgentCore {
   final _results = <String, Completer<HostResult>>{};
   final _approvals = <String, Completer<AgentHostProgress>>{};
   Future<void> Function(AgentQuery)? afterRead;
+  List<ViewConversationSource> sources = const [];
   late final StreamController<AgentEvent> _source =
       StreamController<AgentEvent>.broadcast(
         onListen: () => scheduleMicrotask(
@@ -38,6 +39,20 @@ class _HostCore extends MemoryAgentCore {
   Future<QueryResult> query({required AgentQuery query}) async {
     final result = await super.query(query: query);
     await afterRead?.call(query);
+    if (query.kind == QueryKind.businessContext) {
+      return QueryResult(
+        conversations: const [],
+        messages: const [],
+        total: 0,
+        knowledge: const [],
+        historyVersions: const [],
+        replyRevisions: const [],
+        state: result.state,
+        run: result.run,
+        sources: sources,
+        attachments: result.attachments,
+      );
+    }
     return result;
   }
 
@@ -131,7 +146,9 @@ void main() {
 
   setUp(() async {
     business = CoreToolHarness();
-    await business.initialize();
+    await business.initialize(
+      conversationForScope: (scope) => host.conversationForScope(scope),
+    );
     core = _HostCore();
     host = RustAgentBusinessHost(
       client: core.client,
@@ -147,6 +164,43 @@ void main() {
     business.tools.dispose();
     await business.close();
   });
+
+  test(
+    'business tools receive requested source material without reading history',
+    () async {
+      core.sources = const [
+        ViewConversationSource(
+          id: 'import-source',
+          kind: 'text',
+          text: 'Material needed by the business tool.',
+          truncated: false,
+        ),
+      ];
+      final result = await core.send(
+        const HostRequest(
+          id: 'read-source',
+          kind: HostRequestKind.execute,
+          conversationId: _conversationId,
+          runId: _runId,
+          toolCallId: 'read-source-call',
+          toolName: 'sources.read',
+          mode: ViewPermissionMode.ask,
+          operationIds: [],
+          arguments: JsonPayload(json: '{"id":"import-source"}'),
+        ),
+      );
+      expect(
+        result.outcome,
+        HostOutcome.success,
+        reason: result.modelPayload?.json ?? result.errorMessage,
+      );
+      final payload = jsonDecode(result.modelPayload!.json) as Map;
+      expect(payload['text'], 'Material needed by the business tool.');
+      expect(core.queries.map((query) => query.kind), [
+        QueryKind.businessContext,
+      ]);
+    },
+  );
 
   test(
     'restored Ask history does not inherit a deleted Full permission',
@@ -180,7 +234,7 @@ void main() {
       final captured = Completer<void>();
       final release = Completer<void>();
       core.afterRead = (query) async {
-        if (query.kind == QueryKind.readConversation && !captured.isCompleted) {
+        if (query.kind == QueryKind.businessContext && !captured.isCompleted) {
           captured.complete();
           await release.future;
         }
@@ -195,7 +249,7 @@ void main() {
       release.complete();
       expect(await core.approvalOrResult('create-calendar'), isNotNull);
       expect(
-        core.queries.where((query) => query.kind == QueryKind.readConversation),
+        core.queries.where((query) => query.kind == QueryKind.businessContext),
         hasLength(2),
       );
       await core.reject();

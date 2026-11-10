@@ -159,6 +159,7 @@ class ConversationRunUsage {
     this.continuedFromRunId,
     this.status = ConversationRunStatus.running,
     this.settledAt,
+    this.usageSummary,
     Iterable<ConversationRequestUsage> requests = const [],
     Iterable<ConversationToolUsage> tools = const [],
   }) : requests = List.unmodifiable(requests),
@@ -173,6 +174,7 @@ class ConversationRunUsage {
   final String? continuedFromRunId;
   final ConversationRunStatus status;
   final DateTime? settledAt;
+  final Map<String, Object?>? usageSummary;
   final List<ConversationRequestUsage> requests;
   final List<ConversationToolUsage> tools;
 
@@ -191,6 +193,7 @@ class ConversationRunUsage {
     continuedFromRunId: continuedFromRunId,
     status: status ?? this.status,
     settledAt: settledAt ?? this.settledAt,
+    usageSummary: usageSummary,
     requests: requests ?? this.requests,
     tools: tools ?? this.tools,
   );
@@ -243,7 +246,8 @@ class ConversationRunUsage {
     if (protocol != null) 'protocol': protocol,
     if (reasoningEffort != null) 'reasoningEffort': reasoningEffort!.name,
     if (continuedFromRunId != null) 'continuedFromRunId': continuedFromRunId,
-    ...summarizeConversationUsage([this]),
+    ...?usageSummary,
+    if (usageSummary == null) ...summarizeConversationUsage([this]),
   };
 
   factory ConversationRunUsage.fromJson(Map<String, dynamic> json) {

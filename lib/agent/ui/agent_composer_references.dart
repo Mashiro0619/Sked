@@ -35,7 +35,7 @@ class _AgentReferenceSession {
 extension _AgentComposerReferences on _AgentConversationViewState {
   List<AgentComposerReference> _effectiveReferences(
     AgentConversation conversation,
-  ) => conversation.pendingRedo == null
+  ) => !conversation.hasPendingRedo
       ? conversation.draftReferences
       : widget.history
                 ?.pendingRedoRequest(conversation.id)
@@ -43,7 +43,7 @@ extension _AgentComposerReferences on _AgentConversationViewState {
             const [];
 
   String? _referenceTarget(AgentConversation conversation) =>
-      conversation.pendingRedo == null
+      !conversation.hasPendingRedo
       ? null
       : widget.history?.pendingRedoRequest(conversation.id)?.id;
 
@@ -58,7 +58,7 @@ extension _AgentComposerReferences on _AgentConversationViewState {
         !_busy.contains('restore-queued-$id') &&
         conversation != null &&
         !conversation.archived &&
-        (conversation.pendingRedo == null ||
+        (!conversation.hasPendingRedo ||
             (!_runtime.runFor(id).isActive &&
                 _referenceTarget(conversation) != null));
   }
@@ -236,7 +236,7 @@ extension _AgentComposerReferences on _AgentConversationViewState {
     if (update != null) {
       await update(id, references, validate: validate);
     } else {
-      if (repository.find(id)?.pendingRedo != null) {
+      if (repository.find(id)?.hasPendingRedo == true) {
         throw const OperationProblem(
           OperationErrorCode.unsupported,
           'The history reference owner is unavailable.',

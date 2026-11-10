@@ -249,7 +249,7 @@ impl AgentStorage {
     }
 
     fn read_saved_for_archive(&mut self, id: &str) -> Result<Option<ConversationSnapshot>> {
-        self.with_saved_archive(id, |storage| storage.read(id))
+        self.with_saved_archive(id, |storage| storage.read_uncached(id))
     }
 
     pub fn export_archive_json(
@@ -450,10 +450,12 @@ impl AgentStorage {
             .and_then(|m| m.get(restore_id))
         {
             if marker != &Value::String(digest) {
+                self.release_conversation(&id);
                 return Err(StorageError::Conflict(
                     "Restore ID belongs to a different conversation target".into(),
                 ));
             }
+            self.release_conversation(&id);
             return Ok(());
         }
         let mut snapshot = portable(source);
@@ -512,14 +514,18 @@ impl AgentStorage {
             id: restore_id.into(),
             value: Some(Value::String(digest)),
         });
-        self.with_saved_archive(&id, |storage| {
+        let result = self.with_saved_archive(&id, |storage| {
             storage.append(
                 &id,
                 previous.map_or(0, |s| s.sequence),
                 timestamp_ms,
                 changes,
             )
-        })?;
+        });
+        // Restore runs under the maintenance lease; each target's complete
+        // projection is released after its durable marker has settled.
+        self.release_conversation(&id);
+        result?;
         Ok(())
     }
 

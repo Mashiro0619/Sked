@@ -151,8 +151,10 @@ Future<void> runRustAgentOfflineJourney(
     expect(journey.conversations.isDraft(journey.id), isFalse);
     expect(journey.conversations.conversations, hasLength(1));
     final paged = RustConversationRepository(journey.client, pageSize: 2);
+    final pagedView = Object();
     await paged.load();
     await paged.select(journey.id);
+    await paged.setViewActive(pagedView, journey.id);
     final recent = paged.visibleMessages(journey.id);
     expect(recent.length, lessThan(first.messages.length));
     expect(recent.first.role, isNot(ConversationRole.tool));
@@ -169,6 +171,7 @@ Future<void> runRustAgentOfflineJourney(
       paged.visibleMessages(journey.id).map((message) => message.id),
       first.messages.map((message) => message.id),
     );
+    await paged.setViewActive(pagedView, null);
     paged.dispose();
     final unsent = await journey.conversations.createDraft(title: '稍后继续的草稿');
     await journey.conversations.updateDraftText(unsent.id, '保留应用内输入');
@@ -189,6 +192,7 @@ Future<void> runRustAgentOfflineJourney(
       XFile(queuedSource.path, mimeType: 'application/octet-stream'),
       canModify: () => journey.conversations.canWrite,
     );
+    await journey.conversations.setViewActive(journey, journey.id);
     final queuedFile = journey.conversations
         .find(journey.id)!
         .attachments
@@ -306,16 +310,25 @@ Future<void> runRustAgentOfflineJourney(
     final replacedRun = await journey.send('先提议一个待审批安排');
     final steeringApprovalId = await journey.approval('create-steer-approval');
     const steeringText = '改为只解释安排，不保存这项提议';
+    final beforeSteer = (await journey.delegate.loadConversation(journey.id))!;
     await journey.delegate.steer(journey.id, steeringText);
     final steered = await journey.events.wait(
       (event) =>
-          event.snapshot?.conversation.id == journey.id &&
-          event.snapshot?.conversation.runId != replacedRun &&
-          event.snapshot!.messages.any(
-            (message) => message.text == steeringText,
-          ),
+          event.state?.conversation.id == journey.id &&
+          event.state!.sequence > beforeSteer.sequence &&
+          event.state?.conversation.runId != null &&
+          event.state?.conversation.runId != replacedRun,
     );
-    await journey.settled(steered.snapshot!.conversation.runId!);
+    final steeringMessage = (await journey.client.query(
+      native.AgentQuery(
+        kind: native.QueryKind.message,
+        conversationId: journey.id,
+        targetId: steered.state!.lastUserMessageId,
+      ),
+    )).message!;
+    expect(steeringMessage.text, steeringText);
+    expect(steeringMessage.role, view.ViewMessageRole.user);
+    await journey.settled(steered.state!.conversation.runId!);
     await expectLater(
       journey.delegate.approve(journey.id, steeringApprovalId),
       throwsA(isA<Object>()),
@@ -340,16 +353,16 @@ Future<void> runRustAgentOfflineJourney(
     final heldRun = await journey.send('保存期间关闭界面，然后继续管理任务');
     await journey.writeGate.entered.future.timeout(const Duration(seconds: 20));
     await tester.pumpWidget(const SizedBox.shrink());
-    journey.detachView();
+    await journey.detachView();
     final stillRunning = await journey.client.query(
       native.AgentQuery(
-        kind: native.QueryKind.readConversation,
+        kind: native.QueryKind.conversationState,
         conversationId: journey.id,
       ),
     );
     expect(stillRunning.presentation!.active, isTrue);
     expect(journey.eventTitles, unorderedEquals(['课后复习', '已批准的安排']));
-    journey.attachView();
+    await journey.attachView();
     await journey.delegate.loadConversation(journey.id);
     await journey.show(tester);
     checkpoints.add('关闭界面订阅后原生核心与已接纳保存继续运行');
@@ -361,12 +374,12 @@ Future<void> runRustAgentOfflineJourney(
     await journey.finishUiAction();
     final stopping = await journey.client.query(
       native.AgentQuery(
-        kind: native.QueryKind.readConversation,
+        kind: native.QueryKind.conversationState,
         conversationId: journey.id,
       ),
     );
     expect(
-      stopping.snapshot!.conversation.status,
+      stopping.state!.conversation.status,
       view.ViewConversationStatus.stopping,
     );
     expect(stopping.presentation!.active, isTrue);
@@ -393,7 +406,7 @@ Future<void> runRustAgentOfflineJourney(
     checkpoints.add('排队、停止请求、真实保存收尾与按钮状态一致');
 
     await journey.delegate.continueConversation(journey.id);
-    final continued = await journey.snapshot();
+    final continued = (await journey.delegate.loadConversation(journey.id))!;
     await journey.settled(continued.conversation.runId!);
     final finished = await journey.snapshot();
     expect(finished.queuedInputs, isEmpty);
@@ -625,7 +638,7 @@ class _Journey {
       mode: AgentPermissionMode.full,
     );
     id = created.id;
-    attachView();
+    await attachView();
     await conversations.updateDraftReferences(id, [
       AgentComposerReference.resource(
         ref: const ResourceRef(kind: ResourceKind.calendar, id: _calendarId),
@@ -637,27 +650,37 @@ class _Journey {
     await delegate.loadConversation(id);
   }
 
-  void attachView() {
+  Future<void> attachView() async {
     if (_viewAttached) return;
     conversations.addListener(_updateView);
     _viewAttached = true;
+    await conversations.setViewActive(this, id);
+    await delegate.setConversationActive(this, id);
     _updateView();
   }
 
   void _updateView() => conversation.value = conversations.find(id);
 
-  void detachView() {
+  Future<void> detachView() async {
     if (!_viewAttached) return;
     conversations.removeListener(_updateView);
     _viewAttached = false;
+    await conversations.setViewActive(this, null);
+    await delegate.setConversationActive(this, null);
   }
 
-  Future<view.ViewConversationSnapshot> snapshot() async =>
-      (await delegate.loadConversation(id))!;
+  // Full history is read only for these acceptance assertions, without being
+  // ingested by either UI owner.
+  Future<view.ViewConversationSnapshot> snapshot() async => (await client.query(
+    native.AgentQuery(
+      kind: native.QueryKind.readConversation,
+      conversationId: id,
+    ),
+  )).snapshot!;
 
   Future<String> send(String text) async {
     await delegate.send(id, text);
-    return (await snapshot()).conversation.runId!;
+    return (await delegate.loadConversation(id))!.conversation.runId!;
   }
 
   Future<void> settled(String runId) async {
@@ -666,21 +689,36 @@ class _Journey {
           event.kind == native.EventKind.runSettled && event.runId == runId,
     );
     await delegate.loadConversation(id);
+    if (_viewAttached) {
+      await conversations.setViewActive(this, id);
+      await delegate.setConversationActive(this, id);
+    }
   }
 
   Future<String> approval(String wireCallId) async {
-    await events.wait(
+    final runId = (await delegate.loadConversation(id))!.conversation.runId;
+    final waiting = await events.wait(
       (event) =>
-          event.snapshot?.operations.any(
-            (operation) =>
-                operation.toolCallId ==
-                    _findLocalCallId(event.snapshot!, wireCallId) &&
-                operation.phase == view.ViewOperationPhase.waitingApproval,
-          ) ==
-          true,
+          event.state?.conversation.id == id &&
+          event.state?.conversation.runId == runId &&
+          event.state?.pendingOperations.any(
+                (operation) =>
+                    operation.phase == view.ViewOperationPhase.waitingApproval,
+              ) ==
+              true,
     );
     await delegate.loadConversation(id);
+    await delegate.setConversationActive(this, id);
     final localId = _localCallId(await snapshot(), wireCallId);
+    expect(
+      waiting.state!.pendingOperations
+          .singleWhere(
+            (operation) =>
+                operation.phase == view.ViewOperationPhase.waitingApproval,
+          )
+          .toolCallId,
+      localId,
+    );
     expect(delegate.state.value.runFor(id).pendingApproval!.id, localId);
     return localId;
   }
@@ -710,7 +748,7 @@ class _Journey {
 
   Future<void> closeCore() async {
     if (!_opened || _coreClosed) return;
-    detachView();
+    await detachView();
     await workspace.closeCore();
     await events.close();
     _coreClosed = true;

@@ -91,7 +91,7 @@ abstract class RustLibApi extends BaseApi {
     required String mediaType,
   });
 
-  Future<ViewConversationSnapshot> crateApiAgentCoreAdmitDraftAttachment({
+  Future<ViewConversationState> crateApiAgentCoreAdmitDraftAttachment({
     required AgentCore that,
     required DraftAttachmentAdmission request,
   });
@@ -178,14 +178,13 @@ abstract class RustLibApi extends BaseApi {
     required List<ViewKnowledgeRecord> records,
   });
 
-  Future<ViewConversationSnapshot> crateApiAgentCoreRemoveDraftAttachment({
+  Future<ViewConversationState> crateApiAgentCoreRemoveDraftAttachment({
     required AgentCore that,
     required DraftAttachmentTarget target,
     required String attachmentId,
   });
 
-  Future<ViewConversationSnapshot>
-  crateApiAgentCoreReplacePendingRedoReferences({
+  Future<ViewConversationState> crateApiAgentCoreReplacePendingRedoReferences({
     required AgentCore that,
     required String conversationId,
     required String batchId,
@@ -222,7 +221,7 @@ abstract class RustLibApi extends BaseApi {
     required AgentCore that,
   });
 
-  Future<ViewConversationSnapshot> crateApiAgentCoreUseDraftAttachment({
+  Future<ViewConversationState> crateApiAgentCoreUseDraftAttachment({
     required AgentCore that,
     required DraftAttachmentTarget target,
     required String attachmentId,
@@ -310,7 +309,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<ViewConversationSnapshot> crateApiAgentCoreAdmitDraftAttachment({
+  Future<ViewConversationState> crateApiAgentCoreAdmitDraftAttachment({
     required AgentCore that,
     required DraftAttachmentAdmission request,
   }) {
@@ -334,7 +333,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           );
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_view_conversation_snapshot,
+          decodeSuccessData: sse_decode_view_conversation_state,
           decodeErrorData: sse_decode_String,
         ),
         constMeta: kCrateApiAgentCoreAdmitDraftAttachmentConstMeta,
@@ -961,7 +960,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<ViewConversationSnapshot> crateApiAgentCoreRemoveDraftAttachment({
+  Future<ViewConversationState> crateApiAgentCoreRemoveDraftAttachment({
     required AgentCore that,
     required DraftAttachmentTarget target,
     required String attachmentId,
@@ -984,7 +983,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           );
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_view_conversation_snapshot,
+          decodeSuccessData: sse_decode_view_conversation_state,
           decodeErrorData: sse_decode_String,
         ),
         constMeta: kCrateApiAgentCoreRemoveDraftAttachmentConstMeta,
@@ -1001,8 +1000,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<ViewConversationSnapshot>
-  crateApiAgentCoreReplacePendingRedoReferences({
+  Future<ViewConversationState> crateApiAgentCoreReplacePendingRedoReferences({
     required AgentCore that,
     required String conversationId,
     required String batchId,
@@ -1029,7 +1027,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           );
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_view_conversation_snapshot,
+          decodeSuccessData: sse_decode_view_conversation_state,
           decodeErrorData: sse_decode_String,
         ),
         constMeta: kCrateApiAgentCoreReplacePendingRedoReferencesConstMeta,
@@ -1289,7 +1287,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<ViewConversationSnapshot> crateApiAgentCoreUseDraftAttachment({
+  Future<ViewConversationState> crateApiAgentCoreUseDraftAttachment({
     required AgentCore that,
     required DraftAttachmentTarget target,
     required String attachmentId,
@@ -1312,7 +1310,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           );
         },
         codec: SseCodec(
-          decodeSuccessData: sse_decode_view_conversation_snapshot,
+          decodeSuccessData: sse_decode_view_conversation_state,
           decodeErrorData: sse_decode_String,
         ),
         constMeta: kCrateApiAgentCoreUseDraftAttachmentConstMeta,
@@ -1702,25 +1700,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   AgentEvent dco_decode_agent_event(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 14)
-      throw Exception('unexpected arr length: expect 14 but see ${arr.length}');
+    if (arr.length != 15)
+      throw Exception('unexpected arr length: expect 15 but see ${arr.length}');
     return AgentEvent(
       kind: dco_decode_event_kind(arr[0]),
       conversationId: dco_decode_String(arr[1]),
       runId: dco_decode_opt_String(arr[2]),
       requestId: dco_decode_opt_String(arr[3]),
       snapshot: dco_decode_opt_box_autoadd_view_conversation_snapshot(arr[4]),
-      text: dco_decode_opt_String(arr[5]),
-      progress: dco_decode_opt_box_autoadd_agent_host_progress(arr[6]),
-      usage: dco_decode_opt_box_autoadd_view_token_usage(arr[7]),
-      outcome: dco_decode_opt_box_autoadd_host_outcome(arr[8]),
-      errorCode: dco_decode_opt_String(arr[9]),
+      state: dco_decode_opt_box_autoadd_view_conversation_state(arr[5]),
+      text: dco_decode_opt_String(arr[6]),
+      progress: dco_decode_opt_box_autoadd_agent_host_progress(arr[7]),
+      usage: dco_decode_opt_box_autoadd_view_token_usage(arr[8]),
+      outcome: dco_decode_opt_box_autoadd_host_outcome(arr[9]),
+      errorCode: dco_decode_opt_String(arr[10]),
       providerFailure: dco_decode_opt_box_autoadd_view_provider_failure(
-        arr[10],
+        arr[11],
       ),
-      hostRequest: dco_decode_opt_box_autoadd_host_request(arr[11]),
-      presentation: dco_decode_opt_box_autoadd_run_presentation(arr[12]),
-      knowledgeRevision: dco_decode_opt_CastedPrimitive_u_64(arr[13]),
+      hostRequest: dco_decode_opt_box_autoadd_host_request(arr[12]),
+      presentation: dco_decode_opt_box_autoadd_run_presentation(arr[13]),
+      knowledgeRevision: dco_decode_opt_CastedPrimitive_u_64(arr[14]),
     );
   }
 
@@ -1742,8 +1741,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   AgentQuery dco_decode_agent_query(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 13)
-      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
+    if (arr.length != 16)
+      throw Exception('unexpected arr length: expect 16 but see ${arr.length}');
     return AgentQuery(
       kind: dco_decode_query_kind(arr[0]),
       conversationId: dco_decode_opt_String(arr[1]),
@@ -1758,6 +1757,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       conversationIds: dco_decode_opt_list_String(arr[10]),
       knowledgeKeys: dco_decode_opt_list_String(arr[11]),
       attachment: dco_decode_opt_box_autoadd_view_attachment_metadata(arr[12]),
+      beforeMessageId: dco_decode_opt_String(arr[13]),
+      fromMessageId: dco_decode_opt_String(arr[14]),
+      versionId: dco_decode_opt_String(arr[15]),
     );
   }
 
@@ -1924,6 +1926,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewConversationPage dco_decode_box_autoadd_view_conversation_page(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_view_conversation_page(raw);
+  }
+
+  @protected
   ViewConversationSnapshot dco_decode_box_autoadd_view_conversation_snapshot(
     dynamic raw,
   ) {
@@ -1937,6 +1947,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_view_conversation_source(raw);
+  }
+
+  @protected
+  ViewConversationState dco_decode_box_autoadd_view_conversation_state(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_view_conversation_state(raw);
+  }
+
+  @protected
+  ViewHistoryMessagePage dco_decode_box_autoadd_view_history_message_page(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_view_history_message_page(raw);
+  }
+
+  @protected
+  ViewInteractionDetails dco_decode_box_autoadd_view_interaction_details(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_view_interaction_details(raw);
   }
 
   @protected
@@ -1973,6 +2007,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ViewKnowledgeState dco_decode_box_autoadd_view_knowledge_state(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_view_knowledge_state(raw);
+  }
+
+  @protected
+  ViewMessage dco_decode_box_autoadd_view_message(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_view_message(raw);
   }
 
   @protected
@@ -2026,11 +2066,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewQuestionSummary dco_decode_box_autoadd_view_question_summary(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_view_question_summary(raw);
+  }
+
+  @protected
+  ViewReplyRevision dco_decode_box_autoadd_view_reply_revision(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_view_reply_revision(raw);
+  }
+
+  @protected
+  ViewRequestUsage dco_decode_box_autoadd_view_request_usage(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_view_request_usage(raw);
+  }
+
+  @protected
   ViewResourceReference dco_decode_box_autoadd_view_resource_reference(
     dynamic raw,
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_view_resource_reference(raw);
+  }
+
+  @protected
+  ViewRun dco_decode_box_autoadd_view_run(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_view_run(raw);
+  }
+
+  @protected
+  ViewRunSummary dco_decode_box_autoadd_view_run_summary(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_view_run_summary(raw);
   }
 
   @protected
@@ -2077,8 +2149,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   CommandResult dco_decode_command_result(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
     return CommandResult(
       id: dco_decode_opt_String(arr[0]),
       snapshot: dco_decode_opt_box_autoadd_view_conversation_snapshot(arr[1]),
@@ -2087,6 +2159,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       ),
       created: dco_decode_opt_box_autoadd_bool(arr[3]),
       selection: dco_decode_opt_box_autoadd_conversation_selection(arr[4]),
+      state: dco_decode_opt_box_autoadd_view_conversation_state(arr[5]),
     );
   }
 
@@ -2480,6 +2553,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<ViewHistoryVersionSummary> dco_decode_list_view_history_version_summary(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_view_history_version_summary)
+        .toList();
+  }
+
+  @protected
   List<ViewKnowledgeChange> dco_decode_list_view_knowledge_change(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>)
@@ -2546,6 +2629,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<ViewOperationSummary> dco_decode_list_view_operation_summary(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_view_operation_summary)
+        .toList();
+  }
+
+  @protected
   List<ViewPlanStep> dco_decode_list_view_plan_step(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_view_plan_step).toList();
@@ -2588,9 +2681,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<ViewRedoSummary> dco_decode_list_view_redo_summary(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_view_redo_summary).toList();
+  }
+
+  @protected
   List<ViewReplyRevision> dco_decode_list_view_reply_revision(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_view_reply_revision).toList();
+  }
+
+  @protected
+  List<ViewReplyRevisionSummary> dco_decode_list_view_reply_revision_summary(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_view_reply_revision_summary)
+        .toList();
   }
 
   @protected
@@ -2616,6 +2725,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<ViewRunSummary> dco_decode_list_view_run_summary(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_view_run_summary).toList();
+  }
+
+  @protected
+  List<ViewSourceSummary> dco_decode_list_view_source_summary(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_view_source_summary).toList();
+  }
+
+  @protected
   List<ViewToolCall> dco_decode_list_view_tool_call(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_view_tool_call).toList();
@@ -2631,6 +2752,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<ViewTurn> dco_decode_list_view_turn(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_view_turn).toList();
+  }
+
+  @protected
+  List<ViewTurnContext> dco_decode_list_view_turn_context(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_view_turn_context).toList();
   }
 
   @protected
@@ -2827,6 +2954,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewConversationPage? dco_decode_opt_box_autoadd_view_conversation_page(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_view_conversation_page(raw);
+  }
+
+  @protected
   ViewConversationSnapshot?
   dco_decode_opt_box_autoadd_view_conversation_snapshot(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
@@ -2843,6 +2980,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     return raw == null
         ? null
         : dco_decode_box_autoadd_view_conversation_source(raw);
+  }
+
+  @protected
+  ViewConversationState? dco_decode_opt_box_autoadd_view_conversation_state(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_view_conversation_state(raw);
+  }
+
+  @protected
+  ViewHistoryMessagePage? dco_decode_opt_box_autoadd_view_history_message_page(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_view_history_message_page(raw);
+  }
+
+  @protected
+  ViewInteractionDetails? dco_decode_opt_box_autoadd_view_interaction_details(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_view_interaction_details(raw);
   }
 
   @protected
@@ -2891,6 +3058,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     return raw == null
         ? null
         : dco_decode_box_autoadd_view_knowledge_state(raw);
+  }
+
+  @protected
+  ViewMessage? dco_decode_opt_box_autoadd_view_message(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_view_message(raw);
   }
 
   @protected
@@ -2964,6 +3137,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewQuestionSummary? dco_decode_opt_box_autoadd_view_question_summary(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_view_question_summary(raw);
+  }
+
+  @protected
+  ViewReplyRevision? dco_decode_opt_box_autoadd_view_reply_revision(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_view_reply_revision(raw);
+  }
+
+  @protected
+  ViewRequestUsage? dco_decode_opt_box_autoadd_view_request_usage(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_view_request_usage(raw);
+  }
+
+  @protected
   ViewResourceReference? dco_decode_opt_box_autoadd_view_resource_reference(
     dynamic raw,
   ) {
@@ -2971,6 +3168,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     return raw == null
         ? null
         : dco_decode_box_autoadd_view_resource_reference(raw);
+  }
+
+  @protected
+  ViewRun? dco_decode_opt_box_autoadd_view_run(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_view_run(raw);
+  }
+
+  @protected
+  ViewRunSummary? dco_decode_opt_box_autoadd_view_run_summary(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_view_run_summary(raw);
   }
 
   @protected
@@ -3063,8 +3272,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   QueryResult dco_decode_query_result(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 19)
-      throw Exception('unexpected arr length: expect 19 but see ${arr.length}');
+    if (arr.length != 30)
+      throw Exception('unexpected arr length: expect 30 but see ${arr.length}');
     return QueryResult(
       conversations: dco_decode_list_view_conversation_summary(arr[0]),
       snapshot: dco_decode_opt_box_autoadd_view_conversation_snapshot(arr[1]),
@@ -3087,6 +3296,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       presentation: dco_decode_opt_box_autoadd_run_presentation(arr[16]),
       selection: dco_decode_opt_box_autoadd_conversation_selection(arr[17]),
       knowledgeCatalog: dco_decode_opt_box_autoadd_knowledge_catalog(arr[18]),
+      state: dco_decode_opt_box_autoadd_view_conversation_state(arr[19]),
+      page: dco_decode_opt_box_autoadd_view_conversation_page(arr[20]),
+      historyPage: dco_decode_opt_box_autoadd_view_history_message_page(
+        arr[21],
+      ),
+      historyVersions: dco_decode_list_view_history_version_summary(arr[22]),
+      replyRevisions: dco_decode_list_view_reply_revision_summary(arr[23]),
+      replyRevision: dco_decode_opt_box_autoadd_view_reply_revision(arr[24]),
+      source: dco_decode_opt_box_autoadd_view_conversation_source(arr[25]),
+      run: dco_decode_opt_box_autoadd_view_run(arr[26]),
+      sources: dco_decode_list_view_conversation_source(arr[27]),
+      interactionDetails: dco_decode_opt_box_autoadd_view_interaction_details(
+        arr[28],
+      ),
+      message: dco_decode_opt_box_autoadd_view_message(arr[29]),
     );
   }
 
@@ -3376,6 +3600,28 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewConversationPage dco_decode_view_conversation_page(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 12)
+      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
+    return ViewConversationPage(
+      sequence: dco_decode_CastedPrimitive_u_64(arr[0]),
+      total: dco_decode_CastedPrimitive_usize(arr[1]),
+      start: dco_decode_CastedPrimitive_usize(arr[2]),
+      nextOffset: dco_decode_opt_CastedPrimitive_usize(arr[3]),
+      messages: dco_decode_list_view_message(arr[4]),
+      turns: dco_decode_list_view_turn_context(arr[5]),
+      runs: dco_decode_list_view_run_summary(arr[6]),
+      operations: dco_decode_list_view_operation_summary(arr[7]),
+      attachments: dco_decode_list_view_attachment_metadata(arr[8]),
+      sources: dco_decode_list_view_source_summary(arr[9]),
+      replyRevisions: dco_decode_list_view_reply_revision_summary(arr[10]),
+      handoffs: dco_decode_list_view_conversation_handoff(arr[11]),
+    );
+  }
+
+  @protected
   ViewConversationSnapshot dco_decode_view_conversation_snapshot(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -3430,6 +3676,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewConversationState dco_decode_view_conversation_state(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 20)
+      throw Exception('unexpected arr length: expect 20 but see ${arr.length}');
+    return ViewConversationState(
+      conversation: dco_decode_view_conversation(arr[0]),
+      sequence: dco_decode_CastedPrimitive_u_64(arr[1]),
+      messageCount: dco_decode_CastedPrimitive_usize(arr[2]),
+      sourceCount: dco_decode_CastedPrimitive_usize(arr[3]),
+      hasExecutionUserInput: dco_decode_bool(arr[4]),
+      managementContextDigest: dco_decode_String(arr[5]),
+      lastUserMessageId: dco_decode_opt_String(arr[6]),
+      currentRun: dco_decode_opt_box_autoadd_view_run_summary(arr[7]),
+      queuedInputs: dco_decode_list_view_queued_input(arr[8]),
+      queuedControls: dco_decode_list_view_queued_control(arr[9]),
+      pendingOperations: dco_decode_list_view_operation_summary(arr[10]),
+      question: dco_decode_opt_box_autoadd_view_question_summary(arr[11]),
+      planRevision: dco_decode_opt_CastedPrimitive_u_64(arr[12]),
+      pendingRedos: dco_decode_list_view_redo_summary(arr[13]),
+      historyVersionCount: dco_decode_CastedPrimitive_usize(arr[14]),
+      replyRevisionCount: dco_decode_CastedPrimitive_usize(arr[15]),
+      lastCommittedAssistantId: dco_decode_opt_String(arr[16]),
+      lastCommittedAssistantRevision: dco_decode_CastedPrimitive_u_64(arr[17]),
+      idleCanContinue: dco_decode_bool(arr[18]),
+      usage: dco_decode_view_usage_summary(arr[19]),
+    );
+  }
+
+  @protected
   ViewConversationStatus dco_decode_view_conversation_status(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return ViewConversationStatus.values[raw as int];
@@ -3457,6 +3733,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewHistoryMessagePage dco_decode_view_history_message_page(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return ViewHistoryMessagePage(
+      version: dco_decode_view_history_version_summary(arr[0]),
+      page: dco_decode_view_conversation_page(arr[1]),
+    );
+  }
+
+  @protected
   ViewHistoryVersion dco_decode_view_history_version(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -3470,6 +3758,37 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       runs: dco_decode_list_view_run(arr[4]),
       turns: dco_decode_list_view_turn(arr[5]),
       providerHistory: dco_decode_list_json_payload(arr[6]),
+    );
+  }
+
+  @protected
+  ViewHistoryVersionSummary dco_decode_view_history_version_summary(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return ViewHistoryVersionSummary(
+      id: dco_decode_String(arr[0]),
+      batchId: dco_decode_String(arr[1]),
+      createdAt: dco_decode_CastedPrimitive_i_64(arr[2]),
+      messageCount: dco_decode_CastedPrimitive_usize(arr[3]),
+    );
+  }
+
+  @protected
+  ViewInteractionDetails dco_decode_view_interaction_details(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return ViewInteractionDetails(
+      sequence: dco_decode_CastedPrimitive_u_64(arr[0]),
+      question: dco_decode_opt_box_autoadd_view_question_request(arr[1]),
+      plan: dco_decode_opt_box_autoadd_view_task_plan(arr[2]),
+      pendingOperations: dco_decode_list_view_operation_record(arr[3]),
+      pendingRedos: dco_decode_list_view_redo_batch(arr[4]),
     );
   }
 
@@ -3667,6 +3986,37 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewOperationSummary dco_decode_view_operation_summary(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return ViewOperationSummary(
+      toolCallId: dco_decode_String(arr[0]),
+      toolName: dco_decode_String(arr[1]),
+      runId: dco_decode_String(arr[2]),
+      binding: dco_decode_opt_box_autoadd_view_operation_binding(arr[3]),
+      phase: dco_decode_view_operation_phase(arr[4]),
+    );
+  }
+
+  @protected
+  ViewOutcomeCounts dco_decode_view_outcome_counts(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return ViewOutcomeCounts(
+      pending: dco_decode_CastedPrimitive_usize(arr[0]),
+      completed: dco_decode_CastedPrimitive_usize(arr[1]),
+      failed: dco_decode_CastedPrimitive_usize(arr[2]),
+      cancelled: dco_decode_CastedPrimitive_usize(arr[3]),
+      unknown: dco_decode_CastedPrimitive_usize(arr[4]),
+      notStarted: dco_decode_CastedPrimitive_usize(arr[5]),
+    );
+  }
+
+  @protected
   ViewPermissionMode dco_decode_view_permission_mode(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return ViewPermissionMode.values[raw as int];
@@ -3782,6 +4132,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewQuestionSummary dco_decode_view_question_summary(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return ViewQuestionSummary(
+      id: dco_decode_String(arr[0]),
+      toolCallId: dco_decode_String(arr[1]),
+      runId: dco_decode_String(arr[2]),
+      requestMessageId: dco_decode_String(arr[3]),
+      status: dco_decode_view_question_status(arr[4]),
+      consumed: dco_decode_bool(arr[5]),
+    );
+  }
+
+  @protected
   ViewQueueMode dco_decode_view_queue_mode(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return ViewQueueMode.values[raw as int];
@@ -3852,6 +4218,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewRedoSummary dco_decode_view_redo_summary(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return ViewRedoSummary(
+      id: dco_decode_String(arr[0]),
+      sourceTurnId: dco_decode_String(arr[1]),
+      sourceMessageId: dco_decode_String(arr[2]),
+      historyVersionId: dco_decode_String(arr[3]),
+      replayRunId: dco_decode_String(arr[4]),
+      phase: dco_decode_view_redo_phase(arr[5]),
+      hasHistoryVersion: dco_decode_bool(arr[6]),
+      lastError: dco_decode_opt_String(arr[7]),
+    );
+  }
+
+  @protected
   ViewReplyRevision dco_decode_view_reply_revision(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -3866,6 +4250,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       model: dco_decode_opt_box_autoadd_view_model_selection(arr[5]),
       providerProtocol: dco_decode_opt_String(arr[6]),
       responseItems: dco_decode_list_json_payload(arr[7]),
+    );
+  }
+
+  @protected
+  ViewReplyRevisionSummary dco_decode_view_reply_revision_summary(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return ViewReplyRevisionSummary(
+      id: dco_decode_String(arr[0]),
+      messageId: dco_decode_String(arr[1]),
+      runId: dco_decode_String(arr[2]),
+      createdAt: dco_decode_CastedPrimitive_i_64(arr[3]),
+      model: dco_decode_opt_box_autoadd_view_model_selection(arr[4]),
+      providerProtocol: dco_decode_opt_String(arr[5]),
     );
   }
 
@@ -3943,6 +4343,28 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewRunSummary dco_decode_view_run_summary(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 12)
+      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
+    return ViewRunSummary(
+      id: dco_decode_String(arr[0]),
+      startedAt: dco_decode_CastedPrimitive_i_64(arr[1]),
+      settledAt: dco_decode_opt_CastedPrimitive_i_64(arr[2]),
+      kind: dco_decode_view_run_kind(arr[3]),
+      status: dco_decode_view_run_status(arr[4]),
+      model: dco_decode_opt_box_autoadd_view_model_selection(arr[5]),
+      continuedFromRunId: dco_decode_opt_String(arr[6]),
+      requestCount: dco_decode_CastedPrimitive_usize(arr[7]),
+      toolCount: dco_decode_CastedPrimitive_usize(arr[8]),
+      lastRequest: dco_decode_opt_box_autoadd_view_request_usage(arr[9]),
+      errorCode: dco_decode_opt_String(arr[10]),
+      usage: dco_decode_view_usage_summary(arr[11]),
+    );
+  }
+
+  @protected
   ViewSourceProvenance dco_decode_view_source_provenance(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -3956,6 +4378,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       localeCode: dco_decode_String(arr[4]),
       revision: dco_decode_u_32(arr[5]),
       resourceReferences: dco_decode_list_view_resource_reference(arr[6]),
+    );
+  }
+
+  @protected
+  ViewSourceSummary dco_decode_view_source_summary(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
+    return ViewSourceSummary(
+      id: dco_decode_String(arr[0]),
+      kind: dco_decode_String(arr[1]),
+      url: dco_decode_opt_String(arr[2]),
+      targetId: dco_decode_opt_String(arr[3]),
+      truncated: dco_decode_bool(arr[4]),
+      provenance: dco_decode_opt_box_autoadd_view_source_provenance(arr[5]),
+      attachedAfterRunId: dco_decode_opt_String(arr[6]),
+      attachedAfterMessageId: dco_decode_opt_String(arr[7]),
+      boundInputId: dco_decode_opt_String(arr[8]),
+      boundMessageId: dco_decode_opt_String(arr[9]),
     );
   }
 
@@ -4052,6 +4494,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewTurnContext dco_decode_view_turn_context(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return ViewTurnContext(
+      id: dco_decode_String(arr[0]),
+      requestMessageId: dco_decode_String(arr[1]),
+      request: dco_decode_opt_box_autoadd_view_message(arr[2]),
+      ownershipComplete: dco_decode_bool(arr[3]),
+      visibleMessageIds: dco_decode_list_String(arr[4]),
+      runIds: dco_decode_list_String(arr[5]),
+      operations: dco_decode_list_view_operation_binding(arr[6]),
+    );
+  }
+
+  @protected
   ViewUndoTicket dco_decode_view_undo_ticket(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -4062,6 +4521,28 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       token: dco_decode_String(arr[1]),
       digest: dco_decode_String(arr[2]),
       operationIds: dco_decode_list_String(arr[3]),
+    );
+  }
+
+  @protected
+  ViewUsageSummary dco_decode_view_usage_summary(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 12)
+      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
+    return ViewUsageSummary(
+      recordedRuns: dco_decode_CastedPrimitive_usize(arr[0]),
+      continuedRuns: dco_decode_CastedPrimitive_usize(arr[1]),
+      modelRequests: dco_decode_CastedPrimitive_usize(arr[2]),
+      requestOutcomes: dco_decode_view_outcome_counts(arr[3]),
+      toolAttempts: dco_decode_CastedPrimitive_usize(arr[4]),
+      toolOutcomes: dco_decode_view_outcome_counts(arr[5]),
+      reportedUsageRequests: dco_decode_CastedPrimitive_usize(arr[6]),
+      completedUsageRequests: dco_decode_CastedPrimitive_usize(arr[7]),
+      cachedInputReportedRequests: dco_decode_CastedPrimitive_usize(arr[8]),
+      reasoningReportedRequests: dco_decode_CastedPrimitive_usize(arr[9]),
+      reportedTokens: dco_decode_opt_box_autoadd_view_token_usage(arr[10]),
+      settledDurationMs: dco_decode_CastedPrimitive_i_64(arr[11]),
     );
   }
 
@@ -4276,6 +4757,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_snapshot = sse_decode_opt_box_autoadd_view_conversation_snapshot(
       deserializer,
     );
+    var var_state = sse_decode_opt_box_autoadd_view_conversation_state(
+      deserializer,
+    );
     var var_text = sse_decode_opt_String(deserializer);
     var var_progress = sse_decode_opt_box_autoadd_agent_host_progress(
       deserializer,
@@ -4299,6 +4783,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       runId: var_runId,
       requestId: var_requestId,
       snapshot: var_snapshot,
+      state: var_state,
       text: var_text,
       progress: var_progress,
       usage: var_usage,
@@ -4348,6 +4833,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_attachment = sse_decode_opt_box_autoadd_view_attachment_metadata(
       deserializer,
     );
+    var var_beforeMessageId = sse_decode_opt_String(deserializer);
+    var var_fromMessageId = sse_decode_opt_String(deserializer);
+    var var_versionId = sse_decode_opt_String(deserializer);
     return AgentQuery(
       kind: var_kind,
       conversationId: var_conversationId,
@@ -4362,6 +4850,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       conversationIds: var_conversationIds,
       knowledgeKeys: var_knowledgeKeys,
       attachment: var_attachment,
+      beforeMessageId: var_beforeMessageId,
+      fromMessageId: var_fromMessageId,
+      versionId: var_versionId,
     );
   }
 
@@ -4552,6 +5043,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewConversationPage sse_decode_box_autoadd_view_conversation_page(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_view_conversation_page(deserializer));
+  }
+
+  @protected
   ViewConversationSnapshot sse_decode_box_autoadd_view_conversation_snapshot(
     SseDeserializer deserializer,
   ) {
@@ -4565,6 +5064,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_view_conversation_source(deserializer));
+  }
+
+  @protected
+  ViewConversationState sse_decode_box_autoadd_view_conversation_state(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_view_conversation_state(deserializer));
+  }
+
+  @protected
+  ViewHistoryMessagePage sse_decode_box_autoadd_view_history_message_page(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_view_history_message_page(deserializer));
+  }
+
+  @protected
+  ViewInteractionDetails sse_decode_box_autoadd_view_interaction_details(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_view_interaction_details(deserializer));
   }
 
   @protected
@@ -4605,6 +5128,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_view_knowledge_state(deserializer));
+  }
+
+  @protected
+  ViewMessage sse_decode_box_autoadd_view_message(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_view_message(deserializer));
   }
 
   @protected
@@ -4664,11 +5195,49 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewQuestionSummary sse_decode_box_autoadd_view_question_summary(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_view_question_summary(deserializer));
+  }
+
+  @protected
+  ViewReplyRevision sse_decode_box_autoadd_view_reply_revision(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_view_reply_revision(deserializer));
+  }
+
+  @protected
+  ViewRequestUsage sse_decode_box_autoadd_view_request_usage(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_view_request_usage(deserializer));
+  }
+
+  @protected
   ViewResourceReference sse_decode_box_autoadd_view_resource_reference(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_view_resource_reference(deserializer));
+  }
+
+  @protected
+  ViewRun sse_decode_box_autoadd_view_run(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_view_run(deserializer));
+  }
+
+  @protected
+  ViewRunSummary sse_decode_box_autoadd_view_run_summary(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_view_run_summary(deserializer));
   }
 
   @protected
@@ -4731,12 +5300,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_selection = sse_decode_opt_box_autoadd_conversation_selection(
       deserializer,
     );
+    var var_state = sse_decode_opt_box_autoadd_view_conversation_state(
+      deserializer,
+    );
     return CommandResult(
       id: var_id,
       snapshot: var_snapshot,
       knowledgeReceipt: var_knowledgeReceipt,
       created: var_created,
       selection: var_selection,
+      state: var_state,
     );
   }
 
@@ -5287,6 +5860,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<ViewHistoryVersionSummary> sse_decode_list_view_history_version_summary(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ViewHistoryVersionSummary>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_view_history_version_summary(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<ViewKnowledgeChange> sse_decode_list_view_knowledge_change(
     SseDeserializer deserializer,
   ) {
@@ -5397,6 +5984,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<ViewOperationSummary> sse_decode_list_view_operation_summary(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ViewOperationSummary>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_view_operation_summary(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<ViewPlanStep> sse_decode_list_view_plan_step(
     SseDeserializer deserializer,
   ) {
@@ -5495,6 +6096,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<ViewRedoSummary> sse_decode_list_view_redo_summary(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ViewRedoSummary>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_view_redo_summary(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<ViewReplyRevision> sse_decode_list_view_reply_revision(
     SseDeserializer deserializer,
   ) {
@@ -5504,6 +6119,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <ViewReplyRevision>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_view_reply_revision(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<ViewReplyRevisionSummary> sse_decode_list_view_reply_revision_summary(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ViewReplyRevisionSummary>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_view_reply_revision_summary(deserializer));
     }
     return ans_;
   }
@@ -5549,6 +6178,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<ViewRunSummary> sse_decode_list_view_run_summary(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ViewRunSummary>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_view_run_summary(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<ViewSourceSummary> sse_decode_list_view_source_summary(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ViewSourceSummary>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_view_source_summary(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<ViewToolCall> sse_decode_list_view_tool_call(
     SseDeserializer deserializer,
   ) {
@@ -5584,6 +6241,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <ViewTurn>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_view_turn(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<ViewTurnContext> sse_decode_list_view_turn_context(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ViewTurnContext>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_view_turn_context(deserializer));
     }
     return ans_;
   }
@@ -5915,6 +6586,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewConversationPage? sse_decode_opt_box_autoadd_view_conversation_page(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_view_conversation_page(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   ViewConversationSnapshot?
   sse_decode_opt_box_autoadd_view_conversation_snapshot(
     SseDeserializer deserializer,
@@ -5936,6 +6620,45 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_box_autoadd_view_conversation_source(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  ViewConversationState? sse_decode_opt_box_autoadd_view_conversation_state(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_view_conversation_state(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  ViewHistoryMessagePage? sse_decode_opt_box_autoadd_view_history_message_page(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_view_history_message_page(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  ViewInteractionDetails? sse_decode_opt_box_autoadd_view_interaction_details(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_view_interaction_details(deserializer));
     } else {
       return null;
     }
@@ -6001,6 +6724,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_box_autoadd_view_knowledge_state(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  ViewMessage? sse_decode_opt_box_autoadd_view_message(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_view_message(deserializer));
     } else {
       return null;
     }
@@ -6098,6 +6834,45 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewQuestionSummary? sse_decode_opt_box_autoadd_view_question_summary(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_view_question_summary(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  ViewReplyRevision? sse_decode_opt_box_autoadd_view_reply_revision(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_view_reply_revision(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  ViewRequestUsage? sse_decode_opt_box_autoadd_view_request_usage(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_view_request_usage(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   ViewResourceReference? sse_decode_opt_box_autoadd_view_resource_reference(
     SseDeserializer deserializer,
   ) {
@@ -6105,6 +6880,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_box_autoadd_view_resource_reference(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  ViewRun? sse_decode_opt_box_autoadd_view_run(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_view_run(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  ViewRunSummary? sse_decode_opt_box_autoadd_view_run_summary(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_view_run_summary(deserializer));
     } else {
       return null;
     }
@@ -6297,6 +7096,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_knowledgeCatalog = sse_decode_opt_box_autoadd_knowledge_catalog(
       deserializer,
     );
+    var var_state = sse_decode_opt_box_autoadd_view_conversation_state(
+      deserializer,
+    );
+    var var_page = sse_decode_opt_box_autoadd_view_conversation_page(
+      deserializer,
+    );
+    var var_historyPage = sse_decode_opt_box_autoadd_view_history_message_page(
+      deserializer,
+    );
+    var var_historyVersions = sse_decode_list_view_history_version_summary(
+      deserializer,
+    );
+    var var_replyRevisions = sse_decode_list_view_reply_revision_summary(
+      deserializer,
+    );
+    var var_replyRevision = sse_decode_opt_box_autoadd_view_reply_revision(
+      deserializer,
+    );
+    var var_source = sse_decode_opt_box_autoadd_view_conversation_source(
+      deserializer,
+    );
+    var var_run = sse_decode_opt_box_autoadd_view_run(deserializer);
+    var var_sources = sse_decode_list_view_conversation_source(deserializer);
+    var var_interactionDetails =
+        sse_decode_opt_box_autoadd_view_interaction_details(deserializer);
+    var var_message = sse_decode_opt_box_autoadd_view_message(deserializer);
     return QueryResult(
       conversations: var_conversations,
       snapshot: var_snapshot,
@@ -6317,6 +7142,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       presentation: var_presentation,
       selection: var_selection,
       knowledgeCatalog: var_knowledgeCatalog,
+      state: var_state,
+      page: var_page,
+      historyPage: var_historyPage,
+      historyVersions: var_historyVersions,
+      replyRevisions: var_replyRevisions,
+      replyRevision: var_replyRevision,
+      source: var_source,
+      run: var_run,
+      sources: var_sources,
+      interactionDetails: var_interactionDetails,
+      message: var_message,
     );
   }
 
@@ -6690,6 +7526,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewConversationPage sse_decode_view_conversation_page(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_sequence = sse_decode_CastedPrimitive_u_64(deserializer);
+    var var_total = sse_decode_CastedPrimitive_usize(deserializer);
+    var var_start = sse_decode_CastedPrimitive_usize(deserializer);
+    var var_nextOffset = sse_decode_opt_CastedPrimitive_usize(deserializer);
+    var var_messages = sse_decode_list_view_message(deserializer);
+    var var_turns = sse_decode_list_view_turn_context(deserializer);
+    var var_runs = sse_decode_list_view_run_summary(deserializer);
+    var var_operations = sse_decode_list_view_operation_summary(deserializer);
+    var var_attachments = sse_decode_list_view_attachment_metadata(
+      deserializer,
+    );
+    var var_sources = sse_decode_list_view_source_summary(deserializer);
+    var var_replyRevisions = sse_decode_list_view_reply_revision_summary(
+      deserializer,
+    );
+    var var_handoffs = sse_decode_list_view_conversation_handoff(deserializer);
+    return ViewConversationPage(
+      sequence: var_sequence,
+      total: var_total,
+      start: var_start,
+      nextOffset: var_nextOffset,
+      messages: var_messages,
+      turns: var_turns,
+      runs: var_runs,
+      operations: var_operations,
+      attachments: var_attachments,
+      sources: var_sources,
+      replyRevisions: var_replyRevisions,
+      handoffs: var_handoffs,
+    );
+  }
+
+  @protected
   ViewConversationSnapshot sse_decode_view_conversation_snapshot(
     SseDeserializer deserializer,
   ) {
@@ -6787,6 +7660,65 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewConversationState sse_decode_view_conversation_state(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_conversation = sse_decode_view_conversation(deserializer);
+    var var_sequence = sse_decode_CastedPrimitive_u_64(deserializer);
+    var var_messageCount = sse_decode_CastedPrimitive_usize(deserializer);
+    var var_sourceCount = sse_decode_CastedPrimitive_usize(deserializer);
+    var var_hasExecutionUserInput = sse_decode_bool(deserializer);
+    var var_managementContextDigest = sse_decode_String(deserializer);
+    var var_lastUserMessageId = sse_decode_opt_String(deserializer);
+    var var_currentRun = sse_decode_opt_box_autoadd_view_run_summary(
+      deserializer,
+    );
+    var var_queuedInputs = sse_decode_list_view_queued_input(deserializer);
+    var var_queuedControls = sse_decode_list_view_queued_control(deserializer);
+    var var_pendingOperations = sse_decode_list_view_operation_summary(
+      deserializer,
+    );
+    var var_question = sse_decode_opt_box_autoadd_view_question_summary(
+      deserializer,
+    );
+    var var_planRevision = sse_decode_opt_CastedPrimitive_u_64(deserializer);
+    var var_pendingRedos = sse_decode_list_view_redo_summary(deserializer);
+    var var_historyVersionCount = sse_decode_CastedPrimitive_usize(
+      deserializer,
+    );
+    var var_replyRevisionCount = sse_decode_CastedPrimitive_usize(deserializer);
+    var var_lastCommittedAssistantId = sse_decode_opt_String(deserializer);
+    var var_lastCommittedAssistantRevision = sse_decode_CastedPrimitive_u_64(
+      deserializer,
+    );
+    var var_idleCanContinue = sse_decode_bool(deserializer);
+    var var_usage = sse_decode_view_usage_summary(deserializer);
+    return ViewConversationState(
+      conversation: var_conversation,
+      sequence: var_sequence,
+      messageCount: var_messageCount,
+      sourceCount: var_sourceCount,
+      hasExecutionUserInput: var_hasExecutionUserInput,
+      managementContextDigest: var_managementContextDigest,
+      lastUserMessageId: var_lastUserMessageId,
+      currentRun: var_currentRun,
+      queuedInputs: var_queuedInputs,
+      queuedControls: var_queuedControls,
+      pendingOperations: var_pendingOperations,
+      question: var_question,
+      planRevision: var_planRevision,
+      pendingRedos: var_pendingRedos,
+      historyVersionCount: var_historyVersionCount,
+      replyRevisionCount: var_replyRevisionCount,
+      lastCommittedAssistantId: var_lastCommittedAssistantId,
+      lastCommittedAssistantRevision: var_lastCommittedAssistantRevision,
+      idleCanContinue: var_idleCanContinue,
+      usage: var_usage,
+    );
+  }
+
+  @protected
   ViewConversationStatus sse_decode_view_conversation_status(
     SseDeserializer deserializer,
   ) {
@@ -6827,6 +7759,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewHistoryMessagePage sse_decode_view_history_message_page(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_version = sse_decode_view_history_version_summary(deserializer);
+    var var_page = sse_decode_view_conversation_page(deserializer);
+    return ViewHistoryMessagePage(version: var_version, page: var_page);
+  }
+
+  @protected
   ViewHistoryVersion sse_decode_view_history_version(
     SseDeserializer deserializer,
   ) {
@@ -6846,6 +7788,46 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       runs: var_runs,
       turns: var_turns,
       providerHistory: var_providerHistory,
+    );
+  }
+
+  @protected
+  ViewHistoryVersionSummary sse_decode_view_history_version_summary(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_batchId = sse_decode_String(deserializer);
+    var var_createdAt = sse_decode_CastedPrimitive_i_64(deserializer);
+    var var_messageCount = sse_decode_CastedPrimitive_usize(deserializer);
+    return ViewHistoryVersionSummary(
+      id: var_id,
+      batchId: var_batchId,
+      createdAt: var_createdAt,
+      messageCount: var_messageCount,
+    );
+  }
+
+  @protected
+  ViewInteractionDetails sse_decode_view_interaction_details(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_sequence = sse_decode_CastedPrimitive_u_64(deserializer);
+    var var_question = sse_decode_opt_box_autoadd_view_question_request(
+      deserializer,
+    );
+    var var_plan = sse_decode_opt_box_autoadd_view_task_plan(deserializer);
+    var var_pendingOperations = sse_decode_list_view_operation_record(
+      deserializer,
+    );
+    var var_pendingRedos = sse_decode_list_view_redo_batch(deserializer);
+    return ViewInteractionDetails(
+      sequence: var_sequence,
+      question: var_question,
+      plan: var_plan,
+      pendingOperations: var_pendingOperations,
+      pendingRedos: var_pendingRedos,
     );
   }
 
@@ -7126,6 +8108,48 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewOperationSummary sse_decode_view_operation_summary(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_toolCallId = sse_decode_String(deserializer);
+    var var_toolName = sse_decode_String(deserializer);
+    var var_runId = sse_decode_String(deserializer);
+    var var_binding = sse_decode_opt_box_autoadd_view_operation_binding(
+      deserializer,
+    );
+    var var_phase = sse_decode_view_operation_phase(deserializer);
+    return ViewOperationSummary(
+      toolCallId: var_toolCallId,
+      toolName: var_toolName,
+      runId: var_runId,
+      binding: var_binding,
+      phase: var_phase,
+    );
+  }
+
+  @protected
+  ViewOutcomeCounts sse_decode_view_outcome_counts(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_pending = sse_decode_CastedPrimitive_usize(deserializer);
+    var var_completed = sse_decode_CastedPrimitive_usize(deserializer);
+    var var_failed = sse_decode_CastedPrimitive_usize(deserializer);
+    var var_cancelled = sse_decode_CastedPrimitive_usize(deserializer);
+    var var_unknown = sse_decode_CastedPrimitive_usize(deserializer);
+    var var_notStarted = sse_decode_CastedPrimitive_usize(deserializer);
+    return ViewOutcomeCounts(
+      pending: var_pending,
+      completed: var_completed,
+      failed: var_failed,
+      cancelled: var_cancelled,
+      unknown: var_unknown,
+      notStarted: var_notStarted,
+    );
+  }
+
+  @protected
   ViewPermissionMode sse_decode_view_permission_mode(
     SseDeserializer deserializer,
   ) {
@@ -7279,6 +8303,27 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewQuestionSummary sse_decode_view_question_summary(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_toolCallId = sse_decode_String(deserializer);
+    var var_runId = sse_decode_String(deserializer);
+    var var_requestMessageId = sse_decode_String(deserializer);
+    var var_status = sse_decode_view_question_status(deserializer);
+    var var_consumed = sse_decode_bool(deserializer);
+    return ViewQuestionSummary(
+      id: var_id,
+      toolCallId: var_toolCallId,
+      runId: var_runId,
+      requestMessageId: var_requestMessageId,
+      status: var_status,
+      consumed: var_consumed,
+    );
+  }
+
+  @protected
   ViewQueueMode sse_decode_view_queue_mode(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_i_32(deserializer);
@@ -7382,6 +8427,29 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewRedoSummary sse_decode_view_redo_summary(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_sourceTurnId = sse_decode_String(deserializer);
+    var var_sourceMessageId = sse_decode_String(deserializer);
+    var var_historyVersionId = sse_decode_String(deserializer);
+    var var_replayRunId = sse_decode_String(deserializer);
+    var var_phase = sse_decode_view_redo_phase(deserializer);
+    var var_hasHistoryVersion = sse_decode_bool(deserializer);
+    var var_lastError = sse_decode_opt_String(deserializer);
+    return ViewRedoSummary(
+      id: var_id,
+      sourceTurnId: var_sourceTurnId,
+      sourceMessageId: var_sourceMessageId,
+      historyVersionId: var_historyVersionId,
+      replayRunId: var_replayRunId,
+      phase: var_phase,
+      hasHistoryVersion: var_hasHistoryVersion,
+      lastError: var_lastError,
+    );
+  }
+
+  @protected
   ViewReplyRevision sse_decode_view_reply_revision(
     SseDeserializer deserializer,
   ) {
@@ -7405,6 +8473,29 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       model: var_model,
       providerProtocol: var_providerProtocol,
       responseItems: var_responseItems,
+    );
+  }
+
+  @protected
+  ViewReplyRevisionSummary sse_decode_view_reply_revision_summary(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_messageId = sse_decode_String(deserializer);
+    var var_runId = sse_decode_String(deserializer);
+    var var_createdAt = sse_decode_CastedPrimitive_i_64(deserializer);
+    var var_model = sse_decode_opt_box_autoadd_view_model_selection(
+      deserializer,
+    );
+    var var_providerProtocol = sse_decode_opt_String(deserializer);
+    return ViewReplyRevisionSummary(
+      id: var_id,
+      messageId: var_messageId,
+      runId: var_runId,
+      createdAt: var_createdAt,
+      model: var_model,
+      providerProtocol: var_providerProtocol,
     );
   }
 
@@ -7503,6 +8594,41 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewRunSummary sse_decode_view_run_summary(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_startedAt = sse_decode_CastedPrimitive_i_64(deserializer);
+    var var_settledAt = sse_decode_opt_CastedPrimitive_i_64(deserializer);
+    var var_kind = sse_decode_view_run_kind(deserializer);
+    var var_status = sse_decode_view_run_status(deserializer);
+    var var_model = sse_decode_opt_box_autoadd_view_model_selection(
+      deserializer,
+    );
+    var var_continuedFromRunId = sse_decode_opt_String(deserializer);
+    var var_requestCount = sse_decode_CastedPrimitive_usize(deserializer);
+    var var_toolCount = sse_decode_CastedPrimitive_usize(deserializer);
+    var var_lastRequest = sse_decode_opt_box_autoadd_view_request_usage(
+      deserializer,
+    );
+    var var_errorCode = sse_decode_opt_String(deserializer);
+    var var_usage = sse_decode_view_usage_summary(deserializer);
+    return ViewRunSummary(
+      id: var_id,
+      startedAt: var_startedAt,
+      settledAt: var_settledAt,
+      kind: var_kind,
+      status: var_status,
+      model: var_model,
+      continuedFromRunId: var_continuedFromRunId,
+      requestCount: var_requestCount,
+      toolCount: var_toolCount,
+      lastRequest: var_lastRequest,
+      errorCode: var_errorCode,
+      usage: var_usage,
+    );
+  }
+
+  @protected
   ViewSourceProvenance sse_decode_view_source_provenance(
     SseDeserializer deserializer,
   ) {
@@ -7524,6 +8650,37 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       localeCode: var_localeCode,
       revision: var_revision,
       resourceReferences: var_resourceReferences,
+    );
+  }
+
+  @protected
+  ViewSourceSummary sse_decode_view_source_summary(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_kind = sse_decode_String(deserializer);
+    var var_url = sse_decode_opt_String(deserializer);
+    var var_targetId = sse_decode_opt_String(deserializer);
+    var var_truncated = sse_decode_bool(deserializer);
+    var var_provenance = sse_decode_opt_box_autoadd_view_source_provenance(
+      deserializer,
+    );
+    var var_attachedAfterRunId = sse_decode_opt_String(deserializer);
+    var var_attachedAfterMessageId = sse_decode_opt_String(deserializer);
+    var var_boundInputId = sse_decode_opt_String(deserializer);
+    var var_boundMessageId = sse_decode_opt_String(deserializer);
+    return ViewSourceSummary(
+      id: var_id,
+      kind: var_kind,
+      url: var_url,
+      targetId: var_targetId,
+      truncated: var_truncated,
+      provenance: var_provenance,
+      attachedAfterRunId: var_attachedAfterRunId,
+      attachedAfterMessageId: var_attachedAfterMessageId,
+      boundInputId: var_boundInputId,
+      boundMessageId: var_boundMessageId,
     );
   }
 
@@ -7636,6 +8793,27 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewTurnContext sse_decode_view_turn_context(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_requestMessageId = sse_decode_String(deserializer);
+    var var_request = sse_decode_opt_box_autoadd_view_message(deserializer);
+    var var_ownershipComplete = sse_decode_bool(deserializer);
+    var var_visibleMessageIds = sse_decode_list_String(deserializer);
+    var var_runIds = sse_decode_list_String(deserializer);
+    var var_operations = sse_decode_list_view_operation_binding(deserializer);
+    return ViewTurnContext(
+      id: var_id,
+      requestMessageId: var_requestMessageId,
+      request: var_request,
+      ownershipComplete: var_ownershipComplete,
+      visibleMessageIds: var_visibleMessageIds,
+      runIds: var_runIds,
+      operations: var_operations,
+    );
+  }
+
+  @protected
   ViewUndoTicket sse_decode_view_undo_ticket(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_owner = sse_decode_view_operation_store(deserializer);
@@ -7647,6 +8825,47 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       token: var_token,
       digest: var_digest,
       operationIds: var_operationIds,
+    );
+  }
+
+  @protected
+  ViewUsageSummary sse_decode_view_usage_summary(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_recordedRuns = sse_decode_CastedPrimitive_usize(deserializer);
+    var var_continuedRuns = sse_decode_CastedPrimitive_usize(deserializer);
+    var var_modelRequests = sse_decode_CastedPrimitive_usize(deserializer);
+    var var_requestOutcomes = sse_decode_view_outcome_counts(deserializer);
+    var var_toolAttempts = sse_decode_CastedPrimitive_usize(deserializer);
+    var var_toolOutcomes = sse_decode_view_outcome_counts(deserializer);
+    var var_reportedUsageRequests = sse_decode_CastedPrimitive_usize(
+      deserializer,
+    );
+    var var_completedUsageRequests = sse_decode_CastedPrimitive_usize(
+      deserializer,
+    );
+    var var_cachedInputReportedRequests = sse_decode_CastedPrimitive_usize(
+      deserializer,
+    );
+    var var_reasoningReportedRequests = sse_decode_CastedPrimitive_usize(
+      deserializer,
+    );
+    var var_reportedTokens = sse_decode_opt_box_autoadd_view_token_usage(
+      deserializer,
+    );
+    var var_settledDurationMs = sse_decode_CastedPrimitive_i_64(deserializer);
+    return ViewUsageSummary(
+      recordedRuns: var_recordedRuns,
+      continuedRuns: var_continuedRuns,
+      modelRequests: var_modelRequests,
+      requestOutcomes: var_requestOutcomes,
+      toolAttempts: var_toolAttempts,
+      toolOutcomes: var_toolOutcomes,
+      reportedUsageRequests: var_reportedUsageRequests,
+      completedUsageRequests: var_completedUsageRequests,
+      cachedInputReportedRequests: var_cachedInputReportedRequests,
+      reasoningReportedRequests: var_reasoningReportedRequests,
+      reportedTokens: var_reportedTokens,
+      settledDurationMs: var_settledDurationMs,
     );
   }
 
@@ -7844,6 +9063,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       self.snapshot,
       serializer,
     );
+    sse_encode_opt_box_autoadd_view_conversation_state(self.state, serializer);
     sse_encode_opt_String(self.text, serializer);
     sse_encode_opt_box_autoadd_agent_host_progress(self.progress, serializer);
     sse_encode_opt_box_autoadd_view_token_usage(self.usage, serializer);
@@ -7892,6 +9112,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       self.attachment,
       serializer,
     );
+    sse_encode_opt_String(self.beforeMessageId, serializer);
+    sse_encode_opt_String(self.fromMessageId, serializer);
+    sse_encode_opt_String(self.versionId, serializer);
   }
 
   @protected
@@ -8108,6 +9331,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_view_conversation_page(
+    ViewConversationPage self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_view_conversation_page(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_view_conversation_snapshot(
     ViewConversationSnapshot self,
     SseSerializer serializer,
@@ -8123,6 +9355,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_view_conversation_source(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_view_conversation_state(
+    ViewConversationState self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_view_conversation_state(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_view_history_message_page(
+    ViewHistoryMessagePage self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_view_history_message_page(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_view_interaction_details(
+    ViewInteractionDetails self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_view_interaction_details(self, serializer);
   }
 
   @protected
@@ -8168,6 +9427,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_view_knowledge_state(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_view_message(
+    ViewMessage self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_view_message(self, serializer);
   }
 
   @protected
@@ -8234,12 +9502,54 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_view_question_summary(
+    ViewQuestionSummary self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_view_question_summary(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_view_reply_revision(
+    ViewReplyRevision self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_view_reply_revision(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_view_request_usage(
+    ViewRequestUsage self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_view_request_usage(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_view_resource_reference(
     ViewResourceReference self,
     SseSerializer serializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_view_resource_reference(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_view_run(ViewRun self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_view_run(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_view_run_summary(
+    ViewRunSummary self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_view_run_summary(self, serializer);
   }
 
   @protected
@@ -8310,6 +9620,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       self.selection,
       serializer,
     );
+    sse_encode_opt_box_autoadd_view_conversation_state(self.state, serializer);
   }
 
   @protected
@@ -8743,6 +10054,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_view_history_version_summary(
+    List<ViewHistoryVersionSummary> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_view_history_version_summary(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_view_knowledge_change(
     List<ViewKnowledgeChange> self,
     SseSerializer serializer,
@@ -8839,6 +10162,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_view_operation_summary(
+    List<ViewOperationSummary> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_view_operation_summary(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_view_plan_step(
     List<ViewPlanStep> self,
     SseSerializer serializer,
@@ -8923,6 +10258,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_view_redo_summary(
+    List<ViewRedoSummary> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_view_redo_summary(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_view_reply_revision(
     List<ViewReplyRevision> self,
     SseSerializer serializer,
@@ -8931,6 +10278,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_view_reply_revision(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_view_reply_revision_summary(
+    List<ViewReplyRevisionSummary> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_view_reply_revision_summary(item, serializer);
     }
   }
 
@@ -8968,6 +10327,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_view_run_summary(
+    List<ViewRunSummary> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_view_run_summary(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_view_source_summary(
+    List<ViewSourceSummary> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_view_source_summary(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_view_tool_call(
     List<ViewToolCall> self,
     SseSerializer serializer,
@@ -9000,6 +10383,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_view_turn(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_view_turn_context(
+    List<ViewTurnContext> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_view_turn_context(item, serializer);
     }
   }
 
@@ -9312,6 +10707,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_view_conversation_page(
+    ViewConversationPage? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_view_conversation_page(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_box_autoadd_view_conversation_snapshot(
     ViewConversationSnapshot? self,
     SseSerializer serializer,
@@ -9334,6 +10742,45 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_view_conversation_source(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_view_conversation_state(
+    ViewConversationState? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_view_conversation_state(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_view_history_message_page(
+    ViewHistoryMessagePage? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_view_history_message_page(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_view_interaction_details(
+    ViewInteractionDetails? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_view_interaction_details(self, serializer);
     }
   }
 
@@ -9399,6 +10846,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_view_knowledge_state(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_view_message(
+    ViewMessage? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_view_message(self, serializer);
     }
   }
 
@@ -9494,6 +10954,45 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_view_question_summary(
+    ViewQuestionSummary? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_view_question_summary(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_view_reply_revision(
+    ViewReplyRevision? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_view_reply_revision(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_view_request_usage(
+    ViewRequestUsage? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_view_request_usage(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_box_autoadd_view_resource_reference(
     ViewResourceReference? self,
     SseSerializer serializer,
@@ -9503,6 +11002,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_view_resource_reference(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_view_run(
+    ViewRun? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_view_run(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_view_run_summary(
+    ViewRunSummary? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_view_run_summary(self, serializer);
     }
   }
 
@@ -9698,6 +11223,35 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       self.knowledgeCatalog,
       serializer,
     );
+    sse_encode_opt_box_autoadd_view_conversation_state(self.state, serializer);
+    sse_encode_opt_box_autoadd_view_conversation_page(self.page, serializer);
+    sse_encode_opt_box_autoadd_view_history_message_page(
+      self.historyPage,
+      serializer,
+    );
+    sse_encode_list_view_history_version_summary(
+      self.historyVersions,
+      serializer,
+    );
+    sse_encode_list_view_reply_revision_summary(
+      self.replyRevisions,
+      serializer,
+    );
+    sse_encode_opt_box_autoadd_view_reply_revision(
+      self.replyRevision,
+      serializer,
+    );
+    sse_encode_opt_box_autoadd_view_conversation_source(
+      self.source,
+      serializer,
+    );
+    sse_encode_opt_box_autoadd_view_run(self.run, serializer);
+    sse_encode_list_view_conversation_source(self.sources, serializer);
+    sse_encode_opt_box_autoadd_view_interaction_details(
+      self.interactionDetails,
+      serializer,
+    );
+    sse_encode_opt_box_autoadd_view_message(self.message, serializer);
   }
 
   @protected
@@ -9986,6 +11540,29 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_view_conversation_page(
+    ViewConversationPage self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_CastedPrimitive_u_64(self.sequence, serializer);
+    sse_encode_CastedPrimitive_usize(self.total, serializer);
+    sse_encode_CastedPrimitive_usize(self.start, serializer);
+    sse_encode_opt_CastedPrimitive_usize(self.nextOffset, serializer);
+    sse_encode_list_view_message(self.messages, serializer);
+    sse_encode_list_view_turn_context(self.turns, serializer);
+    sse_encode_list_view_run_summary(self.runs, serializer);
+    sse_encode_list_view_operation_summary(self.operations, serializer);
+    sse_encode_list_view_attachment_metadata(self.attachments, serializer);
+    sse_encode_list_view_source_summary(self.sources, serializer);
+    sse_encode_list_view_reply_revision_summary(
+      self.replyRevisions,
+      serializer,
+    );
+    sse_encode_list_view_conversation_handoff(self.handoffs, serializer);
+  }
+
+  @protected
   void sse_encode_view_conversation_snapshot(
     ViewConversationSnapshot self,
     SseSerializer serializer,
@@ -10049,6 +11626,37 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_view_conversation_state(
+    ViewConversationState self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_view_conversation(self.conversation, serializer);
+    sse_encode_CastedPrimitive_u_64(self.sequence, serializer);
+    sse_encode_CastedPrimitive_usize(self.messageCount, serializer);
+    sse_encode_CastedPrimitive_usize(self.sourceCount, serializer);
+    sse_encode_bool(self.hasExecutionUserInput, serializer);
+    sse_encode_String(self.managementContextDigest, serializer);
+    sse_encode_opt_String(self.lastUserMessageId, serializer);
+    sse_encode_opt_box_autoadd_view_run_summary(self.currentRun, serializer);
+    sse_encode_list_view_queued_input(self.queuedInputs, serializer);
+    sse_encode_list_view_queued_control(self.queuedControls, serializer);
+    sse_encode_list_view_operation_summary(self.pendingOperations, serializer);
+    sse_encode_opt_box_autoadd_view_question_summary(self.question, serializer);
+    sse_encode_opt_CastedPrimitive_u_64(self.planRevision, serializer);
+    sse_encode_list_view_redo_summary(self.pendingRedos, serializer);
+    sse_encode_CastedPrimitive_usize(self.historyVersionCount, serializer);
+    sse_encode_CastedPrimitive_usize(self.replyRevisionCount, serializer);
+    sse_encode_opt_String(self.lastCommittedAssistantId, serializer);
+    sse_encode_CastedPrimitive_u_64(
+      self.lastCommittedAssistantRevision,
+      serializer,
+    );
+    sse_encode_bool(self.idleCanContinue, serializer);
+    sse_encode_view_usage_summary(self.usage, serializer);
+  }
+
+  @protected
   void sse_encode_view_conversation_status(
     ViewConversationStatus self,
     SseSerializer serializer,
@@ -10077,6 +11685,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_view_history_message_page(
+    ViewHistoryMessagePage self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_view_history_version_summary(self.version, serializer);
+    sse_encode_view_conversation_page(self.page, serializer);
+  }
+
+  @protected
   void sse_encode_view_history_version(
     ViewHistoryVersion self,
     SseSerializer serializer,
@@ -10089,6 +11707,31 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_list_view_run(self.runs, serializer);
     sse_encode_list_view_turn(self.turns, serializer);
     sse_encode_list_json_payload(self.providerHistory, serializer);
+  }
+
+  @protected
+  void sse_encode_view_history_version_summary(
+    ViewHistoryVersionSummary self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.batchId, serializer);
+    sse_encode_CastedPrimitive_i_64(self.createdAt, serializer);
+    sse_encode_CastedPrimitive_usize(self.messageCount, serializer);
+  }
+
+  @protected
+  void sse_encode_view_interaction_details(
+    ViewInteractionDetails self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_CastedPrimitive_u_64(self.sequence, serializer);
+    sse_encode_opt_box_autoadd_view_question_request(self.question, serializer);
+    sse_encode_opt_box_autoadd_view_task_plan(self.plan, serializer);
+    sse_encode_list_view_operation_record(self.pendingOperations, serializer);
+    sse_encode_list_view_redo_batch(self.pendingRedos, serializer);
   }
 
   @protected
@@ -10280,6 +11923,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_view_operation_summary(
+    ViewOperationSummary self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.toolCallId, serializer);
+    sse_encode_String(self.toolName, serializer);
+    sse_encode_String(self.runId, serializer);
+    sse_encode_opt_box_autoadd_view_operation_binding(self.binding, serializer);
+    sse_encode_view_operation_phase(self.phase, serializer);
+  }
+
+  @protected
+  void sse_encode_view_outcome_counts(
+    ViewOutcomeCounts self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_CastedPrimitive_usize(self.pending, serializer);
+    sse_encode_CastedPrimitive_usize(self.completed, serializer);
+    sse_encode_CastedPrimitive_usize(self.failed, serializer);
+    sse_encode_CastedPrimitive_usize(self.cancelled, serializer);
+    sse_encode_CastedPrimitive_usize(self.unknown, serializer);
+    sse_encode_CastedPrimitive_usize(self.notStarted, serializer);
+  }
+
+  @protected
   void sse_encode_view_permission_mode(
     ViewPermissionMode self,
     SseSerializer serializer,
@@ -10389,6 +12059,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_view_question_summary(
+    ViewQuestionSummary self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.toolCallId, serializer);
+    sse_encode_String(self.runId, serializer);
+    sse_encode_String(self.requestMessageId, serializer);
+    sse_encode_view_question_status(self.status, serializer);
+    sse_encode_bool(self.consumed, serializer);
+  }
+
+  @protected
   void sse_encode_view_queue_mode(
     ViewQueueMode self,
     SseSerializer serializer,
@@ -10465,6 +12149,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_view_redo_summary(
+    ViewRedoSummary self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.sourceTurnId, serializer);
+    sse_encode_String(self.sourceMessageId, serializer);
+    sse_encode_String(self.historyVersionId, serializer);
+    sse_encode_String(self.replayRunId, serializer);
+    sse_encode_view_redo_phase(self.phase, serializer);
+    sse_encode_bool(self.hasHistoryVersion, serializer);
+    sse_encode_opt_String(self.lastError, serializer);
+  }
+
+  @protected
   void sse_encode_view_reply_revision(
     ViewReplyRevision self,
     SseSerializer serializer,
@@ -10478,6 +12178,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_box_autoadd_view_model_selection(self.model, serializer);
     sse_encode_opt_String(self.providerProtocol, serializer);
     sse_encode_list_json_payload(self.responseItems, serializer);
+  }
+
+  @protected
+  void sse_encode_view_reply_revision_summary(
+    ViewReplyRevisionSummary self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.messageId, serializer);
+    sse_encode_String(self.runId, serializer);
+    sse_encode_CastedPrimitive_i_64(self.createdAt, serializer);
+    sse_encode_opt_box_autoadd_view_model_selection(self.model, serializer);
+    sse_encode_opt_String(self.providerProtocol, serializer);
   }
 
   @protected
@@ -10552,6 +12266,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_view_run_summary(
+    ViewRunSummary self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_CastedPrimitive_i_64(self.startedAt, serializer);
+    sse_encode_opt_CastedPrimitive_i_64(self.settledAt, serializer);
+    sse_encode_view_run_kind(self.kind, serializer);
+    sse_encode_view_run_status(self.status, serializer);
+    sse_encode_opt_box_autoadd_view_model_selection(self.model, serializer);
+    sse_encode_opt_String(self.continuedFromRunId, serializer);
+    sse_encode_CastedPrimitive_usize(self.requestCount, serializer);
+    sse_encode_CastedPrimitive_usize(self.toolCount, serializer);
+    sse_encode_opt_box_autoadd_view_request_usage(self.lastRequest, serializer);
+    sse_encode_opt_String(self.errorCode, serializer);
+    sse_encode_view_usage_summary(self.usage, serializer);
+  }
+
+  @protected
   void sse_encode_view_source_provenance(
     ViewSourceProvenance self,
     SseSerializer serializer,
@@ -10567,6 +12301,27 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       self.resourceReferences,
       serializer,
     );
+  }
+
+  @protected
+  void sse_encode_view_source_summary(
+    ViewSourceSummary self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.kind, serializer);
+    sse_encode_opt_String(self.url, serializer);
+    sse_encode_opt_String(self.targetId, serializer);
+    sse_encode_bool(self.truncated, serializer);
+    sse_encode_opt_box_autoadd_view_source_provenance(
+      self.provenance,
+      serializer,
+    );
+    sse_encode_opt_String(self.attachedAfterRunId, serializer);
+    sse_encode_opt_String(self.attachedAfterMessageId, serializer);
+    sse_encode_opt_String(self.boundInputId, serializer);
+    sse_encode_opt_String(self.boundMessageId, serializer);
   }
 
   @protected
@@ -10641,6 +12396,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_view_turn_context(
+    ViewTurnContext self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.requestMessageId, serializer);
+    sse_encode_opt_box_autoadd_view_message(self.request, serializer);
+    sse_encode_bool(self.ownershipComplete, serializer);
+    sse_encode_list_String(self.visibleMessageIds, serializer);
+    sse_encode_list_String(self.runIds, serializer);
+    sse_encode_list_view_operation_binding(self.operations, serializer);
+  }
+
+  @protected
   void sse_encode_view_undo_ticket(
     ViewUndoTicket self,
     SseSerializer serializer,
@@ -10650,6 +12420,35 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.token, serializer);
     sse_encode_String(self.digest, serializer);
     sse_encode_list_String(self.operationIds, serializer);
+  }
+
+  @protected
+  void sse_encode_view_usage_summary(
+    ViewUsageSummary self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_CastedPrimitive_usize(self.recordedRuns, serializer);
+    sse_encode_CastedPrimitive_usize(self.continuedRuns, serializer);
+    sse_encode_CastedPrimitive_usize(self.modelRequests, serializer);
+    sse_encode_view_outcome_counts(self.requestOutcomes, serializer);
+    sse_encode_CastedPrimitive_usize(self.toolAttempts, serializer);
+    sse_encode_view_outcome_counts(self.toolOutcomes, serializer);
+    sse_encode_CastedPrimitive_usize(self.reportedUsageRequests, serializer);
+    sse_encode_CastedPrimitive_usize(self.completedUsageRequests, serializer);
+    sse_encode_CastedPrimitive_usize(
+      self.cachedInputReportedRequests,
+      serializer,
+    );
+    sse_encode_CastedPrimitive_usize(
+      self.reasoningReportedRequests,
+      serializer,
+    );
+    sse_encode_opt_box_autoadd_view_token_usage(
+      self.reportedTokens,
+      serializer,
+    );
+    sse_encode_CastedPrimitive_i_64(self.settledDurationMs, serializer);
   }
 }
 
@@ -10685,7 +12484,7 @@ class AgentCoreImpl extends RustOpaque implements AgentCore {
     mediaType: mediaType,
   );
 
-  Future<ViewConversationSnapshot> admitDraftAttachment({
+  Future<ViewConversationState> admitDraftAttachment({
     required DraftAttachmentAdmission request,
   }) => RustLib.instance.api.crateApiAgentCoreAdmitDraftAttachment(
     that: this,
@@ -10803,7 +12602,7 @@ class AgentCoreImpl extends RustOpaque implements AgentCore {
     records: records,
   );
 
-  Future<ViewConversationSnapshot> removeDraftAttachment({
+  Future<ViewConversationState> removeDraftAttachment({
     required DraftAttachmentTarget target,
     required String attachmentId,
   }) => RustLib.instance.api.crateApiAgentCoreRemoveDraftAttachment(
@@ -10812,7 +12611,7 @@ class AgentCoreImpl extends RustOpaque implements AgentCore {
     attachmentId: attachmentId,
   );
 
-  Future<ViewConversationSnapshot> replacePendingRedoReferences({
+  Future<ViewConversationState> replacePendingRedoReferences({
     required String conversationId,
     required String batchId,
     required int expectedSequence,
@@ -10864,7 +12663,7 @@ class AgentCoreImpl extends RustOpaque implements AgentCore {
   Future<List<ToolDefinition>> toolDefinitions() =>
       RustLib.instance.api.crateApiAgentCoreToolDefinitions(that: this);
 
-  Future<ViewConversationSnapshot> useDraftAttachment({
+  Future<ViewConversationState> useDraftAttachment({
     required DraftAttachmentTarget target,
     required String attachmentId,
   }) => RustLib.instance.api.crateApiAgentCoreUseDraftAttachment(

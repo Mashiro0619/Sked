@@ -684,9 +684,9 @@ async fn offline_business_queue_question_context_and_history_journey() {
         .unwrap();
     let question_id = tokio::time::timeout(std::time::Duration::from_secs(10), async {
         loop {
-            if let RuntimeEvent::Snapshot { snapshot } = events.recv().await.unwrap() {
-                if snapshot.conversation.id == qid {
-                    if let Some(question) = snapshot.current_question {
+            if let RuntimeEvent::Snapshot { state } = events.recv().await.unwrap() {
+                if state.conversation.id == qid {
+                    if let Some(question) = state.question {
                         break question.id;
                     }
                 }

@@ -587,6 +587,9 @@ class AgentConversation {
     this.modelSelection,
     this.pendingQuestion,
     this.executionHistoryStart = 0,
+    this.isViewProjection = false,
+    this.usageSummary,
+    this.pendingRedoExists = false,
     Iterable<ConversationMessage> messages = const [],
     Iterable<ConversationSource> sources = const [],
     Iterable<ConversationRunUsage> runs = const [],
@@ -621,7 +624,9 @@ class AgentConversation {
       throw const FormatException('Invalid executable history boundary.');
     }
     _validateStoredReferences();
-    validateConversationTurns(this.messages, this.runs, this.turns);
+    if (!isViewProjection) {
+      validateConversationTurns(this.messages, this.runs, this.turns);
+    }
     if (this.queuedInputs.map((item) => item.id).toSet().length !=
             this.queuedInputs.length ||
         this.queuedInputs.any(
@@ -633,8 +638,10 @@ class AgentConversation {
         this.queuedControls.length) {
       throw const FormatException('Duplicate conversation control identity.');
     }
-    _validatePendingQuestion();
-    _validateReferenceAttachments();
+    if (!isViewProjection) {
+      _validatePendingQuestion();
+      _validateReferenceAttachments();
+    }
   }
 
   AgentConversation._withUpdatedAt(AgentConversation source, this.updatedAt)
@@ -653,6 +660,9 @@ class AgentConversation {
       modelSelection = source.modelSelection,
       pendingQuestion = source.pendingQuestion,
       executionHistoryStart = source.executionHistoryStart,
+      isViewProjection = source.isViewProjection,
+      usageSummary = source.usageSummary,
+      pendingRedoExists = source.pendingRedoExists,
       messages = source.messages,
       sources = source.sources,
       runs = source.runs,
@@ -686,6 +696,13 @@ class AgentConversation {
   final AgentModelSelection? modelSelection;
   final AgentQuestionRequest? pendingQuestion;
   final int executionHistoryStart;
+
+  /// Native browsing projections contain a page and stable ownership metadata.
+  /// Complete archive validation remains on full conversation records.
+  final bool isViewProjection;
+  final Map<String, Object?>? usageSummary;
+  final bool pendingRedoExists;
+  bool get hasPendingRedo => pendingRedoExists || pendingRedo != null;
   Iterable<ConversationMessage> get executionMessages =>
       messages.skip(executionHistoryStart);
   final List<ConversationMessage> messages;
@@ -758,6 +775,9 @@ class AgentConversation {
         ? null
         : pendingQuestion ?? this.pendingQuestion,
     executionHistoryStart: executionHistoryStart ?? this.executionHistoryStart,
+    isViewProjection: isViewProjection,
+    usageSummary: usageSummary,
+    pendingRedoExists: pendingRedoExists,
     messages: messages ?? this.messages,
     sources: sources ?? this.sources,
     runs: runs ?? this.runs,

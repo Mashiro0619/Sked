@@ -46,12 +46,12 @@ fn source_digest(source: &ConversationSource) -> Result<String> {
 
 impl AgentStorage {
     pub fn prune_conversation(&mut self, id: &str, cutoff_ms: i64) -> Result<bool> {
-        let Some(snapshot) = self.read(id)? else {
+        let Some(snapshot) = self.conversation_state(id)? else {
             return Ok(false);
         };
         let conversation = &snapshot.conversation;
         let pending_question = snapshot
-            .current_question
+            .question
             .as_ref()
             .is_some_and(|question| question.status == QuestionStatus::Pending);
         let pending_control = snapshot
@@ -59,10 +59,10 @@ impl AgentStorage {
             .iter()
             .any(|control| control.status == ControlStatus::Queued);
         let pending_redo = snapshot
-            .redo_batches
+            .pending_redos
             .iter()
             .any(|batch| !matches!(batch.phase, RedoPhase::Completed | RedoPhase::Cancelled));
-        let pending_operation = snapshot.operations.iter().any(|operation| {
+        let pending_operation = snapshot.pending_operations.iter().any(|operation| {
             matches!(
                 operation.phase,
                 OperationPhase::Preparing
@@ -97,7 +97,7 @@ impl AgentStorage {
         model_selection: Option<ModelSelection>,
     ) -> Result<ConversationSnapshot> {
         required(&id, "conversation.id")?;
-        if let Some(existing) = self.read(&id)? {
+        if let Some(existing) = self.read_uncached(&id)? {
             if existing.conversation.draft_only
                 || existing.conversation.title != title
                 || existing.conversation.mode != mode
@@ -111,25 +111,30 @@ impl AgentStorage {
             return Ok(existing);
         }
         let timestamp = now_ms();
-        self.append(
-            &id,
-            0,
-            timestamp,
-            vec![JournalChange::ConversationCreated {
-                conversation: Conversation {
-                    id: id.clone(),
-                    title,
-                    title_was_edited: true,
-                    mode,
-                    model_selection,
-                    created_at: timestamp,
-                    updated_at: timestamp,
-                    ..Default::default()
-                },
-            }],
-        )?;
-        self.select_conversation(&id)?;
-        self.read(&id)?.ok_or(StorageError::NotFound(id))
+        let result = (|| {
+            self.append(
+                &id,
+                0,
+                timestamp,
+                vec![JournalChange::ConversationCreated {
+                    conversation: Conversation {
+                        id: id.clone(),
+                        title,
+                        title_was_edited: true,
+                        mode,
+                        model_selection,
+                        created_at: timestamp,
+                        updated_at: timestamp,
+                        ..Default::default()
+                    },
+                }],
+            )?;
+            self.select_conversation(&id)?;
+            self.read_uncached(&id)?
+                .ok_or(StorageError::NotFound(id.clone()))
+        })();
+        self.release_conversation(&id);
+        result
     }
 
     pub fn discard_drafts(&mut self) -> Result<()> {
@@ -202,7 +207,8 @@ impl AgentStorage {
         } else if self.drafts.contains_key(id) {
             self.selected_id = Some(id.into());
         } else {
-            if self.read(id)?.is_none() {
+            self.ensure_index()?;
+            if index::head(&self.index, id)?.is_none() {
                 return Err(StorageError::NotFound(id.into()));
             }
             let mut navigation = self.navigation.clone();
@@ -288,12 +294,16 @@ impl AgentStorage {
     }
 
     pub(super) fn prepare_conversation_deletion(&mut self, id: &str) -> Result<()> {
-        let snapshot = self.read(id)?;
+        self.ensure_index()?;
         let mut navigation = self.navigation.clone();
-        if let Some(snapshot) = &snapshot {
+        if let Some(snapshot) = self.drafts.get(id) {
             navigation
                 .retired_handoffs
                 .extend(snapshot.handoffs.iter().map(|handoff| handoff.id.clone()));
+        } else {
+            navigation
+                .retired_handoffs
+                .extend(index::record_ids(&self.index, id, "", "handoff")?);
         }
         if navigation.selected_id.as_deref() == Some(id) {
             navigation.selected_id = self.fallback_selection(Some(id))?;
@@ -320,11 +330,12 @@ impl AgentStorage {
         self.ensure_index()?;
         let mut navigation = self.navigation.clone();
         for head in index::heads(&self.index)? {
-            if let Some(snapshot) = self.read(&head.id)? {
-                navigation
-                    .retired_handoffs
-                    .extend(snapshot.handoffs.iter().map(|handoff| handoff.id.clone()));
-            }
+            navigation.retired_handoffs.extend(index::record_ids(
+                &self.index,
+                &head.id,
+                "",
+                "handoff",
+            )?);
         }
         navigation.selected_id = None;
         self.persist_navigation(&navigation)?;
@@ -405,7 +416,7 @@ impl AgentStorage {
         }
         let digest = source_digest(&source)?;
         let id = format!("handoff-{:x}", Sha256::digest(handoff_id.as_bytes()));
-        if let Some(existing) = self.read(&id)? {
+        if let Some(existing) = self.read_uncached(&id)? {
             let handoff = existing
                 .handoffs
                 .iter()
@@ -440,54 +451,62 @@ impl AgentStorage {
         let timestamp = now_ms();
         let message_id = Uuid::new_v4().to_string();
         source.bound_message_id = Some(message_id.clone());
-        self.append(
-            &id,
-            0,
-            timestamp,
-            vec![
-                JournalChange::ConversationCreated {
-                    conversation: Conversation {
-                        id: id.clone(),
-                        title,
-                        title_was_edited: true,
-                        mode,
-                        model_selection: model_selection.clone(),
-                        created_at: timestamp,
-                        updated_at: timestamp,
-                        ..Default::default()
+        let result = (|| {
+            self.append(
+                &id,
+                0,
+                timestamp,
+                vec![
+                    JournalChange::ConversationCreated {
+                        conversation: Conversation {
+                            id: id.clone(),
+                            title,
+                            title_was_edited: true,
+                            mode,
+                            model_selection: model_selection.clone(),
+                            created_at: timestamp,
+                            updated_at: timestamp,
+                            ..Default::default()
+                        },
                     },
-                },
-                JournalChange::SourceUpserted { source },
-                JournalChange::MessageUpserted {
-                    message: Message {
-                        id: message_id.clone(),
-                        role: MessageRole::User,
-                        text: prompt,
-                        created_at: timestamp,
-                        model_selection,
-                        ..Default::default()
+                    JournalChange::SourceUpserted { source },
+                    JournalChange::MessageUpserted {
+                        message: Message {
+                            id: message_id.clone(),
+                            role: MessageRole::User,
+                            text: prompt,
+                            created_at: timestamp,
+                            model_selection,
+                            ..Default::default()
+                        },
                     },
-                },
-                JournalChange::TurnUpserted {
-                    turn: Turn {
-                        id: Uuid::new_v4().to_string(),
-                        request_message_id: message_id.clone(),
-                        message_ids: vec![message_id.clone()],
-                        ..Default::default()
+                    JournalChange::TurnUpserted {
+                        turn: Turn {
+                            id: Uuid::new_v4().to_string(),
+                            request_message_id: message_id.clone(),
+                            message_ids: vec![message_id.clone()],
+                            ..Default::default()
+                        },
                     },
-                },
-                JournalChange::HandoffStored {
-                    handoff: ConversationHandoff {
-                        id: handoff_id,
-                        conversation_id: id.clone(),
-                        source_digest: digest,
-                        message_id,
+                    JournalChange::HandoffStored {
+                        handoff: ConversationHandoff {
+                            id: handoff_id,
+                            conversation_id: id.clone(),
+                            source_digest: digest,
+                            message_id,
+                        },
                     },
-                },
-            ],
-        )?;
-        self.select_conversation(&id)?;
-        Ok((self.read(&id)?.ok_or(StorageError::NotFound(id))?, true))
+                ],
+            )?;
+            self.select_conversation(&id)?;
+            Ok((
+                self.read_uncached(&id)?
+                    .ok_or(StorageError::NotFound(id.clone()))?,
+                true,
+            ))
+        })();
+        self.release_conversation(&id);
+        result
     }
 
     pub fn add_source(

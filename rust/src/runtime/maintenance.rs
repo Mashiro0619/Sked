@@ -132,11 +132,13 @@ impl RuntimeManager {
                 continue;
             }
             let target = id.clone();
-            let deleted = self
+            let result = self
                 .inner
                 .storage
                 .call(move |store| store.prune_conversation(&target, cutoff_ms))
-                .await?;
+                .await;
+            self.release_if_unowned(&id).await;
+            let deleted = result?;
             if deleted {
                 state.presentation = RuntimePresentation::default();
                 state.calibration = None;

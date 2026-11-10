@@ -118,7 +118,7 @@ class AgentApplication extends ChangeNotifier {
     binaryAttachments = RustConversationAttachments(
       client: this.nativeClient,
       readConversation: conversations.find,
-      publishSnapshot: conversations.ingestSnapshot,
+      publishState: conversations.ingestState,
       stagingDirectory: attachmentStagingDirectory,
       resolveStagingDirectory: resolveAgentAttachmentStaging,
       isAvailable: _knowledgeAvailable,

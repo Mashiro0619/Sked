@@ -182,6 +182,10 @@ class AgentUiState {
 /// an approval, stores a credential, or initiates a model request by itself.
 abstract class AgentUiDelegate {
   ValueListenable<AgentUiState> get state;
+  Future<void> setConversationActive(
+    Object owner,
+    String? conversationId,
+  ) async {}
 
   /// Hosts with per-conversation publication can return their own listenable.
   /// The default adapter is owned and disposed by the requesting view.
