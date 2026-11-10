@@ -1,3 +1,5 @@
+use std::{collections::BTreeMap, sync::Mutex as StdMutex};
+
 use futures::future::BoxFuture;
 use serde_json::Value;
 use tokio_util::sync::CancellationToken;
@@ -15,6 +17,7 @@ struct TransportExecutor {
     run_id: Option<String>,
     connection: ConnectionIdentity,
     inner: Arc<dyn ModelToolExecutor>,
+    expected_attachments: Arc<StdMutex<Option<AttachmentExpectations>>>,
 }
 
 impl RuntimeManager {
@@ -31,6 +34,7 @@ impl RuntimeManager {
             run_id,
             connection: ConnectionIdentity::from_config(&config),
             inner,
+            expected_attachments: Arc::new(StdMutex::new(None)),
         })
     }
 
@@ -109,50 +113,10 @@ impl ModelToolExecutor for TransportExecutor {
         let manager = self.manager.clone();
         let id = self.conversation_id.clone();
         Box::pin(async move {
-            let snapshot = manager.read(&id).await.map_err(|error| error.to_string())?;
-            for value in input {
-                let message: rig::message::Message =
-                    serde_json::from_value(value).map_err(|error| error.to_string())?;
-                if let rig::message::Message::User { content } = message {
-                    for content in content {
-                        let Some(source) = context::attachment_source(&content) else {
-                            continue;
-                        };
-                        let Some(id) = context::attachment_source_id(source) else {
-                            continue;
-                        };
-                        let metadata = snapshot
-                            .attachments
-                            .iter()
-                            .find(|attachment| attachment.id == id)
-                            .ok_or_else(|| format!("attachment_missing: 附件 {id} 不存在"))?;
-                        let media = metadata.media_type.as_str();
-                        let allowed = match &content {
-                            rig::message::UserContent::Image(_) => matches!(
-                                media,
-                                "image/png" | "image/jpeg" | "image/gif" | "image/webp"
-                            ),
-                            rig::message::UserContent::Audio(_) => {
-                                protocol == ProviderProtocol::ChatCompletions
-                                    && matches!(media, "audio/mpeg" | "audio/wav" | "audio/x-wav")
-                            }
-                            rig::message::UserContent::Document(_) => {
-                                media == "application/pdf"
-                                    || (protocol == ProviderProtocol::Responses
-                                        && RESPONSES_FILE_MEDIA_TYPES.contains(&media))
-                            }
-                            _ => false,
-                        };
-                        if !allowed {
-                            return Err(format!(
-                                "provider.unsupportedAttachment: {}",
-                                metadata.name
-                            ));
-                        }
-                    }
-                }
-            }
-            Ok(())
+            manager
+                .attachment_expectations(&id, input, protocol)
+                .await
+                .map(|_| ())
         })
     }
 
@@ -198,12 +162,26 @@ impl ModelToolExecutor for TransportExecutor {
         let manager = self.manager.clone();
         let conversation_id = self.conversation_id.clone();
         let expected = self.connection.protocol;
+        let attachments = self
+            .expected_attachments
+            .lock()
+            .expect("attachment expectations mutex poisoned")
+            .clone();
         Box::pin(async move {
             if protocol != expected {
                 return Err("附件请求协议已改变".into());
             }
+            let attachments = attachments.ok_or_else(|| {
+                "provider.attachmentEncodingMismatch: 本轮附件材料尚未核对，请求未发送".to_string()
+            })?;
             manager
-                .prepare_attachment_request(conversation_id, body, protocol, cancellation)
+                .prepare_attachment_request(
+                    conversation_id,
+                    body,
+                    protocol,
+                    attachments,
+                    cancellation,
+                )
                 .await
         })
     }
@@ -217,9 +195,40 @@ impl ModelToolExecutor for TransportExecutor {
         history: Vec<Value>,
         request_index: usize,
     ) -> BoxFuture<'static, std::result::Result<bool, String>> {
-        self.inner.prepare_model(history, request_index)
+        let manager = self.manager.clone();
+        let id = self.conversation_id.clone();
+        let protocol = self.connection.protocol;
+        let inner = self.inner.clone();
+        let expected = self.expected_attachments.clone();
+        Box::pin(async move {
+            *expected
+                .lock()
+                .expect("attachment expectations mutex poisoned") = None;
+            // RunHook supplies the complete native history before every Rig
+            // replay, including later tool turns and the current prompt. Text
+            // containing a marker is not an attachment content block.
+            let attachments = manager
+                .attachment_expectations(&id, history.clone(), protocol)
+                .await?;
+            let paused = inner.prepare_model(history, request_index).await?;
+            if !paused {
+                *expected
+                    .lock()
+                    .expect("attachment expectations mutex poisoned") = Some(attachments);
+            }
+            Ok(paused)
+        })
     }
 }
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum AttachmentMedia {
+    Image,
+    Audio,
+    File,
+}
+
+type AttachmentExpectations = BTreeMap<(AttachmentMedia, String), usize>;
 
 #[derive(Clone, Copy)]
 enum AttachmentPart {
@@ -230,12 +239,103 @@ enum AttachmentPart {
     ResponseFile,
 }
 
+impl AttachmentPart {
+    fn media(self) -> AttachmentMedia {
+        match self {
+            Self::ChatImage | Self::ResponseImage => AttachmentMedia::Image,
+            Self::Audio => AttachmentMedia::Audio,
+            Self::ChatFile | Self::ResponseFile => AttachmentMedia::File,
+        }
+    }
+
+    fn protocol(self) -> ProviderProtocol {
+        match self {
+            Self::ChatImage | Self::Audio | Self::ChatFile => ProviderProtocol::ChatCompletions,
+            Self::ResponseImage | Self::ResponseFile => ProviderProtocol::Responses,
+        }
+    }
+}
+
+/// Rig wraps a typed Base64 source in a data URL. Only values in native media
+/// slots are inspected; identical text in a user message remains plain text.
+fn wire_attachment_marker(source: &str) -> Option<(&str, Option<&str>)> {
+    if let Some(id) = source.strip_prefix("sked-attachment://") {
+        return Some((id, None));
+    }
+    let (media, value) = source.strip_prefix("data:")?.split_once(";base64,")?;
+    Some((value.strip_prefix("sked-attachment://")?, Some(media)))
+}
+
 impl RuntimeManager {
+    async fn attachment_expectations(
+        &self,
+        conversation_id: &str,
+        input: Vec<Value>,
+        protocol: ProviderProtocol,
+    ) -> std::result::Result<AttachmentExpectations, String> {
+        let snapshot = self
+            .read(conversation_id)
+            .await
+            .map_err(|error| error.to_string())?;
+        let mut expected = AttachmentExpectations::new();
+        for value in input {
+            let message: rig::message::Message =
+                serde_json::from_value(value).map_err(|error| error.to_string())?;
+            if let rig::message::Message::User { content } = message {
+                for content in content {
+                    let Some(id) = context::attachment_source(&content)
+                        .and_then(context::attachment_source_id)
+                    else {
+                        continue;
+                    };
+                    let metadata = snapshot
+                        .attachments
+                        .iter()
+                        .find(|attachment| attachment.id == id)
+                        .ok_or_else(|| format!("attachment_missing: 附件 {id} 不存在"))?;
+                    let media = metadata.media_type.as_str();
+                    let kind = match &content {
+                        rig::message::UserContent::Image(_)
+                            if matches!(
+                                media,
+                                "image/png" | "image/jpeg" | "image/gif" | "image/webp"
+                            ) =>
+                        {
+                            AttachmentMedia::Image
+                        }
+                        rig::message::UserContent::Audio(_)
+                            if protocol == ProviderProtocol::ChatCompletions
+                                && matches!(media, "audio/mpeg" | "audio/wav" | "audio/x-wav") =>
+                        {
+                            AttachmentMedia::Audio
+                        }
+                        rig::message::UserContent::Document(_)
+                            if media == "application/pdf"
+                                || (protocol == ProviderProtocol::Responses
+                                    && RESPONSES_FILE_MEDIA_TYPES.contains(&media)) =>
+                        {
+                            AttachmentMedia::File
+                        }
+                        _ => {
+                            return Err(format!(
+                                "provider.unsupportedAttachment: {}",
+                                metadata.name
+                            ));
+                        }
+                    };
+                    *expected.entry((kind, id.to_owned())).or_default() += 1;
+                }
+            }
+        }
+        Ok(expected)
+    }
+
     async fn prepare_attachment_request(
         &self,
         conversation_id: String,
         mut body: Value,
         protocol: ProviderProtocol,
+        expected: AttachmentExpectations,
         cancellation: CancellationToken,
     ) -> std::result::Result<PreparedRequestBody, String> {
         let root = if protocol == ProviderProtocol::Responses {
@@ -244,6 +344,7 @@ impl RuntimeManager {
             "messages"
         };
         let mut markers = Vec::new();
+        let mut actual = AttachmentExpectations::new();
         if let Some(messages) = body.get(root).and_then(Value::as_array) {
             for (message_index, message) in messages.iter().enumerate() {
                 if message.get("role").and_then(Value::as_str) != Some("user") {
@@ -271,22 +372,36 @@ impl RuntimeManager {
                             .and_then(Value::as_str)
                             .map(|value| (AttachmentPart::ChatFile, value)),
                         Some("input_file") => part
-                            .get("file_url")
+                            .get("file_data")
                             .and_then(Value::as_str)
+                            .or_else(|| part.get("file_url").and_then(Value::as_str))
                             .map(|value| (AttachmentPart::ResponseFile, value)),
                         _ => None,
                     };
                     if let Some((kind, source)) = source {
-                        if let Some(id) = source.strip_prefix("sked-attachment://") {
+                        if let Some((id, media)) = wire_attachment_marker(source) {
+                            if kind.protocol() != protocol {
+                                return Err(
+                                    "provider.attachmentEncodingMismatch: 附件内容块与请求协议不符"
+                                        .into(),
+                                );
+                            }
+                            *actual.entry((kind.media(), id.to_owned())).or_default() += 1;
                             markers.push((
                                 format!("/{root}/{message_index}/content/{part_index}"),
                                 kind,
                                 id.to_owned(),
+                                media.map(str::to_owned),
                             ));
                         }
                     }
                 }
             }
+        }
+        if actual != expected {
+            return Err(
+                "provider.attachmentEncodingMismatch: 本轮附件内容未完整保留，请求未发送".into(),
+            );
         }
         if markers.is_empty() {
             return PreparedRequestBody::json(body);
@@ -296,7 +411,7 @@ impl RuntimeManager {
             .await
             .map_err(|error| error.to_string())?;
         let mut files = Vec::new();
-        for (pointer, kind, id) in markers {
+        for (pointer, kind, id, declared_media) in markers {
             if cancellation.is_cancelled() {
                 return Err("模型请求已取消".into());
             }
@@ -307,6 +422,15 @@ impl RuntimeManager {
                 .ok_or_else(|| format!("attachment_missing: 附件 {id} 不存在"))?
                 .clone();
             let media = metadata.media_type.as_str();
+            if declared_media
+                .as_deref()
+                .is_some_and(|declared| declared != media)
+            {
+                return Err(format!(
+                    "provider.attachmentEncodingMismatch: 附件 {} 的媒体类型已改变",
+                    metadata.name
+                ));
+            }
             let allowed = match kind {
                 AttachmentPart::ChatImage | AttachmentPart::ResponseImage => matches!(
                     media,

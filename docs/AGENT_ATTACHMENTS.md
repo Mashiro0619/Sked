@@ -42,6 +42,8 @@
 
 精确类型以[媒体类型目录](../lib/agent/attachments/attachment_media_types.dart)、[Rust 类型目录](../rust/src/runtime/attachment_media.rs)和[原生传输准备](../rust/src/runtime/transport.rs)为准。Rig 内容块保留私有附件 ID；HTTP 传输在发送前打开相应文件，按原始媒体类型和文件名生成请求内容，分块 Base64 编码并核对实际长度、SHA-256。JSONL 不嵌入二进制内容。服务拒绝后不自动换模型或只发送文件名。
 
+PDF 在 Rig 历史中使用带私有 ID 的 Base64 源引用，旧 URL 形式的 PDF 引用在读取历史时统一转换。Chat Completions 的 `file.file_data` 和 Responses 的 `input_file.file_data` 均在传输层替换为实际文件内容。每轮请求以编码前的完整原生消息固定附件类型、ID 和出现次数，编码后逐项核对；内容块被丢弃、降为文本或改成其他类型时停止发送并返回具体错误。正文中写出的附件标记仍按普通文本处理。
+
 活动上下文保留文件引用。压缩不会删除原文件；重新生成使用所选回复之前的有效附件。仅由退役历史版本引用的文件不会自动进入当前模型请求。
 
 ## 平台与维护

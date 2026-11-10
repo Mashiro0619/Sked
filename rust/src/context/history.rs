@@ -1,6 +1,7 @@
 use base64::{Engine, engine::general_purpose::STANDARD};
 use rig::message::{
-    Document, DocumentData, DocumentSourceKind, Message as ProviderMessage, UserContent,
+    Document, DocumentData, DocumentMediaType, DocumentSourceKind, Message as ProviderMessage,
+    UserContent,
 };
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -19,15 +20,24 @@ pub(crate) fn archive_history(
                 for content in content {
                     match content {
                         UserContent::Image(image) => {
-                            archive_attachment_source(&mut image.data, attachments, false)
+                            archive_attachment_source(&mut image.data, attachments, false);
                         }
                         UserContent::Audio(audio) => {
-                            archive_attachment_source(&mut audio.data, attachments, true)
+                            archive_attachment_source(&mut audio.data, attachments, true);
                         }
                         UserContent::Document(Document {
                             data: DocumentData::File(source),
+                            media_type,
                             ..
-                        }) => archive_attachment_source(source, attachments, false),
+                        }) => {
+                            if archive_attachment_source(
+                                source,
+                                attachments,
+                                *media_type == Some(DocumentMediaType::PDF),
+                            ) {
+                                *media_type = Some(DocumentMediaType::PDF);
+                            }
+                        }
                         _ => {}
                     }
                 }
@@ -61,12 +71,11 @@ pub(crate) fn attachment_source_id(source: &DocumentSourceKind) -> Option<&str> 
 fn archive_attachment_source(
     source: &mut DocumentSourceKind,
     attachments: &[AttachmentMetadata],
-    audio: bool,
-) {
-    if attachment_source_id(source).is_some() {
-        return;
-    }
+    use_base64: bool,
+) -> bool {
+    let original_id = attachment_source_id(source).map(str::to_owned);
     let digest = match source {
+        _ if original_id.is_some() => None,
         DocumentSourceKind::Raw(bytes) => Some(format!("{:x}", Sha256::digest(bytes))),
         DocumentSourceKind::Base64(data) => STANDARD
             .decode(data.as_bytes())
@@ -74,16 +83,22 @@ fn archive_attachment_source(
             .map(|bytes| format!("{:x}", Sha256::digest(bytes))),
         _ => None,
     };
-    if let Some(metadata) = digest.as_ref().and_then(|digest| {
-        attachments
-            .iter()
-            .find(|attachment| &attachment.sha256 == digest)
-    }) {
-        let marker = format!("sked-attachment://{}", metadata.id);
-        *source = if audio {
+    let metadata = attachments.iter().find(|attachment| {
+        original_id.as_ref().map_or_else(
+            || digest.as_ref() == Some(&attachment.sha256),
+            |id| &attachment.id == id,
+        )
+    });
+    let pdf = metadata.is_some_and(|metadata| metadata.media_type == "application/pdf");
+    if let Some(id) = original_id.or_else(|| metadata.map(|metadata| metadata.id.clone())) {
+        let marker = format!("sked-attachment://{id}");
+        // Normalize existing URL markers as well as legacy inline content.
+        // JSONL keeps the marker itself, never the encoded file bytes.
+        *source = if use_base64 || pdf {
             DocumentSourceKind::Base64(marker)
         } else {
             DocumentSourceKind::Url(marker)
         };
     }
+    pdf
 }

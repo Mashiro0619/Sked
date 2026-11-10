@@ -126,7 +126,13 @@ impl ContextProvider for DefaultContextProvider {
             } else if RESPONSES_FILE_MEDIA_TYPES.contains(&media) {
                 content.push(UserContent::Document(Document {
                     media_type: (media == "application/pdf").then_some(DocumentMediaType::PDF),
-                    data: DocumentData::File(DocumentSourceKind::Url(marker)),
+                    // OpenAI's Chat replay accepts PDF data, not PDF URLs. The
+                    // marker remains a reference until transport streams it.
+                    data: DocumentData::File(if media == "application/pdf" {
+                        DocumentSourceKind::Base64(marker)
+                    } else {
+                        DocumentSourceKind::Url(marker)
+                    }),
                     ..Default::default()
                 }));
             } else {
