@@ -133,7 +133,7 @@ Sked 通过 `/models` 获取模型列表，通过 `/chat/completions` 解析课�
 
 环境准备、原子提交、本地化和验证流程见 [贡献指南](CONTRIBUTING.md)。
 
-内置 Agent 的当前行为见[运行说明](docs/AGENT_RUNTIME.md)和[使用逻辑](docs/USAGE_LOGIC.md)。设计依据与验收边界见[架构](docs/AGENT_ARCHITECTURE.md)、[能力全集](docs/AGENT_CAPABILITIES.md)、[数据与应用重构](docs/AGENT_DATA_REFACTOR.md)、[共享 Skills](docs/AGENT_SKILLS.md)、[开源 harness 研究](docs/AGENT_HARNESS_RESEARCH.md)和[实施计划](docs/AGENT_IMPLEMENTATION_PLAN.md)；其中的后续设计与尚未完成的外部验收均单独标明。
+内置 Agent 的当前行为见[运行说明](docs/AGENT_RUNTIME.md)和[使用逻辑](docs/USAGE_LOGIC.md)。设计依据与验收边界见[架构](docs/AGENT_ARCHITECTURE.md)、[能力全集](docs/AGENT_CAPABILITIES.md)、[数据与应用重构](docs/AGENT_DATA_REFACTOR.md)、[共享 Skills](docs/AGENT_SKILLS.md)、[开源 harness 研究](docs/AGENT_HARNESS_RESEARCH.md)和[既有实施记录](docs/AGENT_IMPLEMENTATION_PLAN.md)。以 DeepSeek Harness 为标准的下一阶段目标、通用外部能力和原子提交顺序见[插件架构与上线目标](docs/AGENT_PLUGIN_ARCHITECTURE.md)。
 
 学校站点配置位于 [`assets/school_sites.json`](assets/school_sites.json)，也欢迎补充尚未收录的学校。
 
