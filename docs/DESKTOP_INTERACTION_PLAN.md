@@ -17,7 +17,7 @@ Sked 桌面端应支持用户熟悉的对象操作、键盘操作和文件交互
 | 会话列表 | D1 已接入右键和键盘上下文菜单；顶部、行尾按钮与菜单共用目标动作，管理其他会话时保留当前阅读对象 | [列表](../lib/agent/ui/agent_conversation_list.dart)、[共享会话动作](../lib/agent/ui/agent_conversation_actions.dart)、[会话界面](../lib/agent/ui/agent_conversation_view.dart) |
 | 课程与日程 | 课程日视图、周视图已接入查看、编辑和删除的右键及键盘菜单；日程的复制及重复范围操作正在连接同一入口 | [课程网格](../lib/widgets/timetable_grid.dart)、[日程列表](../lib/screens/general_schedule_list_view.dart)、[日程业务入口](../lib/screens/general_schedule_home_screen.dart) |
 | 课表、分类、附件与知识 | 附件与知识列表已接入整行右键和键盘菜单；课表、分类等资源行继续接入已有动作 | [资源行](../lib/widgets/workbench_resource_widgets.dart)、[附件](../lib/agent/ui/agent_attachment_view.dart)、[知识](../lib/agent/ui/agent_knowledge_view.dart) |
-| 键盘打开对象菜单 | D1 已为会话接入菜单键和 Shift+F10；其他对象继续按计划接入同一入口 | [桌面上下文菜单](../lib/widgets/desktop_context_menu.dart)、[列表](../lib/agent/ui/agent_conversation_list.dart) |
+| 键盘打开对象菜单 | 已接入的对象菜单共用菜单键和 Shift+F10；会话还支持 F2 改名、Delete 确认删除，保留文本控件按键优先级 | [桌面上下文菜单](../lib/widgets/desktop_context_menu.dart)、[列表](../lib/agent/ui/agent_conversation_list.dart) |
 | 搜索与保存快捷键 | 历史区与语言页已接入 Ctrl+F 和搜索 Esc；D5 已为现有编辑任务接入 Ctrl+S，节次时间页通过原 flush 保存 | [历史搜索](../lib/agent/ui/agent_conversation_list.dart)、[语言搜索](../lib/screens/language_settings_page.dart)、[编辑器动作](../lib/widgets/sked_task_actions.dart) |
 | 文件拖入与截图粘贴 | 附件通过文件选择器进入；桌面文件拖入、剪贴板图片和文件列表没有接入附件链 | [附件控制器](../lib/agent/attachments/agent_attachment_controller.dart)、[Windows 插件装配](../windows/flutter/generated_plugin_registrant.cc) |
 | 保存后的系统动作 | 附件主要提供预览、再次附加和移除；导出成功显示路径，缺少统一的默认应用打开、资源管理器定位和复制路径动作 | [附件菜单](../lib/agent/ui/agent_attachment_view.dart)、[导出反馈](../lib/widgets/export_save_flow.dart)、[导出服务](../lib/services/export_service.dart) |
@@ -105,7 +105,7 @@ Tab / Shift+Tab、Enter、Space、文本选择、Ctrl+A/C/X/V/Z 及重做沿用�
 | D1 | feat(桌面菜单): 接入会话对象上下文动作 | 已实现；动作契约、会话行右键、菜单键／Shift+F10、目标身份校验与现有会话动作一起接通 |
 | D2 | feat(桌面菜单): 接入课程与日程对象动作 | 课程已实现；日程继续接入查看、编辑、复制及重复范围删除，按两类对象分笔 |
 | D3 | feat(桌面菜单): 接入资源与内容对象动作 | 附件与知识已实现；课表分类、消息分别继续接入，保留文本菜单优先级 |
-| D4 | feat(桌面快捷键): 接入区域搜索与对象操作 | 历史区与语言页的 Ctrl+F、搜索 Esc 已实现；F2、Delete 继续按对象接入同一动作规则 |
+| D4 | feat(桌面快捷键): 接入区域搜索与对象操作 | 历史区与语言页的 Ctrl+F、搜索 Esc，以及会话 F2／Delete 已实现；其他资源按对象接入同一动作规则 |
 | D5 | feat(桌面快捷键): 接入当前编辑任务保存 | 已实现；课程、日程、课表、学校站点、分类名称的保存及节次时间 flush 共用原命令，保留输入法、忙碌和退出守卫 |
 | D6 | feat(桌面附件): 接入系统文件拖入 | 平台拖入适配、有效落点和正式附件接纳同笔，跨会话与取消保持原身份 |
 | D7 | feat(桌面附件): 接入剪贴板图片与文件 | 平台载荷读取、输入焦点与附件接纳同笔，保留纯文本粘贴 |

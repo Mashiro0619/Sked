@@ -13,6 +13,7 @@ class DesktopAction {
     required this.id,
     required this.label,
     this.icon,
+    this.shortcut,
     this.enabled = true,
     this.onInvoke,
   });
@@ -20,6 +21,10 @@ class DesktopAction {
   final String id;
   final String label;
   final IconData? icon;
+
+  /// An unmodified object key, such as F2 or Delete. Text fields keep their keys.
+  final LogicalKeyboardKey? shortcut;
+  String? get shortcutLabel => shortcut?.keyLabel;
   final bool enabled;
   final FutureOr<void> Function()? onInvoke;
 }
@@ -73,10 +78,14 @@ class _DesktopContextMenuRegionState extends State<DesktopContextMenuRegion> {
   SkedMenuSession? _menu;
   bool _dependenciesRead = false;
   bool _sourceAttached = true;
+  bool _visible = true;
   int _generation = 0;
 
   bool get _ownerCurrent =>
-      mounted && widget.enabled && widget.isOwnerCurrent?.call() != false;
+      mounted &&
+      _visible &&
+      widget.enabled &&
+      widget.isOwnerCurrent?.call() != false;
 
   bool get _canOpen =>
       _sourceAttached &&
@@ -100,6 +109,7 @@ class _DesktopContextMenuRegionState extends State<DesktopContextMenuRegion> {
     _dependenciesRead = true;
     _ownerRoute = ownerRoute;
     _parentSession = parent;
+    _visible = TickerMode.valuesOf(context).enabled;
     _task?.check();
   }
 
@@ -157,6 +167,70 @@ class _DesktopContextMenuRegionState extends State<DesktopContextMenuRegion> {
     );
   }
 
+  SkedTaskSession _beginTask() {
+    final generation = _generation;
+    final target = widget.target;
+    final targetChanges = widget.targetChanges;
+    return _task = SkedTaskSession(
+      ownerRoute: _ownerRoute,
+      parent: _parentSession,
+      targetChanges: targetChanges,
+      isOwnerActive: () =>
+          _ownerCurrent &&
+          generation == _generation &&
+          widget.target == target &&
+          identical(widget.targetChanges, targetChanges),
+    );
+  }
+
+  bool _invokeShortcut(LogicalKeyboardKey key) {
+    final task = _beginTask();
+    final invocation = DesktopActionContext(
+      context: context,
+      target: widget.target,
+      isCurrent: () => task.isCurrent,
+    );
+    DesktopAction? selected;
+    try {
+      selected = widget
+          .actionsBuilder(invocation)
+          .where((action) => action.shortcut == key)
+          .firstOrNull;
+    } catch (_) {
+      task.dispose();
+      if (identical(_task, task)) _task = null;
+      rethrow;
+    }
+    if (selected == null ||
+        !task.isCurrent ||
+        !selected.enabled ||
+        selected.onInvoke == null) {
+      task.dispose();
+      if (identical(_task, task)) _task = null;
+      return selected != null;
+    }
+    unawaited(_runShortcut(task, selected));
+    return true;
+  }
+
+  Future<void> _runShortcut(SkedTaskSession task, DesktopAction action) async {
+    try {
+      await action.onInvoke!();
+    } catch (error, stack) {
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: error,
+          stack: stack,
+          library: 'Sked desktop actions',
+          context: ErrorDescription('while invoking an object shortcut'),
+        ),
+      );
+    } finally {
+      task.dispose();
+      if (identical(_task, task)) _task = null;
+    }
+  }
+
   Future<void> _open(Offset? pointerPosition) async {
     if (!_canOpen) return;
     final source = context.findRenderObject() as RenderBox?;
@@ -169,20 +243,9 @@ class _DesktopContextMenuRegionState extends State<DesktopContextMenuRegion> {
       return;
     }
 
-    final generation = _generation;
     final target = widget.target;
-    final targetChanges = widget.targetChanges;
     final menu = _menu = SkedMenuSession();
-    final task = _task = SkedTaskSession(
-      ownerRoute: _ownerRoute,
-      parent: _parentSession,
-      targetChanges: targetChanges,
-      isOwnerActive: () =>
-          _ownerCurrent &&
-          generation == _generation &&
-          widget.target == target &&
-          identical(widget.targetChanges, targetChanges),
-    );
+    final task = _beginTask();
     void checkTask() {
       if (!task.isCurrent) menu.invalidate();
     }
@@ -211,6 +274,12 @@ class _DesktopContextMenuRegionState extends State<DesktopContextMenuRegion> {
               enabled: action.enabled && action.onInvoke != null,
               child: SkedMenuItemContent(
                 leading: action.icon == null ? null : Icon(action.icon),
+                trailing: action.shortcutLabel == null
+                    ? null
+                    : Text(
+                        action.shortcutLabel!,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                 child: Text(action.label),
               ),
             ),
@@ -253,11 +322,22 @@ class _DesktopContextMenuRegionState extends State<DesktopContextMenuRegion> {
 
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent || !_canOpen) return KeyEventResult.ignored;
+    if (FocusManager.instance.primaryFocus?.context
+            ?.findAncestorStateOfType<EditableTextState>() !=
+        null) {
+      return KeyEventResult.ignored;
+    }
     final keyboard = HardwareKeyboard.instance;
     if (keyboard.isControlPressed ||
         keyboard.isAltPressed ||
         keyboard.isMetaPressed) {
       return KeyEventResult.ignored;
+    }
+    if (!keyboard.isShiftPressed &&
+        (event.logicalKey == LogicalKeyboardKey.f2 ||
+            event.logicalKey == LogicalKeyboardKey.delete) &&
+        _invokeShortcut(event.logicalKey)) {
+      return KeyEventResult.handled;
     }
     final contextMenu =
         event.logicalKey == LogicalKeyboardKey.contextMenu &&

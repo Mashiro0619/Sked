@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -90,6 +91,11 @@ class AgentConversationActions extends ChangeNotifier {
           id: id,
           label: label,
           icon: icon,
+          shortcut: switch (id) {
+            'rename' => LogicalKeyboardKey.f2,
+            'delete' => LogicalKeyboardKey.delete,
+            _ => null,
+          },
           enabled:
               context.isCurrent() &&
               _ownerCurrent(owner) &&
