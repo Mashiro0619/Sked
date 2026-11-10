@@ -15,6 +15,7 @@ import '../widgets/settings_page_header.dart';
 import '../widgets/sked_task_route.dart';
 import '../widgets/ui_command.dart';
 import '../widgets/adaptive_navigation_scope.dart';
+import '../widgets/desktop_search_shortcuts.dart';
 
 class LanguageSettingsPage extends StatefulWidget {
   const LanguageSettingsPage({super.key});
@@ -26,6 +27,7 @@ class LanguageSettingsPage extends StatefulWidget {
 class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
   final _searchController = TextEditingController();
   final _searchFocus = FocusNode();
+  FocusNode? _searchReturnFocus;
   String _query = '';
   bool _isSelectingLanguage = false;
   bool _languageSelectionPopped = false;
@@ -43,6 +45,36 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
     _searchFocus.requestFocus();
   }
 
+  void _focusSearch() {
+    if (!_searchFocus.hasFocus) {
+      _searchReturnFocus = FocusManager.instance.primaryFocus;
+    }
+    _searchFocus.requestFocus();
+    _searchController.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: _searchController.text.length,
+    );
+  }
+
+  bool _dismissSearch() {
+    final field = FocusManager.instance.primaryFocus?.context
+        ?.findAncestorWidgetOfExactType<TextField>();
+    if (!_searchFocus.hasFocus && field?.controller != _searchController) {
+      return false;
+    }
+    _searchFocus.unfocus();
+    final previous = _searchReturnFocus;
+    _searchReturnFocus = null;
+    if (previous?.context?.mounted == true &&
+        previous!.canRequestFocus &&
+        previous.context
+                ?.findAncestorStateOfType<_LanguageSettingsPageState>() ==
+            this) {
+      previous.requestFocus();
+    }
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer2<SettingsViewState, AppDataMaintenance>(
@@ -58,97 +90,118 @@ class _LanguageSettingsPageState extends State<LanguageSettingsPage> {
               56.0,
               double.infinity,
             );
-        return PopScope(
-          canPop: !_isSelectingLanguage,
-          child: SettingsPageScaffold(
-            title: l10n.language,
-            statusIndicator: UiCommandBusyIndicator(busy: _isSelectingLanguage),
-            headerBottom: PreferredSize(
-              preferredSize: Size.fromHeight(searchHeight),
-              child: SizedBox(
-                height: searchHeight,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 720),
-                    child: TextField(
-                      key: const ValueKey('language-search'),
-                      controller: _searchController,
-                      focusNode: _searchFocus,
-                      decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.search),
-                        hintText: MaterialLocalizations.of(context)
-                            .searchFieldLabel,
-                        suffixIcon: _query.isEmpty
-                            ? null
-                            : IconButton(
-                                key: const ValueKey('language-search-clear'),
-                                tooltip: l10n.clear,
-                                onPressed: _clearSearch,
-                                icon: const Icon(Icons.close),
-                              ),
+        return DesktopSearchShortcuts(
+          autofocus: true,
+          isCurrent: () =>
+              mounted &&
+              !_isSelectingLanguage &&
+              !_languageSelectionPopped &&
+              !maintenance.isReserved,
+          onFind: _focusSearch,
+          onDismiss: _dismissSearch,
+          child: PopScope(
+            canPop: !_isSelectingLanguage,
+            child: SettingsPageScaffold(
+              title: l10n.language,
+              statusIndicator: UiCommandBusyIndicator(
+                busy: _isSelectingLanguage,
+              ),
+              headerBottom: PreferredSize(
+                preferredSize: Size.fromHeight(searchHeight),
+                child: SizedBox(
+                  height: searchHeight,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 720),
+                      child: TextField(
+                        key: const ValueKey('language-search'),
+                        controller: _searchController,
+                        focusNode: _searchFocus,
+                        decoration: InputDecoration(
+                          prefixIcon: Tooltip(
+                            message: DesktopSearchShortcuts.findTooltip(
+                              context,
+                              MaterialLocalizations.of(context)
+                                  .searchFieldLabel,
+                            ),
+                            child: const Icon(Icons.search),
+                          ),
+                          hintText: MaterialLocalizations.of(context)
+                              .searchFieldLabel,
+                          suffixIcon: _query.isEmpty
+                              ? null
+                              : IconButton(
+                                  key: const ValueKey('language-search-clear'),
+                                  tooltip: l10n.clear,
+                                  onPressed: _clearSearch,
+                                  icon: const Icon(Icons.close),
+                                ),
+                        ),
+                        onChanged: (value) => setState(() => _query = value),
                       ),
-                      onChanged: (value) => setState(() => _query = value),
                     ),
                   ),
                 ),
               ),
-            ),
-            bodyBuilder: (_, headerSliver) => Column(
-              children: [
-                Expanded(
-                  child: SafeArea(
-                    top: false,
-                    child: ResponsiveSettingsSingleColumnBody(
-                      scrollViewKey: const PageStorageKey(
-                        'language-settings-scroll',
-                      ),
-                      headerSliver: headerSliver,
-                      child: Column(
-                        children: [
-                          if (filteredOptions.isEmpty)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 24,
-                              ),
-                              child: Semantics(
-                                liveRegion: true,
-                                child: Text(
-                                  l10n.languageNoResults,
-                                  key: const ValueKey('language-no-results'),
-                                  textAlign: TextAlign.center,
-                                  style: Theme.of(context).textTheme.bodyLarge,
+              bodyBuilder: (_, headerSliver) => Column(
+                children: [
+                  Expanded(
+                    child: SafeArea(
+                      top: false,
+                      child: ResponsiveSettingsSingleColumnBody(
+                        scrollViewKey: const PageStorageKey(
+                          'language-settings-scroll',
+                        ),
+                        headerSliver: headerSliver,
+                        child: Column(
+                          children: [
+                            if (filteredOptions.isEmpty)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 24,
+                                ),
+                                child: Semantics(
+                                  liveRegion: true,
+                                  child: Text(
+                                    l10n.languageNoResults,
+                                    key: const ValueKey('language-no-results'),
+                                    textAlign: TextAlign.center,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyLarge,
+                                  ),
                                 ),
                               ),
-                            ),
-                          for (final option in filteredOptions)
-                            _LanguageOptionTile(
-                              key: ValueKey('language-option-${option.code}'),
-                              option: option,
-                              selected: option.code == currentCode,
-                              onTap:
-                                  _isSelectingLanguage ||
-                                      _languageSelectionPopped ||
-                                      maintenance.isReserved
-                                  ? null
-                                  : () {
-                                      unawaited(
-                                        _selectLanguage(
-                                          commands: commands,
-                                          settings: settings,
-                                          maintenance: maintenance,
-                                          localeCode: option.code,
-                                        ),
-                                      );
-                                    },
-                            ),
-                        ],
+                            for (final option in filteredOptions)
+                              _LanguageOptionTile(
+                                key: ValueKey('language-option-${option.code}'),
+                                option: option,
+                                selected: option.code == currentCode,
+                                onTap:
+                                    _isSelectingLanguage ||
+                                        _languageSelectionPopped ||
+                                        maintenance.isReserved
+                                    ? null
+                                    : () {
+                                        unawaited(
+                                          _selectLanguage(
+                                            commands: commands,
+                                            settings: settings,
+                                            maintenance: maintenance,
+                                            localeCode: option.code,
+                                          ),
+                                        );
+                                      },
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );

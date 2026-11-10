@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/sked_expressive_theme.dart';
 import '../../widgets/desktop_context_menu.dart';
+import '../../widgets/desktop_search_shortcuts.dart';
 import '../../widgets/sked_popup_menu.dart';
 import '../../widgets/sked_task_session.dart';
 import '../../widgets/workbench_chrome_metrics.dart';
@@ -61,6 +62,8 @@ class _AgentConversationListState extends State<AgentConversationList> {
   final _objectContexts = Expando<DesktopActionContext>();
   final _search = TextEditingController();
   final _searchFocus = FocusNode();
+  final _searchToggleFocus = FocusNode();
+  FocusNode? _searchReturnFocus;
   final _scroll = ScrollController();
   final _scrollOffsets = <bool, double>{false: 0, true: 0};
   bool _archived = false;
@@ -123,6 +126,7 @@ class _AgentConversationListState extends State<AgentConversationList> {
     _menu?.dispose();
     _menu = null;
     _searchFocus.unfocus();
+    _searchReturnFocus = null;
   }
 
   @override
@@ -136,6 +140,7 @@ class _AgentConversationListState extends State<AgentConversationList> {
     _menu?.dispose();
     _search.dispose();
     _searchFocus.dispose();
+    _searchToggleFocus.dispose();
     _scroll.dispose();
     super.dispose();
   }
@@ -263,16 +268,53 @@ class _AgentConversationListState extends State<AgentConversationList> {
 
   void _toggleSearch(int generation, ConversationViewRepository repository) {
     if (!_current(generation, repository)) return;
-    setState(() => _searchOpen = !_searchOpen);
-    if (!_searchOpen) {
-      _searchFocus.unfocus();
-      return;
+    if (_searchOpen) {
+      _closeSearch();
+    } else {
+      _openSearch(generation, repository);
     }
+  }
+
+  void _openSearch(int generation, ConversationViewRepository repository) {
+    if (!_current(generation, repository)) return;
+    final previous = FocusManager.instance.primaryFocus;
+    if (!_searchFocus.hasFocus &&
+        previous?.context
+                ?.findAncestorStateOfType<_AgentConversationListState>() ==
+            this) {
+      _searchReturnFocus = previous;
+    }
+    if (!_searchOpen) setState(() => _searchOpen = true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_current(generation, repository) && _searchOpen) {
+      if (_current(generation, repository) &&
+          _searchOpen &&
+          ModalRoute.of(context)?.isCurrent != false) {
         _searchFocus.requestFocus();
+        _search.selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: _search.text.length,
+        );
       }
     });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  bool _closeSearch() {
+    if (!_searchOpen || !_enabled) return false;
+    setState(() => _searchOpen = false);
+    _searchFocus.unfocus();
+    final previous = _searchReturnFocus;
+    _searchReturnFocus = null;
+    if (previous?.context?.mounted == true &&
+        previous!.canRequestFocus &&
+        previous.context
+                ?.findAncestorStateOfType<_AgentConversationListState>() ==
+            this) {
+      previous.requestFocus();
+    } else {
+      _searchToggleFocus.requestFocus();
+    }
+    return true;
   }
 
   List<PopupMenuEntry<_HistoryArchiveChoice>> _archiveItems(
@@ -425,6 +467,7 @@ class _AgentConversationListState extends State<AgentConversationList> {
           );
     final search = IconButton(
       key: const ValueKey('agent-history-search-toggle'),
+      focusNode: _searchToggleFocus,
       style: iconStyle.copyWith(
         backgroundColor: _searchOpen || _query.isNotEmpty
             ? WidgetStatePropertyAll(style.selected)
@@ -436,7 +479,7 @@ class _AgentConversationListState extends State<AgentConversationList> {
       tooltip: _searchOpen
           ? MaterialLocalizations.of(context).closeButtonTooltip
           : _query.isEmpty
-          ? l.agentSearchConversations
+          ? '${l.agentSearchConversations}${metrics.desktop ? ' (${DesktopSearchShortcuts.findLabel(context)})' : ''}'
           : '${l.agentSearchConversations}: ${_search.text}',
       isSelected: _searchOpen || _query.isNotEmpty,
       icon: Icon(_searchOpen ? Icons.close : Icons.search, size: iconSize),
@@ -511,7 +554,7 @@ class _AgentConversationListState extends State<AgentConversationList> {
     final style = AgentUiStyle.of(context);
     final metrics = WorkbenchChromeMetrics.of(context);
     final iconStyle = metrics.iconStyle.merge(style.controlStyle);
-    return FocusScope(
+    final content = FocusScope(
       canRequestFocus: _enabled,
       descendantsAreFocusable: _enabled,
       descendantsAreTraversable: _enabled,
@@ -915,6 +958,12 @@ class _AgentConversationListState extends State<AgentConversationList> {
           ),
         ),
       ),
+    );
+    return DesktopSearchShortcuts(
+      isCurrent: () => _enabled,
+      onFind: () => _openSearch(_generation, widget.repository),
+      onDismiss: _closeSearch,
+      child: content,
     );
   }
 }
