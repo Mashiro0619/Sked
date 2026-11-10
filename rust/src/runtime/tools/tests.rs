@@ -219,3 +219,86 @@ async fn restored_dataset_keeps_a_saved_answer_as_earlier_context() {
     assert_eq!(result["contextChanged"], true);
     assert_eq!(result["answers"][0]["text"], "Use that calendar");
 }
+
+#[tokio::test]
+async fn clearing_and_rebuilding_a_plan_preserves_ordered_tool_results() {
+    let store = QuestionStore::new();
+    let steps = [
+        json!([{"id":"first","title":"Original plan","status":"pending"}]),
+        json!([{"id":"first","title":"Original plan","status":"completed"}]),
+        json!([]),
+        json!([{"id":"new","title":"New plan","status":"pending"}]),
+    ];
+    let mut replies: Vec<_> = steps
+        .iter()
+        .enumerate()
+        .map(|(index, steps)| {
+            reply(
+                json!({"role":"assistant","tool_calls":[{
+                    "index":0,"id":format!("plan-{index}"),"type":"function","function":{
+                        "name":wire_tool_name("update_plan"),
+                        "arguments":json!({"steps":steps}).to_string()
+                    }
+                }]}),
+                "tool_calls",
+            )
+        })
+        .collect();
+    replies.push(reply(
+        json!({"role":"assistant","content":"The new plan is ready."}),
+        "stop",
+    ));
+    let transport = ScriptedTransport::new(replies);
+    let manager = RuntimeManager::new(
+        store.worker.as_ref().unwrap().handle(),
+        Arc::new(NoBusinessOperations),
+        RigModelClient::with_transport(DynHttpClient::new(transport.clone())),
+    );
+    manager.set_title_generation_enabled(false);
+    let id = manager
+        .create_conversation("Plan revisions".into(), PermissionMode::Full, None)
+        .await
+        .unwrap()
+        .conversation
+        .id;
+    manager
+        .send(
+            &id,
+            "Revise the plan.".into(),
+            Vec::new(),
+            Vec::new(),
+            config("data"),
+        )
+        .await
+        .unwrap();
+    tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        manager.wait_until_idle(&id),
+    )
+    .await
+    .unwrap();
+    let snapshot = manager.read(&id).await.unwrap();
+    manager.shutdown().await;
+    drop(manager);
+    assert_eq!(transport.requests().len(), 5);
+    let results: Vec<Value> = snapshot
+        .messages
+        .iter()
+        .filter(|message| message.role == MessageRole::Tool)
+        .map(|message| serde_json::from_str(&message.text).unwrap())
+        .collect();
+    assert_eq!(results.len(), 4);
+    for (index, result) in results.iter().enumerate() {
+        assert_eq!(result["status"], "updated");
+        assert_eq!(result["plan"]["revision"], index + 1);
+        assert_eq!(
+            result["plan"]["steps"].as_array().unwrap().len(),
+            steps[index].as_array().unwrap().len()
+        );
+    }
+    assert_eq!(results[2]["plan"]["steps"], json!([]));
+    assert_eq!(results[3]["plan"]["steps"][0]["title"], "New plan");
+    let plan = snapshot.plan.unwrap();
+    assert_eq!(plan.revision, 4);
+    assert_eq!(plan.steps[0].title, "New plan");
+}

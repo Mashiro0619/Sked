@@ -1269,9 +1269,14 @@ impl RuntimeManager {
         let rid = accepted.run_id.clone();
         let snapshot = self
             .change(&accepted.conversation_id, move |snapshot| {
-                let plan = (!steps.is_empty()).then(|| TaskPlan {
+                let revision = snapshot
+                    .plan
+                    .as_ref()
+                    .filter(|plan| plan.run_id == rid)
+                    .map_or(1, |plan| plan.revision + 1);
+                let plan = Some(TaskPlan {
                     run_id: rid,
-                    revision: snapshot.plan.as_ref().map_or(1, |p| p.revision + 1),
+                    revision,
                     steps,
                 });
                 Ok(vec![JournalChange::PlanSet { plan }])
