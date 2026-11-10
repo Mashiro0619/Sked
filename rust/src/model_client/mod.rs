@@ -1,5 +1,6 @@
 mod credentials;
 pub mod offline;
+mod provider_failure;
 mod request_body;
 #[cfg(test)]
 mod tests;
@@ -174,7 +175,10 @@ impl RigModelClient {
             .iter_mut()
             .for_each(|value| guard.value(value));
         result.text = guard.text(&result.text);
-        result.error = result.error.map(|error| guard.error(&error));
+        result.error = match &result.provider_failure {
+            Some(failure) => Some(failure.code.clone()),
+            None => result.error.map(|error| guard.error(&error)),
+        };
         result
     }
 
@@ -362,9 +366,11 @@ impl RigModelClient {
                         cancelled: cancellation.is_cancelled(),
                         paused_for_compaction: false,
                         error: None,
+                        provider_failure: None,
                     });
                 }
                 Err(error) => {
+                    let provider_failure = provider_failure::from_prompt(&error, &config.api_key);
                     let history = match &error {
                         PromptError::Cancelled { chat_history, .. }
                         | PromptError::UnknownToolCall { chat_history, .. }
@@ -386,7 +392,12 @@ impl RigModelClient {
                         usage,
                         cancelled: cancellation.is_cancelled(),
                         paused_for_compaction,
-                        error: Some(error.to_string()),
+                        error: Some(
+                            provider_failure
+                                .as_ref()
+                                .map_or_else(|| error.to_string(), |failure| failure.code.clone()),
+                        ),
+                        provider_failure,
                     });
                 }
                 _ => {}

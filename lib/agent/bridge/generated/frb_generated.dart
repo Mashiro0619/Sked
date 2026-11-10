@@ -1702,8 +1702,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   AgentEvent dco_decode_agent_event(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 13)
-      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
+    if (arr.length != 14)
+      throw Exception('unexpected arr length: expect 14 but see ${arr.length}');
     return AgentEvent(
       kind: dco_decode_event_kind(arr[0]),
       conversationId: dco_decode_String(arr[1]),
@@ -1715,9 +1715,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       usage: dco_decode_opt_box_autoadd_view_token_usage(arr[7]),
       outcome: dco_decode_opt_box_autoadd_host_outcome(arr[8]),
       errorCode: dco_decode_opt_String(arr[9]),
-      hostRequest: dco_decode_opt_box_autoadd_host_request(arr[10]),
-      presentation: dco_decode_opt_box_autoadd_run_presentation(arr[11]),
-      knowledgeRevision: dco_decode_opt_CastedPrimitive_u_64(arr[12]),
+      providerFailure: dco_decode_opt_box_autoadd_view_provider_failure(
+        arr[10],
+      ),
+      hostRequest: dco_decode_opt_box_autoadd_host_request(arr[11]),
+      presentation: dco_decode_opt_box_autoadd_run_presentation(arr[12]),
+      knowledgeRevision: dco_decode_opt_CastedPrimitive_u_64(arr[13]),
     );
   }
 
@@ -1891,6 +1894,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int dco_decode_box_autoadd_u_16(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
   ViewAgentArchiveParts dco_decode_box_autoadd_view_agent_archive_parts(
     dynamic raw,
   ) {
@@ -1998,6 +2007,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ViewPermissionMode dco_decode_box_autoadd_view_permission_mode(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_view_permission_mode(raw);
+  }
+
+  @protected
+  ViewProviderFailure dco_decode_box_autoadd_view_provider_failure(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_view_provider_failure(raw);
   }
 
   @protected
@@ -2774,6 +2791,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int? dco_decode_opt_box_autoadd_u_16(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_u_16(raw);
+  }
+
+  @protected
   ViewAgentArchiveParts? dco_decode_opt_box_autoadd_view_agent_archive_parts(
     dynamic raw,
   ) {
@@ -2918,6 +2941,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     return raw == null
         ? null
         : dco_decode_box_autoadd_view_permission_mode(raw);
+  }
+
+  @protected
+  ViewProviderFailure? dco_decode_opt_box_autoadd_view_provider_failure(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_view_provider_failure(raw);
   }
 
   @protected
@@ -3661,6 +3694,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewProviderFailure dco_decode_view_provider_failure(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return ViewProviderFailure(
+      code: dco_decode_String(arr[0]),
+      statusCode: dco_decode_opt_box_autoadd_u_16(arr[1]),
+      responseMessage: dco_decode_opt_String(arr[2]),
+      responseCode: dco_decode_opt_String(arr[3]),
+      responseBody: dco_decode_opt_String(arr[4]),
+      requestId: dco_decode_opt_String(arr[5]),
+    );
+  }
+
+  @protected
   ViewQuestionAnswer dco_decode_view_question_answer(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -3861,8 +3910,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ViewRun dco_decode_view_run(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 11)
-      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
+    if (arr.length != 12)
+      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
     return ViewRun(
       id: dco_decode_String(arr[0]),
       startedAt: dco_decode_CastedPrimitive_i_64(arr[1]),
@@ -3874,7 +3923,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       requests: dco_decode_list_view_request_usage(arr[7]),
       tools: dco_decode_list_view_tool_usage(arr[8]),
       errorCode: dco_decode_opt_String(arr[9]),
-      environment: dco_decode_json_payload(arr[10]),
+      providerFailure: dco_decode_opt_box_autoadd_view_provider_failure(
+        arr[10],
+      ),
+      environment: dco_decode_json_payload(arr[11]),
     );
   }
 
@@ -4231,6 +4283,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_usage = sse_decode_opt_box_autoadd_view_token_usage(deserializer);
     var var_outcome = sse_decode_opt_box_autoadd_host_outcome(deserializer);
     var var_errorCode = sse_decode_opt_String(deserializer);
+    var var_providerFailure = sse_decode_opt_box_autoadd_view_provider_failure(
+      deserializer,
+    );
     var var_hostRequest = sse_decode_opt_box_autoadd_host_request(deserializer);
     var var_presentation = sse_decode_opt_box_autoadd_run_presentation(
       deserializer,
@@ -4249,6 +4304,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       usage: var_usage,
       outcome: var_outcome,
       errorCode: var_errorCode,
+      providerFailure: var_providerFailure,
       hostRequest: var_hostRequest,
       presentation: var_presentation,
       knowledgeRevision: var_knowledgeRevision,
@@ -4466,6 +4522,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int sse_decode_box_autoadd_u_16(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_u_16(deserializer));
+  }
+
+  @protected
   ViewAgentArchiveParts sse_decode_box_autoadd_view_agent_archive_parts(
     SseDeserializer deserializer,
   ) {
@@ -4583,6 +4645,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_view_permission_mode(deserializer));
+  }
+
+  @protected
+  ViewProviderFailure sse_decode_box_autoadd_view_provider_failure(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_view_provider_failure(deserializer));
   }
 
   @protected
@@ -5795,6 +5865,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int? sse_decode_opt_box_autoadd_u_16(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_u_16(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   ViewAgentArchiveParts? sse_decode_opt_box_autoadd_view_agent_archive_parts(
     SseDeserializer deserializer,
   ) {
@@ -5985,6 +6066,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_box_autoadd_view_permission_mode(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  ViewProviderFailure? sse_decode_opt_box_autoadd_view_provider_failure(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_view_provider_failure(deserializer));
     } else {
       return null;
     }
@@ -7067,6 +7161,27 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  ViewProviderFailure sse_decode_view_provider_failure(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_code = sse_decode_String(deserializer);
+    var var_statusCode = sse_decode_opt_box_autoadd_u_16(deserializer);
+    var var_responseMessage = sse_decode_opt_String(deserializer);
+    var var_responseCode = sse_decode_opt_String(deserializer);
+    var var_responseBody = sse_decode_opt_String(deserializer);
+    var var_requestId = sse_decode_opt_String(deserializer);
+    return ViewProviderFailure(
+      code: var_code,
+      statusCode: var_statusCode,
+      responseMessage: var_responseMessage,
+      responseCode: var_responseCode,
+      responseBody: var_responseBody,
+      requestId: var_requestId,
+    );
+  }
+
+  @protected
   ViewQuestionAnswer sse_decode_view_question_answer(
     SseDeserializer deserializer,
   ) {
@@ -7353,6 +7468,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_requests = sse_decode_list_view_request_usage(deserializer);
     var var_tools = sse_decode_list_view_tool_usage(deserializer);
     var var_errorCode = sse_decode_opt_String(deserializer);
+    var var_providerFailure = sse_decode_opt_box_autoadd_view_provider_failure(
+      deserializer,
+    );
     var var_environment = sse_decode_json_payload(deserializer);
     return ViewRun(
       id: var_id,
@@ -7365,6 +7483,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       requests: var_requests,
       tools: var_tools,
       errorCode: var_errorCode,
+      providerFailure: var_providerFailure,
       environment: var_environment,
     );
   }
@@ -7730,6 +7849,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_box_autoadd_view_token_usage(self.usage, serializer);
     sse_encode_opt_box_autoadd_host_outcome(self.outcome, serializer);
     sse_encode_opt_String(self.errorCode, serializer);
+    sse_encode_opt_box_autoadd_view_provider_failure(
+      self.providerFailure,
+      serializer,
+    );
     sse_encode_opt_box_autoadd_host_request(self.hostRequest, serializer);
     sse_encode_opt_box_autoadd_run_presentation(self.presentation, serializer);
     sse_encode_opt_CastedPrimitive_u_64(self.knowledgeRevision, serializer);
@@ -7952,6 +8075,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_u_16(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_16(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_view_agent_archive_parts(
     ViewAgentArchiveParts self,
     SseSerializer serializer,
@@ -8084,6 +8213,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_view_permission_mode(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_view_provider_failure(
+    ViewProviderFailure self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_view_provider_failure(self, serializer);
   }
 
   @protected
@@ -9125,6 +9263,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_u_16(int? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_u_16(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_box_autoadd_view_agent_archive_parts(
     ViewAgentArchiveParts? self,
     SseSerializer serializer,
@@ -9316,6 +9464,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_view_permission_mode(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_view_provider_failure(
+    ViewProviderFailure? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_view_provider_failure(self, serializer);
     }
   }
 
@@ -10147,6 +10308,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_view_provider_failure(
+    ViewProviderFailure self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.code, serializer);
+    sse_encode_opt_box_autoadd_u_16(self.statusCode, serializer);
+    sse_encode_opt_String(self.responseMessage, serializer);
+    sse_encode_opt_String(self.responseCode, serializer);
+    sse_encode_opt_String(self.responseBody, serializer);
+    sse_encode_opt_String(self.requestId, serializer);
+  }
+
+  @protected
   void sse_encode_view_question_answer(
     ViewQuestionAnswer self,
     SseSerializer serializer,
@@ -10354,6 +10529,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_list_view_request_usage(self.requests, serializer);
     sse_encode_list_view_tool_usage(self.tools, serializer);
     sse_encode_opt_String(self.errorCode, serializer);
+    sse_encode_opt_box_autoadd_view_provider_failure(
+      self.providerFailure,
+      serializer,
+    );
     sse_encode_json_payload(self.environment, serializer);
   }
 

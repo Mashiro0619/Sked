@@ -10,6 +10,9 @@ static AUTHORIZATION: LazyLock<Regex> = LazyLock::new(|| {
 static ASSIGNMENT: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"(?i)(?:^|[\s{,;])[\"']?(?:api[ _-]?key|api[ _-]?token|access[ _-]?token|refresh[ _-]?token|client[ _-]?secret|secret|password|authorization|proxy[ _-]?authorization|密钥|金鑰|令牌)[\"']?\s*(?::|=|\bis\b)\s*(\"(?:\\.|[^\"\\])*(?:\"|$)|'(?:\\.|[^'\\])*(?:'|$)|[^\s,;}]+)"#).expect("credential assignment expression")
 });
+static DIAGNOSTIC_ASSIGNMENT: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"(?i)([\"']?(?:api[ _-]?key|api[ _-]?token|access[ _-]?token|refresh[ _-]?token|client[ _-]?secret|secret|password|authorization|proxy[ _-]?authorization|cookie|set[ _-]?cookie|密钥|金鑰|令牌)[\"']?\s*[:=]\s*)(\"(?:\\.|[^\"\\])*(?:\"|$)|'(?:\\.|[^'\\])*(?:'|$)|[^\s,;}]+)"#).expect("diagnostic credential assignment expression")
+});
 
 /// One captured connection's credential. This value never implements Debug.
 #[derive(Clone)]
@@ -26,6 +29,44 @@ impl CredentialGuard {
         } else {
             text.replace(self.0.as_ref(), "[redacted]")
         }
+    }
+
+    /// Diagnostic excerpts also remove named credentials returned by a service.
+    /// Redact before truncating so a boundary never exposes a partial secret.
+    pub fn diagnostic(&self, text: &str, limit: usize) -> Option<String> {
+        let mut text = text.to_owned();
+        if !self.0.is_empty() {
+            let encoded = serde_json::to_string(self.0.as_ref()).expect("credential encoding");
+            text = text
+                .replace(&encoded[1..encoded.len() - 1], "[redacted]")
+                .replace(self.0.as_ref(), "[redacted]");
+        }
+        text = AUTHORIZATION
+            .replace_all(&text, "[redacted authorization]")
+            .into_owned();
+        text = DIAGNOSTIC_ASSIGNMENT
+            .replace_all(&text, |captures: &regex::Captures<'_>| {
+                let value = &captures[2];
+                let quote = if value.starts_with('"') {
+                    "\""
+                } else if value.starts_with('\'') {
+                    "'"
+                } else {
+                    ""
+                };
+                format!("{}{quote}[redacted]{quote}", &captures[1])
+            })
+            .into_owned();
+        text.retain(|value| !value.is_control() || matches!(value, '\n' | '\r' | '\t'));
+        if text.is_empty() {
+            return None;
+        }
+        let mut chars = text.chars();
+        let mut excerpt: String = chars.by_ref().take(limit).collect();
+        if chars.next().is_some() {
+            excerpt.push('…');
+        }
+        Some(excerpt)
     }
 
     pub fn text(&self, text: &str) -> String {

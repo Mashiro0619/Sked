@@ -116,6 +116,7 @@ pub struct ModelRunResult {
     pub cancelled: bool,
     pub paused_for_compaction: bool,
     pub error: Option<String>,
+    pub provider_failure: Option<crate::storage::models::ProviderFailure>,
 }
 
 pub trait ModelToolExecutor: Send + Sync {

@@ -2135,6 +2135,8 @@ impl SseDecode for crate::api::contracts::AgentEvent {
         let mut var_outcome =
             <Option<crate::api::contracts::HostOutcome>>::sse_decode(deserializer);
         let mut var_errorCode = <Option<String>>::sse_decode(deserializer);
+        let mut var_providerFailure =
+            <Option<crate::api::models::ViewProviderFailure>>::sse_decode(deserializer);
         let mut var_hostRequest =
             <Option<crate::api::contracts::HostRequest>>::sse_decode(deserializer);
         let mut var_presentation =
@@ -2151,6 +2153,7 @@ impl SseDecode for crate::api::contracts::AgentEvent {
             usage: var_usage,
             outcome: var_outcome,
             error_code: var_errorCode,
+            provider_failure: var_providerFailure,
             host_request: var_hostRequest,
             presentation: var_presentation,
             knowledge_revision: var_knowledgeRevision,
@@ -3462,6 +3465,17 @@ impl SseDecode for Option<crate::api::contracts::RunPresentation> {
     }
 }
 
+impl SseDecode for Option<u16> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<u16>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<crate::api::models::ViewAgentArchiveParts> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -3649,6 +3663,19 @@ impl SseDecode for Option<crate::api::models::ViewPermissionMode> {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         if (<bool>::sse_decode(deserializer)) {
             return Some(<crate::api::models::ViewPermissionMode>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::models::ViewProviderFailure> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::models::ViewProviderFailure>::sse_decode(
                 deserializer,
             ));
         } else {
@@ -4800,6 +4827,26 @@ impl SseDecode for crate::api::models::ViewPlanStepStatus {
     }
 }
 
+impl SseDecode for crate::api::models::ViewProviderFailure {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_code = <String>::sse_decode(deserializer);
+        let mut var_statusCode = <Option<u16>>::sse_decode(deserializer);
+        let mut var_responseMessage = <Option<String>>::sse_decode(deserializer);
+        let mut var_responseCode = <Option<String>>::sse_decode(deserializer);
+        let mut var_responseBody = <Option<String>>::sse_decode(deserializer);
+        let mut var_requestId = <Option<String>>::sse_decode(deserializer);
+        return crate::api::models::ViewProviderFailure {
+            code: var_code,
+            status_code: var_statusCode,
+            response_message: var_responseMessage,
+            response_code: var_responseCode,
+            response_body: var_responseBody,
+            request_id: var_requestId,
+        };
+    }
+}
+
 impl SseDecode for crate::api::models::ViewQuestionAnswer {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -5107,6 +5154,8 @@ impl SseDecode for crate::api::models::ViewRun {
             <Vec<crate::api::models::ViewRequestUsage>>::sse_decode(deserializer);
         let mut var_tools = <Vec<crate::api::models::ViewToolUsage>>::sse_decode(deserializer);
         let mut var_errorCode = <Option<String>>::sse_decode(deserializer);
+        let mut var_providerFailure =
+            <Option<crate::api::models::ViewProviderFailure>>::sse_decode(deserializer);
         let mut var_environment = <crate::api::models::JsonPayload>::sse_decode(deserializer);
         return crate::api::models::ViewRun {
             id: var_id,
@@ -5119,6 +5168,7 @@ impl SseDecode for crate::api::models::ViewRun {
             requests: var_requests,
             tools: var_tools,
             error_code: var_errorCode,
+            provider_failure: var_providerFailure,
             environment: var_environment,
         };
     }
@@ -5529,6 +5579,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::contracts::AgentEvent {
             self.usage.into_into_dart().into_dart(),
             self.outcome.into_into_dart().into_dart(),
             self.error_code.into_into_dart().into_dart(),
+            self.provider_failure.into_into_dart().into_dart(),
             self.host_request.into_into_dart().into_dart(),
             self.presentation.into_into_dart().into_dart(),
             self.knowledge_revision.into_into_dart().into_dart(),
@@ -7201,6 +7252,31 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewPlanStepStatus>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::models::ViewProviderFailure {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.code.into_into_dart().into_dart(),
+            self.status_code.into_into_dart().into_dart(),
+            self.response_message.into_into_dart().into_dart(),
+            self.response_code.into_into_dart().into_dart(),
+            self.response_body.into_into_dart().into_dart(),
+            self.request_id.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::models::ViewProviderFailure
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewProviderFailure>
+    for crate::api::models::ViewProviderFailure
+{
+    fn into_into_dart(self) -> crate::api::models::ViewProviderFailure {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::models::ViewQuestionAnswer {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -7569,6 +7645,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::models::ViewRun {
             self.requests.into_into_dart().into_dart(),
             self.tools.into_into_dart().into_dart(),
             self.error_code.into_into_dart().into_dart(),
+            self.provider_failure.into_into_dart().into_dart(),
             self.environment.into_into_dart().into_dart(),
         ]
         .into_dart()
@@ -7959,6 +8036,10 @@ impl SseEncode for crate::api::contracts::AgentEvent {
         <Option<crate::api::models::ViewTokenUsage>>::sse_encode(self.usage, serializer);
         <Option<crate::api::contracts::HostOutcome>>::sse_encode(self.outcome, serializer);
         <Option<String>>::sse_encode(self.error_code, serializer);
+        <Option<crate::api::models::ViewProviderFailure>>::sse_encode(
+            self.provider_failure,
+            serializer,
+        );
         <Option<crate::api::contracts::HostRequest>>::sse_encode(self.host_request, serializer);
         <Option<crate::api::contracts::RunPresentation>>::sse_encode(self.presentation, serializer);
         <Option<u64>>::sse_encode(self.knowledge_revision, serializer);
@@ -8997,6 +9078,16 @@ impl SseEncode for Option<crate::api::contracts::RunPresentation> {
     }
 }
 
+impl SseEncode for Option<u16> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <u16>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<crate::api::models::ViewAgentArchiveParts> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -9143,6 +9234,16 @@ impl SseEncode for Option<crate::api::models::ViewPermissionMode> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <crate::api::models::ViewPermissionMode>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::models::ViewProviderFailure> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::models::ViewProviderFailure>::sse_encode(value, serializer);
         }
     }
 }
@@ -10047,6 +10148,18 @@ impl SseEncode for crate::api::models::ViewPlanStepStatus {
     }
 }
 
+impl SseEncode for crate::api::models::ViewProviderFailure {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.code, serializer);
+        <Option<u16>>::sse_encode(self.status_code, serializer);
+        <Option<String>>::sse_encode(self.response_message, serializer);
+        <Option<String>>::sse_encode(self.response_code, serializer);
+        <Option<String>>::sse_encode(self.response_body, serializer);
+        <Option<String>>::sse_encode(self.request_id, serializer);
+    }
+}
+
 impl SseEncode for crate::api::models::ViewQuestionAnswer {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -10280,6 +10393,10 @@ impl SseEncode for crate::api::models::ViewRun {
         <Vec<crate::api::models::ViewRequestUsage>>::sse_encode(self.requests, serializer);
         <Vec<crate::api::models::ViewToolUsage>>::sse_encode(self.tools, serializer);
         <Option<String>>::sse_encode(self.error_code, serializer);
+        <Option<crate::api::models::ViewProviderFailure>>::sse_encode(
+            self.provider_failure,
+            serializer,
+        );
         <crate::api::models::JsonPayload>::sse_encode(self.environment, serializer);
     }
 }

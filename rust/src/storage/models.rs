@@ -238,6 +238,18 @@ pub struct ToolUsage {
     pub outcome: AttemptOutcome,
 }
 
+/// Redacted provider response diagnostics, separate from the stable UI code.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct ProviderFailure {
+    pub code: String,
+    pub status_code: Option<u16>,
+    pub response_message: Option<String>,
+    pub response_code: Option<String>,
+    pub response_body: Option<String>,
+    pub request_id: Option<String>,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Run {
@@ -251,6 +263,7 @@ pub struct Run {
     pub requests: Vec<RequestUsage>,
     pub tools: Vec<ToolUsage>,
     pub error_code: Option<String>,
+    pub provider_failure: Option<ProviderFailure>,
     pub environment: Value,
 }
 

@@ -42,6 +42,8 @@ pub enum RuntimeError {
     Storage(#[from] StorageError),
     #[error(transparent)]
     Host(#[from] HostError),
+    #[error("{}", .0.code)]
+    Provider(ProviderFailure),
     #[error("会话仍在处理已接纳的操作")]
     Busy,
     #[error("{0}")]
@@ -1775,12 +1777,16 @@ impl RuntimeManager {
         accepted: &AcceptedRun,
         result: Result<ModelRunResult>,
     ) -> Result<ConversationSnapshot> {
-        let (result, error) = match result {
+        let (result, error, provider_failure) = match result {
             Ok(result) => {
                 let error = result.error.clone();
-                (Some(result), error)
+                let provider_failure = result.provider_failure.clone();
+                (Some(result), error, provider_failure)
             }
-            Err(error) => (None, Some(error.to_string())),
+            Err(RuntimeError::Provider(failure)) => {
+                (None, Some(failure.code.clone()), Some(failure))
+            }
+            Err(error) => (None, Some(error.to_string()), None),
         };
         let interrupted = accepted.control.cancellation.is_cancelled()
             || result.as_ref().is_some_and(|r| r.cancelled)
@@ -1805,6 +1811,7 @@ impl RuntimeManager {
         let rid = accepted.run_id.clone();
         let model_selection = accepted.config.selection();
         let stored_error = error.clone();
+        let stored_provider_failure = provider_failure.clone();
         let save_partial = accepted.save_partial;
         let stop_requested = accepted.control.stop_requested.load(Ordering::Acquire);
         let unknown_outcome = accepted.control.unknown_outcome.load(Ordering::Acquire);
@@ -1843,6 +1850,7 @@ impl RuntimeManager {
                 };
                 run.settled_at = Some(now_ms());
                 run.error_code = stored_error.clone();
+                run.provider_failure = stored_provider_failure.clone();
                 for request in &mut run.requests {
                     if request.outcome == AttemptOutcome::Pending {
                         request.outcome = if outcome == ToolOutcome::Cancelled {
@@ -1853,6 +1861,7 @@ impl RuntimeManager {
                             AttemptOutcome::Completed
                         };
                         request.settled_at = Some(now_ms());
+                        request.error_code = stored_error.clone();
                     }
                 }
                 changes.push(JournalChange::RunUpserted { run: run.clone() });
@@ -1928,6 +1937,7 @@ impl RuntimeManager {
             run_id: accepted.run_id.clone(),
             outcome,
             error,
+            provider_failure,
         });
         Ok(snapshot)
     }

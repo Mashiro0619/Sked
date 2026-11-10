@@ -1082,6 +1082,41 @@ impl TryFrom<ViewToolUsage> for stored::ToolUsage {
 
 #[derive(Debug, Clone, PartialEq)]
 #[flutter_rust_bridge::frb(non_opaque)]
+pub struct ViewProviderFailure {
+    pub code: String,
+    pub status_code: Option<u16>,
+    pub response_message: Option<String>,
+    pub response_code: Option<String>,
+    pub response_body: Option<String>,
+    pub request_id: Option<String>,
+}
+impl From<stored::ProviderFailure> for ViewProviderFailure {
+    fn from(value: stored::ProviderFailure) -> Self {
+        Self {
+            code: value.code,
+            status_code: value.status_code,
+            response_message: value.response_message,
+            response_code: value.response_code,
+            response_body: value.response_body,
+            request_id: value.request_id,
+        }
+    }
+}
+impl From<ViewProviderFailure> for stored::ProviderFailure {
+    fn from(value: ViewProviderFailure) -> Self {
+        Self {
+            code: value.code,
+            status_code: value.status_code,
+            response_message: value.response_message,
+            response_code: value.response_code,
+            response_body: value.response_body,
+            request_id: value.request_id,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+#[flutter_rust_bridge::frb(non_opaque)]
 pub struct ViewRun {
     pub id: String,
     pub started_at: i64,
@@ -1093,6 +1128,7 @@ pub struct ViewRun {
     pub requests: Vec<ViewRequestUsage>,
     pub tools: Vec<ViewToolUsage>,
     pub error_code: Option<String>,
+    pub provider_failure: Option<ViewProviderFailure>,
     pub environment: JsonPayload,
 }
 impl From<stored::Run> for ViewRun {
@@ -1112,6 +1148,7 @@ impl From<stored::Run> for ViewRun {
                 .collect(),
             tools: value.tools.into_iter().map(|value| value.into()).collect(),
             error_code: value.error_code.map(|value| value),
+            provider_failure: value.provider_failure.map(Into::into),
             environment: JsonPayload {
                 json: value.environment.to_string(),
             },
@@ -1152,6 +1189,7 @@ impl TryFrom<ViewRun> for stored::Run {
                 .error_code
                 .map(|value| Ok::<_, String>(value))
                 .transpose()?,
+            provider_failure: value.provider_failure.map(Into::into),
             environment: value.environment.parse()?,
         })
     }

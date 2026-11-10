@@ -151,6 +151,7 @@ class AgentEvent {
   final ViewTokenUsage? usage;
   final HostOutcome? outcome;
   final String? errorCode;
+  final ViewProviderFailure? providerFailure;
   final HostRequest? hostRequest;
   final RunPresentation? presentation;
   final int? knowledgeRevision;
@@ -166,6 +167,7 @@ class AgentEvent {
     this.usage,
     this.outcome,
     this.errorCode,
+    this.providerFailure,
     this.hostRequest,
     this.presentation,
     this.knowledgeRevision,
@@ -183,6 +185,7 @@ class AgentEvent {
       usage.hashCode ^
       outcome.hashCode ^
       errorCode.hashCode ^
+      providerFailure.hashCode ^
       hostRequest.hashCode ^
       presentation.hashCode ^
       knowledgeRevision.hashCode;
@@ -202,6 +205,7 @@ class AgentEvent {
           usage == other.usage &&
           outcome == other.outcome &&
           errorCode == other.errorCode &&
+          providerFailure == other.providerFailure &&
           hostRequest == other.hostRequest &&
           presentation == other.presentation &&
           knowledgeRevision == other.knowledgeRevision;

@@ -655,7 +655,10 @@ impl RuntimeManager {
                 Some((cancelled, error.clone())),
             )
             .await?;
-            return Err(RuntimeError::Invalid(error));
+            return Err(match result.provider_failure {
+                Some(failure) => RuntimeError::Provider(failure),
+                None => RuntimeError::Invalid(error),
+            });
         }
         let mut compacted = vec![
             serde_json::to_value(ProviderMessage::System {

@@ -61,6 +61,7 @@ class RustAgentUiDelegate extends AgentUiDelegate {
   final _output = <String, StringBuffer>{};
   final _outputRuns = <String, String>{};
   final _errors = <String, String>{};
+  final _providerFailures = <String, native.ViewProviderFailure>{};
   final _approvals = <String, (String, AgentUiApproval)>{};
   final _loading = <String, Future<native.ViewConversationSnapshot?>>{};
   final _transportRequests = <String, _TransportConsent>{};
@@ -92,7 +93,7 @@ class RustAgentUiDelegate extends AgentUiDelegate {
     if (loading != null) return loading;
     late final Future<native.ViewConversationSnapshot?> request;
     request = _loadConversation(id).whenComplete(() {
-      if (identical(_loading[id], request)) _loading.remove(id);
+      if (identical(_loading[id], request)) unawaited(_loading.remove(id));
     });
     _loading[id] = request;
     return request;
@@ -153,6 +154,7 @@ class RustAgentUiDelegate extends AgentUiDelegate {
       _output.remove(id);
       _outputRuns.remove(id);
       _errors.remove(id);
+      _providerFailures.remove(id);
       _presentations.remove(id);
     }
     if (presentation != null) _presentations[id] = presentation;
@@ -187,6 +189,7 @@ class RustAgentUiDelegate extends AgentUiDelegate {
     _output.remove(id);
     _outputRuns.remove(id);
     _errors.remove(id);
+    _providerFailures.remove(id);
     _approvals.remove(id);
     if (!_disposed) {
       _views[id]?.value = const AgentUiRunState();
@@ -275,7 +278,9 @@ class RustAgentUiDelegate extends AgentUiDelegate {
         if (event.runId != _snapshots[id]?.conversation.runId) return;
         _output.remove(id);
         if (event.outcome == bridge.HostOutcome.error) {
-          _errors[id] = _nativeErrorCode(event.errorCode);
+          final failure = event.providerFailure;
+          if (failure != null) _providerFailures[id] = failure;
+          _errors[id] = failure?.code ?? _nativeErrorCode(event.errorCode);
         } else if (event.outcome == bridge.HostOutcome.unknown) {
           _errors[id] = 'interruptedRunNeedsReview';
         }
@@ -562,6 +567,8 @@ class RustAgentUiDelegate extends AgentUiDelegate {
     final error =
         _errors[id] ??
         (run?.errorCode == null ? null : _nativeErrorCode(run!.errorCode));
+    final savedFailure = _providerFailures[id] ?? run?.providerFailure;
+    final providerFailure = savedFailure?.code == error ? savedFailure : null;
     final status =
         snapshot?.conversation.status ?? native.ViewConversationStatus.idle;
     final active = presentation?.active ?? _nativeActive(status);
@@ -610,6 +617,9 @@ class RustAgentUiDelegate extends AgentUiDelegate {
       replyTargetMessageId: presentation?.replyTargetMessageId,
       streamingText: _output[id]?.toString() ?? '',
       errorMessage: error,
+      providerErrorDetails: providerFailure?.responseMessage,
+      providerErrorResponseBody: providerFailure?.responseBody,
+      providerErrorMetadata: _providerErrorMetadata(providerFailure),
       pendingApproval: approval,
       recoveryRequired:
           operations.any(
@@ -1141,6 +1151,18 @@ String _nativeErrorCode(String? code) => switch (code) {
   null || '' => 'toolFailure',
   _ => code,
 };
+
+String? _providerErrorMetadata(native.ViewProviderFailure? failure) {
+  if (failure == null) return null;
+  final metadata = {
+    if (failure.statusCode != null) 'statusCode': failure.statusCode,
+    if (failure.responseCode != null) 'responseCode': failure.responseCode,
+    if (failure.requestId != null) 'requestId': failure.requestId,
+  };
+  return metadata.isEmpty
+      ? null
+      : const JsonEncoder.withIndent('  ').convert(metadata);
+}
 
 /// Uses the same endpoint rules as connection configuration and diagnostics.
 Uri resolveRustAgentEndpoint(AgentSettings settings) =>

@@ -5,6 +5,8 @@ mod host;
 pub mod management;
 pub mod management_contracts;
 pub mod models;
+#[cfg(test)]
+mod provider_failure_tests;
 
 use crate::frb_generated::StreamSink;
 use crate::{
@@ -961,10 +963,16 @@ fn runtime_event(event: RuntimeEvent) -> AgentEvent {
             run_id,
             outcome,
             error,
+            provider_failure,
         } => {
             let mut e = AgentEvent::empty(EventKind::RunSettled, conversation_id);
             e.run_id = Some(run_id);
             e.outcome = Some(outcome.into());
+            e.error_code = provider_failure
+                .as_ref()
+                .map(|failure| failure.code.clone())
+                .or_else(|| error.clone());
+            e.provider_failure = provider_failure.map(Into::into);
             e.text = error;
             e
         }

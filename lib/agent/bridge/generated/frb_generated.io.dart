@@ -163,6 +163,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RunPresentation dco_decode_box_autoadd_run_presentation(dynamic raw);
 
   @protected
+  int dco_decode_box_autoadd_u_16(dynamic raw);
+
+  @protected
   ViewAgentArchiveParts dco_decode_box_autoadd_view_agent_archive_parts(
     dynamic raw,
   );
@@ -222,6 +225,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ViewPermissionMode dco_decode_box_autoadd_view_permission_mode(dynamic raw);
+
+  @protected
+  ViewProviderFailure dco_decode_box_autoadd_view_provider_failure(dynamic raw);
 
   @protected
   ViewQuestionRequest dco_decode_box_autoadd_view_question_request(dynamic raw);
@@ -541,6 +547,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RunPresentation? dco_decode_opt_box_autoadd_run_presentation(dynamic raw);
 
   @protected
+  int? dco_decode_opt_box_autoadd_u_16(dynamic raw);
+
+  @protected
   ViewAgentArchiveParts? dco_decode_opt_box_autoadd_view_agent_archive_parts(
     dynamic raw,
   );
@@ -611,6 +620,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ViewPermissionMode? dco_decode_opt_box_autoadd_view_permission_mode(
+    dynamic raw,
+  );
+
+  @protected
+  ViewProviderFailure? dco_decode_opt_box_autoadd_view_provider_failure(
     dynamic raw,
   );
 
@@ -812,6 +826,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ViewPlanStepStatus dco_decode_view_plan_step_status(dynamic raw);
+
+  @protected
+  ViewProviderFailure dco_decode_view_provider_failure(dynamic raw);
 
   @protected
   ViewQuestionAnswer dco_decode_view_question_answer(dynamic raw);
@@ -1054,6 +1071,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  int sse_decode_box_autoadd_u_16(SseDeserializer deserializer);
+
+  @protected
   ViewAgentArchiveParts sse_decode_box_autoadd_view_agent_archive_parts(
     SseDeserializer deserializer,
   );
@@ -1125,6 +1145,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ViewPermissionMode sse_decode_box_autoadd_view_permission_mode(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ViewProviderFailure sse_decode_box_autoadd_view_provider_failure(
     SseDeserializer deserializer,
   );
 
@@ -1528,6 +1553,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  int? sse_decode_opt_box_autoadd_u_16(SseDeserializer deserializer);
+
+  @protected
   ViewAgentArchiveParts? sse_decode_opt_box_autoadd_view_agent_archive_parts(
     SseDeserializer deserializer,
   );
@@ -1600,6 +1628,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ViewPermissionMode? sse_decode_opt_box_autoadd_view_permission_mode(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ViewProviderFailure? sse_decode_opt_box_autoadd_view_provider_failure(
     SseDeserializer deserializer,
   );
 
@@ -1877,6 +1910,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ViewPlanStepStatus sse_decode_view_plan_step_status(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ViewProviderFailure sse_decode_view_provider_failure(
     SseDeserializer deserializer,
   );
 
@@ -2183,6 +2221,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_u_16(int self, SseSerializer serializer);
+
+  @protected
   void sse_encode_box_autoadd_view_agent_archive_parts(
     ViewAgentArchiveParts self,
     SseSerializer serializer,
@@ -2269,6 +2310,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_view_permission_mode(
     ViewPermissionMode self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_view_provider_failure(
+    ViewProviderFailure self,
     SseSerializer serializer,
   );
 
@@ -2756,6 +2803,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_u_16(int? self, SseSerializer serializer);
+
+  @protected
   void sse_encode_opt_box_autoadd_view_agent_archive_parts(
     ViewAgentArchiveParts? self,
     SseSerializer serializer,
@@ -2842,6 +2892,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_view_permission_mode(
     ViewPermissionMode? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_view_provider_failure(
+    ViewProviderFailure? self,
     SseSerializer serializer,
   );
 
@@ -3181,6 +3237,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_view_plan_step_status(
     ViewPlanStepStatus self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_view_provider_failure(
+    ViewProviderFailure self,
     SseSerializer serializer,
   );
 
