@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../theme/sked_expressive_theme.dart';
+import '../../widgets/desktop_context_menu.dart';
 import '../../widgets/sked_popup_menu.dart';
 import '../../widgets/sked_task_session.dart';
 import '../../widgets/workbench_chrome_metrics.dart';
@@ -29,6 +30,9 @@ class AgentConversationList extends StatefulWidget {
     this.interactive = true,
     this.interactionRevision = 0,
     this.isOwnerCurrent,
+    this.contextActionsBuilder,
+    this.contextActionsChanges,
+    this.isContextActionBusy,
   });
 
   final ConversationViewRepository repository;
@@ -44,12 +48,17 @@ class AgentConversationList extends StatefulWidget {
   final bool interactive;
   final int interactionRevision;
   final bool Function()? isOwnerCurrent;
+  final List<DesktopAction> Function(DesktopActionContext)?
+  contextActionsBuilder;
+  final Listenable? contextActionsChanges;
+  final bool Function(String, [String?])? isContextActionBusy;
 
   @override
   State<AgentConversationList> createState() => _AgentConversationListState();
 }
 
 class _AgentConversationListState extends State<AgentConversationList> {
+  final _objectContexts = Expando<DesktopActionContext>();
   final _search = TextEditingController();
   final _searchFocus = FocusNode();
   final _scroll = ScrollController();
@@ -96,6 +105,10 @@ class _AgentConversationListState extends State<AgentConversationList> {
     }
     if (!identical(oldWidget.repository, widget.repository) ||
         !identical(oldWidget.delegate, widget.delegate) ||
+        !identical(
+          oldWidget.contextActionsChanges,
+          widget.contextActionsChanges,
+        ) ||
         oldWidget.interactionRevision != widget.interactionRevision ||
         (oldWidget.active && !widget.active) ||
         (oldWidget.interactive && !widget.interactive)) {
@@ -142,6 +155,13 @@ class _AgentConversationListState extends State<AgentConversationList> {
         conversation.archived == _archived &&
         conversation.title.toLowerCase().contains(_query),
   );
+
+  VoidCallback? _actionCallback(DesktopAction? action) {
+    if (action == null || !action.enabled || action.onInvoke == null) {
+      return null;
+    }
+    return () => unawaited(Future<void>.sync(action.onInvoke!));
+  }
 
   Future<void> _changeArchived(
     String id,
@@ -500,7 +520,10 @@ class _AgentConversationListState extends State<AgentConversationList> {
         child: ExcludeSemantics(
           excluding: !_enabled,
           child: ListenableBuilder(
-            listenable: widget.repository,
+            listenable: Listenable.merge([
+              widget.repository,
+              widget.contextActionsChanges,
+            ]),
             builder: (context, _) {
               final repository = widget.repository;
               final generation = _generation;
@@ -662,6 +685,55 @@ class _AgentConversationListState extends State<AgentConversationList> {
                             },
                             itemBuilder: (context, index) {
                               final conversation = entries[index];
+                              final objectActions = widget.contextActionsBuilder
+                                  ?.call(
+                                    DesktopActionContext(
+                                      context: context,
+                                      target: conversation.id,
+                                      isCurrent: () =>
+                                          _current(generation, repository) &&
+                                          _visibleConversation(conversation.id),
+                                    ),
+                                  );
+                              DesktopAction? actionFor(String id) {
+                                for (final action
+                                    in objectActions ??
+                                        const <DesktopAction>[]) {
+                                  if (action.id == id) return action;
+                                }
+                                return null;
+                              }
+
+                              final pinAction = actionFor(
+                                conversation.pinned ? 'unpin' : 'pin',
+                              );
+                              final archiveAction = actionFor(
+                                conversation.archived ? 'restore' : 'archive',
+                              );
+                              final pinning =
+                                  _pinningId == conversation.id ||
+                                  (widget.isContextActionBusy?.call(
+                                        conversation.id,
+                                        'pin',
+                                      ) ??
+                                      false) ||
+                                  (widget.isContextActionBusy?.call(
+                                        conversation.id,
+                                        'unpin',
+                                      ) ??
+                                      false);
+                              final archiving =
+                                  _restoringId == conversation.id ||
+                                  (widget.isContextActionBusy?.call(
+                                        conversation.id,
+                                        'archive',
+                                      ) ??
+                                      false) ||
+                                  (widget.isContextActionBusy?.call(
+                                        conversation.id,
+                                        'restore',
+                                      ) ??
+                                      false);
                               final selected =
                                   conversation.id ==
                                   widget.repository.selectedId;
@@ -670,129 +742,166 @@ class _AgentConversationListState extends State<AgentConversationList> {
                                 padding: EdgeInsets.only(
                                   bottom: metrics.desktop ? 2 : 4,
                                 ),
-                                child: AgentConversationRow(
-                                  conversation: conversation,
-                                  delegate: widget.delegate,
-                                  selected: selected,
-                                  enabled: _enabled,
-                                  busy:
-                                      _restoringId == conversation.id ||
-                                      _pinningId == conversation.id,
-                                  onSelected: !_enabled
-                                      ? null
-                                      : () {
-                                          if (_current(
-                                                generation,
-                                                repository,
-                                              ) &&
-                                              _visibleConversation(
-                                                conversation.id,
-                                              )) {
-                                            onSelected(conversation.id);
-                                          }
-                                        },
-                                  actions: [
-                                    if (!conversation.archived)
-                                      IconButton(
-                                        key: ValueKey(
-                                          'agent-pin-${conversation.id}',
-                                        ),
-                                        tooltip: conversation.pinned
-                                            ? l.agentUnpinConversation
-                                            : l.agentPinConversation,
-                                        style: iconStyle,
-                                        onPressed:
-                                            !_enabled ||
-                                                (!repository.canWrite &&
-                                                    (!repository.blocked ||
-                                                        widget.onRecover ==
-                                                            null)) ||
-                                                _restoreToken != null
-                                            ? null
-                                            : () => unawaited(
-                                                _setPinned(
-                                                  conversation.id,
-                                                  !conversation.pinned,
+                                child: DesktopContextMenuRegion(
+                                  target: (
+                                    repository,
+                                    widget.delegate,
+                                    conversation.id,
+                                    conversation.createdAt,
+                                    generation,
+                                  ),
+                                  enabled:
+                                      metrics.desktop &&
+                                      _enabled &&
+                                      widget.contextActionsBuilder != null,
+                                  targetChanges: repository,
+                                  isOwnerCurrent: () =>
+                                      _sameOwner(generation, repository) &&
+                                      _visibleConversation(conversation.id),
+                                  actionsBuilder: (actionContext) =>
+                                      widget.contextActionsBuilder?.call(
+                                        _objectContexts[actionContext] ??=
+                                            DesktopActionContext(
+                                              context: actionContext.context,
+                                              target: conversation.id,
+                                              isCurrent:
+                                                  actionContext.isCurrent,
+                                            ),
+                                      ) ??
+                                      const <DesktopAction>[],
+                                  child: AgentConversationRow(
+                                    conversation: conversation,
+                                    delegate: widget.delegate,
+                                    selected: selected,
+                                    enabled: _enabled,
+                                    busy:
+                                        archiving ||
+                                        pinning ||
+                                        (widget.isContextActionBusy?.call(
+                                              conversation.id,
+                                            ) ??
+                                            false),
+                                    onSelected: !_enabled
+                                        ? null
+                                        : () {
+                                            if (_current(
                                                   generation,
                                                   repository,
-                                                ),
-                                              ),
-                                        icon: _pinningId == conversation.id
-                                            ? SizedBox.square(
-                                                dimension: 16,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                      strokeWidth: 1.6,
-                                                      padding: EdgeInsets.zero,
-                                                      trackGap: 0,
-                                                      color: style.muted,
-                                                      semanticsLabel:
-                                                          l.agentSaving,
-                                                    ),
-                                              )
-                                            : Icon(
-                                                conversation.pinned
-                                                    ? Icons.push_pin
-                                                    : Icons.push_pin_outlined,
-                                              ),
-                                      ),
-                                    if (conversation.archived ||
-                                        onArchive != null)
-                                      IconButton(
-                                        key: ValueKey(
-                                          conversation.archived
-                                              ? 'agent-restore-${conversation.id}'
-                                              : 'agent-archive-${conversation.id}',
-                                        ),
-                                        tooltip: conversation.archived
-                                            ? l.agentRestoreConversation
-                                            : l.agentArchiveConversation,
-                                        onPressed:
-                                            !_enabled ||
-                                                (conversation.archived
-                                                        ? onRestore
-                                                        : onArchive) ==
-                                                    null ||
-                                                (!repository.canWrite &&
-                                                    (!repository.blocked ||
-                                                        widget.onRecover ==
-                                                            null)) ||
-                                                _restoreToken != null
-                                            ? null
-                                            : () => unawaited(
-                                                _changeArchived(
+                                                ) &&
+                                                _visibleConversation(
                                                   conversation.id,
-                                                  !conversation.archived,
-                                                  generation,
+                                                )) {
+                                              onSelected(conversation.id);
+                                            }
+                                          },
+                                    actions: [
+                                      if (!conversation.archived)
+                                        IconButton(
+                                          key: ValueKey(
+                                            'agent-pin-${conversation.id}',
+                                          ),
+                                          tooltip: conversation.pinned
+                                              ? l.agentUnpinConversation
+                                              : l.agentPinConversation,
+                                          style: iconStyle,
+                                          onPressed: objectActions != null
+                                              ? _actionCallback(pinAction)
+                                              : !_enabled ||
+                                                    (!repository.canWrite &&
+                                                        (!repository.blocked ||
+                                                            widget.onRecover ==
+                                                                null)) ||
+                                                    _restoreToken != null
+                                              ? null
+                                              : () => unawaited(
+                                                  _setPinned(
+                                                    conversation.id,
+                                                    !conversation.pinned,
+                                                    generation,
+                                                    repository,
+                                                  ),
+                                                ),
+                                          icon: pinning
+                                              ? SizedBox.square(
+                                                  dimension: 16,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                        strokeWidth: 1.6,
+                                                        padding:
+                                                            EdgeInsets.zero,
+                                                        trackGap: 0,
+                                                        color: style.muted,
+                                                        semanticsLabel:
+                                                            l.agentSaving,
+                                                      ),
+                                                )
+                                              : Icon(
+                                                  conversation.pinned
+                                                      ? Icons.push_pin
+                                                      : Icons.push_pin_outlined,
+                                                ),
+                                        ),
+                                      if (conversation.archived ||
+                                          onArchive != null ||
+                                          archiveAction != null)
+                                        IconButton(
+                                          key: ValueKey(
+                                            conversation.archived
+                                                ? 'agent-restore-${conversation.id}'
+                                                : 'agent-archive-${conversation.id}',
+                                          ),
+                                          tooltip: conversation.archived
+                                              ? l.agentRestoreConversation
+                                              : l.agentArchiveConversation,
+                                          onPressed: objectActions != null
+                                              ? _actionCallback(archiveAction)
+                                              : !_enabled ||
+                                                    (conversation.archived
+                                                            ? onRestore
+                                                            : onArchive) ==
+                                                        null ||
+                                                    (!repository.canWrite &&
+                                                        (!repository.blocked ||
+                                                            widget.onRecover ==
+                                                                null)) ||
+                                                    _restoreToken != null
+                                              ? null
+                                              : () => unawaited(
+                                                  _changeArchived(
+                                                    conversation.id,
+                                                    !conversation.archived,
+                                                    generation,
+                                                    conversation.archived
+                                                        ? restoreGeneration
+                                                        : archiveGeneration,
+                                                    repository,
+                                                  ),
+                                                ),
+                                          style: iconStyle,
+                                          icon: archiving
+                                              ? SizedBox.square(
+                                                  dimension: 20,
+                                                  child: CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                    padding: EdgeInsets.zero,
+                                                    trackGap: 0,
+                                                    color: style.muted,
+                                                    semanticsLabel:
+                                                        conversation.archived
+                                                        ? l.agentRestoreConversation
+                                                        : l.agentArchiveConversation,
+                                                    semanticsValue:
+                                                        l.agentSaving,
+                                                  ),
+                                                )
+                                              : Icon(
                                                   conversation.archived
-                                                      ? restoreGeneration
-                                                      : archiveGeneration,
-                                                  repository,
+                                                      ? Icons.unarchive_outlined
+                                                      : Icons.archive_outlined,
                                                 ),
-                                              ),
-                                        style: iconStyle,
-                                        icon: _restoringId == conversation.id
-                                            ? SizedBox.square(
-                                                dimension: 20,
-                                                child: CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  padding: EdgeInsets.zero,
-                                                  trackGap: 0,
-                                                  color: style.muted,
-                                                  semanticsLabel:
-                                                      conversation.archived
-                                                      ? l.agentRestoreConversation
-                                                      : l.agentArchiveConversation,
-                                                  semanticsValue: l.agentSaving,
-                                                ),
-                                              )
-                                            : Icon(
-                                                conversation.archived
-                                                    ? Icons.unarchive_outlined
-                                                    : Icons.archive_outlined,
-                                              ),
-                                      ),
-                                  ],
+                                        ),
+                                    ],
+                                  ),
                                 ),
                               );
                             },

@@ -1,6 +1,6 @@
 # 桌面基础交互补齐计划
 
-状态：计划待实施。源码审查基线为 2fd2fcb3；当前结论来自实现及所用 Flutter 默认行为的静态核对，运行验收继续暂停。
+状态：D1 会话对象菜单已实现，其余条目待实施；Windows 原生交互验收待进行。初次缺口审查基线为 2fd2fcb3，当前会话行为见[Agent 对话界面](AGENT_CHAT_DESIGN.md)。
 
 ## 目标与优先级
 
@@ -10,14 +10,14 @@ Sked 桌面端应支持用户熟悉的对象操作、键盘操作和文件交互
 
 这批交互直接接入现有业务动作，不等待整个应用完成插件化。共享动作接口为后续插件贡献保留入口，避免菜单、快捷键和工具栏各自实现一套业务保存逻辑。
 
-## 已确认的缺口
+## 审查结果与进度
 
 | 范围 | 当前实现与实际缺口 | 源码入口 |
 | --- | --- | --- |
-| 会话列表 | 会话行只有左键选择及悬停时的固定、归档按钮；改名、导出、删除在已打开会话的顶部菜单，右键行没有对象操作入口 | [会话行](../lib/agent/ui/agent_conversation_row.dart)、[列表](../lib/agent/ui/agent_conversation_list.dart)、[会话动作](../lib/agent/ui/agent_conversation_view.dart) |
+| 会话列表 | D1 已接入右键和键盘上下文菜单；顶部、行尾按钮与菜单共用目标动作，管理其他会话时保留当前阅读对象 | [列表](../lib/agent/ui/agent_conversation_list.dart)、[共享会话动作](../lib/agent/ui/agent_conversation_actions.dart)、[会话界面](../lib/agent/ui/agent_conversation_view.dart) |
 | 课程与日程 | 课程接点击和长按，日程卡接点击；课程已有查看、编辑、删除，日程另有复制及重复范围操作，均未连接对象右键 | [课程网格](../lib/widgets/timetable_grid.dart)、[日程列表](../lib/screens/general_schedule_list_view.dart)、[日程业务入口](../lib/screens/general_schedule_home_screen.dart) |
 | 课表、分类、附件与知识 | 资源行使用点击或悬停按钮，附件使用独立菜单，知识项先进入编辑器；已有动作未形成整行右键入口 | [资源行](../lib/widgets/workbench_resource_widgets.dart)、[附件](../lib/agent/ui/agent_attachment_view.dart)、[知识](../lib/agent/ui/agent_knowledge_view.dart) |
-| 键盘打开对象菜单 | 对象没有菜单键或 Shift+F10 入口；Flutter 默认激活和遍历不会替业务对象生成菜单 | [会话行](../lib/agent/ui/agent_conversation_row.dart)、[应用装配](../lib/main.dart) |
+| 键盘打开对象菜单 | D1 已为会话接入菜单键和 Shift+F10；其他对象继续按计划接入同一入口 | [桌面上下文菜单](../lib/widgets/desktop_context_menu.dart)、[列表](../lib/agent/ui/agent_conversation_list.dart) |
 | 搜索与保存快捷键 | 历史搜索和语言搜索已有控件，但未接 Ctrl+F；课程、日程等显式保存表单的保存入口未接 Ctrl+S | [历史搜索](../lib/agent/ui/agent_conversation_list.dart)、[语言搜索](../lib/screens/language_settings_page.dart)、[编辑器动作](../lib/widgets/sked_task_actions.dart) |
 | 文件拖入与截图粘贴 | 附件通过文件选择器进入；桌面文件拖入、剪贴板图片和文件列表没有接入附件链 | [附件控制器](../lib/agent/attachments/agent_attachment_controller.dart)、[Windows 插件装配](../windows/flutter/generated_plugin_registrant.cc) |
 | 保存后的系统动作 | 附件主要提供预览、再次附加和移除；导出成功显示路径，缺少统一的默认应用打开、资源管理器定位和复制路径动作 | [附件菜单](../lib/agent/ui/agent_attachment_view.dart)、[导出反馈](../lib/widgets/export_save_flow.dart)、[导出服务](../lib/services/export_service.dart) |
@@ -98,11 +98,11 @@ Tab / Shift+Tab、Enter、Space、文本选择、Ctrl+A/C/X/V/Z 及重做沿用�
 
 ## 原子提交顺序
 
-每个条目单独审查、签名提交，包含对应行为说明和必要回归材料。共享接口与第一个完整调用入口同笔交付；后续对象逐项接入，不把全应用改动积累成一笔。
+每个条目单独审查、签名提交，包含对应行为说明。开发阶段通过格式检查、静态分析和代码审查推进，不编写或运行自动化测试。共享接口与第一个完整调用入口同笔交付；后续对象逐项接入，不把全应用改动积累成一笔。
 
 | 顺序 | 提交主题 | 完整边界 |
 | --- | --- | --- |
-| D1 | feat(桌面菜单): 接入会话对象上下文动作 | 动作契约、会话行右键、菜单键／Shift+F10、目标身份校验与现有会话动作一起接通 |
+| D1 | feat(桌面菜单): 接入会话对象上下文动作 | 已实现；动作契约、会话行右键、菜单键／Shift+F10、目标身份校验与现有会话动作一起接通 |
 | D2 | feat(桌面菜单): 接入课程与日程对象动作 | 复用 D1 契约，连接查看、编辑和删除；日程保留复制及重复范围选择，可按两类对象分笔 |
 | D3 | feat(桌面菜单): 接入资源与内容对象动作 | 按课表分类、知识、消息、附件分别提交完整入口，保留文本菜单优先级 |
 | D4 | feat(桌面快捷键): 接入区域搜索与对象操作 | Ctrl+F、搜索 Esc、F2、Delete 共用区域焦点与动作规则；独立交互可继续分笔 |
@@ -115,7 +115,7 @@ Tab / Shift+Tab、Enter、Space、文本选择、Ctrl+A/C/X/V/Z 及重做沿用�
 
 D1–D5 优先作为桌面基础补齐，不依赖 Agent 插件迁移完成。D6、D7 复用现有附件链，文件夹引用衔接 Agent 文件 Provider；D8 与 Agent 的通用产物交付共同使用文件动作服务。
 
-开发在 main，保留现有未提交修改。提交消息使用中文，SSH 签名并验签。开发临时工件放 F 盘；测试、构建、真实模型及性能采样继续暂停。
+开发在 main，保留现有未提交修改。提交消息使用中文，SSH 签名并验签。开发临时工件放 F 盘；构建、真实模型调用及性能采样继续暂停，原生交互另行验收。
 
 ## 恢复后的验收
 

@@ -25,6 +25,7 @@ Future<T?> showSkedMenu<T>({
   bool useRootNavigator = false,
   String? semanticLabel,
   RouteSettings? routeSettings,
+  SkedMenuSession? menuSession,
 }) => _showSkedMenu<T>(
   context: context,
   items: items,
@@ -36,13 +37,17 @@ Future<T?> showSkedMenu<T>({
   useRootNavigator: useRootNavigator,
   semanticLabel: semanticLabel,
   routeSettings: routeSettings,
-  session: _SkedMenuSession(),
+  session: menuSession ?? SkedMenuSession(),
 );
 
-class _SkedMenuSession {
-  bool valid = true;
-  VoidCallback? onInvalidated;
+/// Controls one menu invocation without invalidating a normal selection close.
+/// Create a new session for every call to [showSkedMenu].
+class SkedMenuSession {
+  bool _valid = true;
+  VoidCallback? _onInvalidated;
   ModalRoute<dynamic>? _route;
+
+  bool get valid => _valid;
 
   // The route can finish before its Future delivers the result. Keep an
   // unbuilt route open, but do not mistake a popped/removed route for a live
@@ -50,9 +55,9 @@ class _SkedMenuSession {
   bool get isOpen => _route?.isActive ?? true;
 
   void invalidate() {
-    if (!valid) return;
-    valid = false;
-    onInvalidated?.call();
+    if (!_valid) return;
+    _valid = false;
+    _onInvalidated?.call();
   }
 }
 
@@ -67,9 +72,10 @@ Future<T?> _showSkedMenu<T>({
   bool useRootNavigator = false,
   String? semanticLabel,
   RouteSettings? routeSettings,
-  required _SkedMenuSession session,
+  required SkedMenuSession session,
 }) {
   assert((position == null) != (positionBuilder == null));
+  if (!session.valid) return Future<T?>.value();
   final menu = SkedMenuStyle.of(context);
   final effectiveConstraints = SkedMenuStyle.constraintsFor(
     context,
@@ -224,7 +230,7 @@ class _SkedPopupMenuButton<T> extends PopupMenuButton<T> {
 class _SkedPopupMenuButtonState<T> extends PopupMenuButtonState<T> {
   bool _expanded = false;
   int _menuGeneration = 0;
-  _SkedMenuSession? _menuSession;
+  SkedMenuSession? _menuSession;
 
   void _invalidateMenu() {
     if (_menuSession?.isOpen == false) return;
@@ -254,7 +260,7 @@ class _SkedPopupMenuButtonState<T> extends PopupMenuButtonState<T> {
             as RenderBox?;
     if (button == null || overlay == null) return;
     final generation = ++_menuGeneration;
-    final session = _menuSession = _SkedMenuSession();
+    final session = _menuSession = SkedMenuSession();
     RelativeRect? lastPosition;
     widget.onOpened?.call();
     setState(() => _expanded = true);
@@ -365,7 +371,7 @@ class _SkedMenuMetricsGuard<T> extends PopupMenuEntry<T> {
   const _SkedMenuMetricsGuard({required this.item, required this.session});
 
   final PopupMenuEntry<T> item;
-  final _SkedMenuSession session;
+  final SkedMenuSession session;
   @override
   double get height => item.height;
   @override
@@ -388,7 +394,7 @@ class _SkedMenuMetricsGuardState<T> extends State<_SkedMenuMetricsGuard<T>>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    widget.session.onInvalidated = _closeIfCurrent;
+    widget.session._onInvalidated = _closeIfCurrent;
   }
 
   @override
@@ -421,7 +427,7 @@ class _SkedMenuMetricsGuardState<T> extends State<_SkedMenuMetricsGuard<T>>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    widget.session.onInvalidated = null;
+    widget.session._onInvalidated = null;
     super.dispose();
   }
 

@@ -19,6 +19,7 @@ import '../../theme/sked_surface.dart';
 import '../../theme/sked_expressive_theme.dart';
 import '../../theme/sked_menu_style.dart';
 import '../../widgets/desktop_window_host.dart';
+import '../../widgets/desktop_context_menu.dart';
 import '../../widgets/expressive_dialog.dart';
 import '../../widgets/app_modal_sheet.dart';
 import '../../widgets/sked_expressive_loading_indicator.dart';
@@ -29,6 +30,7 @@ import '../../widgets/workbench_chrome_metrics.dart';
 import '../../widgets/workspace_frame.dart';
 import '../../widgets/workspace_navigation.dart';
 import 'agent_conversation_list.dart';
+import 'agent_conversation_actions.dart';
 import 'agent_conversation_timeline.dart';
 import 'agent_message_content.dart';
 import 'agent_message_actions.dart';
@@ -177,6 +179,66 @@ class AgentConversationView extends StatefulWidget {
 }
 
 class _AgentConversationViewState extends State<AgentConversationView> {
+  late AgentConversationActions _conversationActions;
+
+  AgentConversationActions _createConversationActions() {
+    final repository = _repository;
+    final delegate = widget.delegate;
+    final buffer = _draftBuffers[repository] ??= _AgentDraftBuffer();
+    late final AgentConversationActions actions;
+    actions = AgentConversationActions(
+      repository: repository,
+      delegate: delegate,
+      isOwnerActive: () =>
+          mounted &&
+          widget.active &&
+          widget.interactive &&
+          identical(repository, _repository) &&
+          identical(delegate, widget.delegate),
+      readDatasetGeneration: widget.readDatasetGeneration == null
+          ? null
+          : () => widget.readDatasetGeneration!(),
+      recoverConversations: widget.recoverConversations == null
+          ? null
+          : () => widget.recoverConversations!(),
+      onExportConversation: widget.onExportConversation == null
+          ? null
+          : (id) => widget.onExportConversation!(id),
+      onDeleted: (id) {
+        buffer.drafts.remove(id);
+        buffer.saved.remove(id);
+        unawaited(buffer.writes.remove(id));
+        buffer.reading.remove(id);
+      },
+      onExported: (id, saved) {
+        if (!mounted || !identical(_conversationActions, actions)) return;
+        setState(() {
+          if (saved) {
+            _exportedId = id;
+          } else if (_exportedId == id) {
+            _exportedId = null;
+          }
+        });
+      },
+    )..addListener(_conversationActionsChanged);
+    return actions;
+  }
+
+  void _conversationActionsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  List<DesktopAction> _objectActions(
+    BuildContext sourceContext,
+    AgentConversation conversation,
+  ) => _conversationActions.buildActions(
+    DesktopActionContext(
+      context: sourceContext,
+      target: conversation.id,
+      isCurrent: () => mounted && widget.active && widget.interactive,
+    ),
+  );
+
   void _updateReferenceState(VoidCallback update) => setState(update);
   void _updateProcessState(VoidCallback update) => setState(update);
 
@@ -574,6 +636,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   @override
   void initState() {
     super.initState();
+    _conversationActions = _createConversationActions();
     _composer.addListener(_referenceInputChanged);
     _composerFocus.addListener(_referenceInputChanged);
     _composerRegionFocus.addListener(_referenceInputChanged);
@@ -614,6 +677,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         !identical(oldWidget.repository, widget.repository) ||
         !identical(oldWidget.delegate, widget.delegate)) {
       _invalidateUiSource();
+      _conversationActions.invalidate();
     }
     if (!widget.active) {
       _hostActive = false;
@@ -646,6 +710,18 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       oldWidget.binaryAttachments?.removeListener(_changed);
       widget.binaryAttachments?.addListener(_changed);
     }
+    if (!identical(oldWidget.repository, widget.repository) ||
+        !identical(oldWidget.delegate, widget.delegate) ||
+        (oldWidget.onExportConversation == null) !=
+            (widget.onExportConversation == null) ||
+        (oldWidget.recoverConversations == null) !=
+            (widget.recoverConversations == null) ||
+        (oldWidget.readDatasetGeneration == null) !=
+            (widget.readDatasetGeneration == null)) {
+      _conversationActions.removeListener(_conversationActionsChanged);
+      _conversationActions.dispose();
+      _conversationActions = _createConversationActions();
+    }
     _messageHistorySession?.check();
     _scheduleBrowse();
     _scheduleInitialDraft();
@@ -654,6 +730,8 @@ class _AgentConversationViewState extends State<AgentConversationView> {
 
   @override
   void dispose() {
+    _conversationActions.removeListener(_conversationActionsChanged);
+    _conversationActions.dispose();
     _invalidateUiSource();
     _disposeRunWatch();
     _repository.removeListener(_changed);
@@ -1034,64 +1112,6 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     });
   }
 
-  Future<void> _rename(AgentConversation conversation) async {
-    if (!_uiActive) return;
-    final repository = _repository;
-    final uiGeneration = _uiGeneration;
-    final title = await showExpressiveDialog<String>(
-      context: context,
-      builder: (context) =>
-          _RenameConversationDialog(title: conversation.title),
-    );
-    if (title == null ||
-        !_uiSessionCurrent(uiGeneration, conversation.id) ||
-        !identical(repository, _repository)) {
-      return;
-    }
-    await _perform('rename', () async {
-      await repository.rename(conversation.id, title);
-    });
-  }
-
-  Future<void> _delete(AgentConversation conversation) async {
-    if (!_uiActive) return;
-    final repository = _repository;
-    final uiGeneration = _uiGeneration;
-    final delegate = widget.delegate;
-    final l = AppLocalizations.of(context);
-    final confirmed = await showExpressiveDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l.agentDeleteConversation),
-        content: Text(l.agentDeleteConversationMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(l.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop<bool>(true),
-            child: Text(l.delete),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true ||
-        !_uiSessionCurrent(uiGeneration, conversation.id) ||
-        !identical(repository, _repository)) {
-      return;
-    }
-    await _perform('delete', () async {
-      await delegate.stop(conversation.id);
-      if (!identical(repository, _repository)) return;
-      await repository.delete(conversation.id);
-      _drafts.remove(conversation.id);
-      _savedDrafts.remove(conversation.id);
-      unawaited(_draftWrites.remove(conversation.id));
-      _draftBuffer.reading.remove(conversation.id);
-    });
-  }
-
   Future<void> _editHistory(
     AgentConversation conversation,
     ConversationMessage message,
@@ -1411,6 +1431,9 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     return AgentConversationList(
       repository: repository,
       delegate: delegate,
+      contextActionsBuilder: _conversationActions.buildActions,
+      contextActionsChanges: _conversationActions,
+      isContextActionBusy: _conversationActions.isBusy,
       onSelected: onSelected,
       active: widget.active && active,
       interactive: widget.interactive && !state.maintenance,
@@ -1501,6 +1524,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     final historyChanges = Listenable.merge([
       repository,
       historySource.delegate.state,
+      _conversationActions,
     ]);
     final motion = SkedMotionPolicy.of(context);
     final direction = Directionality.of(context);
@@ -1665,7 +1689,6 @@ class _AgentConversationViewState extends State<AgentConversationView> {
               context,
               l,
               conversation,
-              writable,
               wideHistory,
               inlineInspector,
             );
@@ -2044,7 +2067,6 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     BuildContext headerContext,
     AppLocalizations l,
     AgentConversation? conversation,
-    bool writable,
     bool wideHistory,
     bool inlineInspector,
   ) {
@@ -2098,7 +2120,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
           ),
         KeyedSubtree(
           key: ValueKey(('agent-actions-session', uiGeneration)),
-          child: SkedPopupMenuButton<String>(
+          child: SkedPopupMenuButton<Object>(
             key: const ValueKey('agent-conversation-menu'),
             tooltip: l.agentConversationActions,
             enabled: _uiActive && !_runtime.maintenance,
@@ -2107,41 +2129,13 @@ class _AgentConversationViewState extends State<AgentConversationView> {
               switch (value) {
                 case 'settings':
                   widget.delegate.openSettings();
-                case 'rename':
-                  if (conversation != null) unawaited(_rename(conversation));
+                case DesktopAction():
+                  if (value.enabled && value.onInvoke != null) {
+                    unawaited(Future<void>.sync(value.onInvoke!));
+                  }
                 case 'message-history':
                   if (conversation != null) {
                     unawaited(_showMessageHistory(conversation));
-                  }
-                case 'delete':
-                  if (conversation != null) unawaited(_delete(conversation));
-                case 'archive':
-                  if (conversation != null) {
-                    unawaited(
-                      _perform(
-                        'archive-${conversation.id}',
-                        () => widget.delegate.setArchived(
-                          conversation.id,
-                          !conversation.archived,
-                        ),
-                      ),
-                    );
-                  }
-                case 'export':
-                  if (conversation != null &&
-                      widget.onExportConversation != null) {
-                    unawaited(
-                      _perform('export-${conversation.id}', () async {
-                        final saved = await widget.onExportConversation!(
-                          conversation.id,
-                        );
-                        if (mounted) {
-                          setState(
-                            () => _exportedId = saved ? conversation.id : null,
-                          );
-                        }
-                      }),
-                    );
                   }
               }
             },
@@ -2153,7 +2147,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
               ),
               if (conversation != null &&
                   !_repository.isDraft(conversation.id)) ...[
-                const SkedPopupMenuDivider<String>(),
+                const SkedPopupMenuDivider<Object>(),
                 if ((_repository is ConversationBrowseRepository &&
                         (_repository as ConversationBrowseRepository)
                             .hasMessageHistory(conversation.id)) ||
@@ -2163,31 +2157,12 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                     value: 'message-history',
                     child: Text(l.agentHistoryVersions),
                   ),
-                SkedPopupMenuItem(
-                  value: 'rename',
-                  enabled: writable && !_busy.contains('rename'),
-                  child: Text(l.rename),
-                ),
-                SkedPopupMenuItem(
-                  value: 'archive',
-                  enabled: writable,
-                  child: Text(
-                    conversation.archived
-                        ? l.agentRestoreConversation
-                        : l.agentArchiveConversation,
-                  ),
-                ),
-                if (widget.onExportConversation != null)
+                for (final action in _objectActions(context, conversation))
                   SkedPopupMenuItem(
-                    value: 'export',
-                    enabled: writable,
-                    child: Text(l.agentExportConversation),
+                    value: action,
+                    enabled: action.enabled && action.onInvoke != null,
+                    child: Text(action.label),
                   ),
-                SkedPopupMenuItem(
-                  value: 'delete',
-                  enabled: writable && !_busy.contains('delete'),
-                  child: Text(l.delete),
-                ),
               ],
             ],
           ),
@@ -3786,56 +3761,6 @@ class _EditHistoryDialogState extends State<_EditHistoryDialog> {
                 ? null
                 : () => Navigator.of(context).pop(_controller.text),
             child: Text(l.agentEditAndRedo),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _RenameConversationDialog extends StatefulWidget {
-  const _RenameConversationDialog({required this.title});
-  final String title;
-  @override
-  State<_RenameConversationDialog> createState() =>
-      _RenameConversationDialogState();
-}
-
-class _RenameConversationDialogState extends State<_RenameConversationDialog> {
-  late final _controller = TextEditingController(text: widget.title);
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return AlertDialog(
-      title: Text(l.agentRenameConversation),
-      content: TextField(
-        key: const ValueKey('agent-rename-input'),
-        controller: _controller,
-        autofocus: true,
-
-        decoration: InputDecoration(filled: true, labelText: l.name),
-        onSubmitted: (value) {
-          if (value.trim().isNotEmpty) Navigator.of(context).pop(value.trim());
-        },
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l.cancel),
-        ),
-        ListenableBuilder(
-          listenable: _controller,
-          builder: (context, _) => FilledButton(
-            onPressed: _controller.text.trim().isEmpty
-                ? null
-                : () => Navigator.of(context).pop(_controller.text.trim()),
-            child: Text(l.save),
           ),
         ),
       ],
