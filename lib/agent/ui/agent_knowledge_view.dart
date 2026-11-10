@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/sked_expressive_theme.dart';
 import '../../utils/unique_id.dart';
+import '../../widgets/desktop_context_menu.dart';
 import '../../widgets/expressive_dialog.dart';
 import '../../widgets/expressive_empty_state.dart';
 import '../../widgets/sked_expressive_loading_indicator.dart';
@@ -12,6 +13,7 @@ import '../../widgets/settings_list.dart';
 import '../../widgets/settings_page_header.dart';
 import '../../widgets/sked_task_session.dart';
 import '../../widgets/sked_dropdown_menu.dart';
+import '../../widgets/workbench_chrome_metrics.dart';
 import '../knowledge/agent_knowledge_editor_controller.dart';
 import 'agent_settings_exit_guard.dart';
 
@@ -40,7 +42,10 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
   final _uiSessions = <SkedTaskSession>{};
   bool _loading = true, _failed = false;
   bool _routeCurrent = false;
+  ModalRoute<dynamic>? _ownerRoute;
   int _interactionGeneration = 0;
+  int _objectGeneration = 0;
+  Object? _objectAction;
   Object? _loadRequest;
   Object? _openRequest;
   SkedTaskSession? _readSession;
@@ -48,6 +53,7 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
   _KnowledgeState _state = _KnowledgeState.all;
 
   bool get _opening => _openRequest != null;
+  bool get _busy => _opening || _objectAction != null;
   @override
   void initState() {
     super.initState();
@@ -57,7 +63,12 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final current = ModalRoute.of(context)?.isCurrent == true;
+    final route = ModalRoute.of(context);
+    if (_ownerRoute != null && !identical(_ownerRoute, route)) {
+      _objectGeneration++;
+    }
+    _ownerRoute = route;
+    final current = route?.isCurrent == true;
     if (_routeCurrent && !current) _interactionGeneration++;
     _routeCurrent = current;
     _checkUiSessions();
@@ -70,6 +81,8 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
         oldWidget.kind != widget.kind ||
         oldWidget.pageEditor != widget.pageEditor) {
       _interactionGeneration++;
+      _objectGeneration++;
+      _objectAction = null;
       _checkUiSessions();
       if (oldWidget.kind != widget.kind) {
         _origin = _KnowledgeOrigin.all;
@@ -173,7 +186,7 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
   }
 
   Future<void> _open({KnowledgeRecord? item, required int generation}) async {
-    if (_opening ||
+    if (_busy ||
         generation != _interactionGeneration ||
         ModalRoute.of(context)?.isCurrent != true) {
       return;
@@ -249,6 +262,142 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
       }
     } finally {
       _retireUiSession(session);
+    }
+  }
+
+  List<DesktopAction> _objectActions(
+    KnowledgeRecord item,
+    DesktopActionContext invocation,
+  ) {
+    final l = AppLocalizations.of(context);
+    final service = widget.service;
+    DesktopAction action(String id, String label, IconData icon) =>
+        DesktopAction(
+          id: id,
+          label: label,
+          icon: icon,
+          enabled:
+              !_busy &&
+              service.ready &&
+              invocation.isCurrent() &&
+              _hasKnowledgeRecord(service, item),
+          onInvoke: () async {
+            if (_busy || !invocation.isCurrent()) return;
+            if (id == 'edit') {
+              await _open(item: item, generation: _interactionGeneration);
+            } else {
+              await _changeKnowledge(item, id, invocation);
+            }
+          },
+        );
+    return [
+      action('edit', l.agentKnowledgeEdit, Icons.edit_outlined),
+      action(
+        'toggle-enabled',
+        l.agentKnowledgeEnabled,
+        item.enabled ? Icons.check_box_outlined : Icons.check_box_outline_blank,
+      ),
+      if (item.builtIn)
+        action(
+          'restore-original',
+          l.agentKnowledgeRestoreOriginal,
+          Icons.restore,
+        )
+      else
+        action('delete', l.agentKnowledgeDelete, Icons.delete_outline),
+    ];
+  }
+
+  Future<void> _changeKnowledge(
+    KnowledgeRecord item,
+    String action,
+    DesktopActionContext invocation,
+  ) async {
+    if (_busy || !invocation.isCurrent()) return;
+    final service = widget.service;
+    final kind = widget.kind;
+    final pageEditor = widget.pageEditor;
+    final route = _ownerRoute;
+    final generation = _objectGeneration;
+    bool ownerCurrent() =>
+        mounted &&
+        generation == _objectGeneration &&
+        identical(widget.service, service) &&
+        widget.kind == kind &&
+        widget.pageEditor == pageEditor &&
+        identical(_ownerRoute, route) &&
+        route?.isActive == true &&
+        service.ready;
+    final session = SkedTaskSession(
+      ownerRoute: route,
+      parent: SkedTaskSessionScope.maybeOf(context)?.session,
+      targetChanges: service,
+      isOwnerActive: ownerCurrent,
+      isTargetCurrent: () => _hasKnowledgeRecord(service, item),
+    );
+    if (!session.isCurrent) {
+      session.dispose();
+      return;
+    }
+    _uiSessions.add(session);
+    final token = Object();
+    setState(() => _objectAction = token);
+    try {
+      final record = await service.read(item.kind, item.id);
+      if (!mounted || !session.isCurrent) return;
+      if (_knowledgeIdentity(record) != _knowledgeIdentity(item)) {
+        throw const KnowledgeException(
+          KnowledgeError.conflict,
+          'Knowledge changed before the action was accepted.',
+        );
+      }
+      KnowledgeReceipt receipt;
+      switch (action) {
+        case 'toggle-enabled':
+          receipt = await service.saveDraft(
+            record.copyWith(enabled: !record.enabled),
+          );
+        case 'restore-original':
+          if (!record.builtIn) return;
+          receipt = await service.restoreOriginal(record);
+        case 'delete':
+          if (record.builtIn) return;
+          final confirmed = await _confirmKnowledgeDelete(
+            context,
+            record.title,
+            session: session,
+          );
+          if (confirmed != true || !session.isCurrent) return;
+          receipt = await service.delete(record);
+        default:
+          return;
+      }
+      // A successful change retires the old record version. Feedback follows
+      // the owner, while every write above used the captured expected version.
+      if (mounted && ownerCurrent() && route?.isCurrent == true) {
+        _showFeedback(
+          AppLocalizations.of(context).agentKnowledgeSaved,
+          undoOperationId: receipt.operationId,
+        );
+      }
+    } on KnowledgeException catch (error) {
+      if (mounted && ownerCurrent() && route?.isCurrent == true) {
+        final l = AppLocalizations.of(context);
+        _showFeedback(switch (error.code) {
+          KnowledgeError.conflict => l.agentKnowledgeConflict,
+          KnowledgeError.invalid => l.agentKnowledgeInvalid,
+          _ => l.agentKnowledgeStorageFailed,
+        });
+      }
+    } catch (_) {
+      if (mounted && ownerCurrent() && route?.isCurrent == true) {
+        _showFeedback(AppLocalizations.of(context).agentKnowledgeStorageFailed);
+      }
+    } finally {
+      _retireUiSession(session);
+      if (mounted && identical(_objectAction, token)) {
+        setState(() => _objectAction = null);
+      }
     }
   }
 
@@ -469,7 +618,7 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
                               key: ValueKey(
                                 'knowledge-add-${widget.kind.name}',
                               ),
-                              onPressed: _opening
+                              onPressed: _busy
                                   ? null
                                   : () => unawaited(
                                       _open(generation: generation),
@@ -529,59 +678,80 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
                               if (!skill && widget.service.needsRecheck(item))
                                 l.agentKnowledgeStaleReference,
                             ];
-                            return Material(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerLow,
-                              shape: index == 0 || index == items.length - 1
-                                  ? skedShapeSchemeOf(context).card
-                                  : skedShapeSchemeOf(context).compact,
-                              clipBehavior: Clip.antiAlias,
-                              child: ListTile(
-                                key: ValueKey('knowledge-item-${item.key}'),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 4,
-                                ),
-                                title: Text(
-                                  item.title,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (preview.isNotEmpty)
+                            return DesktopContextMenuRegion(
+                              target: (
+                                widget.service,
+                                widget.kind,
+                                widget.pageEditor,
+                                _objectGeneration,
+                                _knowledgeIdentity(item),
+                              ),
+                              enabled:
+                                  WorkbenchChromeMetrics.of(context).desktop &&
+                                  !_busy &&
+                                  widget.service.ready,
+                              targetChanges: widget.service,
+                              isOwnerCurrent: () =>
+                                  mounted &&
+                                  widget.service.ready &&
+                                  _hasKnowledgeRecord(widget.service, item),
+                              actionsBuilder: (invocation) =>
+                                  _objectActions(item, invocation),
+                              child: Material(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerLow,
+                                shape: index == 0 || index == items.length - 1
+                                    ? skedShapeSchemeOf(context).card
+                                    : skedShapeSchemeOf(context).compact,
+                                clipBehavior: Clip.antiAlias,
+                                child: ListTile(
+                                  key: ValueKey('knowledge-item-${item.key}'),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 4,
+                                  ),
+                                  title: Text(
+                                    item.title,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  subtitle: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (preview.isNotEmpty)
+                                        Text(
+                                          preview,
+                                          key: ValueKey(
+                                            'knowledge-preview-${item.key}',
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      const SizedBox(height: 4),
                                       Text(
-                                        preview,
+                                        details.join(' · '),
                                         key: ValueKey(
-                                          'knowledge-preview-${item.key}',
+                                          'knowledge-status-${item.key}',
                                         ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall,
                                       ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      details.join(' · '),
-                                      key: ValueKey(
-                                        'knowledge-status-${item.key}',
-                                      ),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall,
-                                    ),
-                                  ],
+                                    ],
+                                  ),
+                                  trailing: const Icon(Icons.chevron_right),
+                                  onTap: _busy
+                                      ? null
+                                      : () => unawaited(
+                                          _open(
+                                            item: item,
+                                            generation: generation,
+                                          ),
+                                        ),
                                 ),
-                                trailing: const Icon(Icons.chevron_right),
-                                onTap: _opening
-                                    ? null
-                                    : () => unawaited(
-                                        _open(
-                                          item: item,
-                                          generation: generation,
-                                        ),
-                                      ),
                               ),
                             );
                           },
@@ -780,24 +950,10 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor>
   }
 
   Future<void> _delete() async {
-    final l = AppLocalizations.of(context);
     final route = ModalRoute.of(context);
-    final confirmed = await showExpressiveDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l.agentKnowledgeDeleteConfirm),
-        content: Text(widget.record!.title),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(l.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(l.agentKnowledgeDelete),
-          ),
-        ],
-      ),
+    final confirmed = await _confirmKnowledgeDelete(
+      context,
+      widget.record!.title,
     );
     if (confirmed == true && mounted && route?.isCurrent == true) {
       await _save(delete: true);
@@ -1004,6 +1160,51 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor>
       ),
     );
   }
+}
+
+Object _knowledgeIdentity(KnowledgeRecord record) => (
+  record.kind,
+  record.id,
+  record.revision,
+  record.builtIn,
+  record.usesOriginal,
+  record.baseVersion,
+  record.baseSha256,
+);
+
+bool _hasKnowledgeRecord(
+  AgentKnowledgeEditorController service,
+  KnowledgeRecord expected,
+) => service
+    .list(expected.kind)
+    .any(
+      (record) => _knowledgeIdentity(record) == _knowledgeIdentity(expected),
+    );
+
+Future<bool?> _confirmKnowledgeDelete(
+  BuildContext context,
+  String title, {
+  SkedTaskSession? session,
+}) {
+  final l = AppLocalizations.of(context);
+  return showExpressiveDialog<bool>(
+    context: context,
+    session: session,
+    builder: (context) => AlertDialog(
+      title: Text(l.agentKnowledgeDeleteConfirm),
+      content: Text(title),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: Text(l.cancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: Text(l.agentKnowledgeDelete),
+        ),
+      ],
+    ),
+  );
 }
 
 /// Hides only a recognized built-in preamble. The caller retains these exact
