@@ -25,6 +25,8 @@ import 'connection/agent_endpoint.dart';
 import 'execution/agent_execution_coordinator.dart';
 import 'execution/execution_evidence.dart'
     show projectExecutionResult, pythonExecutionAction;
+import 'files/agent_file_coordinator.dart';
+import 'files/file_evidence.dart' show fileWriteAction, projectFileResult;
 import 'conversations/conversation_models.dart';
 import 'knowledge/knowledge_models.dart';
 import 'provider/provider.dart';
@@ -34,6 +36,7 @@ import 'references/agent_composer_reference_search.dart';
 import 'skills/shared_skill_loader.dart';
 import 'tools/application_tool_host.dart';
 import 'tools/platform_tool_adapters.dart';
+import 'tools/file_tool_adapters.dart';
 import 'tools/workflow_tool_adapters.dart';
 import 'tools/conversation_tool_adapters.dart';
 import 'tools/agent_control_tool_adapters.dart';
@@ -116,6 +119,11 @@ class AgentApplication extends ChangeNotifier {
       external: external,
       isAvailable: () => platformSupported && _knowledgeAvailable(),
     );
+    files = AgentFileCoordinator(
+      client: this.nativeClient,
+      external: external,
+      isAvailable: () => platformSupported && _knowledgeAvailable(),
+    );
     uiContributions.replaceProfileOwner(
       AgentUiContributionOwner(
         lifetime: AgentUiContributionLifetime.profile,
@@ -176,6 +184,10 @@ class AgentApplication extends ChangeNotifier {
       connectionManager: connections,
     );
     platformTools.registerReadBack(pythonExecutionAction, execution.readBack);
+    tools.registerExternalResultProjector(fileWriteAction, projectFileResult);
+    tools.registerCandidateDisposer('external.commit', files.discardPlan);
+    platformTools.registerReadBack(fileWriteAction, files.readBack);
+    fileTools = FileToolAdapters(host: tools, files: files);
     registerSchoolImportTools(tools);
     workflowTools = registerWorkflowTools(
       tools,
@@ -221,7 +233,9 @@ class AgentApplication extends ChangeNotifier {
         session: session,
         mutations: mutations,
         external: external,
-        reconcileExternal: execution.reconcileIfOwned,
+        reconcileExternal: (operationId) async =>
+            await files.reconcileIfOwned(operationId) ??
+            await execution.reconcileIfOwned(operationId),
       ).read,
       beginHistory: historyMaintenance.begin,
       endHistory: historyMaintenance.end,
@@ -231,6 +245,7 @@ class AgentApplication extends ChangeNotifier {
           historyMaintenance.runWithOwner(request, () => undo.commit(request)),
       onScopeSettled: (scope) {
         execution.discardScope(scope);
+        files.discardScope(scope);
         external.discardScope(scope);
         controlTools.discardScope(scope);
         _pruneHistory().ignore();
@@ -281,7 +296,9 @@ class AgentApplication extends ChangeNotifier {
   late final MutationCoordinator mutations;
   late final ExternalOperationCoordinator external;
   late final AgentExecutionCoordinator execution;
+  late final AgentFileCoordinator files;
   late final PlatformToolAdapters platformTools;
+  late final FileToolAdapters fileTools;
   late final WorkflowToolAdapters workflowTools;
   late final ConversationToolAdapters conversationTools;
   late final AgentControlToolAdapters controlTools;
@@ -376,6 +393,7 @@ class AgentApplication extends ChangeNotifier {
 
   Future<void> _prepareNative() async {
     final core = await nativeClient.ensureInitialized();
+    fileTools.registerAvailable(core.fileAvailability());
     await core.dispatch(
       command: native.AgentCommand(
         kind: native.CommandKind.setTools,
@@ -858,6 +876,7 @@ class AgentApplication extends ChangeNotifier {
     final generation = mutations.generation;
     if (generation != _attachmentDataGeneration) {
       execution.invalidate();
+      files.invalidate();
       _attachmentDataGeneration = generation;
       if (!_maintenance.isReserved) {
         binaryAttachments.invalidatePendingAfterDataBoundary();
@@ -891,6 +910,7 @@ class AgentApplication extends ChangeNotifier {
       conversations.setMaintenance(true);
       if (!historyMaintenance.ownsMaintenance) {
         execution.invalidate();
+        files.invalidate();
         _stopNative().ignore();
         mutations.invalidate();
         external.invalidate();
@@ -921,12 +941,14 @@ class AgentApplication extends ChangeNotifier {
 
   Future<void> quiesce() async {
     execution.invalidate();
+    files.invalidate();
     for (final token in _diagnosticTokens) {
       token.cancel();
     }
     await _stopNative();
     await _configurationTail;
     await execution.waitForPending();
+    await files.waitForPending();
     await mutations.waitForPendingWrites();
     if (_maintenanceScope == null) await external.waitForPendingWrites();
     if (_maintenanceScope == null) {
@@ -946,6 +968,7 @@ class AgentApplication extends ChangeNotifier {
   void freeze({bool drainAcceptedRuns = false}) {
     _suspended = true;
     execution.invalidate();
+    files.invalidate();
     _syncUiContributions();
     for (final token in _diagnosticTokens) {
       token.cancel();
@@ -1020,6 +1043,7 @@ class AgentApplication extends ChangeNotifier {
   Future<void> close() => _closing ??= _close();
   Future<void> _close() async {
     execution.invalidate();
+    files.invalidate();
     if (nativeClient.isInitialized && !_clearSuspended) {
       await nativeClient.dispatch(
         const native.AgentCommand(kind: native.CommandKind.quiesce),
@@ -1028,6 +1052,7 @@ class AgentApplication extends ChangeNotifier {
     await quiesce();
     await historyMaintenance.close();
     await execution.close();
+    await files.close();
     await nativeClient.shutdown();
     await businessHost.dispose();
     await runtime.dispose();

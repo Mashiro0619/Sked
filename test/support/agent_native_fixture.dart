@@ -5,6 +5,8 @@ import 'dart:typed_data';
 
 import 'package:sked/agent/bridge/generated/api.dart';
 import 'package:sked/agent/bridge/generated/api/contracts.dart';
+import 'package:sked/agent/bridge/generated/api/file_contracts.dart'
+    show FileAvailability;
 import 'package:sked/agent/bridge/generated/api/history.dart';
 import 'package:sked/agent/bridge/generated/api/management_contracts.dart';
 import 'package:sked/agent/bridge/generated/api/models.dart';
@@ -26,6 +28,10 @@ class MemoryAgentCore implements AgentCore {
       this.snapshots[snapshot.conversation.id] = snapshot;
     }
   }
+
+  @override
+  FileAvailability fileAvailability() =>
+      const FileAvailability(available: false, resourceKinds: []);
 
   final snapshots = <String, ViewConversationSnapshot>{};
   final knowledge = <String, ViewKnowledgeRecord>{};

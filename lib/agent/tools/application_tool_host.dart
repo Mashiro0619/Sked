@@ -49,7 +49,7 @@ class ApplicationToolHost {
     this.readSkillSnapshot,
   }) : settings = settings ?? SettingRegistry(),
        _loadAsset = loadSkillAsset ?? rootBundle.loadString {
-    _candidateDisposers['mutation.commit'] = mutations.discard;
+    registerCandidateDisposer('mutation.commit', mutations.discard);
     _registerCore();
     _registerTaskPlanTools();
   }
@@ -69,7 +69,8 @@ class ApplicationToolHost {
   final _tools = <String, (ToolDefinition, ApplicationToolAction)>{};
   final _internalTools = <String, (ToolDefinition, ApplicationToolAction)>{};
   final _preparations = <String, String>{};
-  final _candidateDisposers = <String, void Function(String planId)>{};
+  final _candidateDisposers =
+      <String, List<FutureOr<void> Function(String planId)>>{};
   final _externalResultProjectors =
       <String, Map<String, Object?> Function(Map<String, Object?>)>{};
   final _readOnlyTools = <String>{};
@@ -185,8 +186,22 @@ class ApplicationToolHost {
 
   void registerCandidateDisposer(
     String commitTool,
-    void Function(String planId) discard,
-  ) => _candidateDisposers[commitTool] = discard;
+    FutureOr<void> Function(String planId) discard,
+  ) => (_candidateDisposers[commitTool] ??= []).add(discard);
+
+  Future<void> _discardCandidate(String commitTool, String planId) async {
+    Object? firstError;
+    StackTrace? firstStack;
+    for (final discard in _candidateDisposers[commitTool] ?? const []) {
+      try {
+        await discard(planId);
+      } catch (error, stack) {
+        firstError ??= error;
+        firstStack ??= stack;
+      }
+    }
+    if (firstError != null) Error.throwWithStackTrace(firstError, firstStack!);
+  }
 
   void register(
     ToolDefinition definition,
@@ -324,8 +339,7 @@ class ApplicationToolHost {
           ),
           onPrepared: onOperationPrepared,
           onUpdate: (update) => onOperationUpdate?.call(scope, update),
-          discardCandidate: (commitTool, planId) =>
-              _candidateDisposers[commitTool]!(planId),
+          discardCandidate: _discardCandidate,
         );
         return {
           for (final entry in result.entries)

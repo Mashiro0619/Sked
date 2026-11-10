@@ -3,6 +3,8 @@ pub mod contracts;
 mod default_profile;
 pub mod execution;
 pub mod execution_contracts;
+pub mod file_contracts;
+pub mod files;
 pub mod history;
 mod host;
 pub mod management;

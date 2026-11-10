@@ -6,6 +6,7 @@
 pub mod api;
 pub mod context;
 pub mod execution;
+pub mod files;
 mod frb_generated;
 pub mod model_client;
 pub mod plugins;

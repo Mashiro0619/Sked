@@ -7,6 +7,8 @@ import 'api.dart';
 import 'api/contracts.dart';
 import 'api/execution.dart';
 import 'api/execution_contracts.dart';
+import 'api/file_contracts.dart';
+import 'api/files.dart';
 import 'api/history.dart';
 import 'api/management_contracts.dart';
 import 'api/models.dart';
@@ -75,7 +77,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 2108187593;
+  int get rustContentHash => -762467158;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -142,6 +144,8 @@ abstract class RustLibApi extends BaseApi {
     List<String>? knowledgeKeys,
   });
 
+  FileAvailability crateApiAgentCoreFileAvailability({required AgentCore that});
+
   Future<List<HistoryRecoveryTarget>> crateApiAgentCoreHistoryRecoveryTargets({
     required AgentCore that,
   });
@@ -164,6 +168,8 @@ abstract class RustLibApi extends BaseApi {
     required AgentCore that,
     required ExecutionIdentity identity,
   });
+
+  FileAccessHandle crateApiAgentCoreOpenFileAccess({required AgentCore that});
 
   UiContributionSubscription crateApiAgentCoreOpenUiContributions({
     required AgentCore that,
@@ -276,6 +282,79 @@ abstract class RustLibApi extends BaseApi {
     required ExecutionEventSubscription that,
   });
 
+  Future<int> crateApiFilesFileAccessHandleAppendContent({
+    required FileAccessHandle that,
+    required String contentId,
+    required int offset,
+    required List<int> bytes,
+  });
+
+  Future<String> crateApiFilesFileAccessHandleBeginContent({
+    required FileAccessHandle that,
+  });
+
+  void crateApiFilesFileAccessHandleCancel({required FileAccessHandle that});
+
+  Future<void> crateApiFilesFileAccessHandleClose({
+    required FileAccessHandle that,
+  });
+
+  Future<void> crateApiFilesFileAccessHandleCloseCursor({
+    required FileAccessHandle that,
+    required String cursor,
+  });
+
+  Future<void> crateApiFilesFileAccessHandleDiscardContent({
+    required FileAccessHandle that,
+    required String contentId,
+  });
+
+  Future<FileSnapshot> crateApiFilesFileAccessHandleFinishContent({
+    required FileAccessHandle that,
+    required String contentId,
+  });
+
+  Future<FileWriteReceipt> crateApiFilesFileAccessHandleInspect({
+    required FileAccessHandle that,
+    required FileWriteIdentity identity,
+  });
+
+  Future<FileDirectoryPage> crateApiFilesFileAccessHandleList({
+    required FileAccessHandle that,
+    required FileResourceRef directory,
+    String? cursor,
+    required int pageSize,
+  });
+
+  Future<PreparedFileWriteHandle> crateApiFilesFileAccessHandlePrepareWrite({
+    required FileAccessHandle that,
+    required FileWriteRequest request,
+  });
+
+  Future<FileSnapshotChunk> crateApiFilesFileAccessHandleReadSnapshot({
+    required FileAccessHandle that,
+    required String snapshotId,
+    required int offset,
+    required int length,
+  });
+
+  Future<FileSearchPage> crateApiFilesFileAccessHandleSearch({
+    required FileAccessHandle that,
+    required FileSearchRequest request,
+    String? cursor,
+    required int pageSize,
+  });
+
+  Future<FileSnapshot> crateApiFilesFileAccessHandleSnapshot({
+    required FileAccessHandle that,
+    required FileResourceRef source,
+  });
+
+  Future<FileSnapshot> crateApiFilesFileAccessHandleSnapshotInfo({
+    required FileAccessHandle that,
+    required String snapshotId,
+  });
+
   void crateApiExecutionPreparedExecutionHandleCancel({
     required PreparedExecutionHandle that,
   });
@@ -300,6 +379,27 @@ abstract class RustLibApi extends BaseApi {
   Future<ExecutionReceipt> crateApiExecutionPreparedExecutionHandleStartOnce({
     required PreparedExecutionHandle that,
     required String operationId,
+  });
+
+  void crateApiFilesPreparedFileWriteHandleCancel({
+    required PreparedFileWriteHandle that,
+  });
+
+  FileWritePreview crateApiFilesPreparedFileWriteHandlePreview({
+    required PreparedFileWriteHandle that,
+  });
+
+  FileWriteReceipt? crateApiFilesPreparedFileWriteHandleReceipt({
+    required PreparedFileWriteHandle that,
+  });
+
+  Future<FileWriteReceipt> crateApiFilesPreparedFileWriteHandleStartOnce({
+    required PreparedFileWriteHandle that,
+    required String operationId,
+  });
+
+  String crateApiFilesPreparedFileWriteHandleWriteId({
+    required PreparedFileWriteHandle that,
   });
 
   void crateApiUiUiContributionSubscriptionClose({
@@ -335,6 +435,15 @@ abstract class RustLibApi extends BaseApi {
   get rust_arc_decrement_strong_count_ExecutionEventSubscriptionPtr;
 
   RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_FileAccessHandle;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_FileAccessHandle;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_FileAccessHandlePtr;
+
+  RustArcIncrementStrongCountFnType
   get rust_arc_increment_strong_count_PreparedExecutionHandle;
 
   RustArcDecrementStrongCountFnType
@@ -342,6 +451,15 @@ abstract class RustLibApi extends BaseApi {
 
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_PreparedExecutionHandlePtr;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_PreparedFileWriteHandle;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_PreparedFileWriteHandle;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_PreparedFileWriteHandlePtr;
 
   RustArcIncrementStrongCountFnType
   get rust_arc_increment_strong_count_UiContributionSubscription;
@@ -749,6 +867,37 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  FileAvailability crateApiAgentCoreFileAvailability({
+    required AgentCore that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_file_availability,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiAgentCoreFileAvailabilityConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCoreFileAvailabilityConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_file_availability",
+        argNames: ["that"],
+      );
+
+  @override
   Future<List<HistoryRecoveryTarget>> crateApiAgentCoreHistoryRecoveryTargets({
     required AgentCore that,
   }) {
@@ -763,7 +912,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 12,
             port: port_,
           );
         },
@@ -803,7 +952,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 12,
+            funcId: 13,
             port: port_,
           );
         },
@@ -843,7 +992,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 13,
+            funcId: 14,
             port: port_,
           );
         },
@@ -874,7 +1023,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 14,
+            funcId: 15,
             port: port_,
           );
         },
@@ -913,7 +1062,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 15,
+            funcId: 16,
             port: port_,
           );
         },
@@ -935,6 +1084,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  FileAccessHandle crateApiAgentCoreOpenFileAccess({required AgentCore that}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiAgentCoreOpenFileAccessConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCoreOpenFileAccessConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_open_file_access",
+        argNames: ["that"],
+      );
+
+  @override
   UiContributionSubscription crateApiAgentCoreOpenUiContributions({
     required AgentCore that,
   }) {
@@ -946,7 +1125,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18)!;
         },
         codec: SseCodec(
           decodeSuccessData:
@@ -987,7 +1166,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 17,
+            funcId: 19,
             port: port_,
           );
         },
@@ -1026,7 +1205,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 18,
+            funcId: 20,
             port: port_,
           );
         },
@@ -1065,7 +1244,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 19,
+            funcId: 21,
             port: port_,
           );
         },
@@ -1103,7 +1282,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 20,
+            funcId: 22,
             port: port_,
           );
         },
@@ -1142,7 +1321,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 21,
+            funcId: 23,
             port: port_,
           );
         },
@@ -1180,7 +1359,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 22,
+            funcId: 24,
             port: port_,
           );
         },
@@ -1218,7 +1397,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 23,
+            funcId: 25,
             port: port_,
           );
         },
@@ -1258,7 +1437,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 24,
+            funcId: 26,
             port: port_,
           );
         },
@@ -1302,7 +1481,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 25,
+            funcId: 27,
             port: port_,
           );
         },
@@ -1358,7 +1537,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 26,
+            funcId: 28,
             port: port_,
           );
         },
@@ -1398,7 +1577,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 27,
+            funcId: 29,
             port: port_,
           );
         },
@@ -1433,7 +1612,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 28,
+            funcId: 30,
             port: port_,
           );
         },
@@ -1471,7 +1650,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 29,
+            funcId: 31,
             port: port_,
           );
         },
@@ -1509,7 +1688,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 30,
+            funcId: 32,
             port: port_,
           );
         },
@@ -1545,7 +1724,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 31,
+            funcId: 33,
             port: port_,
           );
         },
@@ -1585,7 +1764,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 32,
+            funcId: 34,
             port: port_,
           );
         },
@@ -1623,7 +1802,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 33,
+            funcId: 35,
             port: port_,
           );
         },
@@ -1660,7 +1839,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 34,
+              funcId: 36,
               port: port_,
             );
           },
@@ -1702,7 +1881,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 35,
+            funcId: 37,
             port: port_,
           );
         },
@@ -1735,7 +1914,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 36)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 38)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1773,7 +1952,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 37,
+              funcId: 39,
               port: port_,
             );
           },
@@ -1798,6 +1977,542 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<int> crateApiFilesFileAccessHandleAppendContent({
+    required FileAccessHandle that,
+    required String contentId,
+    required int offset,
+    required List<int> bytes,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+            that,
+            serializer,
+          );
+          sse_encode_String(contentId, serializer);
+          sse_encode_CastedPrimitive_u_64(offset, serializer);
+          sse_encode_list_prim_u_8_loose(bytes, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 40,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_CastedPrimitive_u_64,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiFilesFileAccessHandleAppendContentConstMeta,
+        argValues: [that, contentId, offset, bytes],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFilesFileAccessHandleAppendContentConstMeta =>
+      const TaskConstMeta(
+        debugName: "FileAccessHandle_append_content",
+        argNames: ["that", "contentId", "offset", "bytes"],
+      );
+
+  @override
+  Future<String> crateApiFilesFileAccessHandleBeginContent({
+    required FileAccessHandle that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 41,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiFilesFileAccessHandleBeginContentConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFilesFileAccessHandleBeginContentConstMeta =>
+      const TaskConstMeta(
+        debugName: "FileAccessHandle_begin_content",
+        argNames: ["that"],
+      );
+
+  @override
+  void crateApiFilesFileAccessHandleCancel({required FileAccessHandle that}) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 42)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiFilesFileAccessHandleCancelConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFilesFileAccessHandleCancelConstMeta =>
+      const TaskConstMeta(
+        debugName: "FileAccessHandle_cancel",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<void> crateApiFilesFileAccessHandleClose({
+    required FileAccessHandle that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 43,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiFilesFileAccessHandleCloseConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFilesFileAccessHandleCloseConstMeta =>
+      const TaskConstMeta(
+        debugName: "FileAccessHandle_close",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<void> crateApiFilesFileAccessHandleCloseCursor({
+    required FileAccessHandle that,
+    required String cursor,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+            that,
+            serializer,
+          );
+          sse_encode_String(cursor, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 44,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiFilesFileAccessHandleCloseCursorConstMeta,
+        argValues: [that, cursor],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFilesFileAccessHandleCloseCursorConstMeta =>
+      const TaskConstMeta(
+        debugName: "FileAccessHandle_close_cursor",
+        argNames: ["that", "cursor"],
+      );
+
+  @override
+  Future<void> crateApiFilesFileAccessHandleDiscardContent({
+    required FileAccessHandle that,
+    required String contentId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+            that,
+            serializer,
+          );
+          sse_encode_String(contentId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 45,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiFilesFileAccessHandleDiscardContentConstMeta,
+        argValues: [that, contentId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFilesFileAccessHandleDiscardContentConstMeta =>
+      const TaskConstMeta(
+        debugName: "FileAccessHandle_discard_content",
+        argNames: ["that", "contentId"],
+      );
+
+  @override
+  Future<FileSnapshot> crateApiFilesFileAccessHandleFinishContent({
+    required FileAccessHandle that,
+    required String contentId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+            that,
+            serializer,
+          );
+          sse_encode_String(contentId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 46,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_file_snapshot,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiFilesFileAccessHandleFinishContentConstMeta,
+        argValues: [that, contentId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFilesFileAccessHandleFinishContentConstMeta =>
+      const TaskConstMeta(
+        debugName: "FileAccessHandle_finish_content",
+        argNames: ["that", "contentId"],
+      );
+
+  @override
+  Future<FileWriteReceipt> crateApiFilesFileAccessHandleInspect({
+    required FileAccessHandle that,
+    required FileWriteIdentity identity,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_file_write_identity(identity, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 47,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_file_write_receipt,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiFilesFileAccessHandleInspectConstMeta,
+        argValues: [that, identity],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFilesFileAccessHandleInspectConstMeta =>
+      const TaskConstMeta(
+        debugName: "FileAccessHandle_inspect",
+        argNames: ["that", "identity"],
+      );
+
+  @override
+  Future<FileDirectoryPage> crateApiFilesFileAccessHandleList({
+    required FileAccessHandle that,
+    required FileResourceRef directory,
+    String? cursor,
+    required int pageSize,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_file_resource_ref(directory, serializer);
+          sse_encode_opt_String(cursor, serializer);
+          sse_encode_u_32(pageSize, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 48,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_file_directory_page,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiFilesFileAccessHandleListConstMeta,
+        argValues: [that, directory, cursor, pageSize],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFilesFileAccessHandleListConstMeta =>
+      const TaskConstMeta(
+        debugName: "FileAccessHandle_list",
+        argNames: ["that", "directory", "cursor", "pageSize"],
+      );
+
+  @override
+  Future<PreparedFileWriteHandle> crateApiFilesFileAccessHandlePrepareWrite({
+    required FileAccessHandle that,
+    required FileWriteRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_file_write_request(request, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 49,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiFilesFileAccessHandlePrepareWriteConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFilesFileAccessHandlePrepareWriteConstMeta =>
+      const TaskConstMeta(
+        debugName: "FileAccessHandle_prepare_write",
+        argNames: ["that", "request"],
+      );
+
+  @override
+  Future<FileSnapshotChunk> crateApiFilesFileAccessHandleReadSnapshot({
+    required FileAccessHandle that,
+    required String snapshotId,
+    required int offset,
+    required int length,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+            that,
+            serializer,
+          );
+          sse_encode_String(snapshotId, serializer);
+          sse_encode_CastedPrimitive_u_64(offset, serializer);
+          sse_encode_u_32(length, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 50,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_file_snapshot_chunk,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiFilesFileAccessHandleReadSnapshotConstMeta,
+        argValues: [that, snapshotId, offset, length],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFilesFileAccessHandleReadSnapshotConstMeta =>
+      const TaskConstMeta(
+        debugName: "FileAccessHandle_read_snapshot",
+        argNames: ["that", "snapshotId", "offset", "length"],
+      );
+
+  @override
+  Future<FileSearchPage> crateApiFilesFileAccessHandleSearch({
+    required FileAccessHandle that,
+    required FileSearchRequest request,
+    String? cursor,
+    required int pageSize,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_file_search_request(request, serializer);
+          sse_encode_opt_String(cursor, serializer);
+          sse_encode_u_32(pageSize, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 51,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_file_search_page,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiFilesFileAccessHandleSearchConstMeta,
+        argValues: [that, request, cursor, pageSize],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFilesFileAccessHandleSearchConstMeta =>
+      const TaskConstMeta(
+        debugName: "FileAccessHandle_search",
+        argNames: ["that", "request", "cursor", "pageSize"],
+      );
+
+  @override
+  Future<FileSnapshot> crateApiFilesFileAccessHandleSnapshot({
+    required FileAccessHandle that,
+    required FileResourceRef source,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_file_resource_ref(source, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 52,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_file_snapshot,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiFilesFileAccessHandleSnapshotConstMeta,
+        argValues: [that, source],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFilesFileAccessHandleSnapshotConstMeta =>
+      const TaskConstMeta(
+        debugName: "FileAccessHandle_snapshot",
+        argNames: ["that", "source"],
+      );
+
+  @override
+  Future<FileSnapshot> crateApiFilesFileAccessHandleSnapshotInfo({
+    required FileAccessHandle that,
+    required String snapshotId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+            that,
+            serializer,
+          );
+          sse_encode_String(snapshotId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 53,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_file_snapshot,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiFilesFileAccessHandleSnapshotInfoConstMeta,
+        argValues: [that, snapshotId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFilesFileAccessHandleSnapshotInfoConstMeta =>
+      const TaskConstMeta(
+        debugName: "FileAccessHandle_snapshot_info",
+        argNames: ["that", "snapshotId"],
+      );
+
+  @override
   void crateApiExecutionPreparedExecutionHandleCancel({
     required PreparedExecutionHandle that,
   }) {
@@ -1809,7 +2524,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 38)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 54)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -1840,7 +2555,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 39)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 55)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -1874,7 +2589,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 40)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 56)!;
         },
         codec: SseCodec(
           decodeSuccessData:
@@ -1907,7 +2622,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 41)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 57)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_execution_preview,
@@ -1938,7 +2653,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 42)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 58)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_opt_box_autoadd_execution_receipt,
@@ -1974,7 +2689,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 43,
+            funcId: 59,
             port: port_,
           );
         },
@@ -1997,6 +2712,168 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  void crateApiFilesPreparedFileWriteHandleCancel({
+    required PreparedFileWriteHandle that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 60)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiFilesPreparedFileWriteHandleCancelConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFilesPreparedFileWriteHandleCancelConstMeta =>
+      const TaskConstMeta(
+        debugName: "PreparedFileWriteHandle_cancel",
+        argNames: ["that"],
+      );
+
+  @override
+  FileWritePreview crateApiFilesPreparedFileWriteHandlePreview({
+    required PreparedFileWriteHandle that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 61)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_file_write_preview,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiFilesPreparedFileWriteHandlePreviewConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFilesPreparedFileWriteHandlePreviewConstMeta =>
+      const TaskConstMeta(
+        debugName: "PreparedFileWriteHandle_preview",
+        argNames: ["that"],
+      );
+
+  @override
+  FileWriteReceipt? crateApiFilesPreparedFileWriteHandleReceipt({
+    required PreparedFileWriteHandle that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 62)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_file_write_receipt,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiFilesPreparedFileWriteHandleReceiptConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFilesPreparedFileWriteHandleReceiptConstMeta =>
+      const TaskConstMeta(
+        debugName: "PreparedFileWriteHandle_receipt",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<FileWriteReceipt> crateApiFilesPreparedFileWriteHandleStartOnce({
+    required PreparedFileWriteHandle that,
+    required String operationId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
+            that,
+            serializer,
+          );
+          sse_encode_String(operationId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 63,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_file_write_receipt,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiFilesPreparedFileWriteHandleStartOnceConstMeta,
+        argValues: [that, operationId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFilesPreparedFileWriteHandleStartOnceConstMeta =>
+      const TaskConstMeta(
+        debugName: "PreparedFileWriteHandle_start_once",
+        argNames: ["that", "operationId"],
+      );
+
+  @override
+  String crateApiFilesPreparedFileWriteHandleWriteId({
+    required PreparedFileWriteHandle that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 64)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiFilesPreparedFileWriteHandleWriteIdConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiFilesPreparedFileWriteHandleWriteIdConstMeta =>
+      const TaskConstMeta(
+        debugName: "PreparedFileWriteHandle_write_id",
+        argNames: ["that"],
+      );
+
+  @override
   void crateApiUiUiContributionSubscriptionClose({
     required UiContributionSubscription that,
   }) {
@@ -2008,7 +2885,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             that,
             serializer,
           );
-          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 44)!;
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 65)!;
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -2048,7 +2925,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 45,
+              funcId: 66,
               port: port_,
             );
           },
@@ -2080,7 +2957,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 46,
+            funcId: 67,
             port: port_,
           );
         },
@@ -2108,7 +2985,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 47,
+            funcId: 68,
             port: port_,
           );
         },
@@ -2140,7 +3017,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 48,
+            funcId: 69,
             port: port_,
           );
         },
@@ -2175,12 +3052,28 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription;
 
   RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_FileAccessHandle => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_FileAccessHandle => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle;
+
+  RustArcIncrementStrongCountFnType
   get rust_arc_increment_strong_count_PreparedExecutionHandle => wire
       .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle;
 
   RustArcDecrementStrongCountFnType
   get rust_arc_decrement_strong_count_PreparedExecutionHandle => wire
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_PreparedFileWriteHandle => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_PreparedFileWriteHandle => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle;
 
   RustArcIncrementStrongCountFnType
   get rust_arc_increment_strong_count_UiContributionSubscription => wire
@@ -2217,12 +3110,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  FileAccessHandle
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return FileAccessHandleImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
   PreparedExecutionHandle
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
     dynamic raw,
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return PreparedExecutionHandleImpl.frbInternalDcoDecode(
+      raw as List<dynamic>,
+    );
+  }
+
+  @protected
+  PreparedFileWriteHandle
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return PreparedFileWriteHandleImpl.frbInternalDcoDecode(
       raw as List<dynamic>,
     );
   }
@@ -2259,12 +3172,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  FileAccessHandle
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return FileAccessHandleImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
   PreparedExecutionHandle
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
     dynamic raw,
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return PreparedExecutionHandleImpl.frbInternalDcoDecode(
+      raw as List<dynamic>,
+    );
+  }
+
+  @protected
+  PreparedFileWriteHandle
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return PreparedFileWriteHandleImpl.frbInternalDcoDecode(
       raw as List<dynamic>,
     );
   }
@@ -2366,12 +3299,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  FileAccessHandle
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return FileAccessHandleImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
   PreparedExecutionHandle
   dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
     dynamic raw,
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return PreparedExecutionHandleImpl.frbInternalDcoDecode(
+      raw as List<dynamic>,
+    );
+  }
+
+  @protected
+  PreparedFileWriteHandle
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return PreparedFileWriteHandleImpl.frbInternalDcoDecode(
       raw as List<dynamic>,
     );
   }
@@ -2652,6 +3605,54 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   double dco_decode_box_autoadd_f_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as double;
+  }
+
+  @protected
+  FileError dco_decode_box_autoadd_file_error(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_file_error(raw);
+  }
+
+  @protected
+  FileResourceRef dco_decode_box_autoadd_file_resource_ref(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_file_resource_ref(raw);
+  }
+
+  @protected
+  FileSearchRequest dco_decode_box_autoadd_file_search_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_file_search_request(raw);
+  }
+
+  @protected
+  FileSnapshot dco_decode_box_autoadd_file_snapshot(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_file_snapshot(raw);
+  }
+
+  @protected
+  FileVersion dco_decode_box_autoadd_file_version(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_file_version(raw);
+  }
+
+  @protected
+  FileWriteIdentity dco_decode_box_autoadd_file_write_identity(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_file_write_identity(raw);
+  }
+
+  @protected
+  FileWriteReceipt dco_decode_box_autoadd_file_write_receipt(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_file_write_receipt(raw);
+  }
+
+  @protected
+  FileWriteRequest dco_decode_box_autoadd_file_write_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_file_write_request(raw);
   }
 
   @protected
@@ -3375,6 +4376,254 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  FileAvailability dco_decode_file_availability(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return FileAvailability(
+      available: dco_decode_bool(arr[0]),
+      resourceKinds: dco_decode_list_file_resource_kind(arr[1]),
+    );
+  }
+
+  @protected
+  FileDirectoryPage dco_decode_file_directory_page(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return FileDirectoryPage(
+      directory: dco_decode_file_entry(arr[0]),
+      entries: dco_decode_list_file_entry(arr[1]),
+      issues: dco_decode_list_file_issue(arr[2]),
+      nextCursor: dco_decode_opt_String(arr[3]),
+    );
+  }
+
+  @protected
+  FileEntry dco_decode_file_entry(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return FileEntry(
+      resource: dco_decode_file_resource_ref(arr[0]),
+      name: dco_decode_String(arr[1]),
+      kind: dco_decode_file_kind(arr[2]),
+      version: dco_decode_file_version(arr[3]),
+      isLink: dco_decode_bool(arr[4]),
+    );
+  }
+
+  @protected
+  FileError dco_decode_file_error(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return FileError(
+      code: dco_decode_file_error_code(arr[0]),
+      message: dco_decode_String(arr[1]),
+      osCode: dco_decode_opt_box_autoadd_i_32(arr[2]),
+    );
+  }
+
+  @protected
+  FileErrorCode dco_decode_file_error_code(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return FileErrorCode.values[raw as int];
+  }
+
+  @protected
+  FileIssue dco_decode_file_issue(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return FileIssue(
+      resource: dco_decode_file_resource_ref(arr[0]),
+      error: dco_decode_file_error(arr[1]),
+    );
+  }
+
+  @protected
+  FileKind dco_decode_file_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return FileKind.values[raw as int];
+  }
+
+  @protected
+  FileResourceKind dco_decode_file_resource_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return FileResourceKind.values[raw as int];
+  }
+
+  @protected
+  FileResourceRef dco_decode_file_resource_ref(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return FileResourceRef(
+      kind: dco_decode_file_resource_kind(arr[0]),
+      value: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
+  FileSearchHit dco_decode_file_search_hit(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return FileSearchHit(
+      entry: dco_decode_file_entry(arr[0]),
+      byteOffset: dco_decode_opt_CastedPrimitive_u_64(arr[1]),
+      line: dco_decode_opt_CastedPrimitive_u_64(arr[2]),
+      matchedText: dco_decode_String(arr[3]),
+    );
+  }
+
+  @protected
+  FileSearchPage dco_decode_file_search_page(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return FileSearchPage(
+      hits: dco_decode_list_file_search_hit(arr[0]),
+      issues: dco_decode_list_file_issue(arr[1]),
+      nextCursor: dco_decode_opt_String(arr[2]),
+    );
+  }
+
+  @protected
+  FileSearchRequest dco_decode_file_search_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return FileSearchRequest(
+      root: dco_decode_file_resource_ref(arr[0]),
+      query: dco_decode_String(arr[1]),
+      text: dco_decode_bool(arr[2]),
+      recursive: dco_decode_bool(arr[3]),
+    );
+  }
+
+  @protected
+  FileSnapshot dco_decode_file_snapshot(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return FileSnapshot(
+      id: dco_decode_String(arr[0]),
+      source: dco_decode_opt_box_autoadd_file_resource_ref(arr[1]),
+      sourceVersion: dco_decode_opt_box_autoadd_file_version(arr[2]),
+      content: dco_decode_file_resource_ref(arr[3]),
+      contentVersion: dco_decode_file_version(arr[4]),
+    );
+  }
+
+  @protected
+  FileSnapshotChunk dco_decode_file_snapshot_chunk(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return FileSnapshotChunk(
+      snapshotId: dco_decode_String(arr[0]),
+      offset: dco_decode_CastedPrimitive_u_64(arr[1]),
+      bytes: dco_decode_list_prim_u_8_strict(arr[2]),
+      nextOffset: dco_decode_opt_CastedPrimitive_u_64(arr[3]),
+    );
+  }
+
+  @protected
+  FileVersion dco_decode_file_version(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return FileVersion(
+      resourceId: dco_decode_String(arr[0]),
+      version: dco_decode_String(arr[1]),
+      sha256: dco_decode_opt_String(arr[2]),
+      byteLength: dco_decode_opt_CastedPrimitive_u_64(arr[3]),
+      modifiedAtMs: dco_decode_opt_CastedPrimitive_i_64(arr[4]),
+    );
+  }
+
+  @protected
+  FileWriteIdentity dco_decode_file_write_identity(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return FileWriteIdentity(
+      writeId: dco_decode_String(arr[0]),
+      operationId: dco_decode_String(arr[1]),
+      specDigest: dco_decode_String(arr[2]),
+    );
+  }
+
+  @protected
+  FileWritePreview dco_decode_file_write_preview(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return FileWritePreview(
+      writeId: dco_decode_String(arr[0]),
+      specDigest: dco_decode_String(arr[1]),
+      target: dco_decode_file_resource_ref(arr[2]),
+      resolvedTarget: dco_decode_file_resource_ref(arr[3]),
+      parent: dco_decode_file_entry(arr[4]),
+      expected: dco_decode_opt_box_autoadd_file_version(arr[5]),
+      content: dco_decode_file_snapshot(arr[6]),
+    );
+  }
+
+  @protected
+  FileWriteReceipt dco_decode_file_write_receipt(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return FileWriteReceipt(
+      identity: dco_decode_file_write_identity(arr[0]),
+      state: dco_decode_file_write_state(arr[1]),
+      targetChanged: dco_decode_opt_box_autoadd_bool(arr[2]),
+      target: dco_decode_file_resource_ref(arr[3]),
+      currentVersion: dco_decode_opt_box_autoadd_file_version(arr[4]),
+      originalSnapshot: dco_decode_opt_box_autoadd_file_snapshot(arr[5]),
+      recoveryResources: dco_decode_list_file_entry(arr[6]),
+      error: dco_decode_opt_box_autoadd_file_error(arr[7]),
+    );
+  }
+
+  @protected
+  FileWriteRequest dco_decode_file_write_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return FileWriteRequest(
+      target: dco_decode_file_resource_ref(arr[0]),
+      expected: dco_decode_opt_box_autoadd_file_version(arr[1]),
+      contentSnapshotId: dco_decode_String(arr[2]),
+    );
+  }
+
+  @protected
+  FileWriteState dco_decode_file_write_state(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return FileWriteState.values[raw as int];
+  }
+
+  @protected
   HandoffRequest dco_decode_handoff_request(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -3577,6 +4826,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     return (raw as List<dynamic>)
         .map(dco_decode_execution_resource_version)
         .toList();
+  }
+
+  @protected
+  List<FileEntry> dco_decode_list_file_entry(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_file_entry).toList();
+  }
+
+  @protected
+  List<FileIssue> dco_decode_list_file_issue(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_file_issue).toList();
+  }
+
+  @protected
+  List<FileResourceKind> dco_decode_list_file_resource_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_file_resource_kind).toList();
+  }
+
+  @protected
+  List<FileSearchHit> dco_decode_list_file_search_hit(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_file_search_hit).toList();
   }
 
   @protected
@@ -4114,6 +5387,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   double? dco_decode_opt_box_autoadd_f_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_f_64(raw);
+  }
+
+  @protected
+  FileError? dco_decode_opt_box_autoadd_file_error(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_file_error(raw);
+  }
+
+  @protected
+  FileResourceRef? dco_decode_opt_box_autoadd_file_resource_ref(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_file_resource_ref(raw);
+  }
+
+  @protected
+  FileSnapshot? dco_decode_opt_box_autoadd_file_snapshot(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_file_snapshot(raw);
+  }
+
+  @protected
+  FileVersion? dco_decode_opt_box_autoadd_file_version(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_file_version(raw);
+  }
+
+  @protected
+  FileWriteReceipt? dco_decode_opt_box_autoadd_file_write_receipt(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_file_write_receipt(raw);
   }
 
   @protected
@@ -5886,12 +7189,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  FileAccessHandle
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return FileAccessHandleImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
   PreparedExecutionHandle
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return PreparedExecutionHandleImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  PreparedFileWriteHandle
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return PreparedFileWriteHandleImpl.frbInternalSseDecode(
       sse_decode_usize(deserializer),
       sse_decode_i_32(deserializer),
     );
@@ -5934,12 +7261,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  FileAccessHandle
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return FileAccessHandleImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
   PreparedExecutionHandle
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return PreparedExecutionHandleImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  PreparedFileWriteHandle
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return PreparedFileWriteHandleImpl.frbInternalSseDecode(
       sse_decode_usize(deserializer),
       sse_decode_i_32(deserializer),
     );
@@ -6044,12 +7395,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  FileAccessHandle
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return FileAccessHandleImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
   PreparedExecutionHandle
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return PreparedExecutionHandleImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  PreparedFileWriteHandle
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return PreparedFileWriteHandleImpl.frbInternalSseDecode(
       sse_decode_usize(deserializer),
       sse_decode_i_32(deserializer),
     );
@@ -6430,6 +7805,68 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   double sse_decode_box_autoadd_f_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_f_64(deserializer));
+  }
+
+  @protected
+  FileError sse_decode_box_autoadd_file_error(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_file_error(deserializer));
+  }
+
+  @protected
+  FileResourceRef sse_decode_box_autoadd_file_resource_ref(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_file_resource_ref(deserializer));
+  }
+
+  @protected
+  FileSearchRequest sse_decode_box_autoadd_file_search_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_file_search_request(deserializer));
+  }
+
+  @protected
+  FileSnapshot sse_decode_box_autoadd_file_snapshot(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_file_snapshot(deserializer));
+  }
+
+  @protected
+  FileVersion sse_decode_box_autoadd_file_version(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_file_version(deserializer));
+  }
+
+  @protected
+  FileWriteIdentity sse_decode_box_autoadd_file_write_identity(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_file_write_identity(deserializer));
+  }
+
+  @protected
+  FileWriteReceipt sse_decode_box_autoadd_file_write_receipt(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_file_write_receipt(deserializer));
+  }
+
+  @protected
+  FileWriteRequest sse_decode_box_autoadd_file_write_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_file_write_request(deserializer));
   }
 
   @protected
@@ -7295,6 +8732,278 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  FileAvailability sse_decode_file_availability(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_available = sse_decode_bool(deserializer);
+    var var_resourceKinds = sse_decode_list_file_resource_kind(deserializer);
+    return FileAvailability(
+      available: var_available,
+      resourceKinds: var_resourceKinds,
+    );
+  }
+
+  @protected
+  FileDirectoryPage sse_decode_file_directory_page(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_directory = sse_decode_file_entry(deserializer);
+    var var_entries = sse_decode_list_file_entry(deserializer);
+    var var_issues = sse_decode_list_file_issue(deserializer);
+    var var_nextCursor = sse_decode_opt_String(deserializer);
+    return FileDirectoryPage(
+      directory: var_directory,
+      entries: var_entries,
+      issues: var_issues,
+      nextCursor: var_nextCursor,
+    );
+  }
+
+  @protected
+  FileEntry sse_decode_file_entry(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_resource = sse_decode_file_resource_ref(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_kind = sse_decode_file_kind(deserializer);
+    var var_version = sse_decode_file_version(deserializer);
+    var var_isLink = sse_decode_bool(deserializer);
+    return FileEntry(
+      resource: var_resource,
+      name: var_name,
+      kind: var_kind,
+      version: var_version,
+      isLink: var_isLink,
+    );
+  }
+
+  @protected
+  FileError sse_decode_file_error(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_code = sse_decode_file_error_code(deserializer);
+    var var_message = sse_decode_String(deserializer);
+    var var_osCode = sse_decode_opt_box_autoadd_i_32(deserializer);
+    return FileError(code: var_code, message: var_message, osCode: var_osCode);
+  }
+
+  @protected
+  FileErrorCode sse_decode_file_error_code(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return FileErrorCode.values[inner];
+  }
+
+  @protected
+  FileIssue sse_decode_file_issue(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_resource = sse_decode_file_resource_ref(deserializer);
+    var var_error = sse_decode_file_error(deserializer);
+    return FileIssue(resource: var_resource, error: var_error);
+  }
+
+  @protected
+  FileKind sse_decode_file_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return FileKind.values[inner];
+  }
+
+  @protected
+  FileResourceKind sse_decode_file_resource_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return FileResourceKind.values[inner];
+  }
+
+  @protected
+  FileResourceRef sse_decode_file_resource_ref(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_file_resource_kind(deserializer);
+    var var_value = sse_decode_String(deserializer);
+    return FileResourceRef(kind: var_kind, value: var_value);
+  }
+
+  @protected
+  FileSearchHit sse_decode_file_search_hit(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_entry = sse_decode_file_entry(deserializer);
+    var var_byteOffset = sse_decode_opt_CastedPrimitive_u_64(deserializer);
+    var var_line = sse_decode_opt_CastedPrimitive_u_64(deserializer);
+    var var_matchedText = sse_decode_String(deserializer);
+    return FileSearchHit(
+      entry: var_entry,
+      byteOffset: var_byteOffset,
+      line: var_line,
+      matchedText: var_matchedText,
+    );
+  }
+
+  @protected
+  FileSearchPage sse_decode_file_search_page(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_hits = sse_decode_list_file_search_hit(deserializer);
+    var var_issues = sse_decode_list_file_issue(deserializer);
+    var var_nextCursor = sse_decode_opt_String(deserializer);
+    return FileSearchPage(
+      hits: var_hits,
+      issues: var_issues,
+      nextCursor: var_nextCursor,
+    );
+  }
+
+  @protected
+  FileSearchRequest sse_decode_file_search_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_root = sse_decode_file_resource_ref(deserializer);
+    var var_query = sse_decode_String(deserializer);
+    var var_text = sse_decode_bool(deserializer);
+    var var_recursive = sse_decode_bool(deserializer);
+    return FileSearchRequest(
+      root: var_root,
+      query: var_query,
+      text: var_text,
+      recursive: var_recursive,
+    );
+  }
+
+  @protected
+  FileSnapshot sse_decode_file_snapshot(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_source = sse_decode_opt_box_autoadd_file_resource_ref(deserializer);
+    var var_sourceVersion = sse_decode_opt_box_autoadd_file_version(
+      deserializer,
+    );
+    var var_content = sse_decode_file_resource_ref(deserializer);
+    var var_contentVersion = sse_decode_file_version(deserializer);
+    return FileSnapshot(
+      id: var_id,
+      source: var_source,
+      sourceVersion: var_sourceVersion,
+      content: var_content,
+      contentVersion: var_contentVersion,
+    );
+  }
+
+  @protected
+  FileSnapshotChunk sse_decode_file_snapshot_chunk(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_snapshotId = sse_decode_String(deserializer);
+    var var_offset = sse_decode_CastedPrimitive_u_64(deserializer);
+    var var_bytes = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_nextOffset = sse_decode_opt_CastedPrimitive_u_64(deserializer);
+    return FileSnapshotChunk(
+      snapshotId: var_snapshotId,
+      offset: var_offset,
+      bytes: var_bytes,
+      nextOffset: var_nextOffset,
+    );
+  }
+
+  @protected
+  FileVersion sse_decode_file_version(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_resourceId = sse_decode_String(deserializer);
+    var var_version = sse_decode_String(deserializer);
+    var var_sha256 = sse_decode_opt_String(deserializer);
+    var var_byteLength = sse_decode_opt_CastedPrimitive_u_64(deserializer);
+    var var_modifiedAtMs = sse_decode_opt_CastedPrimitive_i_64(deserializer);
+    return FileVersion(
+      resourceId: var_resourceId,
+      version: var_version,
+      sha256: var_sha256,
+      byteLength: var_byteLength,
+      modifiedAtMs: var_modifiedAtMs,
+    );
+  }
+
+  @protected
+  FileWriteIdentity sse_decode_file_write_identity(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_writeId = sse_decode_String(deserializer);
+    var var_operationId = sse_decode_String(deserializer);
+    var var_specDigest = sse_decode_String(deserializer);
+    return FileWriteIdentity(
+      writeId: var_writeId,
+      operationId: var_operationId,
+      specDigest: var_specDigest,
+    );
+  }
+
+  @protected
+  FileWritePreview sse_decode_file_write_preview(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_writeId = sse_decode_String(deserializer);
+    var var_specDigest = sse_decode_String(deserializer);
+    var var_target = sse_decode_file_resource_ref(deserializer);
+    var var_resolvedTarget = sse_decode_file_resource_ref(deserializer);
+    var var_parent = sse_decode_file_entry(deserializer);
+    var var_expected = sse_decode_opt_box_autoadd_file_version(deserializer);
+    var var_content = sse_decode_file_snapshot(deserializer);
+    return FileWritePreview(
+      writeId: var_writeId,
+      specDigest: var_specDigest,
+      target: var_target,
+      resolvedTarget: var_resolvedTarget,
+      parent: var_parent,
+      expected: var_expected,
+      content: var_content,
+    );
+  }
+
+  @protected
+  FileWriteReceipt sse_decode_file_write_receipt(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_identity = sse_decode_file_write_identity(deserializer);
+    var var_state = sse_decode_file_write_state(deserializer);
+    var var_targetChanged = sse_decode_opt_box_autoadd_bool(deserializer);
+    var var_target = sse_decode_file_resource_ref(deserializer);
+    var var_currentVersion = sse_decode_opt_box_autoadd_file_version(
+      deserializer,
+    );
+    var var_originalSnapshot = sse_decode_opt_box_autoadd_file_snapshot(
+      deserializer,
+    );
+    var var_recoveryResources = sse_decode_list_file_entry(deserializer);
+    var var_error = sse_decode_opt_box_autoadd_file_error(deserializer);
+    return FileWriteReceipt(
+      identity: var_identity,
+      state: var_state,
+      targetChanged: var_targetChanged,
+      target: var_target,
+      currentVersion: var_currentVersion,
+      originalSnapshot: var_originalSnapshot,
+      recoveryResources: var_recoveryResources,
+      error: var_error,
+    );
+  }
+
+  @protected
+  FileWriteRequest sse_decode_file_write_request(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_target = sse_decode_file_resource_ref(deserializer);
+    var var_expected = sse_decode_opt_box_autoadd_file_version(deserializer);
+    var var_contentSnapshotId = sse_decode_String(deserializer);
+    return FileWriteRequest(
+      target: var_target,
+      expected: var_expected,
+      contentSnapshotId: var_contentSnapshotId,
+    );
+  }
+
+  @protected
+  FileWriteState sse_decode_file_write_state(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return FileWriteState.values[inner];
+  }
+
+  @protected
   HandoffRequest sse_decode_handoff_request(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_handoffId = sse_decode_String(deserializer);
@@ -7568,6 +9277,58 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <ExecutionResourceVersion>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_execution_resource_version(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<FileEntry> sse_decode_list_file_entry(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <FileEntry>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_file_entry(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<FileIssue> sse_decode_list_file_issue(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <FileIssue>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_file_issue(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<FileResourceKind> sse_decode_list_file_resource_kind(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <FileResourceKind>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_file_resource_kind(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<FileSearchHit> sse_decode_list_file_search_hit(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <FileSearchHit>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_file_search_hit(deserializer));
     }
     return ans_;
   }
@@ -8499,6 +10260,71 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_box_autoadd_f_64(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  FileError? sse_decode_opt_box_autoadd_file_error(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_file_error(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  FileResourceRef? sse_decode_opt_box_autoadd_file_resource_ref(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_file_resource_ref(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  FileSnapshot? sse_decode_opt_box_autoadd_file_snapshot(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_file_snapshot(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  FileVersion? sse_decode_opt_box_autoadd_file_version(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_file_version(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  FileWriteReceipt? sse_decode_opt_box_autoadd_file_write_receipt(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_file_write_receipt(deserializer));
     } else {
       return null;
     }
@@ -11056,6 +12882,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+    FileAccessHandle self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as FileAccessHandleImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
     PreparedExecutionHandle self,
     SseSerializer serializer,
@@ -11063,6 +12902,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
       (self as PreparedExecutionHandleImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
+    PreparedFileWriteHandle self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as PreparedFileWriteHandleImpl).frbInternalSseEncode(move: true),
       serializer,
     );
   }
@@ -11110,6 +12962,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+    FileAccessHandle self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as FileAccessHandleImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
     PreparedExecutionHandle self,
     SseSerializer serializer,
@@ -11117,6 +12982,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
       (self as PreparedExecutionHandleImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
+    PreparedFileWriteHandle self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as PreparedFileWriteHandleImpl).frbInternalSseEncode(move: false),
       serializer,
     );
   }
@@ -11230,6 +13108,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+    FileAccessHandle self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as FileAccessHandleImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
+  }
+
+  @protected
+  void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
     PreparedExecutionHandle self,
     SseSerializer serializer,
@@ -11237,6 +13128,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
       (self as PreparedExecutionHandleImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
+    PreparedFileWriteHandle self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as PreparedFileWriteHandleImpl).frbInternalSseEncode(move: null),
       serializer,
     );
   }
@@ -11582,6 +13486,78 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_f_64(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_file_error(
+    FileError self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_file_error(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_file_resource_ref(
+    FileResourceRef self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_file_resource_ref(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_file_search_request(
+    FileSearchRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_file_search_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_file_snapshot(
+    FileSnapshot self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_file_snapshot(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_file_version(
+    FileVersion self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_file_version(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_file_write_identity(
+    FileWriteIdentity self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_file_write_identity(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_file_write_receipt(
+    FileWriteReceipt self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_file_write_receipt(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_file_write_request(
+    FileWriteRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_file_write_request(self, serializer);
   }
 
   @protected
@@ -12356,6 +14332,216 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_file_availability(
+    FileAvailability self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.available, serializer);
+    sse_encode_list_file_resource_kind(self.resourceKinds, serializer);
+  }
+
+  @protected
+  void sse_encode_file_directory_page(
+    FileDirectoryPage self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_file_entry(self.directory, serializer);
+    sse_encode_list_file_entry(self.entries, serializer);
+    sse_encode_list_file_issue(self.issues, serializer);
+    sse_encode_opt_String(self.nextCursor, serializer);
+  }
+
+  @protected
+  void sse_encode_file_entry(FileEntry self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_file_resource_ref(self.resource, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_file_kind(self.kind, serializer);
+    sse_encode_file_version(self.version, serializer);
+    sse_encode_bool(self.isLink, serializer);
+  }
+
+  @protected
+  void sse_encode_file_error(FileError self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_file_error_code(self.code, serializer);
+    sse_encode_String(self.message, serializer);
+    sse_encode_opt_box_autoadd_i_32(self.osCode, serializer);
+  }
+
+  @protected
+  void sse_encode_file_error_code(
+    FileErrorCode self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_file_issue(FileIssue self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_file_resource_ref(self.resource, serializer);
+    sse_encode_file_error(self.error, serializer);
+  }
+
+  @protected
+  void sse_encode_file_kind(FileKind self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_file_resource_kind(
+    FileResourceKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_file_resource_ref(
+    FileResourceRef self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_file_resource_kind(self.kind, serializer);
+    sse_encode_String(self.value, serializer);
+  }
+
+  @protected
+  void sse_encode_file_search_hit(
+    FileSearchHit self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_file_entry(self.entry, serializer);
+    sse_encode_opt_CastedPrimitive_u_64(self.byteOffset, serializer);
+    sse_encode_opt_CastedPrimitive_u_64(self.line, serializer);
+    sse_encode_String(self.matchedText, serializer);
+  }
+
+  @protected
+  void sse_encode_file_search_page(
+    FileSearchPage self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_file_search_hit(self.hits, serializer);
+    sse_encode_list_file_issue(self.issues, serializer);
+    sse_encode_opt_String(self.nextCursor, serializer);
+  }
+
+  @protected
+  void sse_encode_file_search_request(
+    FileSearchRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_file_resource_ref(self.root, serializer);
+    sse_encode_String(self.query, serializer);
+    sse_encode_bool(self.text, serializer);
+    sse_encode_bool(self.recursive, serializer);
+  }
+
+  @protected
+  void sse_encode_file_snapshot(FileSnapshot self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_opt_box_autoadd_file_resource_ref(self.source, serializer);
+    sse_encode_opt_box_autoadd_file_version(self.sourceVersion, serializer);
+    sse_encode_file_resource_ref(self.content, serializer);
+    sse_encode_file_version(self.contentVersion, serializer);
+  }
+
+  @protected
+  void sse_encode_file_snapshot_chunk(
+    FileSnapshotChunk self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.snapshotId, serializer);
+    sse_encode_CastedPrimitive_u_64(self.offset, serializer);
+    sse_encode_list_prim_u_8_strict(self.bytes, serializer);
+    sse_encode_opt_CastedPrimitive_u_64(self.nextOffset, serializer);
+  }
+
+  @protected
+  void sse_encode_file_version(FileVersion self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.resourceId, serializer);
+    sse_encode_String(self.version, serializer);
+    sse_encode_opt_String(self.sha256, serializer);
+    sse_encode_opt_CastedPrimitive_u_64(self.byteLength, serializer);
+    sse_encode_opt_CastedPrimitive_i_64(self.modifiedAtMs, serializer);
+  }
+
+  @protected
+  void sse_encode_file_write_identity(
+    FileWriteIdentity self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.writeId, serializer);
+    sse_encode_String(self.operationId, serializer);
+    sse_encode_String(self.specDigest, serializer);
+  }
+
+  @protected
+  void sse_encode_file_write_preview(
+    FileWritePreview self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.writeId, serializer);
+    sse_encode_String(self.specDigest, serializer);
+    sse_encode_file_resource_ref(self.target, serializer);
+    sse_encode_file_resource_ref(self.resolvedTarget, serializer);
+    sse_encode_file_entry(self.parent, serializer);
+    sse_encode_opt_box_autoadd_file_version(self.expected, serializer);
+    sse_encode_file_snapshot(self.content, serializer);
+  }
+
+  @protected
+  void sse_encode_file_write_receipt(
+    FileWriteReceipt self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_file_write_identity(self.identity, serializer);
+    sse_encode_file_write_state(self.state, serializer);
+    sse_encode_opt_box_autoadd_bool(self.targetChanged, serializer);
+    sse_encode_file_resource_ref(self.target, serializer);
+    sse_encode_opt_box_autoadd_file_version(self.currentVersion, serializer);
+    sse_encode_opt_box_autoadd_file_snapshot(self.originalSnapshot, serializer);
+    sse_encode_list_file_entry(self.recoveryResources, serializer);
+    sse_encode_opt_box_autoadd_file_error(self.error, serializer);
+  }
+
+  @protected
+  void sse_encode_file_write_request(
+    FileWriteRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_file_resource_ref(self.target, serializer);
+    sse_encode_opt_box_autoadd_file_version(self.expected, serializer);
+    sse_encode_String(self.contentSnapshotId, serializer);
+  }
+
+  @protected
+  void sse_encode_file_write_state(
+    FileWriteState self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
   void sse_encode_handoff_request(
     HandoffRequest self,
     SseSerializer serializer,
@@ -12559,6 +14745,54 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_execution_resource_version(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_file_entry(
+    List<FileEntry> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_file_entry(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_file_issue(
+    List<FileIssue> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_file_issue(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_file_resource_kind(
+    List<FileResourceKind> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_file_resource_kind(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_file_search_hit(
+    List<FileSearchHit> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_file_search_hit(item, serializer);
     }
   }
 
@@ -13387,6 +15621,71 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_f_64(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_file_error(
+    FileError? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_file_error(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_file_resource_ref(
+    FileResourceRef? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_file_resource_ref(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_file_snapshot(
+    FileSnapshot? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_file_snapshot(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_file_version(
+    FileVersion? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_file_version(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_file_write_receipt(
+    FileWriteReceipt? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_file_write_receipt(self, serializer);
     }
   }
 
@@ -15444,6 +17743,9 @@ class AgentCoreImpl extends RustOpaque implements AgentCore {
     knowledgeKeys: knowledgeKeys,
   );
 
+  FileAvailability fileAvailability() =>
+      RustLib.instance.api.crateApiAgentCoreFileAvailability(that: this);
+
   /// Reads summary flags first, loading journals only for pending conversations.
   Future<List<HistoryRecoveryTarget>> historyRecoveryTargets() =>
       RustLib.instance.api.crateApiAgentCoreHistoryRecoveryTargets(that: this);
@@ -15474,6 +17776,11 @@ class AgentCoreImpl extends RustOpaque implements AgentCore {
     that: this,
     identity: identity,
   );
+
+  /// The service owns native task lifetimes. Retained Dart access handles do
+  /// not retain a plugin lease that would prevent its quiescence.
+  FileAccessHandle openFileAccess() =>
+      RustLib.instance.api.crateApiAgentCoreOpenFileAccess(that: this);
 
   /// The caller owns this subscription and closes it when unsubscribing.
   /// The handle contains value snapshots and cancellation signals only.
@@ -15658,6 +17965,126 @@ class ExecutionEventSubscriptionImpl extends RustOpaque
 }
 
 @sealed
+class FileAccessHandleImpl extends RustOpaque implements FileAccessHandle {
+  // Not to be used by end users
+  FileAccessHandleImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  FileAccessHandleImpl.frbInternalSseDecode(
+    BigInt ptr,
+    int externalSizeOnNative,
+  ) : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount:
+        RustLib.instance.api.rust_arc_increment_strong_count_FileAccessHandle,
+    rustArcDecrementStrongCount:
+        RustLib.instance.api.rust_arc_decrement_strong_count_FileAccessHandle,
+    rustArcDecrementStrongCountPtr: RustLib
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_FileAccessHandlePtr,
+  );
+
+  Future<int> appendContent({
+    required String contentId,
+    required int offset,
+    required List<int> bytes,
+  }) => RustLib.instance.api.crateApiFilesFileAccessHandleAppendContent(
+    that: this,
+    contentId: contentId,
+    offset: offset,
+    bytes: bytes,
+  );
+
+  Future<String> beginContent() => RustLib.instance.api
+      .crateApiFilesFileAccessHandleBeginContent(that: this);
+
+  void cancel() =>
+      RustLib.instance.api.crateApiFilesFileAccessHandleCancel(that: this);
+
+  /// Every close caller waits for the same cleanup driver. Cancellation of a
+  /// bridge waiter does not abandon the cleanup of native resource handles.
+  Future<void> close() =>
+      RustLib.instance.api.crateApiFilesFileAccessHandleClose(that: this);
+
+  Future<void> closeCursor({required String cursor}) => RustLib.instance.api
+      .crateApiFilesFileAccessHandleCloseCursor(that: this, cursor: cursor);
+
+  /// Release only this access handle's unfinished content. Cleanup remains
+  /// available after cancellation and is idempotent once ownership is gone.
+  Future<void> discardContent({required String contentId}) =>
+      RustLib.instance.api.crateApiFilesFileAccessHandleDiscardContent(
+        that: this,
+        contentId: contentId,
+      );
+
+  Future<FileSnapshot> finishContent({required String contentId}) =>
+      RustLib.instance.api.crateApiFilesFileAccessHandleFinishContent(
+        that: this,
+        contentId: contentId,
+      );
+
+  Future<FileWriteReceipt> inspect({required FileWriteIdentity identity}) =>
+      RustLib.instance.api.crateApiFilesFileAccessHandleInspect(
+        that: this,
+        identity: identity,
+      );
+
+  Future<FileDirectoryPage> list({
+    required FileResourceRef directory,
+    String? cursor,
+    required int pageSize,
+  }) => RustLib.instance.api.crateApiFilesFileAccessHandleList(
+    that: this,
+    directory: directory,
+    cursor: cursor,
+    pageSize: pageSize,
+  );
+
+  Future<PreparedFileWriteHandle> prepareWrite({
+    required FileWriteRequest request,
+  }) => RustLib.instance.api.crateApiFilesFileAccessHandlePrepareWrite(
+    that: this,
+    request: request,
+  );
+
+  Future<FileSnapshotChunk> readSnapshot({
+    required String snapshotId,
+    required int offset,
+    required int length,
+  }) => RustLib.instance.api.crateApiFilesFileAccessHandleReadSnapshot(
+    that: this,
+    snapshotId: snapshotId,
+    offset: offset,
+    length: length,
+  );
+
+  Future<FileSearchPage> search({
+    required FileSearchRequest request,
+    String? cursor,
+    required int pageSize,
+  }) => RustLib.instance.api.crateApiFilesFileAccessHandleSearch(
+    that: this,
+    request: request,
+    cursor: cursor,
+    pageSize: pageSize,
+  );
+
+  Future<FileSnapshot> snapshot({required FileResourceRef source}) => RustLib
+      .instance
+      .api
+      .crateApiFilesFileAccessHandleSnapshot(that: this, source: source);
+
+  Future<FileSnapshot> snapshotInfo({required String snapshotId}) =>
+      RustLib.instance.api.crateApiFilesFileAccessHandleSnapshotInfo(
+        that: this,
+        snapshotId: snapshotId,
+      );
+}
+
+@sealed
 class PreparedExecutionHandleImpl extends RustOpaque
     implements PreparedExecutionHandle {
   // Not to be used by end users
@@ -15707,6 +18134,53 @@ class PreparedExecutionHandleImpl extends RustOpaque
         that: this,
         operationId: operationId,
       );
+}
+
+@sealed
+class PreparedFileWriteHandleImpl extends RustOpaque
+    implements PreparedFileWriteHandle {
+  // Not to be used by end users
+  PreparedFileWriteHandleImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  PreparedFileWriteHandleImpl.frbInternalSseDecode(
+    BigInt ptr,
+    int externalSizeOnNative,
+  ) : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount: RustLib
+        .instance
+        .api
+        .rust_arc_increment_strong_count_PreparedFileWriteHandle,
+    rustArcDecrementStrongCount: RustLib
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_PreparedFileWriteHandle,
+    rustArcDecrementStrongCountPtr: RustLib
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_PreparedFileWriteHandlePtr,
+  );
+
+  void cancel() => RustLib.instance.api
+      .crateApiFilesPreparedFileWriteHandleCancel(that: this);
+
+  FileWritePreview preview() => RustLib.instance.api
+      .crateApiFilesPreparedFileWriteHandlePreview(that: this);
+
+  FileWriteReceipt? receipt() => RustLib.instance.api
+      .crateApiFilesPreparedFileWriteHandleReceipt(that: this);
+
+  Future<FileWriteReceipt> startOnce({required String operationId}) =>
+      RustLib.instance.api.crateApiFilesPreparedFileWriteHandleStartOnce(
+        that: this,
+        operationId: operationId,
+      );
+
+  String writeId() => RustLib.instance.api
+      .crateApiFilesPreparedFileWriteHandleWriteId(that: this);
 }
 
 @sealed

@@ -7,6 +7,8 @@ import 'api.dart';
 import 'api/contracts.dart';
 import 'api/execution.dart';
 import 'api/execution_contracts.dart';
+import 'api/file_contracts.dart';
+import 'api/files.dart';
 import 'api/history.dart';
 import 'api/management_contracts.dart';
 import 'api/models.dart';
@@ -38,8 +40,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscriptionPtr;
 
   CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_FileAccessHandlePtr => wire
+      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandlePtr;
+
+  CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_PreparedExecutionHandlePtr => wire
       ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandlePtr;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_PreparedFileWriteHandlePtr => wire
+      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandlePtr;
 
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_UiContributionSubscriptionPtr => wire
@@ -61,8 +71,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  FileAccessHandle
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+    dynamic raw,
+  );
+
+  @protected
   PreparedExecutionHandle
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+    dynamic raw,
+  );
+
+  @protected
+  PreparedFileWriteHandle
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
     dynamic raw,
   );
 
@@ -85,8 +107,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  FileAccessHandle
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+    dynamic raw,
+  );
+
+  @protected
   PreparedExecutionHandle
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+    dynamic raw,
+  );
+
+  @protected
+  PreparedFileWriteHandle
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
     dynamic raw,
   );
 
@@ -131,8 +165,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  FileAccessHandle
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+    dynamic raw,
+  );
+
+  @protected
   PreparedExecutionHandle
   dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+    dynamic raw,
+  );
+
+  @protected
+  PreparedFileWriteHandle
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
     dynamic raw,
   );
 
@@ -239,6 +285,30 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   double dco_decode_box_autoadd_f_64(dynamic raw);
+
+  @protected
+  FileError dco_decode_box_autoadd_file_error(dynamic raw);
+
+  @protected
+  FileResourceRef dco_decode_box_autoadd_file_resource_ref(dynamic raw);
+
+  @protected
+  FileSearchRequest dco_decode_box_autoadd_file_search_request(dynamic raw);
+
+  @protected
+  FileSnapshot dco_decode_box_autoadd_file_snapshot(dynamic raw);
+
+  @protected
+  FileVersion dco_decode_box_autoadd_file_version(dynamic raw);
+
+  @protected
+  FileWriteIdentity dco_decode_box_autoadd_file_write_identity(dynamic raw);
+
+  @protected
+  FileWriteReceipt dco_decode_box_autoadd_file_write_receipt(dynamic raw);
+
+  @protected
+  FileWriteRequest dco_decode_box_autoadd_file_write_request(dynamic raw);
 
   @protected
   HandoffRequest dco_decode_box_autoadd_handoff_request(dynamic raw);
@@ -512,6 +582,66 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double dco_decode_f_64(dynamic raw);
 
   @protected
+  FileAvailability dco_decode_file_availability(dynamic raw);
+
+  @protected
+  FileDirectoryPage dco_decode_file_directory_page(dynamic raw);
+
+  @protected
+  FileEntry dco_decode_file_entry(dynamic raw);
+
+  @protected
+  FileError dco_decode_file_error(dynamic raw);
+
+  @protected
+  FileErrorCode dco_decode_file_error_code(dynamic raw);
+
+  @protected
+  FileIssue dco_decode_file_issue(dynamic raw);
+
+  @protected
+  FileKind dco_decode_file_kind(dynamic raw);
+
+  @protected
+  FileResourceKind dco_decode_file_resource_kind(dynamic raw);
+
+  @protected
+  FileResourceRef dco_decode_file_resource_ref(dynamic raw);
+
+  @protected
+  FileSearchHit dco_decode_file_search_hit(dynamic raw);
+
+  @protected
+  FileSearchPage dco_decode_file_search_page(dynamic raw);
+
+  @protected
+  FileSearchRequest dco_decode_file_search_request(dynamic raw);
+
+  @protected
+  FileSnapshot dco_decode_file_snapshot(dynamic raw);
+
+  @protected
+  FileSnapshotChunk dco_decode_file_snapshot_chunk(dynamic raw);
+
+  @protected
+  FileVersion dco_decode_file_version(dynamic raw);
+
+  @protected
+  FileWriteIdentity dco_decode_file_write_identity(dynamic raw);
+
+  @protected
+  FileWritePreview dco_decode_file_write_preview(dynamic raw);
+
+  @protected
+  FileWriteReceipt dco_decode_file_write_receipt(dynamic raw);
+
+  @protected
+  FileWriteRequest dco_decode_file_write_request(dynamic raw);
+
+  @protected
+  FileWriteState dco_decode_file_write_state(dynamic raw);
+
+  @protected
   HandoffRequest dco_decode_handoff_request(dynamic raw);
 
   @protected
@@ -579,6 +709,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<ExecutionResourceVersion> dco_decode_list_execution_resource_version(
     dynamic raw,
   );
+
+  @protected
+  List<FileEntry> dco_decode_list_file_entry(dynamic raw);
+
+  @protected
+  List<FileIssue> dco_decode_list_file_issue(dynamic raw);
+
+  @protected
+  List<FileResourceKind> dco_decode_list_file_resource_kind(dynamic raw);
+
+  @protected
+  List<FileSearchHit> dco_decode_list_file_search_hit(dynamic raw);
 
   @protected
   List<HistoryRecoveryTarget> dco_decode_list_history_recovery_target(
@@ -834,6 +976,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   double? dco_decode_opt_box_autoadd_f_64(dynamic raw);
+
+  @protected
+  FileError? dco_decode_opt_box_autoadd_file_error(dynamic raw);
+
+  @protected
+  FileResourceRef? dco_decode_opt_box_autoadd_file_resource_ref(dynamic raw);
+
+  @protected
+  FileSnapshot? dco_decode_opt_box_autoadd_file_snapshot(dynamic raw);
+
+  @protected
+  FileVersion? dco_decode_opt_box_autoadd_file_version(dynamic raw);
+
+  @protected
+  FileWriteReceipt? dco_decode_opt_box_autoadd_file_write_receipt(dynamic raw);
 
   @protected
   HandoffRequest? dco_decode_opt_box_autoadd_handoff_request(dynamic raw);
@@ -1335,8 +1492,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  FileAccessHandle
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   PreparedExecutionHandle
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  PreparedFileWriteHandle
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
     SseDeserializer deserializer,
   );
 
@@ -1359,8 +1528,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  FileAccessHandle
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   PreparedExecutionHandle
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  PreparedFileWriteHandle
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
     SseDeserializer deserializer,
   );
 
@@ -1413,8 +1594,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  FileAccessHandle
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   PreparedExecutionHandle
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  PreparedFileWriteHandle
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
     SseDeserializer deserializer,
   );
 
@@ -1547,6 +1740,42 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   double sse_decode_box_autoadd_f_64(SseDeserializer deserializer);
+
+  @protected
+  FileError sse_decode_box_autoadd_file_error(SseDeserializer deserializer);
+
+  @protected
+  FileResourceRef sse_decode_box_autoadd_file_resource_ref(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  FileSearchRequest sse_decode_box_autoadd_file_search_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  FileSnapshot sse_decode_box_autoadd_file_snapshot(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  FileVersion sse_decode_box_autoadd_file_version(SseDeserializer deserializer);
+
+  @protected
+  FileWriteIdentity sse_decode_box_autoadd_file_write_identity(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  FileWriteReceipt sse_decode_box_autoadd_file_write_receipt(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  FileWriteRequest sse_decode_box_autoadd_file_write_request(
+    SseDeserializer deserializer,
+  );
 
   @protected
   HandoffRequest sse_decode_box_autoadd_handoff_request(
@@ -1894,6 +2123,74 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double sse_decode_f_64(SseDeserializer deserializer);
 
   @protected
+  FileAvailability sse_decode_file_availability(SseDeserializer deserializer);
+
+  @protected
+  FileDirectoryPage sse_decode_file_directory_page(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  FileEntry sse_decode_file_entry(SseDeserializer deserializer);
+
+  @protected
+  FileError sse_decode_file_error(SseDeserializer deserializer);
+
+  @protected
+  FileErrorCode sse_decode_file_error_code(SseDeserializer deserializer);
+
+  @protected
+  FileIssue sse_decode_file_issue(SseDeserializer deserializer);
+
+  @protected
+  FileKind sse_decode_file_kind(SseDeserializer deserializer);
+
+  @protected
+  FileResourceKind sse_decode_file_resource_kind(SseDeserializer deserializer);
+
+  @protected
+  FileResourceRef sse_decode_file_resource_ref(SseDeserializer deserializer);
+
+  @protected
+  FileSearchHit sse_decode_file_search_hit(SseDeserializer deserializer);
+
+  @protected
+  FileSearchPage sse_decode_file_search_page(SseDeserializer deserializer);
+
+  @protected
+  FileSearchRequest sse_decode_file_search_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  FileSnapshot sse_decode_file_snapshot(SseDeserializer deserializer);
+
+  @protected
+  FileSnapshotChunk sse_decode_file_snapshot_chunk(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  FileVersion sse_decode_file_version(SseDeserializer deserializer);
+
+  @protected
+  FileWriteIdentity sse_decode_file_write_identity(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  FileWritePreview sse_decode_file_write_preview(SseDeserializer deserializer);
+
+  @protected
+  FileWriteReceipt sse_decode_file_write_receipt(SseDeserializer deserializer);
+
+  @protected
+  FileWriteRequest sse_decode_file_write_request(SseDeserializer deserializer);
+
+  @protected
+  FileWriteState sse_decode_file_write_state(SseDeserializer deserializer);
+
+  @protected
   HandoffRequest sse_decode_handoff_request(SseDeserializer deserializer);
 
   @protected
@@ -1965,6 +2262,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<ExecutionResourceVersion> sse_decode_list_execution_resource_version(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<FileEntry> sse_decode_list_file_entry(SseDeserializer deserializer);
+
+  @protected
+  List<FileIssue> sse_decode_list_file_issue(SseDeserializer deserializer);
+
+  @protected
+  List<FileResourceKind> sse_decode_list_file_resource_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<FileSearchHit> sse_decode_list_file_search_hit(
     SseDeserializer deserializer,
   );
 
@@ -2286,6 +2599,31 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer);
+
+  @protected
+  FileError? sse_decode_opt_box_autoadd_file_error(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  FileResourceRef? sse_decode_opt_box_autoadd_file_resource_ref(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  FileSnapshot? sse_decode_opt_box_autoadd_file_snapshot(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  FileVersion? sse_decode_opt_box_autoadd_file_version(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  FileWriteReceipt? sse_decode_opt_box_autoadd_file_write_receipt(
+    SseDeserializer deserializer,
+  );
 
   @protected
   HandoffRequest? sse_decode_opt_box_autoadd_handoff_request(
@@ -2943,8 +3281,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+    FileAccessHandle self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
     PreparedExecutionHandle self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
+    PreparedFileWriteHandle self,
     SseSerializer serializer,
   );
 
@@ -2971,8 +3323,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+    FileAccessHandle self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
     PreparedExecutionHandle self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
+    PreparedFileWriteHandle self,
     SseSerializer serializer,
   );
 
@@ -3032,8 +3398,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+    FileAccessHandle self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
     PreparedExecutionHandle self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
+    PreparedFileWriteHandle self,
     SseSerializer serializer,
   );
 
@@ -3190,6 +3570,54 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_file_error(
+    FileError self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_file_resource_ref(
+    FileResourceRef self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_file_search_request(
+    FileSearchRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_file_snapshot(
+    FileSnapshot self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_file_version(
+    FileVersion self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_file_write_identity(
+    FileWriteIdentity self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_file_write_receipt(
+    FileWriteReceipt self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_file_write_request(
+    FileWriteRequest self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_box_autoadd_handoff_request(
@@ -3627,6 +4055,102 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_f_64(double self, SseSerializer serializer);
 
   @protected
+  void sse_encode_file_availability(
+    FileAvailability self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_file_directory_page(
+    FileDirectoryPage self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_file_entry(FileEntry self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_file_error(FileError self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_file_error_code(FileErrorCode self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_file_issue(FileIssue self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_file_kind(FileKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_file_resource_kind(
+    FileResourceKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_file_resource_ref(
+    FileResourceRef self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_file_search_hit(FileSearchHit self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_file_search_page(
+    FileSearchPage self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_file_search_request(
+    FileSearchRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_file_snapshot(FileSnapshot self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_file_snapshot_chunk(
+    FileSnapshotChunk self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_file_version(FileVersion self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_file_write_identity(
+    FileWriteIdentity self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_file_write_preview(
+    FileWritePreview self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_file_write_receipt(
+    FileWriteReceipt self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_file_write_request(
+    FileWriteRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_file_write_state(
+    FileWriteState self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_handoff_request(
     HandoffRequest self,
     SseSerializer serializer,
@@ -3716,6 +4240,30 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_execution_resource_version(
     List<ExecutionResourceVersion> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_file_entry(
+    List<FileEntry> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_file_issue(
+    List<FileIssue> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_file_resource_kind(
+    List<FileResourceKind> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_file_search_hit(
+    List<FileSearchHit> self,
     SseSerializer serializer,
   );
 
@@ -4105,6 +4653,36 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_file_error(
+    FileError? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_file_resource_ref(
+    FileResourceRef? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_file_snapshot(
+    FileSnapshot? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_file_version(
+    FileVersion? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_file_write_receipt(
+    FileWriteReceipt? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_opt_box_autoadd_handoff_request(
@@ -4973,6 +5551,40 @@ class RustLibWire implements BaseWire {
           .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
   void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandlePtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_sked_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle',
+      );
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle =
+      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandlePtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandlePtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_sked_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle',
+      );
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle =
+      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandlePtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
   rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle(
     ffi.Pointer<ffi.Void> ptr,
   ) {
@@ -5004,6 +5616,40 @@ class RustLibWire implements BaseWire {
       );
   late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandle =
       _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedExecutionHandlePtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandlePtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_sked_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle',
+      );
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle =
+      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandlePtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandlePtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_sked_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle',
+      );
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandle =
+      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerPreparedFileWriteHandlePtr
           .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
   void

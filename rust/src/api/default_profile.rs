@@ -6,6 +6,7 @@ use super::{contracts::*, descriptors, host::BridgeHost, runtime_event};
 use crate::{
     context::{CONTEXT_SERVICE as CONTEXT, DefaultContextPlugin},
     execution::{EXECUTION_SERVICE as EXECUTION, ExecutionService},
+    files::{FILES_SERVICE as FILES, FileService},
     model_client::{
         offline::ScriptedReply,
         services::{DefaultModelPlugin, MODEL_SERVICE as MODEL},
@@ -49,6 +50,8 @@ pub(super) struct DefaultAgentProfile {
 
 impl DefaultAgentProfile {
     pub(super) async fn open(config: CoreConfig) -> Result<Self, String> {
+        #[cfg(windows)]
+        let file_root = std::path::PathBuf::from(&config.data_directory).join("files");
         let tools = descriptors(config.tools)?;
         let (events, _) = broadcast::channel(2048);
         let events_closed = CancellationToken::new();
@@ -122,6 +125,17 @@ impl DefaultAgentProfile {
                 EVENT_RELAY.key(),
             ],
         };
+        #[cfg(windows)]
+        let profile = {
+            let mut profile = profile;
+            profile.plugins.push(PluginSpec::new(
+                "default.files",
+                Arc::new(FilePlugin { root: file_root }),
+                Value::Null,
+            ));
+            profile.required_services.push(FILES.key());
+            profile
+        };
         let plugins = PluginContainer::assemble(profile)
             .await
             .map_err(|error| error.to_string())?;
@@ -163,6 +177,10 @@ impl DefaultAgentProfile {
         self.plugins.lease(EXECUTION).ok()
     }
 
+    pub(super) fn file_service(&self) -> Option<ServiceLease<FileService>> {
+        self.plugins.lease(FILES).ok()
+    }
+
     pub(super) async fn shutdown(&self, except: Option<String>) -> Result<(), String> {
         if let Some(id) = except {
             self.shutdown_exclusions.send_modify(|excluded| {
@@ -173,6 +191,40 @@ impl DefaultAgentProfile {
             .shutdown()
             .await
             .map_err(|error| error.to_string())
+    }
+}
+
+#[cfg(windows)]
+struct FilePlugin {
+    root: std::path::PathBuf,
+}
+
+#[cfg(windows)]
+#[flutter_rust_bridge::frb(ignore)]
+#[async_trait]
+impl Plugin for FilePlugin {
+    fn descriptor(&self) -> PluginDescriptor {
+        PluginDescriptor {
+            id: "sked.windows.files",
+            contract_version: 1,
+            provides: vec![FILES.key()],
+            dependencies: vec![STORAGE.key()],
+        }
+    }
+
+    async fn setup(&self, context: PluginContext) -> Result<(), PluginError> {
+        let _storage = context.require(STORAGE)?;
+        let service = FileService::open(self.root.clone())
+            .await
+            .map_err(|error| PluginError::new(error.to_string()))?;
+        let draining = service.clone();
+        context.on_quiesce(move || {
+            Box::pin(async move {
+                draining.shutdown().await;
+                Ok(())
+            })
+        })?;
+        context.provide(FILES, service)
     }
 }
 

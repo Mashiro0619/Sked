@@ -6,6 +6,8 @@
 import 'api/contracts.dart';
 import 'api/execution.dart';
 import 'api/execution_contracts.dart';
+import 'api/file_contracts.dart';
+import 'api/files.dart';
 import 'api/history.dart';
 import 'api/management_contracts.dart';
 import 'api/models.dart';
@@ -62,6 +64,8 @@ abstract class AgentCore implements RustOpaqueInterface {
     List<String>? knowledgeKeys,
   });
 
+  FileAvailability fileAvailability();
+
   /// Reads summary flags first, loading journals only for pending conversations.
   Future<List<HistoryRecoveryTarget>> historyRecoveryTargets();
 
@@ -83,6 +87,10 @@ abstract class AgentCore implements RustOpaqueInterface {
   Future<ExecutionReceipt> inspectExecution({
     required ExecutionIdentity identity,
   });
+
+  /// The service owns native task lifetimes. Retained Dart access handles do
+  /// not retain a plugin lease that would prevent its quiescence.
+  FileAccessHandle openFileAccess();
 
   /// The caller owns this subscription and closes it when unsubscribing.
   /// The handle contains value snapshots and cancellation signals only.

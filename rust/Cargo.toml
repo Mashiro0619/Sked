@@ -26,6 +26,9 @@ thiserror = "2"
 async-trait = "0.1"
 regex = "=1.13.1"
 
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "=0.61.2", features = ["Wdk_Foundation", "Wdk_Storage_FileSystem", "Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_Storage_FileSystem", "Win32_System_IO", "Win32_System_SystemServices"] }
+
 [target.'cfg(target_os = "android")'.dependencies]
 jni = { version = "=0.22.4", default-features = false }
 rustls-platform-verifier = "=0.7.1"
