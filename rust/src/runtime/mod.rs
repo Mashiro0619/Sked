@@ -5,6 +5,8 @@ mod host_actions;
 mod journey;
 mod maintenance;
 #[cfg(test)]
+mod recovered_context_tests;
+#[cfg(test)]
 mod reply_revision_tests;
 mod tools;
 mod transport;
@@ -1113,7 +1115,9 @@ impl RuntimeManager {
                 .is_some_and(|previous| previous != &connection_fingerprint);
         let rebuild_handoff =
             continuing && source.provider_history.is_empty() && !source.handoffs.is_empty();
-        let rebuilt_history = if model_changed || rebuild_handoff {
+        let rebuild_imported_history =
+            source.conversation.execution_history_start > 0 && source.provider_history.is_empty();
+        let rebuilt_history = if model_changed || rebuild_handoff || rebuild_imported_history {
             if let Some(cancellation) = session.title.take() {
                 cancellation.cancel();
             }

@@ -993,7 +993,34 @@ impl RuntimeManager {
         messages: &[Message],
     ) -> Result<Vec<Value>> {
         let mut history = Vec::new();
-        for message in messages {
+        for (index, message) in messages.iter().enumerate() {
+            if index < snapshot.conversation.execution_history_start {
+                let mut text = format!(
+                    "[Imported history; no current operation or permission]\n{}",
+                    message.text
+                );
+                if !message.tool_calls.is_empty() {
+                    text.push_str("\nRecorded tool calls:\n");
+                    text.push_str(
+                        &serde_json::to_string(&message.tool_calls)
+                            .map_err(|error| RuntimeError::Invalid(error.to_string()))?,
+                    );
+                }
+                let imported = match message.role {
+                    MessageRole::User => {
+                        let mut source = message.clone();
+                        source.text = text;
+                        self.provider_prompt(snapshot, &source).await?
+                    }
+                    MessageRole::Assistant | MessageRole::Tool => ProviderMessage::assistant(text),
+                    _ => continue,
+                };
+                history.push(
+                    serde_json::to_value(imported)
+                        .map_err(|error| RuntimeError::Invalid(error.to_string()))?,
+                );
+                continue;
+            }
             match message.role {
                 MessageRole::User => history.push(
                     serde_json::to_value(self.provider_prompt(snapshot, message).await?)
