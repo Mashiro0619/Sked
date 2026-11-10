@@ -89,6 +89,7 @@ pub trait ConversationStore {
         &mut self,
         id: &str,
         version_id: &str,
+        before_message_id: Option<&str>,
         query: MessageQuery,
     ) -> Result<Option<HistoryMessagePage>>;
 

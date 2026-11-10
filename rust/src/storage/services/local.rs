@@ -146,9 +146,10 @@ impl ConversationStore for AgentStorage {
         &mut self,
         id: &str,
         version_id: &str,
+        before_message_id: Option<&str>,
         query: MessageQuery,
     ) -> Result<Option<HistoryMessagePage>> {
-        AgentStorage::history_version_page(self, id, version_id, query)
+        AgentStorage::history_version_page(self, id, version_id, before_message_id, query)
     }
 
     fn reply_revision_page(

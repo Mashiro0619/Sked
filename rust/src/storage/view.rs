@@ -829,6 +829,7 @@ impl AgentStorage {
         &mut self,
         id: &str,
         version_id: &str,
+        before_message_id: Option<&str>,
         query: MessageQuery,
     ) -> Result<Option<HistoryMessagePage>> {
         self.ensure_index()?;
@@ -853,10 +854,18 @@ impl AgentStorage {
                 "History page browsing uses contiguous message windows".into(),
             ));
         }
-        let before = query
-            .before
-            .unwrap_or(version.message_count)
-            .min(version.message_count);
+        let before = match before_message_id {
+            Some(message_id) => {
+                let position = index::message_position(&self.index, id, version_id, message_id)?;
+                position.ok_or_else(|| {
+                    StorageError::Invalid("beforeMessageId: 消息不属于当前历史版本".into())
+                })?
+            }
+            None => query
+                .before
+                .unwrap_or(version.message_count)
+                .min(version.message_count),
+        };
         let (start, end) =
             index::message_window(&self.index, id, version_id, before, None, query.limit)?;
         let page = self.compose_page(

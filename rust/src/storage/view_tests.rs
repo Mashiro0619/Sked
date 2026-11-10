@@ -202,6 +202,7 @@ fn pages_and_lazy_details_preserve_facts_without_opening_execution_snapshot() {
         .history_version_page(
             "paged",
             "version",
+            None,
             MessageQuery {
                 limit: 3,
                 ..Default::default()

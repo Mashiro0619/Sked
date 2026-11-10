@@ -619,6 +619,7 @@ impl AgentCore {
                             .history_version_page(
                                 &id,
                                 &target,
+                                query.before_message_id.as_deref(),
                                 stored::MessageQuery {
                                     before: query.before,
                                     limit: query.limit.unwrap_or(50),

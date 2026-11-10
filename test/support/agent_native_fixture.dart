@@ -305,6 +305,7 @@ class MemoryAgentCore implements AgentCore {
                     snapshot!,
                     historyVersion: version,
                     before: query.before,
+                    beforeMessageId: query.beforeMessageId,
                     limit: query.limit ?? 50,
                   ),
                 ),
@@ -1588,10 +1589,15 @@ ViewConversationPage nativePageFixture(
     return index < 0 ? null : index;
   }
 
-  var end = math.min(
-    position(beforeMessageId) ?? before ?? all.length,
-    all.length,
-  );
+  final beforePosition = position(beforeMessageId);
+  if (historyVersion != null &&
+      beforeMessageId != null &&
+      beforePosition == null) {
+    throw StateError(
+      'History page cursor does not belong to the selected version.',
+    );
+  }
+  var end = math.min(beforePosition ?? before ?? all.length, all.length);
   final owners = <String, int>{
     for (var index = 0; index < all.length; index++)
       for (final call in all[index].toolCalls) call.id: index,
