@@ -37,6 +37,10 @@ Agent 备份只实现新布局的导入导出；业务备份仍由现有 Dart �
 
 Rust 1.97.1；Rig 0.46.0（agent、reqwest、rustls）；FRB 的 Dart／Rust／codegen 统一 2.13.0；Tokio 1.54.1；tokio-util 0.7.20；rusqlite 0.41.1（bundled）。SQLite 由专属工作线程处理。
 
+FRB 默认原生库名来自 Cargo 的 library target，当前为 `sked_agent_core`。生成前先用固定工具链执行 `cargo metadata --locked --offline --format-version=1`，取得当前清单对应的库名；生成后核对 `kDefaultExternalLibraryLoaderConfig.stem` 与该库名一致。元数据失败、库名为 `UNKNOWN` 或核对不一致时停止，不复制生成物。
+
+仅生成源码时，将当前 Rust 源码、Cargo 清单与锁文件、Dart 清单与锁文件同步到 F 盘临时镜像，生成配置从仓库的 `flutter_rust_bridge.yaml` 派生。`CARGO_MANIFEST_DIR` 必须与镜像 `rust_root` 的本机绝对路径完全一致，Windows 保留反斜杠；`CARGO` 与命令搜索路径使用只允许读取元数据和版本的入口，元数据固定启用 `--locked --offline`。生成关闭依赖检查、自动修复与自动格式化，随后分别使用固定版本的 Dart 和 Rust 格式化工具；保留 `stop_on_error: true`，并核对 Dart／Rust 的公开接口和 content hash。工具链、Cargo 缓存、目标目录和临时目录统一使用 F 盘。
+
 Flutter 3.47.7／Dart 3.13.5 和现有 Android 工具链保持。新增 Cargo.lock。
 
 分批更新 crypto 3.0.8、web 1.1.2、lunar 1.7.9；material_ui 1.10.0、cupertino_ui 1.1.6；flutter_local_notifications 22.3.3。archive 保持 4.5.2，WebView 保留三个固定 Git 补丁。依赖声明与锁文件一起维护。

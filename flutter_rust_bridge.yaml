@@ -5,3 +5,4 @@ type_64bit_int: true
 build_runner: false
 dart_fix: false
 auto_upgrade_dependency: false
+stop_on_error: true
