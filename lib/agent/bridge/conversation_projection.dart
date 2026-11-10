@@ -263,6 +263,7 @@ AgentQuestionRequest? questionFromRust(native.ViewQuestionRequest? value) {
         id: prompt.id,
         question: prompt.question,
         multiple: prompt.multiple,
+        allowFreeText: prompt.allowFreeText,
         options: prompt.options.map(
           (option) => AgentQuestionOption(
             id: option.id,

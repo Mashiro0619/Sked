@@ -315,7 +315,7 @@ pub struct QuestionOption {
     pub description: String,
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct QuestionPrompt {
     pub id: String,
@@ -325,6 +325,20 @@ pub struct QuestionPrompt {
     pub multiple: bool,
     pub allow_free_text: bool,
     pub required: bool,
+}
+
+impl Default for QuestionPrompt {
+    fn default() -> Self {
+        Self {
+            id: String::new(),
+            title: String::new(),
+            question: String::new(),
+            options: Vec::new(),
+            multiple: false,
+            allow_free_text: true,
+            required: false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]

@@ -40,6 +40,7 @@ class AgentQuestionPrompt {
     required this.question,
     Iterable<AgentQuestionOption> options = const [],
     this.multiple = false,
+    this.allowFreeText = true,
   }) : options = List.unmodifiable(options) {
     _text(id, 'question.id');
     _text(question, 'question');
@@ -53,16 +54,24 @@ class AgentQuestionPrompt {
   final String question;
   final List<AgentQuestionOption> options;
   final bool multiple;
+  final bool allowFreeText;
 
   Map<String, Object?> toJson() => {
     'id': id,
     'question': question,
     'options': options.map((option) => option.toJson()).toList(),
     'multiple': multiple,
+    'allowFreeText': allowFreeText,
   };
 
   factory AgentQuestionPrompt.fromJson(Map<String, Object?> json) {
-    _keys(json, const {'id', 'question', 'options', 'multiple'});
+    _keys(json, const {
+      'id',
+      'question',
+      'options',
+      'multiple',
+      'allowFreeText',
+    });
     return AgentQuestionPrompt(
       id: _text(json['id'], 'question.id'),
       question: _text(json['question'], 'question'),
@@ -73,6 +82,7 @@ class AgentQuestionPrompt {
             ).map((option) => AgentQuestionOption.fromJson(_object(option)))
           : const [],
       multiple: _optionalBool(json, 'multiple'),
+      allowFreeText: _optionalBool(json, 'allowFreeText', defaultValue: true),
     );
   }
 }
@@ -298,7 +308,8 @@ final ToolDefinition agentAskUserTool = ToolDefinition(
   name: 'ask_user',
   description:
       'Ask the user to clarify a choice, missing information or an ambiguous goal. '
-      'Present questions with optional choices. Free text is always supported. '
+      'Present questions with optional choices. Free text is supported by default; '
+      'set allowFreeText to false to accept only the listed choices. '
       'User answers provide task input and never grant permission for an operation.',
   parameters: {
     'type': 'object',
@@ -316,6 +327,7 @@ final ToolDefinition agentAskUserTool = ToolDefinition(
             'id': {'type': 'string', 'minLength': 1},
             'question': {'type': 'string', 'minLength': 1},
             'multiple': {'type': 'boolean', 'default': false},
+            'allowFreeText': {'type': 'boolean', 'default': true},
             'options': {
               'type': 'array',
               'items': {
@@ -363,6 +375,7 @@ void _validateAnswers(
     final question = questionsById[answer.questionId];
     if (question == null ||
         (!question.multiple && answer.optionIds.length > 1) ||
+        (!question.allowFreeText && answer.text.isNotEmpty) ||
         answer.optionIds.any(
           (id) => !question.options.any((option) => option.id == id),
         )) {
@@ -398,8 +411,12 @@ void _keys(Map<String, Object?> value, Set<String> allowed) {
   }
 }
 
-bool _optionalBool(Map<String, Object?> value, String key) {
-  if (!value.containsKey(key)) return false;
+bool _optionalBool(
+  Map<String, Object?> value,
+  String key, {
+  bool defaultValue = false,
+}) {
+  if (!value.containsKey(key)) return defaultValue;
   final result = value[key];
   if (result is! bool) throw FormatException('Invalid $key.');
   return result;

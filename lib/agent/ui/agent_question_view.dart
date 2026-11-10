@@ -43,7 +43,7 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
   bool get _complete => widget.request.questions.every(
     (question) =>
         _selected[question.id]!.isNotEmpty ||
-        _text[question.id]!.text.trim().isNotEmpty,
+        (question.allowFreeText && _text[question.id]!.text.trim().isNotEmpty),
   );
 
   @override
@@ -116,7 +116,7 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
                 for (final option in question.options)
                   if (_selected[question.id]!.contains(option.id)) option.id,
               ],
-              text: _text[question.id]!.text,
+              text: question.allowFreeText ? _text[question.id]!.text : '',
             ),
         ];
         await widget.onAnswer(answers);
@@ -179,40 +179,41 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
                 _answer(question)
               else ...[
                 if (question.options.isNotEmpty) _options(question),
-                TextField(
-                  key: ValueKey('agent-question-text-${question.id}'),
-                  controller: _text[question.id],
-                  enabled: _editable,
-                  minLines: 1,
-                  maxLines: 4,
-                  style: style.label,
-                  decoration: InputDecoration(
-                    hintText: l.agentQuestionAnswer,
-                    hintStyle: style.label.copyWith(color: style.muted),
-                    isDense: true,
-                    filled: false,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 10,
+                if (question.allowFreeText)
+                  TextField(
+                    key: ValueKey('agent-question-text-${question.id}'),
+                    controller: _text[question.id],
+                    enabled: _editable,
+                    minLines: 1,
+                    maxLines: 4,
+                    style: style.label,
+                    decoration: InputDecoration(
+                      hintText: l.agentQuestionAnswer,
+                      hintStyle: style.label.copyWith(color: style.muted),
+                      isDense: true,
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 10,
+                      ),
+                      prefixIconConstraints: BoxConstraints(
+                        minWidth: 32,
+                        minHeight: target,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.edit_outlined,
+                        size: 16,
+                        color: style.muted,
+                      ),
                     ),
-                    prefixIconConstraints: BoxConstraints(
-                      minWidth: 32,
-                      minHeight: target,
-                    ),
-                    prefixIcon: Icon(
-                      Icons.edit_outlined,
-                      size: 16,
-                      color: style.muted,
-                    ),
+                    onChanged: (_) {
+                      if (generation != _generation || !_editable) return;
+                      setState(() => _failed = false);
+                    },
                   ),
-                  onChanged: (_) {
-                    if (generation != _generation || !_editable) return;
-                    setState(() => _failed = false);
-                  },
-                ),
               ],
             ],
             if (_failed) ...[

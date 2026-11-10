@@ -10,6 +10,8 @@ use super::*;
 use crate::model_client::ModelToolExecutor;
 
 #[cfg(test)]
+mod question_input_tests;
+#[cfg(test)]
 mod tests;
 
 pub(super) struct RuntimeToolExecutor {
