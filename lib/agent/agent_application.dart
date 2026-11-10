@@ -522,6 +522,7 @@ class AgentApplication extends ChangeNotifier {
 
   Future<void> completeSuccessfulDataRestore() async {
     if (_disposed) return;
+    runtime.invalidateAfterDataBoundary();
     if (platformSupported && nativeClient.isInitialized) {
       await nativeClient.dispatch(
         const native.AgentCommand(kind: native.CommandKind.discardDrafts),

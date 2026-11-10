@@ -67,6 +67,7 @@ class RustAgentUiDelegate extends AgentUiDelegate {
   final _transportGrants = <String>{};
   String? _transportSettingsStamp;
   int _transportEpoch = 0;
+  int _dataEpoch = 0;
   late final StreamSubscription<bridge.AgentEvent> _subscription;
   bool _disposed = false;
 
@@ -86,12 +87,19 @@ class RustAgentUiDelegate extends AgentUiDelegate {
   }
 
   /// Loads existing history without starting or resuming a model request.
-  Future<native.ViewConversationSnapshot?> loadConversation(String id) =>
-      _loading[id] ??= _loadConversation(id).whenComplete(() {
-        unawaited(_loading.remove(id));
-      });
+  Future<native.ViewConversationSnapshot?> loadConversation(String id) {
+    final loading = _loading[id];
+    if (loading != null) return loading;
+    late final Future<native.ViewConversationSnapshot?> request;
+    request = _loadConversation(id).whenComplete(() {
+      if (identical(_loading[id], request)) _loading.remove(id);
+    });
+    _loading[id] = request;
+    return request;
+  }
 
   Future<native.ViewConversationSnapshot?> _loadConversation(String id) async {
+    final dataEpoch = _dataEpoch;
     final presentationEpoch = _presentationEpochs[id] ?? 0;
     final result = await client.query(
       bridge.AgentQuery(
@@ -99,7 +107,7 @@ class RustAgentUiDelegate extends AgentUiDelegate {
         conversationId: id,
       ),
     );
-    if (_disposed) return result.snapshot;
+    if (_disposed || dataEpoch != _dataEpoch) return null;
     final snapshot = result.snapshot;
     if (snapshot == null) {
       forgetConversation(id);
@@ -187,6 +195,9 @@ class RustAgentUiDelegate extends AgentUiDelegate {
   }
 
   void invalidateAfterDataBoundary() {
+    _dataEpoch++;
+    _loading.clear();
+    _invalidateTransport();
     for (final id in _snapshots.keys.toList()) {
       forgetConversation(id);
     }
@@ -275,7 +286,6 @@ class RustAgentUiDelegate extends AgentUiDelegate {
         _errors[id] = _nativeErrorCode(event.errorCode);
         _publishConversation(id);
       case bridge.EventKind.resync:
-        _invalidateTransport();
         for (final conversationId in _snapshots.keys.toList()) {
           unawaited(_refreshConversation(conversationId));
         }
