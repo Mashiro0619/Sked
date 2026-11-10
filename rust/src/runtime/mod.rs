@@ -8,6 +8,8 @@ mod maintenance;
 mod recovered_context_tests;
 #[cfg(test)]
 mod reply_revision_tests;
+#[cfg(test)]
+mod steering_tests;
 mod tools;
 mod transport;
 mod types;
@@ -485,6 +487,17 @@ impl RuntimeManager {
         if session.active.is_none() {
             validate_execution_admission(&snapshot, false)?;
         }
+        let steering_turn_id = (mode == QueueMode::Steering)
+            .then(|| {
+                session.active.as_ref().and_then(|active| {
+                    snapshot
+                        .turns
+                        .iter()
+                        .find(|turn| turn.run_ids.contains(&active.id))
+                        .map(|turn| turn.id.clone())
+                })
+            })
+            .flatten();
         let context_references = self.freeze_selected_references(context_references).await?;
         let input = QueuedInput {
             id: new_id(),
@@ -498,6 +511,13 @@ impl RuntimeManager {
         let input_id = input.id.clone();
         self.change(id, move |snapshot| {
             let mut changes = bind_sources_to_input(snapshot, &input.id);
+            if let Some(turn_id) = steering_turn_id {
+                changes.push(JournalChange::ExtensionSet {
+                    namespace: "steeringTurns".into(),
+                    id: input.id.clone(),
+                    value: Some(Value::String(turn_id)),
+                });
+            }
             changes.push(JournalChange::InputQueued { input });
             snapshot.conversation.draft_only = false;
             snapshot.conversation.draft.clear();
@@ -1200,9 +1220,41 @@ impl RuntimeManager {
                     changes.push(JournalChange::ProviderHistoryReplaced { messages });
                     changes.push(JournalChange::CheckpointSet { checkpoint: None });
                 }
-                let continued_from_run_id = continuing
-                    .then(|| snapshot.conversation.run_id.clone())
-                    .flatten();
+                let steering_turn_id = input
+                    .as_ref()
+                    .filter(|input| input.mode == QueueMode::Steering)
+                    .and_then(|input| {
+                        snapshot
+                            .extensions
+                            .get("steeringTurns")
+                            .and_then(|turns| turns.get(&input.id))
+                            .and_then(Value::as_str)
+                    });
+                let steering_turn_index = steering_turn_id
+                    .map(|id| {
+                        snapshot
+                            .turns
+                            .iter()
+                            .position(|turn| turn.id == id)
+                            .ok_or_else(|| {
+                                StorageError::Conflict(
+                                    "补充目标已改变，请移回输入框重新发送".into(),
+                                )
+                            })
+                    })
+                    .transpose()?;
+                if steering_turn_index.is_some_and(|index| index + 1 != snapshot.turns.len()) {
+                    return Err(StorageError::Conflict(
+                        "补充目标已改变，请移回输入框重新发送".into(),
+                    ));
+                }
+                let continued_from_run_id = steering_turn_index
+                    .and_then(|index| snapshot.turns[index].run_ids.last().cloned())
+                    .or_else(|| {
+                        continuing
+                            .then(|| snapshot.conversation.run_id.clone())
+                            .flatten()
+                    });
                 let run = Run {
                     id: rid.clone(),
                     started_at: now_ms(),
@@ -1221,6 +1273,13 @@ impl RuntimeManager {
                     changes.push(JournalChange::InputRemoved {
                         id: input.id.clone(),
                     });
+                    if steering_turn_index.is_some() {
+                        changes.push(JournalChange::ExtensionSet {
+                            namespace: "steeringTurns".into(),
+                            id: input.id.clone(),
+                            value: None,
+                        });
+                    }
                 }
                 if let Some(mut message) = stored_prompt {
                     snapshot.conversation.draft_only = false;
@@ -1234,6 +1293,12 @@ impl RuntimeManager {
                                 StorageError::Invalid("来源交接的原始轮次不存在".into())
                             })?;
                         turn.run_ids.push(rid.clone());
+                        changes.push(JournalChange::TurnUpserted { turn: turn.clone() });
+                    } else if let Some(index) = steering_turn_index {
+                        let turn = &mut snapshot.turns[index];
+                        turn.message_ids.push(message.id.clone());
+                        turn.run_ids.push(rid.clone());
+                        turn.ownership_complete = false;
                         changes.push(JournalChange::TurnUpserted { turn: turn.clone() });
                     } else {
                         changes.push(JournalChange::TurnUpserted {
@@ -1962,7 +2027,7 @@ fn release_input_sources(
 ) -> Vec<JournalChange> {
     let run_id = snapshot.conversation.run_id.clone();
     let message_id = snapshot.messages.last().map(|message| message.id.clone());
-    snapshot
+    let mut changes: Vec<_> = snapshot
         .sources
         .iter_mut()
         .filter(|source| source.bound_input_id.as_deref() == Some(input_id))
@@ -1974,7 +2039,19 @@ fn release_input_sources(
                 source: source.clone(),
             }
         })
-        .collect()
+        .collect();
+    if snapshot
+        .extensions
+        .get("steeringTurns")
+        .is_some_and(|turns| turns.contains_key(input_id))
+    {
+        changes.push(JournalChange::ExtensionSet {
+            namespace: "steeringTurns".into(),
+            id: input_id.into(),
+            value: None,
+        });
+    }
+    changes
 }
 
 fn validate_execution_admission(
