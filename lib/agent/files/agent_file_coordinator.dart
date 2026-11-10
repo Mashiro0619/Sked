@@ -60,6 +60,11 @@ class AgentFileCoordinator {
     ),
   );
 
+  Future<void> closeCursor({
+    required OperationScope scope,
+    required String cursor,
+  }) => _use(scope, (access) => access.handle.closeCursor(cursor: cursor));
+
   Future<FileSnapshot> snapshot({
     required OperationScope scope,
     required FileResourceRef source,

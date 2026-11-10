@@ -1,12 +1,14 @@
 # Agent 设备文件
 
-设备文件通过 `sked.files@1` 提供服务，Windows 默认 Profile 装配系统文件 Provider。模型使用 `files.list`、`files.search`、`files.read`、`files.new` 和 `files.write`；文件保存沿用应用的三种权限、操作审批和持久回执。工具发现依据已装配 Provider 的能力，接口保留真实资源种类，Android 接入进度见[插件计划](AGENT_PLUGIN_ARCHITECTURE.md)。
+设备文件通过 `sked.files@1` 提供服务，Windows 默认 Profile 装配系统文件 Provider。模型使用 `files.list`、`files.search`、`files.close_cursor`、`files.read`、`files.new` 和 `files.write`；文件保存沿用应用的三种权限、操作审批和持久回执。工具发现依据已装配 Provider 的能力，接口保留真实资源种类，Android 接入进度见[插件计划](AGENT_PLUGIN_ARCHITECTURE.md)。
 
 ## 资源与读取
 
 Windows 使用当前系统用户的文件权限，接受绝对盘符路径和 UNC 路径。资源记录保留请求位置、系统解析后的位置及文件身份；设备命名空间、备用数据流和普通文件分别处理。写入已有文件时要求普通文件，重解析点变化、资源占用和权限失败返回具体原因。
 
 目录和文件名、文本搜索按页读取。游标绑定原查询和文件访问会话，后续页继续原遍历；关闭访问会话释放其游标。分页控制单次返回量，可以继续读取全部结果。目录变化、不可访问的子项和无法处理的内容通过实际结果及问题项表达。
+
+取得所需结果后，可将 `nextCursor` 交给 `files.close_cursor`，关闭当前运行中的该项遍历并等待文件句柄释放；重复关闭保持成功。文本搜索尚未读完时会持有当前文件的读取句柄，修改这个文件前先关闭相应游标，再读取版本并准备写入。
 
 搜索查询按非空 UTF-8 字面量匹配，保留空格、制表符和换行；可用全空白查询定位缩进或连续空行。
 

@@ -36,7 +36,7 @@ class FileToolAdapters {
     };
     _add(
       'files.list',
-      'Browse a real directory. Continue with nextCursor and the same directory; pageSize controls one page, not the total directory size.',
+      'Browse a real directory. Continue with nextCursor and the same directory; pageSize controls one page, not the total directory size. Close nextCursor with files.close_cursor when finished browsing.',
       {'directory': resource, 'cursor': _string, 'pageSize': _pageSize},
       ['directory'],
       (args, scope) async {
@@ -60,7 +60,7 @@ class FileToolAdapters {
     );
     _add(
       'files.search',
-      'Search file names or UTF-8 text under a real directory. Continue with nextCursor and the same search parameters. Individual inaccessible resources are reported in issues.',
+      'Search file names or UTF-8 text under a real directory. Continue with nextCursor and the same search parameters. Individual inaccessible resources are reported in issues. Close nextCursor with files.close_cursor before writing a searched file or once you have the results you need.',
       {
         'root': resource,
         'query': _string,
@@ -98,6 +98,19 @@ class FileToolAdapters {
             ),
           ),
         );
+      },
+      readOnly: true,
+    );
+    _add(
+      'files.close_cursor',
+      'Close a directory or search cursor from this run and release its file handles. Use the returned nextCursor. Repeated closes are harmless.',
+      {'cursor': _string},
+      ['cursor'],
+      (args, scope) async {
+        _keys(args, {'cursor'});
+        final cursor = _text(args, 'cursor');
+        await _files.closeCursor(scope: scope, cursor: cursor);
+        return {'cursor': cursor, 'closed': true};
       },
       readOnly: true,
     );
