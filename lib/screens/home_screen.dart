@@ -37,6 +37,7 @@ import '../controllers/app_data_maintenance.dart';
 import '../controllers/app_session.dart';
 import '../controllers/settings_view_state.dart';
 import '../controllers/student_commands.dart';
+import '../controllers/data_transfer_controller.dart';
 import '../controllers/student_view_state.dart';
 import '../controllers/workspace_view_state.dart';
 import '../providers/app_scope.dart';
@@ -62,6 +63,10 @@ import '../widgets/sked_adaptive_picker_dialog.dart';
 import '../widgets/expressive_motion.dart';
 import '../widgets/period_time_set_picker_dialog.dart';
 import '../widgets/period_time_set_manager.dart';
+import '../services/export_service.dart';
+import '../widgets/export_save_flow.dart';
+import '../widgets/text_transfer_widgets.dart';
+import '../widgets/student_resource_context_menu.dart';
 import '../widgets/sked_expressive_components.dart';
 import '../widgets/sked_menu_item_content.dart';
 import '../widgets/sked_popup_menu.dart';
@@ -75,6 +80,7 @@ import 'timetable_import_flow.dart';
 part 'home_screen_course_actions.dart';
 part 'home_screen_imports.dart';
 part 'home_screen_timetable_management.dart';
+part 'home_screen_resource_actions.dart';
 part 'home_screen_widgets.dart';
 part '../previews/timetable_information_previews.dart';
 
@@ -145,6 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _courseDeleteOpen = false;
   bool _courseDetailsOpen = false;
   bool _timetableItemDialogOpen = false;
+  bool _timetableResourceActionOpen = false;
   bool _timetableSwitchInProgress = false;
   bool _settingsPageOpen = false;
   bool _periodTimeSetManagerOpen = false;
@@ -210,6 +217,15 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() => _timetableItemDialogOpen = value);
     } else {
       _timetableItemDialogOpen = value;
+    }
+  }
+
+  void _setTimetableResourceActionOpen(bool value) {
+    if (_timetableResourceActionOpen == value) return;
+    if (mounted) {
+      setState(() => _timetableResourceActionOpen = value);
+    } else {
+      _timetableResourceActionOpen = value;
     }
   }
 
@@ -668,6 +684,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 builder: (context, resources, _) {
                   final l10n = AppLocalizations.of(context);
+                  final student = context.read<StudentViewState>();
                   final resourcesExpanded =
                       WorkspaceResourceScope.maybeOf(context)?.drawerOpen ==
                           true ||
@@ -740,27 +757,48 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                     children: [
                       for (final timetable in resources.timetables)
-                        TimetableResourceRow(
-                          key: ValueKey('resource-timetable-${timetable.id}'),
-                          timetableId: timetable.id,
-                          name: timetable.config.name,
-                          selected: timetable.id == resources.activeId,
-                          onSelected: widget.interactive
-                              ? () => _switchTimetableFromPicker(
-                                  context,
-                                  timetable,
-                                )
-                              : null,
-                          onEditAt:
-                              _courseEditorOpen || _timetableItemDialogOpen
-                              ? null
-                              : (anchor) => _openTimetableItemDialog(
-                                  context,
-                                  timetable,
-                                  editor: WorkspaceEditorConfiguration(
-                                    anchorContext: anchor,
+                        StudentResourceContextMenu(
+                          key: ValueKey(
+                            'resource-timetable-context-${timetable.id}',
+                          ),
+                          target: ('timetable', timetable),
+                          enabled:
+                              widget.active &&
+                              widget.interactive &&
+                              resourcesExpanded,
+                          isTargetCurrent: () => identical(
+                            timetable,
+                            student.timetables
+                                .where((item) => item.id == timetable.id)
+                                .firstOrNull,
+                          ),
+                          actionsBuilder: (actionContext) => _timetableActions(
+                            context,
+                            timetable,
+                            actionContext,
+                          ),
+                          child: TimetableResourceRow(
+                            key: ValueKey('resource-timetable-${timetable.id}'),
+                            timetableId: timetable.id,
+                            name: timetable.config.name,
+                            selected: timetable.id == resources.activeId,
+                            onSelected: widget.interactive
+                                ? () => _switchTimetableFromPicker(
+                                    context,
+                                    timetable,
+                                  )
+                                : null,
+                            onEditAt:
+                                _courseEditorOpen || _timetableItemDialogOpen
+                                ? null
+                                : (anchor) => _openTimetableItemDialog(
+                                    context,
+                                    timetable,
+                                    editor: WorkspaceEditorConfiguration(
+                                      anchorContext: anchor,
+                                    ),
                                   ),
-                                ),
+                          ),
                         ),
                     ],
                   );

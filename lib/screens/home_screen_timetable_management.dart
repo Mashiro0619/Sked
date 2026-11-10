@@ -12,18 +12,44 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
     try {
       final panel = _TimetablePickerPanel(
         student: student,
+        isOwnerCurrent: () => mounted && widget.active && widget.interactive,
+        actionsBuilder: (actionContext, timetable, edit) => _timetableActions(
+          context,
+          timetable,
+          actionContext,
+          editAction: edit,
+        ),
         onSwitch: (pickerContext, timetable) =>
             _switchTimetableFromPicker(pickerContext, timetable),
         onEdit: (pickerContext, timetable) async {
+          final handoff = SkedTaskSession(
+            maintenance: context.read<AppDataMaintenance>(),
+            workspaceView: context.read<WorkspaceViewState>(),
+            workspace: AppMode.student,
+            targetChanges: student,
+            ownerRoute: ModalRoute.of(context),
+            isOwnerActive: () => mounted && widget.active && widget.interactive,
+            isTargetCurrent: () => identical(
+              timetable,
+              student.timetables
+                  .where((item) => item.id == timetable.id)
+                  .firstOrNull,
+            ),
+          );
           final editor = WorkspaceEditorConfiguration(
             anchorRect: WorkspaceEditorConfiguration(
               anchorContext: pickerContext,
             ).initialAnchor,
           );
-          completeSkedTaskRoute(pickerContext);
-          await WidgetsBinding.instance.endOfFrame;
-          if (!context.mounted) return false;
-          return _openTimetableItemDialog(context, timetable, editor: editor);
+          try {
+            if (!handoff.isCurrent) return false;
+            completeSkedTaskRoute(pickerContext);
+            await WidgetsBinding.instance.endOfFrame;
+            if (!context.mounted || !handoff.isCurrent) return false;
+            return _openTimetableItemDialog(context, timetable, editor: editor);
+          } finally {
+            handoff.dispose();
+          }
         },
         onCreate: (pickerContext) async {
           final editor = WorkspaceEditorConfiguration(
@@ -178,10 +204,17 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
     TimetableData timetable, {
     WorkspaceEditorConfiguration? editor,
   }) {
+    if (!mounted || !context.mounted) return Future.value(false);
+    final current = context
+        .read<StudentViewState>()
+        .timetables
+        .where((item) => item.id == timetable.id)
+        .firstOrNull;
+    if (current == null) return Future.value(false);
     return _openTimetableConfigDialog(
       context,
-      initialConfig: timetable.config,
-      timetable: timetable,
+      initialConfig: current.config,
+      timetable: current,
       editor: editor,
     );
   }

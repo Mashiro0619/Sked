@@ -1143,12 +1143,21 @@ class _DayStripMetrics {
 class _TimetablePickerPanel extends StatefulWidget {
   const _TimetablePickerPanel({
     required this.student,
+    required this.actionsBuilder,
+    required this.isOwnerCurrent,
     required this.onSwitch,
     required this.onEdit,
     required this.onCreate,
   });
 
   final StudentViewState student;
+  final bool Function() isOwnerCurrent;
+  final List<DesktopAction> Function(
+    DesktopActionContext context,
+    TimetableData timetable,
+    Future<void> Function() edit,
+  )
+  actionsBuilder;
   final Future<bool> Function(BuildContext context, TimetableData timetable)
   onSwitch;
   final Future<bool> Function(BuildContext context, TimetableData timetable)
@@ -1254,22 +1263,57 @@ class _TimetablePickerPanelState extends State<_TimetablePickerPanel> {
         final selectedId = widget.student.activeTimetableOrNull?.id;
         final items = [
           for (final item in widget.student.timetables)
-            _TimetableDrawerItem(
-              timetable: item,
-              selected: item.id == selectedId,
-              enabled: !_busy && !_childDialogOpen,
-              currentLabel: l10n.currentTimetableWeeks(item.config.totalWeeks),
-              switchLabel: l10n.tapToSwitchWeeks(item.config.totalWeeks),
-              editTooltip: l10n.editTimetable,
-              onTap: _busy || _childDialogOpen
-                  ? null
-                  : () => _switch(() => widget.onSwitch(context, item)),
-              onEdit: _busy || _childDialogOpen
-                  ? null
-                  : (anchor) => _openChildDialog(
-                      () => widget.onEdit(anchor, item),
-                      closeWhenNoTimetables: true,
-                    ),
+            StudentResourceContextMenu(
+              key: ValueKey('timetable-picker-context-${item.id}'),
+              target: ('timetable', item),
+              isOwnerCurrent: widget.isOwnerCurrent,
+              isTargetCurrent: () => identical(
+                item,
+                widget.student.timetables
+                    .where((timetable) => timetable.id == item.id)
+                    .firstOrNull,
+              ),
+              actionsBuilder: (actionContext) => [
+                for (final action in widget.actionsBuilder(
+                  actionContext,
+                  item,
+                  () async {
+                    await widget.onEdit(actionContext.context, item);
+                  },
+                ))
+                  DesktopAction(
+                    id: action.id,
+                    label: action.label,
+                    icon: action.icon,
+                    shortcut: action.shortcut,
+                    enabled: action.enabled && !_busy && !_childDialogOpen,
+                    onInvoke: action.onInvoke == null
+                        ? null
+                        : () => _openChildDialog(() async {
+                            await action.onInvoke!();
+                            return true;
+                          }, closeWhenNoTimetables: true),
+                  ),
+              ],
+              child: _TimetableDrawerItem(
+                timetable: item,
+                selected: item.id == selectedId,
+                enabled: !_busy && !_childDialogOpen,
+                currentLabel: l10n.currentTimetableWeeks(
+                  item.config.totalWeeks,
+                ),
+                switchLabel: l10n.tapToSwitchWeeks(item.config.totalWeeks),
+                editTooltip: l10n.editTimetable,
+                onTap: _busy || _childDialogOpen
+                    ? null
+                    : () => _switch(() => widget.onSwitch(context, item)),
+                onEdit: _busy || _childDialogOpen
+                    ? null
+                    : (anchor) => _openChildDialog(
+                        () => widget.onEdit(anchor, item),
+                        closeWhenNoTimetables: true,
+                      ),
+              ),
             ),
         ];
         return sliver
