@@ -1,19 +1,157 @@
 part of 'home_screen.dart';
 
 extension _HomeScreenCourseActions on _HomeScreenState {
+  List<DesktopAction> _courseActions(
+    BuildContext context,
+    String timetableId,
+    DesktopActionContext actionContext,
+    TimetableCourseTapInfo info,
+  ) {
+    final l10n = AppLocalizations.of(context);
+    final enabled =
+        mounted &&
+        widget.active &&
+        widget.interactive &&
+        !_courseEditorOpen &&
+        !_courseDeleteOpen &&
+        actionContext.isCurrent();
+    final conflicted = info.courses.length > 1;
+    return [
+      DesktopAction(
+        id: 'course.details',
+        label: l10n.agentLayoutCourseDetails,
+        icon: Icons.info_outline,
+        enabled: enabled,
+        onInvoke: () => _openDetails(
+          context,
+          info,
+          timetableId: timetableId,
+          isEntryCurrent: actionContext.isCurrent,
+        ),
+      ),
+      DesktopAction(
+        id: 'course.edit',
+        label: conflicted
+            ? '${l10n.editThisCourse}: ${info.course.name}'
+            : l10n.editCourseTitle,
+        icon: Icons.edit_outlined,
+        enabled: enabled,
+        onInvoke: () => _openEditor(
+          context,
+          course: info.course,
+          timetableId: timetableId,
+          editor: WorkspaceEditorConfiguration(anchorRect: info.anchorRect),
+        ),
+      ),
+      DesktopAction(
+        id: 'course.delete',
+        label: conflicted
+            ? '${l10n.deleteCourseTitle}: ${info.course.name}'
+            : l10n.deleteCourseTitle,
+        icon: Icons.delete_outline,
+        enabled: enabled,
+        onInvoke: () =>
+            _deleteCourseFromMenu(context, timetableId, info, actionContext),
+      ),
+    ];
+  }
+
+  Future<void> _deleteCourseFromMenu(
+    BuildContext context,
+    String timetableId,
+    TimetableCourseTapInfo info,
+    DesktopActionContext actionContext,
+  ) async {
+    if (!mounted ||
+        !context.mounted ||
+        _courseEditorOpen ||
+        _courseDeleteOpen ||
+        !actionContext.isCurrent()) {
+      return;
+    }
+    final student = context.read<StudentViewState>();
+    final timetable = student.timetables
+        .where((item) => item.id == timetableId)
+        .firstOrNull;
+    final course = timetable?.courses
+        .where((item) => item.id == info.course.id)
+        .firstOrNull;
+    if (timetable == null || course == null) return;
+    final workspace = context.read<WorkspaceViewState>();
+    final maintenance = context.read<AppDataMaintenance>();
+    final task = CourseTaskController(
+      commands: context.read<StudentCommands>(),
+      view: student,
+      workspaceView: workspace,
+      maintenance: maintenance,
+      timetable: timetable,
+      initialCourse: course,
+    );
+    var submitted = false;
+    final session = SkedTaskSession(
+      maintenance: maintenance,
+      workspaceView: workspace,
+      workspace: AppMode.student,
+      targetChanges: student,
+      ownerRoute: ModalRoute.of(context),
+      isOwnerActive: () => mounted && widget.active && widget.interactive,
+      isTargetCurrent: () =>
+          task.isCurrent && (submitted || actionContext.isCurrent()),
+    );
+    _setCourseDeleteOpen(true);
+    try {
+      await showExpressiveDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        session: session,
+        builder: (dialogContext) {
+          final l10n = AppLocalizations.of(dialogContext);
+          return SkedMutationConfirmationDialog(
+            workspace: AppMode.student,
+            title: l10n.deleteCourseTitle,
+            message: '${course.name}\n\n${l10n.deleteCourseMessage}',
+            confirmLabel: l10n.delete,
+            debugLabel: 'Delete course',
+            filledConfirmButton: false,
+            onConfirm: () async {
+              if (!session.isCurrent) {
+                throw StateError('The selected course is no longer current.');
+              }
+              // The mutation now owns the target. The source row can disappear
+              // during the write; its menu must not retire completion or a
+              // failed write's confirmation and retry after rollback.
+              submitted = true;
+              await task.delete();
+            },
+          );
+        },
+      );
+    } finally {
+      session.dispose();
+      _setCourseDeleteOpen(false);
+    }
+  }
+
   Future<void> _openDetails(
     BuildContext context,
-    TimetableCourseTapInfo info,
-  ) async {
-    if (!mounted || !context.mounted) return;
+    TimetableCourseTapInfo info, {
+    String? timetableId,
+    bool Function()? isEntryCurrent,
+  }) async {
+    if (!mounted || !context.mounted || isEntryCurrent?.call() == false) return;
     final student = context.read<StudentViewState>();
-    final timetableId = student.activeTimetableOrNull?.id;
-    if (!mounted || _courseEditorOpen || timetableId == null) return;
+    final targetTimetableId = timetableId ?? student.activeTimetableOrNull?.id;
+    if (!mounted || _courseEditorOpen || targetTimetableId == null) return;
     if (_courseDetailsOpen) {
       if (_pane.selectedId == 'course:${info.course.id}') return;
       await _pane.close();
       await Future<void>.delayed(Duration.zero);
-      if (!mounted || !context.mounted || _pane.isOpen) return;
+      if (!mounted ||
+          !context.mounted ||
+          _pane.isOpen ||
+          isEntryCurrent?.call() == false) {
+        return;
+      }
     }
     final commands = context.read<StudentCommands>();
     final selectedWeek = info.selectedWeek ?? student.selectedWeek;
@@ -27,7 +165,7 @@ extension _HomeScreenCourseActions on _HomeScreenState {
         final task = _openEditor(
           context,
           course: course,
-          timetableId: timetableId,
+          timetableId: targetTimetableId,
         );
         if (!mobile) return task;
         // Opening a second bottom route is navigation, not a pending data
@@ -48,7 +186,7 @@ extension _HomeScreenCourseActions on _HomeScreenState {
                 _pane.hasModalTasks)
             ? () => student.timetables.any(
                 (timetable) =>
-                    timetable.id == timetableId &&
+                    timetable.id == targetTimetableId &&
                     timetable.courses.any(
                       (course) => course.id == info.course.id,
                     ),
@@ -59,7 +197,7 @@ extension _HomeScreenCourseActions on _HomeScreenState {
         enableDrag: true,
         maxWidth: 860,
         builder: (sheetContext) => CourseDetailsSheet(
-          timetableId: timetableId,
+          timetableId: targetTimetableId,
           courseId: info.course.id,
           weekday: info.course.dayOfWeek,
           conflictKey: info.conflictKey,

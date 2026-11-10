@@ -1471,6 +1471,7 @@ class _TimetableWeekPager extends StatefulWidget {
     required this.onWeekdaySelected,
     required this.onJumpWeekBy,
     required this.onCourseTap,
+    required this.courseActionsBuilder,
     required this.onAddCourse,
     required this.onEmptySlotTap,
   });
@@ -1495,6 +1496,7 @@ class _TimetableWeekPager extends StatefulWidget {
   final ValueChanged<int> onWeekdaySelected;
   final Future<void> Function(int offset) onJumpWeekBy;
   final ValueChanged<TimetableCourseTapInfo> onCourseTap;
+  final TimetableCourseActionsBuilder courseActionsBuilder;
   final ValueChanged<BuildContext>? onAddCourse;
   final ValueChanged<TimetableEmptySlotTapInfo>? onEmptySlotTap;
 
@@ -1923,6 +1925,10 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
                         onCourseTap: currentPageInteractive && widget.active
                             ? widget.onCourseTap
                             : null,
+                        courseActionsBuilder:
+                            currentPageInteractive && widget.active
+                            ? widget.courseActionsBuilder
+                            : null,
                         onAddCourse: currentPageInteractive && widget.active
                             ? widget.onAddCourse
                             : null,
@@ -1993,6 +1999,9 @@ class _TimetableWeekPagerState extends State<_TimetableWeekPager>
                   onCourseTap: currentPageInteractive
                       ? widget.onCourseTap
                       : (_) {},
+                  courseActionsBuilder: currentPageInteractive && widget.active
+                      ? widget.courseActionsBuilder
+                      : null,
                   onEmptySlotTap: currentPageInteractive
                       ? widget.onEmptySlotTap
                       : null,

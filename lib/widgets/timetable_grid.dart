@@ -14,6 +14,7 @@ import '../theme/sked_expressive_theme.dart';
 import '../theme/timetable_contrast.dart';
 import '../utils/latin_word_wrapping.dart';
 import 'timetable_entry.dart';
+import 'timetable_course_context_menu.dart';
 import 'timetable_course_week_status.dart';
 import 'timetable_week_projection.dart';
 import 'sked_calendar_day_label.dart';
@@ -23,49 +24,13 @@ import 'workbench_chrome_metrics.dart';
 
 export 'timetable_week_projection.dart'
     show CourseDisplayState, CourseLayout, OverlapGroup, buildOverlapGroups;
+export 'timetable_course_context_menu.dart'
+    show TimetableCourseTapInfo, TimetableCourseActionsBuilder;
 
 const _minuteHeight = 1.4;
 const _compactHeaderHeight = 56.0;
 const _regularHeaderHeight = 64.0;
 const _minimumCourseHitExtent = 48.0;
-
-class TimetableCourseTapInfo {
-  const TimetableCourseTapInfo({
-    required this.course,
-    required this.courses,
-    required this.isFullConflict,
-    this.conflictKey,
-    this.selectedWeek,
-    this.anchorRect,
-  });
-
-  final CourseItem course;
-  final List<CourseItem> courses;
-  final bool isFullConflict;
-  final String? conflictKey;
-
-  /// Week rendered by this grid when the course was tapped.
-  final int? selectedWeek;
-  final Rect? anchorRect;
-
-  TimetableCourseTapInfo copyWith({
-    CourseItem? course,
-    List<CourseItem>? courses,
-    bool? isFullConflict,
-    String? conflictKey,
-    int? selectedWeek,
-    Rect? anchorRect,
-  }) {
-    return TimetableCourseTapInfo(
-      course: course ?? this.course,
-      courses: courses ?? this.courses,
-      isFullConflict: isFullConflict ?? this.isFullConflict,
-      conflictKey: conflictKey ?? this.conflictKey,
-      selectedWeek: selectedWeek ?? this.selectedWeek,
-      anchorRect: anchorRect ?? this.anchorRect,
-    );
-  }
-}
 
 class TimetableEmptySlotTapInfo {
   const TimetableEmptySlotTapInfo({
@@ -99,6 +64,7 @@ class TimetableGrid extends StatefulWidget {
     required this.showFutureCourses,
     required this.showGridLines,
     required this.onCourseTap,
+    this.courseActionsBuilder,
     required this.onEmptySlotTap,
     required this.themeColorMode,
     required this.courseNameColorValues,
@@ -133,6 +99,7 @@ class TimetableGrid extends StatefulWidget {
   final bool showFutureCourses;
   final bool showGridLines;
   final ValueChanged<TimetableCourseTapInfo> onCourseTap;
+  final TimetableCourseActionsBuilder? courseActionsBuilder;
   final ValueChanged<TimetableEmptySlotTapInfo>? onEmptySlotTap;
   final String themeColorMode;
   final Map<String, int> courseNameColorValues;
@@ -686,6 +653,10 @@ class _TimetableGridState extends State<TimetableGrid> {
                                           for (final weekday
                                               in widget.visibleWeekdays)
                                             _DayColumn(
+                                              timetable: widget.timetable,
+                                              courseActionsBuilder: useEntries
+                                                  ? null
+                                                  : widget.courseActionsBuilder,
                                               weekday: weekday,
                                               localeCode: widget.localeCode,
                                               emptySlotSemanticLabel:
@@ -1018,6 +989,8 @@ class _RenderTouchWeekScrollSemantics extends RenderProxyBox {
 
 class _DayColumn extends StatelessWidget {
   const _DayColumn({
+    required this.timetable,
+    required this.courseActionsBuilder,
     required this.weekday,
     required this.localeCode,
     required this.emptySlotSemanticLabel,
@@ -1042,6 +1015,8 @@ class _DayColumn extends StatelessWidget {
     required this.onLayoutTap,
   });
 
+  final TimetableData timetable;
+  final TimetableCourseActionsBuilder? courseActionsBuilder;
   final int weekday;
   final String localeCode;
   final String emptySlotSemanticLabel;
@@ -1145,6 +1120,9 @@ class _DayColumn extends StatelessWidget {
                   ),
                 for (final geometry in geometries)
                   _CourseHitTarget(
+                    timetable: timetable,
+                    selectedWeek: selectedWeek,
+                    courseActionsBuilder: courseActionsBuilder,
                     geometry: geometry,
                     metrics: metrics,
                     semanticLabel: _semanticLabelForGeometry(
@@ -2874,6 +2852,9 @@ class _DesktopCourseTypographyState extends State<_DesktopCourseTypography> {
 
 class _CourseHitTarget extends StatefulWidget {
   const _CourseHitTarget({
+    required this.timetable,
+    required this.selectedWeek,
+    required this.courseActionsBuilder,
     required this.geometry,
     required this.metrics,
     required this.semanticLabel,
@@ -2883,6 +2864,9 @@ class _CourseHitTarget extends StatefulWidget {
     this.includeSemantics = true,
   });
 
+  final TimetableData timetable;
+  final int selectedWeek;
+  final TimetableCourseActionsBuilder? courseActionsBuilder;
   final _CourseGeometry geometry;
   final _TimetableMetrics metrics;
   final String semanticLabel;
@@ -2983,6 +2967,20 @@ class _CourseHitTargetState extends State<_CourseHitTarget> {
         ),
       ),
     );
+    final interaction = layout.course != null && layout.entry == null
+        ? TimetableCourseContextMenu(
+            timetable: widget.timetable,
+            info: TimetableCourseTapInfo(
+              course: layout.course!,
+              courses: layout.conflictCourses.whereType<CourseItem>().toList(),
+              isFullConflict: layout.isFullConflict,
+              conflictKey: layout.conflictKey,
+              selectedWeek: widget.selectedWeek,
+            ),
+            actionsBuilder: widget.courseActionsBuilder,
+            child: visual,
+          )
+        : visual;
     return PositionedDirectional(
       // Dense courses keep physical hit regions on their exact visual
       // intervals. Their separate semantic targets still provide 48dp
@@ -3001,9 +2999,9 @@ class _CourseHitTargetState extends State<_CourseHitTarget> {
               ),
               label: widget.semanticLabel,
               onTap: () => widget.onTap(context),
-              child: visual,
+              child: interaction,
             )
-          : ExcludeSemantics(child: visual),
+          : ExcludeSemantics(child: interaction),
     );
   }
 }

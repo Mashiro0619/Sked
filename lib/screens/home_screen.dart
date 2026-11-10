@@ -8,6 +8,7 @@ import '../widgets/sked_week_picker.dart';
 import '../theme/sked_surface.dart';
 
 import '../widgets/desktop_window_host.dart';
+import '../widgets/desktop_context_menu.dart';
 import '../widgets/workbench_chrome_metrics.dart';
 import '../widgets/workbench_resource_widgets.dart';
 import '../widgets/workbench_compact_calendar_bar.dart';
@@ -141,6 +142,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _weekPickerOpen = false;
   bool _timetablePickerOpen = false;
   bool _courseEditorOpen = false;
+  bool _courseDeleteOpen = false;
   bool _courseDetailsOpen = false;
   bool _timetableItemDialogOpen = false;
   bool _timetableSwitchInProgress = false;
@@ -181,6 +183,15 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() => _courseEditorOpen = value);
     } else {
       _courseEditorOpen = value;
+    }
+  }
+
+  void _setCourseDeleteOpen(bool value) {
+    if (_courseDeleteOpen == value) return;
+    if (mounted) {
+      setState(() => _courseDeleteOpen = value);
+    } else {
+      _courseDeleteOpen = value;
     }
   }
 
@@ -530,6 +541,13 @@ class _HomeScreenState extends State<HomeScreen> {
                               onJumpWeekBy: (offset) => _jumpWeekBy(offset),
                               onCourseTap: (info) =>
                                   _openDetails(context, info),
+                              courseActionsBuilder: (actionContext, info) =>
+                                  _courseActions(
+                                    context,
+                                    timetable.id,
+                                    actionContext,
+                                    info,
+                                  ),
                               onAddCourse: addVisible
                                   ? (anchor) => _openEditor(
                                       context,

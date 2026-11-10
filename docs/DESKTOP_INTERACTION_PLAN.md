@@ -15,7 +15,7 @@ Sked 桌面端应支持用户熟悉的对象操作、键盘操作和文件交互
 | 范围 | 当前实现与实际缺口 | 源码入口 |
 | --- | --- | --- |
 | 会话列表 | D1 已接入右键和键盘上下文菜单；顶部、行尾按钮与菜单共用目标动作，管理其他会话时保留当前阅读对象 | [列表](../lib/agent/ui/agent_conversation_list.dart)、[共享会话动作](../lib/agent/ui/agent_conversation_actions.dart)、[会话界面](../lib/agent/ui/agent_conversation_view.dart) |
-| 课程与日程 | 课程接点击和长按，日程卡接点击；课程已有查看、编辑、删除，日程另有复制及重复范围操作，均未连接对象右键 | [课程网格](../lib/widgets/timetable_grid.dart)、[日程列表](../lib/screens/general_schedule_list_view.dart)、[日程业务入口](../lib/screens/general_schedule_home_screen.dart) |
+| 课程与日程 | 课程日视图、周视图已接入查看、编辑和删除的右键及键盘菜单；日程的复制及重复范围操作正在连接同一入口 | [课程网格](../lib/widgets/timetable_grid.dart)、[日程列表](../lib/screens/general_schedule_list_view.dart)、[日程业务入口](../lib/screens/general_schedule_home_screen.dart) |
 | 课表、分类、附件与知识 | 附件与知识列表已接入整行右键和键盘菜单；课表、分类等资源行继续接入已有动作 | [资源行](../lib/widgets/workbench_resource_widgets.dart)、[附件](../lib/agent/ui/agent_attachment_view.dart)、[知识](../lib/agent/ui/agent_knowledge_view.dart) |
 | 键盘打开对象菜单 | D1 已为会话接入菜单键和 Shift+F10；其他对象继续按计划接入同一入口 | [桌面上下文菜单](../lib/widgets/desktop_context_menu.dart)、[列表](../lib/agent/ui/agent_conversation_list.dart) |
 | 搜索与保存快捷键 | D5 已为现有编辑任务接入 Ctrl+S，节次时间页通过原 flush 保存；历史搜索和语言搜索的 Ctrl+F 待接入 | [历史搜索](../lib/agent/ui/agent_conversation_list.dart)、[语言搜索](../lib/screens/language_settings_page.dart)、[编辑器动作](../lib/widgets/sked_task_actions.dart) |
@@ -103,7 +103,7 @@ Tab / Shift+Tab、Enter、Space、文本选择、Ctrl+A/C/X/V/Z 及重做沿用�
 | 顺序 | 提交主题 | 完整边界 |
 | --- | --- | --- |
 | D1 | feat(桌面菜单): 接入会话对象上下文动作 | 已实现；动作契约、会话行右键、菜单键／Shift+F10、目标身份校验与现有会话动作一起接通 |
-| D2 | feat(桌面菜单): 接入课程与日程对象动作 | 复用 D1 契约，连接查看、编辑和删除；日程保留复制及重复范围选择，可按两类对象分笔 |
+| D2 | feat(桌面菜单): 接入课程与日程对象动作 | 课程已实现；日程继续接入查看、编辑、复制及重复范围删除，按两类对象分笔 |
 | D3 | feat(桌面菜单): 接入资源与内容对象动作 | 附件与知识已实现；课表分类、消息分别继续接入，保留文本菜单优先级 |
 | D4 | feat(桌面快捷键): 接入区域搜索与对象操作 | Ctrl+F、搜索 Esc、F2、Delete 共用区域焦点与动作规则；独立交互可继续分笔 |
 | D5 | feat(桌面快捷键): 接入当前编辑任务保存 | 已实现；课程、日程、课表、学校站点、分类名称的保存及节次时间 flush 共用原命令，保留输入法、忙碌和退出守卫 |

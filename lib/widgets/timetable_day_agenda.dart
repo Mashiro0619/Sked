@@ -6,7 +6,7 @@ import '../l10n/app_localizations.dart';
 import '../models/timetable_models.dart';
 import '../theme/timetable_contrast.dart';
 import 'sked_floating_anchor.dart';
-import 'timetable_grid.dart' show TimetableCourseTapInfo;
+import 'timetable_course_context_menu.dart';
 import 'timetable_week_projection.dart';
 import 'workspace_frame.dart';
 
@@ -35,6 +35,7 @@ class TimetableDayAgenda extends StatefulWidget {
     required this.liveCourseOutlineColorValue,
     required this.liveCourseOutlineWidth,
     this.onCourseTap,
+    this.courseActionsBuilder,
     this.onAddCourse,
     this.showEmptyAddCourseAction = true,
     this.bottomContentInset = 0,
@@ -62,6 +63,7 @@ class TimetableDayAgenda extends StatefulWidget {
   final int liveCourseOutlineColorValue;
   final double liveCourseOutlineWidth;
   final ValueChanged<TimetableCourseTapInfo>? onCourseTap;
+  final TimetableCourseActionsBuilder? courseActionsBuilder;
   final ValueChanged<BuildContext>? onAddCourse;
   final bool showEmptyAddCourseAction;
   final double bottomContentInset;
@@ -265,6 +267,8 @@ class _TimetableDayAgendaState extends State<TimetableDayAgenda> {
             final layout = layouts[index];
             return _DayAgendaCourseRow(
               key: ValueKey('student-day-course-${layout.course!.id}'),
+              timetable: widget.timetable,
+              courseActionsBuilder: widget.courseActionsBuilder,
               layout: layout,
               date: date,
               selectedWeek: widget.selectedWeek,
@@ -291,6 +295,8 @@ class _TimetableDayAgendaState extends State<TimetableDayAgenda> {
 class _DayAgendaCourseRow extends StatelessWidget {
   const _DayAgendaCourseRow({
     super.key,
+    required this.timetable,
+    required this.courseActionsBuilder,
     required this.layout,
     required this.date,
     required this.selectedWeek,
@@ -308,6 +314,8 @@ class _DayAgendaCourseRow extends StatelessWidget {
     required this.onCourseTap,
   });
 
+  final TimetableData timetable;
+  final TimetableCourseActionsBuilder? courseActionsBuilder;
   final CourseLayout layout;
   final DateTime date;
   final int selectedWeek;
@@ -413,20 +421,22 @@ class _DayAgendaCourseRow extends StatelessWidget {
 
     final card = Builder(
       builder: (cardContext) {
-        void openCourse() {
-          onCourseTap?.call(
+        TimetableCourseTapInfo courseInfo([Rect? anchor]) =>
             TimetableCourseTapInfo(
               course: course,
               courses: layout.conflictCourses.whereType<CourseItem>().toList(),
               isFullConflict: layout.isFullConflict,
               conflictKey: layout.conflictKey,
               selectedWeek: selectedWeek,
-              anchorRect: SkedFloatingAnchor.capture(cardContext).globalRect,
-            ),
+              anchorRect: anchor,
+            );
+        void openCourse() {
+          onCourseTap?.call(
+            courseInfo(SkedFloatingAnchor.capture(cardContext).globalRect),
           );
         }
 
-        return Semantics(
+        final entry = Semantics(
           container: true,
           button: true,
           enabled: onCourseTap != null,
@@ -544,6 +554,12 @@ class _DayAgendaCourseRow extends StatelessWidget {
               ),
             ),
           ),
+        );
+        return TimetableCourseContextMenu(
+          timetable: timetable,
+          info: courseInfo(),
+          actionsBuilder: courseActionsBuilder,
+          child: entry,
         );
       },
     );
