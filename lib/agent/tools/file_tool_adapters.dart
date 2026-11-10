@@ -84,7 +84,7 @@ class FileToolAdapters {
             scope: scope,
             request: FileSearchRequest(
               root: _resource(args['root'], 'root'),
-              query: _text(args, 'query'),
+              query: _query(args['query']),
               text: _boolean(args, 'text', false),
               recursive: _boolean(args, 'recursive', true),
             ),
@@ -418,6 +418,13 @@ void _keys(Map<String, Object?> value, Set<String> allowed) {
   if (value.keys.any((key) => !allowed.contains(key))) {
     _invalid('Unknown file argument.');
   }
+}
+
+String _query(Object? value) {
+  if (value is! String || value.isEmpty) {
+    _invalid('query must be a nonempty string.');
+  }
+  return value;
 }
 
 String _text(Map<String, Object?> value, String key) {
