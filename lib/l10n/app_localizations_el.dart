@@ -10,6 +10,22 @@ class AppLocalizationsEl extends AppLocalizations {
   AppLocalizationsEl([String locale = 'el']) : super(locale);
 
   @override
+  String get desktopOpenFile => 'Άνοιγμα αρχείου';
+
+  @override
+  String get desktopRevealFile => 'Εμφάνιση στον φάκελο';
+
+  @override
+  String get desktopCopyFilePath => 'Αντιγραφή διαδρομής';
+
+  @override
+  String get desktopSaveFileCopy => 'Αποθήκευση αντιγράφου';
+
+  @override
+  String get desktopFileActionFailed =>
+      'Η ενέργεια αρχείου απέτυχε. Δοκιμάστε ξανά.';
+
+  @override
   String get agentDropFilesHint => 'Σύρετε αρχεία εδώ για επισύναψη';
 
   @override

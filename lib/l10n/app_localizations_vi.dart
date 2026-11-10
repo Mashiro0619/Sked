@@ -10,6 +10,22 @@ class AppLocalizationsVi extends AppLocalizations {
   AppLocalizationsVi([String locale = 'vi']) : super(locale);
 
   @override
+  String get desktopOpenFile => 'Mở tệp';
+
+  @override
+  String get desktopRevealFile => 'Hiển thị trong thư mục';
+
+  @override
+  String get desktopCopyFilePath => 'Sao chép đường dẫn';
+
+  @override
+  String get desktopSaveFileCopy => 'Lưu bản sao';
+
+  @override
+  String get desktopFileActionFailed =>
+      'Thao tác với tệp không thành công. Vui lòng thử lại.';
+
+  @override
   String get agentDropFilesHint => 'Thả tệp để đính kèm';
 
   @override

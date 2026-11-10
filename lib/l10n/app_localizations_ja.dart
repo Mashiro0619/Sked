@@ -10,6 +10,21 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String get desktopOpenFile => 'ファイルを開く';
+
+  @override
+  String get desktopRevealFile => 'フォルダーで表示';
+
+  @override
+  String get desktopCopyFilePath => 'パスをコピー';
+
+  @override
+  String get desktopSaveFileCopy => 'コピーを保存';
+
+  @override
+  String get desktopFileActionFailed => 'ファイル操作に失敗しました。もう一度お試しください。';
+
+  @override
   String get agentDropFilesHint => 'ファイルをドロップして添付';
 
   @override

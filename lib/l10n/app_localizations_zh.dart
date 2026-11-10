@@ -10,6 +10,21 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get desktopOpenFile => '打开文件';
+
+  @override
+  String get desktopRevealFile => '在文件夹中显示';
+
+  @override
+  String get desktopCopyFilePath => '复制路径';
+
+  @override
+  String get desktopSaveFileCopy => '另存副本';
+
+  @override
+  String get desktopFileActionFailed => '文件操作失败，请重试。';
+
+  @override
   String get agentDropFilesHint => '拖入文件以添加附件';
 
   @override
@@ -4305,6 +4320,21 @@ class AppLocalizationsZh extends AppLocalizations {
 /// The translations for Chinese, using the Han script (`zh_Hant`).
 class AppLocalizationsZhHant extends AppLocalizationsZh {
   AppLocalizationsZhHant() : super('zh_Hant');
+
+  @override
+  String get desktopOpenFile => '開啟檔案';
+
+  @override
+  String get desktopRevealFile => '在資料夾中顯示';
+
+  @override
+  String get desktopCopyFilePath => '複製路徑';
+
+  @override
+  String get desktopSaveFileCopy => '另存副本';
+
+  @override
+  String get desktopFileActionFailed => '檔案操作失敗，請重試。';
 
   @override
   String get agentDropFilesHint => '拖入檔案以加入附件';

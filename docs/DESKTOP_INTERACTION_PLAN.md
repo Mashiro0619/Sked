@@ -1,6 +1,6 @@
 # 桌面基础交互补齐计划
 
-状态：D1–D5 对象菜单、区域搜索、对象快捷键及当前编辑任务保存已实现；文件输入与系统文件动作继续实施。Windows 原生交互验收待进行。初次缺口审查基线为 2fd2fcb3，当前会话行为见[Agent 对话界面](AGENT_CHAT_DESIGN.md)。
+状态：D1–D6 对象菜单、快捷键及文件拖入已实现；D8 已接入导出文件的系统动作，剪贴板与附件系统动作继续实施。Windows 原生交互验收待进行。初次缺口审查基线为 2fd2fcb3，当前会话行为见[Agent 对话界面](AGENT_CHAT_DESIGN.md)。
 
 ## 目标与优先级
 
@@ -20,7 +20,7 @@ Sked 桌面端应支持用户熟悉的对象操作、键盘操作和文件交互
 | 键盘打开对象菜单 | 已接入的对象菜单共用菜单键和 Shift+F10；会话还支持 F2 改名、Delete 确认删除，保留文本控件按键优先级 | [桌面上下文菜单](../lib/widgets/desktop_context_menu.dart)、[列表](../lib/agent/ui/agent_conversation_list.dart) |
 | 搜索与保存快捷键 | 历史区与语言页已接入 Ctrl+F 和搜索 Esc；D5 已为现有编辑任务接入 Ctrl+S，节次时间页通过原 flush 保存 | [历史搜索](../lib/agent/ui/agent_conversation_list.dart)、[语言搜索](../lib/screens/language_settings_page.dart)、[编辑器动作](../lib/widgets/sked_task_actions.dart) |
 | 文件拖入与截图粘贴 | 桌面文件拖入已接入正式附件链，包含实际落点、批次身份和剩余重试；剪贴板图片与文件列表继续接入 | [附件控制器](../lib/agent/attachments/agent_attachment_controller.dart)、[拖入适配器](../lib/agent/ui/agent_desktop_file_drop.dart)、[Windows 插件装配](../windows/flutter/generated_plugin_registrant.cc) |
-| 保存后的系统动作 | 附件主要提供预览、再次附加和移除；导出成功显示路径，缺少统一的默认应用打开、资源管理器定位和复制路径动作 | [附件菜单](../lib/agent/ui/agent_attachment_view.dart)、[导出反馈](../lib/widgets/export_save_flow.dart)、[导出服务](../lib/services/export_service.dart) |
+| 保存后的系统动作 | 导出成功可打开文件、在文件夹显示、复制路径和另存副本，按钮与右键共用动作；附件私有副本与系统动作继续接入 | [文件动作](../lib/services/desktop_file_actions.dart)、[保存反馈](../lib/widgets/saved_desktop_file_notice.dart)、[附件菜单](../lib/agent/ui/agent_attachment_view.dart) |
 | 列表批量管理 | 会话和课表资源行只记录单个活动对象，没有 Ctrl／Shift 对象多选；导入导出选择器已有复选框和全选。列表批量操作列为后续增强 | [会话列表](../lib/agent/ui/agent_conversation_list.dart)、[资源行](../lib/widgets/workbench_resource_widgets.dart) |
 
 ### 已有能力继续保留
@@ -94,6 +94,8 @@ Tab / Shift+Tab、Enter、Space、文本选择、Ctrl+A/C/X/V/Z 及重做沿用�
 
 建立 DesktopFileActions，接收已登记的文件或产物引用，提供默认应用打开、在资源管理器中定位、复制路径和另存为。附件、笔记、导出与未来 Office 产物共用入口。
 
+首批已接入统一导出保存流程：成功回执中的本机绝对路径成为独立文件目标，保存任务结束后仍可使用。反馈保留到用户关闭或下一次文件保存反馈替换，显示可选择的真实路径和文件菜单；打开菜单、系统选择器及失败重试期间不会因通知计时而撤回动作。取消另存保留原文件反馈，同一文件的另存不覆盖自身。
+
 已经保存到用户位置的文件直接使用真实路径。私有附件按原文件名生成受管理的打开副本；需要保留到用户目录时使用另存为，定位和复制路径针对实际可用文件。模型正文中的任意路径或 file URL 不直接转成可执行系统动作。
 
 ## 原子提交顺序
@@ -109,7 +111,7 @@ Tab / Shift+Tab、Enter、Space、文本选择、Ctrl+A/C/X/V/Z 及重做沿用�
 | D5 | feat(桌面快捷键): 接入当前编辑任务保存 | 已实现；课程、日程、课表、学校站点、分类名称／颜色及 Agent 独立设置表单共用原保存，节次时间复用 flush |
 | D6 | feat(桌面附件): 接入系统文件拖入 | 已实现；实际落点、整批原输入租约、进度、取消和剩余重试接入正式附件链，目录引用等待文件 Provider |
 | D7 | feat(桌面附件): 接入剪贴板图片与文件 | 平台载荷读取、输入焦点与附件接纳同笔，保留纯文本粘贴 |
-| D8 | feat(桌面文件): 接入系统打开与定位 | 统一文件动作、已登记引用解析、保存产物及附件入口同笔，和 Agent 文件交付能力复用 |
+| D8 | feat(桌面文件): 接入系统打开与定位 | 已分笔实现统一文件动作及导出保存入口；附件私有副本和系统动作继续接入，后续和 Agent 文件交付复用 |
 | D9 | feat(桌面列表): 接入对象多选与批量动作 | 后续增强；选择集合、范围锚点、上下文目标、批量动作与实际结果一起交付，按列表类型分笔 |
 | D10 | docs(桌面交互): 同步操作说明与验收状态 | 根据实际交付更新菜单、快捷键、文件操作与平台验收记录 |
 

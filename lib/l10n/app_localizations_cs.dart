@@ -10,6 +10,22 @@ class AppLocalizationsCs extends AppLocalizations {
   AppLocalizationsCs([String locale = 'cs']) : super(locale);
 
   @override
+  String get desktopOpenFile => 'Otevřít soubor';
+
+  @override
+  String get desktopRevealFile => 'Zobrazit ve složce';
+
+  @override
+  String get desktopCopyFilePath => 'Kopírovat cestu';
+
+  @override
+  String get desktopSaveFileCopy => 'Uložit kopii';
+
+  @override
+  String get desktopFileActionFailed =>
+      'Operace se souborem se nezdařila. Zkuste to znovu.';
+
+  @override
   String get agentDropFilesHint => 'Přetažením připojte soubory';
 
   @override

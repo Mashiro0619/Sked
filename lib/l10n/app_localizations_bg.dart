@@ -10,6 +10,22 @@ class AppLocalizationsBg extends AppLocalizations {
   AppLocalizationsBg([String locale = 'bg']) : super(locale);
 
   @override
+  String get desktopOpenFile => 'Отваряне на файла';
+
+  @override
+  String get desktopRevealFile => 'Показване в папката';
+
+  @override
+  String get desktopCopyFilePath => 'Копиране на пътя';
+
+  @override
+  String get desktopSaveFileCopy => 'Запазване на копие';
+
+  @override
+  String get desktopFileActionFailed =>
+      'Действието с файла не успя. Опитайте отново.';
+
+  @override
   String get agentDropFilesHint => 'Пуснете файлове, за да ги прикачите';
 
   @override

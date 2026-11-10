@@ -10,6 +10,22 @@ class AppLocalizationsRu extends AppLocalizations {
   AppLocalizationsRu([String locale = 'ru']) : super(locale);
 
   @override
+  String get desktopOpenFile => 'Открыть файл';
+
+  @override
+  String get desktopRevealFile => 'Показать в папке';
+
+  @override
+  String get desktopCopyFilePath => 'Копировать путь';
+
+  @override
+  String get desktopSaveFileCopy => 'Сохранить копию';
+
+  @override
+  String get desktopFileActionFailed =>
+      'Операция с файлом не выполнена. Повторите попытку.';
+
+  @override
   String get agentDropFilesHint => 'Перетащите файлы, чтобы прикрепить их';
 
   @override

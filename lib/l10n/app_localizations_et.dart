@@ -10,6 +10,22 @@ class AppLocalizationsEt extends AppLocalizations {
   AppLocalizationsEt([String locale = 'et']) : super(locale);
 
   @override
+  String get desktopOpenFile => 'Ava fail';
+
+  @override
+  String get desktopRevealFile => 'Kuva kaustas';
+
+  @override
+  String get desktopCopyFilePath => 'Kopeeri asukoht';
+
+  @override
+  String get desktopSaveFileCopy => 'Salvesta koopia';
+
+  @override
+  String get desktopFileActionFailed =>
+      'Failitoiming ebaõnnestus. Proovi uuesti.';
+
+  @override
   String get agentDropFilesHint => 'Manustamiseks lohistage failid siia';
 
   @override

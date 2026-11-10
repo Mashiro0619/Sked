@@ -145,6 +145,36 @@ abstract class AppLocalizations {
     Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
   ];
 
+  /// No description provided for @desktopOpenFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Open file'**
+  String get desktopOpenFile;
+
+  /// No description provided for @desktopRevealFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Show in folder'**
+  String get desktopRevealFile;
+
+  /// No description provided for @desktopCopyFilePath.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy path'**
+  String get desktopCopyFilePath;
+
+  /// No description provided for @desktopSaveFileCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Save a copy'**
+  String get desktopSaveFileCopy;
+
+  /// No description provided for @desktopFileActionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'File action failed. Please try again.'**
+  String get desktopFileActionFailed;
+
   /// No description provided for @agentDropFilesHint.
   ///
   /// In en, this message translates to:

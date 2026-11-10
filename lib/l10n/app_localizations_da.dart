@@ -10,6 +10,21 @@ class AppLocalizationsDa extends AppLocalizations {
   AppLocalizationsDa([String locale = 'da']) : super(locale);
 
   @override
+  String get desktopOpenFile => 'Åbn fil';
+
+  @override
+  String get desktopRevealFile => 'Vis i mappe';
+
+  @override
+  String get desktopCopyFilePath => 'Kopiér sti';
+
+  @override
+  String get desktopSaveFileCopy => 'Gem en kopi';
+
+  @override
+  String get desktopFileActionFailed => 'Filhandlingen mislykkedes. Prøv igen.';
+
+  @override
   String get agentDropFilesHint => 'Slip filer for at vedhæfte dem';
 
   @override

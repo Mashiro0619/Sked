@@ -10,6 +10,22 @@ class AppLocalizationsRo extends AppLocalizations {
   AppLocalizationsRo([String locale = 'ro']) : super(locale);
 
   @override
+  String get desktopOpenFile => 'Deschide fișierul';
+
+  @override
+  String get desktopRevealFile => 'Arată în dosar';
+
+  @override
+  String get desktopCopyFilePath => 'Copiază calea';
+
+  @override
+  String get desktopSaveFileCopy => 'Salvează o copie';
+
+  @override
+  String get desktopFileActionFailed =>
+      'Operația asupra fișierului a eșuat. Încearcă din nou.';
+
+  @override
   String get agentDropFilesHint => 'Plasați fișiere pentru a le atașa';
 
   @override

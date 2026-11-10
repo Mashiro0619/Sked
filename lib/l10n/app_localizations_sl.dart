@@ -10,6 +10,22 @@ class AppLocalizationsSl extends AppLocalizations {
   AppLocalizationsSl([String locale = 'sl']) : super(locale);
 
   @override
+  String get desktopOpenFile => 'Odpri datoteko';
+
+  @override
+  String get desktopRevealFile => 'Pokaži v mapi';
+
+  @override
+  String get desktopCopyFilePath => 'Kopiraj pot';
+
+  @override
+  String get desktopSaveFileCopy => 'Shrani kopijo';
+
+  @override
+  String get desktopFileActionFailed =>
+      'Dejanje z datoteko ni uspelo. Poskusite znova.';
+
+  @override
   String get agentDropFilesHint => 'Spustite datoteke, da jih priložite';
 
   @override

@@ -10,6 +10,22 @@ class AppLocalizationsPl extends AppLocalizations {
   AppLocalizationsPl([String locale = 'pl']) : super(locale);
 
   @override
+  String get desktopOpenFile => 'Otwórz plik';
+
+  @override
+  String get desktopRevealFile => 'Pokaż w folderze';
+
+  @override
+  String get desktopCopyFilePath => 'Kopiuj ścieżkę';
+
+  @override
+  String get desktopSaveFileCopy => 'Zapisz kopię';
+
+  @override
+  String get desktopFileActionFailed =>
+      'Operacja na pliku nie powiodła się. Spróbuj ponownie.';
+
+  @override
   String get agentDropFilesHint => 'Upuść pliki, aby je załączyć';
 
   @override

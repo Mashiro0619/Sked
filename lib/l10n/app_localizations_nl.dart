@@ -10,6 +10,22 @@ class AppLocalizationsNl extends AppLocalizations {
   AppLocalizationsNl([String locale = 'nl']) : super(locale);
 
   @override
+  String get desktopOpenFile => 'Bestand openen';
+
+  @override
+  String get desktopRevealFile => 'Tonen in map';
+
+  @override
+  String get desktopCopyFilePath => 'Pad kopiëren';
+
+  @override
+  String get desktopSaveFileCopy => 'Kopie opslaan';
+
+  @override
+  String get desktopFileActionFailed =>
+      'Bestandsactie mislukt. Probeer het opnieuw.';
+
+  @override
   String get agentDropFilesHint =>
       'Sleep bestanden hierheen om ze bij te voegen';
 

@@ -10,6 +10,22 @@ class AppLocalizationsEs extends AppLocalizations {
   AppLocalizationsEs([String locale = 'es']) : super(locale);
 
   @override
+  String get desktopOpenFile => 'Abrir archivo';
+
+  @override
+  String get desktopRevealFile => 'Mostrar en la carpeta';
+
+  @override
+  String get desktopCopyFilePath => 'Copiar ruta';
+
+  @override
+  String get desktopSaveFileCopy => 'Guardar una copia';
+
+  @override
+  String get desktopFileActionFailed =>
+      'La operación con el archivo falló. Inténtalo de nuevo.';
+
+  @override
   String get agentDropFilesHint => 'Suelta archivos para adjuntarlos';
 
   @override

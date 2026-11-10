@@ -10,6 +10,22 @@ class AppLocalizationsSv extends AppLocalizations {
   AppLocalizationsSv([String locale = 'sv']) : super(locale);
 
   @override
+  String get desktopOpenFile => 'Öppna fil';
+
+  @override
+  String get desktopRevealFile => 'Visa i mapp';
+
+  @override
+  String get desktopCopyFilePath => 'Kopiera sökväg';
+
+  @override
+  String get desktopSaveFileCopy => 'Spara en kopia';
+
+  @override
+  String get desktopFileActionFailed =>
+      'Filåtgärden misslyckades. Försök igen.';
+
+  @override
   String get agentDropFilesHint => 'Släpp filer för att bifoga dem';
 
   @override

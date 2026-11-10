@@ -10,6 +10,21 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get desktopOpenFile => 'Open file';
+
+  @override
+  String get desktopRevealFile => 'Show in folder';
+
+  @override
+  String get desktopCopyFilePath => 'Copy path';
+
+  @override
+  String get desktopSaveFileCopy => 'Save a copy';
+
+  @override
+  String get desktopFileActionFailed => 'File action failed. Please try again.';
+
+  @override
   String get agentDropFilesHint => 'Drop files to attach';
 
   @override

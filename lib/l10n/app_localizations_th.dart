@@ -10,6 +10,22 @@ class AppLocalizationsTh extends AppLocalizations {
   AppLocalizationsTh([String locale = 'th']) : super(locale);
 
   @override
+  String get desktopOpenFile => 'เปิดไฟล์';
+
+  @override
+  String get desktopRevealFile => 'แสดงในโฟลเดอร์';
+
+  @override
+  String get desktopCopyFilePath => 'คัดลอกพาธ';
+
+  @override
+  String get desktopSaveFileCopy => 'บันทึกสำเนา';
+
+  @override
+  String get desktopFileActionFailed =>
+      'ดำเนินการกับไฟล์ไม่สำเร็จ โปรดลองอีกครั้ง';
+
+  @override
   String get agentDropFilesHint => 'วางไฟล์เพื่อแนบ';
 
   @override

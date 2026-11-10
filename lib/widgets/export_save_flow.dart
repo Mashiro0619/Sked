@@ -4,9 +4,11 @@ import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
 import '../services/export_service.dart';
+import '../services/desktop_file_actions.dart';
 import 'expressive_dialog.dart';
 import 'sked_task_route.dart';
 import 'sked_task_session.dart';
+import 'saved_desktop_file_notice.dart';
 
 /// Saves one captured export. Retries and sharing keep that exact payload,
 /// while the calling page retains its own busy and exit policy.
@@ -39,7 +41,12 @@ Future<void> saveExportWithFeedback({
       final l10n = AppLocalizations.of(context);
       switch (result.status) {
         case ExportSaveStatus.saved:
-          message(l10n.savedToPath(result.path ?? payload.fileName));
+          final file = SavedDesktopFile.fromResult(result);
+          if (file == null) {
+            message(l10n.savedToPath(result.path ?? payload.fileName));
+          } else {
+            SavedDesktopFileNotice.show(context, file);
+          }
           return;
         case ExportSaveStatus.cancelled:
           message(l10n.saveCancelled);

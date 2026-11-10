@@ -10,6 +10,21 @@ class AppLocalizationsKo extends AppLocalizations {
   AppLocalizationsKo([String locale = 'ko']) : super(locale);
 
   @override
+  String get desktopOpenFile => '파일 열기';
+
+  @override
+  String get desktopRevealFile => '폴더에서 보기';
+
+  @override
+  String get desktopCopyFilePath => '경로 복사';
+
+  @override
+  String get desktopSaveFileCopy => '사본 저장';
+
+  @override
+  String get desktopFileActionFailed => '파일 작업에 실패했습니다. 다시 시도하세요.';
+
+  @override
   String get agentDropFilesHint => '파일을 끌어다 놓아 첨부';
 
   @override

@@ -10,6 +10,22 @@ class AppLocalizationsFi extends AppLocalizations {
   AppLocalizationsFi([String locale = 'fi']) : super(locale);
 
   @override
+  String get desktopOpenFile => 'Avaa tiedosto';
+
+  @override
+  String get desktopRevealFile => 'Näytä kansiossa';
+
+  @override
+  String get desktopCopyFilePath => 'Kopioi polku';
+
+  @override
+  String get desktopSaveFileCopy => 'Tallenna kopio';
+
+  @override
+  String get desktopFileActionFailed =>
+      'Tiedostotoiminto epäonnistui. Yritä uudelleen.';
+
+  @override
   String get agentDropFilesHint => 'Liitä tiedostot pudottamalla ne tähän';
 
   @override

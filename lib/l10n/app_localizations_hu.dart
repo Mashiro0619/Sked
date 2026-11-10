@@ -10,6 +10,22 @@ class AppLocalizationsHu extends AppLocalizations {
   AppLocalizationsHu([String locale = 'hu']) : super(locale);
 
   @override
+  String get desktopOpenFile => 'Fájl megnyitása';
+
+  @override
+  String get desktopRevealFile => 'Megjelenítés a mappában';
+
+  @override
+  String get desktopCopyFilePath => 'Elérési út másolása';
+
+  @override
+  String get desktopSaveFileCopy => 'Másolat mentése';
+
+  @override
+  String get desktopFileActionFailed =>
+      'A fájlművelet sikertelen. Próbálja újra.';
+
+  @override
   String get agentDropFilesHint => 'Húzza ide a csatolandó fájlokat';
 
   @override

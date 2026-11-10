@@ -10,6 +10,22 @@ class AppLocalizationsHi extends AppLocalizations {
   AppLocalizationsHi([String locale = 'hi']) : super(locale);
 
   @override
+  String get desktopOpenFile => 'फ़ाइल खोलें';
+
+  @override
+  String get desktopRevealFile => 'फ़ोल्डर में दिखाएँ';
+
+  @override
+  String get desktopCopyFilePath => 'पथ कॉपी करें';
+
+  @override
+  String get desktopSaveFileCopy => 'एक प्रति सहेजें';
+
+  @override
+  String get desktopFileActionFailed =>
+      'फ़ाइल की कार्रवाई विफल रही। कृपया फिर से प्रयास करें।';
+
+  @override
   String get agentDropFilesHint => 'अटैच करने के लिए फ़ाइलें यहाँ छोड़ें';
 
   @override
