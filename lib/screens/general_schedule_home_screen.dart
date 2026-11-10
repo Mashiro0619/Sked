@@ -26,6 +26,7 @@ import '../widgets/sked_calendar_day_label.dart';
 import '../utils/date_selection.dart';
 
 import 'dart:async';
+import 'dart:convert';
 
 import '../services/desktop_layout_preferences.dart';
 import '../services/general_reminder_items.dart';
@@ -88,11 +89,13 @@ import '../widgets/general_event_editor_sheet.dart';
 import '../widgets/sked_expressive_components.dart';
 import '../widgets/sked_menu_item_content.dart';
 import '../widgets/sked_popup_menu.dart';
+import '../widgets/desktop_context_menu.dart';
 import '../widgets/ui_command.dart';
 import '../theme/sked_expressive_theme.dart';
 import 'settings_page.dart';
 
 part 'general_schedule_list_view.dart';
+part 'general_schedule_occurrence_actions.dart';
 part 'general_schedule_reminder_strip.dart';
 part 'general_event_list_details_host.dart';
 part 'general_schedule_timeline_view.dart';
@@ -145,6 +148,7 @@ class GeneralScheduleHomeScreen extends StatefulWidget {
 
 class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
   final _pane = WorkspacePaneController();
+  _GeneralOccurrenceActions? _occurrenceActions;
   var _calendarViewport = _CalendarViewportSession();
   SkedDateRangeController? _rangeController;
   GeneralDateRange? _rememberedCustomRange;
@@ -182,6 +186,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
 
   @override
   void dispose() {
+    _occurrenceActions?.dispose();
     _calendarTaskLifetime?.invalidate();
     _rangeController?.dispose();
     _pane.dispose();
@@ -295,6 +300,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     super.didUpdateWidget(oldWidget);
     if (!widget.active || !widget.interactive) {
       _calendarTaskLifetime?.invalidate();
+      _occurrenceActions?.invalidate();
     }
     if (!oldWidget.active && widget.active) _resumeCustomFocus();
   }
@@ -354,6 +360,31 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       _GeneralHomeSnapshot.from,
     );
     final general = context.read<GeneralViewState>();
+    var occurrenceActions = _occurrenceActions;
+    if (occurrenceActions == null ||
+        occurrenceActions.view != general ||
+        occurrenceActions.commands != commands ||
+        occurrenceActions.workspace != workspace ||
+        occurrenceActions.maintenance != maintenance) {
+      occurrenceActions?.dispose();
+      occurrenceActions = _occurrenceActions = _GeneralOccurrenceActions(
+        view: general,
+        commands: commands,
+        workspace: workspace,
+        maintenance: maintenance,
+        feedbackContext: context,
+        isOwnerActive: () => mounted && widget.active && widget.interactive,
+        canEdit: () => !_editorSheetOpen,
+        onEdit: (item, scope, editor) => _openEditor(
+          context,
+          general,
+          occurrence: item,
+          editScope: scope,
+          editor: editor,
+          reopenDetailsOnCancel: false,
+        ),
+      );
+    }
     _observeRangeSession(general);
     _scheduleStartupReminders(general);
     final selectedDate = snapshot.selectedDate;
@@ -753,18 +784,22 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         },
       ),
     );
-    return _EventListDetailsHost(
-      view: general,
-      commands: commands,
-      workspace: workspace,
-      maintenance: maintenance,
-      settings: settings,
-      pane: _pane,
-      isOwnerActive: () => mounted && widget.active && widget.interactive,
-      onEdit: (item, scope) =>
-          _openEditor(context, general, occurrence: item, editScope: scope),
-      canEdit: () => !_editorSheetOpen,
-      child: _wrapStandalone(body),
+    return _GeneralOccurrenceActionScope(
+      actions: occurrenceActions,
+      child: _EventListDetailsHost(
+        view: general,
+        commands: commands,
+        workspace: workspace,
+        maintenance: maintenance,
+        settings: settings,
+        pane: _pane,
+        occurrenceActions: occurrenceActions,
+        isOwnerActive: () => mounted && widget.active && widget.interactive,
+        onEdit: (item, scope) =>
+            _openEditor(context, general, occurrence: item, editScope: scope),
+        canEdit: () => !_editorSheetOpen,
+        child: _wrapStandalone(body),
+      ),
     );
   }
 
@@ -2040,6 +2075,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     WorkspaceEditorConfiguration? editor,
     GeneralEventOccurrence? occurrence,
     GeneralEventEditScope? editScope,
+    bool reopenDetailsOnCancel = true,
   }) async {
     if (!mounted ||
         !context.mounted ||
@@ -2080,7 +2116,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         isSessionCurrent: () => task.isCurrent,
         selectionId: event == null
             ? null
-            : _pane.selectedId ?? 'event:${event.id}',
+            : occurrence?.occurrenceKey ?? 'event:${event.id}',
         isDismissible: general.data.closeEventPopupOnOutsideTap,
         enableDrag: true,
         maxWidth: appSheetWidthMedium,
@@ -2096,7 +2132,10 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     final saved = task.savedEvent;
     if (!mounted || !context.mounted) return;
     if (saved == null) {
-      if (!task.committed && task.isCurrent && occurrence != null) {
+      if (reopenDetailsOnCancel &&
+          !task.committed &&
+          task.isCurrent &&
+          occurrence != null) {
         await _openDetails(
           context,
           general,
@@ -2322,11 +2361,14 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
         isDismissible: canDismiss,
         enableDrag: canDismiss,
         maxWidth: appSheetWidthCompact,
-        builder: (sheetContext) => _MoreGeneralOccurrencesSheet(
-          occurrences: occurrences,
-          contextDate: contextDate,
-          onOccurrenceTap: (occurrence, anchor) => unawaited(
-            _openDetails(context, general, occurrence, anchorContext: anchor),
+        builder: (sheetContext) => _GeneralOccurrenceActionScope(
+          actions: _occurrenceActions!,
+          child: _MoreGeneralOccurrencesSheet(
+            occurrences: occurrences,
+            contextDate: contextDate,
+            onOccurrenceTap: (occurrence, anchor) => unawaited(
+              _openDetails(context, general, occurrence, anchorContext: anchor),
+            ),
           ),
         ),
       );

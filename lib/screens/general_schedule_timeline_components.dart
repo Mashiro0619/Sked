@@ -299,7 +299,7 @@ class _AllDayChip extends StatelessWidget {
         width: selected ? 2 : 0.8,
       ),
     );
-    return Padding(
+    final chip = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 3),
       child: SkedTooltip(
         message: occurrence.event.title,
@@ -340,6 +340,11 @@ class _AllDayChip extends StatelessWidget {
           ),
         ),
       ),
+    );
+    return _GeneralOccurrenceMenu(
+      occurrence: occurrence,
+      onView: onTap,
+      child: chip,
     );
   }
 }
@@ -663,7 +668,7 @@ class _OccurrenceCard extends StatelessWidget {
       color: detailColor,
       height: 1.05,
     );
-    return Material(
+    final card = Material(
       key: ValueKey(
         'general-timed-occurrence-'
         '${occurrence.event.id}-${occurrence.start.toIso8601String()}',
@@ -751,6 +756,11 @@ class _OccurrenceCard extends StatelessWidget {
                 ),
         ),
       ),
+    );
+    return _GeneralOccurrenceMenu(
+      occurrence: occurrence,
+      onView: onTap,
+      child: card,
     );
   }
 }

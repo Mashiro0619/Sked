@@ -1938,7 +1938,7 @@ class _MonthAgendaTile extends StatelessWidget {
           )
         : null;
 
-    return Material(
+    final tile = Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(10),
       clipBehavior: Clip.antiAlias,
@@ -1990,6 +1990,11 @@ class _MonthAgendaTile extends StatelessWidget {
           ),
         ),
       ),
+    );
+    return _GeneralOccurrenceMenu(
+      occurrence: occurrence,
+      onView: onTap,
+      child: tile,
     );
   }
 }

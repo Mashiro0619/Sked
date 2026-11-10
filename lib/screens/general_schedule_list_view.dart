@@ -139,7 +139,7 @@ class _GeneralListOccurrenceTile extends StatelessWidget {
         : null;
 
     if (WorkbenchChromeMetrics.of(context).desktop) {
-      return LayoutBuilder(
+      final tile = LayoutBuilder(
         builder: (context, constraints) {
           final timeWidth = compactPanel ? 88.0 : 104.0;
           const locationWidth = 150.0;
@@ -286,6 +286,11 @@ class _GeneralListOccurrenceTile extends StatelessWidget {
             ),
           );
         },
+      );
+      return _GeneralOccurrenceMenu(
+        occurrence: occurrence,
+        onView: onTap,
+        child: tile,
       );
     }
     return Padding(

@@ -1,5 +1,6 @@
 import 'sked_detail_row.dart';
 import 'sked_task_actions.dart';
+import 'sked_task_session.dart';
 import 'sked_task_body.dart';
 import 'sked_task_header.dart';
 import 'sked_confirmation_dialog.dart';
@@ -17,6 +18,114 @@ import 'general_event_edit_flow.dart';
 import 'ui_command.dart';
 import 'workbench_chrome_metrics.dart';
 import 'workspace_view_panel.dart';
+
+Future<GeneralEventEditScope?> showGeneralEventDeleteScopeDialog(
+  BuildContext context,
+  GeneralEventOccurrence occurrence, {
+  bool allowThis = true,
+  bool allowFuture = true,
+  bool allowAll = true,
+  ValueChanged<ModalRoute<dynamic>?>? onChildRouteChanged,
+  SkedTaskSession? session,
+}) {
+  final event = occurrence.event;
+  final isRepeating = event.recurrenceRule.isRepeating;
+  return showExpressiveDialog<GeneralEventEditScope>(
+    context: context,
+    session: session,
+    waitForTransitionComplete: true,
+    builder: (dialogContext) {
+      onChildRouteChanged?.call(ModalRoute.of(dialogContext));
+      final l10n = AppLocalizations.of(dialogContext);
+      var popped = false;
+      void popWith([GeneralEventEditScope? action]) {
+        if (popped) return;
+        popped = true;
+        Navigator.of(dialogContext).pop(action);
+      }
+
+      if (!isRepeating) {
+        return SkedConfirmationDialog(
+          key: const ValueKey('general-event-delete-dialog'),
+          title: Text(l10n.deleteEventTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.deleteEventConfirmation),
+              const SizedBox(height: 8),
+              Text(
+                event.title,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(dialogContext).textTheme.titleSmall,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: popWith, child: Text(l10n.cancel)),
+            FilledButton(
+              key: const ValueKey('general-event-confirm-delete'),
+              onPressed: () => popWith(GeneralEventEditScope.thisOccurrence),
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(dialogContext).colorScheme.error,
+                foregroundColor: Theme.of(dialogContext).colorScheme.onError,
+              ),
+              child: Text(l10n.delete),
+            ),
+          ],
+        );
+      }
+      return SkedConfirmationDialog(
+        key: const ValueKey('general-event-delete-scope-dialog'),
+        title: Text(l10n.deleteRecurringEventTitle),
+        contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        content: ExpressiveDialogContent(
+          maxWidth: 360,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                child: Text(
+                  event.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(dialogContext).textTheme.bodyMedium,
+                ),
+              ),
+              if (allowThis)
+                ExpressiveDialogOption(
+                  key: const ValueKey('general-event-delete-this'),
+                  leading: const Icon(Icons.delete_outline),
+                  title: Text(l10n.deleteThisOccurrence),
+                  onTap: () => popWith(GeneralEventEditScope.thisOccurrence),
+                ),
+              if (occurrence.sequence > 0 && allowFuture)
+                ExpressiveDialogOption(
+                  key: const ValueKey(
+                    'general-event-delete-this-and-following',
+                  ),
+                  leading: const Icon(Icons.delete_sweep_outlined),
+                  title: Text(l10n.deleteFutureOccurrences),
+                  onTap: () => popWith(GeneralEventEditScope.thisAndFollowing),
+                ),
+              if (allowAll)
+                ExpressiveDialogOption(
+                  key: const ValueKey('general-event-delete-entire-series'),
+                  leading: const Icon(Icons.delete_forever_outlined),
+                  title: Text(l10n.deleteAllOccurrences),
+                  onTap: () => popWith(GeneralEventEditScope.entireSeries),
+                ),
+            ],
+          ),
+        ),
+        actions: [TextButton(onPressed: popWith, child: Text(l10n.cancel))],
+      );
+    },
+  );
+}
 
 class GeneralEventDetailsSheet extends StatefulWidget {
   const GeneralEventDetailsSheet({
@@ -135,9 +244,9 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
       return;
     }
     final action = switch (choice) {
-      _DeleteEventAction.thisOccurrence => widget.onDeleteThis,
-      _DeleteEventAction.thisAndFollowing => widget.onDeleteFuture,
-      _DeleteEventAction.entireSeries => widget.onDeleteAll,
+      GeneralEventEditScope.thisOccurrence => widget.onDeleteThis,
+      GeneralEventEditScope.thisAndFollowing => widget.onDeleteFuture,
+      GeneralEventEditScope.entireSeries => widget.onDeleteAll,
       null => null,
     };
     if (action == null) {
@@ -154,106 +263,15 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
     }
   }
 
-  Future<_DeleteEventAction?> _showDeleteDialog() {
-    final event = widget.occurrence.event;
-    final isRepeating = event.recurrenceRule.isRepeating;
-    return showExpressiveDialog<_DeleteEventAction>(
-      context: context,
-      waitForTransitionComplete: true,
-      builder: (dialogContext) {
-        widget.onChildRouteChanged?.call(ModalRoute.of(dialogContext));
-        final l10n = AppLocalizations.of(dialogContext);
-        var popped = false;
-        void popWith([_DeleteEventAction? action]) {
-          if (popped) return;
-          popped = true;
-          Navigator.of(dialogContext).pop(action);
-        }
-
-        if (!isRepeating) {
-          return SkedConfirmationDialog(
-            key: const ValueKey('general-event-delete-dialog'),
-            title: Text(l10n.deleteEventTitle),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(l10n.deleteEventConfirmation),
-                const SizedBox(height: 8),
-                Text(
-                  event.title,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(dialogContext).textTheme.titleSmall,
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(onPressed: popWith, child: Text(l10n.cancel)),
-              FilledButton(
-                key: const ValueKey('general-event-confirm-delete'),
-                onPressed: () => popWith(_DeleteEventAction.thisOccurrence),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Theme.of(dialogContext).colorScheme.error,
-                  foregroundColor: Theme.of(dialogContext).colorScheme.onError,
-                ),
-                child: Text(l10n.delete),
-              ),
-            ],
-          );
-        }
-        return SkedConfirmationDialog(
-          key: const ValueKey('general-event-delete-scope-dialog'),
-          title: Text(l10n.deleteRecurringEventTitle),
-          contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          content: ExpressiveDialogContent(
-            maxWidth: 360,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                  child: Text(
-                    event.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(dialogContext).textTheme.bodyMedium,
-                  ),
-                ),
-                if (widget.onDeleteThis != null)
-                  ExpressiveDialogOption(
-                    key: const ValueKey('general-event-delete-this'),
-                    leading: const Icon(Icons.delete_outline),
-                    title: Text(l10n.deleteThisOccurrence),
-                    onTap: () => popWith(_DeleteEventAction.thisOccurrence),
-                  ),
-                if (widget.occurrence.sequence > 0 &&
-                    widget.onDeleteFuture != null)
-                  ExpressiveDialogOption(
-                    key: const ValueKey(
-                      'general-event-delete-this-and-following',
-                    ),
-                    leading: const Icon(Icons.delete_sweep_outlined),
-                    title: Text(l10n.deleteFutureOccurrences),
-                    onTap: () => popWith(_DeleteEventAction.thisAndFollowing),
-                  ),
-                if (widget.onDeleteAll != null)
-                  ExpressiveDialogOption(
-                    key: const ValueKey('general-event-delete-entire-series'),
-                    leading: const Icon(Icons.delete_forever_outlined),
-                    title: Text(l10n.deleteAllOccurrences),
-                    onTap: () => popWith(_DeleteEventAction.entireSeries),
-                  ),
-              ],
-            ),
-          ),
-          actions: [TextButton(onPressed: popWith, child: Text(l10n.cancel))],
-        );
-      },
-    );
-  }
-
+  Future<GeneralEventEditScope?> _showDeleteDialog() =>
+      showGeneralEventDeleteScopeDialog(
+        context,
+        widget.occurrence,
+        allowThis: widget.onDeleteThis != null,
+        allowFuture: widget.onDeleteFuture != null,
+        allowAll: widget.onDeleteAll != null,
+        onChildRouteChanged: widget.onChildRouteChanged,
+      );
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -505,8 +523,6 @@ class _GeneralEventDetailsSheetState extends State<GeneralEventDetailsSheet> {
     return PopScope<void>(canPop: !_blocked, child: content);
   }
 }
-
-enum _DeleteEventAction { thisOccurrence, thisAndFollowing, entireSeries }
 
 class _EventIconButton extends StatelessWidget {
   const _EventIconButton({

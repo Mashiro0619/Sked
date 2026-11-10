@@ -10,6 +10,7 @@ class _EventListDetailsHost extends StatefulWidget {
     required this.maintenance,
     required this.settings,
     required this.pane,
+    required this.occurrenceActions,
     required this.isOwnerActive,
     required this.onEdit,
     required this.canEdit,
@@ -21,6 +22,7 @@ class _EventListDetailsHost extends StatefulWidget {
   final AppDataMaintenance maintenance;
   final SettingsViewState settings;
   final WorkspacePaneController pane;
+  final _GeneralOccurrenceActions occurrenceActions;
   final bool Function() isOwnerActive;
   final Future<void> Function(GeneralEventOccurrence, GeneralEventEditScope)
   onEdit;
@@ -558,7 +560,12 @@ class _EventListDetailsHostState extends State<_EventListDetailsHost>
           session.leaveRow(key);
         }
       },
-      child: builder(() => _activate(source, key)),
+      child: _GeneralOccurrenceMenu(
+        actions: widget.occurrenceActions,
+        occurrence: occurrence,
+        onView: () => _activate(source, key),
+        child: builder(() => _activate(source, key)),
+      ),
     );
   }
 
