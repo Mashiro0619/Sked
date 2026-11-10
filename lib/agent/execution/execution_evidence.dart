@@ -4,6 +4,7 @@ import '../../application/external_operation_coordinator.dart';
 import '../../application/mutation_draft.dart';
 import '../../application/operation_contracts.dart';
 import '../bridge/generated/api/execution_contracts.dart';
+import '../operations/tool_outcome.dart';
 
 const pythonExecutionAction = 'execution.python';
 
@@ -142,13 +143,18 @@ ExternalEffectResult executionEffect(ExecutionReceipt receipt) {
 /// Keep the ledger's effect evidence while reporting the actual tool outcome.
 Map<String, Object?> executionCommitResultJson(
   ExternalMutationCommitResult result,
-) {
-  final value = {
-    ...result.toJson(),
-    'completedAt': result.receipt.completedAtIso,
-  };
-  if (result.recoveryRequired) return value;
-  final execution = result.effect.details['execution'];
+) => projectExecutionResult({
+  ...result.toJson(),
+  'completedAt': result.receipt.completedAtIso,
+});
+
+Map<String, Object?> projectExecutionResult(Map<String, Object?> value) {
+  if (ToolOutcome.fromResult(value).kind ==
+      ToolOutcomeKind.needsReconciliation) {
+    return value;
+  }
+  final effect = value['effectResult'];
+  final execution = effect is Map ? effect['execution'] : null;
   if (execution is! Map<String, Object?>) return value;
   final terminal = execution['terminal'];
   final error = execution['error'];

@@ -157,7 +157,7 @@ class PlatformToolAdapters {
           scope: scope,
           approval: approval,
         );
-        return boundedToolReceipt(result.toJson());
+        return boundedToolReceipt(_host.describeCommitResult(result.toJson()));
       },
       required: ['planId'],
     );
@@ -170,7 +170,7 @@ class PlatformToolAdapters {
         final receipt = _external.status(_text(args, 'operationId'));
         return receipt == null
             ? {'status': 'notRecorded', 'operationId': args['operationId']}
-            : boundedToolReceipt(receipt.result);
+            : boundedToolReceipt(_host.describeCommitResult(receipt.result));
       },
       required: ['operationId'],
     );
@@ -193,13 +193,15 @@ class PlatformToolAdapters {
           _unsupported('This action has no safe readback adapter.');
         }
         return boundedToolReceipt(
-          (await _external.reconcile(
-            operationId: operationId,
-            readBack: (operation) async =>
-                await readLegacyEffect?.call(operation) ??
-                await readBack(operation),
-            scope: scope,
-          )).toJson(),
+          _host.describeCommitResult(
+            (await _external.reconcile(
+              operationId: operationId,
+              readBack: (operation) async =>
+                  await readLegacyEffect?.call(operation) ??
+                  await readBack(operation),
+              scope: scope,
+            )).toJson(),
+          ),
         );
       },
       required: ['operationId'],

@@ -70,6 +70,8 @@ class ApplicationToolHost {
   final _internalTools = <String, (ToolDefinition, ApplicationToolAction)>{};
   final _preparations = <String, String>{};
   final _candidateDisposers = <String, void Function(String planId)>{};
+  final _externalResultProjectors =
+      <String, Map<String, Object?> Function(Map<String, Object?>)>{};
   final _readOnlyTools = <String>{};
   final _operations = const OperationExecutor();
   OperationPrepared? onOperationPrepared;
@@ -126,10 +128,12 @@ class ApplicationToolHost {
   /// The durable save remains committed even when a platform projection is
   /// pending, unavailable, or was superseded by another commit.
   Map<String, Object?> describeCommitResult(Map<String, Object?> result) {
+    if (result['kind'] == 'external') {
+      return _externalResultProjectors[result['action']]?.call(result) ??
+          result;
+    }
     final operationId = result['operationId'];
-    if (result['status'] != 'committed' ||
-        result['kind'] == 'external' ||
-        operationId is! String) {
+    if (result['status'] != 'committed' || operationId is! String) {
       return result;
     }
     return {
@@ -166,6 +170,18 @@ class ApplicationToolHost {
       List.unmodifiable(_tools.values.map((tool) => tool.$1));
 
   bool isReadOnlyTool(String name) => _readOnlyTools.contains(name);
+
+  /// Owners interpret their process outcome without rewriting durable effects.
+  /// Execution, status queries and recovery share the same projection.
+  void registerExternalResultProjector(
+    String action,
+    Map<String, Object?> Function(Map<String, Object?>) project,
+  ) {
+    if (_externalResultProjectors.containsKey(action)) {
+      throw StateError('Duplicate external result projector: $action');
+    }
+    _externalResultProjectors[action] = project;
+  }
 
   void registerCandidateDisposer(
     String commitTool,

@@ -23,7 +23,8 @@ import 'connection/agent_connection_manager.dart';
 import 'connection/agent_connection_diagnostics.dart';
 import 'connection/agent_endpoint.dart';
 import 'execution/agent_execution_coordinator.dart';
-import 'execution/execution_evidence.dart' show pythonExecutionAction;
+import 'execution/execution_evidence.dart'
+    show projectExecutionResult, pythonExecutionAction;
 import 'conversations/conversation_models.dart';
 import 'knowledge/knowledge_models.dart';
 import 'provider/provider.dart';
@@ -161,6 +162,10 @@ class AgentApplication extends ChangeNotifier {
         await knowledge.initialize();
         return knowledge.captureSkillSnapshot();
       },
+    );
+    tools.registerExternalResultProjector(
+      pythonExecutionAction,
+      projectExecutionResult,
     );
     platformTools = registerPlatformTools(
       tools,
