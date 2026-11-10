@@ -128,7 +128,7 @@ class ExternalMutationCommitResult {
 
   Map<String, Object?> toJson() => {
     ...receipt.result,
-    'status': !receiptFinalized ? 'partial' : _status(effect.state),
+    'status': !receiptFinalized ? 'partial' : _status(effect),
     'effectStatus': effect.state.name,
     'dataStatus': effect.dataStatus.name,
     'effectResult': effect.details,
@@ -138,6 +138,23 @@ class ExternalMutationCommitResult {
     'replayed': replayed,
     'stoppedAfterCommit': stoppedAfterCommit,
   };
+}
+
+/// Projects a settled pre-effect cancellation, including older saved receipts.
+/// Incomplete settlement and uncertain effects retain their recovery status.
+Map<String, Object?> projectExternalOperationResult(
+  Map<String, Object?> result,
+) {
+  if (result['kind'] != 'external' ||
+      result['status'] != 'failed' ||
+      result['effectStatus'] != ExternalEffectState.failed.name ||
+      result['dataStatus'] != ExternalDataState.unchanged.name ||
+      result['receiptFinalized'] == false ||
+      result['recoveryRequired'] == true ||
+      !_cancelledBeforeEffect(result['effectResult'])) {
+    return result;
+  }
+  return {...result, 'status': 'cancelled'};
 }
 
 /// Journals a host-defined side-store/platform action through AppSession.
@@ -544,7 +561,7 @@ class ExternalOperationCoordinator {
         completedAtIso: _clock().toUtc().toIso8601String(),
         result: {
           ...pending.result,
-          'status': _status(observed.state),
+          'status': _status(observed),
           'effectStatus': observed.state.name,
           'dataStatus': observed.dataStatus.name,
           'effectResult': observed.details,
@@ -747,9 +764,18 @@ ExternalEffectResult _unknown() => ExternalEffectResult(
   details: const {'code': 'effectOutcomeUnknown'},
 );
 
-String _status(ExternalEffectState state) => switch (state) {
+bool _cancelledBeforeEffect(Object? details) =>
+    details is Map &&
+    details['code'] == OperationErrorCode.cancelled.name &&
+    details['effectStarted'] == false;
+
+String _status(ExternalEffectResult effect) => switch (effect.state) {
   ExternalEffectState.pending => 'effectsPending',
   ExternalEffectState.applied => 'applied',
+  ExternalEffectState.failed
+      when effect.dataStatus == ExternalDataState.unchanged &&
+          _cancelledBeforeEffect(effect.details) =>
+    'cancelled',
   ExternalEffectState.failed => 'failed',
   ExternalEffectState.unknown => 'outcomeUnknown',
 };

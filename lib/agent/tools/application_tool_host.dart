@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 import '../../application/agenda_queries.dart';
+import '../../application/external_operation_coordinator.dart'
+    show projectExternalOperationResult;
 import '../../application/mutation_coordinator.dart';
 import '../../application/operation_contracts.dart';
 import '../../application/resource_queries.dart';
@@ -130,8 +132,9 @@ class ApplicationToolHost {
   /// pending, unavailable, or was superseded by another commit.
   Map<String, Object?> describeCommitResult(Map<String, Object?> result) {
     if (result['kind'] == 'external') {
-      return _externalResultProjectors[result['action']]?.call(result) ??
-          result;
+      final projected = projectExternalOperationResult(result);
+      return _externalResultProjectors[result['action']]?.call(projected) ??
+          projected;
     }
     final operationId = result['operationId'];
     if (result['status'] != 'committed' || operationId is! String) {

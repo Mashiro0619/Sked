@@ -74,11 +74,15 @@ class RustAgentOperationInspector {
       if (request.owner == view.ViewOperationStore.external_) {
         final recovered = await reconcileExternal?.call(id);
         if (recovered != null) {
-          return {...recovered, 'operationId': id, 'recovered': true};
+          return {
+            ...projectExternalOperationResult(recovered),
+            'operationId': id,
+            'recovered': true,
+          };
         }
       }
       return {
-        ...receipt.result,
+        ...projectExternalOperationResult(receipt.result),
         'operationId': receipt.operationId,
         'completedAt': receipt.completedAtIso,
         'replayed': true,
