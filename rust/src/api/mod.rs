@@ -16,7 +16,7 @@ use crate::frb_generated::StreamSink;
 use crate::{model_client::RigModelClient, storage::StorageWorker};
 use crate::{
     runtime::{RuntimeEvent, RuntimeManager, ToolDescriptor},
-    storage::{StorageError, StorageHandle, models as stored},
+    storage::{StorageError, models as stored, services::PersistenceService},
 };
 use contracts::*;
 use default_profile::DefaultAgentProfile;
@@ -883,7 +883,7 @@ impl AgentCore {
         self.profile.shutdown(except).await
     }
 
-    fn storage(&self) -> StorageHandle {
+    fn storage(&self) -> PersistenceService {
         self.manager.storage()
     }
     fn resync(&self) {

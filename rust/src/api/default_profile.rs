@@ -13,15 +13,14 @@ use crate::{
         PluginSpec, ServiceDefinition,
     },
     runtime::{RuntimeManager, ToolDescriptor},
-    storage::{StorageHandle, StorageWorker},
+    storage::services::{DefaultPersistencePlugin, PERSISTENCE_SERVICE as STORAGE},
 };
 use async_trait::async_trait;
 use serde_json::{Value, json};
-use std::{collections::HashSet, path::PathBuf, sync::Arc};
+use std::{collections::HashSet, sync::Arc};
 use tokio::sync::{broadcast, watch};
 use tokio_util::sync::CancellationToken;
 
-const STORAGE: ServiceDefinition<StorageHandle> = ServiceDefinition::new("sked.storage", 1);
 const HOST: ServiceDefinition<BridgeHost> = ServiceDefinition::new("sked.business-host", 1);
 const MODEL: ServiceDefinition<RigModelClient> = ServiceDefinition::new("sked.model", 1);
 const RUNTIME: ServiceDefinition<RuntimeManager> = ServiceDefinition::new("sked.runtime", 1);
@@ -61,7 +60,7 @@ impl DefaultAgentProfile {
             plugins: vec![
                 PluginSpec::new(
                     "default.storage",
-                    Arc::new(StoragePlugin),
+                    Arc::new(DefaultPersistencePlugin),
                     json!({"directory": config.data_directory}),
                 ),
                 PluginSpec::new(
@@ -143,43 +142,6 @@ impl DefaultAgentProfile {
             .shutdown()
             .await
             .map_err(|error| error.to_string())
-    }
-}
-
-struct StoragePlugin;
-
-#[async_trait]
-impl Plugin for StoragePlugin {
-    fn descriptor(&self) -> PluginDescriptor {
-        PluginDescriptor {
-            id: "sked.default.storage",
-            contract_version: 1,
-            provides: vec![STORAGE.key()],
-            dependencies: vec![],
-        }
-    }
-
-    async fn setup(&self, context: PluginContext) -> Result<(), PluginError> {
-        let root = context
-            .config()
-            .get("directory")
-            .and_then(Value::as_str)
-            .ok_or_else(|| PluginError::new("Storage provider requires its data directory"))?;
-        let root = PathBuf::from(root);
-        let worker = tokio::task::spawn_blocking(move || StorageWorker::open(root))
-            .await
-            .map_err(|error| PluginError::new(error.to_string()))?
-            .map_err(|error| PluginError::new(error.to_string()))?;
-        let handle = worker.handle();
-        context.on_dispose(move || {
-            Box::pin(async move {
-                tokio::task::spawn_blocking(move || worker.shutdown())
-                    .await
-                    .map_err(|error| PluginError::new(error.to_string()))?
-                    .map_err(|error| PluginError::new(error.to_string()))
-            })
-        })?;
-        context.provide(STORAGE, handle)
     }
 }
 

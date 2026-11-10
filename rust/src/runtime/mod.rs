@@ -36,7 +36,7 @@ use uuid::Uuid;
 
 use crate::{
     model_client::{ConnectionConfig, ModelEvent, ModelRunResult, RigModelClient},
-    storage::{ConversationState, StorageError, StorageHandle, models::*},
+    storage::{ConversationState, StorageError, models::*, services::PersistenceService},
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -63,7 +63,7 @@ pub struct RuntimeManager {
 }
 
 struct ManagerInner {
-    storage: StorageHandle,
+    storage: PersistenceService,
     host: SharedHost,
     model_client: RigModelClient,
     sessions: Mutex<HashMap<String, Arc<Mutex<Session>>>>,
@@ -133,7 +133,12 @@ pub(crate) fn new_id() -> String {
 }
 
 impl RuntimeManager {
-    pub fn new(storage: StorageHandle, host: SharedHost, model_client: RigModelClient) -> Self {
+    pub fn new(
+        storage: impl Into<PersistenceService>,
+        host: SharedHost,
+        model_client: RigModelClient,
+    ) -> Self {
+        let storage = storage.into();
         let (events, _) = broadcast::channel(1024);
         Self { inner: Arc::new(ManagerInner { storage, host, model_client, sessions: Mutex::new(HashMap::new()), cache_owners: StdMutex::new(HashSet::new()), tools: StdMutex::new(Vec::new()), preamble: StdMutex::new("You are Sked's task assistant. Use the available tools for current application facts. Follow the user's permission mode. A tool receipt determines whether an operation completed. Ask for missing information with ask_user and maintain a plan with update_plan when useful.".into()), events, shutdown: CancellationToken::new(), auto_title: AtomicBool::new(true),
 #[cfg(test)] fail_next_tool_record: AtomicBool::new(false) }) }
@@ -142,7 +147,7 @@ impl RuntimeManager {
     pub fn subscribe(&self) -> broadcast::Receiver<RuntimeEvent> {
         self.inner.events.subscribe()
     }
-    pub fn storage(&self) -> StorageHandle {
+    pub fn storage(&self) -> PersistenceService {
         self.inner.storage.clone()
     }
     pub fn set_tools(&self, tools: Vec<ToolDescriptor>) {

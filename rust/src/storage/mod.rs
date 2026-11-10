@@ -11,6 +11,7 @@ mod journal;
 mod knowledge;
 pub mod models;
 mod projection;
+pub mod services;
 mod sqlite;
 pub mod view;
 mod worker;
