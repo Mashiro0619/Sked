@@ -904,12 +904,34 @@ impl RuntimeManager {
             }
         }
         let mut seen = HashSet::new();
-        for question in &questions {
-            if question.id.is_empty() || question.question.is_empty() || !seen.insert(&question.id)
-            {
-                return Err(RuntimeError::Invalid(
-                    "questions: 问题标识须非空且互不重复，问题正文不能为空".into(),
-                ));
+        for (question_index, question) in questions.iter().enumerate() {
+            if question.id.trim().is_empty() || !seen.insert(&question.id) {
+                return Err(RuntimeError::Invalid(format!(
+                    "questions[{question_index}].id: 问题标识须非空且互不重复"
+                )));
+            }
+            if question.question.trim().is_empty() {
+                return Err(RuntimeError::Invalid(format!(
+                    "questions[{question_index}].question: 问题正文不能为空"
+                )));
+            }
+            let mut option_ids = HashSet::new();
+            for (option_index, option) in question.options.iter().enumerate() {
+                if option.id.trim().is_empty() || !option_ids.insert(&option.id) {
+                    return Err(RuntimeError::Invalid(format!(
+                        "questions[{question_index}].options[{option_index}].id: 选项标识须非空且在当前问题内互不重复"
+                    )));
+                }
+                if option.label.trim().is_empty() {
+                    return Err(RuntimeError::Invalid(format!(
+                        "questions[{question_index}].options[{option_index}].label: 选项文字不能为空"
+                    )));
+                }
+                if !option.description.is_empty() && option.description.trim().is_empty() {
+                    return Err(RuntimeError::Invalid(format!(
+                        "questions[{question_index}].options[{option_index}].description: 选项说明不能只有空白"
+                    )));
+                }
             }
         }
         let snapshot = self.read(&accepted.conversation_id).await?;
