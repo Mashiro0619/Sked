@@ -8189,6 +8189,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Agent is not available on this platform yet.'**
   String get agentUnsupportedPlatform;
+
+  /// No description provided for @agentFileAccessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'File access'**
+  String get agentFileAccessTitle;
+
+  /// No description provided for @agentFileAccessDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage access to shared storage and the files and folders you select with the system picker.'**
+  String get agentFileAccessDescription;
+
+  /// No description provided for @agentFileAccessAllFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'All files access'**
+  String get agentFileAccessAllFiles;
+
+  /// No description provided for @agentFileAccessStoragePermission.
+  ///
+  /// In en, this message translates to:
+  /// **'Storage access'**
+  String get agentFileAccessStoragePermission;
+
+  /// No description provided for @agentFileAccessChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading access status…'**
+  String get agentFileAccessChecking;
+
+  /// No description provided for @agentFileAccessManage.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage file access'**
+  String get agentFileAccessManage;
+
+  /// No description provided for @agentFileAccessPathHint.
+  ///
+  /// In en, this message translates to:
+  /// **'This permission covers shared storage. You can also select individual files or folders.'**
+  String get agentFileAccessPathHint;
+
+  /// No description provided for @agentFileAccessPickFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a file'**
+  String get agentFileAccessPickFile;
+
+  /// No description provided for @agentFileAccessPickDirectory.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a folder'**
+  String get agentFileAccessPickDirectory;
+
+  /// No description provided for @agentFileAccessSelections.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected files and folders'**
+  String get agentFileAccessSelections;
+
+  /// No description provided for @agentFileAccessEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No files or folders selected.'**
+  String get agentFileAccessEmpty;
+
+  /// No description provided for @agentFileAccessReadWrite.
+  ///
+  /// In en, this message translates to:
+  /// **'Read and write'**
+  String get agentFileAccessReadWrite;
+
+  /// No description provided for @agentFileAccessReadOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Read only'**
+  String get agentFileAccessReadOnly;
+
+  /// No description provided for @agentFileAccessWriteOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Write only'**
+  String get agentFileAccessWriteOnly;
+
+  /// No description provided for @agentFileAccessDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Not allowed'**
+  String get agentFileAccessDenied;
+
+  /// No description provided for @agentFileAccessUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Currently unavailable'**
+  String get agentFileAccessUnavailable;
+
+  /// No description provided for @agentFileAccessPersistent.
+  ///
+  /// In en, this message translates to:
+  /// **'Access saved'**
+  String get agentFileAccessPersistent;
+
+  /// No description provided for @agentFileAccessSessionOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Temporary access'**
+  String get agentFileAccessSessionOnly;
+
+  /// No description provided for @agentFileAccessRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from file access'**
+  String get agentFileAccessRemove;
+
+  /// No description provided for @agentFileAccessRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh status'**
+  String get agentFileAccessRefresh;
+
+  /// No description provided for @agentFileAccessFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not read or update file access. Try again.'**
+  String get agentFileAccessFailed;
 }
 
 class _AppLocalizationsDelegate

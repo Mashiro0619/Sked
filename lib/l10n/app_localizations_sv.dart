@@ -4613,4 +4613,70 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get agentUnsupportedPlatform =>
       'Agent is not available on this platform yet.';
+
+  @override
+  String get agentFileAccessTitle => 'File access';
+
+  @override
+  String get agentFileAccessDescription =>
+      'Manage access to shared storage and the files and folders you select with the system picker.';
+
+  @override
+  String get agentFileAccessAllFiles => 'All files access';
+
+  @override
+  String get agentFileAccessStoragePermission => 'Storage access';
+
+  @override
+  String get agentFileAccessChecking => 'Reading access status…';
+
+  @override
+  String get agentFileAccessManage => 'Manage file access';
+
+  @override
+  String get agentFileAccessPathHint =>
+      'This permission covers shared storage. You can also select individual files or folders.';
+
+  @override
+  String get agentFileAccessPickFile => 'Choose a file';
+
+  @override
+  String get agentFileAccessPickDirectory => 'Choose a folder';
+
+  @override
+  String get agentFileAccessSelections => 'Selected files and folders';
+
+  @override
+  String get agentFileAccessEmpty => 'No files or folders selected.';
+
+  @override
+  String get agentFileAccessReadWrite => 'Read and write';
+
+  @override
+  String get agentFileAccessReadOnly => 'Read only';
+
+  @override
+  String get agentFileAccessWriteOnly => 'Write only';
+
+  @override
+  String get agentFileAccessDenied => 'Not allowed';
+
+  @override
+  String get agentFileAccessUnavailable => 'Currently unavailable';
+
+  @override
+  String get agentFileAccessPersistent => 'Access saved';
+
+  @override
+  String get agentFileAccessSessionOnly => 'Temporary access';
+
+  @override
+  String get agentFileAccessRemove => 'Remove from file access';
+
+  @override
+  String get agentFileAccessRefresh => 'Refresh status';
+
+  @override
+  String get agentFileAccessFailed =>
+      'Could not read or update file access. Try again.';
 }

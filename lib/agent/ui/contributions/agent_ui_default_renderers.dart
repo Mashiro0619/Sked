@@ -284,6 +284,7 @@ class AgentSettingsDestinationData {
     required this.preferences,
     required this.skills,
     required this.memories,
+    this.files,
   });
 
   final bool platformSupported;
@@ -292,6 +293,7 @@ class AgentSettingsDestinationData {
   final Widget preferences;
   final Widget skills;
   final Widget memories;
+  final Widget? files;
 }
 
 class AgentSettingsDestinationView {
@@ -345,6 +347,13 @@ AgentSettingsDestinationView? buildAgentSettingsContribution(
         title: l.agentMemories,
         icon: Icons.psychology_outlined,
         page: data.memories,
+      ),
+    AgentUiRendererIds.files when data.files != null =>
+      AgentSettingsDestinationView(
+        key: const ValueKey('agent-settings-files'),
+        title: l.agentFileAccessTitle,
+        icon: Icons.folder_open_outlined,
+        page: data.files!,
       ),
     _ => null,
   };

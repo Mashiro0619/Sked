@@ -32,6 +32,11 @@ class AgentFileCoordinator {
   var _closed = false;
   Future<void>? _closing;
 
+  Future<FileResourceCapabilities> capabilities({
+    required OperationScope scope,
+    required FileResourceRef resource,
+  }) => _use(scope, (access) => access.handle.capabilities(resource: resource));
+
   Future<FileDirectoryPage> list({
     required OperationScope scope,
     required FileResourceRef directory,

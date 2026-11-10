@@ -26,6 +26,7 @@ import 'execution/agent_execution_coordinator.dart';
 import 'execution/execution_evidence.dart'
     show projectExecutionResult, pythonExecutionAction;
 import 'files/agent_file_coordinator.dart';
+import 'files/agent_file_access_bridge.dart';
 import 'files/file_evidence.dart' show fileWriteAction, projectFileResult;
 import 'conversations/conversation_models.dart';
 import 'knowledge/knowledge_models.dart';
@@ -124,6 +125,7 @@ class AgentApplication extends ChangeNotifier {
       external: external,
       isAvailable: () => platformSupported && _knowledgeAvailable(),
     );
+    fileAccess = AgentFileAccessBridge(canInteract: _knowledgeAvailable);
     uiContributions.replaceProfileOwner(
       AgentUiContributionOwner(
         lifetime: AgentUiContributionLifetime.profile,
@@ -187,7 +189,11 @@ class AgentApplication extends ChangeNotifier {
     tools.registerExternalResultProjector(fileWriteAction, projectFileResult);
     tools.registerCandidateDisposer('external.commit', files.discardPlan);
     platformTools.registerReadBack(fileWriteAction, files.readBack);
-    fileTools = FileToolAdapters(host: tools, files: files);
+    fileTools = FileToolAdapters(
+      host: tools,
+      files: files,
+      fileAccess: fileAccess,
+    );
     registerSchoolImportTools(tools);
     workflowTools = registerWorkflowTools(
       tools,
@@ -297,6 +303,7 @@ class AgentApplication extends ChangeNotifier {
   late final ExternalOperationCoordinator external;
   late final AgentExecutionCoordinator execution;
   late final AgentFileCoordinator files;
+  late final AgentFileAccessBridge fileAccess;
   late final PlatformToolAdapters platformTools;
   late final FileToolAdapters fileTools;
   late final WorkflowToolAdapters workflowTools;
@@ -853,6 +860,7 @@ class AgentApplication extends ChangeNotifier {
       );
       _nativeReady = null;
     }
+    await fileAccess.clearGrants();
   }
 
   void resumeAfterFailedDataClear() {
@@ -1053,6 +1061,7 @@ class AgentApplication extends ChangeNotifier {
     await historyMaintenance.close();
     await execution.close();
     await files.close();
+    await fileAccess.close();
     await nativeClient.shutdown();
     await businessHost.dispose();
     await runtime.dispose();

@@ -4318,6 +4318,69 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentUnsupportedPlatform => '此平台暂不支持 Agent。';
+
+  @override
+  String get agentFileAccessTitle => '文件访问';
+
+  @override
+  String get agentFileAccessDescription => '管理共享存储权限，以及你通过系统选择器授权的文件与目录。';
+
+  @override
+  String get agentFileAccessAllFiles => '所有文件访问';
+
+  @override
+  String get agentFileAccessStoragePermission => '存储访问';
+
+  @override
+  String get agentFileAccessChecking => '正在读取访问状态…';
+
+  @override
+  String get agentFileAccessManage => '管理文件访问';
+
+  @override
+  String get agentFileAccessPathHint => '此权限用于共享存储中的文件。还可以单独选择文件或目录。';
+
+  @override
+  String get agentFileAccessPickFile => '选择文件';
+
+  @override
+  String get agentFileAccessPickDirectory => '选择目录';
+
+  @override
+  String get agentFileAccessSelections => '已选择的文件与目录';
+
+  @override
+  String get agentFileAccessEmpty => '尚未选择文件或目录。';
+
+  @override
+  String get agentFileAccessReadWrite => '可读写';
+
+  @override
+  String get agentFileAccessReadOnly => '只读';
+
+  @override
+  String get agentFileAccessWriteOnly => '仅写入';
+
+  @override
+  String get agentFileAccessDenied => '未允许';
+
+  @override
+  String get agentFileAccessUnavailable => '当前无法访问';
+
+  @override
+  String get agentFileAccessPersistent => '已保存此授权';
+
+  @override
+  String get agentFileAccessSessionOnly => '临时访问';
+
+  @override
+  String get agentFileAccessRemove => '移除访问项';
+
+  @override
+  String get agentFileAccessRefresh => '刷新状态';
+
+  @override
+  String get agentFileAccessFailed => '无法读取或更新文件访问，请重试。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -8636,4 +8699,67 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentUnsupportedPlatform => '此平台暫不支援 Agent。';
+
+  @override
+  String get agentFileAccessTitle => '檔案存取';
+
+  @override
+  String get agentFileAccessDescription => '管理共用儲存空間權限，以及你透過系統選擇器授權的檔案與目錄。';
+
+  @override
+  String get agentFileAccessAllFiles => '所有檔案存取';
+
+  @override
+  String get agentFileAccessStoragePermission => '儲存空間存取';
+
+  @override
+  String get agentFileAccessChecking => '正在讀取存取狀態…';
+
+  @override
+  String get agentFileAccessManage => '管理檔案存取';
+
+  @override
+  String get agentFileAccessPathHint => '此權限用於共用儲存空間中的檔案。也可以單獨選擇檔案或目錄。';
+
+  @override
+  String get agentFileAccessPickFile => '選擇檔案';
+
+  @override
+  String get agentFileAccessPickDirectory => '選擇目錄';
+
+  @override
+  String get agentFileAccessSelections => '已選擇的檔案與目錄';
+
+  @override
+  String get agentFileAccessEmpty => '尚未選擇檔案或目錄。';
+
+  @override
+  String get agentFileAccessReadWrite => '可讀寫';
+
+  @override
+  String get agentFileAccessReadOnly => '唯讀';
+
+  @override
+  String get agentFileAccessWriteOnly => '僅寫入';
+
+  @override
+  String get agentFileAccessDenied => '未允許';
+
+  @override
+  String get agentFileAccessUnavailable => '目前無法存取';
+
+  @override
+  String get agentFileAccessPersistent => '已儲存此授權';
+
+  @override
+  String get agentFileAccessSessionOnly => '暫時存取';
+
+  @override
+  String get agentFileAccessRemove => '移除存取項目';
+
+  @override
+  String get agentFileAccessRefresh => '重新整理狀態';
+
+  @override
+  String get agentFileAccessFailed => '無法讀取或更新檔案存取，請重試。';
 }

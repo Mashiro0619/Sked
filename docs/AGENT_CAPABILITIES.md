@@ -97,7 +97,7 @@ Agent 纳入现有功能管理，使用一个开关控制启用与入口显示�
 | 学校站点 | 列表、详情、添加、改名/改 URL、删除、导入、导出、恢复内置列表 | [SchoolSiteService](../lib/services/school_site_service.dart)、[SchoolSite](../lib/models/school_site_models.dart)。站点持久保存稳定 ID，改名、改地址和排序不改变身份；旧数据迁移及选择恢复规则见[学校站点身份](SCHOOL_SITE_IDENTITIES.md)。Agent 变更继续使用来源版本绑定的句柄，不能用页面 index 执行并发删除。 |
 | 学校网页登录会话 | 查询可操作状态、退出本机学校网页会话、清理后重建页面 | [SchoolWebSessionService](../lib/services/school_web_session_service.dart)。本机 Cookie/缓存清理不等于注销远端学校全部会话。 |
 | 课表/日程/节次导入导出 | 准备候选、查看完整诊断、选择资源和追加/替换目标、应用、生成 JSON/ICS 文件产物 | `DataTransferController` 与 [ImportExportService](../lib/services/import_export_service.dart)。来源和目标显式固定；文件生成、写入用户选定位置、分享/外传是不同能力。 |
-| Windows 设备文件 | 目录分页、文件名与文本搜索、不可变内容读取、新建和版本保护修改 | `files.list/search/read/new/write` 使用已装配的系统文件 Provider。查询保留真实资源与版本，保存沿用统一审批和持久回执，冲突保留实际文件效果及恢复位置；详见[设备文件](AGENT_FILES.md)。 |
+| Windows／Android 设备文件 | 资源能力、目录分页、文件名与文本搜索、不可变内容读取、新建和版本保护修改 | `files.info/list/search/close_cursor/read/new/write` 使用系统文件 Provider；Android 的 `files.access` 读取权限与用户选取的真实 URI。保存沿用统一审批和持久回执，预览表达平台写入方式，结果保留实际效果和恢复位置；详见[设备文件](AGENT_FILES.md)。 |
 | 选择性备份 | 按对象生成 ZIP、读取备份清单和依赖、选择恢复、查询恢复进度及待恢复状态 | [AppBackupController](../lib/controllers/app_backup_controller.dart)与[选择性备份服务](../lib/backup/selective_backup_service.dart)共用应用维护门禁。主库、站点、设备偏好、知识、聊天和附件分别记录固定目标及阶段；未选对象保留，聊天只恢复历史，密钥与执行授权不导出。旧 JSON 进入同一选择页，兼容整体恢复 API 另行保留。 |
 | 应用数据清除 | 描述清除范围、执行清除和退出、回报实际清除/退出状态 | [AppDataClearCoordinator](../lib/services/app_data_clear_coordinator.dart)。涉及主存档、侧存储、学校网页、设备偏好与通知；不能只写一个空 AppData 后回报全部清除成功。 |
 | 恢复与维护 | 读取诊断、重试加载、导出受控恢复工件、按既有条件开始新存档、重建通知投影 | [AppLifecycle](../lib/controllers/app_lifecycle.dart)、`AppRepository` 及现有维护服务。只暴露语义动作，不允许改写恢复阶段、文件候选顺序或写门禁状态。 |

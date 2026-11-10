@@ -1,14 +1,37 @@
-use std::{fs::File, io::Read};
-
 use super::{
     BUFFER_SIZE, Cancellation, FileDirectoryPage, FileEntry, FileError, FileErrorCode, FileIssue,
-    FileKind, FileResourceRef, FileSearchHit, FileSearchPage, FileSearchRequest, Result, native,
-    snapshots::ordinary_entry,
+    FileKind, FileResourceRef, FileSearchHit, FileSearchPage, FileSearchRequest, Result,
+    collect_cleanup, native, with_cleanup_error,
 };
 
 pub(super) enum Cursor {
     Directory(DirectoryCursor),
     Search(SearchCursor),
+    #[cfg(target_os = "android")]
+    PendingClose(super::android_jni::PendingCloses),
+}
+
+impl Cursor {
+    pub fn close(&mut self) -> Result<()> {
+        match self {
+            Self::Directory(cursor) => close_directory(&mut cursor.reader),
+            Self::Search(cursor) => cursor.close(),
+            #[cfg(target_os = "android")]
+            Self::PendingClose(pending) => pending.close(),
+        }
+    }
+}
+
+fn close_directory(reader: &mut native::DirectoryReader) -> Result<()> {
+    #[cfg(target_os = "android")]
+    {
+        reader.close()
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = reader;
+        Ok(())
+    }
 }
 
 pub(super) struct DirectoryCursor {
@@ -17,8 +40,8 @@ pub(super) struct DirectoryCursor {
 }
 
 impl DirectoryCursor {
-    pub fn open(request: FileResourceRef) -> Result<Self> {
-        let reader = native::read_directory(&request)?;
+    pub fn open(request: FileResourceRef, cancellation: &Cancellation) -> Result<Self> {
+        let reader = native::read_directory_cancellable(&request, cancellation)?;
         Ok(Self { request, reader })
     }
 
@@ -89,7 +112,7 @@ impl Query {
 }
 
 struct TextReader {
-    file: File,
+    file: native::SourceReader,
     entry: FileEntry,
     buffer: Vec<u8>,
     position: usize,
@@ -100,18 +123,11 @@ struct TextReader {
 }
 
 impl TextReader {
-    fn open(entry: FileEntry) -> Result<Self> {
-        let file = native::open_read(&entry.resource)?;
-        let observed = ordinary_entry(&file)?;
-        if observed.version != entry.version {
-            return Err(FileError::new(
-                FileErrorCode::Conflict,
-                "The file changed between directory lookup and text search.",
-            ));
-        }
+    fn open(entry: FileEntry, cancellation: &Cancellation) -> Result<Self> {
+        let file = native::open_source(&entry.resource, cancellation)?;
         Ok(Self {
             file,
-            entry: observed,
+            entry,
             buffer: vec![0; BUFFER_SIZE],
             position: 0,
             filled: 0,
@@ -121,13 +137,17 @@ impl TextReader {
         })
     }
 
+    fn close(&mut self) -> Result<()> {
+        native::close_source(&mut self.file)
+    }
+
     fn next(
         &mut self,
         query: &Query,
         cancellation: &Cancellation,
     ) -> Result<Option<FileSearchHit>> {
         cancellation.check()?;
-        if ordinary_entry(&self.file)?.version != self.entry.version {
+        if native::source_entry(&self.file)?.version != self.entry.version {
             return Err(FileError::new(
                 FileErrorCode::Conflict,
                 "The file changed during text search.",
@@ -136,10 +156,10 @@ impl TextReader {
         loop {
             if self.position == self.filled {
                 cancellation.check()?;
-                self.filled = self.file.read(&mut self.buffer)?;
+                self.filled = native::source_read(&mut self.file, &mut self.buffer, cancellation)?;
                 self.position = 0;
                 if self.filled == 0 {
-                    if ordinary_entry(&self.file)?.version != self.entry.version {
+                    if native::source_entry(&self.file)?.version != self.entry.version {
                         return Err(FileError::new(
                             FileErrorCode::Conflict,
                             "The file changed during text search.",
@@ -186,15 +206,34 @@ pub(super) struct SearchCursor {
 }
 
 impl SearchCursor {
-    pub fn open(request: FileSearchRequest) -> Result<Self> {
+    pub fn open(request: FileSearchRequest, cancellation: &Cancellation) -> Result<Self> {
         let query = Query::new(&request.query)?;
-        let reader = native::read_directory(&request.root)?;
+        let reader = native::read_directory_cancellable(&request.root, cancellation)?;
         Ok(Self {
             request,
             query,
             directories: vec![reader],
             text: None,
         })
+    }
+
+    fn close(&mut self) -> Result<()> {
+        let mut result = Ok(());
+        if let Some(text) = &mut self.text {
+            match text.close() {
+                Ok(()) => self.text = None,
+                Err(error) => collect_cleanup(&mut result, Err(error)),
+            }
+        }
+        self.directories
+            .retain_mut(|directory| match close_directory(directory) {
+                Ok(()) => false,
+                Err(error) => {
+                    collect_cleanup(&mut result, Err(error));
+                    true
+                }
+            });
+        result
     }
 
     pub fn page(
@@ -216,9 +255,15 @@ impl SearchCursor {
                         page.hits.push(hit);
                         continue;
                     }
-                    Ok(None) => self.text = None,
+                    Ok(None) => {
+                        text.close()?;
+                        self.text = None;
+                    }
                     Err(error) if error.code == FileErrorCode::Cancelled => return Err(error),
                     Err(error) => {
+                        if let Err(cleanup) = text.close() {
+                            return Err(with_cleanup_error(error, cleanup));
+                        }
                         page.issues.push(FileIssue {
                             resource: text.entry.resource.clone(),
                             error,
@@ -234,6 +279,7 @@ impl SearchCursor {
             directory.verify_identity()?;
             let entry = match directory.next() {
                 None => {
+                    close_directory(directory)?;
                     self.directories.pop();
                     continue;
                 }
@@ -277,20 +323,27 @@ impl SearchCursor {
                         ),
                     });
                 } else {
-                    match native::read_directory(&entry.resource) {
+                    match native::read_directory_cancellable(&entry.resource, cancellation) {
                         Ok(reader)
                             if reader.directory.version.resource_id
                                 == entry.version.resource_id =>
                         {
                             self.directories.push(reader)
                         }
-                        Ok(_) => page.issues.push(FileIssue {
-                            resource: entry.resource,
-                            error: FileError::new(
+                        Ok(mut reader) => {
+                            let error = FileError::new(
                                 FileErrorCode::Conflict,
                                 "The directory changed before traversal.",
-                            ),
-                        }),
+                            );
+                            if let Err(cleanup) = close_directory(&mut reader) {
+                                self.directories.push(reader);
+                                return Err(with_cleanup_error(error, cleanup));
+                            }
+                            page.issues.push(FileIssue {
+                                resource: entry.resource,
+                                error,
+                            });
+                        }
                         Err(error) => page.issues.push(FileIssue {
                             resource: entry.resource,
                             error,
@@ -298,7 +351,7 @@ impl SearchCursor {
                     }
                 }
             } else if self.request.text && entry.kind == FileKind::File && !entry.is_link {
-                match TextReader::open(entry.clone()) {
+                match TextReader::open(entry.clone(), cancellation) {
                     Ok(text) => self.text = Some(text),
                     Err(error) => page.issues.push(FileIssue {
                         resource: entry.resource,

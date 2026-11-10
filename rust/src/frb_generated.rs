@@ -43,7 +43,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -762467158;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -621610595;
 
 // Section: executor
 
@@ -2507,6 +2507,67 @@ fn wire__crate__api__files__FileAccessHandle_cancel_impl(
                 })?;
                 std::result::Result::Ok(output_ok)
             })())
+        },
+    )
+}
+fn wire__crate__api__files__FileAccessHandle_capabilities_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "FileAccessHandle_capabilities",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<FileAccessHandle>,
+            >>::sse_decode(&mut deserializer);
+            let api_resource =
+                <crate::api::file_contracts::FileResourceRef>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, String>(
+                    (move || async move {
+                        let mut api_that_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_that, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => {
+                                    api_that_guard =
+                                        Some(api_that.lockable_decode_async_ref().await)
+                                }
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_that_guard = api_that_guard.unwrap();
+                        let output_ok = crate::api::files::FileAccessHandle::capabilities(
+                            &*api_that_guard,
+                            api_resource,
+                        )
+                        .await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
         },
     )
 }
@@ -5027,6 +5088,21 @@ impl SseDecode for crate::api::file_contracts::FileAvailability {
     }
 }
 
+impl SseDecode for crate::api::file_contracts::FileChildDestination {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_parent =
+            <crate::api::file_contracts::FileResourceRef>::sse_decode(deserializer);
+        let mut var_name = <String>::sse_decode(deserializer);
+        let mut var_mimeType = <String>::sse_decode(deserializer);
+        return crate::api::file_contracts::FileChildDestination {
+            parent: var_parent,
+            name: var_name,
+            mime_type: var_mimeType,
+        };
+    }
+}
+
 impl SseDecode for crate::api::file_contracts::FileDirectoryPage {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -5120,6 +5196,25 @@ impl SseDecode for crate::api::file_contracts::FileKind {
             1 => crate::api::file_contracts::FileKind::Directory,
             2 => crate::api::file_contracts::FileKind::Other,
             _ => unreachable!("Invalid variant for FileKind: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::file_contracts::FileResourceCapabilities {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_read = <bool>::sse_decode(deserializer);
+        let mut var_list = <bool>::sse_decode(deserializer);
+        let mut var_create = <bool>::sse_decode(deserializer);
+        let mut var_modify = <bool>::sse_decode(deserializer);
+        let mut var_writeGuarantees =
+            <Vec<crate::api::file_contracts::FileWriteGuarantee>>::sse_decode(deserializer);
+        return crate::api::file_contracts::FileResourceCapabilities {
+            read: var_read,
+            list: var_list,
+            create: var_create,
+            modify: var_modify,
+            write_guarantees: var_writeGuarantees,
         };
     }
 }
@@ -5252,6 +5347,33 @@ impl SseDecode for crate::api::file_contracts::FileVersion {
     }
 }
 
+impl SseDecode for crate::api::file_contracts::FileWriteEffect {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::file_contracts::FileWriteEffect::NotStarted,
+            1 => crate::api::file_contracts::FileWriteEffect::Observed,
+            2 => crate::api::file_contracts::FileWriteEffect::Unknown,
+            _ => unreachable!("Invalid variant for FileWriteEffect: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::file_contracts::FileWriteGuarantee {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::file_contracts::FileWriteGuarantee::HandleExclusive,
+            1 => crate::api::file_contracts::FileWriteGuarantee::ExclusiveCreate,
+            2 => crate::api::file_contracts::FileWriteGuarantee::OptimisticPathStream,
+            3 => crate::api::file_contracts::FileWriteGuarantee::ProviderStream,
+            _ => unreachable!("Invalid variant for FileWriteGuarantee: {}", inner),
+        };
+    }
+}
+
 impl SseDecode for crate::api::file_contracts::FileWriteIdentity {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -5272,21 +5394,28 @@ impl SseDecode for crate::api::file_contracts::FileWritePreview {
         let mut var_writeId = <String>::sse_decode(deserializer);
         let mut var_specDigest = <String>::sse_decode(deserializer);
         let mut var_target =
-            <crate::api::file_contracts::FileResourceRef>::sse_decode(deserializer);
+            <Option<crate::api::file_contracts::FileResourceRef>>::sse_decode(deserializer);
+        let mut var_destination =
+            <Option<crate::api::file_contracts::FileChildDestination>>::sse_decode(deserializer);
         let mut var_resolvedTarget =
-            <crate::api::file_contracts::FileResourceRef>::sse_decode(deserializer);
-        let mut var_parent = <crate::api::file_contracts::FileEntry>::sse_decode(deserializer);
+            <Option<crate::api::file_contracts::FileResourceRef>>::sse_decode(deserializer);
+        let mut var_parent =
+            <Option<crate::api::file_contracts::FileEntry>>::sse_decode(deserializer);
         let mut var_expected =
             <Option<crate::api::file_contracts::FileVersion>>::sse_decode(deserializer);
         let mut var_content = <crate::api::file_contracts::FileSnapshot>::sse_decode(deserializer);
+        let mut var_guarantee =
+            <crate::api::file_contracts::FileWriteGuarantee>::sse_decode(deserializer);
         return crate::api::file_contracts::FileWritePreview {
             write_id: var_writeId,
             spec_digest: var_specDigest,
             target: var_target,
+            destination: var_destination,
             resolved_target: var_resolvedTarget,
             parent: var_parent,
             expected: var_expected,
             content: var_content,
+            guarantee: var_guarantee,
         };
     }
 }
@@ -5297,9 +5426,12 @@ impl SseDecode for crate::api::file_contracts::FileWriteReceipt {
         let mut var_identity =
             <crate::api::file_contracts::FileWriteIdentity>::sse_decode(deserializer);
         let mut var_state = <crate::api::file_contracts::FileWriteState>::sse_decode(deserializer);
+        let mut var_effect =
+            <crate::api::file_contracts::FileWriteEffect>::sse_decode(deserializer);
+        let mut var_settled = <bool>::sse_decode(deserializer);
         let mut var_targetChanged = <Option<bool>>::sse_decode(deserializer);
         let mut var_target =
-            <crate::api::file_contracts::FileResourceRef>::sse_decode(deserializer);
+            <Option<crate::api::file_contracts::FileResourceRef>>::sse_decode(deserializer);
         let mut var_currentVersion =
             <Option<crate::api::file_contracts::FileVersion>>::sse_decode(deserializer);
         let mut var_originalSnapshot =
@@ -5311,6 +5443,8 @@ impl SseDecode for crate::api::file_contracts::FileWriteReceipt {
         return crate::api::file_contracts::FileWriteReceipt {
             identity: var_identity,
             state: var_state,
+            effect: var_effect,
+            settled: var_settled,
             target_changed: var_targetChanged,
             target: var_target,
             current_version: var_currentVersion,
@@ -5325,12 +5459,15 @@ impl SseDecode for crate::api::file_contracts::FileWriteRequest {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_target =
-            <crate::api::file_contracts::FileResourceRef>::sse_decode(deserializer);
+            <Option<crate::api::file_contracts::FileResourceRef>>::sse_decode(deserializer);
+        let mut var_destination =
+            <Option<crate::api::file_contracts::FileChildDestination>>::sse_decode(deserializer);
         let mut var_expected =
             <Option<crate::api::file_contracts::FileVersion>>::sse_decode(deserializer);
         let mut var_contentSnapshotId = <String>::sse_decode(deserializer);
         return crate::api::file_contracts::FileWriteRequest {
             target: var_target,
+            destination: var_destination,
             expected: var_expected,
             content_snapshot_id: var_contentSnapshotId,
         };
@@ -5345,7 +5482,8 @@ impl SseDecode for crate::api::file_contracts::FileWriteState {
             0 => crate::api::file_contracts::FileWriteState::NotStarted,
             1 => crate::api::file_contracts::FileWriteState::Published,
             2 => crate::api::file_contracts::FileWriteState::Conflict,
-            3 => crate::api::file_contracts::FileWriteState::Unknown,
+            3 => crate::api::file_contracts::FileWriteState::Failed,
+            4 => crate::api::file_contracts::FileWriteState::Unknown,
             _ => unreachable!("Invalid variant for FileWriteState: {}", inner),
         };
     }
@@ -5727,6 +5865,18 @@ impl SseDecode for Vec<crate::api::file_contracts::FileSearchHit> {
             ans_.push(<crate::api::file_contracts::FileSearchHit>::sse_decode(
                 deserializer,
             ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::file_contracts::FileWriteGuarantee> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::file_contracts::FileWriteGuarantee>::sse_decode(deserializer));
         }
         return ans_;
     }
@@ -6656,6 +6806,32 @@ impl SseDecode for Option<f64> {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         if (<bool>::sse_decode(deserializer)) {
             return Some(<f64>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::file_contracts::FileChildDestination> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(
+                <crate::api::file_contracts::FileChildDestination>::sse_decode(deserializer),
+            );
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::file_contracts::FileEntry> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::file_contracts::FileEntry>::sse_decode(
+                deserializer,
+            ));
         } else {
             return None;
         }
@@ -9465,94 +9641,100 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        43 => {
+        43 => wire__crate__api__files__FileAccessHandle_capabilities_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        44 => {
             wire__crate__api__files__FileAccessHandle_close_impl(port, ptr, rust_vec_len, data_len)
         }
-        44 => wire__crate__api__files__FileAccessHandle_close_cursor_impl(
+        45 => wire__crate__api__files__FileAccessHandle_close_cursor_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        45 => wire__crate__api__files__FileAccessHandle_discard_content_impl(
+        46 => wire__crate__api__files__FileAccessHandle_discard_content_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        46 => wire__crate__api__files__FileAccessHandle_finish_content_impl(
+        47 => wire__crate__api__files__FileAccessHandle_finish_content_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        47 => wire__crate__api__files__FileAccessHandle_inspect_impl(
+        48 => wire__crate__api__files__FileAccessHandle_inspect_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        48 => {
+        49 => {
             wire__crate__api__files__FileAccessHandle_list_impl(port, ptr, rust_vec_len, data_len)
         }
-        49 => wire__crate__api__files__FileAccessHandle_prepare_write_impl(
+        50 => wire__crate__api__files__FileAccessHandle_prepare_write_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        50 => wire__crate__api__files__FileAccessHandle_read_snapshot_impl(
+        51 => wire__crate__api__files__FileAccessHandle_read_snapshot_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        51 => {
+        52 => {
             wire__crate__api__files__FileAccessHandle_search_impl(port, ptr, rust_vec_len, data_len)
         }
-        52 => wire__crate__api__files__FileAccessHandle_snapshot_impl(
+        53 => wire__crate__api__files__FileAccessHandle_snapshot_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        53 => wire__crate__api__files__FileAccessHandle_snapshot_info_impl(
+        54 => wire__crate__api__files__FileAccessHandle_snapshot_info_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        59 => wire__crate__api__execution__PreparedExecutionHandle_start_once_impl(
+        60 => wire__crate__api__execution__PreparedExecutionHandle_start_once_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        63 => wire__crate__api__files__PreparedFileWriteHandle_start_once_impl(
+        64 => wire__crate__api__files__PreparedFileWriteHandle_start_once_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        66 => wire__crate__api__ui__UiContributionSubscription_watch_impl(
+        67 => wire__crate__api__ui__UiContributionSubscription_watch_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        67 => wire__crate__api__contracts__command_result_default_impl(
+        68 => wire__crate__api__contracts__command_result_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        68 => wire__crate__api__management_contracts__conversation_selection_default_impl(
+        69 => wire__crate__api__management_contracts__conversation_selection_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        69 => wire__crate__api__contracts__query_result_default_impl(
+        70 => wire__crate__api__contracts__query_result_default_impl(
             port,
             ptr,
             rust_vec_len,
@@ -9580,52 +9762,52 @@ fn pde_ffi_dispatcher_sync_impl(
             data_len,
         ),
         42 => wire__crate__api__files__FileAccessHandle_cancel_impl(ptr, rust_vec_len, data_len),
-        54 => wire__crate__api__execution__PreparedExecutionHandle_cancel_impl(
+        55 => wire__crate__api__execution__PreparedExecutionHandle_cancel_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        55 => wire__crate__api__execution__PreparedExecutionHandle_execution_id_impl(
+        56 => wire__crate__api__execution__PreparedExecutionHandle_execution_id_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        56 => wire__crate__api__execution__PreparedExecutionHandle_open_events_impl(
+        57 => wire__crate__api__execution__PreparedExecutionHandle_open_events_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        57 => wire__crate__api__execution__PreparedExecutionHandle_preview_impl(
+        58 => wire__crate__api__execution__PreparedExecutionHandle_preview_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        58 => wire__crate__api__execution__PreparedExecutionHandle_receipt_impl(
+        59 => wire__crate__api__execution__PreparedExecutionHandle_receipt_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        60 => wire__crate__api__files__PreparedFileWriteHandle_cancel_impl(
+        61 => wire__crate__api__files__PreparedFileWriteHandle_cancel_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        61 => wire__crate__api__files__PreparedFileWriteHandle_preview_impl(
+        62 => wire__crate__api__files__PreparedFileWriteHandle_preview_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        62 => wire__crate__api__files__PreparedFileWriteHandle_receipt_impl(
+        63 => wire__crate__api__files__PreparedFileWriteHandle_receipt_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        64 => wire__crate__api__files__PreparedFileWriteHandle_write_id_impl(
+        65 => wire__crate__api__files__PreparedFileWriteHandle_write_id_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        65 => {
+        66 => {
             wire__crate__api__ui__UiContributionSubscription_close_impl(ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
@@ -10722,6 +10904,28 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::file_contracts::FileAvailabil
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::file_contracts::FileChildDestination {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.parent.into_into_dart().into_dart(),
+            self.name.into_into_dart().into_dart(),
+            self.mime_type.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::file_contracts::FileChildDestination
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::file_contracts::FileChildDestination>
+    for crate::api::file_contracts::FileChildDestination
+{
+    fn into_into_dart(self) -> crate::api::file_contracts::FileChildDestination {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::file_contracts::FileDirectoryPage {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -10860,6 +11064,30 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::file_contracts::FileKind>
     for crate::api::file_contracts::FileKind
 {
     fn into_into_dart(self) -> crate::api::file_contracts::FileKind {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::file_contracts::FileResourceCapabilities {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.read.into_into_dart().into_dart(),
+            self.list.into_into_dart().into_dart(),
+            self.create.into_into_dart().into_dart(),
+            self.modify.into_into_dart().into_dart(),
+            self.write_guarantees.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::file_contracts::FileResourceCapabilities
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::file_contracts::FileResourceCapabilities>
+    for crate::api::file_contracts::FileResourceCapabilities
+{
+    fn into_into_dart(self) -> crate::api::file_contracts::FileResourceCapabilities {
         self
     }
 }
@@ -11046,6 +11274,51 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::file_contracts::FileVersion>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::file_contracts::FileWriteEffect {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::NotStarted => 0.into_dart(),
+            Self::Observed => 1.into_dart(),
+            Self::Unknown => 2.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::file_contracts::FileWriteEffect
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::file_contracts::FileWriteEffect>
+    for crate::api::file_contracts::FileWriteEffect
+{
+    fn into_into_dart(self) -> crate::api::file_contracts::FileWriteEffect {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::file_contracts::FileWriteGuarantee {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::HandleExclusive => 0.into_dart(),
+            Self::ExclusiveCreate => 1.into_dart(),
+            Self::OptimisticPathStream => 2.into_dart(),
+            Self::ProviderStream => 3.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::file_contracts::FileWriteGuarantee
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::file_contracts::FileWriteGuarantee>
+    for crate::api::file_contracts::FileWriteGuarantee
+{
+    fn into_into_dart(self) -> crate::api::file_contracts::FileWriteGuarantee {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::file_contracts::FileWriteIdentity {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -11074,10 +11347,12 @@ impl flutter_rust_bridge::IntoDart for crate::api::file_contracts::FileWritePrev
             self.write_id.into_into_dart().into_dart(),
             self.spec_digest.into_into_dart().into_dart(),
             self.target.into_into_dart().into_dart(),
+            self.destination.into_into_dart().into_dart(),
             self.resolved_target.into_into_dart().into_dart(),
             self.parent.into_into_dart().into_dart(),
             self.expected.into_into_dart().into_dart(),
             self.content.into_into_dart().into_dart(),
+            self.guarantee.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -11099,6 +11374,8 @@ impl flutter_rust_bridge::IntoDart for crate::api::file_contracts::FileWriteRece
         [
             self.identity.into_into_dart().into_dart(),
             self.state.into_into_dart().into_dart(),
+            self.effect.into_into_dart().into_dart(),
+            self.settled.into_into_dart().into_dart(),
             self.target_changed.into_into_dart().into_dart(),
             self.target.into_into_dart().into_dart(),
             self.current_version.into_into_dart().into_dart(),
@@ -11125,6 +11402,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::file_contracts::FileWriteRequ
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.target.into_into_dart().into_dart(),
+            self.destination.into_into_dart().into_dart(),
             self.expected.into_into_dart().into_dart(),
             self.content_snapshot_id.into_into_dart().into_dart(),
         ]
@@ -11149,7 +11427,8 @@ impl flutter_rust_bridge::IntoDart for crate::api::file_contracts::FileWriteStat
             Self::NotStarted => 0.into_dart(),
             Self::Published => 1.into_dart(),
             Self::Conflict => 2.into_dart(),
-            Self::Unknown => 3.into_dart(),
+            Self::Failed => 3.into_dart(),
+            Self::Unknown => 4.into_dart(),
             _ => unreachable!(),
         }
     }
@@ -14599,6 +14878,15 @@ impl SseEncode for crate::api::file_contracts::FileAvailability {
     }
 }
 
+impl SseEncode for crate::api::file_contracts::FileChildDestination {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::file_contracts::FileResourceRef>::sse_encode(self.parent, serializer);
+        <String>::sse_encode(self.name, serializer);
+        <String>::sse_encode(self.mime_type, serializer);
+    }
+}
+
 impl SseEncode for crate::api::file_contracts::FileDirectoryPage {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -14674,6 +14962,20 @@ impl SseEncode for crate::api::file_contracts::FileKind {
                     unimplemented!("");
                 }
             },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::file_contracts::FileResourceCapabilities {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.read, serializer);
+        <bool>::sse_encode(self.list, serializer);
+        <bool>::sse_encode(self.create, serializer);
+        <bool>::sse_encode(self.modify, serializer);
+        <Vec<crate::api::file_contracts::FileWriteGuarantee>>::sse_encode(
+            self.write_guarantees,
             serializer,
         );
     }
@@ -14768,6 +15070,41 @@ impl SseEncode for crate::api::file_contracts::FileVersion {
     }
 }
 
+impl SseEncode for crate::api::file_contracts::FileWriteEffect {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::file_contracts::FileWriteEffect::NotStarted => 0,
+                crate::api::file_contracts::FileWriteEffect::Observed => 1,
+                crate::api::file_contracts::FileWriteEffect::Unknown => 2,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::file_contracts::FileWriteGuarantee {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::file_contracts::FileWriteGuarantee::HandleExclusive => 0,
+                crate::api::file_contracts::FileWriteGuarantee::ExclusiveCreate => 1,
+                crate::api::file_contracts::FileWriteGuarantee::OptimisticPathStream => 2,
+                crate::api::file_contracts::FileWriteGuarantee::ProviderStream => 3,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
 impl SseEncode for crate::api::file_contracts::FileWriteIdentity {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -14782,11 +15119,19 @@ impl SseEncode for crate::api::file_contracts::FileWritePreview {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.write_id, serializer);
         <String>::sse_encode(self.spec_digest, serializer);
-        <crate::api::file_contracts::FileResourceRef>::sse_encode(self.target, serializer);
-        <crate::api::file_contracts::FileResourceRef>::sse_encode(self.resolved_target, serializer);
-        <crate::api::file_contracts::FileEntry>::sse_encode(self.parent, serializer);
+        <Option<crate::api::file_contracts::FileResourceRef>>::sse_encode(self.target, serializer);
+        <Option<crate::api::file_contracts::FileChildDestination>>::sse_encode(
+            self.destination,
+            serializer,
+        );
+        <Option<crate::api::file_contracts::FileResourceRef>>::sse_encode(
+            self.resolved_target,
+            serializer,
+        );
+        <Option<crate::api::file_contracts::FileEntry>>::sse_encode(self.parent, serializer);
         <Option<crate::api::file_contracts::FileVersion>>::sse_encode(self.expected, serializer);
         <crate::api::file_contracts::FileSnapshot>::sse_encode(self.content, serializer);
+        <crate::api::file_contracts::FileWriteGuarantee>::sse_encode(self.guarantee, serializer);
     }
 }
 
@@ -14795,8 +15140,10 @@ impl SseEncode for crate::api::file_contracts::FileWriteReceipt {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <crate::api::file_contracts::FileWriteIdentity>::sse_encode(self.identity, serializer);
         <crate::api::file_contracts::FileWriteState>::sse_encode(self.state, serializer);
+        <crate::api::file_contracts::FileWriteEffect>::sse_encode(self.effect, serializer);
+        <bool>::sse_encode(self.settled, serializer);
         <Option<bool>>::sse_encode(self.target_changed, serializer);
-        <crate::api::file_contracts::FileResourceRef>::sse_encode(self.target, serializer);
+        <Option<crate::api::file_contracts::FileResourceRef>>::sse_encode(self.target, serializer);
         <Option<crate::api::file_contracts::FileVersion>>::sse_encode(
             self.current_version,
             serializer,
@@ -14816,7 +15163,11 @@ impl SseEncode for crate::api::file_contracts::FileWriteReceipt {
 impl SseEncode for crate::api::file_contracts::FileWriteRequest {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <crate::api::file_contracts::FileResourceRef>::sse_encode(self.target, serializer);
+        <Option<crate::api::file_contracts::FileResourceRef>>::sse_encode(self.target, serializer);
+        <Option<crate::api::file_contracts::FileChildDestination>>::sse_encode(
+            self.destination,
+            serializer,
+        );
         <Option<crate::api::file_contracts::FileVersion>>::sse_encode(self.expected, serializer);
         <String>::sse_encode(self.content_snapshot_id, serializer);
     }
@@ -14830,7 +15181,8 @@ impl SseEncode for crate::api::file_contracts::FileWriteState {
                 crate::api::file_contracts::FileWriteState::NotStarted => 0,
                 crate::api::file_contracts::FileWriteState::Published => 1,
                 crate::api::file_contracts::FileWriteState::Conflict => 2,
-                crate::api::file_contracts::FileWriteState::Unknown => 3,
+                crate::api::file_contracts::FileWriteState::Failed => 3,
+                crate::api::file_contracts::FileWriteState::Unknown => 4,
                 _ => {
                     unimplemented!("");
                 }
@@ -15136,6 +15488,16 @@ impl SseEncode for Vec<crate::api::file_contracts::FileSearchHit> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::file_contracts::FileSearchHit>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::file_contracts::FileWriteGuarantee> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::file_contracts::FileWriteGuarantee>::sse_encode(item, serializer);
         }
     }
 }
@@ -15841,6 +16203,26 @@ impl SseEncode for Option<f64> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <f64>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::file_contracts::FileChildDestination> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::file_contracts::FileChildDestination>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::file_contracts::FileEntry> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::file_contracts::FileEntry>::sse_encode(value, serializer);
         }
     }
 }

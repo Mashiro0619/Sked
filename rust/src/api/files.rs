@@ -19,18 +19,24 @@ use crate::files as runtime;
 impl AgentCore {
     #[flutter_rust_bridge::frb(sync)]
     pub fn file_availability(&self) -> FileAvailability {
-        let available = !self.closing.is_cancelled()
-            && self
-                .profile
+        let resource_kinds = if self.closing.is_cancelled() {
+            Vec::new()
+        } else {
+            self.profile
                 .file_service()
-                .is_some_and(|service| service.available());
+                .filter(|service| service.available())
+                .map(|service| {
+                    service
+                        .resource_kinds()
+                        .into_iter()
+                        .map(Into::into)
+                        .collect()
+                })
+                .unwrap_or_default()
+        };
         FileAvailability {
-            available,
-            resource_kinds: if available {
-                vec![FileResourceKind::WindowsPath]
-            } else {
-                Vec::new()
-            },
+            available: !resource_kinds.is_empty(),
+            resource_kinds,
         }
     }
 
@@ -79,6 +85,21 @@ pub struct FileAccessHandle {
 }
 
 impl FileAccessHandle {
+    pub async fn capabilities(
+        &self,
+        resource: FileResourceRef,
+    ) -> Result<FileResourceCapabilities, String> {
+        let _operation = self.admit()?;
+        let result = self
+            .state
+            .service
+            .capabilities(resource.into(), self.token())
+            .await
+            .map_err(file_error)?;
+        self.check_active()?;
+        Ok(result.into())
+    }
+
     pub async fn list(
         &self,
         directory: FileResourceRef,
@@ -90,7 +111,13 @@ impl FileAccessHandle {
         let result = self
             .state
             .service
-            .list(directory.into(), cursor.clone(), page_size, self.token())
+            .list_registered(
+                directory.into(),
+                cursor.clone(),
+                page_size,
+                self.token(),
+                self.cleanup_registration(),
+            )
             .await
             .map_err(file_error)?;
         self.keep_cursor(cursor.as_deref(), result.next_cursor.as_deref())
@@ -109,7 +136,13 @@ impl FileAccessHandle {
         let result = self
             .state
             .service
-            .search(request.into(), cursor.clone(), page_size, self.token())
+            .search_registered(
+                request.into(),
+                cursor.clone(),
+                page_size,
+                self.token(),
+                self.cleanup_registration(),
+            )
             .await
             .map_err(file_error)?;
         self.keep_cursor(cursor.as_deref(), result.next_cursor.as_deref())
@@ -122,7 +155,7 @@ impl FileAccessHandle {
         let result = self
             .state
             .service
-            .snapshot(source.into(), self.token())
+            .snapshot_registered(source.into(), self.token(), self.cleanup_registration())
             .await
             .map_err(file_error)?;
         self.check_active()?;
@@ -258,7 +291,7 @@ impl FileAccessHandle {
         let prepared = self
             .state
             .service
-            .prepare_write(request.into(), self.token())
+            .prepare_write_registered(request.into(), self.token(), self.cleanup_registration())
             .await
             .map_err(file_error)?;
         if let Err(error) = self.check_active() {
@@ -388,6 +421,22 @@ impl FileAccessHandle {
 
     fn token(&self) -> CancellationToken {
         self.state.cancellation.child_token()
+    }
+
+    fn cleanup_registration(&self) -> impl Fn(String) + Send + 'static {
+        let state = self.state.clone();
+        let operation = state.operations.token();
+        move |id| {
+            // Keep the underlying blocking job inside access.close(), even if
+            // its API waiter leaves before a first page or error is returned.
+            let _operation = &operation;
+            state
+                .resources
+                .lock()
+                .expect("file access resources mutex poisoned")
+                .cursors
+                .insert(id);
+        }
     }
 
     fn admit(&self) -> Result<TaskTrackerToken, String> {

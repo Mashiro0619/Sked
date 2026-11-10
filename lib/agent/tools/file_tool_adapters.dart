@@ -1,17 +1,25 @@
 import 'dart:convert';
 
+import 'package:flutter/services.dart' show PlatformException;
+
 import '../../application/operation_contracts.dart';
 import '../bridge/generated/api/file_contracts.dart';
 import '../files/agent_file_coordinator.dart';
+import '../files/agent_file_access_bridge.dart';
 import '../files/file_evidence.dart';
 import '../provider/provider_models.dart';
 import 'application_tool_host.dart';
 
 class FileToolAdapters {
-  FileToolAdapters({required this._host, required this._files});
+  FileToolAdapters({
+    required this._host,
+    required this._files,
+    required this._fileAccess,
+  });
 
   final ApplicationToolHost _host;
   final AgentFileCoordinator _files;
+  final AgentFileAccessBridge _fileAccess;
   Set<FileResourceKind> _resourceKinds = {};
   bool _registered = false;
 
@@ -34,6 +42,51 @@ class FileToolAdapters {
         'value': _string,
       },
     };
+    if (_fileAccess.isSupported) {
+      _add(
+        'files.access',
+        'Read the current Android storage permissions and real resources chosen with the system picker. To grant access, the user opens Settings > Agent > File access. This query does not open a permission prompt or picker.',
+        {},
+        [],
+        (args, scope) async {
+          _keys(args, {});
+          scope.checkActive();
+          try {
+            final status = await _fileAccess.status();
+            scope.checkActive();
+            return {
+              ...status.toJson(),
+              'authorizationEntry': 'Settings > Agent > File access',
+              'pathAccessScope': 'Shared storage permissions are shown here. Other application private directories remain subject to Android isolation.',
+            };
+          } on PlatformException catch (error) {
+            throw OperationProblem(
+              OperationErrorCode.storageFailure,
+              error.message ??
+                  'The current file permissions could not be read.',
+            );
+          }
+        },
+        readOnly: true,
+      );
+    }
+    _add(
+      'files.info',
+      'Read the current capabilities of a real file or directory. Use create/modify and writeGuarantees to determine the supported save behavior.',
+      {'resource': resource},
+      ['resource'],
+      (args, scope) async {
+        _keys(args, {'resource'});
+        final value = _resource(args['resource'], 'resource');
+        return {
+          'resource': fileResourceJson(value),
+          'capabilities': fileCapabilitiesJson(
+            await _files.capabilities(scope: scope, resource: value),
+          ),
+        };
+      },
+      readOnly: true,
+    );
     _add(
       'files.list',
       'Browse a real directory. Continue with nextCursor and the same directory; pageSize controls one page, not the total directory size. Close nextCursor with files.close_cursor when finished browsing.',
@@ -141,10 +194,21 @@ class FileToolAdapters {
       _add(
         create ? 'files.new' : 'files.write',
         create
-            ? 'Create a file only if the destination does not exist. Supply exactly one of text (UTF-8) or contentSnapshotId. Existing destinations are conflicts.'
-            : 'Replace the named file using the exact sourceVersion from files.read as expected. Supply exactly one of text (UTF-8) or contentSnapshotId. A changed identity or content is a conflict; the original file is retained at the returned recovery location.',
+            ? 'Create a file. Supply a path target, or destination with a real parent resource, name and mimeType. For document providers, use destination; the provider returns the new URI after creation. Supply exactly one of text (UTF-8) or contentSnapshotId. The preview reports the actual save guarantees.'
+            : 'Modify the original resource using the sourceVersion from files.read as expected. Supply exactly one of text (UTF-8) or contentSnapshotId. A changed source is a conflict. The preview states the platform save guarantees and the receipt reports actual effects and recovery resources.',
         {
           'target': resource,
+          if (create)
+            'destination': {
+              'type': 'object',
+              'additionalProperties': false,
+              'properties': {
+                'parent': resource,
+                'name': _string,
+                'mimeType': _string,
+              },
+              'required': ['parent', 'name', 'mimeType'],
+            },
           if (!create) 'expected': _versionSchema,
           'text': {'type': 'string'},
           'contentSnapshotId': _string,
@@ -152,7 +216,7 @@ class FileToolAdapters {
           // operation identity through its existing single-call executor.
           'operationId': _string,
         },
-        ['target', if (!create) 'expected'],
+        create ? [] : ['target', 'expected'],
         (args, scope) => _write(args, scope, create: create),
       );
     }
@@ -292,6 +356,7 @@ class FileToolAdapters {
   }) async {
     _keys(args, {
       'target',
+      if (create) 'destination',
       if (!create) 'expected',
       'text',
       'contentSnapshotId',
@@ -299,7 +364,22 @@ class FileToolAdapters {
     if (args.containsKey('text') == args.containsKey('contentSnapshotId')) {
       _invalid('Supply exactly one of text or contentSnapshotId.');
     }
-    final target = _resource(args['target'], 'target');
+    if (create &&
+        args.containsKey('target') == args.containsKey('destination')) {
+      _invalid('Supply exactly one of target or destination for a new file.');
+    }
+    final target = args.containsKey('target')
+        ? _resource(args['target'], 'target')
+        : null;
+    if (create && target?.kind == FileResourceKind.contentUri) {
+      _invalid('Create a document with destination parent, name and mimeType.');
+    }
+    if (!create && target == null) {
+      _invalid('target is required for a file write.');
+    }
+    final destination = args.containsKey('destination')
+        ? _destination(args['destination'])
+        : null;
     final expected = create ? null : _version(args['expected']);
     final text = args['text'];
     if (args.containsKey('text') && text is! String) {
@@ -315,10 +395,33 @@ class FileToolAdapters {
       scope: scope,
       request: FileWriteRequest(
         target: target,
+        destination: destination,
         expected: expected,
         contentSnapshotId: snapshot.id,
       ),
       textPreview: text as String?,
+    );
+  }
+
+  FileChildDestination _destination(Object? value) {
+    if (value is! Map<String, Object?>) {
+      _invalid('destination must identify a parent, name and MIME type.');
+    }
+    _keys(value, {'parent', 'name', 'mimeType'});
+    final name = value['name'];
+    if (name is! String ||
+        name.isEmpty ||
+        name == '.' ||
+        name == '..' ||
+        name.contains('/') ||
+        name.contains('\\') ||
+        name.contains('\u0000')) {
+      _invalid('destination.name must be a single nonempty file name.');
+    }
+    return FileChildDestination(
+      parent: _resource(value['parent'], 'destination.parent'),
+      name: name,
+      mimeType: _text(value, 'mimeType'),
     );
   }
 

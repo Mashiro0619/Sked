@@ -67,6 +67,7 @@ pub enum FileWriteState {
     NotStarted,
     Published,
     Conflict,
+    Failed,
     Unknown,
 }
 
@@ -76,6 +77,7 @@ impl From<internal::FileWriteState> for FileWriteState {
             internal::FileWriteState::NotStarted => Self::NotStarted,
             internal::FileWriteState::Published => Self::Published,
             internal::FileWriteState::Conflict => Self::Conflict,
+            internal::FileWriteState::Failed => Self::Failed,
             internal::FileWriteState::Unknown => Self::Unknown,
         }
     }
@@ -87,7 +89,65 @@ impl From<FileWriteState> for internal::FileWriteState {
             FileWriteState::NotStarted => Self::NotStarted,
             FileWriteState::Published => Self::Published,
             FileWriteState::Conflict => Self::Conflict,
+            FileWriteState::Failed => Self::Failed,
             FileWriteState::Unknown => Self::Unknown,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FileWriteGuarantee {
+    HandleExclusive,
+    ExclusiveCreate,
+    OptimisticPathStream,
+    ProviderStream,
+}
+
+impl From<internal::FileWriteGuarantee> for FileWriteGuarantee {
+    fn from(value: internal::FileWriteGuarantee) -> Self {
+        match value {
+            internal::FileWriteGuarantee::HandleExclusive => Self::HandleExclusive,
+            internal::FileWriteGuarantee::ExclusiveCreate => Self::ExclusiveCreate,
+            internal::FileWriteGuarantee::OptimisticPathStream => Self::OptimisticPathStream,
+            internal::FileWriteGuarantee::ProviderStream => Self::ProviderStream,
+        }
+    }
+}
+
+impl From<FileWriteGuarantee> for internal::FileWriteGuarantee {
+    fn from(value: FileWriteGuarantee) -> Self {
+        match value {
+            FileWriteGuarantee::HandleExclusive => Self::HandleExclusive,
+            FileWriteGuarantee::ExclusiveCreate => Self::ExclusiveCreate,
+            FileWriteGuarantee::OptimisticPathStream => Self::OptimisticPathStream,
+            FileWriteGuarantee::ProviderStream => Self::ProviderStream,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum FileWriteEffect {
+    NotStarted,
+    Observed,
+    Unknown,
+}
+
+impl From<internal::FileWriteEffect> for FileWriteEffect {
+    fn from(value: internal::FileWriteEffect) -> Self {
+        match value {
+            internal::FileWriteEffect::NotStarted => Self::NotStarted,
+            internal::FileWriteEffect::Observed => Self::Observed,
+            internal::FileWriteEffect::Unknown => Self::Unknown,
+        }
+    }
+}
+
+impl From<FileWriteEffect> for internal::FileWriteEffect {
+    fn from(value: FileWriteEffect) -> Self {
+        match value {
+            FileWriteEffect::NotStarted => Self::NotStarted,
+            FileWriteEffect::Observed => Self::Observed,
+            FileWriteEffect::Unknown => Self::Unknown,
         }
     }
 }
@@ -163,6 +223,54 @@ impl From<FileResourceRef> for internal::FileResourceRef {
         Self {
             kind: value.kind.into(),
             value: value.value,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct FileResourceCapabilities {
+    pub read: bool,
+    pub list: bool,
+    pub create: bool,
+    pub modify: bool,
+    pub write_guarantees: Vec<FileWriteGuarantee>,
+}
+
+impl From<internal::FileResourceCapabilities> for FileResourceCapabilities {
+    fn from(value: internal::FileResourceCapabilities) -> Self {
+        Self {
+            read: value.read,
+            list: value.list,
+            create: value.create,
+            modify: value.modify,
+            write_guarantees: value.write_guarantees.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct FileChildDestination {
+    pub parent: FileResourceRef,
+    pub name: String,
+    pub mime_type: String,
+}
+
+impl From<internal::FileChildDestination> for FileChildDestination {
+    fn from(value: internal::FileChildDestination) -> Self {
+        Self {
+            parent: value.parent.into(),
+            name: value.name,
+            mime_type: value.mime_type,
+        }
+    }
+}
+
+impl From<FileChildDestination> for internal::FileChildDestination {
+    fn from(value: FileChildDestination) -> Self {
+        Self {
+            parent: value.parent.into(),
+            name: value.name,
+            mime_type: value.mime_type,
         }
     }
 }
@@ -348,7 +456,8 @@ impl From<internal::FileSnapshotChunk> for FileSnapshotChunk {
 
 #[derive(Clone)]
 pub struct FileWriteRequest {
-    pub target: FileResourceRef,
+    pub target: Option<FileResourceRef>,
+    pub destination: Option<FileChildDestination>,
     pub expected: Option<FileVersion>,
     pub content_snapshot_id: String,
 }
@@ -356,7 +465,8 @@ pub struct FileWriteRequest {
 impl From<internal::FileWriteRequest> for FileWriteRequest {
     fn from(value: internal::FileWriteRequest) -> Self {
         Self {
-            target: value.target.into(),
+            target: value.target.map(Into::into),
+            destination: value.destination.map(Into::into),
             expected: value.expected.map(Into::into),
             content_snapshot_id: value.content_snapshot_id,
         }
@@ -366,7 +476,8 @@ impl From<internal::FileWriteRequest> for FileWriteRequest {
 impl From<FileWriteRequest> for internal::FileWriteRequest {
     fn from(value: FileWriteRequest) -> Self {
         Self {
-            target: value.target.into(),
+            target: value.target.map(Into::into),
+            destination: value.destination.map(Into::into),
             expected: value.expected.map(Into::into),
             content_snapshot_id: value.content_snapshot_id,
         }
@@ -377,11 +488,13 @@ impl From<FileWriteRequest> for internal::FileWriteRequest {
 pub struct FileWritePreview {
     pub write_id: String,
     pub spec_digest: String,
-    pub target: FileResourceRef,
-    pub resolved_target: FileResourceRef,
-    pub parent: FileEntry,
+    pub target: Option<FileResourceRef>,
+    pub destination: Option<FileChildDestination>,
+    pub resolved_target: Option<FileResourceRef>,
+    pub parent: Option<FileEntry>,
     pub expected: Option<FileVersion>,
     pub content: FileSnapshot,
+    pub guarantee: FileWriteGuarantee,
 }
 
 impl From<internal::FileWritePreview> for FileWritePreview {
@@ -389,11 +502,13 @@ impl From<internal::FileWritePreview> for FileWritePreview {
         Self {
             write_id: value.write_id,
             spec_digest: value.spec_digest,
-            target: value.target.into(),
-            resolved_target: value.resolved_target.into(),
-            parent: value.parent.into(),
+            target: value.target.map(Into::into),
+            destination: value.destination.map(Into::into),
+            resolved_target: value.resolved_target.map(Into::into),
+            parent: value.parent.map(Into::into),
             expected: value.expected.map(Into::into),
             content: value.content.into(),
+            guarantee: value.guarantee.into(),
         }
     }
 }
@@ -429,8 +544,10 @@ impl From<FileWriteIdentity> for internal::FileWriteIdentity {
 pub struct FileWriteReceipt {
     pub identity: FileWriteIdentity,
     pub state: FileWriteState,
+    pub effect: FileWriteEffect,
+    pub settled: bool,
     pub target_changed: Option<bool>,
-    pub target: FileResourceRef,
+    pub target: Option<FileResourceRef>,
     pub current_version: Option<FileVersion>,
     pub original_snapshot: Option<FileSnapshot>,
     pub recovery_resources: Vec<FileEntry>,
@@ -442,8 +559,10 @@ impl From<internal::FileWriteReceipt> for FileWriteReceipt {
         Self {
             identity: value.identity.into(),
             state: value.state.into(),
+            effect: value.effect.into(),
+            settled: value.settled,
             target_changed: value.target_changed,
-            target: value.target.into(),
+            target: value.target.map(Into::into),
             current_version: value.current_version.map(Into::into),
             original_snapshot: value.original_snapshot.map(Into::into),
             recovery_resources: value

@@ -8,9 +8,12 @@ use std::{
 
 use sha2::{Digest, Sha256};
 
+#[cfg(target_os = "android")]
+use std::collections::VecDeque;
+
 use super::{
     BUFFER_SIZE, Cancellation, FileEntry, FileError, FileErrorCode, FileKind, FileResourceRef,
-    FileSnapshot, FileVersion, Result, native, validate_id,
+    FileSnapshot, FileVersion, Result, native, validate_id, with_cleanup_error,
 };
 
 pub(super) struct LockedSnapshot {
@@ -21,6 +24,33 @@ pub(super) struct LockedSnapshot {
 struct Cache {
     closing: bool,
     entries: HashMap<String, Arc<LockedSnapshot>>,
+    #[cfg(target_os = "android")]
+    recent: VecDeque<String>,
+}
+
+impl Cache {
+    fn get(&mut self, id: &str) -> Option<Arc<LockedSnapshot>> {
+        let snapshot = self.entries.get(id).cloned();
+        #[cfg(target_os = "android")]
+        if snapshot.is_some() {
+            self.touch(id.to_owned());
+        }
+        snapshot
+    }
+
+    #[cfg(target_os = "android")]
+    fn touch(&mut self, id: String) {
+        self.recent.retain(|saved| saved != &id);
+        self.recent.push_back(id);
+        // Bound idle cached descriptors, not content count or operation count.
+        // Admitted readers/writers keep their own Arc even after eviction.
+        while self.entries.len() > 64 {
+            let Some(oldest) = self.recent.pop_front() else {
+                break;
+            };
+            self.entries.remove(&oldest);
+        }
+    }
 }
 
 pub(super) struct SnapshotStore {
@@ -40,11 +70,24 @@ impl SnapshotStore {
             std::fs::create_dir_all(directory)?;
         }
         let root = native::path(&native::stat(&native::resource(&root)?)?.resource)?;
+        #[cfg(target_os = "android")]
+        {
+            // Persist both child directory names and this store's name before
+            // it admits file work that will rely on these private records.
+            for directory in [root.join("snapshots"), root.join("writes"), root.clone()] {
+                native::sync_private_directory(&directory)?;
+            }
+            if let Some(parent) = root.parent() {
+                native::sync_private_directory(parent)?;
+            }
+        }
         Ok(Self {
             root,
             cache: Mutex::new(Cache {
                 closing: false,
                 entries: HashMap::new(),
+                #[cfg(target_os = "android")]
+                recent: VecDeque::new(),
             }),
         })
     }
@@ -87,16 +130,63 @@ impl SnapshotStore {
         content.finish(self, Some((before.resource, source_version)), cancellation)
     }
 
+    /// Provider streams start at their actual beginning and may not support
+    /// seeking. Their source identity remains distinct from the private copy.
+    pub fn capture_source(
+        &self,
+        source: &mut native::SourceReader,
+        cancellation: &Cancellation,
+    ) -> Result<FileSnapshot> {
+        let captured = (|| {
+            cancellation.check()?;
+            let before = native::source_entry(source)?;
+            let mut content = self.begin()?;
+            let mut buffer = vec![0; BUFFER_SIZE];
+            loop {
+                let read = native::source_read(source, &mut buffer, cancellation)?;
+                if read == 0 {
+                    break;
+                }
+                content.append(content.length, &buffer[..read], cancellation)?;
+            }
+            let after = native::source_entry(source)?;
+            if before.version != after.version
+                || before
+                    .version
+                    .byte_length
+                    .is_some_and(|length| length != content.length)
+            {
+                return Err(FileError::new(
+                    FileErrorCode::Conflict,
+                    "The source changed while its content stream was being captured.",
+                ));
+            }
+            let mut version = before.version;
+            version.byte_length = Some(content.length);
+            version.sha256 = Some(content.sha256());
+            Ok((content, before.resource, version))
+        })();
+        // Closing the retained PFD can report provider errors. Complete it
+        // before publishing the copied bytes as a successfully read snapshot.
+        let closed = native::close_source(source);
+        let (content, resource, version) = match (captured, closed) {
+            (Ok(captured), Ok(())) => captured,
+            (Err(error), Ok(())) | (Ok(_), Err(error)) => return Err(error),
+            (Err(error), Err(cleanup)) => return Err(with_cleanup_error(error, cleanup)),
+        };
+        content.finish(self, Some((resource, version)), cancellation)
+    }
+
     pub fn get(&self, id: &str, cancellation: &Cancellation) -> Result<Arc<LockedSnapshot>> {
         validate_id(id)?;
         cancellation.check()?;
         {
-            let cache = self.cache.lock().expect("file snapshot cache poisoned");
+            let mut cache = self.cache.lock().expect("file snapshot cache poisoned");
             if cache.closing {
                 return Err(closing());
             }
-            if let Some(snapshot) = cache.entries.get(id) {
-                return Ok(snapshot.clone());
+            if let Some(snapshot) = cache.get(id) {
+                return Ok(snapshot);
             }
         }
         let path = self.root.join("snapshots").join(format!("{id}.json"));
@@ -134,16 +224,21 @@ impl SnapshotStore {
         if cache.closing {
             return Err(closing());
         }
-        Ok(cache
+        let snapshot = cache
             .entries
             .entry(snapshot.metadata.id.clone())
             .or_insert(snapshot)
-            .clone())
+            .clone();
+        #[cfg(target_os = "android")]
+        cache.touch(snapshot.metadata.id.clone());
+        Ok(snapshot)
     }
 
     pub fn close(&self) -> Vec<Arc<LockedSnapshot>> {
         let mut cache = self.cache.lock().expect("file snapshot cache poisoned");
         cache.closing = true;
+        #[cfg(target_os = "android")]
+        cache.recent.clear();
         cache.entries.drain().map(|(_, value)| value).collect()
     }
 }
@@ -208,9 +303,21 @@ impl StagedContent {
             .join("snapshots")
             .join(format!("{}.bin", self.id));
         let parent = native::parent(&native::resource(&destination)?)?;
+        #[cfg(target_os = "android")]
+        let original_name = ordinary_entry(file)?.resource;
         parent.rename_owned(file, &parent.name)?;
+        #[cfg(target_os = "android")]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            file.set_permissions(std::fs::Permissions::from_mode(0o400))?;
+            file.sync_all()?;
+        }
         let created_version = ordinary_entry(file)?.version;
         drop(self.file.take());
+        #[cfg(target_os = "android")]
+        if original_name != native::resource(&destination)? {
+            native::cleanup_snapshot_alias(&original_name, &created_version.resource_id)?;
+        }
         // Reopen without write sharing, then verify every byte before publishing
         // the snapshot record. Retained readers keep this content immutable.
         let mut locked = parent.open_child_locked(&parent.name)?;
@@ -247,6 +354,8 @@ impl StagedContent {
             })?;
             record.write_all(b"\n")?;
             record.sync_all()?;
+            #[cfg(target_os = "android")]
+            native::sync_private_directory(&store.root.join("snapshots"))?;
             Ok(metadata)
         })();
         match result {
@@ -295,6 +404,11 @@ pub(super) fn create_private(path: &Path) -> Result<File> {
         options
             .access_mode(GENERIC_READ | GENERIC_WRITE | DELETE)
             .share_mode(FILE_SHARE_READ);
+    }
+    #[cfg(target_os = "android")]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
     }
     Ok(options.open(path)?)
 }

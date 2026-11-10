@@ -3,10 +3,56 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use super::{FileEntry, FileError, FileErrorCode, FileResourceRef, Result};
+use super::{
+    Cancellation, FileEntry, FileError, FileErrorCode, FileResourceCapabilities, FileResourceKind,
+    FileResourceRef, Result,
+};
 
 pub(super) fn available() -> bool {
     false
+}
+
+pub(super) fn resource_kinds() -> Vec<FileResourceKind> {
+    Vec::new()
+}
+
+pub(super) fn capabilities(
+    _resource: &FileResourceRef,
+    _cancellation: &Cancellation,
+) -> Result<FileResourceCapabilities> {
+    Err(unavailable())
+}
+
+pub(super) type SourceReader = File;
+
+pub(super) fn open_source(
+    _resource: &FileResourceRef,
+    _cancellation: &Cancellation,
+) -> Result<SourceReader> {
+    Err(unavailable())
+}
+
+pub(super) fn source_entry(_source: &SourceReader) -> Result<FileEntry> {
+    Err(unavailable())
+}
+
+pub(super) fn source_read(
+    _source: &mut SourceReader,
+    _bytes: &mut [u8],
+    _cancellation: &Cancellation,
+) -> Result<usize> {
+    Err(unavailable())
+}
+
+pub(super) fn close_source(_source: &mut SourceReader) -> Result<()> {
+    Ok(())
+}
+
+pub(super) fn read_directory_cancellable(
+    _resource: &FileResourceRef,
+    _cancellation: &Cancellation,
+) -> Result<DirectoryReader> {
+    Err(unavailable())
 }
 
 pub(super) fn path(_resource: &FileResourceRef) -> Result<PathBuf> {

@@ -16,6 +16,22 @@ Map<String, Object?> fileResourceJson(FileResourceRef value) => {
   'value': value.value,
 };
 
+Map<String, Object?> fileCapabilitiesJson(FileResourceCapabilities value) => {
+  'read': value.read,
+  'list': value.list,
+  'create': value.create,
+  'modify': value.modify,
+  'writeGuarantees': [
+    for (final guarantee in value.writeGuarantees) guarantee.name,
+  ],
+};
+
+Map<String, Object?> fileChildDestinationJson(FileChildDestination value) => {
+  'parent': fileResourceJson(value.parent),
+  'name': value.name,
+  'mimeType': value.mimeType,
+};
+
 Map<String, Object?> fileVersionJson(FileVersion value) => {
   'resourceId': value.resourceId,
   'version': value.version,
@@ -70,7 +86,9 @@ Map<String, Object?>? fileErrorFromException(Object error) {
 }
 
 Map<String, Object?> fileWriteRequestJson(FileWriteRequest value) => {
-  'target': fileResourceJson(value.target),
+  if (value.target case final target?) 'target': fileResourceJson(target),
+  if (value.destination case final destination?)
+    'destination': fileChildDestinationJson(destination),
   if (value.expected case final expected?)
     'expected': fileVersionJson(expected),
   'contentSnapshotId': value.contentSnapshotId,
@@ -80,12 +98,32 @@ Map<String, Object?> fileWritePreviewJson(FileWritePreview value) =>
     immutableMutationJson({
       'writeId': value.writeId,
       'specDigest': value.specDigest,
-      'target': fileResourceJson(value.target),
-      'resolvedTarget': fileResourceJson(value.resolvedTarget),
-      'parent': fileEntryJson(value.parent),
+      if (value.target case final target?) 'target': fileResourceJson(target),
+      if (value.resolvedTarget case final target?)
+        'resolvedTarget': fileResourceJson(target),
+      if (value.destination case final destination?)
+        'destination': fileChildDestinationJson(destination),
+      if (value.parent case final parent?) 'parent': fileEntryJson(parent),
       if (value.expected case final expected?)
         'expected': fileVersionJson(expected),
       'content': fileSnapshotJson(value.content),
+      'guarantee': value.guarantee.name,
+      'savingBehavior': switch (value.guarantee) {
+        FileWriteGuarantee.handleExclusive =>
+          value.expected == null
+              ? 'The parent and staged file are held by handles. Publish only if the destination does not already exist.'
+              : 'The file and parent stay locked during replacement. The original is retained at a recovery location.',
+        FileWriteGuarantee.exclusiveCreate =>
+          'Create only if the destination does not already exist.',
+        FileWriteGuarantee.optimisticPathStream =>
+          value.expected == null
+              ? 'Other applications can change this path while the new file is written.'
+              : 'Check the source version before writing. Other applications can change this path during the write; saving is not an atomic replacement.',
+        FileWriteGuarantee.providerStream =>
+          value.expected == null
+              ? 'The document provider creates the document and controls its write stream. The new resource URI is returned after creation.'
+              : 'The document provider controls the write stream. Check the source version before opening it; saving is not an atomic replacement.',
+      },
     }) as Map<String, Object?>;
 
 FileWriteIdentity fileIdentityFromOperation(
@@ -118,8 +156,10 @@ Map<String, Object?> fileWriteIdentityJson(FileWriteIdentity value) => {
 Map<String, Object?> fileWriteReceiptJson(FileWriteReceipt value) => {
   'identity': fileWriteIdentityJson(value.identity),
   'state': value.state.name,
+  'effect': value.effect.name,
+  'settled': value.settled,
   'targetChanged': value.targetChanged,
-  'target': fileResourceJson(value.target),
+  if (value.target case final target?) 'target': fileResourceJson(target),
   if (value.currentVersion case final version?)
     'currentVersion': fileVersionJson(version),
   if (value.originalSnapshot case final snapshot?)
@@ -130,8 +170,8 @@ Map<String, Object?> fileWriteReceiptJson(FileWriteReceipt value) => {
   if (value.error case final error?) 'error': fileErrorJson(error),
 };
 
-/// A terminal conflict can have known file effects. Native Conflict requires
-/// finalized evidence; an interrupted journal is reported as Unknown instead.
+/// Observed effects are independent of publication success. Providers report
+/// whether their original attempt has settled, including partial stream writes.
 ExternalEffectResult fileWriteEffect(
   FileWriteReceipt receipt, {
   required FileWriteIdentity expected,
@@ -150,15 +190,9 @@ ExternalEffectResult fileWriteEffect(
       },
     );
   }
-  final state = switch ((receipt.state, receipt.targetChanged)) {
-    (FileWriteState.published, true) when receipt.currentVersion != null =>
-      ExternalEffectState.applied,
-    (FileWriteState.conflict, true)
-        when receipt.originalSnapshot != null &&
-            receipt.recoveryResources.isNotEmpty =>
-      ExternalEffectState.applied,
-    (FileWriteState.notStarted || FileWriteState.conflict, false) =>
-      ExternalEffectState.failed,
+  final state = switch ((receipt.settled, receipt.effect)) {
+    (true, FileWriteEffect.observed) => ExternalEffectState.applied,
+    (true, FileWriteEffect.notStarted) => ExternalEffectState.failed,
     _ => ExternalEffectState.unknown,
   };
   return ExternalEffectResult(
@@ -203,7 +237,7 @@ Map<String, Object?> projectFileResult(Map<String, Object?> value) {
                 'The destination changed before the new content was published.',
           },
     },
-    'notStarted' => {
+    'notStarted' || 'failed' => {
       ...value,
       'status': error is Map && error['code'] == 'cancelled'
           ? 'cancelled'
@@ -211,8 +245,8 @@ Map<String, Object?> projectFileResult(Map<String, Object?> value) {
       'error':
           error ??
           const {
-            'code': 'notStarted',
-            'message': 'The file write did not start.',
+            'code': 'writeFailed',
+            'message': 'The file write did not complete.',
           },
     },
     _ => value,

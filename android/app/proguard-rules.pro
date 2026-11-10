@@ -11,3 +11,9 @@
 -keepclassmembers class com.mashiro.sked.SkedApplication {
     native <methods>;
 }
+
+# The application-owned file bridge is called by name from native workers.
+-keep,includedescriptorclasses class com.mashiro.sked.AgentFileAccess {
+    public java.lang.String call(java.lang.String);
+    public void cancel(java.lang.String);
+}

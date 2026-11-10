@@ -287,6 +287,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double dco_decode_box_autoadd_f_64(dynamic raw);
 
   @protected
+  FileChildDestination dco_decode_box_autoadd_file_child_destination(
+    dynamic raw,
+  );
+
+  @protected
+  FileEntry dco_decode_box_autoadd_file_entry(dynamic raw);
+
+  @protected
   FileError dco_decode_box_autoadd_file_error(dynamic raw);
 
   @protected
@@ -585,6 +593,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   FileAvailability dco_decode_file_availability(dynamic raw);
 
   @protected
+  FileChildDestination dco_decode_file_child_destination(dynamic raw);
+
+  @protected
   FileDirectoryPage dco_decode_file_directory_page(dynamic raw);
 
   @protected
@@ -601,6 +612,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   FileKind dco_decode_file_kind(dynamic raw);
+
+  @protected
+  FileResourceCapabilities dco_decode_file_resource_capabilities(dynamic raw);
 
   @protected
   FileResourceKind dco_decode_file_resource_kind(dynamic raw);
@@ -625,6 +639,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   FileVersion dco_decode_file_version(dynamic raw);
+
+  @protected
+  FileWriteEffect dco_decode_file_write_effect(dynamic raw);
+
+  @protected
+  FileWriteGuarantee dco_decode_file_write_guarantee(dynamic raw);
 
   @protected
   FileWriteIdentity dco_decode_file_write_identity(dynamic raw);
@@ -721,6 +741,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<FileSearchHit> dco_decode_list_file_search_hit(dynamic raw);
+
+  @protected
+  List<FileWriteGuarantee> dco_decode_list_file_write_guarantee(dynamic raw);
 
   @protected
   List<HistoryRecoveryTarget> dco_decode_list_history_recovery_target(
@@ -976,6 +999,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   double? dco_decode_opt_box_autoadd_f_64(dynamic raw);
+
+  @protected
+  FileChildDestination? dco_decode_opt_box_autoadd_file_child_destination(
+    dynamic raw,
+  );
+
+  @protected
+  FileEntry? dco_decode_opt_box_autoadd_file_entry(dynamic raw);
 
   @protected
   FileError? dco_decode_opt_box_autoadd_file_error(dynamic raw);
@@ -1742,6 +1773,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   double sse_decode_box_autoadd_f_64(SseDeserializer deserializer);
 
   @protected
+  FileChildDestination sse_decode_box_autoadd_file_child_destination(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  FileEntry sse_decode_box_autoadd_file_entry(SseDeserializer deserializer);
+
+  @protected
   FileError sse_decode_box_autoadd_file_error(SseDeserializer deserializer);
 
   @protected
@@ -2126,6 +2165,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   FileAvailability sse_decode_file_availability(SseDeserializer deserializer);
 
   @protected
+  FileChildDestination sse_decode_file_child_destination(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   FileDirectoryPage sse_decode_file_directory_page(
     SseDeserializer deserializer,
   );
@@ -2144,6 +2188,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   FileKind sse_decode_file_kind(SseDeserializer deserializer);
+
+  @protected
+  FileResourceCapabilities sse_decode_file_resource_capabilities(
+    SseDeserializer deserializer,
+  );
 
   @protected
   FileResourceKind sse_decode_file_resource_kind(SseDeserializer deserializer);
@@ -2172,6 +2221,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   FileVersion sse_decode_file_version(SseDeserializer deserializer);
+
+  @protected
+  FileWriteEffect sse_decode_file_write_effect(SseDeserializer deserializer);
+
+  @protected
+  FileWriteGuarantee sse_decode_file_write_guarantee(
+    SseDeserializer deserializer,
+  );
 
   @protected
   FileWriteIdentity sse_decode_file_write_identity(
@@ -2278,6 +2335,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<FileSearchHit> sse_decode_list_file_search_hit(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<FileWriteGuarantee> sse_decode_list_file_write_guarantee(
     SseDeserializer deserializer,
   );
 
@@ -2599,6 +2661,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer);
+
+  @protected
+  FileChildDestination? sse_decode_opt_box_autoadd_file_child_destination(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  FileEntry? sse_decode_opt_box_autoadd_file_entry(
+    SseDeserializer deserializer,
+  );
 
   @protected
   FileError? sse_decode_opt_box_autoadd_file_error(
@@ -3572,6 +3644,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_file_child_destination(
+    FileChildDestination self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_file_entry(
+    FileEntry self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_file_error(
     FileError self,
     SseSerializer serializer,
@@ -4061,6 +4145,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_file_child_destination(
+    FileChildDestination self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_file_directory_page(
     FileDirectoryPage self,
     SseSerializer serializer,
@@ -4080,6 +4170,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_file_kind(FileKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_file_resource_capabilities(
+    FileResourceCapabilities self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_file_resource_kind(
@@ -4119,6 +4215,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_file_version(FileVersion self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_file_write_effect(
+    FileWriteEffect self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_file_write_guarantee(
+    FileWriteGuarantee self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_file_write_identity(
@@ -4264,6 +4372,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_file_search_hit(
     List<FileSearchHit> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_file_write_guarantee(
+    List<FileWriteGuarantee> self,
     SseSerializer serializer,
   );
 
@@ -4653,6 +4767,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_file_child_destination(
+    FileChildDestination? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_file_entry(
+    FileEntry? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_opt_box_autoadd_file_error(

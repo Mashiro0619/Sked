@@ -6113,6 +6113,7 @@ dependencies = [
  "flutter_rust_bridge",
  "futures",
  "jni",
+ "libc",
  "regex",
  "reqwest 0.13.5",
  "rig",

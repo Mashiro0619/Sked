@@ -53,12 +53,80 @@ use windows_sys::{
 };
 
 use super::{
-    FileEntry, FileError, FileErrorCode, FileKind, FileResourceKind, FileResourceRef, FileVersion,
-    Result, digest,
+    Cancellation, FileEntry, FileError, FileErrorCode, FileKind, FileResourceCapabilities,
+    FileResourceKind, FileResourceRef, FileVersion, FileWriteGuarantee, Result, digest,
 };
 
 pub(super) fn available() -> bool {
     true
+}
+
+pub(super) fn resource_kinds() -> Vec<FileResourceKind> {
+    vec![FileResourceKind::WindowsPath]
+}
+
+pub(super) fn capabilities(
+    resource: &FileResourceRef,
+    cancellation: &Cancellation,
+) -> Result<FileResourceCapabilities> {
+    cancellation.check()?;
+    let file = open_metadata(&path(resource)?, false)?;
+    let entry = entry(&file)?;
+    let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { zeroed() };
+    if unsafe { GetFileInformationByHandle(file.as_raw_handle(), &mut info) } == 0 {
+        return Err(io::Error::last_os_error().into());
+    }
+    let directory = entry.kind == FileKind::Directory;
+    let ordinary = entry.kind == FileKind::File;
+    let modify =
+        ordinary && !entry.is_link && info.dwFileAttributes & FILE_ATTRIBUTE_ENCRYPTED == 0;
+    cancellation.check()?;
+    Ok(FileResourceCapabilities {
+        read: ordinary,
+        list: directory,
+        create: directory,
+        modify,
+        write_guarantees: if directory || modify {
+            vec![FileWriteGuarantee::HandleExclusive]
+        } else {
+            Vec::new()
+        },
+    })
+}
+
+pub(super) type SourceReader = File;
+
+pub(super) fn open_source(
+    resource: &FileResourceRef,
+    cancellation: &Cancellation,
+) -> Result<SourceReader> {
+    cancellation.check()?;
+    open_read(resource)
+}
+
+pub(super) fn source_entry(source: &SourceReader) -> Result<FileEntry> {
+    super::snapshots::ordinary_entry(source)
+}
+
+pub(super) fn source_read(
+    source: &mut SourceReader,
+    bytes: &mut [u8],
+    cancellation: &Cancellation,
+) -> Result<usize> {
+    cancellation.check()?;
+    Ok(std::io::Read::read(source, bytes)?)
+}
+
+pub(super) fn close_source(_source: &mut SourceReader) -> Result<()> {
+    Ok(())
+}
+
+pub(super) fn read_directory_cancellable(
+    resource: &FileResourceRef,
+    cancellation: &Cancellation,
+) -> Result<DirectoryReader> {
+    cancellation.check()?;
+    read_directory(resource)
 }
 
 pub(super) fn path(resource: &FileResourceRef) -> Result<PathBuf> {

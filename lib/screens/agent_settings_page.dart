@@ -15,6 +15,7 @@ import '../widgets/settings_list.dart';
 import '../widgets/settings_page_header.dart';
 import '../widgets/sked_task_session.dart';
 import 'agent_connection_settings_page.dart';
+import 'agent_file_settings_page.dart';
 import 'agent_preferences_settings_page.dart';
 
 /// Agent settings follow the same page hierarchy as the app's other settings.
@@ -159,6 +160,9 @@ class _AgentSettingsPageState extends State<AgentSettingsPage> {
       preferences: const AgentPreferencesSettingsPage(),
       skills: const _AgentKnowledgeSettingsPage(kind: KnowledgeKind.skill),
       memories: const _AgentKnowledgeSettingsPage(kind: KnowledgeKind.memory),
+      files: application.fileAccess.isSupported
+          ? const AgentFileSettingsPage()
+          : null,
     );
     return ListenableBuilder(
       listenable: application.uiContributions,

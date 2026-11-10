@@ -24,6 +24,10 @@ abstract class FileAccessHandle implements RustOpaqueInterface {
 
   void cancel();
 
+  Future<FileResourceCapabilities> capabilities({
+    required FileResourceRef resource,
+  });
+
   /// Every close caller waits for the same cleanup driver. Cancellation of a
   /// bridge waiter does not abandon the cleanup of native resource handles.
   Future<void> close();

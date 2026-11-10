@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
 
 class FileAvailability {
   final bool available;
@@ -28,6 +28,30 @@ class FileAvailability {
           runtimeType == other.runtimeType &&
           available == other.available &&
           resourceKinds == other.resourceKinds;
+}
+
+class FileChildDestination {
+  final FileResourceRef parent;
+  final String name;
+  final String mimeType;
+
+  const FileChildDestination({
+    required this.parent,
+    required this.name,
+    required this.mimeType,
+  });
+
+  @override
+  int get hashCode => parent.hashCode ^ name.hashCode ^ mimeType.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is FileChildDestination &&
+          runtimeType == other.runtimeType &&
+          parent == other.parent &&
+          name == other.name &&
+          mimeType == other.mimeType;
 }
 
 class FileDirectoryPage {
@@ -149,6 +173,41 @@ class FileIssue {
 }
 
 enum FileKind { file, directory, other }
+
+class FileResourceCapabilities {
+  final bool read;
+  final bool list;
+  final bool create;
+  final bool modify;
+  final List<FileWriteGuarantee> writeGuarantees;
+
+  const FileResourceCapabilities({
+    required this.read,
+    required this.list,
+    required this.create,
+    required this.modify,
+    required this.writeGuarantees,
+  });
+
+  @override
+  int get hashCode =>
+      read.hashCode ^
+      list.hashCode ^
+      create.hashCode ^
+      modify.hashCode ^
+      writeGuarantees.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is FileResourceCapabilities &&
+          runtimeType == other.runtimeType &&
+          read == other.read &&
+          list == other.list &&
+          create == other.create &&
+          modify == other.modify &&
+          writeGuarantees == other.writeGuarantees;
+}
 
 enum FileResourceKind { windowsPath, androidPath, contentUri }
 
@@ -354,6 +413,15 @@ class FileVersion {
           modifiedAtMs == other.modifiedAtMs;
 }
 
+enum FileWriteEffect { notStarted, observed, unknown }
+
+enum FileWriteGuarantee {
+  handleExclusive,
+  exclusiveCreate,
+  optimisticPathStream,
+  providerStream,
+}
+
 class FileWriteIdentity {
   final String writeId;
   final String operationId;
@@ -382,20 +450,24 @@ class FileWriteIdentity {
 class FileWritePreview {
   final String writeId;
   final String specDigest;
-  final FileResourceRef target;
-  final FileResourceRef resolvedTarget;
-  final FileEntry parent;
+  final FileResourceRef? target;
+  final FileChildDestination? destination;
+  final FileResourceRef? resolvedTarget;
+  final FileEntry? parent;
   final FileVersion? expected;
   final FileSnapshot content;
+  final FileWriteGuarantee guarantee;
 
   const FileWritePreview({
     required this.writeId,
     required this.specDigest,
-    required this.target,
-    required this.resolvedTarget,
-    required this.parent,
+    this.target,
+    this.destination,
+    this.resolvedTarget,
+    this.parent,
     this.expected,
     required this.content,
+    required this.guarantee,
   });
 
   @override
@@ -403,10 +475,12 @@ class FileWritePreview {
       writeId.hashCode ^
       specDigest.hashCode ^
       target.hashCode ^
+      destination.hashCode ^
       resolvedTarget.hashCode ^
       parent.hashCode ^
       expected.hashCode ^
-      content.hashCode;
+      content.hashCode ^
+      guarantee.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -416,17 +490,21 @@ class FileWritePreview {
           writeId == other.writeId &&
           specDigest == other.specDigest &&
           target == other.target &&
+          destination == other.destination &&
           resolvedTarget == other.resolvedTarget &&
           parent == other.parent &&
           expected == other.expected &&
-          content == other.content;
+          content == other.content &&
+          guarantee == other.guarantee;
 }
 
 class FileWriteReceipt {
   final FileWriteIdentity identity;
   final FileWriteState state;
+  final FileWriteEffect effect;
+  final bool settled;
   final bool? targetChanged;
-  final FileResourceRef target;
+  final FileResourceRef? target;
   final FileVersion? currentVersion;
   final FileSnapshot? originalSnapshot;
   final List<FileEntry> recoveryResources;
@@ -435,8 +513,10 @@ class FileWriteReceipt {
   const FileWriteReceipt({
     required this.identity,
     required this.state,
+    required this.effect,
+    required this.settled,
     this.targetChanged,
-    required this.target,
+    this.target,
     this.currentVersion,
     this.originalSnapshot,
     required this.recoveryResources,
@@ -447,6 +527,8 @@ class FileWriteReceipt {
   int get hashCode =>
       identity.hashCode ^
       state.hashCode ^
+      effect.hashCode ^
+      settled.hashCode ^
       targetChanged.hashCode ^
       target.hashCode ^
       currentVersion.hashCode ^
@@ -461,6 +543,8 @@ class FileWriteReceipt {
           runtimeType == other.runtimeType &&
           identity == other.identity &&
           state == other.state &&
+          effect == other.effect &&
+          settled == other.settled &&
           targetChanged == other.targetChanged &&
           target == other.target &&
           currentVersion == other.currentVersion &&
@@ -470,19 +554,24 @@ class FileWriteReceipt {
 }
 
 class FileWriteRequest {
-  final FileResourceRef target;
+  final FileResourceRef? target;
+  final FileChildDestination? destination;
   final FileVersion? expected;
   final String contentSnapshotId;
 
   const FileWriteRequest({
-    required this.target,
+    this.target,
+    this.destination,
     this.expected,
     required this.contentSnapshotId,
   });
 
   @override
   int get hashCode =>
-      target.hashCode ^ expected.hashCode ^ contentSnapshotId.hashCode;
+      target.hashCode ^
+      destination.hashCode ^
+      expected.hashCode ^
+      contentSnapshotId.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -490,8 +579,9 @@ class FileWriteRequest {
       other is FileWriteRequest &&
           runtimeType == other.runtimeType &&
           target == other.target &&
+          destination == other.destination &&
           expected == other.expected &&
           contentSnapshotId == other.contentSnapshotId;
 }
 
-enum FileWriteState { notStarted, published, conflict, unknown }
+enum FileWriteState { notStarted, published, conflict, failed, unknown }

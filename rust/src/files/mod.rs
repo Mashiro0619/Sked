@@ -7,15 +7,29 @@ mod models;
 mod prepared;
 mod service;
 mod snapshots;
+#[cfg(not(target_os = "android"))]
 mod write;
+
+#[cfg(target_os = "android")]
+mod android;
+#[cfg(target_os = "android")]
+mod android_jni;
+#[cfg(target_os = "android")]
+mod android_ledger;
+#[cfg(target_os = "android")]
+mod android_write;
+#[cfg(target_os = "android")]
+use android as native;
+#[cfg(target_os = "android")]
+use android_write as write;
 
 #[cfg(windows)]
 mod windows;
 #[cfg(windows)]
 use windows as native;
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "android")))]
 mod unavailable;
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "android")))]
 use unavailable as native;
 
 pub use models::*;
@@ -25,6 +39,21 @@ pub use service::{FILES_SERVICE, FileService};
 pub(super) fn digest(bytes: &[u8]) -> String {
     use sha2::{Digest, Sha256};
     format!("{:x}", Sha256::digest(bytes))
+}
+
+pub(super) fn with_cleanup_error(mut failure: FileError, cleanup: FileError) -> FileError {
+    failure.message.push_str("; resource cleanup failed: ");
+    failure.message.push_str(&cleanup.message);
+    failure
+}
+
+pub(super) fn collect_cleanup(result: &mut Result<()>, next: Result<()>) {
+    if let Err(error) = next {
+        *result = Err(match std::mem::replace(result, Ok(())) {
+            Err(previous) => with_cleanup_error(previous, error),
+            Ok(()) => error,
+        });
+    }
 }
 
 pub(super) fn cancelled(token: &tokio_util::sync::CancellationToken) -> Result<()> {

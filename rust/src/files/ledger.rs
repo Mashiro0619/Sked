@@ -7,9 +7,13 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 use super::{
-    FileError, FileErrorCode, FileSnapshot, FileVersion, FileWriteIdentity, FileWritePreview,
-    FileWriteReceipt, Result, digest, native, snapshots::create_private, validate_id,
+    FileError, FileErrorCode, FileSnapshot, FileVersion, FileWriteEffect, FileWriteIdentity,
+    FileWritePreview, FileWriteReceipt, FileWriteState, Result, digest, native,
+    snapshots::create_private, validate_id,
 };
+
+#[path = "ledger_v1.rs"]
+mod legacy;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -113,7 +117,8 @@ impl Journal {
         self.append(evidence)
     }
 
-    pub fn settle(&mut self, receipt: FileWriteReceipt) -> Result<FileWriteReceipt> {
+    pub fn settle(&mut self, mut receipt: FileWriteReceipt) -> Result<FileWriteReceipt> {
+        receipt.settled = true;
         let mut evidence = self.evidence.clone();
         evidence.phase = Phase::Settled;
         evidence.receipt = Some(receipt.clone());
@@ -165,13 +170,8 @@ pub(super) fn load(root: &Path, identity: &FileWriteIdentity) -> Result<LoadedJo
                 "The settled file write journal contains unexpected later records.",
             ));
         }
-        let record: Record = serde_json::from_str(&line)
-            .map_err(|error| unknown(format!("The original write evidence is invalid: {error}")))?;
-        validate_evidence(&record.evidence)?;
-        if record.sequence != sequence
-            || record.previous != previous
-            || record.digest != record_digest(record.sequence, &record.previous, &record.evidence)?
-        {
+        let record = decode_record(&line)?;
+        if record.sequence != sequence || record.previous != previous {
             return Err(unknown(
                 "The original file write journal has an incomplete or inconsistent evidence chain.",
             ));
@@ -183,7 +183,8 @@ pub(super) fn load(root: &Path, identity: &FileWriteIdentity) -> Result<LoadedJo
             ));
         }
         if let Some(prior) = &latest {
-            if prior.preview.spec_digest != record.evidence.preview.spec_digest
+            if prior.format != record.evidence.format
+                || prior.preview.spec_digest != record.evidence.preview.spec_digest
                 || prior.staged_name != record.evidence.staged_name
                 || prior.recovery_name != record.evidence.recovery_name
             {
@@ -199,6 +200,33 @@ pub(super) fn load(root: &Path, identity: &FileWriteIdentity) -> Result<LoadedJo
     let evidence =
         latest.ok_or_else(|| unknown("No complete original file write evidence was saved."))?;
     Ok(LoadedJournal { evidence, complete })
+}
+
+fn decode_record(line: &str) -> Result<Record> {
+    let value: serde_json::Value = serde_json::from_str(line)
+        .map_err(|error| unknown(format!("The original write evidence is invalid: {error}")))?;
+    match value
+        .pointer("/evidence/format")
+        .and_then(serde_json::Value::as_u64)
+    {
+        Some(1) => legacy::decode_record(line),
+        Some(2) => {
+            let record: Record = serde_json::from_str(line).map_err(|error| {
+                unknown(format!("The original write evidence is invalid: {error}"))
+            })?;
+            validate_evidence(&record.evidence)?;
+            if record.digest != record_digest(record.sequence, &record.previous, &record.evidence)?
+            {
+                return Err(unknown(
+                    "The original write record digest does not match its evidence.",
+                ));
+            }
+            Ok(record)
+        }
+        _ => Err(unknown(
+            "The original write journal format is not supported.",
+        )),
+    }
 }
 
 pub(super) fn validate_identity(identity: &FileWriteIdentity) -> Result<()> {
@@ -229,7 +257,7 @@ pub(super) fn preview_digest(preview: &FileWritePreview) -> Result<String> {
 
 fn validate_evidence(evidence: &Evidence) -> Result<()> {
     validate_identity(&evidence.identity)?;
-    if evidence.format != 1
+    if evidence.format != 2
         || evidence.identity.write_id != evidence.preview.write_id
         || evidence.identity.spec_digest != evidence.preview.spec_digest
         || preview_digest(&evidence.preview)? != evidence.preview.spec_digest
@@ -244,6 +272,9 @@ fn validate_evidence(evidence: &Evidence) -> Result<()> {
     if let Some(receipt) = &evidence.receipt {
         if receipt.identity != evidence.identity
             || receipt.target != evidence.preview.resolved_target
+            || !receipt.settled
+            || receipt.state == FileWriteState::Unknown
+            || receipt.effect == FileWriteEffect::Unknown
         {
             return Err(unknown(
                 "The saved receipt belongs to different write material.",

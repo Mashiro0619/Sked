@@ -87,6 +87,8 @@ class MainActivity : FlutterFragmentActivity() {
     private var exportFileChannel: MethodChannel? = null
     private var appInstanceLeaseChannel: MethodChannel? = null
     private var productivityChannel: MethodChannel? = null
+    private var agentFileAccessChannel: MethodChannel? = null
+    private var agentFilePicker: AgentFilePicker? = null
     private val pendingSave = PendingActivityRequest<SaveFileRequest>()
     private val binaryExportStaging by lazy { BinaryExportStaging(cacheDir) }
     private var binaryCopyInFlight: SaveFileRequest? = null
@@ -108,6 +110,7 @@ class MainActivity : FlutterFragmentActivity() {
         // Picker cancellation can complete now. An accepted stream copy must
         // first close on its worker; teardown never reports it saved early.
         cancelFileExports(completeCall = true)
+        agentFilePicker?.close(completeCalls = true)
         super.onDestroy()
     }
 
@@ -120,6 +123,13 @@ class MainActivity : FlutterFragmentActivity() {
         synchronized(pendingAgendaIntents) {
             initialAgendaIntentConsumed = false
         }
+        agentFilePicker?.close(completeCalls = false)
+        val filePicker = AgentFilePicker(this, (application as SkedApplication).agentFileAccess)
+        agentFilePicker = filePicker
+        agentFileAccessChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            AgentFilePicker.CHANNEL,
+        ).also { channel -> channel.setMethodCallHandler(filePicker::handle) }
         exportFileChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             EXPORT_FILE_CHANNEL,
@@ -235,6 +245,10 @@ class MainActivity : FlutterFragmentActivity() {
         // the request tokens as well as dropping their results/content so a
         // late callback cannot consume a new engine's pending request.
         cancelFileExports(completeCall = false)
+        agentFileAccessChannel?.setMethodCallHandler(null)
+        agentFileAccessChannel = null
+        agentFilePicker?.close(completeCalls = false)
+        agentFilePicker = null
         exportFileChannel?.setMethodCallHandler(null)
         exportFileChannel = null
         appInstanceLeaseChannel?.setMethodCallHandler(null)

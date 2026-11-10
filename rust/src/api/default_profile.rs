@@ -50,7 +50,7 @@ pub(super) struct DefaultAgentProfile {
 
 impl DefaultAgentProfile {
     pub(super) async fn open(config: CoreConfig) -> Result<Self, String> {
-        #[cfg(windows)]
+        #[cfg(any(windows, target_os = "android"))]
         let file_root = std::path::PathBuf::from(&config.data_directory).join("files");
         let tools = descriptors(config.tools)?;
         let (events, _) = broadcast::channel(2048);
@@ -125,7 +125,7 @@ impl DefaultAgentProfile {
                 EVENT_RELAY.key(),
             ],
         };
-        #[cfg(windows)]
+        #[cfg(any(windows, target_os = "android"))]
         let profile = {
             let mut profile = profile;
             profile.plugins.push(PluginSpec::new(
@@ -194,18 +194,22 @@ impl DefaultAgentProfile {
     }
 }
 
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "android"))]
 struct FilePlugin {
     root: std::path::PathBuf,
 }
 
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "android"))]
 #[flutter_rust_bridge::frb(ignore)]
 #[async_trait]
 impl Plugin for FilePlugin {
     fn descriptor(&self) -> PluginDescriptor {
         PluginDescriptor {
-            id: "sked.windows.files",
+            id: if cfg!(windows) {
+                "sked.windows.files"
+            } else {
+                "sked.android.files"
+            },
             contract_version: 1,
             provides: vec![FILES.key()],
             dependencies: vec![STORAGE.key()],
@@ -220,8 +224,10 @@ impl Plugin for FilePlugin {
         let draining = service.clone();
         context.on_quiesce(move || {
             Box::pin(async move {
-                draining.shutdown().await;
-                Ok(())
+                draining
+                    .shutdown()
+                    .await
+                    .map_err(|error| PluginError::new(error.to_string()))
             })
         })?;
         context.provide(FILES, service)

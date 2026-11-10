@@ -7,9 +7,9 @@ use std::{
 use tokio_util::{sync::CancellationToken, task::task_tracker::TaskTrackerToken};
 
 use super::{
-    BUFFER_SIZE, Cancellation, FileEntry, FileError, FileErrorCode, FileSnapshot,
-    FileWriteIdentity, FileWritePreview, FileWriteReceipt, FileWriteRequest, FileWriteState,
-    Result,
+    BUFFER_SIZE, Cancellation, FileEntry, FileError, FileErrorCode, FileSnapshot, FileWriteEffect,
+    FileWriteGuarantee, FileWriteIdentity, FileWritePreview, FileWriteReceipt, FileWriteRequest,
+    FileWriteState, Result,
     ledger::{self, Evidence, Journal, Phase},
     native,
     snapshots::{LockedSnapshot, SnapshotStore, frozen_version, ordinary_entry},
@@ -35,6 +35,7 @@ pub(super) fn prepare(
     let preparation_token = tracked;
     let preparation_store = store;
     cancellation.check()?;
+    request.validate_destination()?;
     if let Some(expected) = &request.expected {
         if expected.resource_id.is_empty()
             || expected.version.is_empty()
@@ -50,7 +51,14 @@ pub(super) fn prepare(
         }
     }
     let content = preparation_store.get(&request.content_snapshot_id, cancellation)?;
-    let parent = native::parent(&request.target)?;
+    let target = match (&request.target, &request.destination) {
+        (Some(target), None) => target.clone(),
+        (None, Some(destination)) => {
+            native::resource(&native::path(&destination.parent)?.join(&destination.name))?
+        }
+        _ => unreachable!("validated file destination"),
+    };
+    let parent = native::parent(&target)?;
     let mut original = match parent.open_original() {
         Ok(file) if request.expected.is_none() => {
             drop(file);
@@ -99,10 +107,12 @@ pub(super) fn prepare(
         write_id: uuid::Uuid::new_v4().to_string(),
         spec_digest: String::new(),
         target: request.target,
-        resolved_target: parent.child_resource(&parent.name)?,
-        parent: parent.entry.clone(),
+        destination: request.destination,
+        resolved_target: Some(parent.child_resource(&parent.name)?),
+        parent: Some(parent.entry.clone()),
         expected: request.expected,
         content: content.metadata.clone(),
+        guarantee: FileWriteGuarantee::HandleExclusive,
     };
     preview.spec_digest = ledger::preview_digest(&preview)?;
     Ok(Backend {
@@ -131,7 +141,7 @@ pub(super) fn run(
     token: CancellationToken,
 ) -> FileWriteReceipt {
     let evidence = Evidence {
-        format: 1,
+        format: 2,
         identity: identity.clone(),
         preview: backend.preview.clone(),
         original_snapshot: backend.original_snapshot.clone(),
@@ -350,6 +360,8 @@ impl Attempt {
                 Ok(FileWriteReceipt {
                     identity: self.journal.evidence.identity.clone(),
                     state: FileWriteState::Published,
+                    effect: FileWriteEffect::Observed,
+                    settled: false,
                     target_changed: Some(true),
                     target: self.backend.preview.resolved_target.clone(),
                     current_version: Some(current),
@@ -386,6 +398,12 @@ impl Attempt {
                 Ok(FileWriteReceipt {
                     identity: self.journal.evidence.identity.clone(),
                     state: FileWriteState::Conflict,
+                    effect: if self.original_moved {
+                        FileWriteEffect::Observed
+                    } else {
+                        FileWriteEffect::NotStarted
+                    },
+                    settled: false,
                     target_changed: Some(self.original_moved),
                     target: self.backend.preview.resolved_target.clone(),
                     current_version: Some(current),
@@ -449,6 +467,8 @@ impl Attempt {
             } else {
                 FileWriteState::NotStarted
             },
+            effect: FileWriteEffect::NotStarted,
+            settled: false,
             target_changed: Some(false),
             target: self.backend.preview.resolved_target.clone(),
             current_version: None,
@@ -474,7 +494,7 @@ impl Attempt {
         );
         for file in self.backend.original.iter().chain(self.staged.iter()) {
             if let Ok(entry) = native::entry(file) {
-                if entry.resource == receipt.target {
+                if Some(&entry.resource) == receipt.target.as_ref() {
                     receipt.current_version = Some(entry.version);
                 } else {
                     receipt.recovery_resources.push(entry);
@@ -493,6 +513,8 @@ pub(super) fn not_started(
     FileWriteReceipt {
         identity: identity.clone(),
         state: FileWriteState::NotStarted,
+        effect: FileWriteEffect::NotStarted,
+        settled: true,
         target_changed: Some(false),
         target: preview.resolved_target.clone(),
         current_version: None,
@@ -512,6 +534,12 @@ pub(super) fn unknown(
     FileWriteReceipt {
         identity: identity.clone(),
         state: FileWriteState::Unknown,
+        effect: match changed {
+            Some(false) => FileWriteEffect::NotStarted,
+            Some(true) => FileWriteEffect::Observed,
+            None => FileWriteEffect::Unknown,
+        },
+        settled: false,
         target_changed: changed,
         target: preview.resolved_target.clone(),
         current_version: None,
@@ -563,10 +591,22 @@ fn inspect_publication(
     evidence: &Evidence,
     cancellation: &Cancellation,
 ) -> Result<FileWriteReceipt> {
-    let parent = native::parent(&evidence.preview.resolved_target)?;
+    let target = evidence.preview.resolved_target.as_ref().ok_or_else(|| {
+        FileError::new(
+            FileErrorCode::OutcomeUnknown,
+            "The original Windows destination path was not recorded.",
+        )
+    })?;
+    let parent = native::parent(target)?;
     parent.verify_identity()?;
-    if parent.entry.version.resource_id != evidence.preview.parent.version.resource_id
-        || parent.entry.resource != evidence.preview.parent.resource
+    let original_parent = evidence.preview.parent.as_ref().ok_or_else(|| {
+        FileError::new(
+            FileErrorCode::OutcomeUnknown,
+            "The original Windows parent directory was not recorded.",
+        )
+    })?;
+    if parent.entry.version.resource_id != original_parent.version.resource_id
+        || parent.entry.resource != original_parent.resource
     {
         return Err(FileError::new(
             FileErrorCode::OutcomeUnknown,
@@ -632,6 +672,8 @@ fn inspect_publication(
     let receipt = FileWriteReceipt {
         identity: evidence.identity.clone(),
         state,
+        effect: FileWriteEffect::Observed,
+        settled: true,
         target_changed: Some(changed),
         target: evidence.preview.resolved_target.clone(),
         current_version: Some(current),

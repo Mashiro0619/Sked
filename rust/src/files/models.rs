@@ -15,6 +15,35 @@ pub struct FileResourceRef {
     pub value: String,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileChildDestination {
+    pub parent: FileResourceRef,
+    pub name: String,
+    pub mime_type: String,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum FileWriteGuarantee {
+    HandleExclusive,
+    ExclusiveCreate,
+    OptimisticPathStream,
+    ProviderStream,
+}
+
+/// Supported operations for this resource. Every actual open still checks the
+/// current system permission and provider state.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileResourceCapabilities {
+    pub read: bool,
+    pub list: bool,
+    pub create: bool,
+    pub modify: bool,
+    pub write_guarantees: Vec<FileWriteGuarantee>,
+}
+
 /// A directory version describes its metadata. Only a version with a content
 /// digest can be used as the expected version of an existing file write.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -114,10 +143,37 @@ pub struct FileSnapshotChunk {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FileWriteRequest {
-    pub target: FileResourceRef,
+    pub target: Option<FileResourceRef>,
+    pub destination: Option<FileChildDestination>,
     /// None means create only when the destination does not exist.
     pub expected: Option<FileVersion>,
     pub content_snapshot_id: String,
+}
+
+impl FileWriteRequest {
+    pub(super) fn validate_destination(&self) -> Result<()> {
+        if self.target.is_some() == self.destination.is_some() {
+            return Err(FileError::new(
+                FileErrorCode::InvalidArgument,
+                "Supply exactly one resource target or child destination.",
+            ));
+        }
+        if let Some(destination) = &self.destination {
+            if self.expected.is_some()
+                || destination.name.is_empty()
+                || matches!(destination.name.as_str(), "." | "..")
+                || destination.name.contains(['/', '\\', '\0'])
+                || destination.mime_type.trim().is_empty()
+                || destination.mime_type.contains('\0')
+            {
+                return Err(FileError::new(
+                    FileErrorCode::InvalidArgument,
+                    "A new child destination requires one file name and a MIME type, without an expected existing version.",
+                ));
+            }
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -125,11 +181,13 @@ pub struct FileWriteRequest {
 pub struct FileWritePreview {
     pub write_id: String,
     pub spec_digest: String,
-    pub target: FileResourceRef,
-    pub resolved_target: FileResourceRef,
-    pub parent: FileEntry,
+    pub target: Option<FileResourceRef>,
+    pub destination: Option<FileChildDestination>,
+    pub resolved_target: Option<FileResourceRef>,
+    pub parent: Option<FileEntry>,
     pub expected: Option<FileVersion>,
     pub content: FileSnapshot,
+    pub guarantee: FileWriteGuarantee,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -146,6 +204,15 @@ pub enum FileWriteState {
     NotStarted,
     Published,
     Conflict,
+    Failed,
+    Unknown,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum FileWriteEffect {
+    NotStarted,
+    Observed,
     Unknown,
 }
 
@@ -154,10 +221,14 @@ pub enum FileWriteState {
 pub struct FileWriteReceipt {
     pub identity: FileWriteIdentity,
     pub state: FileWriteState,
-    /// False is used only before any operation that changes the target name.
-    /// A conflict after reserving the original explicitly retains true.
+    pub effect: FileWriteEffect,
+    /// Complete evidence establishes the outcome. An interrupted attempt can
+    /// have observed effects while still requiring reconciliation.
+    pub settled: bool,
+    /// Compatibility projection of effect: false before target mutation,
+    /// true after an observed change, and None while the effect is unknown.
     pub target_changed: Option<bool>,
-    pub target: FileResourceRef,
+    pub target: Option<FileResourceRef>,
     pub current_version: Option<FileVersion>,
     pub original_snapshot: Option<FileSnapshot>,
     pub recovery_resources: Vec<FileEntry>,
@@ -206,7 +277,9 @@ impl FileError {
 
     pub(super) fn io(error: std::io::Error) -> Self {
         use std::io::ErrorKind;
-        let code = if matches!(error.raw_os_error(), Some(32 | 33)) {
+        let code = if error.kind() == ErrorKind::WouldBlock
+            || (cfg!(windows) && matches!(error.raw_os_error(), Some(32 | 33)))
+        {
             FileErrorCode::Busy
         } else {
             match error.kind() {

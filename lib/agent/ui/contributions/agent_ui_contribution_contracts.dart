@@ -92,6 +92,7 @@ abstract final class AgentUiRendererIds {
   static const preferences = 'sked.settings.preferences';
   static const skills = 'sked.settings.skills';
   static const memories = 'sked.settings.memories';
+  static const files = 'sked.settings.files';
 }
 
 const defaultAgentSettingsContributions = [
@@ -118,6 +119,12 @@ const defaultAgentSettingsContributions = [
     slot: AgentUiContributionSlot.settings,
     rendererId: AgentUiRendererIds.memories,
     order: 30,
+  ),
+  AgentUiContribution(
+    id: AgentUiRendererIds.files,
+    slot: AgentUiContributionSlot.settings,
+    rendererId: AgentUiRendererIds.files,
+    order: 40,
   ),
 ];
 
