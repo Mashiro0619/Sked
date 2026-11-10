@@ -1,6 +1,8 @@
 mod credentials;
 pub mod offline;
 mod request_body;
+#[cfg(test)]
+mod tests;
 mod transport;
 mod types;
 
@@ -431,12 +433,14 @@ impl AgentHook for RunHook {
         }
         let serialized: Vec<Value> = history
             .iter()
-            .map(|message| {
-                let mut value = serde_json::to_value(message).expect("message serialization");
-                self.guard.value(&mut value);
-                value
-            })
+            .map(|message| serde_json::to_value(message).expect("message serialization"))
             .collect();
+        if serialized
+            .iter()
+            .any(|message| self.guard.contains_value(message))
+        {
+            return CompletionCallAction::stop("会话内容包含当前连接凭据，已停止请求");
+        }
         match self
             .executor
             .prepare_model(serialized, event.turn - 1)
