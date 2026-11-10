@@ -41,6 +41,7 @@ class AgentQuestionPrompt {
     Iterable<AgentQuestionOption> options = const [],
     this.multiple = false,
     this.allowFreeText = true,
+    this.isRequired = true,
   }) : options = List.unmodifiable(options) {
     _text(id, 'question.id');
     _text(question, 'question');
@@ -55,6 +56,7 @@ class AgentQuestionPrompt {
   final List<AgentQuestionOption> options;
   final bool multiple;
   final bool allowFreeText;
+  final bool isRequired;
 
   Map<String, Object?> toJson() => {
     'id': id,
@@ -62,6 +64,7 @@ class AgentQuestionPrompt {
     'options': options.map((option) => option.toJson()).toList(),
     'multiple': multiple,
     'allowFreeText': allowFreeText,
+    'required': isRequired,
   };
 
   factory AgentQuestionPrompt.fromJson(Map<String, Object?> json) {
@@ -71,6 +74,7 @@ class AgentQuestionPrompt {
       'options',
       'multiple',
       'allowFreeText',
+      'required',
     });
     return AgentQuestionPrompt(
       id: _text(json['id'], 'question.id'),
@@ -83,6 +87,7 @@ class AgentQuestionPrompt {
           : const [],
       multiple: _optionalBool(json, 'multiple'),
       allowFreeText: _optionalBool(json, 'allowFreeText', defaultValue: true),
+      isRequired: _optionalBool(json, 'required', defaultValue: true),
     );
   }
 }
@@ -328,6 +333,7 @@ final ToolDefinition agentAskUserTool = ToolDefinition(
             'question': {'type': 'string', 'minLength': 1},
             'multiple': {'type': 'boolean', 'default': false},
             'allowFreeText': {'type': 'boolean', 'default': true},
+            'required': {'type': 'boolean', 'default': true},
             'options': {
               'type': 'array',
               'items': {
@@ -363,10 +369,14 @@ void _validateAnswers(
   List<AgentQuestionPrompt> questions,
   List<AgentQuestionAnswer> answers,
 ) {
-  if (answers.length != questions.length ||
-      answers.map((answer) => answer.questionId).toSet().length !=
-          answers.length) {
-    throw const FormatException('Every question needs exactly one answer.');
+  final answeredIds = answers.map((answer) => answer.questionId).toSet();
+  if (answeredIds.length != answers.length) {
+    throw const FormatException('A question cannot be answered twice.');
+  }
+  if (questions.any(
+    (question) => question.isRequired && !answeredIds.contains(question.id),
+  )) {
+    throw const FormatException('Required questions need an answer.');
   }
   final questionsById = {
     for (final question in questions) question.id: question,

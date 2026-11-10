@@ -40,10 +40,12 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
 
   bool get _editable => widget.enabled && _pending == null && !_resolved;
 
+  bool _hasAnswer(AgentQuestionPrompt question) =>
+      _selected[question.id]!.isNotEmpty ||
+      (question.allowFreeText && _text[question.id]!.text.trim().isNotEmpty);
+
   bool get _complete => widget.request.questions.every(
-    (question) =>
-        _selected[question.id]!.isNotEmpty ||
-        (question.allowFreeText && _text[question.id]!.text.trim().isNotEmpty),
+    (question) => !question.isRequired || _hasAnswer(question),
   );
 
   @override
@@ -110,14 +112,15 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
       } else {
         final answers = [
           for (final question in widget.request.questions)
-            AgentQuestionAnswer(
-              questionId: question.id,
-              optionIds: [
-                for (final option in question.options)
-                  if (_selected[question.id]!.contains(option.id)) option.id,
-              ],
-              text: question.allowFreeText ? _text[question.id]!.text : '',
-            ),
+            if (_hasAnswer(question))
+              AgentQuestionAnswer(
+                questionId: question.id,
+                optionIds: [
+                  for (final option in question.options)
+                    if (_selected[question.id]!.contains(option.id)) option.id,
+                ],
+                text: question.allowFreeText ? _text[question.id]!.text : '',
+              ),
         ];
         await widget.onAnswer(answers);
       }
@@ -357,6 +360,12 @@ class _AgentQuestionViewState extends State<AgentQuestionView> {
 
   Widget _answer(AgentQuestionPrompt question) {
     final style = AgentUiStyle.of(context);
+    if (!_hasAnswer(question)) {
+      return Text(
+        AppLocalizations.of(context).agentQuestionSkipped,
+        style: style.label,
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,

@@ -247,6 +247,10 @@ AgentQuestionRequest? questionFromRust(native.ViewQuestionRequest? value) {
       value.status == native.ViewQuestionStatus.retired) {
     return null;
   }
+  final optionalQuestionIds = {
+    for (final prompt in value.questions)
+      if (!prompt.required_) prompt.id,
+  };
   return AgentQuestionRequest(
     id: value.id,
     toolCallId: value.toolCallId,
@@ -264,6 +268,7 @@ AgentQuestionRequest? questionFromRust(native.ViewQuestionRequest? value) {
         question: prompt.question,
         multiple: prompt.multiple,
         allowFreeText: prompt.allowFreeText,
+        isRequired: prompt.required_,
         options: prompt.options.map(
           (option) => AgentQuestionOption(
             id: option.id,
@@ -276,13 +281,20 @@ AgentQuestionRequest? questionFromRust(native.ViewQuestionRequest? value) {
     dismissed: value.status == native.ViewQuestionStatus.skipped,
     answers: value.status != native.ViewQuestionStatus.answered
         ? null
-        : value.answers.map(
-            (answer) => AgentQuestionAnswer(
-              questionId: answer.questionId,
-              optionIds: answer.optionIds,
-              text: answer.text ?? '',
-            ),
-          ),
+        : value.answers
+              .where(
+                (answer) =>
+                    !optionalQuestionIds.contains(answer.questionId) ||
+                    answer.optionIds.isNotEmpty ||
+                    (answer.text?.trim().isNotEmpty ?? false),
+              )
+              .map(
+                (answer) => AgentQuestionAnswer(
+                  questionId: answer.questionId,
+                  optionIds: answer.optionIds,
+                  text: answer.text ?? '',
+                ),
+              ),
   );
 }
 
