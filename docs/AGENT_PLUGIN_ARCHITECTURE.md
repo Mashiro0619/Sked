@@ -1,6 +1,6 @@
 # Agent 插件架构与上线目标
 
-状态：服务实例与生命周期容器、默认 Profile、领域服务迁移、执行权限契约与 Windows 文件能力已接通。此前阶段已完成静态审查和确认问题修复；Windows 文件阶段提交后继续审查，再接入 Android 文件能力。并行桌面交互按[独立计划](DESKTOP_INTERACTION_PLAN.md)记录进度。重构基线为 106dc96264634b110b4afc346d5f140b46da4097；本轮 Rust 通过固定 1.97.1 的格式与静态源码审查，构建和原生验收按后文安排继续暂停。当前运行行为见[运行说明](AGENT_RUNTIME.md)，原生实现基线见[Rust 迁移](AGENT_RUST_MIGRATION.md)。
+状态：服务实例与生命周期容器、默认 Profile、领域服务迁移、执行权限契约与 Windows 文件能力已接通，并完成阶段静态审查及确认问题修复；继续接入 Android 文件能力。并行桌面交互按[独立计划](DESKTOP_INTERACTION_PLAN.md)记录进度。重构基线为 106dc96264634b110b4afc346d5f140b46da4097；本轮 Rust 通过固定 1.97.1 的格式与静态源码审查，构建和原生验收按后文安排继续暂停。当前运行行为见[运行说明](AGENT_RUNTIME.md)，原生实现基线见[Rust 迁移](AGENT_RUST_MIGRATION.md)。
 
 ## 产品目标
 
