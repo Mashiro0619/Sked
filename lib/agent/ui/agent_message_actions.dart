@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../theme/sked_menu_style.dart';
+import '../../widgets/desktop_context_menu.dart';
 import 'agent_ui_style.dart';
 
 /// Keeps message operations beside their owner. Hidden desktop controls retain
@@ -14,6 +15,7 @@ class AgentMessageActions extends StatefulWidget {
   const AgentMessageActions({
     super.key,
     required this.messageId,
+    this.ownerIdentity,
     required this.child,
     required this.copyText,
     this.isUser = false,
@@ -31,6 +33,7 @@ class AgentMessageActions extends StatefulWidget {
        assert(versionIndex >= 0 && versionIndex < versionCount);
 
   final String messageId;
+  final Object? ownerIdentity;
   final Widget child;
   final String copyText;
   final bool isUser;
@@ -81,6 +84,7 @@ class _AgentMessageActionsState extends State<AgentMessageActions> {
   void didUpdateWidget(AgentMessageActions oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.messageId != widget.messageId ||
+        oldWidget.ownerIdentity != widget.ownerIdentity ||
         oldWidget.copyText != widget.copyText ||
         oldWidget.versionIndex != widget.versionIndex ||
         oldWidget.versionCount != widget.versionCount ||
@@ -129,6 +133,60 @@ class _AgentMessageActionsState extends State<AgentMessageActions> {
     widget.onVersionSelected?.call(index);
   }
 
+  List<DesktopAction> _objectActions([DesktopActionContext? invocation]) {
+    final l = AppLocalizations.of(context);
+    final generation = _generation;
+    bool current() =>
+        mounted &&
+        _enabled &&
+        generation == _generation &&
+        (invocation == null
+            ? ModalRoute.of(context)?.isCurrent != false
+            : invocation.isCurrent());
+    DesktopAction action(
+      String id,
+      String label,
+      IconData icon,
+      VoidCallback? invoke,
+    ) => DesktopAction(
+      id: id,
+      label: label,
+      icon: icon,
+      enabled: current() && invoke != null,
+      onInvoke: invoke == null
+          ? null
+          : () {
+              if (current()) invoke();
+            },
+    );
+    return [
+      if (widget.copyText.isNotEmpty)
+        DesktopAction(
+          id: 'agent-copy',
+          label: _copied ? l.agentCopied : l.agentCopyMessage,
+          icon: _copied ? Icons.check_rounded : Icons.copy_outlined,
+          enabled: current() && !_copying,
+          onInvoke: () async {
+            if (current()) await _copy();
+          },
+        ),
+      if (widget.showEditAndRedo || widget.onEditAndRedo != null)
+        action(
+          'agent-edit-redo',
+          l.agentEditAndRedo,
+          Icons.edit_outlined,
+          widget.onEditAndRedo,
+        ),
+      if (widget.showRegenerate || widget.onRegenerate != null)
+        action(
+          'agent-regenerate',
+          l.agentRegenerateReply,
+          Icons.refresh_rounded,
+          widget.onRegenerate,
+        ),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -172,34 +230,14 @@ class _AgentMessageActionsState extends State<AgentMessageActions> {
       alignment: widget.isUser ? WrapAlignment.end : WrapAlignment.start,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        if (widget.copyText.isNotEmpty)
+        for (final objectAction in _objectActions())
           action(
-            id: 'agent-copy',
-            label: _copied ? l.agentCopied : l.agentCopyMessage,
-            icon: _copied ? Icons.check_rounded : Icons.copy_outlined,
-            onPressed: _copying ? null : _copy,
-          ),
-        if (widget.showEditAndRedo || widget.onEditAndRedo != null)
-          action(
-            id: 'agent-edit-redo',
-            label: l.agentEditAndRedo,
-            icon: Icons.edit_outlined,
-            onPressed: widget.onEditAndRedo == null
-                ? null
-                : () {
-                    if (_enabled) widget.onEditAndRedo?.call();
-                  },
-          ),
-        if (widget.showRegenerate || widget.onRegenerate != null)
-          action(
-            id: 'agent-regenerate',
-            label: l.agentRegenerateReply,
-            icon: Icons.refresh_rounded,
-            onPressed: widget.onRegenerate == null
-                ? null
-                : () {
-                    if (_enabled) widget.onRegenerate?.call();
-                  },
+            id: objectAction.id,
+            label: objectAction.label,
+            icon: objectAction.icon!,
+            onPressed: objectAction.enabled
+                ? () => objectAction.onInvoke!()
+                : null,
           ),
         if (widget.versionCount > 1) ...[
           action(
@@ -233,7 +271,7 @@ class _AgentMessageActionsState extends State<AgentMessageActions> {
         ],
       ],
     );
-    return MouseRegion(
+    final body = MouseRegion(
       onEnter: (_) {
         if (_enabled) setState(() => _hovered = true);
       },
@@ -267,6 +305,13 @@ class _AgentMessageActionsState extends State<AgentMessageActions> {
           ],
         ),
       ),
+    );
+    return DesktopContextMenuRegion(
+      target: (widget.ownerIdentity, widget.messageId, generation),
+      enabled: desktop && _enabled,
+      isOwnerCurrent: () => mounted && _enabled && generation == _generation,
+      actionsBuilder: _objectActions,
+      child: body,
     );
   }
 }

@@ -317,7 +317,14 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _browseScheduled = false;
       if (!mounted) return;
-      final id = widget.active && _hostActive ? _repository.selectedId : null;
+      // A popup takes keyboard ownership while its source message still needs
+      // the same visible page. Release the lease when the host is hidden or its
+      // route ends, independently of the stricter foreground input gate.
+      final browseActive =
+          widget.active &&
+          TickerMode.valuesOf(context).enabled &&
+          ModalRoute.of(context)?.isActive != false;
+      final id = browseActive ? _repository.selectedId : null;
       if (identical(_browseRepository, _repository) &&
           identical(_browseDelegate, widget.delegate) &&
           _browseId == id &&
@@ -2768,13 +2775,20 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     return AgentMessageActions(
       key: ValueKey('agent-message-group-${message.id}'),
       messageId: message.id,
+      ownerIdentity: (
+        _repository,
+        widget.delegate,
+        conversation.id,
+        generation,
+        widget.readDatasetGeneration?.call(),
+      ),
       copyText:
           !replacing && (message.role == ConversationRole.user || finalResponse)
           ? text
           : '',
       isUser: message.role == ConversationRole.user,
       active: widget.active,
-      interactive: _uiActive,
+      interactive: widget.interactive && !_runtime.maintenance,
       alwaysVisible: latest || choices.length > 1,
       versionCount: choices.length,
       versionIndex: index,

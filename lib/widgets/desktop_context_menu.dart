@@ -356,6 +356,7 @@ class _DesktopContextMenuRegionState extends State<DesktopContextMenuRegion> {
     includeSemantics: false,
     onKeyEvent: _onKeyEvent,
     child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onSecondaryTapUp: widget.enabled
           ? (details) => _launch(details.globalPosition)
           : null,
