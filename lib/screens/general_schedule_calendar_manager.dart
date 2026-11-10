@@ -247,49 +247,18 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
         !SkedTaskSessionScope.isCurrent(context)) {
       return;
     }
-    final commands = context.read<GeneralCommands>();
-    final maintenance = context.read<AppDataMaintenance>();
-    final workspace = context.read<WorkspaceViewState>();
-    final workspaces = context.read<WorkspaceCommands>();
-    final appScope = AppScope.capture(context);
     final general = context.read<GeneralViewState>();
     final schedule = general.schedules
         .where((item) => item.id == id)
         .firstOrNull;
     if (schedule == null) return;
-    final owner = SkedTaskSessionScope.maybeOf(context);
     setState(() => _childTaskOpen = true);
     try {
-      await showSkedAdaptivePickerDialog<void>(
-        context: context,
-        routeName: 'category-color-picker',
-        preferredWidth: 340,
+      await _showCalendarColorTask(
+        context,
+        general,
+        schedule: schedule,
         anchorContext: anchor,
-        workspace: AppMode.general,
-        waitForTransitionComplete: true,
-        isSessionCurrent: () =>
-            mounted &&
-            owner?.session.isCurrent != false &&
-            general.schedules.any((item) => item.id == id),
-        builder: (_) {
-          final child = SkedTaskRouteGuard(
-            workspace: AppMode.general,
-            maintenance: maintenance,
-            workspaceView: workspace,
-            workspaces: workspaces,
-            targetChanges: general,
-            isTargetCurrent: () =>
-                general.schedules.any((item) => item.id == id),
-            isOwnerActive: () => mounted && owner?.session.isCurrent != false,
-            parent: owner?.session,
-            child: _CalendarColorDialog(
-              view: general,
-              commands: commands,
-              schedule: schedule,
-            ),
-          );
-          return appScope?.wrap(child) ?? child;
-        },
       );
     } finally {
       if (mounted) setState(() => _childTaskOpen = false);
@@ -341,36 +310,10 @@ class _CalendarManagerPageState extends State<_CalendarManagerPage>
         !SkedTaskSessionScope.isCurrent(context)) {
       return;
     }
-    final commands = context.read<GeneralCommands>();
-    final maintenance = context.read<AppDataMaintenance>();
-    final workspace = context.read<WorkspaceViewState>();
-    final workspaces = context.read<WorkspaceCommands>();
-    final appScope = AppScope.capture(context);
     final general = context.read<GeneralViewState>();
-    final owner = SkedTaskSessionScope.maybeOf(context);
     setState(() => _childTaskOpen = true);
     try {
-      await showExpressiveDialog<void>(
-        context: context,
-        waitForTransitionComplete: true,
-        builder: (_) {
-          final child = SkedTaskRouteGuard(
-            workspace: AppMode.general,
-            maintenance: maintenance,
-            workspaceView: workspace,
-            workspaces: workspaces,
-            targetChanges: general,
-            isOwnerActive: () => mounted && owner?.session.isCurrent != false,
-            parent: owner?.session,
-            child: _DeleteCalendarDialog(
-              view: general,
-              commands: commands,
-              schedule: schedule,
-            ),
-          );
-          return appScope?.wrap(child) ?? child;
-        },
-      );
+      await _showCalendarDeleteTask(context, general, schedule: schedule);
     } finally {
       if (mounted) setState(() => _childTaskOpen = false);
     }
@@ -670,7 +613,7 @@ class _CalendarManagerTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Semantics(
+    final tile = Semantics(
       key: ValueKey('calendar-manager-tile-${schedule.id}'),
       container: true,
       explicitChildNodes: true,
@@ -726,6 +669,14 @@ class _CalendarManagerTile extends StatelessWidget {
           ),
         ),
       ),
+    );
+    return _GeneralCalendarContextMenu(
+      schedule: schedule,
+      enabled: !disabled,
+      onRename: onRename,
+      onVisibility: onToggleVisibility,
+      onDelete: onDelete,
+      child: tile,
     );
   }
 }
@@ -824,6 +775,98 @@ class _CalendarManagerTileActions extends StatelessWidget {
   }
 }
 
+Future<void> _showCalendarColorTask(
+  BuildContext context,
+  GeneralViewState general, {
+  required GeneralSchedule schedule,
+  required BuildContext anchorContext,
+  bool Function()? isOwnerActive,
+  SkedTaskSession? lifetime,
+}) {
+  if (!context.mounted) return Future<void>.value();
+  final commands = context.read<GeneralCommands>();
+  final maintenance = context.read<AppDataMaintenance>();
+  final workspace = context.read<WorkspaceViewState>();
+  final workspaces = context.read<WorkspaceCommands>();
+  final appScope = AppScope.capture(context);
+  final owner = SkedTaskSessionScope.maybeOf(context);
+  final parent = lifetime ?? owner?.session;
+  bool current() =>
+      context.mounted &&
+      parent?.isCurrent != false &&
+      isOwnerActive?.call() != false;
+  bool targetCurrent() =>
+      general.schedules.any((item) => item.id == schedule.id);
+  return showSkedAdaptivePickerDialog<void>(
+    context: context,
+    routeName: 'category-color-picker',
+    preferredWidth: 340,
+    anchorContext: anchorContext,
+    workspace: AppMode.general,
+    waitForTransitionComplete: true,
+    isSessionCurrent: () => current() && targetCurrent(),
+    builder: (_) {
+      final child = SkedTaskRouteGuard(
+        workspace: AppMode.general,
+        maintenance: maintenance,
+        workspaceView: workspace,
+        workspaces: workspaces,
+        targetChanges: general,
+        isTargetCurrent: targetCurrent,
+        isOwnerActive: current,
+        parent: parent,
+        child: _CalendarColorDialog(
+          view: general,
+          commands: commands,
+          schedule: schedule,
+        ),
+      );
+      return appScope?.wrap(child) ?? child;
+    },
+  );
+}
+
+Future<void> _showCalendarDeleteTask(
+  BuildContext context,
+  GeneralViewState general, {
+  required GeneralSchedule schedule,
+  bool Function()? isOwnerActive,
+  SkedTaskSession? lifetime,
+}) {
+  if (!context.mounted) return Future<void>.value();
+  final commands = context.read<GeneralCommands>();
+  final maintenance = context.read<AppDataMaintenance>();
+  final workspace = context.read<WorkspaceViewState>();
+  final workspaces = context.read<WorkspaceCommands>();
+  final appScope = AppScope.capture(context);
+  final owner = SkedTaskSessionScope.maybeOf(context);
+  final parent = lifetime ?? owner?.session;
+  return showExpressiveDialog<void>(
+    context: context,
+    waitForTransitionComplete: true,
+    builder: (_) {
+      final child = SkedTaskRouteGuard(
+        workspace: AppMode.general,
+        maintenance: maintenance,
+        workspaceView: workspace,
+        workspaces: workspaces,
+        targetChanges: general,
+        isOwnerActive: () =>
+            context.mounted &&
+            parent?.isCurrent != false &&
+            isOwnerActive?.call() != false,
+        parent: parent,
+        child: _DeleteCalendarDialog(
+          view: general,
+          commands: commands,
+          schedule: schedule,
+        ),
+      );
+      return appScope?.wrap(child) ?? child;
+    },
+  );
+}
+
 Future<void> _showCalendarNameTask(
   BuildContext context,
   GeneralViewState general, {
@@ -893,7 +936,7 @@ class _DesktopCalendarManagerRow extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final color = effectiveGeneralCalendarColor(context, schedule);
-    return Padding(
+    final row = Padding(
       key: ValueKey('calendar-manager-tile-${schedule.id}'),
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -976,6 +1019,15 @@ class _DesktopCalendarManagerRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+    return _GeneralCalendarContextMenu(
+      schedule: schedule,
+      enabled: !disabled,
+      onRename: onName,
+      onColor: onColor,
+      onVisibility: onVisibility,
+      onDelete: onDelete,
+      child: row,
     );
   }
 }

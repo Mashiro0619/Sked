@@ -96,6 +96,7 @@ import 'settings_page.dart';
 
 part 'general_schedule_list_view.dart';
 part 'general_schedule_occurrence_actions.dart';
+part 'general_schedule_calendar_actions.dart';
 part 'general_schedule_reminder_strip.dart';
 part 'general_event_list_details_host.dart';
 part 'general_schedule_timeline_view.dart';
@@ -1174,7 +1175,6 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
   }
 
   Widget _wrapStandalone(Widget canvas) {
-    final commands = context.read<GeneralCommands>();
     final settings = context.read<SettingsViewState>();
     final workspace = context.read<WorkspaceViewState>();
     // The home snapshot already observes the resource frame's displayed fields.
@@ -1299,24 +1299,7 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
               onTap: () => _pickDate(context, general),
             ),
           for (final calendar in general.schedules)
-            CalendarResourceRow(
-              key: ValueKey('resource-calendar-${calendar.id}'),
-              name: calendar.name,
-              color: effectiveGeneralCalendarColor(context, calendar),
-              visible: calendar.isVisible,
-              onChanged: widget.interactive
-                  ? () => unawaited(
-                      runUiCommandWithFeedback(
-                        context: context,
-                        debugLabel: 'Toggle calendar visibility',
-                        command: () => commands.updateScheduleVisibility(
-                          calendar.id,
-                          !calendar.isVisible,
-                        ),
-                      ),
-                    )
-                  : null,
-            ),
+            _calendarResourceRow(calendar),
         ],
       ),
       supporting: (_view ?? general.data.defaultView) == generalViewMonth
@@ -1326,6 +1309,39 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
     if (widget.embedded) return framed;
     return Scaffold(key: widget.scaffoldKey, body: framed);
   }
+
+  Widget _calendarResourceRow(GeneralSchedule calendar) => Builder(
+    builder: (anchor) {
+      void invoke(_CalendarObjectAction action, [BuildContext? source]) =>
+          unawaited(
+            _runCalendarResourceAction(
+              calendar.id,
+              action,
+              anchorContext: source ?? anchor,
+            ),
+          );
+      final enabled = widget.interactive && !_calendarManagerOpen;
+      return _GeneralCalendarContextMenu(
+        key: ValueKey('resource-calendar-menu-${calendar.id}'),
+        schedule: calendar,
+        enabled: enabled,
+        isOwnerCurrent: () => mounted && widget.active && widget.interactive,
+        onRename: (source) => invoke(_CalendarObjectAction.rename, source),
+        onColor: (source) => invoke(_CalendarObjectAction.color, source),
+        onVisibility: () => invoke(_CalendarObjectAction.visibility),
+        onDelete: () => invoke(_CalendarObjectAction.delete),
+        child: CalendarResourceRow(
+          key: ValueKey('resource-calendar-${calendar.id}'),
+          name: calendar.name,
+          color: effectiveGeneralCalendarColor(anchor, calendar),
+          visible: calendar.isVisible,
+          onChanged: enabled
+              ? () => invoke(_CalendarObjectAction.visibility)
+              : null,
+        ),
+      );
+    },
+  );
 
   Widget _compactMoreButton(
     BuildContext context,
@@ -2374,6 +2390,83 @@ class _GeneralScheduleHomeScreenState extends State<GeneralScheduleHomeScreen> {
       );
     } finally {
       _setUiBusyFlag(() => _moreOccurrencesSheetOpen = false);
+    }
+  }
+
+  Future<void> _runCalendarResourceAction(
+    String id,
+    _CalendarObjectAction action, {
+    required BuildContext anchorContext,
+  }) async {
+    if (!mounted ||
+        !anchorContext.mounted ||
+        !widget.active ||
+        !widget.interactive ||
+        _calendarManagerOpen ||
+        ModalRoute.of(anchorContext)?.isCurrent == false) {
+      return;
+    }
+    final general = context.read<GeneralViewState>();
+    final commands = context.read<GeneralCommands>();
+    final maintenance = context.read<AppDataMaintenance>();
+    final workspace = context.read<WorkspaceViewState>();
+    if (maintenance.isReserved || !workspace.isEnabled(AppMode.general)) return;
+    final schedule = general.schedules
+        .where((item) => item.id == id)
+        .firstOrNull;
+    if (schedule == null) return;
+    final lifetime = SkedTaskSession(
+      ownerRoute: ModalRoute.of(anchorContext),
+      maintenance: maintenance,
+      workspaceView: workspace,
+      workspaces: context.read<WorkspaceCommands>(),
+      workspace: AppMode.general,
+      isOwnerActive: () => mounted && widget.active && widget.interactive,
+    );
+    _calendarTaskLifetime = lifetime;
+    _setUiBusyFlag(() => _calendarManagerOpen = true);
+    try {
+      switch (action) {
+        case _CalendarObjectAction.rename:
+          await _showCalendarNameTask(
+            context,
+            general,
+            schedule: schedule,
+            anchorContext: anchorContext,
+            placement: SkedFloatingPlacement.right,
+            lifetime: lifetime,
+          );
+        case _CalendarObjectAction.color:
+          await _showCalendarColorTask(
+            context,
+            general,
+            schedule: schedule,
+            anchorContext: anchorContext,
+            lifetime: lifetime,
+          );
+        case _CalendarObjectAction.visibility:
+          await runUiCommandWithFeedback(
+            context: context,
+            debugLabel: 'Toggle calendar visibility',
+            command: () => commands.updateScheduleVisibility(
+              schedule.id,
+              !schedule.isVisible,
+            ),
+          );
+        case _CalendarObjectAction.delete:
+          await _showCalendarDeleteTask(
+            context,
+            general,
+            schedule: schedule,
+            lifetime: lifetime,
+          );
+      }
+    } finally {
+      if (identical(_calendarTaskLifetime, lifetime)) {
+        _calendarTaskLifetime = null;
+      }
+      lifetime.dispose();
+      _setUiBusyFlag(() => _calendarManagerOpen = false);
     }
   }
 
