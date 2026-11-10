@@ -6,6 +6,10 @@ use sha2::{Digest, Sha256};
 
 use super::{AgentStorage, Result, StorageError, error::required, models::*};
 
+#[cfg(test)]
+#[path = "archive_tests.rs"]
+mod tests;
+
 fn fingerprint(value: &impl serde::Serialize) -> Result<String> {
     Ok(format!("{:x}", Sha256::digest(serde_json::to_vec(value)?)))
 }
@@ -159,8 +163,6 @@ fn validate_parts(parts: &AgentArchiveParts) -> Result<()> {
 
 fn portable_messages(messages: &mut [Message]) {
     for message in messages {
-        message.tool_calls.clear();
-        message.tool_call_id = None;
         message.response_items.clear();
         message.attachment_delivery = AttachmentDelivery::Local;
     }
