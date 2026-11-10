@@ -49,6 +49,7 @@ extension _HomeScreenCourseActions on _HomeScreenState {
             ? '${l10n.deleteCourseTitle}: ${info.course.name}'
             : l10n.deleteCourseTitle,
         icon: Icons.delete_outline,
+        shortcut: LogicalKeyboardKey.delete,
         enabled: enabled,
         onInvoke: () =>
             _deleteCourseFromMenu(context, timetableId, info, actionContext),

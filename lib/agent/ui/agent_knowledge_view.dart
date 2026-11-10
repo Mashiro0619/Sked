@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/services.dart' show LogicalKeyboardKey;
 
 import '../../l10n/app_localizations.dart';
 import '../../theme/sked_expressive_theme.dart';
@@ -277,6 +278,11 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
           id: id,
           label: label,
           icon: icon,
+          shortcut: switch (id) {
+            'edit' => LogicalKeyboardKey.f2,
+            'delete' => LogicalKeyboardKey.delete,
+            _ => null,
+          },
           enabled:
               !_busy &&
               service.ready &&

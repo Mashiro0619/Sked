@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -170,6 +171,7 @@ class _AgentAttachmentListState extends State<AgentAttachmentList> {
           id: actionId,
           label: label,
           icon: icon,
+          shortcut: actionId == 'remove' ? LogicalKeyboardKey.delete : null,
           enabled: _enabled && generation == _generation,
           onInvoke: () async {
             if (invocation != null) {
