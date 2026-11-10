@@ -32,7 +32,7 @@ use std::{
 use rig::message::Message as ProviderMessage;
 use serde_json::Value;
 use tokio::sync::{Mutex, Notify, broadcast, mpsc, oneshot, watch};
-use tokio_util::sync::CancellationToken;
+use tokio_util::{sync::CancellationToken, task::TaskTracker};
 use uuid::Uuid;
 
 #[cfg(test)]
@@ -78,6 +78,8 @@ struct ManagerInner {
     events: broadcast::Sender<RuntimeEvent>,
     shutdown: CancellationToken,
     auto_title: AtomicBool,
+    /// Titles stay tracked after their session cancellation handle is cleared.
+    title_tasks: TaskTracker,
     #[cfg(test)]
     fail_next_tool_record: AtomicBool,
 }
@@ -144,7 +146,7 @@ impl RuntimeManager {
         let storage = storage.into();
         let model_client = model_client.into();
         let (events, _) = broadcast::channel(1024);
-        Self { inner: Arc::new(ManagerInner { storage, host, model_client, sessions: Mutex::new(HashMap::new()), cache_owners: StdMutex::new(HashSet::new()), tools: StdMutex::new(Vec::new()), preamble: StdMutex::new("You are Sked's task assistant. Use the available tools for current application facts. Follow the user's permission mode. A tool receipt determines whether an operation completed. Ask for missing information with ask_user and maintain a plan with update_plan when useful.".into()), events, shutdown: CancellationToken::new(), auto_title: AtomicBool::new(true),
+        Self { inner: Arc::new(ManagerInner { storage, host, model_client, sessions: Mutex::new(HashMap::new()), cache_owners: StdMutex::new(HashSet::new()), tools: StdMutex::new(Vec::new()), preamble: StdMutex::new("You are Sked's task assistant. Use the available tools for current application facts. Follow the user's permission mode. A tool receipt determines whether an operation completed. Ask for missing information with ask_user and maintain a plan with update_plan when useful.".into()), events, shutdown: CancellationToken::new(), auto_title: AtomicBool::new(true), title_tasks: TaskTracker::new(),
 #[cfg(test)] fail_next_tool_record: AtomicBool::new(false) }) }
     }
 
@@ -534,7 +536,8 @@ impl RuntimeManager {
                 session.title = Some(cancellation.clone());
                 let manager = self.clone();
                 let id = id.to_owned();
-                tokio::spawn(async move {
+                // Register while holding the session lock used by shutdown's stop loop.
+                self.inner.title_tasks.spawn(async move {
                     manager
                         .generate_title(id.clone(), message, config, cancellation.as_ref().clone())
                         .await;
@@ -1188,6 +1191,9 @@ impl RuntimeManager {
         for id in &sessions {
             let _ = self.stop(id).await;
         }
+        // Admission is closed, and stop acquired every admitted session's lock.
+        // Its send has registered the title before releasing that same lock.
+        self.inner.title_tasks.close();
         for id in &sessions {
             loop {
                 if exclusions.borrow().contains(id) {
@@ -1204,6 +1210,7 @@ impl RuntimeManager {
                 }
             }
         }
+        self.inner.title_tasks.wait().await;
     }
 
     async fn accept_locked(
