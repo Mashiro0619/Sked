@@ -54,7 +54,7 @@ class RustAgentBusinessHost {
   final _completed = <String, Set<String>>{};
   final _cancelledRequests = <String>{};
   final _approvals = <String, _PendingApproval>{};
-  final _modes = <String, AgentPermissionMode>{};
+  int _permissionRevision = 0;
   Object? _eventError;
   bool _disposed = false;
 
@@ -190,13 +190,20 @@ class RustAgentBusinessHost {
   Future<native.HostResult> _execute(native.HostRequest request) async {
     final runId = request.runId!;
     var run = _runs[runId];
-    if (run == null) {
+    while (run == null) {
+      final permissionRevision = _permissionRevision;
       final snapshot = (await client.query(
         native.AgentQuery(
           kind: native.QueryKind.readConversation,
           conversationId: request.conversationId,
         ),
       )).snapshot;
+      // A mode change can arrive while the initial native read is in flight.
+      // Read again instead of carrying a mode across conversation lifetimes.
+      if (permissionRevision != _permissionRevision) {
+        run = _runs[runId];
+        continue;
+      }
       if (snapshot == null) {
         throw const OperationProblem(
           OperationErrorCode.notFound,
@@ -206,11 +213,9 @@ class RustAgentBusinessHost {
       final policy = OperationPolicy()
         ..update(
           enabled: true,
-          mode:
-              _modes[request.conversationId] ??
-              AgentPermissionMode.values.byName(
-                snapshot.conversation.mode.name,
-              ),
+          mode: AgentPermissionMode.values.byName(
+            snapshot.conversation.mode.name,
+          ),
         );
       run = _HostRun(
         conversationId: request.conversationId,
@@ -342,7 +347,7 @@ class RustAgentBusinessHost {
 
   native.HostResult _setMode(native.HostRequest request) {
     final mode = AgentPermissionMode.values.byName(request.mode!.name);
-    _modes[request.conversationId] = mode;
+    _permissionRevision++;
     for (final run in _runs.values) {
       if (run.conversationId == request.conversationId) {
         run.scope.policy.update(mode: mode);
