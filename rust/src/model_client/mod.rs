@@ -519,7 +519,8 @@ impl AgentHook for RunHook {
     ) -> ModelTurnAction {
         let has_content = event.content.iter().any(|content| match content {
             AssistantContent::Text(text) => !text.text.trim().is_empty(),
-            content => !content.is_blank(),
+            AssistantContent::ToolCall(_) => true,
+            _ => false,
         });
         if !has_content {
             return ModelTurnAction::stop("模型返回了空回复");

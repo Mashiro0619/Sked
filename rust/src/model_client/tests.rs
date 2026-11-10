@@ -106,3 +106,58 @@ async fn rejected_credential_arguments_stop_before_the_next_request() {
             .contains(&config.api_key)
     );
 }
+
+#[tokio::test]
+async fn reasoning_needs_answer_text_or_a_tool_call() {
+    let transport = ScriptedTransport::new([
+        chat_reply(
+            json!({"role":"assistant","reasoning_content":"I should read the fixture.","tool_calls":[{
+                "index":0,"id":"read","type":"function","function":{
+                    "name":wire_tool_name("fixture.read"),"arguments":"{}"
+                }
+            }]}),
+            "tool_calls",
+        ),
+        chat_reply(
+            json!({"role":"assistant","reasoning_content":"I am still thinking."}),
+            "stop",
+        ),
+    ]);
+    let client = RigModelClient::with_transport(DynHttpClient::new(transport.clone()));
+    let executor = Arc::new(RecordingExecutor {
+        calls: AtomicUsize::new(0),
+    });
+    let (events, mut receiver) = unbounded_channel();
+    let result = client
+        .run(
+            &config(),
+            "Answer the request.".into(),
+            Message::user("Read the fixture."),
+            Vec::new(),
+            vec![ToolDescriptor {
+                name: "fixture.read".into(),
+                description: "Read the fixture.".into(),
+                parameters: json!({"type":"object","properties":{}}),
+            }],
+            executor.clone(),
+            CancellationToken::new(),
+            events,
+        )
+        .await;
+
+    assert_eq!(executor.calls.load(Ordering::SeqCst), 1);
+    assert_eq!(transport.requests().len(), 2);
+    assert!(
+        result
+            .error
+            .as_deref()
+            .is_some_and(|error| error.contains("空回复"))
+    );
+    let mut committed = 0;
+    while let Ok(event) = receiver.try_recv() {
+        if matches!(event, ModelEvent::AssistantCommitted { .. }) {
+            committed += 1;
+        }
+    }
+    assert_eq!(committed, 1);
+}
