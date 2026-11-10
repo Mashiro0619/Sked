@@ -62,6 +62,9 @@ impl Parent {
     }
 }
 
+pub(super) fn validate_replacement(_original: &File) -> Result<()> {
+    Err(unavailable())
+}
 pub(super) fn preserve_access(_original: &File, _staged: &File) -> Result<()> {
     Err(unavailable())
 }

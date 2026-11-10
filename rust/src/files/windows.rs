@@ -36,13 +36,14 @@ use windows_sys::{
             UNPROTECTED_DACL_SECURITY_INFORMATION,
         },
         Storage::FileSystem::{
-            BY_HANDLE_FILE_INFORMATION, DELETE, FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_NORMAL,
-            FILE_ATTRIBUTE_REPARSE_POINT, FILE_CASE_SENSITIVE_INFO, FILE_FLAG_BACKUP_SEMANTICS,
-            FILE_FLAG_OPEN_REPARSE_POINT, FILE_ID_INFO, FILE_LIST_DIRECTORY, FILE_READ_ATTRIBUTES,
-            FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, FILE_TRAVERSE, FILE_TYPE_DISK,
-            FileCaseSensitiveInfo, FileIdInfo, GetFileInformationByHandle,
-            GetFileInformationByHandleEx, GetFileType, GetFinalPathNameByHandleW,
-            GetVolumeInformationByHandleW, READ_CONTROL, SYNCHRONIZE, WRITE_DAC,
+            BY_HANDLE_FILE_INFORMATION, DELETE, FILE_ATTRIBUTE_DIRECTORY, FILE_ATTRIBUTE_ENCRYPTED,
+            FILE_ATTRIBUTE_NORMAL, FILE_ATTRIBUTE_REPARSE_POINT, FILE_CASE_SENSITIVE_INFO,
+            FILE_FLAG_BACKUP_SEMANTICS, FILE_FLAG_OPEN_REPARSE_POINT, FILE_ID_INFO,
+            FILE_LIST_DIRECTORY, FILE_READ_ATTRIBUTES, FILE_SHARE_DELETE, FILE_SHARE_READ,
+            FILE_SHARE_WRITE, FILE_TRAVERSE, FILE_TYPE_DISK, FileCaseSensitiveInfo, FileIdInfo,
+            GetFileInformationByHandle, GetFileInformationByHandleEx, GetFileType,
+            GetFinalPathNameByHandleW, GetVolumeInformationByHandleW, READ_CONTROL, SYNCHRONIZE,
+            WRITE_DAC,
         },
         System::{
             IO::IO_STATUS_BLOCK,
@@ -428,6 +429,20 @@ impl Parent {
             )
         })
     }
+}
+
+pub(super) fn validate_replacement(original: &File) -> Result<()> {
+    let mut info: BY_HANDLE_FILE_INFORMATION = unsafe { zeroed() };
+    if unsafe { GetFileInformationByHandle(original.as_raw_handle(), &mut info) } == 0 {
+        return Err(io::Error::last_os_error().into());
+    }
+    if info.dwFileAttributes & FILE_ATTRIBUTE_ENCRYPTED != 0 {
+        return Err(FileError::new(
+            FileErrorCode::Unsupported,
+            "EFS replacement is not supported because its encryption metadata cannot be preserved.",
+        ));
+    }
+    Ok(())
 }
 
 /// Apply the original DACL before new content reaches the staging file. Both

@@ -70,6 +70,7 @@ pub(super) fn prepare(
         Err(error) => return Err(error),
     };
     let original_snapshot = if let Some(file) = &mut original {
+        native::validate_replacement(file)?;
         let observed = frozen_version(file, cancellation)?;
         if !observed.matches_expected(request.expected.as_ref().expect("existing read version")) {
             return Err(FileError::new(
