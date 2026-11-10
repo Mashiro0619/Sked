@@ -10,6 +10,10 @@ class AppLocalizationsEs extends AppLocalizations {
   AppLocalizationsEs([String locale = 'es']) : super(locale);
 
   @override
+  String get agentClipboardReadFailed =>
+      'No se pudo leer el portapapeles. Intenta pegar de nuevo.';
+
+  @override
   String get desktopOpenFile => 'Abrir archivo';
 
   @override

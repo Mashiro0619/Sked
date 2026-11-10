@@ -10,6 +10,10 @@ class AppLocalizationsPt extends AppLocalizations {
   AppLocalizationsPt([String locale = 'pt']) : super(locale);
 
   @override
+  String get agentClipboardReadFailed =>
+      'Não foi possível ler a área de transferência. Tente colar novamente.';
+
+  @override
   String get desktopOpenFile => 'Abrir arquivo';
 
   @override

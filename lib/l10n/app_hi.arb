@@ -1,4 +1,6 @@
 {
+  "agentClipboardReadFailed": "क्लिपबोर्ड पढ़ा नहीं जा सका। फिर से पेस्ट करें।",
+  "@agentClipboardReadFailed": {},
   "desktopOpenFile": "फ़ाइल खोलें",
   "@desktopOpenFile": {},
   "desktopRevealFile": "फ़ोल्डर में दिखाएँ",

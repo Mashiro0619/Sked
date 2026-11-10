@@ -1,4 +1,6 @@
 {
+  "agentClipboardReadFailed": "Die Zwischenablage konnte nicht gelesen werden. Versuche es erneut.",
+  "@agentClipboardReadFailed": {},
   "desktopOpenFile": "Datei öffnen",
   "@desktopOpenFile": {},
   "desktopRevealFile": "Im Ordner anzeigen",

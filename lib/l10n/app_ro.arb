@@ -1,4 +1,6 @@
 {
+  "agentClipboardReadFailed": "Clipboardul nu a putut fi citit. Încercați să lipiți din nou.",
+  "@agentClipboardReadFailed": {},
   "desktopOpenFile": "Deschide fișierul",
   "@desktopOpenFile": {},
   "desktopRevealFile": "Arată în dosar",

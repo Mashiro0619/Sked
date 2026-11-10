@@ -1,4 +1,6 @@
 {
+  "agentClipboardReadFailed": "Impossibile leggere gli appunti. Prova a incollare di nuovo.",
+  "@agentClipboardReadFailed": {},
   "desktopOpenFile": "Apri file",
   "@desktopOpenFile": {},
   "desktopRevealFile": "Mostra nella cartella",

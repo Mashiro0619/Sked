@@ -1,4 +1,6 @@
 {
+  "agentClipboardReadFailed": "Не удалось прочитать буфер обмена. Попробуйте вставить ещё раз.",
+  "@agentClipboardReadFailed": {},
   "desktopOpenFile": "Открыть файл",
   "@desktopOpenFile": {},
   "desktopRevealFile": "Показать в папке",

@@ -10,6 +10,10 @@ class AppLocalizationsFi extends AppLocalizations {
   AppLocalizationsFi([String locale = 'fi']) : super(locale);
 
   @override
+  String get agentClipboardReadFailed =>
+      'Leikepöytää ei voitu lukea. Yritä liittää uudelleen.';
+
+  @override
   String get desktopOpenFile => 'Avaa tiedosto';
 
   @override

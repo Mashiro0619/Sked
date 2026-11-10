@@ -1,4 +1,6 @@
 {
+  "agentClipboardReadFailed": "Клипбордът не може да бъде прочетен. Опитайте да поставите отново.",
+  "@agentClipboardReadFailed": {},
   "desktopOpenFile": "Отваряне на файла",
   "@desktopOpenFile": {},
   "desktopRevealFile": "Показване в папката",

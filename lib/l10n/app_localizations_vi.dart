@@ -10,6 +10,10 @@ class AppLocalizationsVi extends AppLocalizations {
   AppLocalizationsVi([String locale = 'vi']) : super(locale);
 
   @override
+  String get agentClipboardReadFailed =>
+      'Không thể đọc bảng nhớ tạm. Hãy thử dán lại.';
+
+  @override
   String get desktopOpenFile => 'Mở tệp';
 
   @override

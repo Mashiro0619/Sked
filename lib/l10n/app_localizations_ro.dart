@@ -10,6 +10,10 @@ class AppLocalizationsRo extends AppLocalizations {
   AppLocalizationsRo([String locale = 'ro']) : super(locale);
 
   @override
+  String get agentClipboardReadFailed =>
+      'Clipboardul nu a putut fi citit. Încercați să lipiți din nou.';
+
+  @override
   String get desktopOpenFile => 'Deschide fișierul';
 
   @override

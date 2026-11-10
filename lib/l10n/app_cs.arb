@@ -1,4 +1,6 @@
 {
+  "agentClipboardReadFailed": "Schránku se nepodařilo přečíst. Zkuste vložení znovu.",
+  "@agentClipboardReadFailed": {},
   "desktopOpenFile": "Otevřít soubor",
   "@desktopOpenFile": {},
   "desktopRevealFile": "Zobrazit ve složce",

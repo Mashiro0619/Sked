@@ -10,6 +10,10 @@ class AppLocalizationsPl extends AppLocalizations {
   AppLocalizationsPl([String locale = 'pl']) : super(locale);
 
   @override
+  String get agentClipboardReadFailed =>
+      'Nie udało się odczytać schowka. Spróbuj wkleić ponownie.';
+
+  @override
   String get desktopOpenFile => 'Otwórz plik';
 
   @override

@@ -10,6 +10,10 @@ class AppLocalizationsHu extends AppLocalizations {
   AppLocalizationsHu([String locale = 'hu']) : super(locale);
 
   @override
+  String get agentClipboardReadFailed =>
+      'A vágólap nem olvasható. Próbálja meg újra a beillesztést.';
+
+  @override
   String get desktopOpenFile => 'Fájl megnyitása';
 
   @override

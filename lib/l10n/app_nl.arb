@@ -1,4 +1,6 @@
 {
+  "agentClipboardReadFailed": "Het klembord kon niet worden gelezen. Probeer opnieuw te plakken.",
+  "@agentClipboardReadFailed": {},
   "desktopOpenFile": "Bestand openen",
   "@desktopOpenFile": {},
   "desktopRevealFile": "Tonen in map",

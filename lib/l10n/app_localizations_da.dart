@@ -10,6 +10,10 @@ class AppLocalizationsDa extends AppLocalizations {
   AppLocalizationsDa([String locale = 'da']) : super(locale);
 
   @override
+  String get agentClipboardReadFailed =>
+      'Udklipsholderen kunne ikke læses. Prøv at indsætte igen.';
+
+  @override
   String get desktopOpenFile => 'Åbn fil';
 
   @override

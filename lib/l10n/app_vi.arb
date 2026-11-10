@@ -1,4 +1,6 @@
 {
+  "agentClipboardReadFailed": "Không thể đọc bảng nhớ tạm. Hãy thử dán lại.",
+  "@agentClipboardReadFailed": {},
   "desktopOpenFile": "Mở tệp",
   "@desktopOpenFile": {},
   "desktopRevealFile": "Hiển thị trong thư mục",

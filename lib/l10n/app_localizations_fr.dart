@@ -10,6 +10,10 @@ class AppLocalizationsFr extends AppLocalizations {
   AppLocalizationsFr([String locale = 'fr']) : super(locale);
 
   @override
+  String get agentClipboardReadFailed =>
+      'Impossible de lire le presse-papiers. Réessayez de coller.';
+
+  @override
   String get desktopOpenFile => 'Ouvrir le fichier';
 
   @override

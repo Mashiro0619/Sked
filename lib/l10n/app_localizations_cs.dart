@@ -10,6 +10,10 @@ class AppLocalizationsCs extends AppLocalizations {
   AppLocalizationsCs([String locale = 'cs']) : super(locale);
 
   @override
+  String get agentClipboardReadFailed =>
+      'Schránku se nepodařilo přečíst. Zkuste vložení znovu.';
+
+  @override
   String get desktopOpenFile => 'Otevřít soubor';
 
   @override

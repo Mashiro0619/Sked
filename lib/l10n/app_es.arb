@@ -1,4 +1,6 @@
 {
+  "agentClipboardReadFailed": "No se pudo leer el portapapeles. Intenta pegar de nuevo.",
+  "@agentClipboardReadFailed": {},
   "desktopOpenFile": "Abrir archivo",
   "@desktopOpenFile": {},
   "desktopRevealFile": "Mostrar en la carpeta",

@@ -19,6 +19,10 @@ class AgentDesktopFile {
       _directory = item is DropItemDirectory,
       _bookmark = item.extraAppleBookmark;
 
+  AgentDesktopFile.fromFile(this.file, {Uint8List? appleBookmark})
+    : _directory = false,
+      _bookmark = appleBookmark;
+
   final XFile file;
   final bool _directory;
   final Uint8List? _bookmark;

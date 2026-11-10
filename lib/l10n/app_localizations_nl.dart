@@ -10,6 +10,10 @@ class AppLocalizationsNl extends AppLocalizations {
   AppLocalizationsNl([String locale = 'nl']) : super(locale);
 
   @override
+  String get agentClipboardReadFailed =>
+      'Het klembord kon niet worden gelezen. Probeer opnieuw te plakken.';
+
+  @override
   String get desktopOpenFile => 'Bestand openen';
 
   @override

@@ -1,4 +1,6 @@
 {
+  "agentClipboardReadFailed": "Could not read the clipboard. Try pasting again.",
+  "@agentClipboardReadFailed": {},
   "desktopOpenFile": "Open file",
   "@desktopOpenFile": {},
   "desktopRevealFile": "Show in folder",

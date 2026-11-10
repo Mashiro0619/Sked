@@ -1,4 +1,6 @@
 {
+  "agentClipboardReadFailed": "Não foi possível ler a área de transferência. Tente colar novamente.",
+  "@agentClipboardReadFailed": {},
   "desktopOpenFile": "Abrir arquivo",
   "@desktopOpenFile": {},
   "desktopRevealFile": "Mostrar na pasta",

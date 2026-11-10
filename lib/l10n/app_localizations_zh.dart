@@ -10,6 +10,9 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get agentClipboardReadFailed => '无法读取剪贴板，请重试粘贴。';
+
+  @override
   String get desktopOpenFile => '打开文件';
 
   @override
@@ -4320,6 +4323,9 @@ class AppLocalizationsZh extends AppLocalizations {
 /// The translations for Chinese, using the Han script (`zh_Hant`).
 class AppLocalizationsZhHant extends AppLocalizationsZh {
   AppLocalizationsZhHant() : super('zh_Hant');
+
+  @override
+  String get agentClipboardReadFailed => '無法讀取剪貼簿，請重試貼上。';
 
   @override
   String get desktopOpenFile => '開啟檔案';

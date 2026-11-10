@@ -145,6 +145,12 @@ abstract class AppLocalizations {
     Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
   ];
 
+  /// No description provided for @agentClipboardReadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not read the clipboard. Try pasting again.'**
+  String get agentClipboardReadFailed;
+
   /// No description provided for @desktopOpenFile.
   ///
   /// In en, this message translates to:

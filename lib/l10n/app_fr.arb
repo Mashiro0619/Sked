@@ -1,4 +1,6 @@
 {
+  "agentClipboardReadFailed": "Impossible de lire le presse-papiers. Réessayez de coller.",
+  "@agentClipboardReadFailed": {},
   "desktopOpenFile": "Ouvrir le fichier",
   "@desktopOpenFile": {},
   "desktopRevealFile": "Afficher dans le dossier",

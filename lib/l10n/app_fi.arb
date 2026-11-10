@@ -1,4 +1,6 @@
 {
+  "agentClipboardReadFailed": "Leikepöytää ei voitu lukea. Yritä liittää uudelleen.",
+  "@agentClipboardReadFailed": {},
   "desktopOpenFile": "Avaa tiedosto",
   "@desktopOpenFile": {},
   "desktopRevealFile": "Näytä kansiossa",

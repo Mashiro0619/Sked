@@ -1,4 +1,6 @@
 {
+  "agentClipboardReadFailed": "A vágólap nem olvasható. Próbálja meg újra a beillesztést.",
+  "@agentClipboardReadFailed": {},
   "desktopOpenFile": "Fájl megnyitása",
   "@desktopOpenFile": {},
   "desktopRevealFile": "Megjelenítés a mappában",

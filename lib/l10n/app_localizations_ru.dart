@@ -10,6 +10,10 @@ class AppLocalizationsRu extends AppLocalizations {
   AppLocalizationsRu([String locale = 'ru']) : super(locale);
 
   @override
+  String get agentClipboardReadFailed =>
+      'Не удалось прочитать буфер обмена. Попробуйте вставить ещё раз.';
+
+  @override
   String get desktopOpenFile => 'Открыть файл';
 
   @override

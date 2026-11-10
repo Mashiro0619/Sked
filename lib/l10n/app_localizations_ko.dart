@@ -10,6 +10,9 @@ class AppLocalizationsKo extends AppLocalizations {
   AppLocalizationsKo([String locale = 'ko']) : super(locale);
 
   @override
+  String get agentClipboardReadFailed => '클립보드를 읽을 수 없습니다. 다시 붙여넣어 주세요.';
+
+  @override
   String get desktopOpenFile => '파일 열기';
 
   @override

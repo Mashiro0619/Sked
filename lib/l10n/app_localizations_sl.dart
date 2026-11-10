@@ -10,6 +10,10 @@ class AppLocalizationsSl extends AppLocalizations {
   AppLocalizationsSl([String locale = 'sl']) : super(locale);
 
   @override
+  String get agentClipboardReadFailed =>
+      'Odložišča ni bilo mogoče prebrati. Poskusite znova prilepiti.';
+
+  @override
   String get desktopOpenFile => 'Odpri datoteko';
 
   @override

@@ -1,4 +1,6 @@
 {
+  "agentClipboardReadFailed": "Nie udało się odczytać schowka. Spróbuj wkleić ponownie.",
+  "@agentClipboardReadFailed": {},
   "desktopOpenFile": "Otwórz plik",
   "@desktopOpenFile": {},
   "desktopRevealFile": "Pokaż w folderze",

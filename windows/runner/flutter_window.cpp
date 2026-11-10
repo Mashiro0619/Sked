@@ -31,6 +31,8 @@ bool FlutterWindow::OnCreate() {
       flutter_controller_->engine()->messenger());
   school_web_session_bridge_ = std::make_unique<SchoolWebSessionBridge>(
       GetHandle(), flutter_controller_->engine()->messenger());
+  desktop_clipboard_reader_ = std::make_unique<DesktopClipboardReader>(
+      GetHandle(), flutter_controller_->engine()->messenger());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
@@ -45,6 +47,7 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  desktop_clipboard_reader_.reset();
   school_web_session_bridge_.reset();
   window_bridge_.reset();
   if (flutter_controller_) {

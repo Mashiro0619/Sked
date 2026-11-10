@@ -10,6 +10,10 @@ class AppLocalizationsSv extends AppLocalizations {
   AppLocalizationsSv([String locale = 'sv']) : super(locale);
 
   @override
+  String get agentClipboardReadFailed =>
+      'Det gick inte att läsa urklipp. Försök att klistra in igen.';
+
+  @override
   String get desktopOpenFile => 'Öppna fil';
 
   @override

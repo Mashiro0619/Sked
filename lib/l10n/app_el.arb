@@ -1,4 +1,6 @@
 {
+  "agentClipboardReadFailed": "Δεν ήταν δυνατή η ανάγνωση του προχείρου. Δοκιμάστε ξανά την επικόλληση.",
+  "@agentClipboardReadFailed": {},
   "desktopOpenFile": "Άνοιγμα αρχείου",
   "@desktopOpenFile": {},
   "desktopRevealFile": "Εμφάνιση στον φάκελο",

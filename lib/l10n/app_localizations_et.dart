@@ -10,6 +10,10 @@ class AppLocalizationsEt extends AppLocalizations {
   AppLocalizationsEt([String locale = 'et']) : super(locale);
 
   @override
+  String get agentClipboardReadFailed =>
+      'Lõikelaua lugemine ebaõnnestus. Proovi uuesti kleepida.';
+
+  @override
   String get desktopOpenFile => 'Ava fail';
 
   @override

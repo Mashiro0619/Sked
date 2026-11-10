@@ -78,6 +78,7 @@ extension _AgentComposerFileInput on _AgentConversationViewState {
         conversation == null ||
         files.isEmpty ||
         _desktopInputBatch != null ||
+        _busy.contains('clipboard-$conversationId') ||
         !_canModifyBinaryAttachments(conversationId) ||
         _busy.contains('attachment-$conversationId') ||
         service.hasPending(conversationId) ||
@@ -180,6 +181,8 @@ extension _AgentComposerFileInput on _AgentConversationViewState {
       });
 
   void _retireDesktopInput() {
+    _clipboardReadCancellation?.cancel();
+    _clipboardReadFailed = false;
     _desktopDropFolderRejected = false;
     final batch = _desktopInputBatch;
     if (batch == null) return;

@@ -10,6 +10,10 @@ class AppLocalizationsEl extends AppLocalizations {
   AppLocalizationsEl([String locale = 'el']) : super(locale);
 
   @override
+  String get agentClipboardReadFailed =>
+      'Δεν ήταν δυνατή η ανάγνωση του προχείρου. Δοκιμάστε ξανά την επικόλληση.';
+
+  @override
   String get desktopOpenFile => 'Άνοιγμα αρχείου';
 
   @override

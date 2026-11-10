@@ -10,6 +10,10 @@ class AppLocalizationsTh extends AppLocalizations {
   AppLocalizationsTh([String locale = 'th']) : super(locale);
 
   @override
+  String get agentClipboardReadFailed =>
+      'ไม่สามารถอ่านคลิปบอร์ดได้ โปรดลองวางอีกครั้ง';
+
+  @override
   String get desktopOpenFile => 'เปิดไฟล์';
 
   @override

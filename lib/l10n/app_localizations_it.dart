@@ -10,6 +10,10 @@ class AppLocalizationsIt extends AppLocalizations {
   AppLocalizationsIt([String locale = 'it']) : super(locale);
 
   @override
+  String get agentClipboardReadFailed =>
+      'Impossibile leggere gli appunti. Prova a incollare di nuovo.';
+
+  @override
   String get desktopOpenFile => 'Apri file';
 
   @override

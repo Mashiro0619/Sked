@@ -1,4 +1,6 @@
 {
+  "agentClipboardReadFailed": "Odložišča ni bilo mogoče prebrati. Poskusite znova prilepiti.",
+  "@agentClipboardReadFailed": {},
   "desktopOpenFile": "Odpri datoteko",
   "@desktopOpenFile": {},
   "desktopRevealFile": "Pokaži v mapi",

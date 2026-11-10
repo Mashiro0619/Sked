@@ -1,4 +1,6 @@
 {
+  "agentClipboardReadFailed": "Udklipsholderen kunne ikke læses. Prøv at indsætte igen.",
+  "@agentClipboardReadFailed": {},
   "desktopOpenFile": "Åbn fil",
   "@desktopOpenFile": {},
   "desktopRevealFile": "Vis i mappe",

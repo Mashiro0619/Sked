@@ -1,6 +1,6 @@
 # 桌面基础交互补齐计划
 
-状态：D1–D6 对象菜单、快捷键及文件拖入已实现；D8 已接入导出文件的系统动作，剪贴板与附件系统动作继续实施。Windows 原生交互验收待进行。初次缺口审查基线为 2fd2fcb3，当前会话行为见[Agent 对话界面](AGENT_CHAT_DESIGN.md)。
+状态：D1–D7 对象菜单、快捷键、文件拖入及剪贴板附件已实现；D8 已接入导出文件的系统动作，附件系统动作继续实施。Windows 原生交互验收待进行。初次缺口审查基线为 2fd2fcb3，当前会话行为见[Agent 对话界面](AGENT_CHAT_DESIGN.md)。
 
 ## 目标与优先级
 
@@ -19,7 +19,7 @@ Sked 桌面端应支持用户熟悉的对象操作、键盘操作和文件交互
 | 课表、分类、节次、附件与知识 | 资源行及各选择器、分类管理列表、附件与知识列表已接入整行右键和键盘菜单；节次操作复用当前编辑页的自动保存提交入口 | [资源行](../lib/widgets/workbench_resource_widgets.dart)、[节次动作](../lib/widgets/period_time_set_actions.dart)、[附件](../lib/agent/ui/agent_attachment_view.dart)、[知识](../lib/agent/ui/agent_knowledge_view.dart) |
 | 键盘打开对象菜单 | 已接入的对象菜单共用菜单键和 Shift+F10；会话还支持 F2 改名、Delete 确认删除，保留文本控件按键优先级 | [桌面上下文菜单](../lib/widgets/desktop_context_menu.dart)、[列表](../lib/agent/ui/agent_conversation_list.dart) |
 | 搜索与保存快捷键 | 历史区与语言页已接入 Ctrl+F 和搜索 Esc；D5 已为现有编辑任务接入 Ctrl+S，节次时间页通过原 flush 保存 | [历史搜索](../lib/agent/ui/agent_conversation_list.dart)、[语言搜索](../lib/screens/language_settings_page.dart)、[编辑器动作](../lib/widgets/sked_task_actions.dart) |
-| 文件拖入与截图粘贴 | 桌面文件拖入已接入正式附件链，包含实际落点、批次身份和剩余重试；剪贴板图片与文件列表继续接入 | [附件控制器](../lib/agent/attachments/agent_attachment_controller.dart)、[拖入适配器](../lib/agent/ui/agent_desktop_file_drop.dart)、[Windows 插件装配](../windows/flutter/generated_plugin_registrant.cc) |
+| 文件拖入与截图粘贴 | 桌面拖入与标准粘贴快捷键已接入正式附件链；粘贴按文件列表、图片、文本选择一种内容，附件复用批次身份与剩余重试 | [附件控制器](../lib/agent/attachments/agent_attachment_controller.dart)、[拖入适配器](../lib/agent/ui/agent_desktop_file_drop.dart)、[剪贴板适配器](../lib/agent/ui/agent_desktop_clipboard.dart) |
 | 保存后的系统动作 | 导出成功可打开文件、在文件夹显示、复制路径和另存副本，按钮与右键共用动作；附件私有副本与系统动作继续接入 | [文件动作](../lib/services/desktop_file_actions.dart)、[保存反馈](../lib/widgets/saved_desktop_file_notice.dart)、[附件菜单](../lib/agent/ui/agent_attachment_view.dart) |
 | 列表批量管理 | 会话和课表资源行只记录单个活动对象，没有 Ctrl／Shift 对象多选；导入导出选择器已有复选框和全选。列表批量操作列为后续增强 | [会话列表](../lib/agent/ui/agent_conversation_list.dart)、[资源行](../lib/widgets/workbench_resource_widgets.dart) |
 
@@ -88,7 +88,7 @@ Tab / Shift+Tab、Enter、Space、文本选择、Ctrl+A/C/X/V/Z 及重做沿用�
 
 拖入时显示有效落点和目标区域。接纳绑定当时的会话与输入身份，复用已有复制、核验、进度和取消流程；添加后保留为草稿，发送仍由用户触发。文件夹以资源引用交给 Agent 文件服务处理。
 
-输入区统一接纳一次 Ctrl+V 粘贴动作，读取剪贴板后按载荷类型分派：图片或文件接入附件链，纯文本委托原文本粘贴逻辑。异步读取期间不同时派发第二条粘贴路径；失败保留可重试信息。
+输入区已统一接纳标准桌面粘贴快捷键（Windows／Linux 为 Ctrl+V，macOS 为 Cmd+V），按文件列表、图片、文本依次选择一种内容。文件进入同一附件批次，截图规范化为有文件名的 PNG，纯文本通过原生文本编辑动作保留选择、格式处理和撤销。读取期间不同时派发第二条粘贴路径，发送与添加文件等待此次读取完成；输入法合成沿用原按键行为。焦点、会话、输入边界、数据世代或可写状态变化后停止旧读取，读取失败可再次粘贴。文本选择工具栏继续使用系统普通文本粘贴。
 
 ### 文件系统动作
 
@@ -110,7 +110,7 @@ Tab / Shift+Tab、Enter、Space、文本选择、Ctrl+A/C/X/V/Z 及重做沿用�
 | D4 | feat(桌面快捷键): 接入区域搜索与对象操作 | 已实现区域搜索、搜索 Esc，以及会话、课表、分类、节次、知识的 F2／Delete；课程接入 Delete，附件在支持移除时接入 Delete |
 | D5 | feat(桌面快捷键): 接入当前编辑任务保存 | 已实现；课程、日程、课表、学校站点、分类名称／颜色及 Agent 独立设置表单共用原保存，节次时间复用 flush |
 | D6 | feat(桌面附件): 接入系统文件拖入 | 已实现；实际落点、整批原输入租约、进度、取消和剩余重试接入正式附件链，目录引用等待文件 Provider |
-| D7 | feat(桌面附件): 接入剪贴板图片与文件 | 平台载荷读取、输入焦点与附件接纳同笔，保留纯文本粘贴 |
+| D7 | feat(桌面附件): 接入剪贴板图片与文件 | 已实现；标准粘贴快捷键按实际载荷接入文件／截图批次或文本编辑，固定读取焦点与输入身份 |
 | D8 | feat(桌面文件): 接入系统打开与定位 | 已分笔实现统一文件动作及导出保存入口；附件私有副本和系统动作继续接入，后续和 Agent 文件交付复用 |
 | D9 | feat(桌面列表): 接入对象多选与批量动作 | 后续增强；选择集合、范围锚点、上下文目标、批量动作与实际结果一起交付，按列表类型分笔 |
 | D10 | docs(桌面交互): 同步操作说明与验收状态 | 根据实际交付更新菜单、快捷键、文件操作与平台验收记录 |

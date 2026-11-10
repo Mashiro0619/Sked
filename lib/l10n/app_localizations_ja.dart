@@ -10,6 +10,9 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String get agentClipboardReadFailed => 'クリップボードを読み取れませんでした。もう一度貼り付けてください。';
+
+  @override
   String get desktopOpenFile => 'ファイルを開く';
 
   @override

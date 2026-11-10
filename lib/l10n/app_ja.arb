@@ -1,4 +1,6 @@
 {
+  "agentClipboardReadFailed": "クリップボードを読み取れませんでした。もう一度貼り付けてください。",
+  "@agentClipboardReadFailed": {},
   "desktopOpenFile": "ファイルを開く",
   "@desktopOpenFile": {},
   "desktopRevealFile": "フォルダーで表示",

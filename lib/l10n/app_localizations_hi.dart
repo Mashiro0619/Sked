@@ -10,6 +10,10 @@ class AppLocalizationsHi extends AppLocalizations {
   AppLocalizationsHi([String locale = 'hi']) : super(locale);
 
   @override
+  String get agentClipboardReadFailed =>
+      'क्लिपबोर्ड पढ़ा नहीं जा सका। फिर से पेस्ट करें।';
+
+  @override
   String get desktopOpenFile => 'फ़ाइल खोलें';
 
   @override

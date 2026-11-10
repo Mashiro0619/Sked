@@ -9,6 +9,7 @@ project(runner LANGUAGES CXX)
 add_executable(${BINARY_NAME} WIN32
   "flutter_window.cpp"
   "desktop_window_bridge.cpp"
+  "desktop_clipboard_reader.cpp"
   "school_web_session_bridge.cpp"
   "main.cpp"
   "single_instance.cpp"
@@ -46,7 +47,7 @@ target_include_directories(${BINARY_NAME} PRIVATE
 add_dependencies(${BINARY_NAME} flutter_assemble)
 add_dependencies(${BINARY_NAME} flutter_inappwebview_windows_DEPS)
 
-target_link_libraries(${BINARY_NAME} PRIVATE comctl32 dwmapi)
+target_link_libraries(${BINARY_NAME} PRIVATE comctl32 dwmapi shell32)
 
 # Acceptance binaries must not share the production registry or instance
 # namespace. This is a build-only setting, never a runtime environment override.

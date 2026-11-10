@@ -1,4 +1,6 @@
 {
+  "agentClipboardReadFailed": "Lõikelaua lugemine ebaõnnestus. Proovi uuesti kleepida.",
+  "@agentClipboardReadFailed": {},
   "desktopOpenFile": "Ava fail",
   "@desktopOpenFile": {},
   "desktopRevealFile": "Kuva kaustas",

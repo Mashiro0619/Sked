@@ -1,4 +1,6 @@
 {
+  "agentClipboardReadFailed": "無法讀取剪貼簿，請重試貼上。",
+  "@agentClipboardReadFailed": {},
   "desktopOpenFile": "開啟檔案",
   "@desktopOpenFile": {},
   "desktopRevealFile": "在資料夾中顯示",

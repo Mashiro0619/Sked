@@ -1,4 +1,6 @@
 {
+  "agentClipboardReadFailed": "ไม่สามารถอ่านคลิปบอร์ดได้ โปรดลองวางอีกครั้ง",
+  "@agentClipboardReadFailed": {},
   "desktopOpenFile": "เปิดไฟล์",
   "@desktopOpenFile": {},
   "desktopRevealFile": "แสดงในโฟลเดอร์",

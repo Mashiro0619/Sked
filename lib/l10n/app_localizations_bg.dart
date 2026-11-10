@@ -10,6 +10,10 @@ class AppLocalizationsBg extends AppLocalizations {
   AppLocalizationsBg([String locale = 'bg']) : super(locale);
 
   @override
+  String get agentClipboardReadFailed =>
+      'Клипбордът не може да бъде прочетен. Опитайте да поставите отново.';
+
+  @override
   String get desktopOpenFile => 'Отваряне на файла';
 
   @override

@@ -1,4 +1,6 @@
 {
+  "agentClipboardReadFailed": "Det gick inte att läsa urklipp. Försök att klistra in igen.",
+  "@agentClipboardReadFailed": {},
   "desktopOpenFile": "Öppna fil",
   "@desktopOpenFile": {},
   "desktopRevealFile": "Visa i mapp",

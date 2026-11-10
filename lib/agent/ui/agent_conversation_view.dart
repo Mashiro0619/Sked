@@ -41,6 +41,7 @@ import 'agent_transcript.dart';
 import 'agent_turn_activity.dart';
 import 'agent_attachment_view.dart';
 import 'agent_desktop_file_drop.dart';
+import 'agent_desktop_clipboard.dart';
 import '../attachments/agent_attachment_controller.dart';
 import '../conversations/conversation_view_repository.dart';
 import '../conversations/conversation_browse_repository.dart';
@@ -66,6 +67,7 @@ import 'agent_task_inspector.dart';
 
 part 'agent_composer_references.dart';
 part 'agent_composer_file_input.dart';
+part 'agent_composer_clipboard.dart';
 part 'agent_task_plan_panel.dart';
 part 'agent_task_inspector_panel.dart';
 part 'agent_queued_input_actions.dart';
@@ -398,6 +400,8 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   AttachmentError? _binaryAttachmentError;
   _AgentDesktopInputBatch? _desktopInputBatch;
   bool _desktopDropFolderRejected = false;
+  bool _clipboardReadFailed = false;
+  AttachmentCancellation? _clipboardReadCancellation;
   ConversationFileAttachments get _attachments =>
       _fileAttachments[_repository] ??= ConversationFileAttachments(
         _repository,
@@ -461,30 +465,31 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     };
   }
 
-  Future<void> _attachBinaryFile(String id) =>
-      _binaryAction(id, (service) async {
-        final repository = _repository;
-        final generation = widget.readDatasetGeneration?.call();
-        final uiGeneration = _uiGeneration;
-        final file = await widget.pickBinaryAttachment();
-        if (file == null || !mounted) return;
-        if (!identical(repository, _repository) ||
-            !identical(service, widget.binaryAttachments) ||
-            generation != widget.readDatasetGeneration?.call() ||
-            !_uiSessionCurrent(uiGeneration, id) ||
-            !_canModifyBinaryAttachments(id)) {
-          throw const AttachmentException(AttachmentError.conflict);
-        }
-        await service.attach(
-          id,
-          file,
-          canModify: () =>
-              identical(repository, _repository) &&
-              generation == widget.readDatasetGeneration?.call() &&
-              _uiSessionCurrent(uiGeneration, id) &&
-              _canModifyBinaryAttachments(id),
-        );
-      });
+  Future<void> _attachBinaryFile(String id) => _busy.contains('clipboard-$id')
+      ? Future<void>.value()
+      : _binaryAction(id, (service) async {
+          final repository = _repository;
+          final generation = widget.readDatasetGeneration?.call();
+          final uiGeneration = _uiGeneration;
+          final file = await widget.pickBinaryAttachment();
+          if (file == null || !mounted) return;
+          if (!identical(repository, _repository) ||
+              !identical(service, widget.binaryAttachments) ||
+              generation != widget.readDatasetGeneration?.call() ||
+              !_uiSessionCurrent(uiGeneration, id) ||
+              !_canModifyBinaryAttachments(id)) {
+            throw const AttachmentException(AttachmentError.conflict);
+          }
+          await service.attach(
+            id,
+            file,
+            canModify: () =>
+                identical(repository, _repository) &&
+                generation == widget.readDatasetGeneration?.call() &&
+                _uiSessionCurrent(uiGeneration, id) &&
+                _canModifyBinaryAttachments(id),
+          );
+        });
 
   Future<void> _retryBinaryAttachment(String id) =>
       _desktopInputBatch?.conversationId == id
@@ -655,6 +660,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     _conversationActions = _createConversationActions();
     _composer.addListener(_referenceInputChanged);
     _composerFocus.addListener(_referenceInputChanged);
+    _composerFocus.addListener(_clipboardFocusChanged);
     _composerRegionFocus.addListener(_referenceInputChanged);
     _repository.addListener(_changed);
     _observedRuntime = _runtime;
@@ -771,6 +777,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     widget.binaryAttachments?.removeListener(_changed);
     _composer.removeListener(_referenceInputChanged);
     _composerFocus.removeListener(_referenceInputChanged);
+    _composerFocus.removeListener(_clipboardFocusChanged);
     _composerRegionFocus.removeListener(_referenceInputChanged);
     _composer.dispose();
     _composerFocus.dispose();
@@ -1088,7 +1095,10 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   });
 
   Future<void> _send(AgentConversation conversation) async {
-    if (_desktopInputBatch?.conversationId == conversation.id) return;
+    if (_desktopInputBatch?.conversationId == conversation.id ||
+        _busy.contains('clipboard-${conversation.id}')) {
+      return;
+    }
     final repository = _repository;
     final uiGeneration = _uiGeneration;
     final delegate = widget.delegate;
@@ -1113,7 +1123,10 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     AgentConversation conversation, {
     required bool steering,
   }) async {
-    if (_desktopInputBatch?.conversationId == conversation.id) return;
+    if (_desktopInputBatch?.conversationId == conversation.id ||
+        _busy.contains('clipboard-${conversation.id}')) {
+      return;
+    }
     final repository = _repository;
     final uiGeneration = _uiGeneration;
     final delegate = widget.delegate;
@@ -1753,6 +1766,8 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                 _notice(agentAttachmentError(l, error), error: true),
               if (_desktopDropFolderRejected)
                 _notice(l.agentDropFolderUnsupported, error: true),
+              if (_clipboardReadFailed)
+                _notice(l.agentClipboardReadFailed, error: true),
               if (_desktopInputBatch case final batch?
                   when batch.conversationId == conversation?.id &&
                       batch.next < batch.files.length)
@@ -1847,6 +1862,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                         !conversation.archived &&
                         !conversation.hasPendingRedo &&
                         _desktopInputBatch?.conversationId != conversation.id &&
+                        !_busy.contains('clipboard-${conversation.id}') &&
                         widget.binaryAttachments?.isImporting(
                               conversation.id,
                             ) !=
@@ -3343,6 +3359,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
               final attachAvailable = widget.binaryAttachments != null
                   ? _canModifyBinaryAttachments(conversation.id) &&
                         _desktopInputBatch == null &&
+                        !_busy.contains('clipboard-${conversation.id}') &&
                         !widget.binaryAttachments!.hasPending(
                           conversation.id,
                         ) &&
@@ -3437,36 +3454,41 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                     ..._referenceWidgets(conversation),
                     KeyedSubtree(
                       key: _composerField,
-                      child: TextField(
-                        key: const ValueKey('agent-composer'),
-                        controller: _composer,
-                        focusNode: _composerFocus,
-                        enabled: enabled,
-                        minLines: 1,
-                        maxLines: 5,
-                        textInputAction: TextInputAction.newline,
-                        style: visual.body,
-                        decoration: InputDecoration(
-                          isDense: desktop,
-                          filled: false,
-                          hintText: l.agentMessageHint,
-                          hintStyle: visual.body.copyWith(color: visual.muted),
-                          counterText: '',
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          // Android's collapsed handle reaches 39dp below the
-                          // caret once its 48dp hit area is included. Keep it
-                          // above the action row, including when it fades out.
-                          contentPadding: EdgeInsets.fromLTRB(
-                            8,
-                            8,
-                            8,
-                            desktop ? 8 : 36,
+                      child: _desktopClipboardScope(
+                        conversation,
+                        TextField(
+                          key: const ValueKey('agent-composer'),
+                          controller: _composer,
+                          focusNode: _composerFocus,
+                          enabled: enabled,
+                          minLines: 1,
+                          maxLines: 5,
+                          textInputAction: TextInputAction.newline,
+                          style: visual.body,
+                          decoration: InputDecoration(
+                            isDense: desktop,
+                            filled: false,
+                            hintText: l.agentMessageHint,
+                            hintStyle: visual.body.copyWith(
+                              color: visual.muted,
+                            ),
+                            counterText: '',
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            // Android's collapsed handle reaches 39dp below the
+                            // caret once its 48dp hit area is included. Keep it
+                            // above the action row, including when it fades out.
+                            contentPadding: EdgeInsets.fromLTRB(
+                              8,
+                              8,
+                              8,
+                              desktop ? 8 : 36,
+                            ),
                           ),
+                          onChanged: (value) =>
+                              _draftChanged(conversation.id, value),
                         ),
-                        onChanged: (value) =>
-                            _draftChanged(conversation.id, value),
                       ),
                     ),
                     if (active && _hasInput(conversation))

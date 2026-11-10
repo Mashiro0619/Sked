@@ -10,6 +10,10 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
+  String get agentClipboardReadFailed =>
+      'Could not read the clipboard. Try pasting again.';
+
+  @override
   String get desktopOpenFile => 'Open file';
 
   @override

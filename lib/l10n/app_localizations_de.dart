@@ -10,6 +10,10 @@ class AppLocalizationsDe extends AppLocalizations {
   AppLocalizationsDe([String locale = 'de']) : super(locale);
 
   @override
+  String get agentClipboardReadFailed =>
+      'Die Zwischenablage konnte nicht gelesen werden. Versuche es erneut.';
+
+  @override
   String get desktopOpenFile => 'Datei öffnen';
 
   @override
