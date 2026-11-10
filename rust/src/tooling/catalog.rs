@@ -404,15 +404,14 @@ impl ToolCatalogSnapshot {
             .cloned();
         Box::pin(async move {
             let cancelled = call.cancellation.is_cancelled();
-            // Snapshots must not retain handler-owned provider leases after
-            // withdrawal. Upgrade before admission, then hold the original
-            // handler until settlement and release it before signalling drain.
+            // Count admission before upgrading, so every strong handler is
+            // retained through settlement and released before signalling drain.
             let admitted = if cancelled {
                 None
             } else {
                 registration.as_ref().and_then(|registration| {
-                    let handler = registration.handler.upgrade()?;
                     let lease = registration.lifetime.acquire(&call.cancellation)?;
+                    let handler = registration.handler.upgrade()?;
                     Some(AdmittedTool { handler, lease })
                 })
             };
