@@ -1,6 +1,6 @@
 # 桌面基础交互补齐计划
 
-状态：D1 会话对象菜单已实现，其余条目待实施；Windows 原生交互验收待进行。初次缺口审查基线为 2fd2fcb3，当前会话行为见[Agent 对话界面](AGENT_CHAT_DESIGN.md)。
+状态：D1 会话对象菜单、D5 当前编辑任务保存快捷键已实现；课程、日程及资源菜单正在接入。Windows 原生交互验收待进行。初次缺口审查基线为 2fd2fcb3，当前会话行为见[Agent 对话界面](AGENT_CHAT_DESIGN.md)。
 
 ## 目标与优先级
 
@@ -18,7 +18,7 @@ Sked 桌面端应支持用户熟悉的对象操作、键盘操作和文件交互
 | 课程与日程 | 课程接点击和长按，日程卡接点击；课程已有查看、编辑、删除，日程另有复制及重复范围操作，均未连接对象右键 | [课程网格](../lib/widgets/timetable_grid.dart)、[日程列表](../lib/screens/general_schedule_list_view.dart)、[日程业务入口](../lib/screens/general_schedule_home_screen.dart) |
 | 课表、分类、附件与知识 | 资源行使用点击或悬停按钮，附件使用独立菜单，知识项先进入编辑器；已有动作未形成整行右键入口 | [资源行](../lib/widgets/workbench_resource_widgets.dart)、[附件](../lib/agent/ui/agent_attachment_view.dart)、[知识](../lib/agent/ui/agent_knowledge_view.dart) |
 | 键盘打开对象菜单 | D1 已为会话接入菜单键和 Shift+F10；其他对象继续按计划接入同一入口 | [桌面上下文菜单](../lib/widgets/desktop_context_menu.dart)、[列表](../lib/agent/ui/agent_conversation_list.dart) |
-| 搜索与保存快捷键 | 历史搜索和语言搜索已有控件，但未接 Ctrl+F；课程、日程等显式保存表单的保存入口未接 Ctrl+S | [历史搜索](../lib/agent/ui/agent_conversation_list.dart)、[语言搜索](../lib/screens/language_settings_page.dart)、[编辑器动作](../lib/widgets/sked_task_actions.dart) |
+| 搜索与保存快捷键 | D5 已为现有编辑任务接入 Ctrl+S，节次时间页通过原 flush 保存；历史搜索和语言搜索的 Ctrl+F 待接入 | [历史搜索](../lib/agent/ui/agent_conversation_list.dart)、[语言搜索](../lib/screens/language_settings_page.dart)、[编辑器动作](../lib/widgets/sked_task_actions.dart) |
 | 文件拖入与截图粘贴 | 附件通过文件选择器进入；桌面文件拖入、剪贴板图片和文件列表没有接入附件链 | [附件控制器](../lib/agent/attachments/agent_attachment_controller.dart)、[Windows 插件装配](../windows/flutter/generated_plugin_registrant.cc) |
 | 保存后的系统动作 | 附件主要提供预览、再次附加和移除；导出成功显示路径，缺少统一的默认应用打开、资源管理器定位和复制路径动作 | [附件菜单](../lib/agent/ui/agent_attachment_view.dart)、[导出反馈](../lib/widgets/export_save_flow.dart)、[导出服务](../lib/services/export_service.dart) |
 | 列表批量管理 | 会话和课表资源行只记录单个活动对象，没有 Ctrl／Shift 对象多选；导入导出选择器已有复选框和全选。列表批量操作列为后续增强 | [会话列表](../lib/agent/ui/agent_conversation_list.dart)、[资源行](../lib/widgets/workbench_resource_widgets.dart) |
@@ -106,7 +106,7 @@ Tab / Shift+Tab、Enter、Space、文本选择、Ctrl+A/C/X/V/Z 及重做沿用�
 | D2 | feat(桌面菜单): 接入课程与日程对象动作 | 复用 D1 契约，连接查看、编辑和删除；日程保留复制及重复范围选择，可按两类对象分笔 |
 | D3 | feat(桌面菜单): 接入资源与内容对象动作 | 按课表分类、知识、消息、附件分别提交完整入口，保留文本菜单优先级 |
 | D4 | feat(桌面快捷键): 接入区域搜索与对象操作 | Ctrl+F、搜索 Esc、F2、Delete 共用区域焦点与动作规则；独立交互可继续分笔 |
-| D5 | feat(桌面快捷键): 接入当前编辑任务保存 | Ctrl+S 与现有保存／flush、输入法、忙碌和退出守卫成套接入 |
+| D5 | feat(桌面快捷键): 接入当前编辑任务保存 | 已实现；课程、日程、课表、学校站点、分类名称的保存及节次时间 flush 共用原命令，保留输入法、忙碌和退出守卫 |
 | D6 | feat(桌面附件): 接入系统文件拖入 | 平台拖入适配、有效落点和正式附件接纳同笔，跨会话与取消保持原身份 |
 | D7 | feat(桌面附件): 接入剪贴板图片与文件 | 平台载荷读取、输入焦点与附件接纳同笔，保留纯文本粘贴 |
 | D8 | feat(桌面文件): 接入系统打开与定位 | 统一文件动作、已登记引用解析、保存产物及附件入口同笔，和 Agent 文件交付能力复用 |

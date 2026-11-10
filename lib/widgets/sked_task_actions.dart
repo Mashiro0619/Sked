@@ -1,6 +1,9 @@
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n/app_localizations.dart';
+import 'sked_task_session.dart';
+import 'workbench_chrome_metrics.dart';
 
 /// Shared command layout; the caller retains ownership of every action.
 class SkedActionArea extends StatelessWidget {
@@ -71,6 +74,46 @@ class SkedEditorActions {
   final bool enabled, showDelete, busy;
   bool get _enabled => enabled && !busy;
 
+  /// The form's fields and commands share one save shortcut and one owner.
+  Widget wrapShortcuts(BuildContext context, Widget child) {
+    if (!WorkbenchChromeMetrics.of(context).desktop) return child;
+    final macOS = Theme.of(context).platform == TargetPlatform.macOS;
+    final shortcut = SingleActivator(
+      LogicalKeyboardKey.keyS,
+      control: !macOS,
+      meta: macOS,
+    );
+    return FocusScope(
+      autofocus: true,
+      skipTraversal: true,
+      includeSemantics: false,
+      onKeyEvent: (_, event) {
+        if (!shortcut.accepts(event, HardwareKeyboard.instance) ||
+            ModalRoute.of(context)?.isCurrent == false ||
+            !TickerMode.valuesOf(context).enabled) {
+          return KeyEventResult.ignored;
+        }
+        // An unavailable inner form still owns this key; it must not save an
+        // ancestor editor. Repeated keys never repeat the submitted operation.
+        if (event is! KeyDownEvent ||
+            !_enabled ||
+            onSubmit == null ||
+            !SkedTaskSessionScope.isCurrent(context)) {
+          return KeyEventResult.handled;
+        }
+        final input = FocusManager.instance.primaryFocus?.context
+            ?.findAncestorStateOfType<EditableTextState>();
+        final composing = input?.widget.controller.value.composing;
+        if (composing != null && composing.isValid && !composing.isCollapsed) {
+          return KeyEventResult.handled;
+        }
+        onSubmit!();
+        return KeyEventResult.handled;
+      },
+      child: child,
+    );
+  }
+
   Widget? leading(BuildContext context) => !showDelete && onDelete == null
       ? null
       : TextButton.icon(
@@ -82,15 +125,23 @@ class SkedEditorActions {
           ),
         );
 
-  List<Widget> trailing(BuildContext context) {
+  List<Widget> trailing(BuildContext context, {bool showSaveShortcut = false}) {
     final l = AppLocalizations.of(context);
+    final save = FilledButton.icon(
+      onPressed: _enabled ? onSubmit : null,
+      icon: const Icon(Icons.check),
+      label: Text(submitLabel ?? l.save),
+    );
     return [
       TextButton(onPressed: _enabled ? onCancel : null, child: Text(l.cancel)),
-      FilledButton.icon(
-        onPressed: _enabled ? onSubmit : null,
-        icon: const Icon(Icons.check),
-        label: Text(submitLabel ?? l.save),
-      ),
+      if (showSaveShortcut && WorkbenchChromeMetrics.of(context).desktop)
+        Tooltip(
+          message:
+              '${submitLabel ?? l.save} (${Theme.of(context).platform == TargetPlatform.macOS ? '⌘S' : 'Ctrl+S'})',
+          child: save,
+        )
+      else
+        save,
     ];
   }
 

@@ -36,6 +36,7 @@ import '../widgets/workbench_chrome_metrics.dart';
 import '../widgets/adaptive_navigation_scope.dart';
 import '../widgets/expressive_empty_state.dart';
 import '../widgets/sked_task_session.dart';
+import '../widgets/sked_task_actions.dart';
 
 part 'period_times_editor.dart';
 
@@ -239,14 +240,21 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
         ),
       ),
     );
-    return PopScope<void>(
-      canPop: _allowPop && !_menuActionInProgress,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) {
-          unawaited(_flushAndPop());
-        }
-      },
-      child: page,
+    return SkedEditorActions(
+      onCancel: null,
+      onSubmit: () => unawaited(_flushPendingAutoSave()),
+      enabled: !_interactionBlocked && !_timePickerOpen,
+    ).wrapShortcuts(
+      context,
+      PopScope<void>(
+        canPop: _allowPop && !_menuActionInProgress,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) {
+            unawaited(_flushAndPop());
+          }
+        },
+        child: page,
+      ),
     );
   }
 

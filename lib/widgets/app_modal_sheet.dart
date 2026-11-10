@@ -285,22 +285,27 @@ class AppSheetScaffold extends StatelessWidget {
     final media = MediaQuery.of(context);
     final desktop = WorkbenchChromeMetrics.of(context).desktop;
     final editor = WorkspaceEditorScope.maybeOf(context);
-    final resolvedActions = editorActions?.trailing(context) ?? actions;
+    final resolvedActions =
+        editorActions?.trailing(context, showSaveShortcut: true) ?? actions;
     final resolvedLeading = editorActions?.leading(context) ?? leading;
     final status = busy ? const UiCommandBusyIndicator(busy: true) : null;
+    Widget withEditorShortcuts(Widget content) =>
+        editorActions?.wrapShortcuts(context, content) ?? content;
     if (!bodyIsSliver &&
         (editor?.enabled == true || (_editor && desktop)) &&
         onClose != null) {
-      return WorkspaceEditorScaffold(
-        title: title,
-        subtitle: subtitle,
-        onClose: onClose!,
-        closeEnabled: closeEnabled,
-        actions: resolvedActions,
-        leading: resolvedLeading,
-        footer: footer,
-        status: status,
-        child: child,
+      return withEditorShortcuts(
+        WorkspaceEditorScaffold(
+          title: title,
+          subtitle: subtitle,
+          onClose: onClose!,
+          closeEnabled: closeEnabled,
+          actions: resolvedActions,
+          leading: resolvedLeading,
+          footer: footer,
+          status: status,
+          child: child,
+        ),
       );
     }
     final inTaskPane = WorkspaceTaskScope.contains(context);
@@ -364,7 +369,9 @@ class AppSheetScaffold extends StatelessWidget {
               ? .96
               : .72
         : heightFactor;
-    if (inTaskPane || factor == null) return body;
-    return FractionallySizedBox(heightFactor: factor, child: body);
+    if (inTaskPane || factor == null) return withEditorShortcuts(body);
+    return withEditorShortcuts(
+      FractionallySizedBox(heightFactor: factor, child: body),
+    );
   }
 }

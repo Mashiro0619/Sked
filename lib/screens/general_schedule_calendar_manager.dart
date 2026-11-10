@@ -484,50 +484,57 @@ class _CalendarNameDialogState extends State<_CalendarNameDialog>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final creating = widget.schedule == null;
-    return PopScope<void>(
-      canPop: _popped,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) unawaited(requestEditorExit());
-      },
-      child: SkedTaskDialog(
-        key: const ValueKey('calendar-name-dialog'),
-        closeEnabled: !_busy && !_popped,
-        constraints: const BoxConstraints(maxWidth: 440),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        scrollable: true,
-        title: Text(creating ? l10n.addCalendar : l10n.renameCalendar),
-        content: SizedBox(
-          width: 360,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (_busy) ...[
-                const UiCommandBusyIndicator(busy: true),
-                const SizedBox(height: 8),
-              ],
-              SkedEditorTextField(
-                label: l10n.name,
-                controlKey: ValueKey(
-                  creating ? 'add-calendar-field' : 'rename-calendar-field',
-                ),
-                controller: _controller,
-                enabled: !_busy && !_popped,
-                autofocus: true,
-                textInputAction: TextInputAction.done,
-                hintText: creating ? l10n.newCalendar : null,
-                onChanged: (_) => setState(() {}),
-                onSubmitted: (_) => unawaited(_save()),
-              ),
-            ],
+    final actions = SkedEditorActions(
+      onCancel: () => unawaited(requestEditorExit()),
+      onSubmit: _canSave ? () => unawaited(_save()) : null,
+      enabled: !_popped,
+      busy: _busy,
+    );
+    return actions.wrapShortcuts(
+      context,
+      PopScope<void>(
+        canPop: _popped,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) unawaited(requestEditorExit());
+        },
+        child: SkedTaskDialog(
+          key: const ValueKey('calendar-name-dialog'),
+          closeEnabled: !_busy && !_popped,
+          constraints: const BoxConstraints(maxWidth: 440),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 24,
           ),
+          scrollable: true,
+          title: Text(creating ? l10n.addCalendar : l10n.renameCalendar),
+          content: SizedBox(
+            width: 360,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (_busy) ...[
+                  const UiCommandBusyIndicator(busy: true),
+                  const SizedBox(height: 8),
+                ],
+                SkedEditorTextField(
+                  label: l10n.name,
+                  controlKey: ValueKey(
+                    creating ? 'add-calendar-field' : 'rename-calendar-field',
+                  ),
+                  controller: _controller,
+                  enabled: !_busy && !_popped,
+                  autofocus: true,
+                  textInputAction: TextInputAction.done,
+                  hintText: creating ? l10n.newCalendar : null,
+                  onChanged: (_) => setState(() {}),
+                  onSubmitted: (_) => unawaited(_save()),
+                ),
+              ],
+            ),
+          ),
+          actions: actions.trailing(context, showSaveShortcut: true),
         ),
-        actions: SkedEditorActions(
-          onCancel: () => unawaited(requestEditorExit()),
-          onSubmit: _canSave ? () => unawaited(_save()) : null,
-          enabled: !_popped,
-          busy: _busy,
-        ).trailing(context),
       ),
     );
   }
