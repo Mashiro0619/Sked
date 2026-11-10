@@ -4,6 +4,8 @@ mod host_actions;
 #[cfg(test)]
 mod journey;
 mod maintenance;
+#[cfg(test)]
+mod reply_revision_tests;
 mod tools;
 mod transport;
 mod types;
@@ -1585,7 +1587,8 @@ impl RuntimeManager {
             ModelEvent::AssistantCommitted { message } => {
                 let parsed: ProviderMessage = serde_json::from_value(message.clone())
                     .map_err(|e| RuntimeError::Invalid(e.to_string()))?;
-                let projected = project_provider_message(&parsed, &rid, now_ms());
+                let projected =
+                    project_model_message(&parsed, &rid, now_ms(), &accepted.config.selection());
                 self.change(id, move |snapshot| {
                     let mut changes = projected
                         .iter()
@@ -1618,7 +1621,8 @@ impl RuntimeManager {
             } => {
                 let parsed: ProviderMessage = serde_json::from_value(message.clone())
                     .map_err(|e| RuntimeError::Invalid(e.to_string()))?;
-                let projected = project_provider_message(&parsed, &rid, now_ms());
+                let projected =
+                    project_model_message(&parsed, &rid, now_ms(), &accepted.config.selection());
                 self.change(id, move |snapshot| {
                     let mut changes = projected.iter().cloned().map(|message| JournalChange::MessageUpserted { message }).collect::<Vec<_>>();
                     if let Some(turn) = snapshot.turns.iter_mut().find(|turn| turn.run_ids.contains(&rid)) { for message in &projected { if !turn.message_ids.contains(&message.id) { turn.message_ids.push(message.id.clone()); } } changes.push(JournalChange::TurnUpserted { turn: turn.clone() }); }
@@ -1730,6 +1734,7 @@ impl RuntimeManager {
             ToolOutcome::Success
         };
         let rid = accepted.run_id.clone();
+        let model_selection = accepted.config.selection();
         let stored_error = error.clone();
         let save_partial = accepted.save_partial;
         let stop_requested = accepted.control.stop_requested.load(Ordering::Acquire);
@@ -1792,7 +1797,9 @@ impl RuntimeManager {
                                     .clone()
                                     .unwrap_or_else(|| "用户已停止本次运行".into()),
                             ));
-                        for message in project_provider_message(&partial, &rid, now_ms()) {
+                        for message in
+                            project_model_message(&partial, &rid, now_ms(), &model_selection)
+                        {
                             changes.push(JournalChange::MessageUpserted { message });
                         }
                         result.history.push(serde_json::to_value(partial)?);
@@ -2062,6 +2069,23 @@ fn continuation_prompt(history: &mut Vec<Value>) -> Result<ProviderMessage> {
         }
         None => Ok(ProviderMessage::user("请继续处理当前任务。")),
     }
+}
+
+fn project_model_message(
+    message: &ProviderMessage,
+    run_id: &str,
+    timestamp: i64,
+    model_selection: &ModelSelection,
+) -> Vec<Message> {
+    let mut messages = project_provider_message(message, run_id, timestamp);
+    for message in messages
+        .iter_mut()
+        .filter(|m| m.role == MessageRole::Assistant)
+    {
+        message.model_selection = Some(model_selection.clone());
+        message.provider_protocol = model_selection.protocol.clone();
+    }
+    messages
 }
 
 fn project_provider_message(

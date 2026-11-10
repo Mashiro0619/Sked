@@ -404,10 +404,10 @@ AgentConversation conversationFromRust(
         runId: revision.runId,
         createdAt: _date(revision.createdAt.toInt()),
         text: revision.text,
-        modelSelection: modelSelectionFromRust(revision.model)!,
-        providerProtocol: AgentModelProtocol.values.byName(
-          revision.providerProtocol!,
-        ),
+        modelSelection: modelSelectionFromRust(revision.model),
+        providerProtocol: revision.providerProtocol == null
+            ? null
+            : AgentModelProtocol.values.byName(revision.providerProtocol!),
       ),
     ),
     redoBatches: value.redoBatches.map(

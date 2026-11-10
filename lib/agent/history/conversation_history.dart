@@ -223,8 +223,8 @@ class ConversationReplyRevision {
   final String runId;
   final DateTime createdAt;
   final String text;
-  final AgentModelSelection modelSelection;
-  final AgentModelProtocol providerProtocol;
+  final AgentModelSelection? modelSelection;
+  final AgentModelProtocol? providerProtocol;
 
   Map<String, Object?> toJson() => {
     'id': id,
@@ -232,8 +232,8 @@ class ConversationReplyRevision {
     'runId': runId,
     'createdAt': createdAt.toUtc().toIso8601String(),
     'text': text,
-    'modelSelection': modelSelection.toJson(),
-    'providerProtocol': providerProtocol.name,
+    'modelSelection': modelSelection?.toJson(),
+    'providerProtocol': providerProtocol?.name,
   };
 
   factory ConversationReplyRevision.fromJson(Object? value) {
@@ -252,11 +252,12 @@ class ConversationReplyRevision {
       runId: historyText(json['runId']),
       createdAt: historyDate(json['createdAt']),
       text: historyText(json['text'], max: null, empty: true),
-      modelSelection: AgentModelSelection.fromJson(json['modelSelection']),
-      providerProtocol: historyEnum(
-        AgentModelProtocol.values,
-        json['providerProtocol'],
-      ),
+      modelSelection: json['modelSelection'] == null
+          ? null
+          : AgentModelSelection.fromJson(json['modelSelection']),
+      providerProtocol: json['providerProtocol'] == null
+          ? null
+          : historyEnum(AgentModelProtocol.values, json['providerProtocol']),
     );
   }
 }

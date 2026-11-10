@@ -126,6 +126,7 @@ impl RuntimeManager {
         let mut updated = original.clone();
         updated.text = result.text.clone();
         updated.model_selection = Some(accepted.config.selection());
+        updated.provider_protocol = Some(accepted.config.protocol.as_str().into());
         let native = match original
             .response_items
             .first()
