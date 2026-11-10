@@ -9,6 +9,9 @@ use tokio_util::sync::CancellationToken;
 use super::*;
 use crate::model_client::ModelToolExecutor;
 
+#[cfg(test)]
+mod tests;
+
 pub(super) struct RuntimeToolExecutor {
     pub manager: RuntimeManager,
     pub accepted: AcceptedRun,
@@ -1001,6 +1004,12 @@ impl RuntimeManager {
             run_id: accepted.run_id.clone(),
             request_message_id,
             connection_fingerprint: accepted.config.connection_fingerprint.clone(),
+            dataset_generation: accepted
+                .config
+                .environment
+                .get("datasetGeneration")
+                .and_then(Value::as_str)
+                .map(str::to_owned),
             created_at: now_ms(),
             context_digest,
             questions,
@@ -1012,11 +1021,53 @@ impl RuntimeManager {
     async fn wait_question(
         &self,
         accepted: &AcceptedRun,
-        question: QuestionRequest,
+        mut question: QuestionRequest,
     ) -> Result<Value> {
         let session = self.session(&accepted.conversation_id).await;
         let receiver = {
             let mut session = session.lock().await;
+            let snapshot = self.read(&accepted.conversation_id).await?;
+            if let Some(current) = snapshot
+                .current_question
+                .as_ref()
+                .filter(|current| current.id == question.id)
+            {
+                question = current.clone();
+            }
+            if question_context_changed(
+                &question,
+                &snapshot,
+                &accepted.config.connection_fingerprint,
+                accepted
+                    .config
+                    .environment
+                    .get("datasetGeneration")
+                    .and_then(Value::as_str),
+            )? {
+                let payload = match question.status {
+                    QuestionStatus::Answered => question_result(
+                        &question,
+                        &QuestionResolution::Answer(question.answers.clone()),
+                        true,
+                    ),
+                    QuestionStatus::Skipped => {
+                        question_result(&question, &QuestionResolution::Skip, true)
+                    }
+                    _ => {
+                        question.status = QuestionStatus::Retired;
+                        json!({
+                            "status":"not_executed",
+                            "questionId":question.id,
+                            "contextChanged":true,
+                            "error":{"code":"question_context_changed"},
+                            "message":"The question belongs to earlier context. Recheck the current data and ask a new question if clarification is still needed."
+                        })
+                    }
+                };
+                self.persist_question_result(&accepted.conversation_id, question, payload.clone())
+                    .await?;
+                return Ok(payload);
+            }
             let (sender, receiver) = oneshot::channel();
             session.question = Some((question.id.clone(), sender));
             let stored = question.clone();
@@ -1067,17 +1118,17 @@ impl RuntimeManager {
             .await?;
         let question = snapshot.current_question.expect("question persisted");
         let snapshot = self.read(&accepted.conversation_id).await?;
-        let changed = question.connection_fingerprint != accepted.config.connection_fingerprint
-            || question.context_digest
-                != question_source_digest(&snapshot, &question.request_message_id)?;
-        let payload = match resolution {
-            QuestionResolution::Answer(answers) => {
-                json!({"status":"answered","questionId":question.id,"answers":answers,"contextDigest":question.context_digest,"contextChanged":changed})
-            }
-            QuestionResolution::Skip => {
-                json!({"status":"skipped","questionId":question.id,"contextChanged":changed})
-            }
-        };
+        let changed = question_context_changed(
+            &question,
+            &snapshot,
+            &accepted.config.connection_fingerprint,
+            accepted
+                .config
+                .environment
+                .get("datasetGeneration")
+                .and_then(Value::as_str),
+        )?;
+        let payload = question_result(&question, &resolution, changed);
         self.persist_question_result(&accepted.conversation_id, question, payload.clone())
             .await?;
         Ok(payload)
@@ -1119,15 +1170,20 @@ impl RuntimeManager {
         }) else {
             return Ok(());
         };
+        let dataset_generation = snapshot
+            .runs
+            .iter()
+            .find(|run| Some(run.id.as_str()) == snapshot.conversation.run_id.as_deref())
+            .and_then(|run| run.environment.get("datasetGeneration"))
+            .and_then(Value::as_str);
         let changed = retiring
-            || question.connection_fingerprint != fingerprint
-            || question.context_digest
-                != question_source_digest(&snapshot, &question.request_message_id)?;
-        let payload = if question.status == QuestionStatus::Answered {
-            json!({"status":"answered","questionId":question.id,"answers":question.answers,"contextDigest":question.context_digest,"contextChanged":changed})
+            || question_context_changed(&question, &snapshot, fingerprint, dataset_generation)?;
+        let resolution = if question.status == QuestionStatus::Answered {
+            QuestionResolution::Answer(question.answers.clone())
         } else {
-            json!({"status":"skipped","questionId":question.id,"contextChanged":changed})
+            QuestionResolution::Skip
         };
+        let payload = question_result(&question, &resolution, changed);
         self.persist_question_result(id, question, payload).await?;
         Ok(())
     }
@@ -1185,6 +1241,7 @@ impl RuntimeManager {
                 changes.push(JournalChange::TurnUpserted { turn: turn.clone() });
             }
             if let Some(current) = snapshot.current_question.as_mut().filter(|current| current.id == question.id) {
+                current.status = question.status;
                 current.consumed = true;
                 changes.push(JournalChange::QuestionSet { question: Some(current.clone()) });
             }
@@ -1667,6 +1724,42 @@ fn question_source_digest(
             serde_json::to_vec(&value).map_err(|error| RuntimeError::Invalid(error.to_string()))?
         )
     ))
+}
+
+fn question_context_changed(
+    question: &QuestionRequest,
+    snapshot: &ConversationSnapshot,
+    fingerprint: &str,
+    dataset_generation: Option<&str>,
+) -> Result<bool> {
+    Ok(question.connection_fingerprint != fingerprint
+        || question
+            .dataset_generation
+            .as_deref()
+            .is_some_and(|generation| Some(generation) != dataset_generation)
+        || question.context_digest
+            != question_source_digest(snapshot, &question.request_message_id)?)
+}
+
+fn question_result(
+    question: &QuestionRequest,
+    resolution: &QuestionResolution,
+    context_changed: bool,
+) -> Value {
+    let mut result = match resolution {
+        QuestionResolution::Answer(answers) => {
+            json!({"status":"answered","questionId":question.id,"answers":answers,"contextDigest":question.context_digest,"contextChanged":context_changed})
+        }
+        QuestionResolution::Skip => {
+            json!({"status":"skipped","questionId":question.id,"contextChanged":context_changed})
+        }
+    };
+    if context_changed {
+        result["message"] = json!(
+            "These answers belong to earlier context. Recheck the current data and ask a new question if clarification is still needed."
+        );
+    }
+    result
 }
 
 pub(super) fn validate_answers(
