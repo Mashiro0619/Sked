@@ -46,7 +46,11 @@ extension _HomeScreenTimetableManagement on _HomeScreenState {
             completeSkedTaskRoute(pickerContext);
             await WidgetsBinding.instance.endOfFrame;
             if (!context.mounted || !handoff.isCurrent) return false;
-            return _openTimetableItemDialog(context, timetable, editor: editor);
+            return await _openTimetableItemDialog(
+              context,
+              timetable,
+              editor: editor,
+            );
           } finally {
             handoff.dispose();
           }
