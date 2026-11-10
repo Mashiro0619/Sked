@@ -1,6 +1,6 @@
 # 桌面基础交互补齐计划
 
-状态：D1–D7 对象菜单、快捷键、文件拖入及剪贴板附件已实现；D8 已接入导出文件的系统动作，附件系统动作继续实施。Windows 原生交互验收待进行。初次缺口审查基线为 2fd2fcb3，当前会话行为见[Agent 对话界面](AGENT_CHAT_DESIGN.md)。
+状态：D1–D8 对象菜单、快捷键、文件拖入、剪贴板附件与系统文件动作已实现；列表批量管理列为后续增强。Windows 原生交互验收待进行。初次缺口审查基线为 2fd2fcb3，当前会话行为见[Agent 对话界面](AGENT_CHAT_DESIGN.md)。
 
 ## 目标与优先级
 
@@ -20,7 +20,7 @@ Sked 桌面端应支持用户熟悉的对象操作、键盘操作和文件交互
 | 键盘打开对象菜单 | 已接入的对象菜单共用菜单键和 Shift+F10；会话还支持 F2 改名、Delete 确认删除，保留文本控件按键优先级 | [桌面上下文菜单](../lib/widgets/desktop_context_menu.dart)、[列表](../lib/agent/ui/agent_conversation_list.dart) |
 | 搜索与保存快捷键 | 历史区与语言页已接入 Ctrl+F 和搜索 Esc；D5 已为现有编辑任务接入 Ctrl+S，节次时间页通过原 flush 保存 | [历史搜索](../lib/agent/ui/agent_conversation_list.dart)、[语言搜索](../lib/screens/language_settings_page.dart)、[编辑器动作](../lib/widgets/sked_task_actions.dart) |
 | 文件拖入与截图粘贴 | 桌面拖入与标准粘贴快捷键已接入正式附件链；粘贴按文件列表、图片、文本选择一种内容，附件复用批次身份与剩余重试 | [附件控制器](../lib/agent/attachments/agent_attachment_controller.dart)、[拖入适配器](../lib/agent/ui/agent_desktop_file_drop.dart)、[剪贴板适配器](../lib/agent/ui/agent_desktop_clipboard.dart) |
-| 保存后的系统动作 | 导出成功可打开文件、在文件夹显示、复制路径和另存副本，按钮与右键共用动作；附件私有副本与系统动作继续接入 | [文件动作](../lib/services/desktop_file_actions.dart)、[保存反馈](../lib/widgets/saved_desktop_file_notice.dart)、[附件菜单](../lib/agent/ui/agent_attachment_view.dart) |
+| 保存后的系统动作 | 导出结果与附件菜单已支持打开文件、在文件夹显示、复制路径和另存副本；附件按原名生成并核验独立副本，按钮与右键共用动作 | [文件动作](../lib/services/desktop_file_actions.dart)、[保存反馈](../lib/widgets/saved_desktop_file_notice.dart)、[附件菜单](../lib/agent/ui/agent_attachment_view.dart) |
 | 列表批量管理 | 会话和课表资源行只记录单个活动对象，没有 Ctrl／Shift 对象多选；导入导出选择器已有复选框和全选。列表批量操作列为后续增强 | [会话列表](../lib/agent/ui/agent_conversation_list.dart)、[资源行](../lib/widgets/workbench_resource_widgets.dart) |
 
 ### 已有能力继续保留
@@ -96,7 +96,7 @@ Tab / Shift+Tab、Enter、Space、文本选择、Ctrl+A/C/X/V/Z 及重做沿用�
 
 首批已接入统一导出保存流程：成功回执中的本机绝对路径成为独立文件目标，保存任务结束后仍可使用。反馈保留到用户关闭或下一次文件保存反馈替换，显示可选择的真实路径和文件菜单；打开菜单、系统选择器及失败重试期间不会因通知计时而撤回动作。取消另存保留原文件反馈，同一文件的另存不覆盖自身。
 
-已经保存到用户位置的文件直接使用真实路径。私有附件按原文件名生成受管理的打开副本；需要保留到用户目录时使用另存为，定位和复制路径针对实际可用文件。模型正文中的任意路径或 file URL 不直接转成可执行系统动作。
+已经保存到用户位置的文件直接使用真实路径。私有附件已接入同一套动作，按原文件名生成系统临时副本，分块核对长度与 SHA-256；取消等待文件句柄关闭后再回收失败副本。缓存复用前重新核验，外部编辑过的副本保留原路径，下次操作从私有原件另建副本。菜单绑定原数据世代，切换来源会撤回尚未接纳的操作。需要长期保留时使用另存副本，定位和复制路径针对实际可用文件。模型正文中的任意路径或 file URL 不直接转成可执行系统动作。
 
 ## 原子提交顺序
 
@@ -111,7 +111,7 @@ Tab / Shift+Tab、Enter、Space、文本选择、Ctrl+A/C/X/V/Z 及重做沿用�
 | D5 | feat(桌面快捷键): 接入当前编辑任务保存 | 已实现；课程、日程、课表、学校站点、分类名称／颜色及 Agent 独立设置表单共用原保存，节次时间复用 flush |
 | D6 | feat(桌面附件): 接入系统文件拖入 | 已实现；实际落点、整批原输入租约、进度、取消和剩余重试接入正式附件链，目录引用等待文件 Provider |
 | D7 | feat(桌面附件): 接入剪贴板图片与文件 | 已实现；标准粘贴快捷键按实际载荷接入文件／截图批次或文本编辑，固定读取焦点与输入身份 |
-| D8 | feat(桌面文件): 接入系统打开与定位 | 已分笔实现统一文件动作及导出保存入口；附件私有副本和系统动作继续接入，后续和 Agent 文件交付复用 |
+| D8 | feat(桌面文件): 接入系统打开与定位 | 已分笔实现统一文件动作、导出保存入口和附件核验副本；后续 Agent 文件交付复用同一服务 |
 | D9 | feat(桌面列表): 接入对象多选与批量动作 | 后续增强；选择集合、范围锚点、上下文目标、批量动作与实际结果一起交付，按列表类型分笔 |
 | D10 | docs(桌面交互): 同步操作说明与验收状态 | 根据实际交付更新菜单、快捷键、文件操作与平台验收记录 |
 

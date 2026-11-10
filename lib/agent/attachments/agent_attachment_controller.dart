@@ -17,6 +17,18 @@ abstract interface class AgentAttachmentReader {
   });
 }
 
+/// Optional streaming export capability for a registered private attachment.
+abstract interface class AgentAttachmentFileReader {
+  /// Changes when maintenance retires the current source data.
+  Object get fileSession;
+
+  Future<void> copyToFile(
+    ConversationAttachment attachment,
+    String destination, {
+    required AttachmentCancellation cancellation,
+  });
+}
+
 /// A captured conversation input shared by all files from one desktop action.
 abstract interface class AgentAttachmentInput {
   Future<void> attach(XFile file, {required bool Function() canModify});

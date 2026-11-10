@@ -4,12 +4,15 @@ import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../services/desktop_file_actions.dart';
 import '../../widgets/desktop_context_menu.dart';
 import '../../widgets/expressive_dialog.dart';
 import '../../widgets/sked_popup_menu.dart';
+import '../../widgets/saved_desktop_file_notice.dart';
 import '../../widgets/sked_task_session.dart';
 import '../../widgets/workbench_chrome_metrics.dart';
 import '../attachments/agent_attachment_controller.dart';
+import '../attachments/desktop_attachment_files.dart';
 import 'agent_selectable_text.dart';
 
 String agentAttachmentError(AppLocalizations l, AttachmentError error) =>
@@ -68,14 +71,34 @@ class AgentAttachmentList extends StatefulWidget {
 }
 
 class _AgentAttachmentListState extends State<AgentAttachmentList> {
+  static const _files = DesktopFileActions();
+  static const _copies = DesktopAttachmentFiles();
   final _menus = <String, SkedTaskSession>{};
   final _previews = <SkedTaskSession>{};
+  final _fileTasks = <SkedTaskSession>{};
+  final _fileBusy = <String, Object>{};
+  final _fileFeedback = <String, String>{};
   int _generation = 0;
+  bool _visible = true;
 
-  bool get _enabled => mounted && widget.active && widget.interactive;
+  bool get _enabled =>
+      mounted && widget.active && widget.interactive && _visible;
 
   ConversationAttachment? _attachment(String id) =>
       widget.attachments.where((attachment) => attachment.id == id).firstOrNull;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _visible = TickerMode.valuesOf(context).enabled;
+    _checkSessions();
+  }
+
+  void _checkSessions() {
+    for (final session in [..._menus.values, ..._previews, ..._fileTasks]) {
+      session.check();
+    }
+  }
 
   @override
   void didUpdateWidget(AgentAttachmentList oldWidget) {
@@ -85,11 +108,19 @@ class _AgentAttachmentListState extends State<AgentAttachmentList> {
         (oldWidget.active && !widget.active) ||
         (oldWidget.interactive && !widget.interactive)) {
       _generation++;
+      _fileBusy.clear();
+      _fileFeedback.clear();
     }
     // Check at the unavailable boundary itself. Returning to the same chat or
     // restoring interaction must never revive a previously opened menu.
-    for (final session in [..._menus.values, ..._previews]) {
-      session.check();
+    _checkSessions();
+    for (final id in _fileFeedback.keys.toList()) {
+      final previous = oldWidget.attachments
+          .where((attachment) => attachment.id == id)
+          .firstOrNull;
+      if (!_sameAttachment(previous, _attachment(id))) {
+        _fileFeedback.remove(id);
+      }
     }
   }
 
@@ -99,25 +130,33 @@ class _AgentAttachmentListState extends State<AgentAttachmentList> {
       session.dispose();
     }
     _menus.clear();
-    for (final session in _previews) {
+    for (final session in [..._previews, ..._fileTasks]) {
       session.invalidate();
     }
     super.dispose();
   }
 
   void _openMenu(String id, int generation) {
-    if (!_enabled || generation != _generation) return;
+    if (!_enabled || generation != _generation || _fileBusy.containsKey(id)) {
+      return;
+    }
     _menus.remove(id)?.dispose();
     final conversationId = widget.conversationId;
     final repository = widget.repository;
     final attachment = _attachment(id);
+    final fileReader = repository is AgentAttachmentFileReader
+        ? repository as AgentAttachmentFileReader
+        : null;
+    final fileSession = fileReader?.fileSession;
     _menus[id] = SkedTaskSession(
       ownerRoute: ModalRoute.of(context),
       parent: SkedTaskSessionScope.maybeOf(context)?.session,
       isOwnerActive: () => _enabled,
       isTargetCurrent: () =>
+          generation == _generation &&
           conversationId == widget.conversationId &&
           identical(repository, widget.repository) &&
+          identical(fileSession, fileReader?.fileSession) &&
           widget.ids.contains(id) &&
           _sameAttachment(attachment, _attachment(id)),
     );
@@ -129,7 +168,9 @@ class _AgentAttachmentListState extends State<AgentAttachmentList> {
   }
 
   Future<void> _select(String id, String action, int generation) async {
-    if (!_enabled || generation != _generation) return;
+    if (!_enabled || generation != _generation || _fileBusy.containsKey(id)) {
+      return;
+    }
     final session = _menus.remove(id);
     if (session == null) return;
     try {
@@ -153,10 +194,82 @@ class _AgentAttachmentListState extends State<AgentAttachmentList> {
           widget.onUseAgain?.call(id);
         case 'remove':
           widget.onRemove?.call(id);
+        case 'open':
+        case 'reveal':
+        case 'copy-path':
+        case 'save-copy':
+          await _fileAction(id, action, session);
       }
     } finally {
       _previews.remove(session);
       session.dispose();
+    }
+  }
+
+  Future<void> _fileAction(
+    String id,
+    String action,
+    SkedTaskSession session,
+  ) async {
+    final repository = widget.repository;
+    final attachment = _attachment(id);
+    if (repository is! AgentAttachmentFileReader || attachment == null) return;
+    final reader = repository as AgentAttachmentFileReader;
+    final ticket = Object();
+    final cancellation = AttachmentCancellation();
+    void check() {
+      if (!session.isCurrent) cancellation.cancel();
+    }
+
+    _fileTasks.add(session);
+    session.addListener(check);
+    setState(() {
+      _fileBusy[id] = ticket;
+      _fileFeedback.remove(id);
+    });
+    try {
+      final file = await _copies.prepare(
+        reader,
+        attachment,
+        cancellation: cancellation,
+      );
+      if (!session.isCurrent) return;
+      // The verified copy becomes the accepted system action's own target.
+      // Source retirement still suppresses feedback on another chat.
+      switch (action) {
+        case 'open':
+          await _files.open(file);
+        case 'reveal':
+          await _files.reveal(file);
+        case 'copy-path':
+          await _files.copyPath(file);
+          if (mounted && session.isCurrent) {
+            setState(() {
+              _fileFeedback[id] = AppLocalizations.of(context)
+                  .copiedToClipboard;
+            });
+          }
+        case 'save-copy':
+          final saved = await _files.saveCopy(file);
+          if (mounted && session.isCurrent && saved != null) {
+            SavedDesktopFileNotice.show(context, saved);
+          }
+      }
+    } catch (error) {
+      if (mounted && session.isCurrent) {
+        final l = AppLocalizations.of(context);
+        setState(() {
+          _fileFeedback[id] = error is AttachmentException
+              ? agentAttachmentError(l, error.code)
+              : l.desktopFileActionFailed;
+        });
+      }
+    } finally {
+      session.removeListener(check);
+      _fileTasks.remove(session);
+      if (mounted && identical(_fileBusy[id], ticket)) {
+        setState(() => _fileBusy.remove(id));
+      }
     }
   }
 
@@ -172,7 +285,10 @@ class _AgentAttachmentListState extends State<AgentAttachmentList> {
           label: label,
           icon: icon,
           shortcut: actionId == 'remove' ? LogicalKeyboardKey.delete : null,
-          enabled: _enabled && generation == _generation,
+          enabled:
+              _enabled &&
+              generation == _generation &&
+              !_fileBusy.containsKey(id),
           onInvoke: () async {
             if (invocation != null) {
               if (!invocation.isCurrent()) return;
@@ -184,6 +300,14 @@ class _AgentAttachmentListState extends State<AgentAttachmentList> {
     return [
       if (_attachment(id) != null)
         action('preview', l.agentFilePreview, Icons.visibility_outlined),
+      if (_attachment(id) != null &&
+          DesktopFileActions.supported &&
+          widget.repository is AgentAttachmentFileReader) ...[
+        action('open', l.desktopOpenFile, Icons.open_in_new),
+        action('reveal', l.desktopRevealFile, Icons.folder_open_outlined),
+        action('copy-path', l.desktopCopyFilePath, Icons.copy_outlined),
+        action('save-copy', l.desktopSaveFileCopy, Icons.save_alt),
+      ],
       if (widget.onUseAgain != null)
         action('reuse', l.agentFileUseAgain, Icons.add_circle_outline),
       if (widget.onRemove != null)
@@ -194,6 +318,10 @@ class _AgentAttachmentListState extends State<AgentAttachmentList> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final fileReader = widget.repository is AgentAttachmentFileReader
+        ? widget.repository as AgentAttachmentFileReader
+        : null;
+    final fileSession = fileReader?.fileSession;
     final byId = {
       for (final attachment in widget.attachments) attachment.id: attachment,
     };
@@ -217,6 +345,7 @@ class _AgentAttachmentListState extends State<AgentAttachmentList> {
                     target: (
                       widget.conversationId,
                       widget.repository,
+                      fileSession,
                       id,
                       generation,
                       byId[id]?.name,
@@ -229,6 +358,7 @@ class _AgentAttachmentListState extends State<AgentAttachmentList> {
                     isOwnerCurrent: () =>
                         _enabled &&
                         generation == _generation &&
+                        identical(fileSession, fileReader?.fileSession) &&
                         widget.ids.contains(id) &&
                         _sameAttachment(byId[id], _attachment(id)),
                     actionsBuilder: (invocation) =>
@@ -284,6 +414,13 @@ class _AgentAttachmentListState extends State<AgentAttachmentList> {
                                       ),
                                     ],
                                   ),
+                                  if (_fileFeedback[id] case final feedback?)
+                                    Text(
+                                      feedback,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall,
+                                    ),
                                 ],
                               ),
                             ),
@@ -292,9 +429,18 @@ class _AgentAttachmentListState extends State<AgentAttachmentList> {
                               tooltip: l.agentFilePreview,
                               enabled:
                                   _enabled &&
+                                  !_fileBusy.containsKey(id) &&
                                   (byId[id] != null ||
                                       widget.onUseAgain != null ||
                                       widget.onRemove != null),
+                              icon: _fileBusy.containsKey(id)
+                                  ? const SizedBox.square(
+                                      dimension: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : null,
                               onOpened: () => _openMenu(id, generation),
                               onCanceled: () => _cancelMenu(id, generation),
                               itemBuilder: (context) => [

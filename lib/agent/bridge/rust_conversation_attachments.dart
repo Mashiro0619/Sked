@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
@@ -14,7 +15,8 @@ import 'generated/api/models.dart' as view;
 import 'rust_agent_client.dart';
 import 'rust_storage_errors.dart';
 
-class RustAttachmentReader implements AgentAttachmentReader {
+class RustAttachmentReader
+    implements AgentAttachmentReader, AgentAttachmentFileReader {
   RustAttachmentReader(this.client);
 
   final AgentRustClient client;
@@ -22,6 +24,74 @@ class RustAttachmentReader implements AgentAttachmentReader {
   final _reads = <Future<void>>{};
   bool _frozen = false;
   bool _closed = false;
+  Object _fileSession = Object();
+
+  @override
+  Object get fileSession => _fileSession;
+
+  @override
+  Future<void> copyToFile(
+    ConversationAttachment attachment,
+    String destination, {
+    required AttachmentCancellation cancellation,
+  }) => _read(
+    () async {
+      attachment.validate();
+      final result = await client.query(
+        native.AgentQuery(
+          kind: native.QueryKind.attachmentPath,
+          attachment: _metadata(attachment),
+        ),
+      );
+      cancellation.check();
+      final sourcePath = result.text;
+      if (sourcePath == null) {
+        throw const AttachmentException(AttachmentError.missing);
+      }
+      final source = File(sourcePath);
+      if (!await source.exists()) {
+        throw const AttachmentException(AttachmentError.missing);
+      }
+      cancellation.check();
+      final input = await source.open();
+      RandomAccessFile? output;
+      final digest = _AttachmentDigestSink();
+      final hashing = sha256.startChunkedConversion(digest);
+      var count = 0;
+      try {
+        cancellation.check();
+        output = await File(destination).open(mode: FileMode.write);
+        while (true) {
+          cancellation.check();
+          final bytes = await input.read(65536);
+          cancellation.check();
+          if (bytes.isEmpty) break;
+          count += bytes.length;
+          if (count > attachment.byteLength) {
+            throw const AttachmentException(AttachmentError.changed);
+          }
+          hashing.add(bytes);
+          await output.writeFrom(bytes);
+        }
+        if (count != attachment.byteLength) {
+          throw const AttachmentException(AttachmentError.changed);
+        }
+      } finally {
+        hashing.close();
+        try {
+          await output?.close();
+        } finally {
+          await input.close();
+        }
+      }
+      cancellation.check();
+      if (digest.value.toString() != attachment.digest) {
+        throw const AttachmentException(AttachmentError.corrupt);
+      }
+    },
+    cancellation,
+    drainBeforeReturning: true,
+  );
 
   @override
   Future<Uint8List> readBytes(
@@ -50,8 +120,9 @@ class RustAttachmentReader implements AgentAttachmentReader {
 
   Future<T> _read<T>(
     Future<T> Function() action,
-    AttachmentCancellation? cancellation,
-  ) async {
+    AttachmentCancellation? cancellation, {
+    bool drainBeforeReturning = false,
+  }) async {
     if (_frozen || _closed) {
       throw const AttachmentException(AttachmentError.unavailable);
     }
@@ -66,7 +137,9 @@ class RustAttachmentReader implements AgentAttachmentReader {
     _reads.add(settled);
     unawaited(settled.whenComplete(() => _reads.remove(settled)));
     try {
-      return await token.guard(work);
+      // File callers own the destination's cleanup. They must only regain it
+      // after the writer has closed, including when cancellation wins.
+      return await (drainBeforeReturning ? work : token.guard(work));
     } catch (error) {
       throw attachmentErrorFromRust(error);
     } finally {
@@ -82,6 +155,7 @@ class RustAttachmentReader implements AgentAttachmentReader {
 
   Future<void> freezeAndDrain() async {
     _frozen = true;
+    _fileSession = Object();
     for (final token in _tokens.toList()) {
       token.cancel();
     }
@@ -96,6 +170,16 @@ class RustAttachmentReader implements AgentAttachmentReader {
     _closed = true;
     await freezeAndDrain();
   }
+}
+
+class _AttachmentDigestSink implements Sink<Digest> {
+  Digest? value;
+
+  @override
+  void add(Digest data) => value = data;
+
+  @override
+  void close() {}
 }
 
 /// Owns picker staging and UI progress. Rust publishes and collects saved blobs.

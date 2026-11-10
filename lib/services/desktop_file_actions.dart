@@ -31,6 +31,8 @@ class SavedDesktopFile {
 class DesktopFileActions {
   const DesktopFileActions();
 
+  static bool get supported => platform.desktopFilesSupported;
+
   Future<void> _requireFile(SavedDesktopFile file) async {
     if (!platform.desktopFilesSupported ||
         !await platform.desktopFileExists(file.path)) {
