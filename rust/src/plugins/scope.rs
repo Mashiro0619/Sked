@@ -195,6 +195,17 @@ impl PluginContext {
         &self.inner.config
     }
 
+    /// A weak phase guard lets contributed resources follow activation without
+    /// retaining the plugin's services or extending its disposal lifetime.
+    pub fn activity_guard(&self) -> impl Fn() -> bool + Send + Sync + 'static {
+        let inner = Arc::downgrade(&self.inner);
+        move || {
+            inner
+                .upgrade()
+                .is_some_and(|inner| inner.state.lock().unwrap().phase == PluginState::Active)
+        }
+    }
+
     /// Services are staged during setup and become discoverable together only
     /// after the complete setup succeeds.
     pub fn provide<T: Send + Sync + 'static>(

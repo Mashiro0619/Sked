@@ -1064,7 +1064,7 @@ async fn offline_business_queue_question_context_and_history_journey() {
         RigModelClient::with_transport(DynHttpClient::new(correction_transport.clone())),
     );
     corrections.set_title_generation_enabled(false);
-    corrections.set_tools(manager.inner.tools.lock().unwrap().clone());
+    corrections.set_tools(manager.tool_catalog());
     let correction_id = corrections
         .create_conversation(
             "参数纠正".into(),
@@ -1127,7 +1127,7 @@ async fn offline_business_queue_question_context_and_history_journey() {
         RigModelClient::with_transport(DynHttpClient::new(steering_transport)),
     );
     steering.set_title_generation_enabled(false);
-    steering.set_tools(manager.inner.tools.lock().unwrap().clone());
+    steering.set_tools(manager.tool_catalog());
     let steering_id = steering
         .create_conversation(
             "补充交接".into(),

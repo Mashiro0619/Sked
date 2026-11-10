@@ -7,7 +7,10 @@ use tokio::sync::{mpsc, oneshot};
 use tokio_util::sync::CancellationToken;
 
 use super::*;
-use crate::model_client::ModelToolExecutor;
+use crate::{
+    model_client::ModelToolExecutor,
+    tooling::{RuntimeToolGroup, ToolCall, ToolResult, ToolRunContext},
+};
 
 #[cfg(test)]
 mod question_input_tests;
@@ -72,95 +75,19 @@ impl ModelToolExecutor for RuntimeToolExecutor {
         arguments: Value,
         cancellation: CancellationToken,
     ) -> BoxFuture<'static, std::result::Result<Value, String>> {
-        let manager = self.manager.clone();
-        let accepted = self.accepted.clone();
-        Box::pin(async move {
-            let result = match name.as_str() {
-                "ask_user" => manager.ask_user(&accepted, &call_id, arguments).await,
-                "update_plan" => manager.update_plan(&accepted, arguments).await,
-                "skills.search"
-                | "skills.load"
-                | "skills.get"
-                | "skills.apply"
-                | "memories.search"
-                | "memories.get"
-                | "memories.apply"
-                | "knowledge.undo"
-                | "knowledge.changes.get" => {
-                    manager
-                        .execute_knowledge(&accepted, &name, &call_id, arguments)
-                        .await
-                }
-                "conversation.get" | "conversation.history" | "conversation.read" => {
-                    manager
-                        .read_conversation_tool(&accepted, &name, arguments)
-                        .await
-                }
-                _ => {
-                    manager
-                        .execute_host(&accepted, &name, &call_id, arguments, cancellation)
-                        .await
-                }
-            };
-            let abort_error = accepted
-                .control
-                .abort_error
-                .lock()
-                .expect("runtime error mutex poisoned")
-                .clone();
-            if let Some(error) = abort_error {
-                if accepted.control.unknown_outcome.load(Ordering::Acquire) {
-                    if let Some(operation) = manager
-                        .read(&accepted.conversation_id)
-                        .await
-                        .map_err(|error| error.to_string())?
-                        .operations
-                        .iter()
-                        .find(|operation| {
-                            operation.run_id == accepted.run_id && operation.tool_call_id == call_id
-                        })
-                    {
-                        return Ok(unknown_operation_details(operation));
-                    }
-                }
-                return Err(error);
-            }
-            let payload = match result {
-                Ok(result) => result,
-                Err(RuntimeError::Cancelled(message)) => {
-                    json!({"status":"cancelled","message":message})
-                }
-                Err(error) => json!({"status":"error", "message":error.to_string()}),
-            };
-            let receipt_recorded = matches!(
-                name.as_str(),
-                "skills.apply" | "memories.apply" | "knowledge.undo"
-            ) && payload.get("status").and_then(Value::as_str)
-                == Some("committed");
-            if is_internal(&name) && !receipt_recorded {
-                let outcome = match payload.get("status").and_then(Value::as_str) {
-                    Some("cancelled") => ToolOutcome::Cancelled,
-                    Some("error") => ToolOutcome::Error,
-                    _ => ToolOutcome::Success,
-                };
-                manager
-                    .record_tool_result(
-                        &accepted,
-                        &name,
-                        &call_id,
-                        &HostToolResult {
-                            model_payload: payload.clone(),
-                            details: payload.clone(),
-                            outcome,
-                        },
-                    )
-                    .await
-                    .map_err(|error| error.to_string())?;
-            }
-            Ok(payload)
-        })
+        self.accepted.tools.execute(
+            ToolCall {
+                name,
+                call_id,
+                arguments,
+                cancellation,
+            },
+            Arc::new(RuntimeToolContext {
+                manager: self.manager.clone(),
+                accepted: self.accepted.clone(),
+            }),
+        )
     }
-
     fn pause_before_model(&self) -> bool {
         self.accepted
             .control
@@ -183,16 +110,7 @@ impl ModelToolExecutor for RuntimeToolExecutor {
         })
     }
     fn active_tools(&self) -> Option<Vec<String>> {
-        let available: HashSet<_> = self
-            .manager
-            .inner
-            .tools
-            .lock()
-            .expect("tool registry mutex poisoned")
-            .iter()
-            .map(|t| t.name.clone())
-            .chain(descriptors().into_iter().map(|t| t.name))
-            .collect();
+        let available = self.accepted.tools.names();
         Some(
             self.accepted
                 .control
@@ -207,130 +125,143 @@ impl ModelToolExecutor for RuntimeToolExecutor {
     }
 }
 
-pub(super) fn bootstrap_names() -> HashSet<String> {
-    [
-        "ask_user",
-        "update_plan",
-        "capabilities.describe",
-        "skills.search",
-        "skills.load",
-        "conversation.get",
-        "conversation.history",
-        "conversation.read",
-    ]
-    .into_iter()
-    .map(str::to_owned)
-    .collect()
+struct RuntimeToolContext {
+    manager: RuntimeManager,
+    accepted: AcceptedRun,
 }
 
-pub(super) fn is_internal(name: &str) -> bool {
-    matches!(
-        name,
-        "ask_user"
-            | "update_plan"
-            | "skills.search"
-            | "skills.load"
-            | "skills.get"
-            | "skills.apply"
-            | "memories.search"
-            | "memories.get"
-            | "memories.apply"
-            | "knowledge.undo"
-            | "knowledge.changes.get"
-            | "conversation.get"
-            | "conversation.history"
-            | "conversation.read"
-    )
-}
+impl ToolRunContext for RuntimeToolContext {
+    fn invoke_runtime(
+        &self,
+        group: RuntimeToolGroup,
+        call: ToolCall,
+    ) -> BoxFuture<'static, Result<ToolResult>> {
+        let manager = self.manager.clone();
+        let accepted = self.accepted.clone();
+        Box::pin(async move {
+            let ToolCall {
+                name,
+                call_id,
+                arguments,
+                cancellation,
+            } = call;
+            let result = match group {
+                RuntimeToolGroup::Interaction => match name.as_str() {
+                    "ask_user" => manager.ask_user(&accepted, &call_id, arguments).await,
+                    "update_plan" => manager.update_plan(&accepted, arguments).await,
+                    _ => Err(RuntimeError::Invalid("交互工具不可用".into())),
+                },
+                RuntimeToolGroup::Conversation => {
+                    manager
+                        .read_conversation_tool(&accepted, &name, arguments)
+                        .await
+                }
+                RuntimeToolGroup::Knowledge => {
+                    manager
+                        .execute_knowledge(&accepted, &name, &call_id, arguments)
+                        .await
+                }
+                RuntimeToolGroup::Business => {
+                    manager
+                        .execute_host(&accepted, &name, &call_id, arguments, cancellation)
+                        .await
+                }
+            };
+            let payload = match result {
+                Ok(payload) => payload,
+                // The business path owns its progress and result records. Keep
+                // its original pre-dispatch failure behavior while settlement
+                // still checks the accepted run's abort/unknown-outcome state.
+                Err(error) if group == RuntimeToolGroup::Business => {
+                    return Ok(ToolResult::DomainOwned(tool_error_payload(error)));
+                }
+                Err(error) => return Err(error),
+            };
+            let recorded = group == RuntimeToolGroup::Business
+                || (matches!(
+                    name.as_str(),
+                    "skills.apply" | "memories.apply" | "knowledge.undo"
+                ) && payload.get("status").and_then(Value::as_str) == Some("committed"));
+            Ok(if recorded {
+                ToolResult::DomainOwned(payload)
+            } else {
+                ToolResult::Pending(pending_result(payload))
+            })
+        })
+    }
 
-fn descriptor(
-    name: &str,
-    description: &str,
-    properties: Value,
-    required: &[&str],
-) -> ToolDescriptor {
-    ToolDescriptor {
-        name: name.into(),
-        description: description.into(),
-        parameters: json!({"type":"object","properties":properties,"required":required,"additionalProperties":false}),
+    fn settle(
+        &self,
+        call: ToolCall,
+        result: Result<ToolResult>,
+    ) -> BoxFuture<'static, std::result::Result<Value, String>> {
+        let manager = self.manager.clone();
+        let accepted = self.accepted.clone();
+        Box::pin(async move {
+            let abort_error = accepted
+                .control
+                .abort_error
+                .lock()
+                .expect("runtime error mutex poisoned")
+                .clone();
+            if let Some(error) = abort_error {
+                if accepted.control.unknown_outcome.load(Ordering::Acquire) {
+                    if let Some(operation) = manager
+                        .read(&accepted.conversation_id)
+                        .await
+                        .map_err(|error| error.to_string())?
+                        .operations
+                        .iter()
+                        .find(|operation| {
+                            operation.run_id == accepted.run_id
+                                && operation.tool_call_id == call.call_id
+                        })
+                    {
+                        return Ok(unknown_operation_details(operation));
+                    }
+                }
+                return Err(error);
+            }
+            let result = match result {
+                Ok(ToolResult::DomainOwned(payload)) => return Ok(payload),
+                Ok(ToolResult::Pending(result)) => result,
+                Err(error) => pending_result(tool_error_payload(error)),
+            };
+            if result.outcome == ToolOutcome::Unknown {
+                accepted
+                    .control
+                    .unknown_outcome
+                    .store(true, Ordering::Release);
+                accepted.control.cancellation.cancel();
+            }
+            manager
+                .record_tool_result(&accepted, &call.name, &call.call_id, &result)
+                .await
+                .map_err(|error| error.to_string())?;
+            Ok(result.model_payload)
+        })
     }
 }
 
-pub(super) fn descriptors() -> Vec<ToolDescriptor> {
-    let mut tools = vec![
-        descriptor(
-            "ask_user",
-            "Ask for facts or choices needed for the current task. Answers provide information; business approval is separate.",
-            json!({"questions":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"title":{"type":"string"},"question":{"type":"string"},"options":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"label":{"type":"string"},"description":{"type":"string"}},"required":["id","label"]}},"multiple":{"type":"boolean"},"allowFreeText":{"type":"boolean"},"required":{"type":"boolean"}},"required":["id","question"]}}}),
-            &["questions"],
-        ),
-        descriptor(
-            "update_plan",
-            "Update this run's task plan. An empty steps list clears the plan. Completion must follow actual operation receipts.",
-            json!({"steps":{"type":"array","items":{"type":"object","properties":{"id":{"type":"string"},"title":{"type":"string"},"status":{"enum":["pending","inProgress","completed","blocked"]},"detail":{"type":"string"},"operationIds":{"type":"array","items":{"type":"string"}}},"required":["id","title","status"]}}}),
-            &["steps"],
-        ),
-        descriptor(
-            "skills.search",
-            "Find enabled Skills by title, summary, or trigger. Load a Skill before following its full instructions.",
-            json!({"query":{"type":"string"},"offset":{"type":"integer","minimum":0},"limit":{"type":"integer","minimum":1}}),
-            &[],
-        ),
-        descriptor(
-            "skills.load",
-            "Load the current revision of an enabled Skill into this conversation and discover its available tools.",
-            json!({"id":{"type":"string"}}),
-            &["id"],
-        ),
-        descriptor(
-            "memories.search",
-            "Search shared memories. Recheck live resources before modifying them; memories never grant permission.",
-            json!({"query":{"type":"string"},"offset":{"type":"integer","minimum":0},"limit":{"type":"integer","minimum":1}}),
-            &[],
-        ),
-        descriptor(
-            "knowledge.undo",
-            "Undo one recorded knowledge operation after checking its current revisions. The host previews in plan mode, asks in confirmation mode, and saves in full mode.",
-            json!({"targetOperationId":{"type":"string"}}),
-            &["targetOperationId"],
-        ),
-        descriptor(
-            "knowledge.changes.get",
-            "Read full details of a knowledge proposal held by this conversation.",
-            json!({"proposalId":{"type":"string"}}),
-            &["proposalId"],
-        ),
-        descriptor(
-            "conversation.get",
-            "Read the current conversation's metadata, plan, pending question, and queue.",
-            json!({}),
-            &[],
-        ),
-        descriptor(
-            "conversation.history",
-            "Read a page of current conversation messages, including complete tool groups.",
-            json!({"before":{"type":"integer","minimum":0},"limit":{"type":"integer","minimum":1},"query":{"type":"string"}}),
-            &[],
-        ),
-        descriptor(
-            "conversation.read",
-            "Read a current conversation message by its stable ID.",
-            json!({"messageId":{"type":"string"}}),
-            &["messageId"],
-        ),
-    ];
-    for family in ["skills", "memories"] {
-        tools.push(descriptor(
-            &format!("{family}.get"),
-            "Read one knowledge record and its current revision.",
-            json!({"id":{"type":"string"}}),
-            &["id"],
-        ));
-        tools.push(descriptor(&format!("{family}.apply"), "Create, update, delete, enable or restore shared knowledge. Existing records require the revision from get. Built-in Skills cannot be deleted. The host previews in plan mode, asks in confirmation mode, and saves in full mode.", json!({"action":{"enum":["create","update","delete","setEnabled","restoreOriginal"]},"id":{"type":"string"},"revision":{"type":"integer","minimum":0},"title":{"type":"string"},"summary":{"type":"string"},"body":{"type":"string"},"sourceNote":{"type":"string"},"enabled":{"type":"boolean"},"triggers":{"type":"array","items":{"type":"string"}},"requiredTools":{"type":"array","items":{"type":"string"}},"optionalTools":{"type":"array","items":{"type":"string"}}}), &["action"]));
+fn tool_error_payload(error: RuntimeError) -> Value {
+    match error {
+        RuntimeError::Cancelled(message) => json!({"status":"cancelled","message":message}),
+        error => json!({"status":"error", "message":error.to_string()}),
     }
-    tools
 }
 
+fn pending_result(payload: Value) -> HostToolResult {
+    let outcome = match payload.get("status").and_then(Value::as_str) {
+        Some("cancelled") => ToolOutcome::Cancelled,
+        Some("error") => ToolOutcome::Error,
+        _ => ToolOutcome::Success,
+    };
+    HostToolResult {
+        model_payload: payload.clone(),
+        details: payload,
+        outcome,
+    }
+}
 impl RuntimeManager {
     async fn execute_host(
         &self,
@@ -385,13 +316,25 @@ impl RuntimeManager {
                 .get_mut("tools")
                 .and_then(Value::as_array_mut)
             {
-                tools.retain(|tool| {
-                    !tool
-                        .get("name")
-                        .and_then(Value::as_str)
-                        .is_some_and(is_internal)
+                let registered = accepted.tools.descriptors();
+                let contributed = accepted.tools.contributed_descriptors();
+                let contributed_names: HashSet<_> =
+                    contributed.iter().map(|tool| tool.name.as_str()).collect();
+                tools.retain_mut(|tool| {
+                    let Some(name) = tool.get("name").and_then(Value::as_str) else {
+                        return false;
+                    };
+                    if contributed_names.contains(name) {
+                        return false;
+                    }
+                    let Some(descriptor) = registered.iter().find(|entry| entry.name == name)
+                    else {
+                        return false;
+                    };
+                    *tool = json!(descriptor);
+                    true
                 });
-                tools.extend(descriptors().into_iter().map(|tool| json!(tool)));
+                tools.extend(contributed.into_iter().map(|tool| json!(tool)));
             }
         }
         if result.outcome == ToolOutcome::Unknown {

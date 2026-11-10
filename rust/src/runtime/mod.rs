@@ -41,6 +41,7 @@ use crate::{
     context::ContextService,
     model_client::{ConnectionConfig, ModelEvent, ModelRunResult, services::ModelService},
     storage::{ConversationState, StorageError, models::*, services::PersistenceService},
+    tooling::{BusinessHostService, ToolCatalogSnapshot, ToolService, default_tool_service},
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -68,14 +69,14 @@ pub struct RuntimeManager {
 
 struct ManagerInner {
     storage: PersistenceService,
-    host: SharedHost,
+    host: BusinessHostService,
     model_client: ModelService,
     context: ContextService,
     sessions: Mutex<HashMap<String, Arc<Mutex<Session>>>>,
     /// Cache ownership follows admitted execution, including queued handoff.
     /// Read-only inspection and metadata updates do not acquire ownership.
     cache_owners: StdMutex<HashSet<String>>,
-    tools: StdMutex<Vec<ToolDescriptor>>,
+    tools: ToolService,
     preamble: StdMutex<String>,
     events: broadcast::Sender<RuntimeEvent>,
     shutdown: CancellationToken,
@@ -127,6 +128,7 @@ struct AcceptedRun {
     compact_only: bool,
     save_partial: bool,
     control: Arc<RunControl>,
+    tools: ToolCatalogSnapshot,
 }
 
 pub(crate) fn now_ms() -> i64 {
@@ -157,8 +159,24 @@ impl RuntimeManager {
         model_client: ModelService,
         context: ContextService,
     ) -> Self {
+        Self::new_with_services(
+            storage,
+            BusinessHostService::new(host),
+            model_client,
+            context,
+            default_tool_service(Vec::new()).expect("default tools are valid"),
+        )
+    }
+
+    pub fn new_with_services(
+        storage: PersistenceService,
+        host: BusinessHostService,
+        model_client: ModelService,
+        context: ContextService,
+        tools: ToolService,
+    ) -> Self {
         let (events, _) = broadcast::channel(1024);
-        Self { inner: Arc::new(ManagerInner { storage, host, model_client, context, sessions: Mutex::new(HashMap::new()), cache_owners: StdMutex::new(HashSet::new()), tools: StdMutex::new(Vec::new()), preamble: StdMutex::new("You are Sked's task assistant. Use the available tools for current application facts. Follow the user's permission mode. A tool receipt determines whether an operation completed. Ask for missing information with ask_user and maintain a plan with update_plan when useful.".into()), events, shutdown: CancellationToken::new(), auto_title: AtomicBool::new(true), title_tasks: TaskTracker::new(),
+        Self { inner: Arc::new(ManagerInner { storage, host, model_client, context, sessions: Mutex::new(HashMap::new()), cache_owners: StdMutex::new(HashSet::new()), tools, preamble: StdMutex::new("You are Sked's task assistant. Use the available tools for current application facts. Follow the user's permission mode. A tool receipt determines whether an operation completed. Ask for missing information with ask_user and maintain a plan with update_plan when useful.".into()), events, shutdown: CancellationToken::new(), auto_title: AtomicBool::new(true), title_tasks: TaskTracker::new(),
 #[cfg(test)] fail_next_tool_record: AtomicBool::new(false) }) }
     }
 
@@ -169,23 +187,11 @@ impl RuntimeManager {
         self.inner.storage.clone()
     }
     pub fn set_tools(&self, tools: Vec<ToolDescriptor>) {
-        *self
-            .inner
-            .tools
-            .lock()
-            .expect("tool registry mutex poisoned") = tools;
+        self.inner.tools.replace_business_tools(tools);
     }
 
     pub fn tool_catalog(&self) -> Vec<ToolDescriptor> {
-        let mut catalog = self
-            .inner
-            .tools
-            .lock()
-            .expect("tools mutex poisoned")
-            .clone();
-        catalog.retain(|tool| !tools::is_internal(&tool.name));
-        catalog.extend(tools::descriptors());
-        catalog
+        self.inner.tools.snapshot().descriptors()
     }
     pub fn set_preamble(&self, text: String) {
         *self.inner.preamble.lock().expect("preamble mutex poisoned") = text;
@@ -1295,7 +1301,9 @@ impl RuntimeManager {
             .map(|input| self.frozen_selected_skills(&input.context_references))
             .transpose()?
             .unwrap_or_default();
-        let available_tools = self.available_tool_names();
+        let tool_snapshot = self.inner.tools.snapshot();
+        let available_tools = tool_snapshot.names();
+        let bootstrap_names = tool_snapshot.bootstrap_names();
         let model_changed = source
             .runs
             .last()
@@ -1365,7 +1373,7 @@ impl RuntimeManager {
                                 .map(str::to_owned)
                                 .collect::<HashSet<_>>()
                         })
-                        .unwrap_or_else(tools::bootstrap_names);
+                        .unwrap_or(bootstrap_names);
                     for skill in selected_skills {
                         exposed.extend(
                             skill
@@ -1534,7 +1542,7 @@ impl RuntimeManager {
                     .map(str::to_owned)
                     .collect()
             })
-            .unwrap_or_else(tools::bootstrap_names);
+            .unwrap_or_else(|| tool_snapshot.bootstrap_names());
         let control = Arc::new(RunControl {
             cancellation: self.inner.shutdown.child_token(),
             stop_requested: AtomicBool::new(false),
@@ -1576,6 +1584,7 @@ impl RuntimeManager {
             compact_only,
             save_partial: true,
             control,
+            tools: tool_snapshot,
         };
         self.publish_presentation(&accepted);
         Ok(accepted)
@@ -1724,14 +1733,7 @@ impl RuntimeManager {
                 }
                 prompt = continuation_prompt(&mut history)?;
             }
-            let mut descriptors = self
-                .inner
-                .tools
-                .lock()
-                .expect("tool registry mutex poisoned")
-                .clone();
-            descriptors.retain(|tool| !tools::is_internal(&tool.name));
-            descriptors.extend(tools::descriptors());
+            let descriptors = accepted.tools.descriptors();
             let request_base = self
                 .read(&accepted.conversation_id)
                 .await?

@@ -14,10 +14,14 @@ use crate::{
         PluginSpec, ServiceDefinition,
     },
     runtime::{
-        RuntimeManager, ToolDescriptor,
+        RuntimeManager,
         services::{RUNTIME_SERVICE as RUNTIME, RuntimeService},
     },
     storage::services::{DefaultPersistencePlugin, PERSISTENCE_SERVICE as STORAGE},
+    tooling::{
+        BUSINESS_HOST_SERVICE as HOST, BusinessHostService, DefaultToolPlugin,
+        TOOL_SERVICE as TOOLS,
+    },
 };
 use async_trait::async_trait;
 use serde_json::{Value, json};
@@ -25,7 +29,8 @@ use std::{collections::HashSet, sync::Arc};
 use tokio::sync::{broadcast, watch};
 use tokio_util::sync::CancellationToken;
 
-const HOST: ServiceDefinition<BridgeHost> = ServiceDefinition::new("sked.business-host", 1);
+const BRIDGE: ServiceDefinition<BridgeHost> =
+    ServiceDefinition::new("sked.business-host.bridge", 1);
 const EVENT_RELAY: ServiceDefinition<()> = ServiceDefinition::new("sked.runtime-events", 1);
 
 /// A clear operation can reach shutdown after ordinary shutdown has begun.
@@ -83,9 +88,13 @@ impl DefaultAgentProfile {
                     Value::Null,
                 ),
                 PluginSpec::new(
+                    "default.tools",
+                    Arc::new(DefaultToolPlugin::new(tools)),
+                    Value::Null,
+                ),
+                PluginSpec::new(
                     "default.runtime",
                     Arc::new(RuntimePlugin {
-                        tools,
                         preamble: config.preamble,
                         generate_titles: config.generate_titles,
                         shutdown_exclusions: shutdown_exclusions.clone(),
@@ -104,6 +113,8 @@ impl DefaultAgentProfile {
             required_services: vec![
                 STORAGE.key(),
                 HOST.key(),
+                BRIDGE.key(),
+                TOOLS.key(),
                 MODEL.key(),
                 CONTEXT.key(),
                 RUNTIME.key(),
@@ -118,7 +129,7 @@ impl DefaultAgentProfile {
         // their existing handles rather than a lease that could block shutdown.
         let exports = (|| -> Result<_, PluginError> {
             let manager = plugins.lease(RUNTIME)?;
-            let host = plugins.lease(HOST)?;
+            let host = plugins.lease(BRIDGE)?;
             Ok(((*manager).clone(), (*host).clone()))
         })();
         let (manager, host) = match exports {
@@ -163,18 +174,19 @@ impl Plugin for HostPlugin {
         PluginDescriptor {
             id: "sked.default.business-host",
             contract_version: 1,
-            provides: vec![HOST.key()],
+            provides: vec![HOST.key(), BRIDGE.key()],
             dependencies: vec![],
         }
     }
 
     async fn setup(&self, context: PluginContext) -> Result<(), PluginError> {
-        context.provide(HOST, BridgeHost::new(self.events.clone()))
+        let bridge = BridgeHost::new(self.events.clone());
+        context.provide(HOST, BusinessHostService::new(Arc::new(bridge.clone())))?;
+        context.provide(BRIDGE, bridge)
     }
 }
 
 struct RuntimePlugin {
-    tools: Vec<ToolDescriptor>,
     preamble: String,
     generate_titles: bool,
     shutdown_exclusions: ShutdownExclusions,
@@ -187,7 +199,13 @@ impl Plugin for RuntimePlugin {
             id: "sked.default.runtime",
             contract_version: 1,
             provides: vec![RUNTIME.key()],
-            dependencies: vec![STORAGE.key(), HOST.key(), MODEL.key(), CONTEXT.key()],
+            dependencies: vec![
+                STORAGE.key(),
+                HOST.key(),
+                MODEL.key(),
+                CONTEXT.key(),
+                TOOLS.key(),
+            ],
         }
     }
 
@@ -196,11 +214,13 @@ impl Plugin for RuntimePlugin {
         let host = context.require(HOST)?;
         let model = context.require(MODEL)?;
         let context_service = context.require(CONTEXT)?;
-        let manager = RuntimeService::from(RuntimeManager::new_with_context(
+        let tools = context.require(TOOLS)?;
+        let manager = RuntimeService::from(RuntimeManager::new_with_services(
             (*storage).clone(),
-            Arc::new((*host).clone()),
+            (*host).clone(),
             (*model).clone(),
             (*context_service).clone(),
+            (*tools).clone(),
         ));
         let draining = manager.clone();
         let exclusions = self.shutdown_exclusions.subscribe();
@@ -210,7 +230,6 @@ impl Plugin for RuntimePlugin {
                 Ok(())
             })
         })?;
-        manager.set_tools(self.tools.clone());
         manager.set_preamble(self.preamble.clone());
         manager.set_title_generation_enabled(self.generate_titles);
         manager

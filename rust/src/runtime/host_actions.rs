@@ -28,7 +28,8 @@ impl RuntimeManager {
         {
             return Err(RuntimeError::Busy);
         }
-        if !self.tool_catalog().iter().any(|tool| tool.name == name) {
+        let tools = self.inner.tools.snapshot();
+        if !tools.names().contains(&name) {
             return Err(RuntimeError::Invalid("该操作工具不可用".into()));
         }
         let run_id = new_id();
@@ -95,7 +96,7 @@ impl RuntimeManager {
             auto_compaction_suspended: AtomicBool::new(false),
             unknown_outcome: AtomicBool::new(false),
             settled: Notify::new(),
-            exposed: StdMutex::new(tools::bootstrap_names()),
+            exposed: StdMutex::new(tools.bootstrap_names()),
             presentation: StdMutex::new(RuntimePresentation {
                 active: true,
                 ..Default::default()
@@ -123,6 +124,7 @@ impl RuntimeManager {
                 environment,
             },
             control: control.clone(),
+            tools,
         };
         self.inner
             .cache_owners

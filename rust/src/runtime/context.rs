@@ -28,14 +28,7 @@ impl ModelToolExecutor for NoTools {
 
 impl RuntimeManager {
     pub(super) fn available_tool_names(&self) -> HashSet<String> {
-        self.inner
-            .tools
-            .lock()
-            .expect("tool registry mutex poisoned")
-            .iter()
-            .map(|tool| tool.name.clone())
-            .chain(tools::descriptors().into_iter().map(|tool| tool.name))
-            .collect()
+        self.inner.tools.snapshot().names()
     }
 
     pub(super) async fn freeze_selected_references(
@@ -109,14 +102,7 @@ impl RuntimeManager {
             .lock()
             .expect("exposed tools mutex poisoned")
             .clone();
-        let mut descriptors = self
-            .inner
-            .tools
-            .lock()
-            .expect("tool registry mutex poisoned")
-            .clone();
-        descriptors.retain(|tool| !tools::is_internal(&tool.name));
-        descriptors.extend(tools::descriptors());
+        let mut descriptors = accepted.tools.descriptors();
         descriptors.retain(|tool| exposed.contains(&tool.name));
         let calibration = *accepted
             .control

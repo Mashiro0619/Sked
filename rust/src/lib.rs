@@ -10,6 +10,7 @@ pub mod model_client;
 pub mod plugins;
 pub mod runtime;
 pub mod storage;
+pub mod tooling;
 
 #[cfg(target_os = "android")]
 mod android;
