@@ -10,6 +10,7 @@ import '../l10n/app_localizations.dart';
 import '../models/agent_settings.dart';
 import '../widgets/settings_page_header.dart';
 import '../widgets/settings_list.dart';
+import '../widgets/sked_task_actions.dart';
 
 class AgentPreferencesSettingsPage extends StatefulWidget {
   const AgentPreferencesSettingsPage({super.key});
@@ -158,7 +159,12 @@ class _AgentPreferencesSettingsPageState
             ],
           ),
         );
-    return guardSettingsPage(
+    final editorActions = SkedEditorActions(
+      onCancel: requestSettingsExit,
+      onSubmit: _saving ? null : () => unawaited(_save()),
+      busy: _saving,
+    );
+    final page = guardSettingsPage(
       SettingsPageScaffold(
         title: l.agentRunPreferences,
         bodyBuilder: (_, header) => Form(
@@ -204,10 +210,13 @@ class _AgentPreferencesSettingsPageState
               ],
               Align(
                 alignment: AlignmentDirectional.centerEnd,
-                child: FilledButton(
-                  key: const ValueKey('agent-save-preferences'),
-                  onPressed: _saving ? null : () => unawaited(_save()),
-                  child: Text(_saving ? l.agentSaving : l.save),
+                child: editorActions.wrapSaveTooltip(
+                  context,
+                  FilledButton(
+                    key: const ValueKey('agent-save-preferences'),
+                    onPressed: editorActions.onSubmit,
+                    child: Text(_saving ? l.agentSaving : l.save),
+                  ),
                 ),
               ),
             ],
@@ -215,5 +224,6 @@ class _AgentPreferencesSettingsPageState
         ),
       ),
     );
+    return editorActions.wrapShortcuts(context, page);
   }
 }

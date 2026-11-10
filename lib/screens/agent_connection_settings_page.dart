@@ -15,6 +15,7 @@ import '../widgets/settings_list.dart';
 import '../widgets/settings_page_header.dart';
 import '../widgets/sked_dropdown_menu.dart';
 import '../widgets/sked_task_session.dart';
+import '../widgets/sked_task_actions.dart';
 import 'agent_model_settings_page.dart';
 
 class AgentConnectionSettingsPage extends StatefulWidget {
@@ -300,7 +301,12 @@ class _AgentConnectionSettingsPageState
             path: uri.path,
           ).toString()
         : l.backupParserEndpointUnset;
-    return guardSettingsPage(
+    final editorActions = SkedEditorActions(
+      onCancel: requestSettingsExit,
+      onSubmit: _saving || _diagnosing ? null : _save,
+      busy: _saving || _diagnosing,
+    );
+    final page = guardSettingsPage(
       SettingsPageScaffold(
         title: l.agentConnectionAndModels,
         bodyBuilder: (_, header) => Form(
@@ -403,10 +409,13 @@ class _AgentConnectionSettingsPageState
               const SizedBox(height: 16),
               Align(
                 alignment: AlignmentDirectional.centerEnd,
-                child: FilledButton(
-                  key: const ValueKey('agent-save-connection'),
-                  onPressed: _saving || _diagnosing ? null : _save,
-                  child: Text(_saving ? l.agentSaving : l.save),
+                child: editorActions.wrapSaveTooltip(
+                  context,
+                  FilledButton(
+                    key: const ValueKey('agent-save-connection'),
+                    onPressed: editorActions.onSubmit,
+                    child: Text(_saving ? l.agentSaving : l.save),
+                  ),
                 ),
               ),
               const SizedBox(height: 28),
@@ -530,6 +539,7 @@ class _AgentConnectionSettingsPageState
         ),
       ),
     );
+    return editorActions.wrapShortcuts(context, page);
   }
 }
 

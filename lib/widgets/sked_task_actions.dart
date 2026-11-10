@@ -125,6 +125,15 @@ class SkedEditorActions {
           ),
         );
 
+  Widget wrapSaveTooltip(BuildContext context, Widget child) {
+    if (!WorkbenchChromeMetrics.of(context).desktop) return child;
+    final label = submitLabel ?? AppLocalizations.of(context).save;
+    final shortcut = Theme.of(context).platform == TargetPlatform.macOS
+        ? '⌘S'
+        : 'Ctrl+S';
+    return Tooltip(message: '$label ($shortcut)', child: child);
+  }
+
   List<Widget> trailing(BuildContext context, {bool showSaveShortcut = false}) {
     final l = AppLocalizations.of(context);
     final save = FilledButton.icon(
@@ -134,14 +143,7 @@ class SkedEditorActions {
     );
     return [
       TextButton(onPressed: _enabled ? onCancel : null, child: Text(l.cancel)),
-      if (showSaveShortcut && WorkbenchChromeMetrics.of(context).desktop)
-        Tooltip(
-          message:
-              '${submitLabel ?? l.save} (${Theme.of(context).platform == TargetPlatform.macOS ? '⌘S' : 'Ctrl+S'})',
-          child: save,
-        )
-      else
-        save,
+      showSaveShortcut ? wrapSaveTooltip(context, save) : save,
     ];
   }
 

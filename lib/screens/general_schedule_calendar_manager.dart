@@ -1098,7 +1098,13 @@ class _CalendarColorDialogState extends State<_CalendarColorDialog>
     final slot = generalCalendarSlotColorValues.contains(
       normalizeGeneralCalendarColorValue(_selected),
     );
-    return PopScope(
+    final editorActions = SkedEditorActions(
+      onCancel: _blocked ? null : _close,
+      onSubmit: _blocked || !_validHex ? null : _save,
+      enabled: !_popped,
+      busy: _busy,
+    );
+    final dialog = PopScope(
       canPop: !_blocked,
       child: SkedTaskDialog(
         key: const ValueKey('category-color-dialog'),
@@ -1197,17 +1203,18 @@ class _CalendarColorDialogState extends State<_CalendarColorDialog>
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: _blocked ? null : _close,
-            child: Text(l.cancel),
-          ),
-          FilledButton(
-            key: const ValueKey('category-color-save'),
-            onPressed: _blocked || !_validHex ? null : _save,
-            child: Text(l.save),
+          TextButton(onPressed: editorActions.onCancel, child: Text(l.cancel)),
+          editorActions.wrapSaveTooltip(
+            context,
+            FilledButton(
+              key: const ValueKey('category-color-save'),
+              onPressed: editorActions.onSubmit,
+              child: Text(l.save),
+            ),
           ),
         ],
       ),
     );
+    return editorActions.wrapShortcuts(context, dialog);
   }
 }

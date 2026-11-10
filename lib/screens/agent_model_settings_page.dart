@@ -12,6 +12,7 @@ import '../models/agent_settings.dart';
 import '../widgets/settings_list.dart';
 import '../widgets/settings_page_header.dart';
 import '../widgets/sked_dropdown_menu.dart';
+import '../widgets/sked_task_actions.dart';
 
 /// Edits one model; the connection page retains its own endpoint/key draft.
 class AgentModelSettingsPage extends StatefulWidget {
@@ -181,7 +182,12 @@ class _AgentModelSettingsPageState extends State<AgentModelSettingsPage>
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return guardSettingsPage(
+    final editorActions = SkedEditorActions(
+      onCancel: requestSettingsExit,
+      onSubmit: _saving ? null : () => unawaited(_save()),
+      busy: _saving,
+    );
+    final page = guardSettingsPage(
       SettingsPageScaffold(
         title: widget.model?.id ?? l.agentAddModel,
         bodyBuilder: (_, header) => Form(
@@ -342,10 +348,13 @@ class _AgentModelSettingsPageState extends State<AgentModelSettingsPage>
                           : () => unawaited(_save(remove: true)),
                       child: Text(l.agentRemoveModel),
                     ),
-                  FilledButton(
-                    key: const ValueKey('agent-save-model'),
-                    onPressed: _saving ? null : () => unawaited(_save()),
-                    child: Text(_saving ? l.agentSaving : l.save),
+                  editorActions.wrapSaveTooltip(
+                    context,
+                    FilledButton(
+                      key: const ValueKey('agent-save-model'),
+                      onPressed: editorActions.onSubmit,
+                      child: Text(_saving ? l.agentSaving : l.save),
+                    ),
                   ),
                 ],
               ),
@@ -354,6 +363,7 @@ class _AgentModelSettingsPageState extends State<AgentModelSettingsPage>
         ),
       ),
     );
+    return editorActions.wrapShortcuts(context, page);
   }
 
   String? _validateTokens(String? value, AppLocalizations l) {
