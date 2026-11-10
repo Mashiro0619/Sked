@@ -4,6 +4,7 @@
 //! model execution, conversation state, and the Agent's local stores.
 
 pub mod api;
+pub mod context;
 mod frb_generated;
 pub mod model_client;
 pub mod plugins;

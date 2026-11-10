@@ -4,6 +4,7 @@
 
 use super::{contracts::*, descriptors, host::BridgeHost, runtime_event};
 use crate::{
+    context::{CONTEXT_SERVICE as CONTEXT, DefaultContextPlugin},
     model_client::{
         offline::ScriptedReply,
         services::{DefaultModelPlugin, MODEL_SERVICE as MODEL},
@@ -77,6 +78,11 @@ impl DefaultAgentProfile {
                     Value::Null,
                 ),
                 PluginSpec::new(
+                    "default.context",
+                    Arc::new(DefaultContextPlugin),
+                    Value::Null,
+                ),
+                PluginSpec::new(
                     "default.runtime",
                     Arc::new(RuntimePlugin {
                         tools,
@@ -99,6 +105,7 @@ impl DefaultAgentProfile {
                 STORAGE.key(),
                 HOST.key(),
                 MODEL.key(),
+                CONTEXT.key(),
                 RUNTIME.key(),
                 EVENT_RELAY.key(),
             ],
@@ -180,7 +187,7 @@ impl Plugin for RuntimePlugin {
             id: "sked.default.runtime",
             contract_version: 1,
             provides: vec![RUNTIME.key()],
-            dependencies: vec![STORAGE.key(), HOST.key(), MODEL.key()],
+            dependencies: vec![STORAGE.key(), HOST.key(), MODEL.key(), CONTEXT.key()],
         }
     }
 
@@ -188,10 +195,12 @@ impl Plugin for RuntimePlugin {
         let storage = context.require(STORAGE)?;
         let host = context.require(HOST)?;
         let model = context.require(MODEL)?;
-        let manager = RuntimeService::from(RuntimeManager::new(
+        let context_service = context.require(CONTEXT)?;
+        let manager = RuntimeService::from(RuntimeManager::new_with_context(
             (*storage).clone(),
             Arc::new((*host).clone()),
             (*model).clone(),
+            (*context_service).clone(),
         ));
         let draining = manager.clone();
         let exclusions = self.shutdown_exclusions.subscribe();
