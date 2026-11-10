@@ -113,7 +113,7 @@ pub struct AgentCommand {
     pub handoff: Option<HandoffRequest>,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct CommandResult {
     pub id: Option<String>,
     pub snapshot: Option<ViewConversationSnapshot>,
@@ -121,6 +121,21 @@ pub struct CommandResult {
     pub created: Option<bool>,
     pub selection: Option<ConversationSelection>,
     pub state: Option<ViewConversationState>,
+}
+
+// Keep the existing generated default constructor available to both the
+// source parser and the macro-expanded bridge generator.
+impl Default for CommandResult {
+    fn default() -> Self {
+        Self {
+            id: Default::default(),
+            snapshot: Default::default(),
+            knowledge_receipt: Default::default(),
+            created: Default::default(),
+            selection: Default::default(),
+            state: Default::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -176,7 +191,7 @@ pub struct AgentQuery {
     pub version_id: Option<String>,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct QueryResult {
     pub conversations: Vec<ViewConversationSummary>,
     pub snapshot: Option<ViewConversationSnapshot>,
@@ -208,6 +223,45 @@ pub struct QueryResult {
     pub sources: Vec<ViewConversationSource>,
     pub interaction_details: Option<ViewInteractionDetails>,
     pub message: Option<ViewMessage>,
+}
+
+// Keep the existing generated default constructor available to both the
+// source parser and the macro-expanded bridge generator.
+impl Default for QueryResult {
+    fn default() -> Self {
+        Self {
+            conversations: Default::default(),
+            snapshot: Default::default(),
+            messages: Default::default(),
+            total: Default::default(),
+            next_offset: Default::default(),
+            page_start: Default::default(),
+            knowledge: Default::default(),
+            knowledge_receipt: Default::default(),
+            revision: Default::default(),
+            knowledge_state: Default::default(),
+            attachments: Default::default(),
+            archive: Default::default(),
+            bytes: Default::default(),
+            text: Default::default(),
+            flag: Default::default(),
+            operation: Default::default(),
+            presentation: Default::default(),
+            selection: Default::default(),
+            knowledge_catalog: Default::default(),
+            state: Default::default(),
+            page: Default::default(),
+            history_page: Default::default(),
+            history_versions: Default::default(),
+            reply_revisions: Default::default(),
+            reply_revision: Default::default(),
+            source: Default::default(),
+            run: Default::default(),
+            sources: Default::default(),
+            interaction_details: Default::default(),
+            message: Default::default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

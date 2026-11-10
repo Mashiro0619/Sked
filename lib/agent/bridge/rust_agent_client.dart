@@ -1,6 +1,11 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
+import 'agent_native_ui_state.dart';
 import 'generated/api/contracts.dart';
+import 'generated/api/ui.dart';
+import 'generated/api/ui_contracts.dart' as native_ui;
 import 'generated/api.dart';
 
 /// Shares one native event stream across the UI and the business tool host.
@@ -9,9 +14,16 @@ class AgentRustClient {
 
   final Future<AgentCore> Function() _initialize;
   final _events = StreamController<AgentEvent>.broadcast();
+  final uiContributions = ValueNotifier<AgentNativeUiState>(
+    const AgentNativeUiState(),
+  );
   Future<AgentCore>? _initializing;
   AgentCore? _openedCore;
   StreamSubscription<AgentEvent>? _subscription;
+  StreamSubscription<native_ui.UiContributionSnapshot>? _uiSubscription;
+  UiContributionSubscription? _uiHandle;
+  Object? _uiToken;
+  bool _uiDisposed = false;
   Future<void>? _shutdownFuture;
   bool _closed = false;
   bool _suspended = false;
@@ -34,20 +46,64 @@ class AgentRustClient {
   }
 
   Future<AgentCore> _open() async {
+    AgentCore? openingCore;
+    UiContributionSubscription? openingUi;
+    StreamSubscription<native_ui.UiContributionSnapshot>? openingUiStream;
+    StreamSubscription<AgentEvent>? openingEvents;
     try {
       final value = await _initialize();
+      openingCore = value;
       _openedCore = value;
+      final token = Object();
+      if (!_closed && !_suspended) {
+        _uiToken = token;
+        uiContributions.value = AgentNativeUiState(sessionToken: token);
+      }
+      final uiReady = Completer<void>();
+      final uiHandle = value.openUiContributions();
+      openingUi = uiHandle;
+      _uiHandle = uiHandle;
+      openingUiStream = uiHandle.watch().listen(
+        (snapshot) {
+          // Initialization must settle even if shutdown retired the UI while
+          // waiting for this first snapshot. It can then close the same core.
+          if (!uiReady.isCompleted) uiReady.complete();
+          if (identical(_uiToken, token) && identical(_openedCore, value)) {
+            uiContributions.value = AgentNativeUiState(
+              sessionToken: token,
+              snapshot: agentUiSnapshotFromNative(snapshot),
+            );
+          }
+        },
+        onError: (Object error, StackTrace stack) {
+          if (!uiReady.isCompleted) uiReady.completeError(error, stack);
+          if (identical(_uiToken, token)) _retireUi();
+        },
+        onDone: () {
+          if (!uiReady.isCompleted) {
+            uiReady.completeError(
+              StateError('Agent UI contribution stream closed.'),
+            );
+          }
+          if (identical(_uiToken, token)) _retireUi();
+        },
+      );
+      _uiSubscription = openingUiStream;
       final ready = Completer<void>();
-      _subscription = value.watchEvents().listen(
+      openingEvents = value.watchEvents().listen(
         (event) {
           if (event.kind == EventKind.ready && !ready.isCompleted) {
             ready.complete();
           }
-          _events.add(event);
+          if (!_events.isClosed && identical(_openedCore, value)) {
+            _events.add(event);
+          }
         },
         onError: (Object error, StackTrace stack) {
           if (!ready.isCompleted) ready.completeError(error, stack);
-          _events.addError(error, stack);
+          if (!_events.isClosed && identical(_openedCore, value)) {
+            _events.addError(error, stack);
+          }
         },
         onDone: () {
           if (!ready.isCompleted) {
@@ -55,13 +111,40 @@ class AgentRustClient {
           }
         },
       );
-      await ready.future;
+      _subscription = openingEvents;
+      await Future.wait([ready.future, uiReady.future], eagerError: true);
       return value;
-    } catch (_) {
+    } catch (error, stack) {
+      _retireUi();
+      await _collectCleanupFailures([
+        () => openingUi?.close(),
+        () async => openingUiStream?.cancel(),
+        () async => openingEvents?.cancel(),
+        () async => openingCore?.shutdown(),
+      ]);
+      if (identical(_uiHandle, openingUi)) _uiHandle = null;
+      if (identical(_uiSubscription, openingUiStream)) _uiSubscription = null;
+      if (identical(_subscription, openingEvents)) _subscription = null;
       _initializing = null;
       _openedCore = null;
-      rethrow;
+      Error.throwWithStackTrace(error, stack);
     }
+  }
+
+  void _retireUi() {
+    _uiToken = null;
+    if (!_uiDisposed) uiContributions.value = const AgentNativeUiState();
+  }
+
+  Future<void> _closeUiSubscription() async {
+    final handle = _uiHandle;
+    final subscription = _uiSubscription;
+    _uiHandle = null;
+    _uiSubscription = null;
+    await _settleCleanup([
+      () => handle?.close(),
+      () async => subscription?.cancel(),
+    ]);
   }
 
   Future<CommandResult> dispatch(AgentCommand command) async =>
@@ -77,19 +160,24 @@ class AgentRustClient {
 
   Future<void> _suspendForDataClear(String? conversationId) async {
     _suspended = true;
+    _retireUi();
     final opening = _initializing;
-    try {
-      if (opening != null) {
-        await (await opening).shutdownForDataClear(
-          conversationId: conversationId,
-        );
-      }
-    } finally {
-      await _subscription?.cancel();
-      _subscription = null;
-      _openedCore = null;
-      _initializing = null;
-    }
+    await _settleCleanup([
+      () async {
+        if (opening != null) {
+          await (await opening).shutdownForDataClear(
+            conversationId: conversationId,
+          );
+        }
+      },
+      _closeUiSubscription,
+      () async => _subscription?.cancel(),
+      () {
+        _subscription = null;
+        _openedCore = null;
+        _initializing = null;
+      },
+    ]);
   }
 
   void resumeAfterFailedDataClear() {
@@ -100,14 +188,46 @@ class AgentRustClient {
 
   Future<void> _shutdown() async {
     _closed = true;
-    await _suspending;
+    _retireUi();
     final opening = _initializing;
+    await _settleCleanup([
+      () async => _suspending,
+      () async {
+        if (opening != null) await (await opening).shutdown();
+      },
+      _closeUiSubscription,
+      () async => _subscription?.cancel(),
+      _events.close,
+      () {
+        _subscription = null;
+        _openedCore = null;
+        _initializing = null;
+        _uiDisposed = true;
+        uiContributions.dispose();
+      },
+    ]);
+  }
+}
+
+/// Every owner gets its cleanup attempt, even if an earlier listener fails.
+/// Return the first failure so callers can retain the primary operation error.
+Future<({Object error, StackTrace stack})?> _collectCleanupFailures(
+  List<FutureOr<void> Function()> steps,
+) async {
+  ({Object error, StackTrace stack})? failure;
+  for (final step in steps) {
     try {
-      if (opening != null) await (await opening).shutdown();
-    } finally {
-      await _subscription?.cancel();
-      await _events.close();
-      _openedCore = null;
+      await step();
+    } catch (error, stack) {
+      failure ??= (error: error, stack: stack);
     }
+  }
+  return failure;
+}
+
+Future<void> _settleCleanup(List<FutureOr<void> Function()> steps) async {
+  final failure = await _collectCleanupFailures(steps);
+  if (failure != null) {
+    Error.throwWithStackTrace(failure.error, failure.stack);
   }
 }

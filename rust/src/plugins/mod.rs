@@ -6,6 +6,7 @@
 mod container;
 mod contracts;
 mod scope;
+mod ui;
 
 pub use container::PluginContainer;
 pub use contracts::{
@@ -13,3 +14,6 @@ pub use contracts::{
     PluginSpec, PluginState, ServiceDefinition, ServiceKey,
 };
 pub use scope::{PluginContext, ServiceLease};
+pub use ui::{
+    UiContributionDefinition, UiContributionOwner, UiContributionSlot, UiContributionSnapshot,
+};

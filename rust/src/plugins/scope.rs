@@ -12,7 +12,10 @@ use futures::future::BoxFuture;
 use serde_json::Value;
 use tokio::sync::Notify;
 
-use super::{PluginDescriptor, PluginError, PluginState, ServiceDefinition, ServiceKey};
+use super::{
+    PluginDescriptor, PluginError, PluginState, ServiceDefinition, ServiceKey,
+    UiContributionDefinition,
+};
 
 pub(crate) type Cleanup =
     Box<dyn FnOnce() -> BoxFuture<'static, Result<(), PluginError>> + Send + 'static>;
@@ -137,6 +140,7 @@ impl<T> Deref for ServiceLease<T> {
 
 struct ScopeState {
     phase: PluginState,
+    ui_contributions: Vec<UiContributionDefinition>,
     provided: BTreeMap<ServiceKey, Arc<ServiceSlot>>,
     dependencies: BTreeMap<ServiceKey, RetainedService>,
     quiesce: Vec<Cleanup>,
@@ -174,6 +178,7 @@ impl PluginContext {
                 config,
                 state: Mutex::new(ScopeState {
                     phase: PluginState::Starting,
+                    ui_contributions: Vec::new(),
                     provided: BTreeMap::new(),
                     dependencies,
                     quiesce: Vec::new(),
@@ -204,6 +209,34 @@ impl PluginContext {
                 .upgrade()
                 .is_some_and(|inner| inner.state.lock().unwrap().phase == PluginState::Active)
         }
+    }
+
+    /// UI declarations become visible with a successful setup. A retired
+    /// context cannot publish new declarations or revive its old renderers.
+    pub fn contribute_ui(&self, definition: UiContributionDefinition) -> Result<(), PluginError> {
+        let mut state = self.inner.state.lock().unwrap();
+        if state.phase != PluginState::Starting {
+            return Err(PluginError::new(
+                "UI contributions can only be declared during setup",
+            ));
+        }
+        if definition.id.trim().is_empty()
+            || definition.renderer_id.trim().is_empty()
+            || state
+                .ui_contributions
+                .iter()
+                .any(|current| current.id == definition.id)
+        {
+            return Err(PluginError::new(
+                "UI contribution identity is invalid or duplicated",
+            ));
+        }
+        state.ui_contributions.push(definition);
+        Ok(())
+    }
+
+    pub(crate) fn ui_contributions(&self) -> Vec<UiContributionDefinition> {
+        self.inner.state.lock().unwrap().ui_contributions.clone()
     }
 
     /// Services are staged during setup and become discoverable together only
@@ -341,6 +374,7 @@ impl PluginContext {
         let (provided, dependencies) = {
             let mut state = self.inner.state.lock().unwrap();
             state.phase = PluginState::Disposed;
+            state.ui_contributions.clear();
             (
                 std::mem::take(&mut state.provided),
                 std::mem::take(&mut state.dependencies),

@@ -6,9 +6,14 @@ import 'package:provider/provider.dart';
 import '../agent/agent_application.dart';
 import '../agent/knowledge/knowledge_models.dart';
 import '../agent/ui/agent_knowledge_view.dart';
+import '../agent/ui/contributions/agent_ui_contribution_contracts.dart';
+import '../agent/ui/contributions/agent_ui_contribution_host.dart';
+import '../agent/ui/contributions/agent_ui_contribution_registry.dart';
+import '../agent/ui/contributions/agent_ui_default_renderers.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/settings_list.dart';
 import '../widgets/settings_page_header.dart';
+import '../widgets/sked_task_session.dart';
 import 'agent_connection_settings_page.dart';
 import 'agent_preferences_settings_page.dart';
 
@@ -28,18 +33,63 @@ class AgentSettingsPage extends StatefulWidget {
     );
   }
 
+  static Future<void> openConnection(BuildContext context) async {
+    final application = context.read<AgentApplication>();
+    final entry = application.uiContributions
+        .entries(AgentUiContributionSlot.settings)
+        .where(
+          (entry) =>
+              entry.contribution.rendererId == AgentUiRendererIds.connection,
+        )
+        .firstOrNull;
+    if (entry == null || !entry.isCurrent) return;
+    final lease = entry.lease();
+    final session = agentUiContributionSession(
+      context: context,
+      lease: lease,
+      isOwnerActive: () => context.mounted,
+      isTargetCurrent: () =>
+          context.mounted &&
+          identical(context.read<AgentApplication>(), application),
+    );
+    try {
+      await Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => ChangeNotifierProvider<AgentApplication>.value(
+            value: application,
+            child: SkedTaskRouteGuard(
+              parent: session,
+              child: const AgentConnectionSettingsPage(),
+            ),
+          ),
+        ),
+      );
+    } finally {
+      session.dispose();
+      lease.dispose();
+    }
+  }
+
   @override
   State<AgentSettingsPage> createState() => _AgentSettingsPageState();
 }
 
 class _AgentSettingsPageState extends State<AgentSettingsPage> {
   AgentApplication? _initializationAttempt;
+  AgentApplication? _application;
+  final _destinations = <SkedTaskSession>{};
   bool _opening = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final application = context.read<AgentApplication>();
+    if (!identical(_application, application)) {
+      for (final session in _destinations) {
+        session.invalidate();
+      }
+      _application = application;
+    }
     if (!application.platformSupported) return;
     if (identical(_initializationAttempt, application)) return;
     _initializationAttempt = application;
@@ -50,22 +100,48 @@ class _AgentSettingsPageState extends State<AgentSettingsPage> {
     });
   }
 
-  Future<void> _open(Widget page) async {
-    if (_opening || ModalRoute.of(context)?.isCurrent != true) return;
+  Future<void> _open(AgentUiContributionEntry entry, Widget page) async {
+    if (_opening ||
+        !entry.isCurrent ||
+        ModalRoute.of(context)?.isCurrent != true) {
+      return;
+    }
     final application = context.read<AgentApplication>();
+    final lease = entry.lease();
+    final session = agentUiContributionSession(
+      context: context,
+      lease: lease,
+      isOwnerActive: () => mounted,
+      isTargetCurrent: () => identical(_application, application),
+    );
+    _destinations.add(session);
     setState(() => _opening = true);
     try {
       await Navigator.of(context).push<void>(
         MaterialPageRoute<void>(
           builder: (_) => ChangeNotifierProvider<AgentApplication>.value(
             value: application,
-            child: page,
+            child: SkedTaskRouteGuard(
+              parent: session,
+              child: AgentUiContributionScope(lease: lease, child: page),
+            ),
           ),
         ),
       );
     } finally {
+      _destinations.remove(session);
+      session.dispose();
+      lease.dispose();
       if (mounted) setState(() => _opening = false);
     }
+  }
+
+  @override
+  void dispose() {
+    for (final session in _destinations) {
+      session.invalidate();
+    }
+    super.dispose();
   }
 
   @override
@@ -76,68 +152,75 @@ class _AgentSettingsPageState extends State<AgentSettingsPage> {
     final endpoint = uri?.host.isNotEmpty == true
         ? uri!.host
         : l.backupParserEndpointUnset;
-    Widget destination(
-      String key,
-      String title,
-      IconData icon,
-      Widget page, {
-      String? value,
-    }) => SettingsConnectedTile(
-      key: ValueKey(key),
-      leading: Icon(icon),
-      title: title,
-      value: value,
-      trailing: const Icon(Icons.chevron_right),
-      onTap: _opening ? null : () => unawaited(_open(page)),
+    final data = AgentSettingsDestinationData(
+      platformSupported: application.platformSupported,
+      endpoint: endpoint,
+      connection: const AgentConnectionSettingsPage(),
+      preferences: const AgentPreferencesSettingsPage(),
+      skills: const _AgentKnowledgeSettingsPage(kind: KnowledgeKind.skill),
+      memories: const _AgentKnowledgeSettingsPage(kind: KnowledgeKind.memory),
     );
-    return SettingsPageScaffold(
-      title: l.agentSettingsTitle,
-      bodyBuilder: (_, header) => ResponsiveSettingsSingleColumnBody(
-        headerSliver: header,
-        scrollViewKey: const PageStorageKey('agent-settings-overview-scroll'),
-        children: [
-          SettingsConnectedGroup(
-            tonal: true,
-            children: [
-              if (!application.platformSupported)
-                SettingsConnectedTile(
-                  key: const ValueKey('agent-settings-unsupported-platform'),
-                  leading: const Icon(Icons.info_outline),
-                  title: l.agentUnsupportedPlatform,
-                  informational: true,
+    return ListenableBuilder(
+      listenable: application.uiContributions,
+      builder: (context, _) {
+        final destinations = [
+          for (final entry in application.uiContributions.entries(
+            AgentUiContributionSlot.settings,
+          ))
+            if (buildAgentSettingsContribution(
+                  context,
+                  entry.contribution,
+                  data,
                 )
-              else
-                destination(
-                  'agent-settings-connection',
-                  l.agentConnectionAndModels,
-                  Icons.hub_outlined,
-                  const AgentConnectionSettingsPage(),
-                  value: endpoint,
-                ),
-              destination(
-                'agent-settings-preferences',
-                l.agentRunPreferences,
-                Icons.tune,
-                const AgentPreferencesSettingsPage(),
+                case final view?)
+              (entry, view),
+        ];
+        final usedKeys = <Key>{};
+        final keyedDestinations = [
+          for (final (entry, view) in destinations)
+            (
+              entry,
+              view,
+              usedKeys.add(view.key) ? view.key : ValueKey((view.key, entry)),
+            ),
+        ];
+        return SettingsPageScaffold(
+          title: l.agentSettingsTitle,
+          bodyBuilder: (_, header) => ResponsiveSettingsSingleColumnBody(
+            headerSliver: header,
+            scrollViewKey: const PageStorageKey(
+              'agent-settings-overview-scroll',
+            ),
+            children: [
+              SettingsConnectedGroup(
+                tonal: true,
+                children: [
+                  if (!application.platformSupported)
+                    SettingsConnectedTile(
+                      key: const ValueKey(
+                        'agent-settings-unsupported-platform',
+                      ),
+                      leading: const Icon(Icons.info_outline),
+                      title: l.agentUnsupportedPlatform,
+                      informational: true,
+                    ),
+                  for (final (entry, view, key) in keyedDestinations)
+                    SettingsConnectedTile(
+                      key: key,
+                      leading: Icon(view.icon),
+                      title: view.title,
+                      value: view.value,
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: _opening || !entry.isCurrent
+                          ? null
+                          : () => unawaited(_open(entry, view.page)),
+                    ),
+                ],
               ),
-              if (application.platformSupported) ...[
-                destination(
-                  'agent-settings-skills',
-                  l.agentSkills,
-                  Icons.auto_awesome_outlined,
-                  const _AgentKnowledgeSettingsPage(kind: KnowledgeKind.skill),
-                ),
-                destination(
-                  'agent-settings-memories',
-                  l.agentMemories,
-                  Icons.psychology_outlined,
-                  const _AgentKnowledgeSettingsPage(kind: KnowledgeKind.memory),
-                ),
-              ],
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

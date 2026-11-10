@@ -4,13 +4,16 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../widgets/adaptive_navigation_scope.dart';
 import '../../widgets/editor_exit_guard.dart';
+import '../../widgets/expressive_dialog.dart';
 import '../../widgets/sked_confirmation_dialog.dart';
+import '../../widgets/sked_task_session.dart';
 
 /// Settings drafts belong to their page and never save as a side effect of Back.
 /// The adaptive settings sidebar can await the same discard decision as Back.
 mixin AgentSettingsExitGuard<T extends StatefulWidget> on State<T> {
   Object get settingsDraftFingerprint;
   bool get settingsExitBlocked;
+  bool get settingsSourceCurrent => SkedTaskSessionScope.isCurrent(context);
 
   late Object _originalDraft;
   bool _askingToDiscard = false;
@@ -45,7 +48,12 @@ mixin AgentSettingsExitGuard<T extends StatefulWidget> on State<T> {
   }
 
   Future<bool> _prepareSettingsExit() async {
-    if (!mounted || settingsExitBlocked || _askingToDiscard) return false;
+    if (!mounted ||
+        !settingsSourceCurrent ||
+        settingsExitBlocked ||
+        _askingToDiscard) {
+      return false;
+    }
     final route = ModalRoute.of(context);
     if (route?.isCurrent != true) return false;
     if (settingsHasUnsavedDraft) {
@@ -53,8 +61,9 @@ mixin AgentSettingsExitGuard<T extends StatefulWidget> on State<T> {
       bool discard;
       try {
         discard =
-            await showDialog<bool>(
+            await showExpressiveDialog<bool>(
               context: context,
+              session: SkedTaskSessionScope.maybeOf(context)?.session,
               builder: (_) => const SkedDiscardDraftDialog(),
             ) ==
             true;
@@ -63,7 +72,10 @@ mixin AgentSettingsExitGuard<T extends StatefulWidget> on State<T> {
       }
       if (!discard) return false;
     }
-    if (!mounted || settingsExitBlocked || route?.isCurrent != true) {
+    if (!mounted ||
+        !settingsSourceCurrent ||
+        settingsExitBlocked ||
+        route?.isCurrent != true) {
       return false;
     }
     completeEditorRoute(context);

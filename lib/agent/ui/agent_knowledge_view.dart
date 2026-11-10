@@ -116,6 +116,7 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
     final generation = _interactionGeneration;
     final session = SkedTaskSession(
       ownerRoute: route,
+      parent: SkedTaskSessionScope.maybeOf(context)?.session,
       isOwnerActive: () => mounted && route?.isCurrent == true,
       isTargetCurrent: () =>
           mounted &&
@@ -211,6 +212,7 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
         route?.isCurrent == true;
     setState(() => _openRequest = request);
     try {
+      if (!readSession.isCurrent) return;
       final record = item == null
           ? null
           : await service.read(item.kind, item.id);
@@ -224,13 +226,19 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
         record: record,
         pagePresentation: pageEditor,
       );
+      final parent = SkedTaskSessionScope.maybeOf(context)?.session;
       final receipt = pageEditor
           ? await Navigator.of(context).push<KnowledgeReceipt>(
-              MaterialPageRoute<KnowledgeReceipt>(builder: (_) => editor),
+              MaterialPageRoute<KnowledgeReceipt>(
+                builder: (_) => parent == null
+                    ? editor
+                    : SkedTaskRouteGuard(parent: parent, child: editor),
+              ),
             )
           : await showExpressiveDialog<KnowledgeReceipt>(
               context: context,
               barrierDismissible: false,
+              session: parent,
               builder: (_) => editor,
             );
       if (!mounted || !current() || receipt == null) return;
@@ -257,6 +265,7 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
     final service = widget.service;
     final session = _createUiSession();
     try {
+      if (!session.isCurrent) return;
       await service.undoFromUi(operationId);
     } catch (_) {
       if (mounted && session.isCurrent) {
@@ -519,6 +528,7 @@ class _AgentKnowledgeViewState extends State<AgentKnowledgeView> {
     unawaited(
       showExpressiveDialog<void>(
         context: context,
+        session: SkedTaskSessionScope.maybeOf(context)?.session,
         builder: (context) => AlertDialog(
           title: Text(skill ? l.agentSkills : l.agentMemories),
           content: Text(
@@ -894,6 +904,7 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor>
 
   Future<void> _save({bool original = false, bool delete = false}) async {
     if (_saving ||
+        !settingsSourceCurrent ||
         ModalRoute.of(context)?.isCurrent != true ||
         (!original && !delete && !_form.currentState!.validate())) {
       return;
@@ -1205,7 +1216,7 @@ Future<bool?> _confirmKnowledgeDelete(
   final l = AppLocalizations.of(context);
   return showExpressiveDialog<bool>(
     context: context,
-    session: session,
+    session: session ?? SkedTaskSessionScope.maybeOf(context)?.session,
     builder: (context) => AlertDialog(
       title: Text(l.agentKnowledgeDeleteConfirm),
       content: Text(title),

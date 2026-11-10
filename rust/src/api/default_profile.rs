@@ -11,7 +11,7 @@ use crate::{
     },
     plugins::{
         AgentProfile, Plugin, PluginContainer, PluginContext, PluginDescriptor, PluginError,
-        PluginSpec, ServiceDefinition,
+        PluginSpec, ServiceDefinition, UiContributionDefinition, UiContributionSlot,
     },
     runtime::{
         RuntimeManager,
@@ -151,6 +151,12 @@ impl DefaultAgentProfile {
         })
     }
 
+    pub(super) fn ui_contributions(
+        &self,
+    ) -> watch::Receiver<crate::plugins::UiContributionSnapshot> {
+        self.plugins.ui_contributions()
+    }
+
     pub(super) async fn shutdown(&self, except: Option<String>) -> Result<(), String> {
         if let Some(id) = except {
             self.shutdown_exclusions.send_modify(|excluded| {
@@ -168,6 +174,7 @@ struct HostPlugin {
     events: broadcast::Sender<AgentEvent>,
 }
 
+#[flutter_rust_bridge::frb(ignore)]
 #[async_trait]
 impl Plugin for HostPlugin {
     fn descriptor(&self) -> PluginDescriptor {
@@ -192,6 +199,7 @@ struct RuntimePlugin {
     shutdown_exclusions: ShutdownExclusions,
 }
 
+#[flutter_rust_bridge::frb(ignore)]
 #[async_trait]
 impl Plugin for RuntimePlugin {
     fn descriptor(&self) -> PluginDescriptor {
@@ -236,6 +244,25 @@ impl Plugin for RuntimePlugin {
             .recover_interrupted()
             .await
             .map_err(|error| PluginError::new(error.to_string()))?;
+        for contribution in [
+            UiContributionDefinition::builtin(
+                UiContributionSlot::ToolResult,
+                "sked.tool.operation",
+                0,
+            ),
+            UiContributionDefinition::builtin(
+                UiContributionSlot::InspectorSection,
+                "sked.inspector.changes",
+                0,
+            ),
+            UiContributionDefinition::builtin(
+                UiContributionSlot::InspectorSection,
+                "sked.inspector.plan",
+                10,
+            ),
+        ] {
+            context.contribute_ui(contribution)?;
+        }
         context.provide(RUNTIME, manager)
     }
 }
@@ -245,6 +272,7 @@ struct EventRelayPlugin {
     events_closed: CancellationToken,
 }
 
+#[flutter_rust_bridge::frb(ignore)]
 #[async_trait]
 impl Plugin for EventRelayPlugin {
     fn descriptor(&self) -> PluginDescriptor {

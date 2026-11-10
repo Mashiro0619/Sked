@@ -7,11 +7,12 @@ import 'api/contracts.dart';
 import 'api/history.dart';
 import 'api/management_contracts.dart';
 import 'api/models.dart';
+import 'api/ui.dart';
 import 'frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `change`, `descriptors`, `now`, `quiesce`, `required`, `resync`, `runtime_event`, `storage`
+// These functions are ignored because they are not marked as `pub`: `change`, `descriptors`, `now`, `quiesce`, `required`, `resync`, `runtime_event`, `shutdown_with_exclusion`, `storage`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<AgentCore>>
 abstract class AgentCore implements RustOpaqueInterface {
@@ -72,6 +73,10 @@ abstract class AgentCore implements RustOpaqueInterface {
 
   static Future<AgentCore> initialize({required CoreConfig config}) =>
       RustLib.instance.api.crateApiAgentCoreInitialize(config: config);
+
+  /// The caller owns this subscription and closes it when unsubscribing.
+  /// The handle contains value snapshots and cancellation signals only.
+  UiContributionSubscription openUiContributions();
 
   Future<List<String>> pruneHistory({required int cutoffMs});
 

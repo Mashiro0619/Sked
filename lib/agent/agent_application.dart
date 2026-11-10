@@ -46,6 +46,8 @@ import 'bridge/rust_knowledge_editor_controller.dart';
 import 'bridge/rust_history_controller.dart';
 import 'history/agent_history_controller.dart';
 import 'bridge/rust_history_maintenance.dart';
+import 'ui/contributions/agent_ui_contribution_contracts.dart';
+import 'ui/contributions/agent_ui_contribution_registry.dart';
 import 'bridge/generated/api/contracts.dart' as native;
 
 export 'connection/agent_credential_action.dart';
@@ -106,6 +108,17 @@ class AgentApplication extends ChangeNotifier {
             generateTitles: generateConversationTitles,
           ),
         );
+    uiContributions.replaceProfileOwner(
+      AgentUiContributionOwner(
+        lifetime: AgentUiContributionLifetime.profile,
+        sessionToken: Object(),
+        instanceId: 'sked.application.settings',
+        generation: 0,
+      ),
+      defaultAgentSettingsContributions,
+    );
+    this.nativeClient.uiContributions.addListener(_syncUiContributions);
+    _syncUiContributions();
     conversations = RustConversationRepository(this.nativeClient);
     knowledge = RustKnowledgeEditorController(
       client: this.nativeClient,
@@ -240,6 +253,8 @@ class AgentApplication extends ChangeNotifier {
   final bool _injectedClient;
   final bool? _platformOverride;
   late final AgentRustClient nativeClient;
+  final AgentUiContributionRegistry uiContributions =
+      AgentUiContributionRegistry();
   late final RustConversationRepository conversations;
   late final RustConversationAttachments binaryAttachments;
   RustAttachmentReader get attachmentStore => binaryAttachments.repository;
@@ -284,6 +299,17 @@ class AgentApplication extends ChangeNotifier {
 
   bool get platformSupported =>
       _platformOverride ?? (_injectedClient || rustAgentPlatformSupported);
+
+  void _syncUiContributions() {
+    if (_disposed) return;
+    final state = nativeClient.uiContributions.value;
+    final token = _suspended || _clearSuspended ? null : state.sessionToken;
+    uiContributions.beginNativeSession(token);
+    if (token != null && state.snapshot != null) {
+      uiContributions.applyNativeSnapshot(token, state.snapshot!);
+    }
+  }
+
   bool get isInitialized => _initialized;
   bool get initializationError => _initializationError;
   AgentInitializationFailure? get initializationFailure =>
@@ -779,6 +805,7 @@ class AgentApplication extends ChangeNotifier {
 
   Future<void> prepareDataClear() async {
     _clearSuspended = true;
+    _syncUiContributions();
     runtime.refreshSettings();
     await quiesce();
     conversations.setMaintenance(true);
@@ -796,6 +823,7 @@ class AgentApplication extends ChangeNotifier {
 
   void resumeAfterFailedDataClear() {
     _clearSuspended = false;
+    _syncUiContributions();
     _initialized = false;
     nativeClient.resumeAfterFailedDataClear();
     knowledge.invalidateAfterDataBoundary();
@@ -897,6 +925,7 @@ class AgentApplication extends ChangeNotifier {
 
   void freeze({bool drainAcceptedRuns = false}) {
     _suspended = true;
+    _syncUiContributions();
     for (final token in _diagnosticTokens) {
       token.cancel();
     }
@@ -998,6 +1027,8 @@ class AgentApplication extends ChangeNotifier {
     if (_disposed) return;
     freeze();
     _disposed = true;
+    nativeClient.uiContributions.removeListener(_syncUiContributions);
+    uiContributions.dispose();
     _session.readiness.removeListener(_readinessChanged);
     _maintenance.removeListener(_maintenanceChanged);
     conversations.removeListener(_conversationsChanged);

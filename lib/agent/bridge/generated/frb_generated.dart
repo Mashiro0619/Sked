@@ -8,6 +8,8 @@ import 'api/contracts.dart';
 import 'api/history.dart';
 import 'api/management_contracts.dart';
 import 'api/models.dart';
+import 'api/ui.dart';
+import 'api/ui_contracts.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -71,11 +73,11 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -1998305564;
+  int get rustContentHash => -239045674;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
-        stem: 'sked_agent_core',
+        stem: 'UNKNOWN',
         ioDirectory: 'rust/target/release/',
         webPrefix: 'pkg/',
         wasmBindgenName: 'wasm_bindgen',
@@ -151,6 +153,10 @@ abstract class RustLibApi extends BaseApi {
   });
 
   Future<AgentCore> crateApiAgentCoreInitialize({required CoreConfig config});
+
+  UiContributionSubscription crateApiAgentCoreOpenUiContributions({
+    required AgentCore that,
+  });
 
   Future<List<String>> crateApiAgentCorePruneHistory({
     required AgentCore that,
@@ -240,6 +246,14 @@ abstract class RustLibApi extends BaseApi {
     required List<int> bytes,
   });
 
+  void crateApiUiUiContributionSubscriptionClose({
+    required UiContributionSubscription that,
+  });
+
+  Stream<UiContributionSnapshot> crateApiUiUiContributionSubscriptionWatch({
+    required UiContributionSubscription that,
+  });
+
   Future<CommandResult> crateApiContractsCommandResultDefault();
 
   Future<ConversationSelection>
@@ -254,6 +268,15 @@ abstract class RustLibApi extends BaseApi {
   get rust_arc_decrement_strong_count_AgentCore;
 
   CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_AgentCorePtr;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_UiContributionSubscription;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_UiContributionSubscription;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_UiContributionSubscriptionPtr;
 }
 
 class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
@@ -769,6 +792,38 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  UiContributionSubscription crateApiAgentCoreOpenUiContributions({
+    required AgentCore that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiAgentCoreOpenUiContributionsConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAgentCoreOpenUiContributionsConstMeta =>
+      const TaskConstMeta(
+        debugName: "AgentCore_open_ui_contributions",
+        argNames: ["that"],
+      );
+
+  @override
   Future<List<String>> crateApiAgentCorePruneHistory({
     required AgentCore that,
     required int cutoffMs,
@@ -785,7 +840,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 14,
+            funcId: 15,
             port: port_,
           );
         },
@@ -823,7 +878,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 15,
+            funcId: 16,
             port: port_,
           );
         },
@@ -862,7 +917,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 16,
+            funcId: 17,
             port: port_,
           );
         },
@@ -900,7 +955,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 17,
+            funcId: 18,
             port: port_,
           );
         },
@@ -938,7 +993,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 18,
+            funcId: 19,
             port: port_,
           );
         },
@@ -978,7 +1033,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 19,
+            funcId: 20,
             port: port_,
           );
         },
@@ -1022,7 +1077,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 20,
+            funcId: 21,
             port: port_,
           );
         },
@@ -1078,7 +1133,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 21,
+            funcId: 22,
             port: port_,
           );
         },
@@ -1118,7 +1173,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 22,
+            funcId: 23,
             port: port_,
           );
         },
@@ -1153,7 +1208,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 23,
+            funcId: 24,
             port: port_,
           );
         },
@@ -1191,7 +1246,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 24,
+            funcId: 25,
             port: port_,
           );
         },
@@ -1229,7 +1284,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 25,
+            funcId: 26,
             port: port_,
           );
         },
@@ -1265,7 +1320,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 26,
+            funcId: 27,
             port: port_,
           );
         },
@@ -1305,7 +1360,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 27,
+            funcId: 28,
             port: port_,
           );
         },
@@ -1343,7 +1398,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 28,
+            funcId: 29,
             port: port_,
           );
         },
@@ -1380,7 +1435,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 29,
+              funcId: 30,
               port: port_,
             );
           },
@@ -1422,7 +1477,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 30,
+            funcId: 31,
             port: port_,
           );
         },
@@ -1444,6 +1499,81 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  void crateApiUiUiContributionSubscriptionClose({
+    required UiContributionSubscription that,
+  }) {
+    return handler.executeSync(
+      SyncTask(
+        callFfi: () {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+            that,
+            serializer,
+          );
+          return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 32)!;
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiUiUiContributionSubscriptionCloseConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiUiUiContributionSubscriptionCloseConstMeta =>
+      const TaskConstMeta(
+        debugName: "UiContributionSubscription_close",
+        argNames: ["that"],
+      );
+
+  @override
+  Stream<UiContributionSnapshot> crateApiUiUiContributionSubscriptionWatch({
+    required UiContributionSubscription that,
+  }) {
+    final sink = RustStreamSink<UiContributionSnapshot>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+              that,
+              serializer,
+            );
+            sse_encode_StreamSink_ui_contribution_snapshot_Sse(
+              sink,
+              serializer,
+            );
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 33,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_String,
+          ),
+          constMeta: kCrateApiUiUiContributionSubscriptionWatchConstMeta,
+          argValues: [that, sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiUiUiContributionSubscriptionWatchConstMeta =>
+      const TaskConstMeta(
+        debugName: "UiContributionSubscription_watch",
+        argNames: ["that", "sink"],
+      );
+
+  @override
   Future<CommandResult> crateApiContractsCommandResultDefault() {
     return handler.executeNormal(
       NormalTask(
@@ -1452,7 +1582,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 31,
+            funcId: 34,
             port: port_,
           );
         },
@@ -1480,7 +1610,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 32,
+            funcId: 35,
             port: port_,
           );
         },
@@ -1512,7 +1642,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 33,
+            funcId: 36,
             port: port_,
           );
         },
@@ -1538,6 +1668,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   get rust_arc_decrement_strong_count_AgentCore => wire
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore;
 
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_UiContributionSubscription => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_UiContributionSubscription => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription;
+
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
@@ -1554,12 +1692,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  UiContributionSubscription
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return UiContributionSubscriptionImpl.frbInternalDcoDecode(
+      raw as List<dynamic>,
+    );
+  }
+
+  @protected
   AgentCore
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
     dynamic raw,
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return AgentCoreImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  UiContributionSubscription
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return UiContributionSubscriptionImpl.frbInternalDcoDecode(
+      raw as List<dynamic>,
+    );
   }
 
   @protected
@@ -1637,9 +1797,27 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  UiContributionSubscription
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return UiContributionSubscriptionImpl.frbInternalDcoDecode(
+      raw as List<dynamic>,
+    );
+  }
+
+  @protected
   RustStreamSink<AgentEvent> dco_decode_StreamSink_agent_event_Sse(
     dynamic raw,
   ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
+  RustStreamSink<UiContributionSnapshot>
+  dco_decode_StreamSink_ui_contribution_snapshot_Sse(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     throw UnimplementedError();
   }
@@ -2468,6 +2646,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<ToolDefinition> dco_decode_list_tool_definition(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_tool_definition).toList();
+  }
+
+  @protected
+  List<UiContributionDefinition> dco_decode_list_ui_contribution_definition(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_ui_contribution_definition)
+        .toList();
+  }
+
+  @protected
+  List<UiContributionOwner> dco_decode_list_ui_contribution_owner(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_ui_contribution_owner)
+        .toList();
   }
 
   @protected
@@ -3408,6 +3604,52 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   int dco_decode_u_8(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as int;
+  }
+
+  @protected
+  UiContributionDefinition dco_decode_ui_contribution_definition(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return UiContributionDefinition(
+      id: dco_decode_String(arr[0]),
+      slot: dco_decode_ui_contribution_slot(arr[1]),
+      rendererId: dco_decode_String(arr[2]),
+      order: dco_decode_i_32(arr[3]),
+    );
+  }
+
+  @protected
+  UiContributionOwner dco_decode_ui_contribution_owner(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return UiContributionOwner(
+      instanceId: dco_decode_String(arr[0]),
+      generation: dco_decode_CastedPrimitive_u_64(arr[1]),
+      contributions: dco_decode_list_ui_contribution_definition(arr[2]),
+    );
+  }
+
+  @protected
+  UiContributionSlot dco_decode_ui_contribution_slot(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return UiContributionSlot.values[raw as int];
+  }
+
+  @protected
+  UiContributionSnapshot dco_decode_ui_contribution_snapshot(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return UiContributionSnapshot(
+      contractVersion: dco_decode_u_32(arr[0]),
+      revision: dco_decode_CastedPrimitive_u_64(arr[1]),
+      owners: dco_decode_list_ui_contribution_owner(arr[2]),
+    );
   }
 
   @protected
@@ -4566,12 +4808,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  UiContributionSubscription
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return UiContributionSubscriptionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
   AgentCore
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return AgentCoreImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  UiContributionSubscription
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return UiContributionSubscriptionImpl.frbInternalSseDecode(
       sse_decode_usize(deserializer),
       sse_decode_i_32(deserializer),
     );
@@ -4652,7 +4918,28 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  UiContributionSubscription
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return UiContributionSubscriptionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
   RustStreamSink<AgentEvent> sse_decode_StreamSink_agent_event_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
+  RustStreamSink<UiContributionSnapshot>
+  sse_decode_StreamSink_ui_contribution_snapshot_Sse(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -5729,6 +6016,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <ToolDefinition>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_tool_definition(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<UiContributionDefinition> sse_decode_list_ui_contribution_definition(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <UiContributionDefinition>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_ui_contribution_definition(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<UiContributionOwner> sse_decode_list_ui_contribution_owner(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <UiContributionOwner>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_ui_contribution_owner(deserializer));
     }
     return ans_;
   }
@@ -7251,6 +7566,64 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   int sse_decode_u_8(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getUint8();
+  }
+
+  @protected
+  UiContributionDefinition sse_decode_ui_contribution_definition(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_slot = sse_decode_ui_contribution_slot(deserializer);
+    var var_rendererId = sse_decode_String(deserializer);
+    var var_order = sse_decode_i_32(deserializer);
+    return UiContributionDefinition(
+      id: var_id,
+      slot: var_slot,
+      rendererId: var_rendererId,
+      order: var_order,
+    );
+  }
+
+  @protected
+  UiContributionOwner sse_decode_ui_contribution_owner(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_instanceId = sse_decode_String(deserializer);
+    var var_generation = sse_decode_CastedPrimitive_u_64(deserializer);
+    var var_contributions = sse_decode_list_ui_contribution_definition(
+      deserializer,
+    );
+    return UiContributionOwner(
+      instanceId: var_instanceId,
+      generation: var_generation,
+      contributions: var_contributions,
+    );
+  }
+
+  @protected
+  UiContributionSlot sse_decode_ui_contribution_slot(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return UiContributionSlot.values[inner];
+  }
+
+  @protected
+  UiContributionSnapshot sse_decode_ui_contribution_snapshot(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_contractVersion = sse_decode_u_32(deserializer);
+    var var_revision = sse_decode_CastedPrimitive_u_64(deserializer);
+    var var_owners = sse_decode_list_ui_contribution_owner(deserializer);
+    return UiContributionSnapshot(
+      contractVersion: var_contractVersion,
+      revision: var_revision,
+      owners: var_owners,
+    );
   }
 
   @protected
@@ -8893,6 +9266,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+    UiContributionSubscription self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as UiContributionSubscriptionImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
     AgentCore self,
     SseSerializer serializer,
@@ -8900,6 +9286,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
       (self as AgentCoreImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+    UiContributionSubscription self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as UiContributionSubscriptionImpl).frbInternalSseEncode(
+        move: false,
+      ),
       serializer,
     );
   }
@@ -8984,6 +9385,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+    UiContributionSubscription self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as UiContributionSubscriptionImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
+  }
+
+  @protected
   void sse_encode_StreamSink_agent_event_Sse(
     RustStreamSink<AgentEvent> self,
     SseSerializer serializer,
@@ -8993,6 +9407,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       self.setupAndSerialize(
         codec: SseCodec(
           decodeSuccessData: sse_decode_agent_event,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_StreamSink_ui_contribution_snapshot_Sse(
+    RustStreamSink<UiContributionSnapshot> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_ui_contribution_snapshot,
           decodeErrorData: sse_decode_AnyhowException,
         ),
       ),
@@ -9942,6 +10373,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_tool_definition(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_ui_contribution_definition(
+    List<UiContributionDefinition> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_ui_contribution_definition(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_ui_contribution_owner(
+    List<UiContributionOwner> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_ui_contribution_owner(item, serializer);
     }
   }
 
@@ -11346,6 +11801,49 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_ui_contribution_definition(
+    UiContributionDefinition self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_ui_contribution_slot(self.slot, serializer);
+    sse_encode_String(self.rendererId, serializer);
+    sse_encode_i_32(self.order, serializer);
+  }
+
+  @protected
+  void sse_encode_ui_contribution_owner(
+    UiContributionOwner self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.instanceId, serializer);
+    sse_encode_CastedPrimitive_u_64(self.generation, serializer);
+    sse_encode_list_ui_contribution_definition(self.contributions, serializer);
+  }
+
+  @protected
+  void sse_encode_ui_contribution_slot(
+    UiContributionSlot self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_ui_contribution_snapshot(
+    UiContributionSnapshot self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.contractVersion, serializer);
+    sse_encode_CastedPrimitive_u_64(self.revision, serializer);
+    sse_encode_list_ui_contribution_owner(self.owners, serializer);
+  }
+
+  @protected
   void sse_encode_unit(void self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
   }
@@ -12570,6 +13068,11 @@ class AgentCoreImpl extends RustOpaque implements AgentCore {
     sourcePath: sourcePath,
   );
 
+  /// The caller owns this subscription and closes it when unsubscribing.
+  /// The handle contains value snapshots and cancellation signals only.
+  UiContributionSubscription openUiContributions() =>
+      RustLib.instance.api.crateApiAgentCoreOpenUiContributions(that: this);
+
   Future<List<String>> pruneHistory({required int cutoffMs}) => RustLib
       .instance
       .api
@@ -12689,4 +13192,43 @@ class AgentCoreImpl extends RustOpaque implements AgentCore {
     metadata: metadata,
     bytes: bytes,
   );
+}
+
+@sealed
+class UiContributionSubscriptionImpl extends RustOpaque
+    implements UiContributionSubscription {
+  // Not to be used by end users
+  UiContributionSubscriptionImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  UiContributionSubscriptionImpl.frbInternalSseDecode(
+    BigInt ptr,
+    int externalSizeOnNative,
+  ) : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount: RustLib
+        .instance
+        .api
+        .rust_arc_increment_strong_count_UiContributionSubscription,
+    rustArcDecrementStrongCount: RustLib
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_UiContributionSubscription,
+    rustArcDecrementStrongCountPtr: RustLib
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_UiContributionSubscriptionPtr,
+  );
+
+  /// Shared access allows close to wake watch while its opaque read guard
+  /// is held. Closing repeatedly or before watch starts is harmless.
+  void close() => RustLib.instance.api
+      .crateApiUiUiContributionSubscriptionClose(that: this);
+
+  /// Complete snapshots replace earlier declarations. Core shutdown sends
+  /// its final snapshot; an explicit close stops this subscription directly.
+  Stream<UiContributionSnapshot> watch() => RustLib.instance.api
+      .crateApiUiUiContributionSubscriptionWatch(that: this);
 }

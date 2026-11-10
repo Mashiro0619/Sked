@@ -21,7 +21,6 @@ import '../widgets/workspace_frame.dart';
 import '../widgets/workspace_navigation.dart';
 import '../widgets/workbench_chrome_metrics.dart';
 import 'agent_settings_page.dart';
-import 'agent_connection_settings_page.dart';
 
 typedef AgentWorkspaceActivator = Future<bool> Function({
   String? conversationId,
@@ -246,15 +245,7 @@ class _AgentConversationHostState extends State<AgentConversationHost> {
     setState(() => _settingsOpen = true);
     try {
       if (connectionOnly) {
-        final application = context.read<AgentApplication>();
-        await Navigator.of(context).push<void>(
-          MaterialPageRoute<void>(
-            builder: (_) => ChangeNotifierProvider<AgentApplication>.value(
-              value: application,
-              child: const AgentConnectionSettingsPage(),
-            ),
-          ),
-        );
+        await AgentSettingsPage.openConnection(context);
       } else {
         await AgentSettingsPage.open(context);
       }
@@ -429,6 +420,7 @@ class _AgentConversationHostState extends State<AgentConversationHost> {
     }
     return AgentConversationView(
       repository: application.conversations,
+      uiContributions: application.uiContributions,
       showTitle: false,
       fullWorkspace: widget.fullWorkspace,
       embedded: widget.embedded,
@@ -462,6 +454,8 @@ class _AgentConversationHostState extends State<AgentConversationHost> {
         );
       },
       onOpenResource: (ref) => AgentResourceView.open(context, ref),
+      onOpenContributionResource: (ref, session) =>
+          AgentResourceView.open(context, ref, contributionSession: session),
       onExportConversation: (id) async {
         final result = await application.conversationTools.exportConversation(
           id,

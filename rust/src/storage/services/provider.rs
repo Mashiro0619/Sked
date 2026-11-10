@@ -5,7 +5,10 @@ use serde_json::Value;
 
 use super::PERSISTENCE_SERVICE;
 use crate::{
-    plugins::{Plugin, PluginContext, PluginDescriptor, PluginError},
+    plugins::{
+        Plugin, PluginContext, PluginDescriptor, PluginError, UiContributionDefinition,
+        UiContributionSlot,
+    },
     storage::StorageWorker,
 };
 
@@ -44,6 +47,11 @@ impl Plugin for DefaultPersistencePlugin {
                     .map_err(|error| PluginError::new(error.to_string()))
             })
         })?;
+        context.contribute_ui(UiContributionDefinition::builtin(
+            UiContributionSlot::InspectorSection,
+            "sked.inspector.attachments",
+            20,
+        ))?;
         context.provide(PERSISTENCE_SERVICE, service)
     }
 }

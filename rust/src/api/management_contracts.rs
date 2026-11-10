@@ -12,10 +12,21 @@ pub struct HandoffRequest {
     pub selection: Option<ViewModelSelection>,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct ConversationSelection {
     pub selected_id: Option<String>,
     pub draft_id: Option<String>,
+}
+
+// Keep the existing generated default constructor available to both the
+// source parser and the macro-expanded bridge generator.
+impl Default for ConversationSelection {
+    fn default() -> Self {
+        Self {
+            selected_id: Default::default(),
+            draft_id: Default::default(),
+        }
+    }
 }
 
 impl From<stored::ConversationSelection> for ConversationSelection {

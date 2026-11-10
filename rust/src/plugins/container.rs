@@ -9,11 +9,12 @@ use std::{
 };
 
 use futures::FutureExt;
-use tokio::sync::{Notify, mpsc, oneshot};
+use tokio::sync::{Notify, mpsc, oneshot, watch};
 
 use super::{
     AgentProfile, PLUGIN_CONTRACT_VERSION, PluginContext, PluginDescriptor, PluginError,
     PluginInstance, PluginSpec, PluginState, ServiceDefinition, ServiceKey, ServiceLease,
+    UiContributionOwner, UiContributionSnapshot,
     scope::{Cleanup, ServiceSlot},
 };
 
@@ -34,6 +35,7 @@ struct Registry {
 
 struct Shared {
     registry: Mutex<Registry>,
+    ui_contributions: watch::Sender<UiContributionSnapshot>,
     instances: Mutex<BTreeMap<String, PluginInstance>>,
     closing: AtomicBool,
     completion: Mutex<Option<LifecycleResult>>,
@@ -44,7 +46,27 @@ impl Shared {
     fn begin_shutdown(&self) -> bool {
         let first = !self.closing.swap(true, Ordering::AcqRel);
         self.registry.lock().unwrap().accepting = false;
+        self.publish_ui(Vec::new());
         first
+    }
+
+    fn publish_ui(&self, mut owners: Vec<UiContributionOwner>) {
+        self.ui_contributions.send_if_modified(|snapshot| {
+            // Recheck under the watch lock: an activation racing shutdown
+            // cannot republish renderers after the empty retirement snapshot.
+            if self.closing.load(Ordering::Acquire) {
+                owners.clear();
+            }
+            if snapshot.owners == owners {
+                return false;
+            }
+            snapshot.revision = snapshot
+                .revision
+                .checked_add(1)
+                .expect("UI contribution revision exhausted");
+            snapshot.owners = owners;
+            true
+        });
     }
 
     fn complete(&self, result: LifecycleResult) {
@@ -87,6 +109,7 @@ impl PluginContainer {
                 services: BTreeMap::new(),
             }),
             instances: Mutex::new(BTreeMap::new()),
+            ui_contributions: watch::channel(UiContributionSnapshot::default()).0,
             closing: AtomicBool::new(false),
             completion: Mutex::new(None),
             completed: Notify::new(),
@@ -143,6 +166,10 @@ impl PluginContainer {
             .values()
             .cloned()
             .collect()
+    }
+
+    pub fn ui_contributions(&self) -> watch::Receiver<UiContributionSnapshot> {
+        self.shared.ui_contributions.subscribe()
     }
 
     /// Missing dependencies leave an installed instance suspended. Returning
@@ -235,6 +262,20 @@ impl Worker {
                 .unwrap()
                 .insert(id.to_owned(), instance.snapshot());
         }
+        let owners = self
+            .instances
+            .values()
+            .filter(|instance| instance.state == PluginState::Active)
+            .filter_map(|instance| {
+                let contributions = instance.context.as_ref()?.ui_contributions();
+                (!contributions.is_empty()).then(|| UiContributionOwner {
+                    instance_id: instance.spec.instance_id.clone(),
+                    generation: instance.generation,
+                    contributions,
+                })
+            })
+            .collect();
+        self.shared.publish_ui(owners);
     }
 
     fn insert(&mut self, spec: PluginSpec, descriptor: PluginDescriptor) {

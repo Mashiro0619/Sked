@@ -52,6 +52,7 @@ class _AgentPreferencesSettingsPageState
 
   Future<void> _save() async {
     if (_saving ||
+        !settingsSourceCurrent ||
         ModalRoute.of(context)?.isCurrent != true ||
         !_form.currentState!.validate()) {
       return;

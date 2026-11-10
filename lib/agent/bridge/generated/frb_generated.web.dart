@@ -11,6 +11,8 @@ import 'api/contracts.dart';
 import 'api/history.dart';
 import 'api/management_contracts.dart';
 import 'api/models.dart';
+import 'api/ui.dart';
+import 'api/ui_contracts.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -31,6 +33,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   get rust_arc_decrement_strong_count_AgentCorePtr => wire
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore;
 
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_UiContributionSubscriptionPtr => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription;
+
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw);
 
@@ -41,8 +47,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  UiContributionSubscription
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+    dynamic raw,
+  );
+
+  @protected
   AgentCore
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+    dynamic raw,
+  );
+
+  @protected
+  UiContributionSubscription
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
     dynamic raw,
   );
 
@@ -75,7 +93,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  UiContributionSubscription
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+    dynamic raw,
+  );
+
+  @protected
   RustStreamSink<AgentEvent> dco_decode_StreamSink_agent_event_Sse(dynamic raw);
+
+  @protected
+  RustStreamSink<UiContributionSnapshot>
+  dco_decode_StreamSink_ui_contribution_snapshot_Sse(dynamic raw);
 
   @protected
   String dco_decode_String(dynamic raw);
@@ -399,6 +427,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<ToolDefinition> dco_decode_list_tool_definition(dynamic raw);
+
+  @protected
+  List<UiContributionDefinition> dco_decode_list_ui_contribution_definition(
+    dynamic raw,
+  );
+
+  @protected
+  List<UiContributionOwner> dco_decode_list_ui_contribution_owner(dynamic raw);
 
   @protected
   List<ViewAttachmentMetadata> dco_decode_list_view_attachment_metadata(
@@ -826,6 +862,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int dco_decode_u_8(dynamic raw);
 
   @protected
+  UiContributionDefinition dco_decode_ui_contribution_definition(dynamic raw);
+
+  @protected
+  UiContributionOwner dco_decode_ui_contribution_owner(dynamic raw);
+
+  @protected
+  UiContributionSlot dco_decode_ui_contribution_slot(dynamic raw);
+
+  @protected
+  UiContributionSnapshot dco_decode_ui_contribution_snapshot(dynamic raw);
+
+  @protected
   void dco_decode_unit(dynamic raw);
 
   @protected
@@ -1068,8 +1116,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  UiContributionSubscription
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   AgentCore
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  UiContributionSubscription
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
     SseDeserializer deserializer,
   );
 
@@ -1110,7 +1170,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  UiContributionSubscription
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   RustStreamSink<AgentEvent> sse_decode_StreamSink_agent_event_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  RustStreamSink<UiContributionSnapshot>
+  sse_decode_StreamSink_ui_contribution_snapshot_Sse(
     SseDeserializer deserializer,
   );
 
@@ -1510,6 +1582,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<ToolDefinition> sse_decode_list_tool_definition(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<UiContributionDefinition> sse_decode_list_ui_contribution_definition(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<UiContributionOwner> sse_decode_list_ui_contribution_owner(
     SseDeserializer deserializer,
   );
 
@@ -2025,6 +2107,26 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int sse_decode_u_8(SseDeserializer deserializer);
 
   @protected
+  UiContributionDefinition sse_decode_ui_contribution_definition(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  UiContributionOwner sse_decode_ui_contribution_owner(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  UiContributionSlot sse_decode_ui_contribution_slot(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  UiContributionSnapshot sse_decode_ui_contribution_snapshot(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   void sse_decode_unit(SseDeserializer deserializer);
 
   @protected
@@ -2372,8 +2474,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+    UiContributionSubscription self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
     AgentCore self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+    UiContributionSubscription self,
     SseSerializer serializer,
   );
 
@@ -2418,8 +2534,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+    UiContributionSubscription self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_StreamSink_agent_event_Sse(
     RustStreamSink<AgentEvent> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_StreamSink_ui_contribution_snapshot_Sse(
+    RustStreamSink<UiContributionSnapshot> self,
     SseSerializer serializer,
   );
 
@@ -2912,6 +3041,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_tool_definition(
     List<ToolDefinition> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_ui_contribution_definition(
+    List<UiContributionDefinition> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_ui_contribution_owner(
+    List<UiContributionOwner> self,
     SseSerializer serializer,
   );
 
@@ -3534,6 +3675,30 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_u_8(int self, SseSerializer serializer);
 
   @protected
+  void sse_encode_ui_contribution_definition(
+    UiContributionDefinition self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_ui_contribution_owner(
+    UiContributionOwner self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_ui_contribution_slot(
+    UiContributionSlot self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_ui_contribution_snapshot(
+    UiContributionSnapshot self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_unit(void self, SseSerializer serializer);
 
   @protected
@@ -3974,6 +4139,22 @@ class RustLibWire implements BaseWire {
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
         ptr,
       );
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+        ptr,
+      );
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+        ptr,
+      );
 }
 
 @JS('wasm_bindgen')
@@ -3989,6 +4170,16 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
 
   external void
   rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAgentCore(
+    int ptr,
+  );
+
+  external void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+    int ptr,
+  );
+
+  external void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
     int ptr,
   );
 }

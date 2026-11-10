@@ -81,6 +81,7 @@ class _AgentConnectionSettingsPageState
 
   Future<void> _save() async {
     if (_saving ||
+        !settingsSourceCurrent ||
         _diagnosing ||
         ModalRoute.of(context)?.isCurrent != true ||
         !_form.currentState!.validate()) {
@@ -140,6 +141,7 @@ class _AgentConnectionSettingsPageState
     if (!mounted ||
         _saving ||
         _opening ||
+        !settingsSourceCurrent ||
         generation != _interactionGeneration ||
         ModalRoute.of(context)?.isCurrent != true ||
         !identical(_scopeApplication, application) ||
@@ -150,12 +152,15 @@ class _AgentConnectionSettingsPageState
       _retireDiagnostic(request, cancel: true);
     }
     setState(() => _opening = true);
+    final parent = SkedTaskSessionScope.maybeOf(context)?.session;
     try {
       await Navigator.of(context).push<void>(
         MaterialPageRoute<void>(
           builder: (_) => ChangeNotifierProvider<AgentApplication>.value(
             value: application,
-            child: page,
+            child: parent == null
+                ? page
+                : SkedTaskRouteGuard(parent: parent, child: page),
           ),
         ),
       );
@@ -186,6 +191,7 @@ class _AgentConnectionSettingsPageState
     required int generation,
   }) async {
     if (!mounted ||
+        !settingsSourceCurrent ||
         _saving ||
         _diagnosing ||
         generation != _interactionGeneration ||
@@ -197,10 +203,12 @@ class _AgentConnectionSettingsPageState
     final route = ModalRoute.of(context);
     final l = AppLocalizations.of(context);
     final cancellation = ProviderCancellationToken();
+    final parent = SkedTaskSessionScope.maybeOf(context)?.session;
     final request = _AgentDiagnosticRequest(
       cancellation: cancellation,
       session: SkedTaskSession(
         ownerRoute: route,
+        parent: parent,
         targetChanges: application,
         isOwnerActive: () => mounted && route?.isCurrent == true,
         isTargetCurrent: () =>
@@ -255,6 +263,7 @@ class _AgentConnectionSettingsPageState
             result: probe,
             session: SkedTaskSession(
               ownerRoute: route,
+              parent: parent,
               targetChanges: application,
               isOwnerActive: () => mounted,
               isTargetCurrent: () =>
@@ -578,19 +587,27 @@ class _AgentModelCatalogPageState extends State<_AgentModelCatalogPage> {
   }
 
   Future<void> _open(String id) async {
-    if (_opening || ModalRoute.of(context)?.isCurrent != true) return;
+    if (_opening ||
+        !SkedTaskSessionScope.isCurrent(context) ||
+        ModalRoute.of(context)?.isCurrent != true) {
+      return;
+    }
     final application = context.read<AgentApplication>();
+    final parent = SkedTaskSessionScope.maybeOf(context)?.session;
+    final page = AgentModelSettingsPage(
+      model: application.settings.modelConfig(id),
+      suggestedId: id,
+      reportedContextTokens: widget.catalog.contextTokens[id],
+    );
     setState(() => _opening = true);
     try {
       await Navigator.of(context).push<void>(
         MaterialPageRoute<void>(
           builder: (_) => ChangeNotifierProvider<AgentApplication>.value(
             value: application,
-            child: AgentModelSettingsPage(
-              model: application.settings.modelConfig(id),
-              suggestedId: id,
-              reportedContextTokens: widget.catalog.contextTokens[id],
-            ),
+            child: parent == null
+                ? page
+                : SkedTaskRouteGuard(parent: parent, child: page),
           ),
         ),
       );

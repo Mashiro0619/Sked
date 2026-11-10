@@ -3,7 +3,10 @@ use async_trait::async_trait;
 use super::{CONTEXT_SERVICE, ContextService};
 use crate::{
     model_client::services::MODEL_SERVICE,
-    plugins::{Plugin, PluginContext, PluginDescriptor, PluginError},
+    plugins::{
+        Plugin, PluginContext, PluginDescriptor, PluginError, UiContributionDefinition,
+        UiContributionSlot,
+    },
     storage::services::PERSISTENCE_SERVICE,
 };
 
@@ -24,6 +27,11 @@ impl Plugin for DefaultContextPlugin {
     async fn setup(&self, context: PluginContext) -> Result<(), PluginError> {
         let storage = context.require(PERSISTENCE_SERVICE)?;
         let model = context.require(MODEL_SERVICE)?;
+        context.contribute_ui(UiContributionDefinition::builtin(
+            UiContributionSlot::InspectorSection,
+            "sked.inspector.context",
+            30,
+        ))?;
         // Every invocation is awaited by the dependent runtime. Its quiesce
         // drains those calls before this provider's dependencies are released.
         context.provide(

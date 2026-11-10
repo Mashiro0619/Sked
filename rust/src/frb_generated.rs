@@ -27,6 +27,7 @@
 
 // Section: imports
 
+use crate::api::ui::*;
 use crate::api::*;
 use flutter_rust_bridge::for_generated::byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
 use flutter_rust_bridge::for_generated::{Lifetimeable, Lockable, transform_result_dco};
@@ -40,7 +41,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1998305564;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -239045674;
 
 // Section: executor
 
@@ -815,6 +816,54 @@ fn wire__crate__api__AgentCore_initialize_impl(
                     .await,
                 )
             }
+        },
+    )
+}
+fn wire__crate__api__AgentCore_open_ui_contributions_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "AgentCore_open_ui_contributions",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<AgentCore>,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let mut api_that_guard = None;
+                let decode_indices_ =
+                    flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                        flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                            &api_that, 0, false,
+                        ),
+                    ]);
+                for i in decode_indices_ {
+                    match i {
+                        0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                        _ => unreachable!(),
+                    }
+                }
+                let api_that_guard = api_that_guard.unwrap();
+                let output_ok = Ok::<_, ()>(crate::api::AgentCore::open_ui_contributions(
+                    &*api_that_guard,
+                ))?;
+                std::result::Result::Ok(output_ok)
+            })())
         },
     )
 }
@@ -1852,6 +1901,117 @@ fn wire__crate__api__AgentCore_write_attachment_impl(
         },
     )
 }
+fn wire__crate__api__ui__UiContributionSubscription_close_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "UiContributionSubscription_close",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<UiContributionSubscription>,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let mut api_that_guard = None;
+                let decode_indices_ =
+                    flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                        flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                            &api_that, 0, false,
+                        ),
+                    ]);
+                for i in decode_indices_ {
+                    match i {
+                        0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                        _ => unreachable!(),
+                    }
+                }
+                let api_that_guard = api_that_guard.unwrap();
+                let output_ok = Ok::<_, ()>({
+                    crate::api::ui::UiContributionSubscription::close(&*api_that_guard);
+                })?;
+                std::result::Result::Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__ui__UiContributionSubscription_watch_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "UiContributionSubscription_watch",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<UiContributionSubscription>,
+            >>::sse_decode(&mut deserializer);
+            let api_sink = <StreamSink<
+                crate::api::ui_contracts::UiContributionSnapshot,
+                flutter_rust_bridge::for_generated::SseCodec,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, String>(
+                    (move || async move {
+                        let mut api_that_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_that, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => {
+                                    api_that_guard =
+                                        Some(api_that.lockable_decode_async_ref().await)
+                                }
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_that_guard = api_that_guard.unwrap();
+                        let output_ok = crate::api::ui::UiContributionSubscription::watch(
+                            &*api_that_guard,
+                            api_sink,
+                        )
+                        .await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__contracts__command_result_default_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1956,6 +2116,9 @@ fn wire__crate__api__contracts__query_result_default_impl(
 flutter_rust_bridge::frb_generated_moi_arc_impl_value!(
     flutter_rust_bridge::for_generated::RustAutoOpaqueInner<AgentCore>
 );
+flutter_rust_bridge::frb_generated_moi_arc_impl_value!(
+    flutter_rust_bridge::for_generated::RustAutoOpaqueInner<UiContributionSubscription>
+);
 
 // Section: dart2rust
 
@@ -1972,6 +2135,16 @@ impl SseDecode for AgentCore {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut inner = <RustOpaqueMoi<
             flutter_rust_bridge::for_generated::RustAutoOpaqueInner<AgentCore>,
+        >>::sse_decode(deserializer);
+        return flutter_rust_bridge::for_generated::rust_auto_opaque_decode_owned(inner);
+    }
+}
+
+impl SseDecode for UiContributionSubscription {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <RustOpaqueMoi<
+            flutter_rust_bridge::for_generated::RustAutoOpaqueInner<UiContributionSubscription>,
         >>::sse_decode(deserializer);
         return flutter_rust_bridge::for_generated::rust_auto_opaque_decode_owned(inner);
     }
@@ -2028,7 +2201,32 @@ impl SseDecode
 }
 
 impl SseDecode
+    for RustOpaqueMoi<
+        flutter_rust_bridge::for_generated::RustAutoOpaqueInner<UiContributionSubscription>,
+    >
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <usize>::sse_decode(deserializer);
+        return decode_rust_opaque_moi(inner);
+    }
+}
+
+impl SseDecode
     for StreamSink<crate::api::contracts::AgentEvent, flutter_rust_bridge::for_generated::SseCodec>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <String>::sse_decode(deserializer);
+        return StreamSink::deserialize(inner);
+    }
+}
+
+impl SseDecode
+    for StreamSink<
+        crate::api::ui_contracts::UiContributionSnapshot,
+        flutter_rust_bridge::for_generated::SseCodec,
+    >
 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2768,6 +2966,34 @@ impl SseDecode for Vec<crate::api::contracts::ToolDefinition> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<crate::api::contracts::ToolDefinition>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::ui_contracts::UiContributionDefinition> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(
+                <crate::api::ui_contracts::UiContributionDefinition>::sse_decode(deserializer),
+            );
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::ui_contracts::UiContributionOwner> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::ui_contracts::UiContributionOwner>::sse_decode(
                 deserializer,
             ));
         }
@@ -4314,6 +4540,65 @@ impl SseDecode for u8 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         deserializer.cursor.read_u8().unwrap()
+    }
+}
+
+impl SseDecode for crate::api::ui_contracts::UiContributionDefinition {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_id = <String>::sse_decode(deserializer);
+        let mut var_slot = <crate::api::ui_contracts::UiContributionSlot>::sse_decode(deserializer);
+        let mut var_rendererId = <String>::sse_decode(deserializer);
+        let mut var_order = <i32>::sse_decode(deserializer);
+        return crate::api::ui_contracts::UiContributionDefinition {
+            id: var_id,
+            slot: var_slot,
+            renderer_id: var_rendererId,
+            order: var_order,
+        };
+    }
+}
+
+impl SseDecode for crate::api::ui_contracts::UiContributionOwner {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_instanceId = <String>::sse_decode(deserializer);
+        let mut var_generation = <u64>::sse_decode(deserializer);
+        let mut var_contributions =
+            <Vec<crate::api::ui_contracts::UiContributionDefinition>>::sse_decode(deserializer);
+        return crate::api::ui_contracts::UiContributionOwner {
+            instance_id: var_instanceId,
+            generation: var_generation,
+            contributions: var_contributions,
+        };
+    }
+}
+
+impl SseDecode for crate::api::ui_contracts::UiContributionSlot {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::ui_contracts::UiContributionSlot::ToolResult,
+            1 => crate::api::ui_contracts::UiContributionSlot::Settings,
+            2 => crate::api::ui_contracts::UiContributionSlot::InspectorSection,
+            _ => unreachable!("Invalid variant for UiContributionSlot: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::ui_contracts::UiContributionSnapshot {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_contractVersion = <u32>::sse_decode(deserializer);
+        let mut var_revision = <u64>::sse_decode(deserializer);
+        let mut var_owners =
+            <Vec<crate::api::ui_contracts::UiContributionOwner>>::sse_decode(deserializer);
+        return crate::api::ui_contracts::UiContributionSnapshot {
+            contract_version: var_contractVersion,
+            revision: var_revision,
+            owners: var_owners,
+        };
     }
 }
 
@@ -6052,66 +6337,72 @@ fn pde_ffi_dispatcher_primary_impl(
         }
         12 => wire__crate__api__AgentCore_import_attachment_impl(port, ptr, rust_vec_len, data_len),
         13 => wire__crate__api__AgentCore_initialize_impl(port, ptr, rust_vec_len, data_len),
-        14 => wire__crate__api__AgentCore_prune_history_impl(port, ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__AgentCore_query_impl(port, ptr, rust_vec_len, data_len),
-        16 => {
+        15 => wire__crate__api__AgentCore_prune_history_impl(port, ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__AgentCore_query_impl(port, ptr, rust_vec_len, data_len),
+        17 => {
             wire__crate__api__AgentCore_recover_history_undo_impl(port, ptr, rust_vec_len, data_len)
         }
-        17 => {
+        18 => {
             wire__crate__api__AgentCore_recover_operations_impl(port, ptr, rust_vec_len, data_len)
         }
-        18 => wire__crate__api__AgentCore_register_builtin_skills_impl(
+        19 => wire__crate__api__AgentCore_register_builtin_skills_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        19 => wire__crate__api__AgentCore_remove_draft_attachment_impl(
+        20 => wire__crate__api__AgentCore_remove_draft_attachment_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        20 => wire__crate__api__AgentCore_replace_pending_redo_references_impl(
+        21 => wire__crate__api__AgentCore_replace_pending_redo_references_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        21 => wire__crate__api__AgentCore_run_host_tool_impl(port, ptr, rust_vec_len, data_len),
-        22 => wire__crate__api__AgentCore_shutdown_impl(port, ptr, rust_vec_len, data_len),
-        23 => wire__crate__api__AgentCore_shutdown_for_data_clear_impl(
+        22 => wire__crate__api__AgentCore_run_host_tool_impl(port, ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__AgentCore_shutdown_impl(port, ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__AgentCore_shutdown_for_data_clear_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        24 => {
+        25 => {
             wire__crate__api__AgentCore_submit_host_progress_impl(port, ptr, rust_vec_len, data_len)
         }
-        25 => {
+        26 => {
             wire__crate__api__AgentCore_submit_host_result_impl(port, ptr, rust_vec_len, data_len)
         }
-        26 => wire__crate__api__AgentCore_tool_definitions_impl(port, ptr, rust_vec_len, data_len),
-        27 => {
+        27 => wire__crate__api__AgentCore_tool_definitions_impl(port, ptr, rust_vec_len, data_len),
+        28 => {
             wire__crate__api__AgentCore_use_draft_attachment_impl(port, ptr, rust_vec_len, data_len)
         }
-        28 => wire__crate__api__AgentCore_verify_attachment_impl(port, ptr, rust_vec_len, data_len),
-        29 => wire__crate__api__AgentCore_watch_events_impl(port, ptr, rust_vec_len, data_len),
-        30 => wire__crate__api__AgentCore_write_attachment_impl(port, ptr, rust_vec_len, data_len),
-        31 => wire__crate__api__contracts__command_result_default_impl(
+        29 => wire__crate__api__AgentCore_verify_attachment_impl(port, ptr, rust_vec_len, data_len),
+        30 => wire__crate__api__AgentCore_watch_events_impl(port, ptr, rust_vec_len, data_len),
+        31 => wire__crate__api__AgentCore_write_attachment_impl(port, ptr, rust_vec_len, data_len),
+        33 => wire__crate__api__ui__UiContributionSubscription_watch_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        32 => wire__crate__api__management_contracts__conversation_selection_default_impl(
+        34 => wire__crate__api__contracts__command_result_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        33 => wire__crate__api__contracts__query_result_default_impl(
+        35 => wire__crate__api__management_contracts__conversation_selection_default_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        36 => wire__crate__api__contracts__query_result_default_impl(
             port,
             ptr,
             rust_vec_len,
@@ -6129,6 +6420,10 @@ fn pde_ffi_dispatcher_sync_impl(
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
+        14 => wire__crate__api__AgentCore_open_ui_contributions_impl(ptr, rust_vec_len, data_len),
+        32 => {
+            wire__crate__api__ui__UiContributionSubscription_close_impl(ptr, rust_vec_len, data_len)
+        }
         _ => unreachable!(),
     }
 }
@@ -6146,6 +6441,26 @@ impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for FrbWrapper<
 
 impl flutter_rust_bridge::IntoIntoDart<FrbWrapper<AgentCore>> for AgentCore {
     fn into_into_dart(self) -> FrbWrapper<AgentCore> {
+        self.into()
+    }
+}
+
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for FrbWrapper<UiContributionSubscription> {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        flutter_rust_bridge::for_generated::rust_auto_opaque_encode::<_, MoiArc<_>>(self.0)
+            .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for FrbWrapper<UiContributionSubscription>
+{
+}
+
+impl flutter_rust_bridge::IntoIntoDart<FrbWrapper<UiContributionSubscription>>
+    for UiContributionSubscription
+{
+    fn into_into_dart(self) -> FrbWrapper<UiContributionSubscription> {
         self.into()
     }
 }
@@ -7018,6 +7333,95 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::contracts::ToolDefinition>
     for crate::api::contracts::ToolDefinition
 {
     fn into_into_dart(self) -> crate::api::contracts::ToolDefinition {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::ui_contracts::UiContributionDefinition {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.id.into_into_dart().into_dart(),
+            self.slot.into_into_dart().into_dart(),
+            self.renderer_id.into_into_dart().into_dart(),
+            self.order.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::ui_contracts::UiContributionDefinition
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::ui_contracts::UiContributionDefinition>
+    for crate::api::ui_contracts::UiContributionDefinition
+{
+    fn into_into_dart(self) -> crate::api::ui_contracts::UiContributionDefinition {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::ui_contracts::UiContributionOwner {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.instance_id.into_into_dart().into_dart(),
+            self.generation.into_into_dart().into_dart(),
+            self.contributions.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::ui_contracts::UiContributionOwner
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::ui_contracts::UiContributionOwner>
+    for crate::api::ui_contracts::UiContributionOwner
+{
+    fn into_into_dart(self) -> crate::api::ui_contracts::UiContributionOwner {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::ui_contracts::UiContributionSlot {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::ToolResult => 0.into_dart(),
+            Self::Settings => 1.into_dart(),
+            Self::InspectorSection => 2.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::ui_contracts::UiContributionSlot
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::ui_contracts::UiContributionSlot>
+    for crate::api::ui_contracts::UiContributionSlot
+{
+    fn into_into_dart(self) -> crate::api::ui_contracts::UiContributionSlot {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::ui_contracts::UiContributionSnapshot {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.contract_version.into_into_dart().into_dart(),
+            self.revision.into_into_dart().into_dart(),
+            self.owners.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::ui_contracts::UiContributionSnapshot
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::ui_contracts::UiContributionSnapshot>
+    for crate::api::ui_contracts::UiContributionSnapshot
+{
+    fn into_into_dart(self) -> crate::api::ui_contracts::UiContributionSnapshot {
         self
     }
 }
@@ -8973,6 +9377,18 @@ impl SseEncode for AgentCore {
     }
 }
 
+impl SseEncode for UiContributionSubscription {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <RustOpaqueMoi<
+            flutter_rust_bridge::for_generated::RustAutoOpaqueInner<UiContributionSubscription>,
+        >>::sse_encode(
+            flutter_rust_bridge::for_generated::rust_auto_opaque_encode::<_, MoiArc<_>>(self),
+            serializer,
+        );
+    }
+}
+
 impl SseEncode for std::collections::HashMap<String, u64> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -9024,7 +9440,32 @@ impl SseEncode
 }
 
 impl SseEncode
+    for RustOpaqueMoi<
+        flutter_rust_bridge::for_generated::RustAutoOpaqueInner<UiContributionSubscription>,
+    >
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        let (ptr, size) = self.sse_encode_raw();
+        <usize>::sse_encode(ptr, serializer);
+        <i32>::sse_encode(size, serializer);
+    }
+}
+
+impl SseEncode
     for StreamSink<crate::api::contracts::AgentEvent, flutter_rust_bridge::for_generated::SseCodec>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        unimplemented!("")
+    }
+}
+
+impl SseEncode
+    for StreamSink<
+        crate::api::ui_contracts::UiContributionSnapshot,
+        flutter_rust_bridge::for_generated::SseCodec,
+    >
 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -9608,6 +10049,26 @@ impl SseEncode for Vec<crate::api::contracts::ToolDefinition> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::contracts::ToolDefinition>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::ui_contracts::UiContributionDefinition> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::ui_contracts::UiContributionDefinition>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::ui_contracts::UiContributionOwner> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::ui_contracts::UiContributionOwner>::sse_encode(item, serializer);
         }
     }
 }
@@ -10819,6 +11280,54 @@ impl SseEncode for u8 {
     }
 }
 
+impl SseEncode for crate::api::ui_contracts::UiContributionDefinition {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.id, serializer);
+        <crate::api::ui_contracts::UiContributionSlot>::sse_encode(self.slot, serializer);
+        <String>::sse_encode(self.renderer_id, serializer);
+        <i32>::sse_encode(self.order, serializer);
+    }
+}
+
+impl SseEncode for crate::api::ui_contracts::UiContributionOwner {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.instance_id, serializer);
+        <u64>::sse_encode(self.generation, serializer);
+        <Vec<crate::api::ui_contracts::UiContributionDefinition>>::sse_encode(
+            self.contributions,
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::ui_contracts::UiContributionSlot {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::ui_contracts::UiContributionSlot::ToolResult => 0,
+                crate::api::ui_contracts::UiContributionSlot::Settings => 1,
+                crate::api::ui_contracts::UiContributionSlot::InspectorSection => 2,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::ui_contracts::UiContributionSnapshot {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.contract_version, serializer);
+        <u64>::sse_encode(self.revision, serializer);
+        <Vec<crate::api::ui_contracts::UiContributionOwner>>::sse_encode(self.owners, serializer);
+    }
+}
+
 impl SseEncode for () {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {}
@@ -12024,6 +12533,7 @@ mod io {
     // Section: imports
 
     use super::*;
+    use crate::api::ui::*;
     use crate::api::*;
     use flutter_rust_bridge::for_generated::byteorder::{
         NativeEndian, ReadBytesExt, WriteBytesExt,
@@ -12048,6 +12558,20 @@ mod io {
     ) {
         MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<AgentCore>>::decrement_strong_count(ptr as _);
     }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_sked_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<UiContributionSubscription>>::increment_strong_count(ptr as _);
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_sked_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<UiContributionSubscription>>::decrement_strong_count(ptr as _);
+    }
 }
 #[cfg(not(target_family = "wasm"))]
 pub use io::*;
@@ -12061,6 +12585,7 @@ mod web {
     // Section: imports
 
     use super::*;
+    use crate::api::ui::*;
     use crate::api::*;
     use flutter_rust_bridge::for_generated::byteorder::{
         NativeEndian, ReadBytesExt, WriteBytesExt,
@@ -12086,6 +12611,20 @@ mod web {
         ptr: *const std::ffi::c_void,
     ) {
         MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<AgentCore>>::decrement_strong_count(ptr as _);
+    }
+
+    #[wasm_bindgen]
+    pub fn rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<UiContributionSubscription>>::increment_strong_count(ptr as _);
+    }
+
+    #[wasm_bindgen]
+    pub fn rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerUiContributionSubscription(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<UiContributionSubscription>>::decrement_strong_count(ptr as _);
     }
 }
 #[cfg(target_family = "wasm")]

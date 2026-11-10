@@ -53,7 +53,6 @@ import '../references/agent_composer_reference.dart';
 import '../references/agent_composer_reference_search.dart';
 import 'agent_ui_delegate.dart';
 import 'agent_ui_style.dart';
-import 'agent_operation_card.dart';
 import 'agent_operation_activity.dart';
 import '../operations/tool_outcome.dart';
 import 'agent_context_control.dart';
@@ -64,6 +63,10 @@ import 'agent_paged_history.dart';
 import 'agent_reference_picker.dart';
 import 'agent_task_plan_view.dart';
 import 'agent_task_inspector.dart';
+import 'contributions/agent_ui_contribution_contracts.dart';
+import 'contributions/agent_ui_contribution_registry.dart';
+import 'contributions/agent_ui_contribution_host.dart';
+import 'contributions/agent_ui_default_renderers.dart';
 
 part 'agent_composer_references.dart';
 part 'agent_composer_file_input.dart';
@@ -72,6 +75,7 @@ part 'agent_task_plan_panel.dart';
 part 'agent_task_inspector_panel.dart';
 part 'agent_queued_input_actions.dart';
 part 'agent_turn_process.dart';
+part 'agent_ui_contribution_bindings.dart';
 
 // Failed saves remain available when a panel is closed and reopened. The
 // buffer follows the repository lifetime and is never shared across archives.
@@ -121,6 +125,8 @@ class AgentConversationView extends StatefulWidget {
     this.describeOperation,
     this.onUndoOperation,
     this.onOpenResource,
+    this.onOpenContributionResource,
+    this.uiContributions,
     this.onExportConversation,
     this.readDatasetGeneration,
     this.recoverConversations,
@@ -155,6 +161,12 @@ class AgentConversationView extends StatefulWidget {
   final Future<void> Function(String conversationId, String operationId)?
   onUndoOperation;
   final Future<void> Function(Map<String, Object?> ref)? onOpenResource;
+  final Future<void> Function(
+    Map<String, Object?> ref,
+    SkedTaskSession session,
+  )?
+  onOpenContributionResource;
+  final AgentUiContributionRegistry? uiContributions;
   final Future<bool> Function(String conversationId)? onExportConversation;
   final String Function()? readDatasetGeneration;
   final Future<void> Function()? recoverConversations;
@@ -268,6 +280,9 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     _retireHistory();
     _messageHistorySession?.invalidate();
     _inspectorSession?.invalidate();
+    for (final session in _contributionTasks) {
+      session.invalidate();
+    }
   }
 
   void _retireHistory() {
@@ -384,6 +399,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   bool _inspectorModalOpen = false;
   bool _inspectorPresentationScheduled = false;
   SkedTaskSession? _inspectorSession;
+  final _contributionTasks = <SkedTaskSession>{};
   bool _hostActive = true;
   bool _initialDraftScheduled = false;
   bool _initialDraftRetry = false;
@@ -667,6 +683,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     _watchSelectedRun();
     widget.delegate.state.addListener(_runtimeChanged);
     widget.binaryAttachments?.addListener(_changed);
+    widget.uiContributions?.addListener(_contributionsChanged);
     _synchronizeDraft();
     if (!_repository.isLoaded) unawaited(_load());
   }
@@ -699,6 +716,14 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   @override
   void didUpdateWidget(AgentConversationView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.uiContributions, widget.uiContributions)) {
+      oldWidget.uiContributions?.removeListener(_contributionsChanged);
+      widget.uiContributions?.addListener(_contributionsChanged);
+      _inspectorSession?.invalidate();
+      for (final session in _contributionTasks) {
+        session.invalidate();
+      }
+    }
     if ((oldWidget.active && !widget.active) ||
         (oldWidget.interactive && !widget.interactive) ||
         !identical(oldWidget.repository, widget.repository) ||
@@ -775,6 +800,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     unawaited(_browseDelegate?.setConversationActive(_browseOwner, null));
     widget.delegate.state.removeListener(_runtimeChanged);
     widget.binaryAttachments?.removeListener(_changed);
+    widget.uiContributions?.removeListener(_contributionsChanged);
     _composer.removeListener(_referenceInputChanged);
     _composerFocus.removeListener(_referenceInputChanged);
     _composerFocus.removeListener(_clipboardFocusChanged);
@@ -2159,7 +2185,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
           IconButton(
             key: const ValueKey('agent-task-details'),
             tooltip: l.agentTaskDetails,
-            onPressed: _uiActive
+            onPressed: _uiActive && _hasInspectorContribution
                 ? () => _showTaskInspector(inline: inlineInspector)
                 : null,
             icon: Icon(
@@ -2561,35 +2587,14 @@ class _AgentConversationViewState extends State<AgentConversationView> {
           : _approval(conversation.id, approval, writable, l, embedded: true),
       details: current == null
           ? const SizedBox.shrink()
-          : AgentOperationCard(
-              outcome: current,
-              embedded: true,
-              onUndo:
-                  !readOnly &&
-                      widget.onUndoOperation != null &&
-                      !state.isActive &&
-                      !state.recoveryRequired &&
-                      writable &&
-                      operation.operationId != null &&
-                      !_busy.contains('undo-${operation.id}')
-                  ? () => _perform(
-                      'undo-${operation.id}',
-                      () => widget.onUndoOperation!(
-                        conversation.id,
-                        operation.operationId!,
-                      ),
-                    )
-                  : null,
-              canOpenConversation: (id) =>
-                  writable && _repository.find(id) != null,
-              onOpenConversation: (id) => unawaited(_select(id)),
-              onOpenResource: widget.onOpenResource == null
-                  ? null
-                  : (ref) => _perform(
-                      'view-${operation.id}',
-                      () => widget.onOpenResource!(ref),
-                      isCurrent: modalCurrent,
-                    ),
+          : _operationReceiptContribution(
+              conversation,
+              operation,
+              state,
+              current,
+              writable: writable,
+              readOnly: readOnly,
+              modalCurrent: modalCurrent,
             ),
     );
     return KeyedSubtree(

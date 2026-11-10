@@ -8,6 +8,8 @@ import 'package:sked/agent/bridge/generated/api/contracts.dart';
 import 'package:sked/agent/bridge/generated/api/history.dart';
 import 'package:sked/agent/bridge/generated/api/management_contracts.dart';
 import 'package:sked/agent/bridge/generated/api/models.dart';
+import 'package:sked/agent/bridge/generated/api/ui.dart';
+import 'package:sked/agent/bridge/generated/api/ui_contracts.dart';
 import 'package:sked/agent/bridge/knowledge_projection.dart';
 import 'package:sked/agent/bridge/rust_agent_client.dart';
 import 'package:sked/agent/knowledge/knowledge_models.dart';
@@ -41,6 +43,7 @@ class MemoryAgentCore implements AgentCore {
   bool fail = false;
   String handoffReply = 'Please confirm the period times before importing.';
   final _events = StreamController<AgentEvent>.broadcast();
+  final _uiSubscriptions = <_MemoryUiContributionSubscription>[];
   Future<void> Function()? beforeInitialize;
   Future<void> Function(AgentQuery)? beforeQuery;
   Future<void> Function(AgentCommand)? beforeDispatch;
@@ -124,6 +127,13 @@ class MemoryAgentCore implements AgentCore {
   Stream<AgentEvent> watchEvents() async* {
     yield const AgentEvent(kind: EventKind.ready, conversationId: '');
     yield* _events.stream;
+  }
+
+  @override
+  UiContributionSubscription openUiContributions() {
+    final subscription = _MemoryUiContributionSubscription();
+    _uiSubscriptions.add(subscription);
+    return subscription;
   }
 
   @override
@@ -912,8 +922,69 @@ class MemoryAgentCore implements AgentCore {
   @override
   Future<void> shutdown() async {
     shutdownCount++;
+    for (final subscription in _uiSubscriptions) {
+      subscription.close();
+    }
+    _uiSubscriptions.clear();
     // AgentRustClient cancels its native subscription after shutdown returns.
     unawaited(_events.close());
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnsupportedError(
+    'UI fixture does not implement ${invocation.memberName}',
+  );
+}
+
+class _MemoryUiContributionSubscription implements UiContributionSubscription {
+  final _closed = Completer<void>();
+
+  @override
+  Stream<UiContributionSnapshot> watch() async* {
+    if (_closed.isCompleted) return;
+    yield UiContributionSnapshot(
+      contractVersion: 1,
+      revision: 1,
+      owners: [
+        UiContributionOwner(
+          instanceId: 'fixture.core',
+          generation: 1,
+          contributions: [
+            for (final (id, slot, order) in const [
+              ('sked.tool.operation', UiContributionSlot.toolResult, 0),
+              (
+                'sked.inspector.changes',
+                UiContributionSlot.inspectorSection,
+                0,
+              ),
+              ('sked.inspector.plan', UiContributionSlot.inspectorSection, 10),
+              (
+                'sked.inspector.attachments',
+                UiContributionSlot.inspectorSection,
+                20,
+              ),
+              (
+                'sked.inspector.context',
+                UiContributionSlot.inspectorSection,
+                30,
+              ),
+            ])
+              UiContributionDefinition(
+                id: id,
+                rendererId: id,
+                slot: slot,
+                order: order,
+              ),
+          ],
+        ),
+      ],
+    );
+    await _closed.future;
+  }
+
+  @override
+  void close() {
+    if (!_closed.isCompleted) _closed.complete();
   }
 
   @override

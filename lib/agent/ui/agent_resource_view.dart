@@ -9,6 +9,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/app_data_commit.dart';
 import '../../widgets/settings_page_header.dart';
 import '../../widgets/workbench_chrome_metrics.dart';
+import '../../widgets/sked_task_session.dart';
 import 'agent_selectable_text.dart';
 import 'agent_change_fields.dart';
 
@@ -24,7 +25,12 @@ class AgentResourceView extends StatelessWidget {
   final AppSession session;
   final ResourceRef ref;
 
-  static Future<void> open(BuildContext context, Map<String, Object?> value) {
+  static Future<void> open(
+    BuildContext context,
+    Map<String, Object?> value, {
+    SkedTaskSession? contributionSession,
+  }) {
+    if (contributionSession?.isCurrent == false) return Future.value();
     final kind = ResourceKind.values
         .where((kind) => kind.name == value['kind'])
         .firstOrNull;
@@ -39,7 +45,12 @@ class AgentResourceView extends StatelessWidget {
     );
     return Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (_) => AgentResourceView(session: session, ref: ref),
+        builder: (_) {
+          final page = AgentResourceView(session: session, ref: ref);
+          return contributionSession == null
+              ? page
+              : SkedTaskRouteGuard(parent: contributionSession, child: page);
+        },
       ),
     );
   }

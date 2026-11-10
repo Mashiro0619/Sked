@@ -88,6 +88,7 @@ class _AgentModelSettingsPageState extends State<AgentModelSettingsPage>
 
   Future<void> _save({bool remove = false}) async {
     if (_saving ||
+        !settingsSourceCurrent ||
         ModalRoute.of(context)?.isCurrent != true ||
         (!remove && !_form.currentState!.validate())) {
       return;
