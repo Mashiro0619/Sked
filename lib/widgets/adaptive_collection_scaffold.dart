@@ -12,6 +12,10 @@ import 'sked_resizable.dart';
 import 'workbench_layout_policy.dart';
 import 'ui_command.dart';
 
+typedef CollectionDetailOpener = Future<void> Function({
+  bool Function()? isCurrent,
+});
+
 class CollectionItem {
   const CollectionItem({
     required this.id,
@@ -24,7 +28,8 @@ class CollectionItem {
   final String title;
   final String? subtitle;
   final Widget? trailing;
-  final Widget Function(bool selected, VoidCallback openDetail)? tileBuilder;
+  final Widget Function(bool selected, CollectionDetailOpener openDetail)?
+  tileBuilder;
 }
 
 /// One collection toolbar and a stable detail navigator. Embedded detail pages
@@ -170,21 +175,23 @@ class _AdaptiveCollectionScaffoldState
     }
   }
 
-  Future<void> _select(String id) async {
-    if (_changing ||
-        _closing ||
-        widget.busy ||
-        _selected == id ||
-        !_contains(id)) {
+  Future<void> _select(String id, {bool Function()? isCurrent}) async {
+    bool current() =>
+        mounted &&
+        !_closing &&
+        !widget.busy &&
+        _contains(id) &&
+        isCurrent?.call() != false;
+    if (_changing || _selected == id || !current()) {
       return;
     }
     setState(() => _changing = true);
     try {
       final navigator = _navigator.currentState!;
       while (navigator.canPop()) {
-        if (!await _popCurrentPage(navigator)) return;
+        if (!await _popCurrentPage(navigator) || !current()) return;
       }
-      if (!mounted || !_contains(id)) return;
+      if (!current() || !navigator.mounted) return;
       final route = MaterialPageRoute<void>(
         builder: (_) => widget.detailBuilder(id),
       );
@@ -223,7 +230,7 @@ class _AdaptiveCollectionScaffoldState
           child: item.tileBuilder != null
               ? item.tileBuilder!(
                   item.id == _selected,
-                  () => unawaited(_select(item.id)),
+                  ({isCurrent}) => _select(item.id, isCurrent: isCurrent),
                 )
               : ListTile(
                   selected: item.id == _selected,

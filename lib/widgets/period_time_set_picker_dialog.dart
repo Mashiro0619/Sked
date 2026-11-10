@@ -21,6 +21,10 @@ import 'sked_task_dialog.dart';
 import 'sked_adaptive_picker_dialog.dart';
 import 'ui_command.dart';
 import 'period_time_set_manager.dart';
+import 'desktop_context_menu.dart';
+import 'period_time_set_actions.dart';
+import 'student_resource_context_menu.dart';
+import 'workbench_chrome_metrics.dart';
 
 /// Returns the choice to the owning form. Selecting never commits a binding.
 Future<String?> showPeriodTimeSetPickerDialog(
@@ -104,6 +108,24 @@ Future<String?> showPeriodTimeSetPickerDialog(
               completeEditorRoute(dialogContext, result);
             }
 
+            Future<void> editSet(
+              PeriodTimeSet item, {
+              bool Function()? isEntryCurrent,
+            }) => runBusy(
+              debugLabel: 'Edit period time set',
+              action: () async {
+                if (!dialogContext.mounted || isEntryCurrent?.call() == false) {
+                  return;
+                }
+                await openPeriodTimePage(item.id);
+                final stillExists =
+                    studentView.periodTimeSetForId(item.id) != null;
+                if (!stillExists && currentSelectedId == item.id) {
+                  currentSelectedId = '';
+                }
+              },
+            );
+
             return PeriodTimeSetPickerDialogView(
               periodTimeSets: studentView.periodTimeSets,
               selectedPeriodTimeSetId: currentSelectedId,
@@ -151,24 +173,38 @@ Future<String?> showPeriodTimeSetPickerDialog(
                   ),
                 );
               },
-              onEdit: (item) {
-                unawaited(
-                  runBusy(
-                    debugLabel: 'Edit period time set',
-                    action: () async {
-                      await openPeriodTimePage(item.id);
-                      final stillExists =
-                          studentView.periodTimeSetForId(item.id) != null;
-                      if (!stillExists && currentSelectedId == item.id) {
-                        currentSelectedId = '';
-                      }
-                    },
-                  ),
-                );
-              },
+              onEdit: (item) => unawaited(editSet(item)),
               onSelect: (id) {
                 if (studentView.periodTimeSetForId(id) != null) popOnce(id);
               },
+              actionsBuilder: (item, invocation) => periodTimeSetDesktopActions(
+                context: dialogContext,
+                invocation: invocation,
+                enabled: !busy && !popped,
+                onEdit: () =>
+                    editSet(item, isEntryCurrent: invocation.isCurrent),
+                onAction: (action) async {
+                  if (!invocation.isCurrent()) return;
+                  await runBusy(
+                    debugLabel:
+                        'Run period time resource action ${action.name}',
+                    action: () async {
+                      await runPeriodTimeSetAction(
+                        context: dialogContext,
+                        target: item,
+                        action: action,
+                        invocation: invocation,
+                        isOwnerCurrent: () =>
+                            dialogContext.mounted && !popped && isCurrent(),
+                      );
+                      if (studentView.periodTimeSetForId(currentSelectedId) ==
+                          null) {
+                        currentSelectedId = '';
+                      }
+                    },
+                  );
+                },
+              ),
               onCancel: popOnce,
             );
           },
@@ -195,6 +231,7 @@ class PeriodTimeSetPickerDialogView extends StatelessWidget {
     required this.onSelect,
     required this.onCancel,
     this.onManage,
+    this.actionsBuilder,
   });
 
   final List<PeriodTimeSet> periodTimeSets;
@@ -206,6 +243,8 @@ class PeriodTimeSetPickerDialogView extends StatelessWidget {
   final ValueChanged<String> onSelect;
   final VoidCallback onCancel;
   final VoidCallback? onManage;
+  final List<DesktopAction> Function(PeriodTimeSet, DesktopActionContext)?
+  actionsBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -270,7 +309,7 @@ class PeriodTimeSetPickerDialogView extends StatelessWidget {
                   separatorBuilder: (_, _) => const SizedBox(height: 4),
                   itemBuilder: (context, index) {
                     final item = periodTimeSets[index];
-                    return ExpressiveDialogOption(
+                    final entry = ExpressiveDialogOption(
                       selected: item.id == selectedPeriodTimeSetId,
                       title: Text(item.name),
                       titleMaxLines: null,
@@ -291,6 +330,21 @@ class PeriodTimeSetPickerDialogView extends StatelessWidget {
                       ),
                       onTap: () => onSelect(item.id),
                       enabled: !blocked,
+                    );
+                    final buildActions = actionsBuilder;
+                    if (buildActions == null) return entry;
+                    return StudentResourceContextMenu(
+                      target: ('period-time-set', item),
+                      enabled: WorkbenchChromeMetrics.of(context).desktop,
+                      isTargetCurrent: () => identical(
+                        context.read<StudentViewState>().periodTimeSetForId(
+                          item.id,
+                        ),
+                        item,
+                      ),
+                      actionsBuilder: (invocation) =>
+                          buildActions(item, invocation),
+                      child: entry,
                     );
                   },
                 ),

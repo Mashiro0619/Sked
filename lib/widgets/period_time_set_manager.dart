@@ -13,7 +13,10 @@ import '../screens/period_times_page.dart';
 import 'adaptive_collection_scaffold.dart';
 import 'expressive_empty_state.dart';
 import 'expressive_dialog.dart';
+import 'period_time_set_actions.dart';
+import 'student_resource_context_menu.dart';
 import 'ui_command.dart';
+import 'workbench_chrome_metrics.dart';
 
 class PeriodTimeSetManagerPage extends StatefulWidget {
   const PeriodTimeSetManagerPage({super.key});
@@ -27,6 +30,7 @@ class _PeriodTimeSetManagerPageState extends State<PeriodTimeSetManagerPage>
         UiCommandRunner<PeriodTimeSetManagerPage>,
         WorkspaceRouteLifecycle<PeriodTimeSetManagerPage> {
   String? _newSetId;
+  final _resourceActions = PeriodTimeSetActionController();
 
   @override
   AppMode get routeWorkspace => AppMode.student;
@@ -81,24 +85,59 @@ class _PeriodTimeSetManagerPageState extends State<PeriodTimeSetManagerPage>
               set.periodTimes.length,
               usageCounts[set.id] ?? 0,
             ),
-            tileBuilder: (selected, openDetail) => ExpressiveDialogOption(
-              key: ValueKey('period-time-set-${set.id}'),
-              selected: selected,
-              title: Text(set.name),
-              subtitle: Text(
-                l.periodTimeSetUsageSummary(
-                  set.periodTimes.length,
-                  usageCounts[set.id] ?? 0,
-                ),
+            tileBuilder: (selected, openDetail) => StudentResourceContextMenu(
+              target: ('period-time-set', set),
+              enabled: WorkbenchChromeMetrics.of(context).desktop,
+              isOwnerCurrent: () => mounted && routeWorkspaceEnabled,
+              isTargetCurrent: () =>
+                  identical(studentView.periodTimeSetForId(set.id), set),
+              actionsBuilder: (invocation) => periodTimeSetDesktopActions(
+                context: context,
+                invocation: invocation,
+                enabled: !uiCommandBusy,
+                onEdit: () => openDetail(isCurrent: invocation.isCurrent),
+                onAction: (action) async {
+                  if (!invocation.isCurrent() || uiCommandBusy) return;
+                  await runUiCommand(
+                    debugLabel:
+                        'Run period time resource action ${action.name}',
+                    command: () async {
+                      await runPeriodTimeSetAction(
+                        context: context,
+                        target: set,
+                        action: action,
+                        invocation: invocation,
+                        controller: _resourceActions,
+                        isOwnerCurrent: () => mounted && routeWorkspaceEnabled,
+                      );
+                    },
+                  );
+                },
               ),
-              trailing: const Icon(Icons.chevron_right),
-              enabled: !uiCommandBusy,
-              onTap: uiCommandBusy ? null : openDetail,
+              child: ExpressiveDialogOption(
+                key: ValueKey('period-time-set-${set.id}'),
+                selected: selected,
+                title: Text(set.name),
+                subtitle: Text(
+                  l.periodTimeSetUsageSummary(
+                    set.periodTimes.length,
+                    usageCounts[set.id] ?? 0,
+                  ),
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                enabled: !uiCommandBusy,
+                onTap: uiCommandBusy ? null : () => unawaited(openDetail()),
+              ),
             ),
           ),
       ],
-      detailBuilder: (id) =>
-          appScope.wrap(PeriodTimesPage(periodTimeSetId: id, embedded: true)),
+      detailBuilder: (id) => appScope.wrap(
+        PeriodTimesPage(
+          periodTimeSetId: id,
+          embedded: true,
+          actionController: _resourceActions,
+        ),
+      ),
     );
   }
 }

@@ -28,7 +28,7 @@ import '../services/export_service.dart';
 import '../services/text_file_picker.dart';
 import '../theme/sked_expressive_theme.dart';
 import '../widgets/expressive_dialog.dart';
-import '../widgets/export_save_flow.dart';
+import '../widgets/period_time_set_actions.dart';
 import '../widgets/sked_popup_menu.dart';
 import '../widgets/text_transfer_widgets.dart';
 import '../widgets/ui_command.dart';
@@ -61,12 +61,14 @@ class PeriodTimesPage extends StatefulWidget {
     super.key,
     required this.periodTimeSetId,
     this.embedded = false,
+    this.actionController,
     ExportService? exportService,
     this.textFilePicker = TextFilePicker.pickText,
   }) : exportService = exportService ?? const ExportService();
 
   final String periodTimeSetId;
   final bool embedded;
+  final PeriodTimeSetActionController? actionController;
   final ExportService exportService;
   final PeriodTimesTextPicker textFilePicker;
 
@@ -124,6 +126,25 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _nameController = TextEditingController();
+    _attachActionController();
+  }
+
+  void _attachActionController() {
+    widget.actionController?.attach(
+      this,
+      widget.periodTimeSetId,
+      (action) =>
+          _runFlushedMenuAction('Run period time resource action', action),
+    );
+  }
+
+  @override
+  void didUpdateWidget(PeriodTimesPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.actionController != widget.actionController) {
+      oldWidget.actionController?.detach(this);
+      _attachActionController();
+    }
   }
 
   @override
@@ -160,6 +181,7 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
 
   @override
   void dispose() {
+    widget.actionController?.detach(this);
     WidgetsBinding.instance.removeObserver(this);
     _unregisterPageExitGuard?.call();
     _isDisposing = true;
@@ -466,41 +488,48 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
     });
   }
 
-  Future<void> _handleMenuAction(_PeriodTimesMenuAction action) async {
-    if (_interactionBlocked) {
+  Future<void> _handleMenuAction(_PeriodTimesMenuAction action) =>
+      _runFlushedMenuAction(
+        'Run period time menu action ${action.name}',
+        () async {
+          switch (action) {
+            case _PeriodTimesMenuAction.importTemplate:
+              await _importTemplate();
+            case _PeriodTimesMenuAction.importTemplateText:
+              await _importTemplateFromText();
+            case _PeriodTimesMenuAction.exportTemplate:
+              await _runStoredAction(PeriodTimeSetAction.share);
+            case _PeriodTimesMenuAction.saveTemplate:
+              await _runStoredAction(PeriodTimeSetAction.saveFile);
+            case _PeriodTimesMenuAction.exportTemplateText:
+              await _runStoredAction(PeriodTimeSetAction.exportText);
+            case _PeriodTimesMenuAction.deleteSet:
+              await _deleteSet();
+          }
+        },
+        requireSavedDraft:
+            action != _PeriodTimesMenuAction.importTemplate &&
+            action != _PeriodTimesMenuAction.importTemplateText,
+      );
+
+  Future<void> _runFlushedMenuAction(
+    String debugLabel,
+    Future<void> Function() action, {
+    bool requireSavedDraft = true,
+  }) async {
+    if (_interactionBlocked || _timePickerOpen) {
       return;
     }
     _setMenuActionInProgress(true);
     try {
       final saved = await _flushPendingAutoSave();
-      if (!saved || !mounted) {
+      if (!saved || !mounted || (requireSavedDraft && _hasInvalidPeriodTimes)) {
         return;
       }
       await runUiCommandWithFeedback(
         context: context,
-        debugLabel: 'Run period time menu action ${action.name}',
-        command: () async {
-          switch (action) {
-            case _PeriodTimesMenuAction.importTemplate:
-              await _importTemplate();
-              return;
-            case _PeriodTimesMenuAction.importTemplateText:
-              await _importTemplateFromText();
-              return;
-            case _PeriodTimesMenuAction.exportTemplate:
-              await _shareTemplate();
-              return;
-            case _PeriodTimesMenuAction.saveTemplate:
-              await _saveTemplateToFile();
-              return;
-            case _PeriodTimesMenuAction.exportTemplateText:
-              await _exportTemplateAsText();
-              return;
-            case _PeriodTimesMenuAction.deleteSet:
-              await _deleteSet();
-              return;
-          }
-        },
+        debugLabel: debugLabel,
+        command: action,
       );
     } finally {
       _setMenuActionInProgress(false);
@@ -863,49 +892,11 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
   }
 
   Future<void> _deleteSet() async {
-    final studentCommands = context.read<StudentCommands>();
     final navigator = Navigator.of(context);
     final route = ModalRoute.of(context);
-    final confirmed = await showExpressiveDialog<bool>(
-      context: context,
-      builder: (context) {
-        final l10n = AppLocalizations.of(context);
-        final name = _nameController.text.trim().isEmpty
-            ? l10n.currentPeriodTimeSet
-            : _nameController.text.trim();
-        var popped = false;
-        void popWith(bool value) {
-          if (popped) return;
-          popped = true;
-          Navigator.of(context).pop(value);
-        }
-
-        return SkedConfirmationDialog(
-          title: Text(l10n.deletePeriodTimeSetTitle),
-          content: Text(l10n.deletePeriodTimeSetMessage(name)),
-          actions: [
-            TextButton(
-              onPressed: () => popWith(false),
-              child: Text(l10n.cancel),
-            ),
-            FilledButton(
-              onPressed: () => popWith(true),
-              child: Text(l10n.delete),
-            ),
-          ],
-        );
-      },
-    );
-    if (confirmed != true) {
-      return;
-    }
-    try {
-      await studentCommands.deletePeriodTimeSet(widget.periodTimeSetId);
-      if (mounted && route?.isCurrent == true) {
-        navigator.pop(true);
-      }
-    } on FormatException catch (error) {
-      _showMessage(error.message);
+    final deleted = await _runStoredAction(PeriodTimeSetAction.delete);
+    if (deleted && mounted && route?.isCurrent == true) {
+      navigator.pop(true);
     }
   }
 
@@ -1010,33 +1001,19 @@ class _PeriodTimesPageState extends State<PeriodTimesPage>
     );
   }
 
-  Future<void> _shareTemplate() async {
-    await _exportService.shareFile(
-      ExportPayload(
-        fileName: 'Sked_period_times.json',
-        content: encodePeriodTimesEnvelope(_periodTimes),
-      ),
+  Future<bool> _runStoredAction(PeriodTimeSetAction action) async {
+    final target = context.read<StudentViewState>().periodTimeSetForId(
+      widget.periodTimeSetId,
+    );
+    if (target == null) return false;
+    return runPeriodTimeSetAction(
+      context: context,
+      target: target,
+      action: action,
+      exportService: _exportService,
+      isOwnerCurrent: () => mounted && !_retired && routeWorkspaceEnabled,
     );
   }
-
-  Future<void> _exportTemplateAsText() async {
-    final l10n = AppLocalizations.of(context);
-    await showTextExportDialog(
-      context,
-      title: l10n.exportPeriodTemplateText,
-      content: encodePeriodTimesEnvelope(_periodTimes),
-    );
-  }
-
-  Future<void> _saveTemplateToFile() => saveExportWithFeedback(
-    context: context,
-    service: _exportService,
-    payload: ExportPayload(
-      fileName: 'Sked_period_times.json',
-      content: encodePeriodTimesEnvelope(_periodTimes),
-    ),
-    isCurrent: () => !_retired && routeWorkspaceEnabled,
-  );
 
   void _showMessage(String message) {
     if (!mounted) {
