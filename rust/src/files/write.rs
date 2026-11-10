@@ -28,7 +28,7 @@ pub(super) struct Backend {
 
 pub(super) fn prepare(
     store: Arc<SnapshotStore>,
-    request: FileWriteRequest,
+    mut request: FileWriteRequest,
     cancellation: &Cancellation,
     tracked: TaskTrackerToken,
 ) -> Result<Backend> {
@@ -71,12 +71,16 @@ pub(super) fn prepare(
     };
     let original_snapshot = if let Some(file) = &mut original {
         let observed = frozen_version(file, cancellation)?;
-        if Some(&observed) != request.expected.as_ref() {
+        if !observed.matches_expected(request.expected.as_ref().expect("existing read version")) {
             return Err(FileError::new(
                 FileErrorCode::Conflict,
                 "The destination no longer matches the content version that was read.",
             ));
         }
+        // The public read version permits omitting the display timestamp.
+        // Freeze the complete observed version after checking its identity,
+        // opaque version, content digest and length against the request.
+        request.expected = Some(observed);
         let snapshot = preparation_store.capture(file, cancellation)?;
         if snapshot.source_version.as_ref() != request.expected.as_ref() {
             return Err(FileError::new(

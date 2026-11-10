@@ -27,6 +27,18 @@ pub struct FileVersion {
     pub modified_at_ms: Option<i64>,
 }
 
+impl FileVersion {
+    pub(super) fn matches_expected(&self, expected: &Self) -> bool {
+        self.resource_id == expected.resource_id
+            && self.version == expected.version
+            && self.sha256 == expected.sha256
+            && self.byte_length == expected.byte_length
+            && expected
+                .modified_at_ms
+                .is_none_or(|modified| self.modified_at_ms == Some(modified))
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum FileKind {
