@@ -11,6 +11,7 @@ import '../../widgets/expressive_empty_state.dart';
 import '../../widgets/sked_expressive_loading_indicator.dart';
 import '../../widgets/settings_list.dart';
 import '../../widgets/settings_page_header.dart';
+import '../../widgets/sked_task_actions.dart';
 import '../../widgets/sked_task_session.dart';
 import '../../widgets/sked_dropdown_menu.dart';
 import '../../widgets/workbench_chrome_metrics.dart';
@@ -965,6 +966,15 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor>
     final l = AppLocalizations.of(context);
     final skill = widget.kind == KnowledgeKind.skill;
     final colors = Theme.of(context).colorScheme;
+    final editorActions = SkedEditorActions(
+      onCancel: _saving
+          ? null
+          : widget.pagePresentation
+          ? requestSettingsExit
+          : () => Navigator.pop(context),
+      onSubmit: _saving ? null : () => unawaited(_save()),
+      busy: _saving,
+    );
     final content = Form(
       key: _form,
       onChanged: () => setState(() {}),
@@ -1101,18 +1111,16 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor>
           onPressed: _saving ? null : () => unawaited(_delete()),
           child: Text(l.agentKnowledgeDelete),
         ),
-      TextButton(
-        onPressed: _saving
-            ? null
-            : widget.pagePresentation
-            ? requestSettingsExit
-            : () => Navigator.pop(context),
-        child: Text(l.cancel),
-      ),
-      FilledButton(
-        key: const ValueKey('knowledge-save'),
-        onPressed: _saving ? null : () => unawaited(_save()),
-        child: Text(_saving ? l.agentSaving : l.save),
+      TextButton(onPressed: editorActions.onCancel, child: Text(l.cancel)),
+      Tooltip(
+        message: WorkbenchChromeMetrics.of(context).desktop
+            ? '${l.save} (${Theme.of(context).platform == TargetPlatform.macOS ? '⌘S' : 'Ctrl+S'})'
+            : l.save,
+        child: FilledButton(
+          key: const ValueKey('knowledge-save'),
+          onPressed: editorActions.onSubmit,
+          child: Text(_saving ? l.agentSaving : l.save),
+        ),
       ),
     ];
     final title = widget.record == null
@@ -1121,7 +1129,7 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor>
         ? widget.record!.title
         : l.agentKnowledgeEdit;
     if (widget.pagePresentation) {
-      return guardSettingsPage(
+      final page = guardSettingsPage(
         SettingsPageScaffold(
           title: title,
           bodyBuilder: (_, header) => ResponsiveSettingsSingleColumnBody(
@@ -1142,8 +1150,9 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor>
           ),
         ),
       );
+      return editorActions.wrapShortcuts(context, page);
     }
-    return PopScope(
+    final dialog = PopScope(
       canPop: !_saving,
       child: AlertDialog(
         title: Text(title),
@@ -1159,6 +1168,7 @@ class _AgentKnowledgeEditorState extends State<AgentKnowledgeEditor>
         actions: actions,
       ),
     );
+    return editorActions.wrapShortcuts(context, dialog);
   }
 }
 

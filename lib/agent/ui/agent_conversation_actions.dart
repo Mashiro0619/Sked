@@ -6,8 +6,10 @@ import 'package:material_ui/material_ui.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/desktop_context_menu.dart';
 import '../../widgets/expressive_dialog.dart';
+import '../../widgets/sked_task_actions.dart';
 import '../../widgets/sked_task_session.dart';
 import '../../widgets/ui_command.dart';
+import '../../widgets/workbench_chrome_metrics.dart';
 import '../conversations/conversation_view_repository.dart';
 import 'agent_ui_delegate.dart';
 
@@ -372,6 +374,23 @@ class _RenameConversationDialog extends StatefulWidget {
 
 class _RenameConversationDialogState extends State<_RenameConversationDialog> {
   late final _controller = TextEditingController(text: widget.title);
+  bool _submitted = false;
+
+  void _finish([String? title]) {
+    if (_submitted ||
+        !mounted ||
+        ModalRoute.of(context)?.isCurrent != true ||
+        !SkedTaskSessionScope.isCurrent(context)) {
+      return;
+    }
+    _submitted = true;
+    Navigator.of(context).pop(title);
+  }
+
+  void _submit() {
+    final title = _controller.text.trim();
+    if (title.isNotEmpty) _finish(title);
+  }
 
   @override
   void dispose() {
@@ -382,32 +401,42 @@ class _RenameConversationDialogState extends State<_RenameConversationDialog> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return AlertDialog(
-      title: Text(l.agentRenameConversation),
-      content: TextField(
-        key: const ValueKey('agent-rename-input'),
-        controller: _controller,
-        autofocus: true,
-        decoration: InputDecoration(filled: true, labelText: l.name),
-        onSubmitted: (value) {
-          if (value.trim().isNotEmpty) Navigator.of(context).pop(value.trim());
-        },
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l.cancel),
-        ),
-        ListenableBuilder(
-          listenable: _controller,
-          builder: (context, _) => FilledButton(
-            onPressed: _controller.text.trim().isEmpty
-                ? null
-                : () => Navigator.of(context).pop(_controller.text.trim()),
-            child: Text(l.save),
+    return ListenableBuilder(
+      listenable: _controller,
+      builder: (context, _) {
+        final actions = SkedEditorActions(
+          onCancel: _submitted ? null : _finish,
+          onSubmit: _submitted || _controller.text.trim().isEmpty
+              ? null
+              : _submit,
+          enabled: !_submitted,
+        );
+        return actions.wrapShortcuts(
+          context,
+          AlertDialog(
+            title: Text(l.agentRenameConversation),
+            content: TextField(
+              key: const ValueKey('agent-rename-input'),
+              controller: _controller,
+              autofocus: true,
+              decoration: InputDecoration(filled: true, labelText: l.name),
+              onSubmitted: (_) => _submit(),
+            ),
+            actions: [
+              TextButton(onPressed: actions.onCancel, child: Text(l.cancel)),
+              Tooltip(
+                message: WorkbenchChromeMetrics.of(context).desktop
+                    ? '${l.save} (${Theme.of(context).platform == TargetPlatform.macOS ? '⌘S' : 'Ctrl+S'})'
+                    : l.save,
+                child: FilledButton(
+                  onPressed: actions.onSubmit,
+                  child: Text(l.save),
+                ),
+              ),
+            ],
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 }
