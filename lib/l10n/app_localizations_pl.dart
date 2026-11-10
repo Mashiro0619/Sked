@@ -10,6 +10,18 @@ class AppLocalizationsPl extends AppLocalizations {
   AppLocalizationsPl([String locale = 'pl']) : super(locale);
 
   @override
+  String get agentDropFilesHint => 'Upuść pliki, aby je załączyć';
+
+  @override
+  String get agentDropFolderUnsupported =>
+      'Nie można tutaj załączać folderów. Upuść pojedyncze pliki.';
+
+  @override
+  String agentDropFilesRemaining(int count) {
+    return 'Pozostałe pliki: $count';
+  }
+
+  @override
   String get agentTaskDetails => 'Task details';
 
   @override

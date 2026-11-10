@@ -10,6 +10,18 @@ class AppLocalizationsEt extends AppLocalizations {
   AppLocalizationsEt([String locale = 'et']) : super(locale);
 
   @override
+  String get agentDropFilesHint => 'Manustamiseks lohistage failid siia';
+
+  @override
+  String get agentDropFolderUnsupported =>
+      'Kaustu ei saa siin manustada. Lohistage üksikud failid.';
+
+  @override
+  String agentDropFilesRemaining(int count) {
+    return 'Järelejäänud failid: $count';
+  }
+
+  @override
   String get agentTaskDetails => 'Task details';
 
   @override

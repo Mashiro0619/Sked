@@ -1,4 +1,10 @@
 {
+  "agentDropFilesHint": "Spustite datoteke, da jih priložite",
+  "@agentDropFilesHint": {},
+  "agentDropFolderUnsupported": "Tukaj ni mogoče priložiti map. Spustite posamezne datoteke.",
+  "@agentDropFolderUnsupported": {},
+  "agentDropFilesRemaining": "Preostale datoteke: {count}",
+  "@agentDropFilesRemaining": {"placeholders": {"count": {"type": "int"}}},
   "@@locale": "sl",
   "appTitle": "Sked",
   "@appTitle": {},

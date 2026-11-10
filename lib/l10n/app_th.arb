@@ -1,4 +1,10 @@
 {
+  "agentDropFilesHint": "วางไฟล์เพื่อแนบ",
+  "@agentDropFilesHint": {},
+  "agentDropFolderUnsupported": "ไม่สามารถแนบโฟลเดอร์ที่นี่ได้ โปรดวางไฟล์แต่ละไฟล์",
+  "@agentDropFolderUnsupported": {},
+  "agentDropFilesRemaining": "ไฟล์ที่เหลือ: {count}",
+  "@agentDropFilesRemaining": {"placeholders": {"count": {"type": "int"}}},
   "@@locale": "th",
   "appTitle": "Sked",
   "@appTitle": {},

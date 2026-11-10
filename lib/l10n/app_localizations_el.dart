@@ -10,6 +10,18 @@ class AppLocalizationsEl extends AppLocalizations {
   AppLocalizationsEl([String locale = 'el']) : super(locale);
 
   @override
+  String get agentDropFilesHint => 'Σύρετε αρχεία εδώ για επισύναψη';
+
+  @override
+  String get agentDropFolderUnsupported =>
+      'Δεν μπορούν να επισυναφθούν φάκελοι εδώ. Σύρετε μεμονωμένα αρχεία.';
+
+  @override
+  String agentDropFilesRemaining(int count) {
+    return 'Αρχεία που απομένουν: $count';
+  }
+
+  @override
   String get agentTaskDetails => 'Task details';
 
   @override

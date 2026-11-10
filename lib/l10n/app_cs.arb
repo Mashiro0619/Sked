@@ -1,4 +1,10 @@
 {
+  "agentDropFilesHint": "Přetažením připojte soubory",
+  "@agentDropFilesHint": {},
+  "agentDropFolderUnsupported": "Zde nelze připojovat složky. Přetáhněte jednotlivé soubory.",
+  "@agentDropFolderUnsupported": {},
+  "agentDropFilesRemaining": "Zbývající soubory: {count}",
+  "@agentDropFilesRemaining": {"placeholders": {"count": {"type": "int"}}},
   "@@locale": "cs",
   "appTitle": "Sked",
   "@appTitle": {},

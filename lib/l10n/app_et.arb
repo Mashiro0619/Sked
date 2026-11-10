@@ -1,4 +1,10 @@
 {
+  "agentDropFilesHint": "Manustamiseks lohistage failid siia",
+  "@agentDropFilesHint": {},
+  "agentDropFolderUnsupported": "Kaustu ei saa siin manustada. Lohistage üksikud failid.",
+  "@agentDropFolderUnsupported": {},
+  "agentDropFilesRemaining": "Järelejäänud failid: {count}",
+  "@agentDropFilesRemaining": {"placeholders": {"count": {"type": "int"}}},
   "@@locale": "et",
   "appTitle": "Sked",
   "@appTitle": {},

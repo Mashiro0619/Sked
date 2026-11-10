@@ -10,6 +10,18 @@ class AppLocalizationsRu extends AppLocalizations {
   AppLocalizationsRu([String locale = 'ru']) : super(locale);
 
   @override
+  String get agentDropFilesHint => 'Перетащите файлы, чтобы прикрепить их';
+
+  @override
+  String get agentDropFolderUnsupported =>
+      'Здесь нельзя прикреплять папки. Перетащите отдельные файлы.';
+
+  @override
+  String agentDropFilesRemaining(int count) {
+    return 'Осталось файлов: $count';
+  }
+
+  @override
   String get agentTaskDetails => 'Task details';
 
   @override

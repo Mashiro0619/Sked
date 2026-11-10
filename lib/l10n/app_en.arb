@@ -1,4 +1,10 @@
 {
+  "agentDropFilesHint": "Drop files to attach",
+  "@agentDropFilesHint": {},
+  "agentDropFolderUnsupported": "Folders cannot be attached here. Drop individual files.",
+  "@agentDropFolderUnsupported": {},
+  "agentDropFilesRemaining": "Files remaining: {count}",
+  "@agentDropFilesRemaining": {"placeholders": {"count": {"type": "int"}}},
   "agentTaskDetails": "Task details",
   "agentTaskChanges": "Changes",
   "agentContextTitle": "Context",

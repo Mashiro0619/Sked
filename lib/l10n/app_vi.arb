@@ -1,4 +1,10 @@
 {
+  "agentDropFilesHint": "Thả tệp để đính kèm",
+  "@agentDropFilesHint": {},
+  "agentDropFolderUnsupported": "Không thể đính kèm thư mục tại đây. Hãy thả từng tệp.",
+  "@agentDropFolderUnsupported": {},
+  "agentDropFilesRemaining": "Số tệp còn lại: {count}",
+  "@agentDropFilesRemaining": {"placeholders": {"count": {"type": "int"}}},
   "@@locale": "vi",
   "appTitle": "Sked",
   "@appTitle": {},

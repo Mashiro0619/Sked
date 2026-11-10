@@ -10,6 +10,18 @@ class AppLocalizationsHi extends AppLocalizations {
   AppLocalizationsHi([String locale = 'hi']) : super(locale);
 
   @override
+  String get agentDropFilesHint => 'अटैच करने के लिए फ़ाइलें यहाँ छोड़ें';
+
+  @override
+  String get agentDropFolderUnsupported =>
+      'यहाँ फ़ोल्डर अटैच नहीं किए जा सकते। अलग-अलग फ़ाइलें छोड़ें।';
+
+  @override
+  String agentDropFilesRemaining(int count) {
+    return 'बाकी फ़ाइलें: $count';
+  }
+
+  @override
   String get agentTaskDetails => 'Task details';
 
   @override

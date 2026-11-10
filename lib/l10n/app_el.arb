@@ -1,4 +1,10 @@
 {
+  "agentDropFilesHint": "Σύρετε αρχεία εδώ για επισύναψη",
+  "@agentDropFilesHint": {},
+  "agentDropFolderUnsupported": "Δεν μπορούν να επισυναφθούν φάκελοι εδώ. Σύρετε μεμονωμένα αρχεία.",
+  "@agentDropFolderUnsupported": {},
+  "agentDropFilesRemaining": "Αρχεία που απομένουν: {count}",
+  "@agentDropFilesRemaining": {"placeholders": {"count": {"type": "int"}}},
   "@@locale": "el",
   "appTitle": "Sked",
   "@appTitle": {},

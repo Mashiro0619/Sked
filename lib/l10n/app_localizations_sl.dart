@@ -10,6 +10,18 @@ class AppLocalizationsSl extends AppLocalizations {
   AppLocalizationsSl([String locale = 'sl']) : super(locale);
 
   @override
+  String get agentDropFilesHint => 'Spustite datoteke, da jih priložite';
+
+  @override
+  String get agentDropFolderUnsupported =>
+      'Tukaj ni mogoče priložiti map. Spustite posamezne datoteke.';
+
+  @override
+  String agentDropFilesRemaining(int count) {
+    return 'Preostale datoteke: $count';
+  }
+
+  @override
   String get agentTaskDetails => 'Task details';
 
   @override

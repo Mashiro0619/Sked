@@ -10,6 +10,19 @@ class AppLocalizationsNl extends AppLocalizations {
   AppLocalizationsNl([String locale = 'nl']) : super(locale);
 
   @override
+  String get agentDropFilesHint =>
+      'Sleep bestanden hierheen om ze bij te voegen';
+
+  @override
+  String get agentDropFolderUnsupported =>
+      'Mappen kunnen hier niet worden bijgevoegd. Sleep afzonderlijke bestanden hierheen.';
+
+  @override
+  String agentDropFilesRemaining(int count) {
+    return 'Resterende bestanden: $count';
+  }
+
+  @override
   String get agentTaskDetails => 'Task details';
 
   @override

@@ -1,4 +1,10 @@
 {
+  "agentDropFilesHint": "अटैच करने के लिए फ़ाइलें यहाँ छोड़ें",
+  "@agentDropFilesHint": {},
+  "agentDropFolderUnsupported": "यहाँ फ़ोल्डर अटैच नहीं किए जा सकते। अलग-अलग फ़ाइलें छोड़ें।",
+  "@agentDropFolderUnsupported": {},
+  "agentDropFilesRemaining": "बाकी फ़ाइलें: {count}",
+  "@agentDropFilesRemaining": {"placeholders": {"count": {"type": "int"}}},
   "@@locale": "hi",
   "appTitle": "Sked",
   "@appTitle": {},

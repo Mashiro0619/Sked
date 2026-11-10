@@ -1,4 +1,10 @@
 {
+  "agentDropFilesHint": "Plasați fișiere pentru a le atașa",
+  "@agentDropFilesHint": {},
+  "agentDropFolderUnsupported": "Nu se pot atașa foldere aici. Plasați fișiere individuale.",
+  "@agentDropFolderUnsupported": {},
+  "agentDropFilesRemaining": "Fișiere rămase: {count}",
+  "@agentDropFilesRemaining": {"placeholders": {"count": {"type": "int"}}},
   "@@locale": "ro",
   "appTitle": "Sked",
   "@appTitle": {},

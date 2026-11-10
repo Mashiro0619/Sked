@@ -10,6 +10,18 @@ class AppLocalizationsHu extends AppLocalizations {
   AppLocalizationsHu([String locale = 'hu']) : super(locale);
 
   @override
+  String get agentDropFilesHint => 'Húzza ide a csatolandó fájlokat';
+
+  @override
+  String get agentDropFolderUnsupported =>
+      'Itt nem csatolhatók mappák. Húzzon ide különálló fájlokat.';
+
+  @override
+  String agentDropFilesRemaining(int count) {
+    return 'Hátralévő fájlok: $count';
+  }
+
+  @override
   String get agentTaskDetails => 'Task details';
 
   @override

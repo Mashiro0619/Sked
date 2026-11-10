@@ -10,6 +10,18 @@ class AppLocalizationsKo extends AppLocalizations {
   AppLocalizationsKo([String locale = 'ko']) : super(locale);
 
   @override
+  String get agentDropFilesHint => '파일을 끌어다 놓아 첨부';
+
+  @override
+  String get agentDropFolderUnsupported =>
+      '여기에는 폴더를 첨부할 수 없습니다. 개별 파일을 끌어다 놓으세요.';
+
+  @override
+  String agentDropFilesRemaining(int count) {
+    return '남은 파일: $count';
+  }
+
+  @override
   String get agentTaskDetails => 'Task details';
 
   @override

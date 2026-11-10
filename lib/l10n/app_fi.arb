@@ -1,4 +1,10 @@
 {
+  "agentDropFilesHint": "Liitä tiedostot pudottamalla ne tähän",
+  "@agentDropFilesHint": {},
+  "agentDropFolderUnsupported": "Kansioita ei voi liittää tähän. Pudota yksittäisiä tiedostoja.",
+  "@agentDropFolderUnsupported": {},
+  "agentDropFilesRemaining": "Jäljellä olevat tiedostot: {count}",
+  "@agentDropFilesRemaining": {"placeholders": {"count": {"type": "int"}}},
   "@@locale": "fi",
   "appTitle": "Sked",
   "@appTitle": {},

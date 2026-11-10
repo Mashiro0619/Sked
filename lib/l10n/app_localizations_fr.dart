@@ -10,6 +10,18 @@ class AppLocalizationsFr extends AppLocalizations {
   AppLocalizationsFr([String locale = 'fr']) : super(locale);
 
   @override
+  String get agentDropFilesHint => 'Déposez des fichiers pour les joindre';
+
+  @override
+  String get agentDropFolderUnsupported =>
+      'Les dossiers ne peuvent pas être joints ici. Déposez des fichiers individuels.';
+
+  @override
+  String agentDropFilesRemaining(int count) {
+    return 'Fichiers restants : $count';
+  }
+
+  @override
   String get agentTaskDetails => 'Task details';
 
   @override

@@ -1,4 +1,10 @@
 {
+  "agentDropFilesHint": "Släpp filer för att bifoga dem",
+  "@agentDropFilesHint": {},
+  "agentDropFolderUnsupported": "Mappar kan inte bifogas här. Släpp enskilda filer.",
+  "@agentDropFolderUnsupported": {},
+  "agentDropFilesRemaining": "Återstående filer: {count}",
+  "@agentDropFilesRemaining": {"placeholders": {"count": {"type": "int"}}},
   "@@locale": "sv",
   "appTitle": "Sked",
   "@appTitle": {},

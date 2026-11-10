@@ -1,4 +1,10 @@
 {
+  "agentDropFilesHint": "Solte arquivos para anexar",
+  "@agentDropFilesHint": {},
+  "agentDropFolderUnsupported": "Não é possível anexar pastas aqui. Solte arquivos individuais.",
+  "@agentDropFolderUnsupported": {},
+  "agentDropFilesRemaining": "Arquivos restantes: {count}",
+  "@agentDropFilesRemaining": {"placeholders": {"count": {"type": "int"}}},
   "@@locale": "pt",
   "appTitle": "Sked",
   "@appTitle": {},

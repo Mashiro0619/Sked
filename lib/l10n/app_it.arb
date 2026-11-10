@@ -1,4 +1,10 @@
 {
+  "agentDropFilesHint": "Trascina i file qui per allegarli",
+  "@agentDropFilesHint": {},
+  "agentDropFolderUnsupported": "Qui non è possibile allegare cartelle. Trascina i singoli file.",
+  "@agentDropFolderUnsupported": {},
+  "agentDropFilesRemaining": "File rimanenti: {count}",
+  "@agentDropFilesRemaining": {"placeholders": {"count": {"type": "int"}}},
   "@@locale": "it",
   "appTitle": "Sked",
   "@appTitle": {},

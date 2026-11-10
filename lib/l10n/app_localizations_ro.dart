@@ -10,6 +10,18 @@ class AppLocalizationsRo extends AppLocalizations {
   AppLocalizationsRo([String locale = 'ro']) : super(locale);
 
   @override
+  String get agentDropFilesHint => 'Plasați fișiere pentru a le atașa';
+
+  @override
+  String get agentDropFolderUnsupported =>
+      'Nu se pot atașa foldere aici. Plasați fișiere individuale.';
+
+  @override
+  String agentDropFilesRemaining(int count) {
+    return 'Fișiere rămase: $count';
+  }
+
+  @override
   String get agentTaskDetails => 'Task details';
 
   @override

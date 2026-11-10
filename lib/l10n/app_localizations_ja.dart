@@ -10,6 +10,18 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
+  String get agentDropFilesHint => 'ファイルをドロップして添付';
+
+  @override
+  String get agentDropFolderUnsupported =>
+      'ここにはフォルダーを添付できません。個別のファイルをドロップしてください。';
+
+  @override
+  String agentDropFilesRemaining(int count) {
+    return '残りのファイル：$count';
+  }
+
+  @override
   String get agentTaskDetails => 'Task details';
 
   @override

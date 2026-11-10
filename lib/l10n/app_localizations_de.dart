@@ -10,6 +10,18 @@ class AppLocalizationsDe extends AppLocalizations {
   AppLocalizationsDe([String locale = 'de']) : super(locale);
 
   @override
+  String get agentDropFilesHint => 'Dateien zum Anhängen hier ablegen';
+
+  @override
+  String get agentDropFolderUnsupported =>
+      'Ordner können hier nicht angehängt werden. Legen Sie einzelne Dateien ab.';
+
+  @override
+  String agentDropFilesRemaining(int count) {
+    return 'Verbleibende Dateien: $count';
+  }
+
+  @override
   String get agentTaskDetails => 'Task details';
 
   @override

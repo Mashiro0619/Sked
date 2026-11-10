@@ -10,6 +10,18 @@ class AppLocalizationsCs extends AppLocalizations {
   AppLocalizationsCs([String locale = 'cs']) : super(locale);
 
   @override
+  String get agentDropFilesHint => 'Přetažením připojte soubory';
+
+  @override
+  String get agentDropFolderUnsupported =>
+      'Zde nelze připojovat složky. Přetáhněte jednotlivé soubory.';
+
+  @override
+  String agentDropFilesRemaining(int count) {
+    return 'Zbývající soubory: $count';
+  }
+
+  @override
   String get agentTaskDetails => 'Task details';
 
   @override

@@ -10,6 +10,18 @@ class AppLocalizationsTh extends AppLocalizations {
   AppLocalizationsTh([String locale = 'th']) : super(locale);
 
   @override
+  String get agentDropFilesHint => 'วางไฟล์เพื่อแนบ';
+
+  @override
+  String get agentDropFolderUnsupported =>
+      'ไม่สามารถแนบโฟลเดอร์ที่นี่ได้ โปรดวางไฟล์แต่ละไฟล์';
+
+  @override
+  String agentDropFilesRemaining(int count) {
+    return 'ไฟล์ที่เหลือ: $count';
+  }
+
+  @override
   String get agentTaskDetails => 'Task details';
 
   @override

@@ -100,7 +100,7 @@ class RustAttachmentReader implements AgentAttachmentReader {
 
 /// Owns picker staging and UI progress. Rust publishes and collects saved blobs.
 class RustConversationAttachments extends ChangeNotifier
-    implements AgentAttachmentController {
+    implements AgentAttachmentController, AgentAttachmentInputOwner {
   RustConversationAttachments({
     required this.client,
     required this.readConversation,
@@ -179,12 +179,46 @@ class RustConversationAttachments extends ChangeNotifier
     String conversationId,
     XFile file, {
     required bool Function() canModify,
+  }) => _attach(conversationId, file, canModify: canModify);
+
+  @override
+  Future<AgentAttachmentInput> captureInput(
+    String conversationId, {
+    required bool Function() canModify,
+  }) async {
+    _check(canModify);
+    final epoch = _epoch;
+    final target = await _target(conversationId);
+    _check(canModify);
+    if (epoch != _epoch) {
+      throw const AttachmentException(AttachmentError.conflict);
+    }
+    return _RustAttachmentInput(
+      (file, canModify) => _attach(
+        conversationId,
+        file,
+        canModify: canModify,
+        capturedTarget: target,
+        capturedEpoch: epoch,
+      ),
+    );
+  }
+
+  Future<void> _attach(
+    String conversationId,
+    XFile file, {
+    required bool Function() canModify,
+    management.DraftAttachmentTarget? capturedTarget,
+    int? capturedEpoch,
   }) => _enqueue(() async {
     _check(canModify);
+    if (capturedEpoch != null && capturedEpoch != _epoch) {
+      throw const AttachmentException(AttachmentError.conflict);
+    }
     if (_pending.containsKey(conversationId)) {
       throw const AttachmentException(AttachmentError.conflict);
     }
-    final target = await _target(conversationId);
+    final target = capturedTarget ?? await _target(conversationId);
     final task = _AttachmentImport(generateUuidV4(), _epoch);
     _imports[conversationId] = task;
     _notify();
@@ -549,6 +583,16 @@ class RustConversationAttachments extends ChangeNotifier
     }
     super.dispose();
   }
+}
+
+class _RustAttachmentInput implements AgentAttachmentInput {
+  const _RustAttachmentInput(this._attach);
+
+  final Future<void> Function(XFile, bool Function()) _attach;
+
+  @override
+  Future<void> attach(XFile file, {required bool Function() canModify}) =>
+      _attach(file, canModify);
 }
 
 class _StagedAttachment {

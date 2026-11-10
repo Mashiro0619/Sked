@@ -1,4 +1,10 @@
 {
+  "agentDropFilesHint": "Húzza ide a csatolandó fájlokat",
+  "@agentDropFilesHint": {},
+  "agentDropFolderUnsupported": "Itt nem csatolhatók mappák. Húzzon ide különálló fájlokat.",
+  "@agentDropFolderUnsupported": {},
+  "agentDropFilesRemaining": "Hátralévő fájlok: {count}",
+  "@agentDropFilesRemaining": {"placeholders": {"count": {"type": "int"}}},
   "@@locale": "hu",
   "appTitle": "Sked",
   "@appTitle": {},

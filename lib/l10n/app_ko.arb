@@ -1,4 +1,10 @@
 {
+  "agentDropFilesHint": "파일을 끌어다 놓아 첨부",
+  "@agentDropFilesHint": {},
+  "agentDropFolderUnsupported": "여기에는 폴더를 첨부할 수 없습니다. 개별 파일을 끌어다 놓으세요.",
+  "@agentDropFolderUnsupported": {},
+  "agentDropFilesRemaining": "남은 파일: {count}",
+  "@agentDropFilesRemaining": {"placeholders": {"count": {"type": "int"}}},
   "@@locale": "ko",
   "appTitle": "Sked",
   "@appTitle": {},

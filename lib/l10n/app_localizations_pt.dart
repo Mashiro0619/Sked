@@ -10,6 +10,18 @@ class AppLocalizationsPt extends AppLocalizations {
   AppLocalizationsPt([String locale = 'pt']) : super(locale);
 
   @override
+  String get agentDropFilesHint => 'Solte arquivos para anexar';
+
+  @override
+  String get agentDropFolderUnsupported =>
+      'Não é possível anexar pastas aqui. Solte arquivos individuais.';
+
+  @override
+  String agentDropFilesRemaining(int count) {
+    return 'Arquivos restantes: $count';
+  }
+
+  @override
   String get agentTaskDetails => 'Task details';
 
   @override

@@ -10,6 +10,17 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
+  String get agentDropFilesHint => '拖入文件以添加附件';
+
+  @override
+  String get agentDropFolderUnsupported => '此处不能添加文件夹，请拖入具体文件。';
+
+  @override
+  String agentDropFilesRemaining(int count) {
+    return '待添加文件：$count';
+  }
+
+  @override
   String get agentTaskDetails => '任务详情';
 
   @override
@@ -4294,6 +4305,17 @@ class AppLocalizationsZh extends AppLocalizations {
 /// The translations for Chinese, using the Han script (`zh_Hant`).
 class AppLocalizationsZhHant extends AppLocalizationsZh {
   AppLocalizationsZhHant() : super('zh_Hant');
+
+  @override
+  String get agentDropFilesHint => '拖入檔案以加入附件';
+
+  @override
+  String get agentDropFolderUnsupported => '此處無法加入資料夾，請拖入個別檔案。';
+
+  @override
+  String agentDropFilesRemaining(int count) {
+    return '待加入檔案：$count';
+  }
 
   @override
   String get agentTaskDetails => '任務詳情';

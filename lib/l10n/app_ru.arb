@@ -1,4 +1,10 @@
 {
+  "agentDropFilesHint": "Перетащите файлы, чтобы прикрепить их",
+  "@agentDropFilesHint": {},
+  "agentDropFolderUnsupported": "Здесь нельзя прикреплять папки. Перетащите отдельные файлы.",
+  "@agentDropFolderUnsupported": {},
+  "agentDropFilesRemaining": "Осталось файлов: {count}",
+  "@agentDropFilesRemaining": {"placeholders": {"count": {"type": "int"}}},
   "@@locale": "ru",
   "appTitle": "Sked",
   "@appTitle": {},

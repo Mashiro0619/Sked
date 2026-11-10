@@ -10,6 +10,18 @@ class AppLocalizationsSv extends AppLocalizations {
   AppLocalizationsSv([String locale = 'sv']) : super(locale);
 
   @override
+  String get agentDropFilesHint => 'Släpp filer för att bifoga dem';
+
+  @override
+  String get agentDropFolderUnsupported =>
+      'Mappar kan inte bifogas här. Släpp enskilda filer.';
+
+  @override
+  String agentDropFilesRemaining(int count) {
+    return 'Återstående filer: $count';
+  }
+
+  @override
   String get agentTaskDetails => 'Task details';
 
   @override

@@ -10,6 +10,18 @@ class AppLocalizationsVi extends AppLocalizations {
   AppLocalizationsVi([String locale = 'vi']) : super(locale);
 
   @override
+  String get agentDropFilesHint => 'Thả tệp để đính kèm';
+
+  @override
+  String get agentDropFolderUnsupported =>
+      'Không thể đính kèm thư mục tại đây. Hãy thả từng tệp.';
+
+  @override
+  String agentDropFilesRemaining(int count) {
+    return 'Số tệp còn lại: $count';
+  }
+
+  @override
   String get agentTaskDetails => 'Task details';
 
   @override

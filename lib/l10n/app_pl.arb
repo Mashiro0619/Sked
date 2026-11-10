@@ -1,4 +1,10 @@
 {
+  "agentDropFilesHint": "Upuść pliki, aby je załączyć",
+  "@agentDropFilesHint": {},
+  "agentDropFolderUnsupported": "Nie można tutaj załączać folderów. Upuść pojedyncze pliki.",
+  "@agentDropFolderUnsupported": {},
+  "agentDropFilesRemaining": "Pozostałe pliki: {count}",
+  "@agentDropFilesRemaining": {"placeholders": {"count": {"type": "int"}}},
   "@@locale": "pl",
   "appTitle": "Sked",
   "@appTitle": {},

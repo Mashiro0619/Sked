@@ -1,4 +1,10 @@
 {
+  "agentDropFilesHint": "Suelta archivos para adjuntarlos",
+  "@agentDropFilesHint": {},
+  "agentDropFolderUnsupported": "Aquí no se pueden adjuntar carpetas. Suelta archivos individuales.",
+  "@agentDropFolderUnsupported": {},
+  "agentDropFilesRemaining": "Archivos restantes: {count}",
+  "@agentDropFilesRemaining": {"placeholders": {"count": {"type": "int"}}},
   "@@locale": "es",
   "appTitle": "Sked",
   "@appTitle": {},

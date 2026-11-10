@@ -10,6 +10,18 @@ class AppLocalizationsDa extends AppLocalizations {
   AppLocalizationsDa([String locale = 'da']) : super(locale);
 
   @override
+  String get agentDropFilesHint => 'Slip filer for at vedhæfte dem';
+
+  @override
+  String get agentDropFolderUnsupported =>
+      'Mapper kan ikke vedhæftes her. Slip de enkelte filer.';
+
+  @override
+  String agentDropFilesRemaining(int count) {
+    return 'Resterende filer: $count';
+  }
+
+  @override
   String get agentTaskDetails => 'Task details';
 
   @override

@@ -1,4 +1,10 @@
 {
+  "agentDropFilesHint": "Пуснете файлове, за да ги прикачите",
+  "@agentDropFilesHint": {},
+  "agentDropFolderUnsupported": "Тук не могат да се прикачват папки. Пуснете отделни файлове.",
+  "@agentDropFolderUnsupported": {},
+  "agentDropFilesRemaining": "Оставащи файлове: {count}",
+  "@agentDropFilesRemaining": {"placeholders": {"count": {"type": "int"}}},
   "@@locale": "bg",
   "appTitle": "Sked",
   "@appTitle": {},

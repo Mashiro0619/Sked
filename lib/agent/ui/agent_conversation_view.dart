@@ -40,6 +40,7 @@ import 'agent_selectable_text.dart';
 import 'agent_transcript.dart';
 import 'agent_turn_activity.dart';
 import 'agent_attachment_view.dart';
+import 'agent_desktop_file_drop.dart';
 import '../attachments/agent_attachment_controller.dart';
 import '../conversations/conversation_view_repository.dart';
 import '../conversations/conversation_browse_repository.dart';
@@ -64,6 +65,7 @@ import 'agent_task_plan_view.dart';
 import 'agent_task_inspector.dart';
 
 part 'agent_composer_references.dart';
+part 'agent_composer_file_input.dart';
 part 'agent_task_plan_panel.dart';
 part 'agent_task_inspector_panel.dart';
 part 'agent_queued_input_actions.dart';
@@ -241,6 +243,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
 
   void _updateReferenceState(VoidCallback update) => setState(update);
   void _updateProcessState(VoidCallback update) => setState(update);
+  void _updateFileInputState(VoidCallback update) => setState(update);
 
   bool get _uiActive =>
       mounted &&
@@ -254,6 +257,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   SkedTaskSession? _messageHistorySession;
 
   void _invalidateUiSource() {
+    _retireDesktopInput();
     _uiGeneration++;
     _replyTexts.clear();
     _transcriptVersions.clear();
@@ -392,6 +396,8 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   bool _attachmentTooLarge = false;
   bool _attachmentFailed = false;
   AttachmentError? _binaryAttachmentError;
+  _AgentDesktopInputBatch? _desktopInputBatch;
+  bool _desktopDropFolderRejected = false;
   ConversationFileAttachments get _attachments =>
       _fileAttachments[_repository] ??= ConversationFileAttachments(
         _repository,
@@ -411,15 +417,16 @@ class _AgentConversationViewState extends State<AgentConversationView> {
 
   Future<void> _binaryAction(
     String id,
-    Future<void> Function(AgentAttachmentController service) action,
-  ) => _perform('attachment-$id', () async {
+    Future<void> Function(AgentAttachmentController service) action, {
+    bool Function()? isOwnerCurrent,
+  }) => _perform('attachment-$id', () async {
     final service = widget.binaryAttachments;
     if (service == null) return;
     final repository = _repository;
     final uiGeneration = _uiGeneration;
     final dataGeneration = widget.readDatasetGeneration?.call();
     bool isCurrent() =>
-        _uiSessionCurrent(uiGeneration, id) &&
+        (isOwnerCurrent?.call() ?? _uiSessionCurrent(uiGeneration, id)) &&
         identical(repository, _repository) &&
         identical(service, widget.binaryAttachments) &&
         dataGeneration == widget.readDatasetGeneration?.call();
@@ -435,7 +442,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
         setState(() => _binaryAttachmentError = AttachmentError.unavailable);
       }
     }
-  });
+  }, isCurrent: isOwnerCurrent);
 
   VoidCallback? _cancelAttachmentImport(
     String id,
@@ -480,27 +487,29 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       });
 
   Future<void> _retryBinaryAttachment(String id) =>
-      _binaryAction(id, (service) async {
-        final repository = _repository;
-        final uiGeneration = _uiGeneration;
-        if (!repository.canWrite) {
-          if (widget.recoverConversations case final recover?) {
-            await recover();
-          } else {
-            await repository.load();
+      _desktopInputBatch?.conversationId == id
+      ? _continueDesktopInput(_desktopInputBatch!)
+      : _binaryAction(id, (service) async {
+          final repository = _repository;
+          final uiGeneration = _uiGeneration;
+          if (!repository.canWrite) {
+            if (widget.recoverConversations case final recover?) {
+              await recover();
+            } else {
+              await repository.load();
+            }
           }
-        }
-        if (!_uiSessionCurrent(uiGeneration, id) ||
-            !identical(repository, _repository)) {
-          return;
-        }
-        await service.retry(
-          id,
-          canModify: () =>
-              _uiSessionCurrent(uiGeneration, id) &&
-              _canModifyBinaryAttachments(id),
-        );
-      });
+          if (!_uiSessionCurrent(uiGeneration, id) ||
+              !identical(repository, _repository)) {
+            return;
+          }
+          await service.retry(
+            id,
+            canModify: () =>
+                _uiSessionCurrent(uiGeneration, id) &&
+                _canModifyBinaryAttachments(id),
+          );
+        });
 
   bool _hasInput(AgentConversation conversation) =>
       _composer.text.trim().isNotEmpty ||
@@ -668,6 +677,11 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       _configurationGeneration++;
       _invalidateReferences();
     }
+    if (!widget.active ||
+        !TickerMode.valuesOf(context).enabled ||
+        ModalRoute.of(context)?.isActive == false) {
+      _retireDesktopInput();
+    }
     final becameActive = active && !_hostActive;
     _hostActive = active;
     if (becameActive) _restoreReading(_repository.selectedId);
@@ -714,6 +728,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       widget.delegate.state.addListener(_runtimeChanged);
     }
     if (oldWidget.binaryAttachments != widget.binaryAttachments) {
+      _retireDesktopInput();
       oldWidget.binaryAttachments?.removeListener(_changed);
       widget.binaryAttachments?.addListener(_changed);
     }
@@ -835,6 +850,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
       }
     }
     setState(() {
+      _discardStaleDesktopInput();
       if (synchronizeDraft || switched) _synchronizeDraft();
     });
     if (synchronizeDraft || switched) {
@@ -1072,6 +1088,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
   });
 
   Future<void> _send(AgentConversation conversation) async {
+    if (_desktopInputBatch?.conversationId == conversation.id) return;
     final repository = _repository;
     final uiGeneration = _uiGeneration;
     final delegate = widget.delegate;
@@ -1096,6 +1113,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
     AgentConversation conversation, {
     required bool steering,
   }) async {
+    if (_desktopInputBatch?.conversationId == conversation.id) return;
     final repository = _repository;
     final uiGeneration = _uiGeneration;
     final delegate = widget.delegate;
@@ -1733,8 +1751,18 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                 _notice(l.agentAttachmentTooLarge, error: true),
               if (_binaryAttachmentError case final error?)
                 _notice(agentAttachmentError(l, error), error: true),
+              if (_desktopDropFolderRejected)
+                _notice(l.agentDropFolderUnsupported, error: true),
+              if (_desktopInputBatch case final batch?
+                  when batch.conversationId == conversation?.id &&
+                      batch.next < batch.files.length)
+                _notice(
+                  l.agentDropFilesRemaining(batch.files.length - batch.next),
+                ),
               if (conversation != null &&
-                  widget.binaryAttachments?.hasPending(conversation.id) == true)
+                  (widget.binaryAttachments?.hasPending(conversation.id) ==
+                          true ||
+                      _desktopInputBatch?.conversationId == conversation.id))
                 Wrap(
                   children: [
                     TextButton(
@@ -1747,11 +1775,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                     TextButton(
                       onPressed: _busy.contains('attachment-${conversation.id}')
                           ? null
-                          : () => _binaryAction(
-                              conversation.id,
-                              (service) =>
-                                  service.discardPending(conversation.id),
-                            ),
+                          : () => _discardDesktopInput(conversation.id),
                       child: Text(l.cancel),
                     ),
                   ],
@@ -1822,6 +1846,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                         runtime.configured &&
                         !conversation.archived &&
                         !conversation.hasPendingRedo &&
+                        _desktopInputBatch?.conversationId != conversation.id &&
                         widget.binaryAttachments?.isImporting(
                               conversation.id,
                             ) !=
@@ -3317,6 +3342,7 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                   _uiSessionCurrent(uiGeneration, conversation.id);
               final attachAvailable = widget.binaryAttachments != null
                   ? _canModifyBinaryAttachments(conversation.id) &&
+                        _desktopInputBatch == null &&
                         !widget.binaryAttachments!.hasPending(
                           conversation.id,
                         ) &&
@@ -3369,6 +3395,11 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                               : null,
                         ),
                       if (service.isImporting(conversation.id) ||
+                          (_desktopInputBatch?.conversationId ==
+                                  conversation.id &&
+                              _busy.contains(
+                                'attachment-${conversation.id}',
+                              )) ||
                           (active &&
                               const {
                                 AttachmentDelivery.preparing,
@@ -3382,7 +3413,11 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                               const AttachmentProgress(
                                 AttachmentDelivery.saving,
                               ),
-                          onCancel: service.isImporting(conversation.id)
+                          onCancel:
+                              _desktopInputBatch?.conversationId ==
+                                  conversation.id
+                              ? () => _cancelDesktopInput(_desktopInputBatch!)
+                              : service.isImporting(conversation.id)
                               ? _cancelAttachmentImport(
                                   conversation.id,
                                   service,
@@ -3462,135 +3497,151 @@ class _AgentConversationViewState extends State<AgentConversationView> {
                     status,
                   ],
                 );
-                return ListenableBuilder(
-                  listenable: _composerFocus,
-                  builder: (context, child) => Material(
-                    key: _composerSurface,
-                    animationDuration: SkedMotionPolicy.of(context)
-                        .effects(SkedMotionSpeed.fast),
-                    color: visual.composer,
-                    shape: skedShapeSchemeOf(context).container.copyWith(
-                      side: BorderSide(
-                        color: _composerFocus.hasFocus
-                            ? visual.muted
-                            : visual.border,
-                        width: 1,
+                return AgentDesktopFileDrop(
+                  target: (conversation.id, uiGeneration),
+                  enabled:
+                      desktop &&
+                      attachAvailable &&
+                      widget.binaryAttachments is AgentAttachmentInputOwner &&
+                      sourceCurrent(),
+                  onDrop: (files) async {
+                    if (!sourceCurrent()) return;
+                    await _acceptDesktopFiles(conversation.id, files);
+                  },
+                  child: ListenableBuilder(
+                    listenable: _composerFocus,
+                    builder: (context, child) => Material(
+                      key: _composerSurface,
+                      animationDuration: SkedMotionPolicy.of(context)
+                          .effects(SkedMotionSpeed.fast),
+                      color: visual.composer,
+                      shape: skedShapeSchemeOf(context).container.copyWith(
+                        side: BorderSide(
+                          color: _composerFocus.hasFocus
+                              ? visual.muted
+                              : visual.border,
+                          width: 1,
+                        ),
                       ),
+                      clipBehavior: Clip.antiAlias,
+                      child: child,
                     ),
-                    clipBehavior: Clip.antiAlias,
-                    child: child,
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(padding),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (scrollWithTranscript)
-                          body
-                        else
-                          Flexible(
-                            child: Scrollbar(
-                              controller: _composerBodyScroll,
-                              thumbVisibility: true,
-                              child: SingleChildScrollView(
-                                key: const ValueKey(
-                                  'agent-composer-body-scroll',
-                                ),
+                    child: Padding(
+                      padding: EdgeInsets.all(padding),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (scrollWithTranscript)
+                            body
+                          else
+                            Flexible(
+                              child: Scrollbar(
                                 controller: _composerBodyScroll,
-                                primary: false,
-                                child: body,
+                                thumbVisibility: true,
+                                child: SingleChildScrollView(
+                                  key: const ValueKey(
+                                    'agent-composer-body-scroll',
+                                  ),
+                                  controller: _composerBodyScroll,
+                                  primary: false,
+                                  child: body,
+                                ),
+                              ),
+                            ),
+                          const SizedBox(height: 4),
+                          _AgentComposerActions(
+                            key: const ValueKey('agent-composer-actions'),
+                            scrollLeading: scrollLeading,
+                            picker: picker,
+                            contextIndicator: AgentContextIndicator(
+                              key: ValueKey((
+                                'context-indicator',
+                                conversation.id,
+                                uiGeneration,
+                              )),
+                              enabled: _uiActive,
+                              usage: state.contextUsage,
+                            ),
+                            permission: _permissionPicker(
+                              conversation,
+                              l,
+                              compact: compactPermission,
+                            ),
+                            attachment: AgentContextControl(
+                              key: ValueKey((
+                                'composer-more',
+                                conversation.id,
+                                uiGeneration,
+                              )),
+                              usage: state.contextUsage,
+                              moreMenu: true,
+                              enabled: _uiActive,
+                              canAttach: attachAvailable,
+                              canCompact: enabled,
+                              attachLabel: widget.binaryAttachments != null
+                                  ? l.agentAttachAnyFile
+                                  : widget.readDatasetGeneration != null
+                                  ? l.agentAttachFile
+                                  : null,
+                              onAttach:
+                                  widget.binaryAttachments == null &&
+                                      widget.readDatasetGeneration == null
+                                  ? null
+                                  : () {
+                                      if (!sourceCurrent()) return;
+                                      unawaited(
+                                        widget.binaryAttachments != null
+                                            ? _attachBinaryFile(conversation.id)
+                                            : _attachFile(conversation.id),
+                                      );
+                                    },
+                              onCompact: () {
+                                if (!sourceCurrent()) return;
+                                unawaited(
+                                  _perform(
+                                    'compact-${conversation.id}',
+                                    () => widget.delegate.compactContext(
+                                      conversation.id,
+                                    ),
+                                    isCurrent: sourceCurrent,
+                                  ),
+                                );
+                              },
+                            ),
+                            send: IconButton.filled(
+                              key: ValueKey(
+                                active ? 'agent-stop' : 'agent-send',
+                              ),
+                              style: visual.primaryActionStyle,
+                              tooltip: active ? l.agentStop : l.agentSend,
+                              onPressed: active
+                                  ? (_busy.contains(
+                                              'stop-${conversation.id}',
+                                            ) ||
+                                            !sourceCurrent()
+                                        ? null
+                                        : () => _perform(
+                                            'stop-${conversation.id}',
+                                            () => widget.delegate.stop(
+                                              conversation.id,
+                                            ),
+                                            isCurrent: sourceCurrent,
+                                          ))
+                                  : (canSend &&
+                                            !sending &&
+                                            _hasInput(conversation)
+                                        ? () => _send(conversation)
+                                        : null),
+                              icon: Icon(
+                                active
+                                    ? Icons.stop_rounded
+                                    : Icons.arrow_upward_rounded,
                               ),
                             ),
                           ),
-                        const SizedBox(height: 4),
-                        _AgentComposerActions(
-                          key: const ValueKey('agent-composer-actions'),
-                          scrollLeading: scrollLeading,
-                          picker: picker,
-                          contextIndicator: AgentContextIndicator(
-                            key: ValueKey((
-                              'context-indicator',
-                              conversation.id,
-                              uiGeneration,
-                            )),
-                            enabled: _uiActive,
-                            usage: state.contextUsage,
-                          ),
-                          permission: _permissionPicker(
-                            conversation,
-                            l,
-                            compact: compactPermission,
-                          ),
-                          attachment: AgentContextControl(
-                            key: ValueKey((
-                              'composer-more',
-                              conversation.id,
-                              uiGeneration,
-                            )),
-                            usage: state.contextUsage,
-                            moreMenu: true,
-                            enabled: _uiActive,
-                            canAttach: attachAvailable,
-                            canCompact: enabled,
-                            attachLabel: widget.binaryAttachments != null
-                                ? l.agentAttachAnyFile
-                                : widget.readDatasetGeneration != null
-                                ? l.agentAttachFile
-                                : null,
-                            onAttach:
-                                widget.binaryAttachments == null &&
-                                    widget.readDatasetGeneration == null
-                                ? null
-                                : () {
-                                    if (!sourceCurrent()) return;
-                                    unawaited(
-                                      widget.binaryAttachments != null
-                                          ? _attachBinaryFile(conversation.id)
-                                          : _attachFile(conversation.id),
-                                    );
-                                  },
-                            onCompact: () {
-                              if (!sourceCurrent()) return;
-                              unawaited(
-                                _perform(
-                                  'compact-${conversation.id}',
-                                  () => widget.delegate.compactContext(
-                                    conversation.id,
-                                  ),
-                                  isCurrent: sourceCurrent,
-                                ),
-                              );
-                            },
-                          ),
-                          send: IconButton.filled(
-                            key: ValueKey(active ? 'agent-stop' : 'agent-send'),
-                            style: visual.primaryActionStyle,
-                            tooltip: active ? l.agentStop : l.agentSend,
-                            onPressed: active
-                                ? (_busy.contains('stop-${conversation.id}') ||
-                                          !sourceCurrent()
-                                      ? null
-                                      : () => _perform(
-                                          'stop-${conversation.id}',
-                                          () => widget.delegate.stop(
-                                            conversation.id,
-                                          ),
-                                          isCurrent: sourceCurrent,
-                                        ))
-                                : (canSend &&
-                                          !sending &&
-                                          _hasInput(conversation)
-                                      ? () => _send(conversation)
-                                      : null),
-                            icon: Icon(
-                              active
-                                  ? Icons.stop_rounded
-                                  : Icons.arrow_upward_rounded,
-                            ),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 );

@@ -145,6 +145,24 @@ abstract class AppLocalizations {
     Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hant'),
   ];
 
+  /// No description provided for @agentDropFilesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Drop files to attach'**
+  String get agentDropFilesHint;
+
+  /// No description provided for @agentDropFolderUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Folders cannot be attached here. Drop individual files.'**
+  String get agentDropFolderUnsupported;
+
+  /// No description provided for @agentDropFilesRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Files remaining: {count}'**
+  String agentDropFilesRemaining(int count);
+
   /// No description provided for @agentTaskDetails.
   ///
   /// In en, this message translates to:

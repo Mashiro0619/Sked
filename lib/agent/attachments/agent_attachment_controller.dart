@@ -17,6 +17,19 @@ abstract interface class AgentAttachmentReader {
   });
 }
 
+/// A captured conversation input shared by all files from one desktop action.
+abstract interface class AgentAttachmentInput {
+  Future<void> attach(XFile file, {required bool Function() canModify});
+}
+
+/// Optional capability for adapters that accept several files at once.
+abstract interface class AgentAttachmentInputOwner {
+  Future<AgentAttachmentInput> captureInput(
+    String conversationId, {
+    required bool Function() canModify,
+  });
+}
+
 abstract interface class AgentAttachmentController implements Listenable {
   AgentAttachmentReader get repository;
 

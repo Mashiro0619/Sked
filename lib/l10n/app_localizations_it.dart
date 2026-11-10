@@ -10,6 +10,18 @@ class AppLocalizationsIt extends AppLocalizations {
   AppLocalizationsIt([String locale = 'it']) : super(locale);
 
   @override
+  String get agentDropFilesHint => 'Trascina i file qui per allegarli';
+
+  @override
+  String get agentDropFolderUnsupported =>
+      'Qui non è possibile allegare cartelle. Trascina i singoli file.';
+
+  @override
+  String agentDropFilesRemaining(int count) {
+    return 'File rimanenti: $count';
+  }
+
+  @override
   String get agentTaskDetails => 'Task details';
 
   @override

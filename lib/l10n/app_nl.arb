@@ -1,4 +1,10 @@
 {
+  "agentDropFilesHint": "Sleep bestanden hierheen om ze bij te voegen",
+  "@agentDropFilesHint": {},
+  "agentDropFolderUnsupported": "Mappen kunnen hier niet worden bijgevoegd. Sleep afzonderlijke bestanden hierheen.",
+  "@agentDropFolderUnsupported": {},
+  "agentDropFilesRemaining": "Resterende bestanden: {count}",
+  "@agentDropFilesRemaining": {"placeholders": {"count": {"type": "int"}}},
   "@@locale": "nl",
   "appTitle": "Sked",
   "@appTitle": {},

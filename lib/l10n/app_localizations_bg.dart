@@ -10,6 +10,18 @@ class AppLocalizationsBg extends AppLocalizations {
   AppLocalizationsBg([String locale = 'bg']) : super(locale);
 
   @override
+  String get agentDropFilesHint => 'Пуснете файлове, за да ги прикачите';
+
+  @override
+  String get agentDropFolderUnsupported =>
+      'Тук не могат да се прикачват папки. Пуснете отделни файлове.';
+
+  @override
+  String agentDropFilesRemaining(int count) {
+    return 'Оставащи файлове: $count';
+  }
+
+  @override
   String get agentTaskDetails => 'Task details';
 
   @override

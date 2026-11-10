@@ -1,4 +1,10 @@
 {
+  "agentDropFilesHint": "Dateien zum Anhängen hier ablegen",
+  "@agentDropFilesHint": {},
+  "agentDropFolderUnsupported": "Ordner können hier nicht angehängt werden. Legen Sie einzelne Dateien ab.",
+  "@agentDropFolderUnsupported": {},
+  "agentDropFilesRemaining": "Verbleibende Dateien: {count}",
+  "@agentDropFilesRemaining": {"placeholders": {"count": {"type": "int"}}},
   "@@locale": "de",
   "appTitle": "Sked",
   "@appTitle": {},

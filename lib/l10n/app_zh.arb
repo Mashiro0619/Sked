@@ -1,4 +1,10 @@
 {
+  "agentDropFilesHint": "拖入文件以添加附件",
+  "@agentDropFilesHint": {},
+  "agentDropFolderUnsupported": "此处不能添加文件夹，请拖入具体文件。",
+  "@agentDropFolderUnsupported": {},
+  "agentDropFilesRemaining": "待添加文件：{count}",
+  "@agentDropFilesRemaining": {"placeholders": {"count": {"type": "int"}}},
   "agentTaskDetails": "任务详情",
   "agentTaskChanges": "变更",
   "agentContextTitle": "上下文",

@@ -10,6 +10,18 @@ class AppLocalizationsFi extends AppLocalizations {
   AppLocalizationsFi([String locale = 'fi']) : super(locale);
 
   @override
+  String get agentDropFilesHint => 'Liitä tiedostot pudottamalla ne tähän';
+
+  @override
+  String get agentDropFolderUnsupported =>
+      'Kansioita ei voi liittää tähän. Pudota yksittäisiä tiedostoja.';
+
+  @override
+  String agentDropFilesRemaining(int count) {
+    return 'Jäljellä olevat tiedostot: $count';
+  }
+
+  @override
   String get agentTaskDetails => 'Task details';
 
   @override

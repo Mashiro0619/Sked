@@ -1,4 +1,10 @@
 {
+  "agentDropFilesHint": "Déposez des fichiers pour les joindre",
+  "@agentDropFilesHint": {},
+  "agentDropFolderUnsupported": "Les dossiers ne peuvent pas être joints ici. Déposez des fichiers individuels.",
+  "@agentDropFolderUnsupported": {},
+  "agentDropFilesRemaining": "Fichiers restants : {count}",
+  "@agentDropFilesRemaining": {"placeholders": {"count": {"type": "int"}}},
   "@@locale": "fr",
   "appTitle": "Sked",
   "@appTitle": {},

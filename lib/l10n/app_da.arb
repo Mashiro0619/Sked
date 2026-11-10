@@ -1,4 +1,10 @@
 {
+  "agentDropFilesHint": "Slip filer for at vedhæfte dem",
+  "@agentDropFilesHint": {},
+  "agentDropFolderUnsupported": "Mapper kan ikke vedhæftes her. Slip de enkelte filer.",
+  "@agentDropFolderUnsupported": {},
+  "agentDropFilesRemaining": "Resterende filer: {count}",
+  "@agentDropFilesRemaining": {"placeholders": {"count": {"type": "int"}}},
   "@@locale": "da",
   "appTitle": "Sked",
   "@appTitle": {},

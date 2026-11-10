@@ -1,4 +1,10 @@
 {
+  "agentDropFilesHint": "ファイルをドロップして添付",
+  "@agentDropFilesHint": {},
+  "agentDropFolderUnsupported": "ここにはフォルダーを添付できません。個別のファイルをドロップしてください。",
+  "@agentDropFolderUnsupported": {},
+  "agentDropFilesRemaining": "残りのファイル：{count}",
+  "@agentDropFilesRemaining": {"placeholders": {"count": {"type": "int"}}},
   "@@locale": "ja",
   "appTitle": "Sked",
   "@appTitle": {},
