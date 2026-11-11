@@ -7,6 +7,10 @@ use tokio_util::sync::CancellationToken;
 use super::*;
 use crate::storage::services::PersistenceStore;
 
+fn media_type_essence(value: &str) -> &str {
+    value.split(';').next().unwrap_or_default().trim()
+}
+
 pub(super) enum PreparedToolContent {
     Copy {
         reader: Box<dyn Read + Send>,
@@ -62,7 +66,7 @@ impl RuntimeManager {
                     sha256,
                     text_range,
                 } => {
-                    let media_type = media_type.trim().to_ascii_lowercase();
+                    let media_type = media_type_essence(&media_type).to_ascii_lowercase();
                     let files = self
                         .inner
                         .files
@@ -86,7 +90,8 @@ impl RuntimeManager {
                         ));
                     }
                     if captured.media_type.as_deref().is_some_and(|captured| {
-                        !captured.trim().is_empty()
+                        let captured = media_type_essence(captured);
+                        !captured.is_empty()
                             && !captured.eq_ignore_ascii_case("application/octet-stream")
                             && !captured.eq_ignore_ascii_case(&media_type)
                     }) {
