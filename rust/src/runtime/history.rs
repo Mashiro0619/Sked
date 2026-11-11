@@ -1060,7 +1060,6 @@ impl RuntimeManager {
         messages: &[Message],
     ) -> Result<Vec<Value>> {
         self.project_provider_history(snapshot, messages, false)
-            .await
     }
 
     async fn provider_history_for_reading(
@@ -1069,10 +1068,9 @@ impl RuntimeManager {
         messages: &[Message],
     ) -> Result<Vec<Value>> {
         self.project_provider_history(snapshot, messages, true)
-            .await
     }
 
-    async fn project_provider_history(
+    pub(super) fn project_provider_history(
         &self,
         snapshot: &ConversationSnapshot,
         messages: &[Message],
@@ -1091,7 +1089,7 @@ impl RuntimeManager {
                     MessageRole::User => {
                         let mut source = message.clone();
                         source.text = text;
-                        self.provider_prompt(snapshot, &source).await?
+                        self.inner.context.provider_prompt(snapshot, &source)?
                     }
                     MessageRole::Assistant | MessageRole::Tool => ProviderMessage::assistant(text),
                     _ => continue,
@@ -1104,7 +1102,7 @@ impl RuntimeManager {
             }
             match message.role {
                 MessageRole::User => history.push(
-                    serde_json::to_value(self.provider_prompt(snapshot, message).await?)
+                    serde_json::to_value(self.inner.context.provider_prompt(snapshot, message)?)
                         .map_err(|e| RuntimeError::Invalid(e.to_string()))?,
                 ),
                 MessageRole::Assistant | MessageRole::Tool => {

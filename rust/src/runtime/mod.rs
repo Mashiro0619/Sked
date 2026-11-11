@@ -14,6 +14,7 @@ pub mod services;
 #[cfg(test)]
 mod steering_tests;
 mod tool_identity;
+mod tool_recovery;
 mod tools;
 mod transport;
 mod types;
@@ -410,7 +411,8 @@ impl RuntimeManager {
                             .get("operationId")
                             .and_then(Value::as_str)
                             .map(str::to_owned);
-                        operation.phase = if operation_id.is_some()
+                        operation.phase = if operation.binding.is_some()
+                            || operation_id.is_some()
                             || operation.phase == OperationPhase::Executing
                         {
                             OperationPhase::Unresolved
@@ -443,6 +445,7 @@ impl RuntimeManager {
                     Ok(changes)
                 })
                 .await?;
+                self.restore_tool_history_locked(&summary.id).await?;
                 recovered.push(summary.id.clone());
             }
             match page.next_offset {

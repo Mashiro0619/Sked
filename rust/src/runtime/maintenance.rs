@@ -36,13 +36,14 @@ impl RuntimeManager {
         let mut recovered = Vec::new();
         for id in ids {
             let session = self.session(&id).await;
-            {
+            let mut changed = {
                 let state = session.lock().await;
                 if state.active.is_some() || state.archiving {
                     continue;
                 }
-            }
-            let mut changed = self.recover_knowledge_operations(&id).await? > 0;
+                self.restore_tool_history_locked(&id).await?
+            };
+            changed |= self.recover_knowledge_operations(&id).await? > 0;
             let snapshot = self.read(&id).await?;
             for operation in snapshot.operations.into_iter().filter(|operation| {
                 matches!(
