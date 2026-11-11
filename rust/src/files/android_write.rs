@@ -18,7 +18,9 @@ use super::{
     android_jni::{self, FdLease, uncancelled},
     android_ledger::{self, Evidence, Journal, Phase},
     ledger, native,
-    snapshots::{LockedSnapshot, SnapshotStore, frozen_version},
+    snapshots::{
+        CapturedSnapshot, LockedSnapshot, SnapshotRetention, SnapshotStore, frozen_version,
+    },
     with_cleanup_error,
 };
 
@@ -41,6 +43,7 @@ pub(super) struct Backend {
     target: Option<Target>,
     content: Arc<LockedSnapshot>,
     store: Arc<SnapshotStore>,
+    _original_retention: Option<SnapshotRetention>,
     // The last field keeps every retained native resource inside service drain.
     _tracked: TaskTrackerToken,
 }
@@ -123,7 +126,7 @@ pub(super) fn prepare(
                     ));
                 }
                 let original = capture(&store, &document.resource(), cancellation)?;
-                require_snapshot(&original, expected)?;
+                require_snapshot(&original.metadata, expected)?;
                 let resolved = document.resource();
                 (
                     Target::Document(document),
@@ -141,7 +144,7 @@ pub(super) fn prepare(
         Some(
             original_snapshot
                 .as_ref()
-                .and_then(|snapshot| snapshot.source_version.clone())
+                .and_then(|snapshot| snapshot.metadata.source_version.clone())
                 .ok_or_else(|| {
                     invalid("The captured existing file has no complete source version.")
                 })?,
@@ -149,6 +152,10 @@ pub(super) fn prepare(
     } else {
         None
     };
+    let (original_snapshot, original_retention) = original_snapshot
+        .map_or((None, None), |captured| {
+            (Some(captured.metadata), Some(captured.retention))
+        });
     let mut preview = FileWritePreview {
         write_id: uuid::Uuid::new_v4().to_string(),
         spec_digest: String::new(),
@@ -167,6 +174,7 @@ pub(super) fn prepare(
         target: Some(target),
         content,
         store,
+        _original_retention: original_retention,
         _tracked: preparation_token,
     })
 }
@@ -175,7 +183,7 @@ type PreparedTarget = (
     Target,
     Option<FileEntry>,
     Option<FileResourceRef>,
-    Option<FileSnapshot>,
+    Option<CapturedSnapshot>,
     FileWriteGuarantee,
 );
 
@@ -190,7 +198,7 @@ fn prepare_path(
         let mut file = parent.open_original()?;
         require_version(&frozen_version(&mut file, cancellation)?, expected)?;
         let snapshot = store.capture(&mut file, cancellation)?;
-        require_snapshot(&snapshot, expected)?;
+        require_snapshot(&snapshot.metadata, expected)?;
         (Some(file), Some(snapshot))
     } else {
         match parent.open_original() {
@@ -243,7 +251,7 @@ fn capture(
     store: &SnapshotStore,
     resource: &FileResourceRef,
     cancellation: &Cancellation,
-) -> Result<FileSnapshot> {
+) -> Result<CapturedSnapshot> {
     let mut source = native::open_source(resource, cancellation)?;
     store.capture_source(&mut source, cancellation)
 }
@@ -361,7 +369,7 @@ impl Attempt {
                     .as_ref()
                     .expect("existing document version");
                 let current = capture(&self.backend.store, &document.resource(), cancellation)?;
-                require_snapshot(&current, expected)?;
+                require_snapshot(&current.metadata, expected)?;
                 let access = native::describe(&document.resource(), cancellation)?;
                 if !access.modify {
                     return Err(permission(
@@ -651,6 +659,7 @@ impl Attempt {
             .ok_or_else(|| invalid("The created document URI was not returned."))?;
         let snapshot = capture(&self.backend.store, target, &uncancelled())?;
         let version = snapshot
+            .metadata
             .source_version
             .ok_or_else(|| invalid("The provider readback has no source identity."))?;
         if self

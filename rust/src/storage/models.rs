@@ -39,6 +39,7 @@ string_enum!(AttachmentDelivery {
     Cancelled,
     Unknown
 });
+string_enum!(ToolContentKind { Text, Native });
 string_enum!(RunStatus {
     Running,
     Completed,
@@ -201,6 +202,31 @@ pub struct ToolCall {
     pub wire_name: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ToolContentRange {
+    pub offset: u64,
+    pub length: u64,
+}
+
+/// Conversation-owned bytes remain separate from the system file used to read
+/// them. The enclosing Tool message supplies the original call identity.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ToolContentRef {
+    pub id: String,
+    pub attachment_id: String,
+    pub kind: ToolContentKind,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_snapshot_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_resource: Option<crate::files::FileResourceRef>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_version: Option<crate::files::FileVersion>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_range: Option<ToolContentRange>,
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Message {
@@ -216,6 +242,8 @@ pub struct Message {
     pub attachment_ids: Vec<String>,
     pub context_references: Vec<ContextReference>,
     pub attachment_delivery: AttachmentDelivery,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tool_content_refs: Vec<ToolContentRef>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]

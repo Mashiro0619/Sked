@@ -12,7 +12,8 @@ class SelectiveBackupCodec {
   static const schema = 'sked-selective-backup';
   static const version = 2;
   static const agentSchema = 'sked-agent-records';
-  static const agentVersion = 2;
+  static const agentVersion = 3;
+  static const nativeAgentVersions = {2, agentVersion};
   static const manifestPath = 'manifest.json';
 
   Uint8List encode(
@@ -141,7 +142,10 @@ class SelectiveBackupCodec {
       }
       if (!legacy &&
           (manifest['agentSchema'] != agentSchema ||
-              !const {1, agentVersion}.contains(manifest['agentVersion']))) {
+              !const {
+                1,
+                ...nativeAgentVersions,
+              }.contains(manifest['agentVersion']))) {
         throw const SelectiveBackupException(
           SelectiveBackupError.unsupportedVersion,
           'Unsupported Agent backup format.',
@@ -180,7 +184,7 @@ class SelectiveBackupCodec {
       for (final raw in backupList(manifest['objects'])) {
         final entry = backupMap(raw, {'key', 'path', 'byteLength', 'digest'});
         final key = BackupObjectKey.fromJson(entry['key']);
-        if ((legacy || manifest['agentVersion'] != agentVersion) &&
+        if ((legacy || manifest['agentVersion'] == 1) &&
             const {
               BackupObjectKind.conversation,
               BackupObjectKind.attachment,

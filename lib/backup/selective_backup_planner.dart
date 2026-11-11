@@ -280,6 +280,17 @@ BackupRecord rebindBackupRecord(
           .map((id) => mapped(BackupObjectKind.attachment, id))
           .toList();
     }
+    if (raw.containsKey('toolContentRefs')) {
+      for (final reference in backupList(raw['toolContentRefs'])) {
+        if (reference is! Map<String, dynamic>) {
+          backupInvalid('Invalid tool content reference.');
+        }
+        reference['attachmentId'] = mapped(
+          BackupObjectKind.attachment,
+          reference['attachmentId'],
+        );
+      }
+    }
     if (raw.containsKey('contextReferences')) {
       for (final reference in backupList(raw['contextReferences'])) {
         if (reference is! Map<String, dynamic>) {

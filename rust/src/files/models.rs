@@ -94,6 +94,10 @@ pub struct FileSnapshot {
     pub source_version: Option<FileVersion>,
     pub content: FileResourceRef,
     pub content_version: FileVersion,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub media_type: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

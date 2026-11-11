@@ -98,7 +98,7 @@ impl BridgeHost {
                     cancel.kind = HostRequestKind::Cancel;
                     self.publish(cancel);
                     if transport {
-                        Ok(Ok(HostResult { request_id: id.clone(), model_payload: None,
+                        Ok(Ok(HostResult { request_id: id.clone(), model_payload: None, model_content: Vec::new(),
                             details: None, outcome: HostOutcome::Cancelled, ticket: None,
                             error_code: None, error_message: None }))
                     } else {
@@ -167,13 +167,14 @@ impl BridgeHost {
 }
 
 fn tool_result(result: HostResult) -> Result<rt::HostToolResult, rt::HostError> {
-    Ok(rt::HostToolResult {
+    let mut output = rt::HostToolResult {
         model_payload: result
             .model_payload
             .map(JsonPayload::parse)
             .transpose()
             .map_err(error)?
             .unwrap_or(serde_json::Value::Null),
+        model_content: Vec::new(),
         details: result
             .details
             .map(JsonPayload::parse)
@@ -181,7 +182,17 @@ fn tool_result(result: HostResult) -> Result<rt::HostToolResult, rt::HostError> 
             .map_err(error)?
             .unwrap_or(serde_json::Value::Null),
         outcome: result.outcome.into(),
-    })
+    };
+    match result
+        .model_content
+        .into_iter()
+        .map(TryInto::try_into)
+        .collect::<Result<_, String>>()
+    {
+        Ok(content) => output.model_content = content,
+        Err(error) => rt::content_delivery_error(&mut output, error),
+    }
+    Ok(output)
 }
 
 #[flutter_rust_bridge::frb(ignore)]

@@ -1,55 +1,110 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet, VecDeque},
     fs::{File, OpenOptions},
     io::{Read, Seek, SeekFrom, Write},
     path::{Path, PathBuf},
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, Weak},
 };
 
 use sha2::{Digest, Sha256};
 
-#[cfg(target_os = "android")]
-use std::collections::VecDeque;
-
 use super::{
     BUFFER_SIZE, Cancellation, FileEntry, FileError, FileErrorCode, FileKind, FileResourceRef,
-    FileSnapshot, FileVersion, Result, native, validate_id, with_cleanup_error,
+    FileSnapshot, FileVersion, Result, native, snapshot_gc, validate_id, with_cleanup_error,
 };
+
+const CACHED_HANDLES: usize = 64;
+
+/// Keeps private snapshot content reachable without retaining an OS handle or
+/// preventing the file service from closing its admission gate.
+#[derive(Clone)]
+pub struct SnapshotRetention {
+    id: String,
+    _lifetime: Arc<()>,
+}
+
+impl SnapshotRetention {
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+}
+
+pub(super) struct CapturedSnapshot {
+    pub metadata: FileSnapshot,
+    pub retention: SnapshotRetention,
+}
 
 pub(super) struct LockedSnapshot {
     pub metadata: FileSnapshot,
     pub file: Mutex<File>,
+    pub retention: SnapshotRetention,
+}
+
+impl LockedSnapshot {
+    pub fn retained(&self) -> CapturedSnapshot {
+        CapturedSnapshot {
+            metadata: self.metadata.clone(),
+            retention: self.retention.clone(),
+        }
+    }
+}
+
+pub(super) struct SnapshotSource {
+    resource: FileResourceRef,
+    version: FileVersion,
+    name: String,
+    media_type: Option<String>,
 }
 
 struct Cache {
     closing: bool,
     entries: HashMap<String, Arc<LockedSnapshot>>,
-    #[cfg(target_os = "android")]
     recent: VecDeque<String>,
+    retained: HashMap<String, Weak<()>>,
 }
 
 impl Cache {
     fn get(&mut self, id: &str) -> Option<Arc<LockedSnapshot>> {
         let snapshot = self.entries.get(id).cloned();
-        #[cfg(target_os = "android")]
         if snapshot.is_some() {
             self.touch(id.to_owned());
         }
         snapshot
     }
 
-    #[cfg(target_os = "android")]
     fn touch(&mut self, id: String) {
         self.recent.retain(|saved| saved != &id);
         self.recent.push_back(id);
         // Bound idle cached descriptors, not content count or operation count.
         // Admitted readers/writers keep their own Arc even after eviction.
-        while self.entries.len() > 64 {
+        while self.entries.len() > CACHED_HANDLES {
             let Some(oldest) = self.recent.pop_front() else {
                 break;
             };
             self.entries.remove(&oldest);
         }
+    }
+
+    fn retain(&mut self, id: &str) -> SnapshotRetention {
+        let lifetime = self
+            .retained
+            .get(id)
+            .and_then(Weak::upgrade)
+            .unwrap_or_else(|| Arc::new(()));
+        self.retained
+            .insert(id.to_owned(), Arc::downgrade(&lifetime));
+        SnapshotRetention {
+            id: id.to_owned(),
+            _lifetime: lifetime,
+        }
+    }
+
+    fn evict_idle(&mut self) {
+        self.entries
+            .retain(|_, snapshot| Arc::strong_count(snapshot) > 1);
+        self.recent.retain(|id| self.entries.contains_key(id));
+        self.retained
+            .retain(|_, lifetime| lifetime.strong_count() > 0);
     }
 }
 
@@ -81,19 +136,28 @@ impl SnapshotStore {
                 native::sync_private_directory(parent)?;
             }
         }
-        Ok(Self {
+        let store = Self {
             root,
             cache: Mutex::new(Cache {
                 closing: false,
                 entries: HashMap::new(),
-                #[cfg(target_os = "android")]
                 recent: VecDeque::new(),
+                retained: HashMap::new(),
             }),
-        })
+        };
+        store.collect_unused()?;
+        Ok(store)
     }
 
     pub fn begin(&self) -> Result<StagedContent> {
         let id = uuid::Uuid::new_v4().to_string();
+        let retention = {
+            let mut cache = self.cache.lock().expect("file snapshot cache poisoned");
+            if cache.closing {
+                return Err(closing());
+            }
+            cache.retain(&id)
+        };
         let path = self.root.join("snapshots").join(format!("{id}.part"));
         let file = create_private(&path)?;
         Ok(StagedContent {
@@ -101,10 +165,15 @@ impl SnapshotStore {
             file: Some(file),
             length: 0,
             hasher: Sha256::new(),
+            retention,
         })
     }
 
-    pub fn capture(&self, source: &mut File, cancellation: &Cancellation) -> Result<FileSnapshot> {
+    pub fn capture(
+        &self,
+        source: &mut File,
+        cancellation: &Cancellation,
+    ) -> Result<CapturedSnapshot> {
         cancellation.check()?;
         let before = ordinary_entry(source)?;
         let mut content = self.begin()?;
@@ -127,7 +196,16 @@ impl SnapshotStore {
         }
         let mut source_version = before.version;
         source_version.sha256 = Some(content.sha256());
-        content.finish(self, Some((before.resource, source_version)), cancellation)
+        content.finish(
+            self,
+            Some(SnapshotSource {
+                resource: before.resource,
+                version: source_version,
+                name: before.name,
+                media_type: None,
+            }),
+            cancellation,
+        )
     }
 
     /// Provider streams start at their actual beginning and may not support
@@ -136,10 +214,10 @@ impl SnapshotStore {
         &self,
         source: &mut native::SourceReader,
         cancellation: &Cancellation,
-    ) -> Result<FileSnapshot> {
+    ) -> Result<CapturedSnapshot> {
         let captured = (|| {
             cancellation.check()?;
-            let before = native::source_entry(source)?;
+            let (before, media_type) = native::source_metadata(source)?;
             let mut content = self.begin()?;
             let mut buffer = vec![0; BUFFER_SIZE];
             loop {
@@ -164,23 +242,31 @@ impl SnapshotStore {
             let mut version = before.version;
             version.byte_length = Some(content.length);
             version.sha256 = Some(content.sha256());
-            Ok((content, before.resource, version))
+            Ok((
+                content,
+                SnapshotSource {
+                    resource: before.resource,
+                    version,
+                    name: before.name,
+                    media_type,
+                },
+            ))
         })();
         // Closing the retained PFD can report provider errors. Complete it
         // before publishing the copied bytes as a successfully read snapshot.
         let closed = native::close_source(source);
-        let (content, resource, version) = match (captured, closed) {
+        let (content, source) = match (captured, closed) {
             (Ok(captured), Ok(())) => captured,
             (Err(error), Ok(())) | (Ok(_), Err(error)) => return Err(error),
             (Err(error), Err(cleanup)) => return Err(with_cleanup_error(error, cleanup)),
         };
-        content.finish(self, Some((resource, version)), cancellation)
+        content.finish(self, Some(source), cancellation)
     }
 
     pub fn get(&self, id: &str, cancellation: &Cancellation) -> Result<Arc<LockedSnapshot>> {
         validate_id(id)?;
         cancellation.check()?;
-        {
+        let retention = {
             let mut cache = self.cache.lock().expect("file snapshot cache poisoned");
             if cache.closing {
                 return Err(closing());
@@ -188,7 +274,8 @@ impl SnapshotStore {
             if let Some(snapshot) = cache.get(id) {
                 return Ok(snapshot);
             }
-        }
+            cache.retain(id)
+        };
         let path = self.root.join("snapshots").join(format!("{id}.json"));
         let metadata: FileSnapshot =
             serde_json::from_reader(File::open(path)?).map_err(|error| {
@@ -216,6 +303,7 @@ impl SnapshotStore {
         self.cache(Arc::new(LockedSnapshot {
             metadata,
             file: Mutex::new(file),
+            retention,
         }))
     }
 
@@ -229,7 +317,6 @@ impl SnapshotStore {
             .entry(snapshot.metadata.id.clone())
             .or_insert(snapshot)
             .clone();
-        #[cfg(target_os = "android")]
         cache.touch(snapshot.metadata.id.clone());
         Ok(snapshot)
     }
@@ -237,9 +324,40 @@ impl SnapshotStore {
     pub fn close(&self) -> Vec<Arc<LockedSnapshot>> {
         let mut cache = self.cache.lock().expect("file snapshot cache poisoned");
         cache.closing = true;
-        #[cfg(target_os = "android")]
         cache.recent.clear();
         cache.entries.drain().map(|(_, value)| value).collect()
+    }
+
+    pub fn collect_unused(&self) -> Result<()> {
+        self.collect(false)
+    }
+
+    /// Call only after the service task tracker has drained, prepared backends
+    /// have been discarded, and cached handles have closed. Remaining access
+    /// retentions belong to a service that can no longer admit their reads.
+    pub fn collect_after_shutdown(&self) -> Result<()> {
+        self.collect(true)
+    }
+
+    fn collect(&self, terminal: bool) -> Result<()> {
+        // Creating a retention and deciding to remove its files share this
+        // gate. Slow native I/O never holds an individual snapshot's read lock.
+        let mut cache = self.cache.lock().expect("file snapshot cache poisoned");
+        if terminal && !cache.closing {
+            return Err(FileError::new(
+                FileErrorCode::Conflict,
+                "Terminal snapshot reclamation requires a closed file service.",
+            ));
+        }
+        cache.evict_idle();
+        let retained: HashSet<String> = if terminal {
+            HashSet::new()
+        } else {
+            cache.retained.keys().cloned().collect()
+        };
+        let result = snapshot_gc::collect(&self.root, &retained);
+        drop(cache);
+        result
     }
 }
 
@@ -248,6 +366,7 @@ pub(super) struct StagedContent {
     file: Option<File>,
     pub length: u64,
     hasher: Sha256,
+    retention: SnapshotRetention,
 }
 
 impl StagedContent {
@@ -291,9 +410,9 @@ impl StagedContent {
     pub fn finish(
         mut self,
         store: &SnapshotStore,
-        source: Option<(FileResourceRef, FileVersion)>,
+        source: Option<SnapshotSource>,
         cancellation: &Cancellation,
-    ) -> Result<FileSnapshot> {
+    ) -> Result<CapturedSnapshot> {
         cancellation.check()?;
         let digest = self.sha256();
         let file = self.file.as_ref().expect("unsealed staged file");
@@ -333,15 +452,23 @@ impl StagedContent {
                 ));
             }
             let content = native::entry(&locked)?.resource;
-            let (source, source_version) = source.map_or((None, None), |(resource, version)| {
-                (Some(resource), Some(version))
-            });
+            let (source, source_version, name, media_type) =
+                source.map_or((None, None, None, None), |source| {
+                    (
+                        Some(source.resource),
+                        Some(source.version),
+                        Some(source.name),
+                        source.media_type,
+                    )
+                });
             let metadata = FileSnapshot {
                 id: self.id.clone(),
                 source,
                 source_version,
                 content,
                 content_version: version,
+                name,
+                media_type,
             };
             cancellation.check()?;
             let metadata_path = store
@@ -363,8 +490,9 @@ impl StagedContent {
                 let stored = store.cache(Arc::new(LockedSnapshot {
                     metadata,
                     file: Mutex::new(locked),
+                    retention: self.retention.clone(),
                 }))?;
-                Ok(stored.metadata.clone())
+                Ok(stored.retained())
             }
             Err(error) => {
                 drop(locked);

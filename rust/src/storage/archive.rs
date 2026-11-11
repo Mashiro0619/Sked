@@ -26,7 +26,7 @@ struct ArchiveEnvelope {
 
 fn decode_archive(json: &str) -> Result<AgentArchiveParts> {
     let archive: ArchiveEnvelope = serde_json::from_str(json)?;
-    if archive.schema != "sked-agent-records" || archive.version != 2 {
+    if archive.schema != "sked-agent-records" || !matches!(archive.version, 2 | 3) {
         return Err(StorageError::Invalid(
             "Unsupported native Agent archive format".into(),
         ));
@@ -288,7 +288,7 @@ impl AgentStorage {
         let parts = self.export_archive(&conversation_ids, &knowledge_keys)?;
         Ok(serde_json::to_string(&ArchiveEnvelope {
             schema: "sked-agent-records".into(),
-            version: 2,
+            version: 3,
             conversations: parts.conversations,
             knowledge: parts.knowledge,
             attachments: parts.attachments,

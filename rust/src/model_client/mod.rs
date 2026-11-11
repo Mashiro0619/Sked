@@ -37,7 +37,7 @@ use tokio::sync::mpsc::unbounded_channel;
 use tokio_util::sync::CancellationToken;
 
 use crate::{runtime::ToolDescriptor, storage::models::TokenUsage};
-use credentials::CredentialGuard;
+pub(crate) use credentials::CredentialGuard;
 use transport::EndpointTransport;
 
 #[derive(Clone)]
@@ -357,6 +357,35 @@ struct RunHook {
     guard: CredentialGuard,
 }
 
+impl RunHook {
+    async fn commit_assistant(
+        &self,
+        message: Value,
+        tool_call_ids: Vec<String>,
+    ) -> Result<(), String> {
+        let (acknowledged, completion) =
+            if !tool_call_ids.is_empty() && self.executor.requires_tool_call_acknowledgement() {
+                let (sender, receiver) = ModelEventAcknowledgement::channel();
+                (Some(sender), Some(receiver))
+            } else {
+                (None, None)
+            };
+        self.events
+            .send(ModelEvent::AssistantCommitted {
+                message,
+                tool_call_ids,
+                acknowledged,
+            })
+            .map_err(|_| "工具调用记录通道已关闭".to_string())?;
+        if let Some(completion) = completion {
+            completion
+                .await
+                .map_err(|_| "工具调用记录未完成".to_string())??;
+        }
+        Ok(())
+    }
+}
+
 impl AgentHook for RunHook {
     async fn on_completion_call(
         &self,
@@ -465,10 +494,16 @@ impl AgentHook for RunHook {
                         .map(|call| state.local_call_id(&call.id.to_string()))
                         .collect()
                 };
-                let _ = self.events.send(ModelEvent::AssistantCommitted {
-                    message: serde_json::to_value(message).expect("message serialization"),
-                    tool_call_ids,
-                });
+                if let Err(error) = self
+                    .commit_assistant(
+                        serde_json::to_value(message).expect("message serialization"),
+                        tool_call_ids,
+                    )
+                    .await
+                {
+                    self.cancellation.cancel();
+                    return Some(InvalidToolCallAction::skip(error));
+                }
             }
         }
         Some(InvalidToolCallAction::skip(format!(
@@ -512,10 +547,15 @@ impl AgentHook for RunHook {
                 })
                 .collect()
         };
-        let _ = self.events.send(ModelEvent::AssistantCommitted {
-            message: serde_json::to_value(message).expect("message serialization"),
-            tool_call_ids,
-        });
+        if let Err(error) = self
+            .commit_assistant(
+                serde_json::to_value(message).expect("message serialization"),
+                tool_call_ids,
+            )
+            .await
+        {
+            return ModelTurnAction::stop(error);
+        }
         ModelTurnAction::Continue
     }
 }

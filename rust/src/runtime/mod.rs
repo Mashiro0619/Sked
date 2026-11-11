@@ -1,3 +1,5 @@
+mod content;
+pub(crate) use content::content_delivery_error;
 mod context;
 mod history;
 mod host_actions;
@@ -72,6 +74,7 @@ struct ManagerInner {
     host: BusinessHostService,
     model_client: ModelService,
     context: ContextService,
+    files: Option<crate::files::FileService>,
     sessions: Mutex<HashMap<String, Arc<Mutex<Session>>>>,
     /// Cache ownership follows admitted execution, including queued handoff.
     /// Read-only inspection and metadata updates do not acquire ownership.
@@ -175,8 +178,19 @@ impl RuntimeManager {
         context: ContextService,
         tools: ToolService,
     ) -> Self {
+        Self::new_with_services_and_files(storage, host, model_client, context, tools, None)
+    }
+
+    pub fn new_with_services_and_files(
+        storage: PersistenceService,
+        host: BusinessHostService,
+        model_client: ModelService,
+        context: ContextService,
+        tools: ToolService,
+        files: Option<crate::files::FileService>,
+    ) -> Self {
         let (events, _) = broadcast::channel(1024);
-        Self { inner: Arc::new(ManagerInner { storage, host, model_client, context, sessions: Mutex::new(HashMap::new()), cache_owners: StdMutex::new(HashSet::new()), tools, preamble: StdMutex::new("You are Sked's task assistant. Use the available tools for current application facts. Follow the user's permission mode. A tool receipt determines whether an operation completed. Ask for missing information with ask_user and maintain a plan with update_plan when useful.".into()), events, shutdown: CancellationToken::new(), auto_title: AtomicBool::new(true), title_tasks: TaskTracker::new(),
+        Self { inner: Arc::new(ManagerInner { storage, host, model_client, context, files, sessions: Mutex::new(HashMap::new()), cache_owners: StdMutex::new(HashSet::new()), tools, preamble: StdMutex::new("You are Sked's task assistant. Use the available tools for current application facts. Follow the user's permission mode. A tool receipt determines whether an operation completed. Ask for missing information with ask_user and maintain a plan with update_plan when useful.".into()), events, shutdown: CancellationToken::new(), auto_title: AtomicBool::new(true), title_tasks: TaskTracker::new(),
 #[cfg(test)] fail_next_tool_record: AtomicBool::new(false) }) }
     }
 
@@ -1794,6 +1808,22 @@ impl RuntimeManager {
     }
 
     async fn record_model_event(&self, accepted: &AcceptedRun, event: ModelEvent) -> Result<()> {
+        let acknowledgement = match &event {
+            ModelEvent::AssistantCommitted { acknowledged, .. } => acknowledged.clone(),
+            _ => None,
+        };
+        let result = self.record_model_event_inner(accepted, event).await;
+        if let Some(acknowledged) = acknowledgement {
+            acknowledged.complete(result.as_ref().map(|_| ()).map_err(ToString::to_string));
+        }
+        result
+    }
+
+    async fn record_model_event_inner(
+        &self,
+        accepted: &AcceptedRun,
+        event: ModelEvent,
+    ) -> Result<()> {
         let id = &accepted.conversation_id;
         let rid = accepted.run_id.clone();
         match event {
@@ -1839,11 +1869,21 @@ impl RuntimeManager {
             ModelEvent::AssistantCommitted {
                 message,
                 tool_call_ids,
+                ..
             } => {
                 let parsed: ProviderMessage = serde_json::from_value(message.clone())
                     .map_err(|e| RuntimeError::Invalid(e.to_string()))?;
                 let mut projected =
                     project_model_message(&parsed, &rid, now_ms(), &accepted.config.selection());
+                if projected
+                    .iter()
+                    .map(|message| message.tool_calls.len())
+                    .sum::<usize>()
+                    != tool_call_ids.len()
+                    || tool_call_ids.iter().collect::<HashSet<_>>().len() != tool_call_ids.len()
+                {
+                    return Err(RuntimeError::Invalid("工具调用组缺少唯一的本地身份".into()));
+                }
                 for (call, local_id) in projected
                     .iter_mut()
                     .flat_map(|message| &mut message.tool_calls)
@@ -1852,6 +1892,9 @@ impl RuntimeManager {
                     call.id = local_id;
                 }
                 self.change(id, move |snapshot| {
+                    if snapshot.conversation.run_id.as_deref() != Some(rid.as_str()) {
+                        return Err(StorageError::Conflict("工具调用所属运行已改变".into()));
+                    }
                     let mut changes = projected
                         .iter()
                         .cloned()
@@ -1889,6 +1932,23 @@ impl RuntimeManager {
                     tool_identity::localize_tool_message(message, &rid, &call_id);
                 }
                 self.change(id, move |snapshot| {
+                    for message in &mut projected {
+                        if let Some(previous) = snapshot
+                            .messages
+                            .iter()
+                            .find(|saved| saved.id == message.id)
+                        {
+                            if previous.role != MessageRole::Tool
+                                || previous.tool_call_id != message.tool_call_id
+                            {
+                                return Err(StorageError::Conflict(
+                                    "工具结果与已保存内容的身份不一致".into(),
+                                ));
+                            }
+                            message.created_at = previous.created_at;
+                            message.tool_content_refs = previous.tool_content_refs.clone();
+                        }
+                    }
                     let mut changes = projected
                         .iter()
                         .cloned()

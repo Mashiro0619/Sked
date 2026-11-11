@@ -202,11 +202,26 @@ pub trait AttachmentStore {
         bytes: &[u8],
     ) -> Result<AttachmentMetadata>;
 
+    fn copy_tool_attachment(
+        &mut self,
+        reader: &mut dyn std::io::Read,
+        metadata: AttachmentMetadata,
+        cancellation: &CancellationToken,
+    ) -> Result<AttachmentMetadata>;
+
     fn attachment_path(&self, metadata: &AttachmentMetadata) -> Result<PathBuf>;
 
     fn verify_attachment(&self, metadata: &AttachmentMetadata) -> Result<()>;
 
     fn read_attachment(&self, metadata: &AttachmentMetadata) -> Result<Vec<u8>>;
+
+    fn read_attachment_range(
+        &self,
+        metadata: &AttachmentMetadata,
+        offset: u64,
+        length: u64,
+        cancellation: &CancellationToken,
+    ) -> Result<Vec<u8>>;
 
     fn collect_unreferenced_attachments(&mut self) -> Result<Vec<String>>;
 

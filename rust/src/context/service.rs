@@ -49,7 +49,7 @@ impl ContextService {
         let model = self.model.run(
             &request.config,
             "You maintain accurate, compact task memory. Return only the summary.".into(),
-            ProviderMessage::user(request.prompt),
+            request.prompt,
             Vec::new(),
             Vec::new(),
             request.executor,
@@ -89,6 +89,7 @@ impl ContextService {
         summary: String,
         usage: TokenUsage,
     ) -> Result<ContextCheckpoint> {
+        let summary = format!("{summary}{}", plan.content_index);
         let mut history = vec![
             serde_json::to_value(ProviderMessage::System {
                 content: format!("Earlier conversation summary:\n{summary}"),
@@ -199,14 +200,14 @@ impl ContextMutation {
                 vec![JournalChange::RunUpserted { run: run.clone() }]
             }
             Self::CommitSummary { checkpoint } => {
-                // Preserve the existing message-identity admission check. A
-                // content-digest revalidation is a separate behavior change.
                 let current: Vec<_> = snapshot
                     .messages
                     .iter()
                     .map(|message| message.id.clone())
                     .collect();
-                if current != checkpoint.source_message_ids {
+                if current != checkpoint.source_message_ids
+                    || super::context_source_digest(snapshot)? != checkpoint.source_digest
+                {
                     return Err(StorageError::Conflict("压缩期间聊天来源已改变".into()));
                 }
                 let history = checkpoint.provider_history.clone();

@@ -76,6 +76,12 @@ pub(super) fn descriptors() -> Vec<ToolDescriptor> {
             json!({"messageId":{"type":"string"}}),
             &["messageId"],
         ),
+        descriptor(
+            "content.read",
+            "Read immutable content already saved by a tool in this conversation or its history versions. Use contentId, then nextOffset to read UTF-8 pages. Native media sends the entire saved file to a supporting model. This reads saved bytes without reopening the external source.",
+            json!({"contentId":{"type":"string"},"format":{"enum":["text","native"]},"offset":{"type":"integer","minimum":0},"length":{"type":"integer","minimum":1}}),
+            &["contentId"],
+        ),
     ];
     for family in ["skills", "memories"] {
         tools.push(descriptor(

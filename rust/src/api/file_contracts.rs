@@ -203,7 +203,7 @@ impl From<FileErrorCode> for internal::FileErrorCode {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FileResourceRef {
     pub kind: FileResourceKind,
     pub value: String,
@@ -275,7 +275,7 @@ impl From<FileChildDestination> for internal::FileChildDestination {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FileVersion {
     pub resource_id: String,
     pub version: String,
@@ -336,6 +336,8 @@ pub struct FileSnapshot {
     pub source_version: Option<FileVersion>,
     pub content: FileResourceRef,
     pub content_version: FileVersion,
+    pub name: Option<String>,
+    pub media_type: Option<String>,
 }
 
 impl From<internal::FileSnapshot> for FileSnapshot {
@@ -346,6 +348,8 @@ impl From<internal::FileSnapshot> for FileSnapshot {
             source_version: value.source_version.map(Into::into),
             content: value.content.into(),
             content_version: value.content_version.into(),
+            name: value.name,
+            media_type: value.media_type,
         }
     }
 }

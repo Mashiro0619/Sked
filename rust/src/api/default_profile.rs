@@ -277,6 +277,8 @@ impl Plugin for RuntimePlugin {
                 MODEL.key(),
                 CONTEXT.key(),
                 TOOLS.key(),
+                #[cfg(any(windows, target_os = "android"))]
+                FILES.key(),
             ],
         }
     }
@@ -287,12 +289,17 @@ impl Plugin for RuntimePlugin {
         let model = context.require(MODEL)?;
         let context_service = context.require(CONTEXT)?;
         let tools = context.require(TOOLS)?;
-        let manager = RuntimeService::from(RuntimeManager::new_with_services(
+        #[cfg(any(windows, target_os = "android"))]
+        let files = Some((*context.require(FILES)?).clone());
+        #[cfg(not(any(windows, target_os = "android")))]
+        let files = None;
+        let manager = RuntimeService::from(RuntimeManager::new_with_services_and_files(
             (*storage).clone(),
             (*host).clone(),
             (*model).clone(),
             (*context_service).clone(),
             (*tools).clone(),
+            files,
         ));
         let draining = manager.clone();
         let exclusions = self.shutdown_exclusions.subscribe();

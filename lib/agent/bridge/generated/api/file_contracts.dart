@@ -318,6 +318,8 @@ class FileSnapshot {
   final FileVersion? sourceVersion;
   final FileResourceRef content;
   final FileVersion contentVersion;
+  final String? name;
+  final String? mediaType;
 
   const FileSnapshot({
     required this.id,
@@ -325,6 +327,8 @@ class FileSnapshot {
     this.sourceVersion,
     required this.content,
     required this.contentVersion,
+    this.name,
+    this.mediaType,
   });
 
   @override
@@ -333,7 +337,9 @@ class FileSnapshot {
       source.hashCode ^
       sourceVersion.hashCode ^
       content.hashCode ^
-      contentVersion.hashCode;
+      contentVersion.hashCode ^
+      name.hashCode ^
+      mediaType.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -344,7 +350,9 @@ class FileSnapshot {
           source == other.source &&
           sourceVersion == other.sourceVersion &&
           content == other.content &&
-          contentVersion == other.contentVersion;
+          contentVersion == other.contentVersion &&
+          name == other.name &&
+          mediaType == other.mediaType;
 }
 
 class FileSnapshotChunk {

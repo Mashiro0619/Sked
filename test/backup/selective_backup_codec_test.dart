@@ -100,7 +100,7 @@ void main() {
       ) as Map;
       expect(manifest['version'], 2);
       expect(manifest['agentSchema'], 'sked-agent-records');
-      expect(manifest['agentVersion'], 2);
+      expect(manifest['agentVersion'], 3);
       expect(
         () => codec.decode(
           _rewriteManifest(source, (manifest) => manifest['agentVersion'] = 1),

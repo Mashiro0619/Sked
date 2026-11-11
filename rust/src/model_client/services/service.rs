@@ -72,6 +72,7 @@ impl ModelService {
                     ModelEvent::AssistantCommitted {
                         message,
                         tool_call_ids,
+                        ..
                     } => {
                         for delta in [text.finish()] {
                             if !delta.is_empty() {

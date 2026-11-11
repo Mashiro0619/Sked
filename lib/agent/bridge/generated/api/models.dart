@@ -4,12 +4,13 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import 'file_contracts.dart';
 import 'management_contracts.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `display_message`, `display_reply_revision`, `parse`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`, `try_from`
 
 class JsonPayload {
   final String json;
@@ -1187,6 +1188,7 @@ class ViewMessage {
   final List<String> attachmentIds;
   final List<ViewContextReference> contextReferences;
   final ViewAttachmentDelivery attachmentDelivery;
+  final List<ViewToolContentRef> toolContentRefs;
 
   const ViewMessage({
     required this.id,
@@ -1201,6 +1203,7 @@ class ViewMessage {
     required this.attachmentIds,
     required this.contextReferences,
     required this.attachmentDelivery,
+    required this.toolContentRefs,
   });
 
   @override
@@ -1216,7 +1219,8 @@ class ViewMessage {
       responseItems.hashCode ^
       attachmentIds.hashCode ^
       contextReferences.hashCode ^
-      attachmentDelivery.hashCode;
+      attachmentDelivery.hashCode ^
+      toolContentRefs.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -1234,7 +1238,8 @@ class ViewMessage {
           responseItems == other.responseItems &&
           attachmentIds == other.attachmentIds &&
           contextReferences == other.contextReferences &&
-          attachmentDelivery == other.attachmentDelivery;
+          attachmentDelivery == other.attachmentDelivery &&
+          toolContentRefs == other.toolContentRefs;
 }
 
 enum ViewMessageRole { user, assistant, tool, system, notice }
@@ -2448,6 +2453,69 @@ class ViewToolCall {
           arguments == other.arguments &&
           rawArguments == other.rawArguments &&
           wireName == other.wireName;
+}
+
+enum ViewToolContentKind { text, native }
+
+class ViewToolContentRange {
+  final int offset;
+  final int length;
+
+  const ViewToolContentRange({required this.offset, required this.length});
+
+  @override
+  int get hashCode => offset.hashCode ^ length.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ViewToolContentRange &&
+          runtimeType == other.runtimeType &&
+          offset == other.offset &&
+          length == other.length;
+}
+
+class ViewToolContentRef {
+  final String id;
+  final String attachmentId;
+  final ViewToolContentKind kind;
+  final String? sourceSnapshotId;
+  final FileResourceRef? sourceResource;
+  final FileVersion? sourceVersion;
+  final ViewToolContentRange? textRange;
+
+  const ViewToolContentRef({
+    required this.id,
+    required this.attachmentId,
+    required this.kind,
+    this.sourceSnapshotId,
+    this.sourceResource,
+    this.sourceVersion,
+    this.textRange,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      attachmentId.hashCode ^
+      kind.hashCode ^
+      sourceSnapshotId.hashCode ^
+      sourceResource.hashCode ^
+      sourceVersion.hashCode ^
+      textRange.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ViewToolContentRef &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          attachmentId == other.attachmentId &&
+          kind == other.kind &&
+          sourceSnapshotId == other.sourceSnapshotId &&
+          sourceResource == other.sourceResource &&
+          sourceVersion == other.sourceVersion &&
+          textRange == other.textRange;
 }
 
 class ViewToolUsage {

@@ -162,6 +162,7 @@ impl AgentHost for Arc<JourneyHost> {
                     model_payload: json!({"status":"preview","title":request.arguments["title"]}),
                     details: json!({"changes":[{"title":request.arguments["title"]}]}),
                     outcome: ToolOutcome::Success,
+                    model_content: Vec::new(),
                 });
             }
             let (ack, received) = oneshot::channel();
@@ -183,6 +184,7 @@ impl AgentHost for Arc<JourneyHost> {
                 model_payload: json!({"status":"committed","operationId":"journey-operation"}),
                 details: json!({"operationId":"journey-operation"}),
                 outcome: ToolOutcome::Success,
+                model_content: Vec::new(),
             })
         })
     }

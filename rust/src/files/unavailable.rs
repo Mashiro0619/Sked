@@ -36,6 +36,10 @@ pub(super) fn source_entry(_source: &SourceReader) -> Result<FileEntry> {
     Err(unavailable())
 }
 
+pub(super) fn source_metadata(source: &SourceReader) -> Result<(FileEntry, Option<String>)> {
+    Ok((source_entry(source)?, None))
+}
+
 pub(super) fn source_read(
     _source: &mut SourceReader,
     _bytes: &mut [u8],
@@ -98,6 +102,9 @@ impl Parent {
         Err(unavailable())
     }
     pub fn open_child_locked(&self, _name: &str) -> Result<File> {
+        Err(unavailable())
+    }
+    pub fn open_child_shared(&self, _name: &str) -> Result<File> {
         Err(unavailable())
     }
     pub fn create_staged(&self, _name: &str) -> Result<File> {

@@ -49,6 +49,32 @@ pub struct HostToolResult {
     pub model_payload: Value,
     pub details: Value,
     pub outcome: ToolOutcome,
+    #[serde(default)]
+    pub model_content: Vec<HostModelContent>,
+}
+
+/// Content offered by the captured host. The runtime admits immutable bytes
+/// and assigns durable content identities before returning them to the model.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum HostModelContent {
+    Text {
+        text: String,
+        name: String,
+    },
+    Snapshot {
+        snapshot_id: String,
+        name: String,
+        media_type: String,
+        byte_length: u64,
+        sha256: String,
+        #[serde(default)]
+        text_range: Option<crate::storage::models::ToolContentRange>,
+    },
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

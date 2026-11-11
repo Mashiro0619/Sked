@@ -532,6 +532,7 @@ class RustAgentUiDelegate extends AgentUiDelegate {
       await (await client.core).submitHostResult(
         result: bridge.HostResult(
           requestId: pending.request.id,
+          modelContent: const [],
           outcome: approved
               ? bridge.HostOutcome.success
               : bridge.HostOutcome.cancelled,

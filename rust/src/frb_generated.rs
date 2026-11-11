@@ -5303,12 +5303,16 @@ impl SseDecode for crate::api::file_contracts::FileSnapshot {
             <crate::api::file_contracts::FileResourceRef>::sse_decode(deserializer);
         let mut var_contentVersion =
             <crate::api::file_contracts::FileVersion>::sse_decode(deserializer);
+        let mut var_name = <Option<String>>::sse_decode(deserializer);
+        let mut var_mediaType = <Option<String>>::sse_decode(deserializer);
         return crate::api::file_contracts::FileSnapshot {
             id: var_id,
             source: var_source,
             source_version: var_sourceVersion,
             content: var_content,
             content_version: var_contentVersion,
+            name: var_name,
+            media_type: var_mediaType,
         };
     }
 }
@@ -5522,6 +5526,43 @@ impl SseDecode for crate::api::history::HistoryRecoveryTarget {
     }
 }
 
+impl SseDecode for crate::api::contracts::HostContentKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::contracts::HostContentKind::Text,
+            1 => crate::api::contracts::HostContentKind::Snapshot,
+            _ => unreachable!("Invalid variant for HostContentKind: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::contracts::HostModelContent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_kind = <crate::api::contracts::HostContentKind>::sse_decode(deserializer);
+        let mut var_name = <String>::sse_decode(deserializer);
+        let mut var_text = <Option<String>>::sse_decode(deserializer);
+        let mut var_snapshotId = <Option<String>>::sse_decode(deserializer);
+        let mut var_mediaType = <Option<String>>::sse_decode(deserializer);
+        let mut var_byteLength = <Option<u64>>::sse_decode(deserializer);
+        let mut var_sha256 = <Option<String>>::sse_decode(deserializer);
+        let mut var_textRange =
+            <Option<crate::api::models::ViewToolContentRange>>::sse_decode(deserializer);
+        return crate::api::contracts::HostModelContent {
+            kind: var_kind,
+            name: var_name,
+            text: var_text,
+            snapshot_id: var_snapshotId,
+            media_type: var_mediaType,
+            byte_length: var_byteLength,
+            sha256: var_sha256,
+            text_range: var_textRange,
+        };
+    }
+}
+
 impl SseDecode for crate::api::contracts::HostOutcome {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -5618,6 +5659,8 @@ impl SseDecode for crate::api::contracts::HostResult {
         let mut var_requestId = <String>::sse_decode(deserializer);
         let mut var_modelPayload =
             <Option<crate::api::models::JsonPayload>>::sse_decode(deserializer);
+        let mut var_modelContent =
+            <Vec<crate::api::contracts::HostModelContent>>::sse_decode(deserializer);
         let mut var_details = <Option<crate::api::models::JsonPayload>>::sse_decode(deserializer);
         let mut var_outcome = <crate::api::contracts::HostOutcome>::sse_decode(deserializer);
         let mut var_ticket = <Option<crate::api::models::ViewUndoTicket>>::sse_decode(deserializer);
@@ -5626,6 +5669,7 @@ impl SseDecode for crate::api::contracts::HostResult {
         return crate::api::contracts::HostResult {
             request_id: var_requestId,
             model_payload: var_modelPayload,
+            model_content: var_modelContent,
             details: var_details,
             outcome: var_outcome,
             ticket: var_ticket,
@@ -5889,6 +5933,20 @@ impl SseDecode for Vec<crate::api::history::HistoryRecoveryTarget> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<crate::api::history::HistoryRecoveryTarget>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::contracts::HostModelContent> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::contracts::HostModelContent>::sse_decode(
                 deserializer,
             ));
         }
@@ -6513,6 +6571,20 @@ impl SseDecode for Vec<crate::api::models::ViewToolCall> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<crate::api::models::ViewToolCall>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::models::ViewToolContentRef> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::models::ViewToolContentRef>::sse_decode(
+                deserializer,
+            ));
         }
         return ans_;
     }
@@ -7416,6 +7488,19 @@ impl SseDecode for Option<crate::api::models::ViewTokenUsage> {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         if (<bool>::sse_decode(deserializer)) {
             return Some(<crate::api::models::ViewTokenUsage>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::api::models::ViewToolContentRange> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::api::models::ViewToolContentRange>::sse_decode(
                 deserializer,
             ));
         } else {
@@ -8601,6 +8686,8 @@ impl SseDecode for crate::api::models::ViewMessage {
             <Vec<crate::api::models::ViewContextReference>>::sse_decode(deserializer);
         let mut var_attachmentDelivery =
             <crate::api::models::ViewAttachmentDelivery>::sse_decode(deserializer);
+        let mut var_toolContentRefs =
+            <Vec<crate::api::models::ViewToolContentRef>>::sse_decode(deserializer);
         return crate::api::models::ViewMessage {
             id: var_id,
             role: var_role,
@@ -8614,6 +8701,7 @@ impl SseDecode for crate::api::models::ViewMessage {
             attachment_ids: var_attachmentIds,
             context_references: var_contextReferences,
             attachment_delivery: var_attachmentDelivery,
+            tool_content_refs: var_toolContentRefs,
         };
     }
 }
@@ -9397,6 +9485,55 @@ impl SseDecode for crate::api::models::ViewToolCall {
             arguments: var_arguments,
             raw_arguments: var_rawArguments,
             wire_name: var_wireName,
+        };
+    }
+}
+
+impl SseDecode for crate::api::models::ViewToolContentKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::models::ViewToolContentKind::Text,
+            1 => crate::api::models::ViewToolContentKind::Native,
+            _ => unreachable!("Invalid variant for ViewToolContentKind: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::models::ViewToolContentRange {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_offset = <u64>::sse_decode(deserializer);
+        let mut var_length = <u64>::sse_decode(deserializer);
+        return crate::api::models::ViewToolContentRange {
+            offset: var_offset,
+            length: var_length,
+        };
+    }
+}
+
+impl SseDecode for crate::api::models::ViewToolContentRef {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_id = <String>::sse_decode(deserializer);
+        let mut var_attachmentId = <String>::sse_decode(deserializer);
+        let mut var_kind = <crate::api::models::ViewToolContentKind>::sse_decode(deserializer);
+        let mut var_sourceSnapshotId = <Option<String>>::sse_decode(deserializer);
+        let mut var_sourceResource =
+            <Option<crate::api::file_contracts::FileResourceRef>>::sse_decode(deserializer);
+        let mut var_sourceVersion =
+            <Option<crate::api::file_contracts::FileVersion>>::sse_decode(deserializer);
+        let mut var_textRange =
+            <Option<crate::api::models::ViewToolContentRange>>::sse_decode(deserializer);
+        return crate::api::models::ViewToolContentRef {
+            id: var_id,
+            attachment_id: var_attachmentId,
+            kind: var_kind,
+            source_snapshot_id: var_sourceSnapshotId,
+            source_resource: var_sourceResource,
+            source_version: var_sourceVersion,
+            text_range: var_textRange,
         };
     }
 }
@@ -11211,6 +11348,8 @@ impl flutter_rust_bridge::IntoDart for crate::api::file_contracts::FileSnapshot 
             self.source_version.into_into_dart().into_dart(),
             self.content.into_into_dart().into_dart(),
             self.content_version.into_into_dart().into_dart(),
+            self.name.into_into_dart().into_dart(),
+            self.media_type.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -11491,6 +11630,54 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::history::HistoryRecoveryTarge
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::contracts::HostContentKind {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Text => 0.into_dart(),
+            Self::Snapshot => 1.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::contracts::HostContentKind
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::contracts::HostContentKind>
+    for crate::api::contracts::HostContentKind
+{
+    fn into_into_dart(self) -> crate::api::contracts::HostContentKind {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::contracts::HostModelContent {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.kind.into_into_dart().into_dart(),
+            self.name.into_into_dart().into_dart(),
+            self.text.into_into_dart().into_dart(),
+            self.snapshot_id.into_into_dart().into_dart(),
+            self.media_type.into_into_dart().into_dart(),
+            self.byte_length.into_into_dart().into_dart(),
+            self.sha256.into_into_dart().into_dart(),
+            self.text_range.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::contracts::HostModelContent
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::contracts::HostModelContent>
+    for crate::api::contracts::HostModelContent
+{
+    fn into_into_dart(self) -> crate::api::contracts::HostModelContent {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::contracts::HostOutcome {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
@@ -11607,6 +11794,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::contracts::HostResult {
         [
             self.request_id.into_into_dart().into_dart(),
             self.model_payload.into_into_dart().into_dart(),
+            self.model_content.into_into_dart().into_dart(),
             self.details.into_into_dart().into_dart(),
             self.outcome.into_into_dart().into_dart(),
             self.ticket.into_into_dart().into_dart(),
@@ -12862,6 +13050,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::models::ViewMessage {
             self.attachment_ids.into_into_dart().into_dart(),
             self.context_references.into_into_dart().into_dart(),
             self.attachment_delivery.into_into_dart().into_dart(),
+            self.tool_content_refs.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -13848,6 +14037,74 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewToolCall>
     for crate::api::models::ViewToolCall
 {
     fn into_into_dart(self) -> crate::api::models::ViewToolCall {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::models::ViewToolContentKind {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Text => 0.into_dart(),
+            Self::Native => 1.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::models::ViewToolContentKind
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewToolContentKind>
+    for crate::api::models::ViewToolContentKind
+{
+    fn into_into_dart(self) -> crate::api::models::ViewToolContentKind {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::models::ViewToolContentRange {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.offset.into_into_dart().into_dart(),
+            self.length.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::models::ViewToolContentRange
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewToolContentRange>
+    for crate::api::models::ViewToolContentRange
+{
+    fn into_into_dart(self) -> crate::api::models::ViewToolContentRange {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::models::ViewToolContentRef {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.id.into_into_dart().into_dart(),
+            self.attachment_id.into_into_dart().into_dart(),
+            self.kind.into_into_dart().into_dart(),
+            self.source_snapshot_id.into_into_dart().into_dart(),
+            self.source_resource.into_into_dart().into_dart(),
+            self.source_version.into_into_dart().into_dart(),
+            self.text_range.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::models::ViewToolContentRef
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::models::ViewToolContentRef>
+    for crate::api::models::ViewToolContentRef
+{
+    fn into_into_dart(self) -> crate::api::models::ViewToolContentRef {
         self
     }
 }
@@ -15046,6 +15303,8 @@ impl SseEncode for crate::api::file_contracts::FileSnapshot {
         );
         <crate::api::file_contracts::FileResourceRef>::sse_encode(self.content, serializer);
         <crate::api::file_contracts::FileVersion>::sse_encode(self.content_version, serializer);
+        <Option<String>>::sse_encode(self.name, serializer);
+        <Option<String>>::sse_encode(self.media_type, serializer);
     }
 }
 
@@ -15212,6 +15471,36 @@ impl SseEncode for crate::api::history::HistoryRecoveryTarget {
     }
 }
 
+impl SseEncode for crate::api::contracts::HostContentKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::contracts::HostContentKind::Text => 0,
+                crate::api::contracts::HostContentKind::Snapshot => 1,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::contracts::HostModelContent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::contracts::HostContentKind>::sse_encode(self.kind, serializer);
+        <String>::sse_encode(self.name, serializer);
+        <Option<String>>::sse_encode(self.text, serializer);
+        <Option<String>>::sse_encode(self.snapshot_id, serializer);
+        <Option<String>>::sse_encode(self.media_type, serializer);
+        <Option<u64>>::sse_encode(self.byte_length, serializer);
+        <Option<String>>::sse_encode(self.sha256, serializer);
+        <Option<crate::api::models::ViewToolContentRange>>::sse_encode(self.text_range, serializer);
+    }
+}
+
 impl SseEncode for crate::api::contracts::HostOutcome {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -15303,6 +15592,7 @@ impl SseEncode for crate::api::contracts::HostResult {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.request_id, serializer);
         <Option<crate::api::models::JsonPayload>>::sse_encode(self.model_payload, serializer);
+        <Vec<crate::api::contracts::HostModelContent>>::sse_encode(self.model_content, serializer);
         <Option<crate::api::models::JsonPayload>>::sse_encode(self.details, serializer);
         <crate::api::contracts::HostOutcome>::sse_encode(self.outcome, serializer);
         <Option<crate::api::models::ViewUndoTicket>>::sse_encode(self.ticket, serializer);
@@ -15508,6 +15798,16 @@ impl SseEncode for Vec<crate::api::history::HistoryRecoveryTarget> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::history::HistoryRecoveryTarget>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::contracts::HostModelContent> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::contracts::HostModelContent>::sse_encode(item, serializer);
         }
     }
 }
@@ -15968,6 +16268,16 @@ impl SseEncode for Vec<crate::api::models::ViewToolCall> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::models::ViewToolCall>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::models::ViewToolContentRef> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::models::ViewToolContentRef>::sse_encode(item, serializer);
         }
     }
 }
@@ -16683,6 +16993,16 @@ impl SseEncode for Option<crate::api::models::ViewTokenUsage> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <crate::api::models::ViewTokenUsage>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::api::models::ViewToolContentRange> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::api::models::ViewToolContentRange>::sse_encode(value, serializer);
         }
     }
 }
@@ -17579,6 +17899,10 @@ impl SseEncode for crate::api::models::ViewMessage {
             self.attachment_delivery,
             serializer,
         );
+        <Vec<crate::api::models::ViewToolContentRef>>::sse_encode(
+            self.tool_content_refs,
+            serializer,
+        );
     }
 }
 
@@ -18158,6 +18482,49 @@ impl SseEncode for crate::api::models::ViewToolCall {
         <crate::api::models::JsonPayload>::sse_encode(self.arguments, serializer);
         <Option<String>>::sse_encode(self.raw_arguments, serializer);
         <Option<String>>::sse_encode(self.wire_name, serializer);
+    }
+}
+
+impl SseEncode for crate::api::models::ViewToolContentKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::models::ViewToolContentKind::Text => 0,
+                crate::api::models::ViewToolContentKind::Native => 1,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::models::ViewToolContentRange {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u64>::sse_encode(self.offset, serializer);
+        <u64>::sse_encode(self.length, serializer);
+    }
+}
+
+impl SseEncode for crate::api::models::ViewToolContentRef {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.id, serializer);
+        <String>::sse_encode(self.attachment_id, serializer);
+        <crate::api::models::ViewToolContentKind>::sse_encode(self.kind, serializer);
+        <Option<String>>::sse_encode(self.source_snapshot_id, serializer);
+        <Option<crate::api::file_contracts::FileResourceRef>>::sse_encode(
+            self.source_resource,
+            serializer,
+        );
+        <Option<crate::api::file_contracts::FileVersion>>::sse_encode(
+            self.source_version,
+            serializer,
+        );
+        <Option<crate::api::models::ViewToolContentRange>>::sse_encode(self.text_range, serializer);
     }
 }
 

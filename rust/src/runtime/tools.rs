@@ -68,6 +68,10 @@ pub(super) fn unknown_operation_details(operation: &OperationRecord) -> Value {
 }
 
 impl ModelToolExecutor for RuntimeToolExecutor {
+    fn requires_tool_call_acknowledgement(&self) -> bool {
+        true
+    }
+
     fn execute(
         &self,
         name: String,
@@ -152,6 +156,12 @@ impl ToolRunContext for RuntimeToolContext {
                     _ => Err(RuntimeError::Invalid("交互工具不可用".into())),
                 },
                 RuntimeToolGroup::Conversation => {
+                    if name == "content.read" {
+                        return manager
+                            .read_saved_content(&accepted, &call_id, arguments)
+                            .await
+                            .map(ToolResult::DomainOwned);
+                    }
                     manager
                         .read_conversation_tool(&accepted, &name, arguments)
                         .await
@@ -234,11 +244,11 @@ impl ToolRunContext for RuntimeToolContext {
                     .store(true, Ordering::Release);
                 accepted.control.cancellation.cancel();
             }
-            manager
+            let payload = manager
                 .record_tool_result(&accepted, &call.name, &call.call_id, &result)
                 .await
                 .map_err(|error| error.to_string())?;
-            Ok(result.model_payload)
+            Ok(payload)
         })
     }
 }
@@ -260,6 +270,7 @@ fn pending_result(payload: Value) -> HostToolResult {
         model_payload: payload.clone(),
         details: payload,
         outcome,
+        model_content: Vec::new(),
     }
 }
 impl RuntimeManager {
@@ -308,6 +319,7 @@ impl RuntimeManager {
                 model_payload: json!({"status":"error","code":error.code,"message":error.message}),
                 details: Value::Null,
                 outcome: ToolOutcome::Error,
+                model_content: Vec::new(),
             },
         };
         if name == "capabilities.describe" {
@@ -344,7 +356,8 @@ impl RuntimeManager {
                 .store(true, Ordering::Release);
             accepted.control.cancellation.cancel();
         }
-        self.record_tool_result(accepted, name, call_id, &result)
+        let payload = self
+            .record_tool_result(accepted, name, call_id, &result)
             .await?;
         if name == "capabilities.describe" {
             let exposed: Vec<String> = result
@@ -358,7 +371,7 @@ impl RuntimeManager {
                 .collect();
             self.expose_tools(accepted, exposed).await?;
         }
-        Ok(result.model_payload)
+        Ok(payload)
     }
 
     async fn acknowledge_progress(&self, accepted: &AcceptedRun, update: HostProgressUpdate) {
@@ -476,7 +489,7 @@ impl RuntimeManager {
         name: &str,
         call_id: &str,
         result: &HostToolResult,
-    ) -> Result<()> {
+    ) -> Result<Value> {
         #[cfg(test)]
         let inject_failure = self
             .inner
@@ -495,6 +508,7 @@ impl RuntimeManager {
                 name,
                 call_id,
                 result,
+                accepted.control.cancellation.clone(),
             )
             .await
         };
@@ -530,120 +544,252 @@ impl RuntimeManager {
         name: &str,
         call_id: &str,
         result: &HostToolResult,
-    ) -> Result<()> {
+        cancellation: CancellationToken,
+    ) -> Result<Value> {
+        let mut result = result.clone();
+        let contents = match self
+            .prepare_tool_content(
+                &format!("{run_id}:tool:{call_id}"),
+                std::mem::take(&mut result.model_content),
+                &cancellation,
+            )
+            .await
+        {
+            Ok(contents) => contents,
+            Err(error) => {
+                content::content_delivery_error(&mut result, error);
+                Vec::new()
+            }
+        };
+        self.save_prepared_tool_result(
+            conversation_id,
+            run_id,
+            name,
+            call_id,
+            result,
+            contents,
+            cancellation,
+        )
+        .await
+    }
+
+    pub(super) async fn save_prepared_tool_result(
+        &self,
+        conversation_id: &str,
+        run_id: &str,
+        name: &str,
+        call_id: &str,
+        mut result: HostToolResult,
+        mut contents: Vec<content::PreparedToolContent>,
+        cancellation: CancellationToken,
+    ) -> Result<Value> {
+        let conversation_id = conversation_id.to_owned();
         let rid = run_id.to_owned();
         let name = name.to_owned();
         let call_id = call_id.to_owned();
-        let result = result.clone();
-        self.change(conversation_id, move |snapshot| {
-            let previous = snapshot
-                .operations
-                .iter()
-                .find(|operation| operation.run_id == rid && operation.tool_call_id == call_id);
-            let operation_id = result
-                .details
-                .get("operationId")
-                .or_else(|| result.model_payload.get("operationId"))
-                .and_then(Value::as_str)
-                .map(str::to_owned);
-            if let Some(binding) = previous.and_then(|operation| operation.binding.as_ref()) {
-                if operation_id
-                    .as_ref()
-                    .is_some_and(|id| id != &binding.operation_id)
+        let (payload, state) = self
+            .inner
+            .storage
+            .call(move |store| {
+                let mut snapshot = store
+                    .read(&conversation_id)?
+                    .ok_or_else(|| StorageError::NotFound(conversation_id.clone()))?;
+                let message_id = format!("{rid}:tool:{call_id}");
+                let has_content = !contents.is_empty();
+                if has_content
+                    && (snapshot.conversation.archived
+                        || snapshot.conversation.run_id.as_deref() != Some(rid.as_str())
+                        || !snapshot.messages.iter().any(|message| {
+                            message.role == MessageRole::Assistant
+                                && message
+                                    .tool_calls
+                                    .iter()
+                                    .any(|call| call.id == call_id && call.name == name)
+                        }))
                 {
                     return Err(StorageError::Conflict(
-                        "工具回执的操作身份与已接纳操作不一致".into(),
+                        "工具内容所属运行或原工具调用已改变".into(),
                     ));
                 }
-            }
-            let store = if name.starts_with("skills.")
-                || name.starts_with("memories.")
-                || name.starts_with("knowledge.")
-            {
-                OperationStore::Knowledge
-            } else if result.model_payload.get("kind").and_then(Value::as_str) == Some("external") {
-                OperationStore::External
-            } else {
-                OperationStore::Main
-            };
-            let store = previous
-                .and_then(|operation| operation.binding.as_ref())
-                .map_or(store, |binding| binding.store);
-            let binding = operation_id
-                .map(|operation_id| OperationBinding {
-                    operation_id,
+                let (references, attachments) = match content::admit_tool_content(
                     store,
-                    run_id: rid.clone(),
-                    tool_call_id: call_id.clone(),
-                })
-                .or_else(|| previous.and_then(|operation| operation.binding.clone()));
-            let phase = match result.outcome {
-                ToolOutcome::Success => {
-                    if matches!(
-                        result.model_payload.get("status").and_then(Value::as_str),
-                        Some("preview" | "previewed")
-                    ) {
-                        OperationPhase::Previewed
-                    } else {
-                        OperationPhase::Committed
+                    &snapshot,
+                    &message_id,
+                    &mut contents,
+                    &cancellation,
+                ) {
+                    Ok(saved) => saved,
+                    Err(error) => {
+                        content::content_delivery_error(&mut result, error);
+                        (Vec::new(), Vec::new())
+                    }
+                };
+                content::attach_content_payload(
+                    &mut result.model_payload,
+                    &references,
+                    &attachments,
+                );
+                let payload = result.model_payload.clone();
+                let mut changes = attachments
+                    .into_iter()
+                    .map(|attachment| JournalChange::AttachmentUpserted { attachment })
+                    .collect::<Vec<_>>();
+                let stored_message_id = if has_content {
+                    let native = tool_identity::result_for_local_call(
+                        &snapshot,
+                        &call_id,
+                        payload.to_string(),
+                    )?;
+                    let mut message = project_provider_message(&native, &rid, now_ms())
+                        .into_iter()
+                        .next()
+                        .ok_or_else(|| StorageError::Invalid("工具内容缺少原结果消息".into()))?;
+                    tool_identity::localize_tool_message(&mut message, &rid, &call_id);
+                    message.tool_content_refs = references;
+                    if let Some(previous) = snapshot
+                        .messages
+                        .iter()
+                        .find(|saved| saved.id == message.id)
+                    {
+                        if !previous.tool_content_refs.is_empty()
+                            && previous.tool_content_refs != message.tool_content_refs
+                        {
+                            return Err(StorageError::Conflict(
+                                "原工具内容已经绑定其他材料".into(),
+                            ));
+                        }
+                        message.created_at = previous.created_at;
+                    }
+                    changes.push(JournalChange::MessageUpserted { message });
+                    changes.push(JournalChange::ProviderHistoryReplaced {
+                        messages: tool_identity::upsert_local_tool_result(
+                            &snapshot, &call_id, &native,
+                        )?,
+                    });
+                    Some(message_id)
+                } else {
+                    None
+                };
+                let previous = snapshot
+                    .operations
+                    .iter()
+                    .find(|operation| operation.run_id == rid && operation.tool_call_id == call_id);
+                let operation_id = result
+                    .details
+                    .get("operationId")
+                    .or_else(|| result.model_payload.get("operationId"))
+                    .and_then(Value::as_str)
+                    .map(str::to_owned);
+                if let Some(binding) = previous.and_then(|operation| operation.binding.as_ref()) {
+                    if operation_id
+                        .as_ref()
+                        .is_some_and(|id| id != &binding.operation_id)
+                    {
+                        return Err(StorageError::Conflict(
+                            "工具回执的操作身份与已接纳操作不一致".into(),
+                        ));
                     }
                 }
-                ToolOutcome::Cancelled => OperationPhase::Cancelled,
-                ToolOutcome::Error => OperationPhase::Failed,
-                ToolOutcome::Unknown => OperationPhase::Unresolved,
-            };
-            let operation = OperationRecord {
-                tool_call_id: call_id.clone(),
-                tool_name: name.clone(),
-                run_id: rid.clone(),
-                binding: binding.clone(),
-                phase,
-                details: json!({"modelPayload":result.model_payload,"details":result.details}),
-            };
-            let mut changes = vec![JournalChange::OperationUpserted { operation }];
-            if let Some(turn) = snapshot
-                .turns
-                .iter_mut()
-                .find(|turn| turn.run_ids.contains(&rid))
-            {
-                if let Some(binding) = binding {
-                    if phase == OperationPhase::Committed
-                        && !name.ends_with(".status")
-                        && !name.ends_with(".get")
-                        && !name.ends_with(".reconcile")
-                        && !turn.operations.iter().any(|b| {
-                            b.operation_id == binding.operation_id && b.store == binding.store
-                        })
-                    {
-                        turn.operations.push(binding);
+                let receipt_store = if name.starts_with("skills.")
+                    || name.starts_with("memories.")
+                    || name.starts_with("knowledge.")
+                {
+                    OperationStore::Knowledge
+                } else if result.model_payload.get("kind").and_then(Value::as_str)
+                    == Some("external")
+                {
+                    OperationStore::External
+                } else {
+                    OperationStore::Main
+                };
+                let receipt_store = previous
+                    .and_then(|operation| operation.binding.as_ref())
+                    .map_or(receipt_store, |binding| binding.store);
+                let binding = operation_id
+                    .map(|operation_id| OperationBinding {
+                        operation_id,
+                        store: receipt_store,
+                        run_id: rid.clone(),
+                        tool_call_id: call_id.clone(),
+                    })
+                    .or_else(|| previous.and_then(|operation| operation.binding.clone()));
+                let phase = match result.outcome {
+                    ToolOutcome::Success => {
+                        if matches!(
+                            result.model_payload.get("status").and_then(Value::as_str),
+                            Some("preview" | "previewed")
+                        ) {
+                            OperationPhase::Previewed
+                        } else {
+                            OperationPhase::Committed
+                        }
+                    }
+                    ToolOutcome::Cancelled => OperationPhase::Cancelled,
+                    ToolOutcome::Error => OperationPhase::Failed,
+                    ToolOutcome::Unknown => OperationPhase::Unresolved,
+                };
+                let operation = OperationRecord {
+                    tool_call_id: call_id.clone(),
+                    tool_name: name.clone(),
+                    run_id: rid.clone(),
+                    binding: binding.clone(),
+                    phase,
+                    details: json!({"modelPayload":result.model_payload,"details":result.details}),
+                };
+                changes.push(JournalChange::OperationUpserted { operation });
+                if let Some(turn) = snapshot
+                    .turns
+                    .iter_mut()
+                    .find(|turn| turn.run_ids.contains(&rid))
+                {
+                    if let Some(message_id) = &stored_message_id {
+                        if !turn.message_ids.contains(message_id) {
+                            turn.message_ids.push(message_id.clone());
+                        }
+                    }
+                    if let Some(binding) = binding {
+                        if phase == OperationPhase::Committed
+                            && !name.ends_with(".status")
+                            && !name.ends_with(".get")
+                            && !name.ends_with(".reconcile")
+                            && !turn.operations.iter().any(|b| {
+                                b.operation_id == binding.operation_id && b.store == binding.store
+                            })
+                        {
+                            turn.operations.push(binding);
+                        }
                     }
                     changes.push(JournalChange::TurnUpserted { turn: turn.clone() });
                 }
-            }
-            if let Some(run) = snapshot.runs.iter_mut().find(|r| r.id == rid) {
-                run.tools.retain(|t| t.id != call_id);
-                run.tools.push(ToolUsage {
-                    id: call_id,
-                    name,
-                    outcome: match result.outcome {
-                        ToolOutcome::Success => AttemptOutcome::Completed,
-                        ToolOutcome::Cancelled => AttemptOutcome::Cancelled,
-                        ToolOutcome::Error => AttemptOutcome::Failed,
-                        ToolOutcome::Unknown => AttemptOutcome::Unknown,
-                    },
+                if let Some(run) = snapshot.runs.iter_mut().find(|r| r.id == rid) {
+                    run.tools.retain(|t| t.id != call_id);
+                    run.tools.push(ToolUsage {
+                        id: call_id,
+                        name,
+                        outcome: match result.outcome {
+                            ToolOutcome::Success => AttemptOutcome::Completed,
+                            ToolOutcome::Cancelled => AttemptOutcome::Cancelled,
+                            ToolOutcome::Error => AttemptOutcome::Failed,
+                            ToolOutcome::Unknown => AttemptOutcome::Unknown,
+                        },
+                    });
+                    changes.push(JournalChange::RunUpserted { run: run.clone() });
+                }
+                if snapshot.conversation.status == ConversationStatus::WaitingApproval {
+                    snapshot.conversation.status = ConversationStatus::Running;
+                }
+                changes.push(JournalChange::ConversationUpdated {
+                    conversation: snapshot.conversation.clone(),
                 });
-                changes.push(JournalChange::RunUpserted { run: run.clone() });
-            }
-            if snapshot.conversation.status == ConversationStatus::WaitingApproval {
-                snapshot.conversation.status = ConversationStatus::Running;
-            }
-            changes.push(JournalChange::ConversationUpdated {
-                conversation: snapshot.conversation.clone(),
-            });
-            Ok(changes)
-        })
-        .await?;
-        Ok(())
+                store.append(&conversation_id, snapshot.sequence, now_ms(), changes)?;
+                let state = store
+                    .conversation_state(&conversation_id)?
+                    .ok_or_else(|| StorageError::NotFound(conversation_id.clone()))?;
+                Ok((payload, state))
+            })
+            .await?;
+        self.publish(state);
+        Ok(payload)
     }
 
     pub(super) async fn recover_knowledge_operations(&self, id: &str) -> Result<usize> {
@@ -679,6 +825,7 @@ impl RuntimeManager {
                         true,
                     ),
                     outcome: ToolOutcome::Success,
+                    model_content: Vec::new(),
                 }
             } else {
                 let mut details = operation
@@ -699,6 +846,7 @@ impl RuntimeManager {
                     model_payload: json!({"status":"cancelled","operationId":operation_id,"dataStatus":"unchanged"}),
                     details,
                     outcome: ToolOutcome::Cancelled,
+                    model_content: Vec::new(),
                 }
             };
             match self
@@ -806,6 +954,7 @@ impl RuntimeManager {
                     .find(|before| before.id == message.id)
                 {
                     message.created_at = before.created_at;
+                    message.tool_content_refs = before.tool_content_refs.clone();
                 }
                 recovered_messages.push(message.id.clone());
                 changes.push(JournalChange::MessageUpserted { message });
@@ -1439,6 +1588,7 @@ impl RuntimeManager {
                     true,
                 ),
                 outcome: ToolOutcome::Success,
+                model_content: Vec::new(),
             };
             self.record_tool_result(accepted, name, call_id, &result)
                 .await?;
@@ -1599,6 +1749,7 @@ impl RuntimeManager {
                 true,
             ),
             outcome: ToolOutcome::Success,
+            model_content: Vec::new(),
         };
         self.record_tool_result(accepted, name, call_id, &result)
             .await?;

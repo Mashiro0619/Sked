@@ -115,6 +115,7 @@ impl RuntimeManager {
             tools: descriptors,
             history,
             attachments: &snapshot.attachments,
+            tool_content: crate::context::tool_content_sources(snapshot, history)?,
             failures: &snapshot.context_failures,
             calibration,
             auto_compaction_suspended: accepted
@@ -319,7 +320,7 @@ impl RuntimeManager {
         history: Vec<Value>,
     ) -> Result<Vec<Value>> {
         let snapshot = self.read(&accepted.conversation_id).await?;
-        let Some(plan) = self.inner.context.plan_compaction(&snapshot, &history)? else {
+        let Some(mut plan) = self.inner.context.plan_compaction(&snapshot, &history)? else {
             accepted
                 .control
                 .auto_compaction_suspended
@@ -328,6 +329,64 @@ impl RuntimeManager {
                 .await?;
             return Ok(history);
         };
+        let summarized = plan.summarized_content.clone();
+        let cancellation = accepted.control.cancellation.clone();
+        let source_text = self
+            .inner
+            .storage
+            .call(move |store| {
+                let mut text = String::new();
+                for source in summarized {
+                    if source.reference.kind == ToolContentKind::Text {
+                        let body = content::read_content_text(
+                            store,
+                            &source.attachment,
+                            &source.reference,
+                            &cancellation,
+                        )?;
+                        text.push_str(&format!(
+                            "\nTool content {} from {} ({}):\n{}\n",
+                            source.reference.id,
+                            source.source_message_id,
+                            source.attachment.name,
+                            body
+                        ));
+                    }
+                }
+                Ok(text)
+            })
+            .await?;
+        plan.prompt.push_str(&source_text);
+        plan.prompt.push_str(&plan.content_index);
+        let mut attachment_ids = Vec::new();
+        for source in &plan.summarized_content {
+            if source.reference.kind != ToolContentKind::Native {
+                continue;
+            }
+            if crate::context::native_content_supported(
+                &source.attachment.media_type,
+                accepted.config.protocol,
+            ) {
+                attachment_ids.push(source.attachment.id.clone());
+                plan.prompt.push_str(&format!(
+                    "\nThe attached file {} is saved tool content {} from message {}.\n",
+                    source.attachment.name, source.reference.id, source.source_message_id
+                ));
+            } else {
+                plan.prompt.push_str(&format!("\nTool content {} ({}) is saved but this protocol cannot receive {}. Its file bytes are unavailable to this summary request; preserve its contentId for later extraction.\n",
+                    source.reference.id, source.attachment.name, source.attachment.media_type));
+            }
+        }
+        let prompt = self.inner.context.provider_prompt(
+            &snapshot,
+            &Message {
+                id: new_id(),
+                role: MessageRole::User,
+                text: plan.prompt.clone(),
+                attachment_ids,
+                ..Default::default()
+            },
+        )?;
         let request_id = format!("{}:compact:{}", accepted.run_id, new_id());
         self.commit_context(
             &accepted.conversation_id,
@@ -342,7 +401,7 @@ impl RuntimeManager {
             .context
             .summarize(SummaryRequest {
                 config: accepted.config.clone(),
-                prompt: plan.prompt.clone(),
+                prompt,
                 executor: self.transport_executor(
                     accepted.conversation_id.clone(),
                     Some(accepted.run_id.clone()),

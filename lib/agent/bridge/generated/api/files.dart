@@ -8,7 +8,7 @@ import 'file_contracts.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `admit`, `cancelled`, `check_active`, `check_content`, `check_cursor`, `cleanup_admission`, `file_error`, `invalid`, `keep_cursor`, `owns_content`, `token`, `unavailable`
+// These functions are ignored because they are not marked as `pub`: `admit`, `cancelled`, `check_active`, `check_content`, `check_cursor`, `cleanup_admission`, `cleanup_registration`, `file_error`, `invalid`, `keep_cursor`, `keep_snapshot`, `owns_content`, `retain_snapshot`, `token`, `unavailable`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `AccessResources`, `AccessState`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `drop`
 

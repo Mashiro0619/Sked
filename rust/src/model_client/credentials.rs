@@ -16,7 +16,7 @@ static DIAGNOSTIC_ASSIGNMENT: LazyLock<Regex> = LazyLock::new(|| {
 
 /// One captured connection's credential. This value never implements Debug.
 #[derive(Clone)]
-pub(super) struct CredentialGuard(Arc<str>);
+pub(crate) struct CredentialGuard(Arc<str>);
 
 impl CredentialGuard {
     pub fn new(key: &str) -> Self {

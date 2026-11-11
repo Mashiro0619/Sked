@@ -21,6 +21,7 @@ pub struct ContextEstimateInput<'a> {
     pub tools: Vec<ToolDescriptor>,
     pub history: &'a [Value],
     pub attachments: &'a [AttachmentMetadata],
+    pub tool_content: Vec<super::ContextContent>,
     pub failures: &'a [ContextFailure],
     pub calibration: Option<(u64, u64)>,
     pub auto_compaction_suspended: bool,
@@ -41,6 +42,8 @@ pub struct CompactionPlan {
     pub prompt: String,
     pub retained_history: Vec<Value>,
     pub attachments: Vec<AttachmentMetadata>,
+    pub summarized_content: Vec<super::ContextContent>,
+    pub content_index: String,
     pub tokens_before: u64,
 }
 
@@ -77,7 +80,7 @@ pub trait ContextProvider: Send + Sync + 'static {
 /// cancellation token. It creates no independent task or business tool loop.
 pub struct SummaryRequest {
     pub config: ConnectionConfig,
-    pub prompt: String,
+    pub prompt: ProviderMessage,
     pub executor: Arc<dyn ModelToolExecutor>,
     pub cancellation: CancellationToken,
 }

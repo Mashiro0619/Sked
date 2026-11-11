@@ -1103,6 +1103,12 @@ impl AgentStorage {
                 &message.attachment_ids,
                 &message.context_references,
             );
+            attachment_ids.extend(
+                message
+                    .tool_content_refs
+                    .iter()
+                    .map(|content| content.attachment_id.clone()),
+            );
             source_ids.extend(
                 message
                     .context_references

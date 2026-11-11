@@ -163,6 +163,14 @@ pub(super) fn load(root: &Path, identity: &FileWriteIdentity) -> Result<(Evidenc
             error.message
         ))
     })?;
+    load_from_file(&file, identity)
+}
+
+pub(super) fn load_from_file(
+    file: &File,
+    identity: &FileWriteIdentity,
+) -> Result<(Evidence, bool)> {
+    ledger::validate_identity(identity)?;
     let mut reader = BufReader::new(file);
     let mut line = String::new();
     let mut sequence = 0;

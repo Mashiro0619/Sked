@@ -318,8 +318,12 @@ pub(super) fn open_source(
 }
 
 pub(super) fn source_entry(source: &SourceReader) -> Result<FileEntry> {
+    source_metadata(source).map(|(entry, _)| entry)
+}
+
+pub(super) fn source_metadata(source: &SourceReader) -> Result<(FileEntry, Option<String>)> {
     match source {
-        SourceReader::Path(file) => entry(file),
+        SourceReader::Path(file) => Ok((entry(file)?, None)),
         SourceReader::Document {
             document,
             cancellation,
@@ -338,7 +342,7 @@ pub(super) fn source_entry(source: &SourceReader) -> Result<FileEntry> {
                     "The document identity changed while its stream was open.",
                 ));
             }
-            Ok(current.entry())
+            Ok((current.entry(), current.mime_type))
         }
     }
 }
@@ -470,6 +474,20 @@ impl Parent {
 
     pub fn open_child_locked(&self, name: &str) -> Result<File> {
         self.open_child(name, libc::O_RDONLY | libc::O_NOFOLLOW, 0)
+    }
+
+    pub fn open_child_shared(&self, name: &str) -> Result<File> {
+        self.open_child_locked(name)
+    }
+
+    pub fn delete_child_owned(&self, name: &str, file: &File) -> Result<()> {
+        self.verify_identity()?;
+        let name = name_string(name)?;
+        self.require_named_identity(&name, &entry(file)?.version.resource_id)?;
+        if unsafe { libc::unlinkat(self.file.as_raw_fd(), name.as_ptr(), 0) } < 0 {
+            return Err(io::Error::last_os_error().into());
+        }
+        Ok(())
     }
 
     pub fn open_for_update(&self) -> Result<File> {

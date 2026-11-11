@@ -3,12 +3,16 @@ import 'dart:convert';
 import 'package:flutter/services.dart' show PlatformException;
 
 import '../../application/operation_contracts.dart';
+import '../attachments/attachment_media_types.dart';
+import '../bridge/generated/api/contracts.dart' as native;
 import '../bridge/generated/api/file_contracts.dart';
+import '../bridge/generated/api/models.dart' show ViewToolContentRange;
 import '../files/agent_file_coordinator.dart';
 import '../files/agent_file_access_bridge.dart';
 import '../files/file_evidence.dart';
 import '../provider/provider_models.dart';
 import 'application_tool_host.dart';
+import 'application_tool_result.dart';
 
 class FileToolAdapters {
   FileToolAdapters({
@@ -169,22 +173,31 @@ class FileToolAdapters {
     );
     _add(
       'files.read',
-      'Read immutable file content. Supply resource to capture a file, or snapshotId to continue the same snapshot with nextOffset. Text is strict UTF-8; use base64 for other binary content. The returned sourceVersion is required when modifying that file.',
+      'Read immutable file content. Supply resource to capture a file, or snapshotId to continue the same snapshot. Text returns strict UTF-8 pages; continue with nextOffset. Native sends the complete file as a model content block, subject to the current protocol. Supply name or mediaType only when the captured metadata cannot identify them. The returned sourceVersion is required when modifying that file.',
       {
         'resource': resource,
         'snapshotId': _string,
-        'offset': {'type': 'integer', 'minimum': 0, 'default': 0},
+        'offset': {
+          'type': 'integer',
+          'minimum': 0,
+          'default': 0,
+          'description': 'Byte offset for text pages.',
+        },
         'length': {
           'type': 'integer',
           'minimum': 1,
           'maximum': _u32Max,
           'default': 32768,
+          'description':
+              'Requested page length for text. Omit for native content.',
         },
         'format': {
           'type': 'string',
-          'enum': ['text', 'base64'],
+          'enum': ['text', 'native'],
           'default': 'text',
         },
+        'name': _string,
+        'mediaType': _string,
       },
       [],
       _read,
@@ -259,7 +272,15 @@ class FileToolAdapters {
     Map<String, Object?> args,
     OperationScope scope,
   ) async {
-    _keys(args, {'resource', 'snapshotId', 'offset', 'length', 'format'});
+    _keys(args, {
+      'resource',
+      'snapshotId',
+      'offset',
+      'length',
+      'format',
+      'name',
+      'mediaType',
+    });
     if (args.containsKey('resource') == args.containsKey('snapshotId')) {
       _invalid('Supply exactly one of resource or snapshotId.');
     }
@@ -272,8 +293,18 @@ class FileToolAdapters {
       maximum: _u32Max,
     );
     final format = _optionalText(args, 'format') ?? 'text';
-    if (format != 'text' && format != 'base64') {
-      _invalid('format must be text or base64.');
+    if (format == 'base64') {
+      _invalid(
+        'format base64 has been replaced by native for complete file content.',
+      );
+    }
+    if (format != 'text' && format != 'native') {
+      _invalid('format must be text or native.');
+    }
+    if (format == 'native' && (offset != 0 || args.containsKey('length'))) {
+      _invalid(
+        'Native content uses the complete file. Omit offset and length.',
+      );
     }
     final snapshot = args.containsKey('resource')
         ? await _files.snapshot(
@@ -284,15 +315,40 @@ class FileToolAdapters {
             scope: scope,
             snapshotId: _text(args, 'snapshotId'),
           );
+    final (name, mediaType) = _contentMetadata(snapshot, args, format: format);
+    final byteLength = snapshot.contentVersion.byteLength;
+    final digest = snapshot.contentVersion.sha256;
+    if (byteLength == null ||
+        byteLength < 0 ||
+        digest == null ||
+        !RegExp(r'^[a-f0-9]{64}$').hasMatch(digest)) {
+      throw const OperationProblem(
+        OperationErrorCode.storageFailure,
+        'The file snapshot has no verified content length or digest.',
+      );
+    }
+    if (format == 'native') {
+      return _contentResult(
+        snapshot,
+        name: name,
+        mediaType: mediaType,
+        byteLength: byteLength,
+        digest: digest,
+        format: format,
+        offset: 0,
+      );
+    }
     // Four bytes are sufficient for at least one complete UTF-8 character.
     final chunk = await _files.readSnapshot(
       scope: scope,
       snapshotId: snapshot.id,
       offset: offset,
-      length: format == 'text' && length < 4 ? 4 : length,
+      length: length < 4 ? 4 : length,
     );
     if (chunk.snapshotId != snapshot.id ||
         chunk.offset != offset ||
+        offset > byteLength ||
+        chunk.bytes.length > byteLength - offset ||
         (chunk.nextOffset != null &&
             (chunk.bytes.isEmpty ||
                 chunk.nextOffset != offset + chunk.bytes.length))) {
@@ -300,15 +356,6 @@ class FileToolAdapters {
         OperationErrorCode.storageFailure,
         'The file snapshot page has inconsistent identity or offsets.',
       );
-    }
-    if (format == 'base64') {
-      return {
-        'snapshot': fileSnapshotJson(snapshot),
-        'offset': offset,
-        'format': format,
-        'base64': base64Encode(chunk.bytes),
-        'nextOffset': chunk.nextOffset,
-      };
     }
     final end = _utf8Boundary(chunk.bytes, hasMore: chunk.nextOffset != null);
     if (end == 0 && chunk.nextOffset != null) {
@@ -318,24 +365,20 @@ class FileToolAdapters {
       );
     }
     try {
-      final bytes = chunk.bytes.sublist(0, end);
-      var text = utf8.decode(bytes);
-      // Each page starts a decoder; retain an actual U+FEFF at that boundary.
-      if (bytes.length >= 3 &&
-          bytes[0] == 0xef &&
-          bytes[1] == 0xbb &&
-          bytes[2] == 0xbf) {
-        text = '\ufeff$text';
-      }
-      return {
-        'snapshot': fileSnapshotJson(snapshot),
-        'offset': offset,
-        'format': format,
-        'text': text,
-        'nextOffset': end < chunk.bytes.length
-            ? offset + end
-            : chunk.nextOffset,
-      };
+      // Validate this exact range; native resolves it from the saved snapshot
+      // and preserves all original characters, including a leading U+FEFF.
+      utf8.decode(chunk.bytes.sublist(0, end));
+      return _contentResult(
+        snapshot,
+        name: name,
+        mediaType: mediaType,
+        byteLength: byteLength,
+        digest: digest,
+        format: format,
+        offset: offset,
+        textLength: end,
+        nextOffset: end < chunk.bytes.length ? offset + end : chunk.nextOffset,
+      );
     } on FormatException {
       return {
         'status': 'failed',
@@ -343,7 +386,7 @@ class FileToolAdapters {
         'offset': offset,
         'error': {
           'code': 'invalidArgument',
-          'message': 'This range is not valid UTF-8. Continue with an exact returned nextOffset, or read this snapshot as base64.',
+          'message': 'This range is not valid UTF-8. Continue with an exact returned nextOffset, or use format native for the complete file.',
         },
       };
     }
@@ -462,6 +505,97 @@ Future<Map<String, Object?>> _fileCall(
     };
   }
 }
+
+(String, String) _contentMetadata(
+  FileSnapshot snapshot,
+  Map<String, Object?> args, {
+  required String format,
+}) {
+  final providedName = _optionalText(args, 'name');
+  final source = snapshot.source;
+  final sourceName =
+      snapshot.name ??
+      (source != null && source.kind != FileResourceKind.contentUri
+          ? source.value.split(RegExp(r'[/\\]')).last
+          : null);
+  final name = sourceName ?? providedName ?? 'file';
+  for (final candidate in [name, ?providedName]) {
+    if (candidate.isEmpty ||
+        candidate == '.' ||
+        candidate == '..' ||
+        candidate.contains(RegExp(r'[\x00-\x1f/\\]'))) {
+      _invalid(
+        'Content requires a file name without path separators or control characters.',
+      );
+    }
+  }
+  final captured = snapshot.mediaType == null
+      ? null
+      : _mediaType(snapshot.mediaType!);
+  final guessed = attachmentMediaType(name);
+  final known = captured != null && captured != 'application/octet-stream'
+      ? captured
+      : guessed != 'application/octet-stream'
+      ? guessed
+      : null;
+  final supplied = _optionalText(args, 'mediaType');
+  final declared = supplied == null ? null : _mediaType(supplied);
+  if (known != null && declared != null && declared != known) {
+    _invalid(
+      'mediaType conflicts with the captured file metadata or file extension.',
+    );
+  }
+  final mediaType =
+      known ?? declared ?? (format == 'text' ? 'text/plain' : null);
+  if (mediaType == null || mediaType == 'application/octet-stream') {
+    throw const OperationProblem(
+      OperationErrorCode.unsupported,
+      'Native content requires a known media type. Supply mediaType for this file.',
+    );
+  }
+  return (name, mediaType);
+}
+
+String _mediaType(String value) {
+  final normalized = value.split(';').first.trim().toLowerCase();
+  if (!RegExp(r'^[a-z0-9!#$&^_.+-]+/[a-z0-9!#$&^_.+-]+$')
+      .hasMatch(normalized)) {
+    _invalid('mediaType must be a valid MIME type.');
+  }
+  return normalized;
+}
+
+ApplicationToolResult _contentResult(
+  FileSnapshot snapshot, {
+  required String name,
+  required String mediaType,
+  required int byteLength,
+  required String digest,
+  required String format,
+  required int offset,
+  int? textLength,
+  int? nextOffset,
+}) => ApplicationToolResult(
+  {
+    'snapshot': fileSnapshotJson(snapshot),
+    'offset': offset,
+    'format': format,
+    'nextOffset': nextOffset,
+  },
+  modelContent: [
+    native.HostModelContent(
+      kind: native.HostContentKind.snapshot,
+      name: name,
+      snapshotId: snapshot.id,
+      mediaType: mediaType,
+      byteLength: byteLength,
+      sha256: digest,
+      textRange: textLength == null
+          ? null
+          : ViewToolContentRange(offset: offset, length: textLength),
+    ),
+  ],
+);
 
 FileVersion _version(Object? value) {
   if (value is! Map<String, Object?>) {

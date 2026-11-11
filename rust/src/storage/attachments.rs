@@ -20,6 +20,42 @@ fn blob_name(digest: &str) -> Result<String> {
     Ok(format!("{}.blob", digest.to_ascii_lowercase()))
 }
 
+pub(super) fn validate_tool_attachment(metadata: &AttachmentMetadata) -> Result<()> {
+    let valid_id = !metadata.id.is_empty()
+        && metadata.id.len() <= 128
+        && metadata
+            .id
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'));
+    let valid_media = metadata.media_type.split('/').count() == 2
+        && metadata.media_type.split('/').all(|part| {
+            !part.is_empty()
+                && part.bytes().all(|byte| {
+                    byte.is_ascii_lowercase()
+                        || byte.is_ascii_digit()
+                        || b"!#$&^_.+-".contains(&byte)
+                })
+        });
+    if !valid_id
+        || metadata.name.is_empty()
+        || metadata
+            .name
+            .chars()
+            .any(|character| character <= '\u{1f}' || matches!(character, '/' | '\\'))
+        || !valid_media
+        || metadata.sha256.len() != 64
+        || !metadata
+            .sha256
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    {
+        return Err(StorageError::Invalid(
+            "Tool attachment metadata is invalid".into(),
+        ));
+    }
+    Ok(())
+}
+
 impl AgentStorage {
     pub fn list_attachment_metadata(&mut self) -> Result<Vec<AttachmentMetadata>> {
         self.ensure_index()?;
@@ -86,6 +122,18 @@ impl AgentStorage {
         bytes: &[u8],
     ) -> Result<AttachmentMetadata> {
         self.copy_attachment(bytes, metadata, true, None)
+    }
+
+    /// The caller keeps the snapshot read lease and publishes its references
+    /// in this same persistence job, so collection cannot interleave admission.
+    pub fn copy_tool_attachment(
+        &mut self,
+        reader: &mut dyn Read,
+        metadata: AttachmentMetadata,
+        cancellation: &CancellationToken,
+    ) -> Result<AttachmentMetadata> {
+        validate_tool_attachment(&metadata)?;
+        self.copy_attachment(reader, metadata, true, Some(cancellation))
     }
 
     fn copy_attachment(
@@ -198,6 +246,69 @@ impl AgentStorage {
         {
             return Err(StorageError::Invalid(
                 "Attachment SHA-256 differs from its metadata".into(),
+            ));
+        }
+        Ok(bytes)
+    }
+
+    /// Reads a bounded page while hashing the same complete stream. Returned
+    /// bytes and verified evidence therefore describe one observed version.
+    pub fn read_attachment_range(
+        &self,
+        metadata: &AttachmentMetadata,
+        offset: u64,
+        length: u64,
+        cancellation: &CancellationToken,
+    ) -> Result<Vec<u8>> {
+        check_cancelled(Some(cancellation))?;
+        if offset > metadata.byte_length {
+            return Err(StorageError::Invalid(
+                "Attachment offset exceeds its length".into(),
+            ));
+        }
+        let end = offset
+            .checked_add(length)
+            .ok_or_else(|| {
+                StorageError::Invalid("Attachment range exceeds the offset domain".into())
+            })?
+            .min(metadata.byte_length);
+        let capacity = usize::try_from(end - offset)
+            .map_err(|_| StorageError::Invalid("Attachment page cannot fit in memory".into()))?;
+        let mut bytes = Vec::new();
+        bytes
+            .try_reserve_exact(capacity)
+            .map_err(|_| StorageError::Invalid("Attachment page cannot fit in memory".into()))?;
+        let mut input = File::open(self.attachment_path(metadata)?)?;
+        let mut digest = Sha256::new();
+        let mut position = 0_u64;
+        let mut buffer = [0_u8; 64 * 1024];
+        loop {
+            check_cancelled(Some(cancellation))?;
+            let count = input.read(&mut buffer)?;
+            if count == 0 {
+                break;
+            }
+            digest.update(&buffer[..count]);
+            let next = position.checked_add(count as u64).ok_or_else(|| {
+                StorageError::Invalid("Attachment stream exceeds the offset domain".into())
+            })?;
+            let start = position.max(offset);
+            let stop = next.min(end);
+            if start < stop {
+                bytes.extend_from_slice(
+                    &buffer[(start - position) as usize..(stop - position) as usize],
+                );
+            }
+            position = next;
+        }
+        if position != metadata.byte_length
+            || !metadata
+                .sha256
+                .eq_ignore_ascii_case(&format!("{:x}", digest.finalize()))
+            || bytes.len() != capacity
+        {
+            return Err(StorageError::Invalid(
+                "Attachment content differs from its metadata".into(),
             ));
         }
         Ok(bytes)

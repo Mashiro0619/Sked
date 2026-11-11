@@ -127,6 +127,23 @@ ConversationRunUsage runFromRust(native.ViewRun value) => ConversationRunUsage(
   ),
 );
 
+ConversationToolContentRef toolContentRefFromRust(
+  native.ViewToolContentRef value,
+) => ConversationToolContentRef(
+  id: value.id,
+  attachmentId: value.attachmentId,
+  kind: ConversationToolContentKind.values.byName(value.kind.name),
+  sourceSnapshotId: value.sourceSnapshotId,
+  sourceResource: value.sourceResource,
+  sourceVersion: value.sourceVersion,
+  textRange: value.textRange == null
+      ? null
+      : ConversationToolContentRange(
+          offset: value.textRange!.offset.toInt(),
+          length: value.textRange!.length.toInt(),
+        ),
+);
+
 ConversationMessage conversationMessageFromRust(native.ViewMessage value) =>
     ConversationMessage(
       id: value.id,
@@ -148,6 +165,7 @@ ConversationMessage conversationMessageFromRust(native.ViewMessage value) =>
           : AgentModelProtocol.values.byName(value.providerProtocol!),
       attachmentIds: value.attachmentIds,
       contextReferences: value.contextReferences.map(referenceFromRust),
+      toolContentRefs: value.toolContentRefs.map(toolContentRefFromRust),
       attachmentDelivery: AttachmentDelivery.values.byName(
         value.attachmentDelivery.name,
       ),

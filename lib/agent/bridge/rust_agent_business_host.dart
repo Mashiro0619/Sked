@@ -8,6 +8,7 @@ import '../operations/operation_executor.dart';
 import '../operations/tool_outcome.dart';
 import '../provider/provider_models.dart';
 import '../tools/application_tool_host.dart';
+import '../tools/application_tool_result.dart';
 import 'conversation_projection.dart';
 import 'generated/api/contracts.dart' as native;
 import 'generated/api.dart' show AgentCore;
@@ -150,6 +151,7 @@ class RustAgentBusinessHost {
         ),
         native.HostRequestKind.prepareUndo => native.HostResult(
           requestId: request.id,
+          modelContent: const [],
           outcome: native.HostOutcome.success,
           ticket: await _prepareUndo(request),
         ),
@@ -171,6 +173,7 @@ class RustAgentBusinessHost {
           ? _result(request.id, ToolOutcome.problem(error).payload)
           : native.HostResult(
               requestId: request.id,
+              modelContent: const [],
               outcome: native.HostOutcome.error,
               errorCode: error.code.name,
               errorMessage: error.message,
@@ -178,6 +181,7 @@ class RustAgentBusinessHost {
     } catch (error) {
       result = native.HostResult(
         requestId: request.id,
+        modelContent: const [],
         outcome: native.HostOutcome.error,
         errorCode: 'host_error',
         errorMessage: 'Business host failed (${error.runtimeType}).',
@@ -356,6 +360,7 @@ class RustAgentBusinessHost {
     );
     return native.HostResult(
       requestId: request.id,
+      modelContent: const [],
       outcome: native.HostOutcome.success,
     );
   }
@@ -376,6 +381,7 @@ class RustAgentBusinessHost {
     }
     return native.HostResult(
       requestId: request.id,
+      modelContent: const [],
       outcome: native.HostOutcome.success,
     );
   }
@@ -393,6 +399,7 @@ class RustAgentBusinessHost {
     await callback(request);
     return native.HostResult(
       requestId: request.id,
+      modelContent: const [],
       outcome: native.HostOutcome.success,
     );
   }
@@ -503,6 +510,9 @@ native.HostResult _result(String id, Map<String, Object?> result) {
   return native.HostResult(
     requestId: id,
     modelPayload: _json(model),
+    modelContent: result is ApplicationToolResult
+        ? result.modelContent
+        : const [],
     details: _json(result),
     outcome: switch (outcome.kind) {
       ToolOutcomeKind.cancelled => native.HostOutcome.cancelled,

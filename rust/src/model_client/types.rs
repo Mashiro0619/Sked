@@ -2,6 +2,8 @@ use futures::future::BoxFuture;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
+use std::sync::{Arc, Mutex};
+use tokio::sync::oneshot;
 use tokio_util::sync::CancellationToken;
 
 use crate::storage::models::{ModelSelection, TokenUsage};
@@ -91,6 +93,7 @@ pub enum ModelEvent {
     AssistantCommitted {
         message: Value,
         tool_call_ids: Vec<String>,
+        acknowledged: Option<ModelEventAcknowledgement>,
     },
     ToolCall {
         id: String,
@@ -108,6 +111,29 @@ pub enum ModelEvent {
     },
 }
 
+/// Cloned event views share one completion. Dropping every view closes the
+/// channel, so a vanished persistence consumer cannot admit tool execution.
+#[derive(Debug, Clone)]
+pub struct ModelEventAcknowledgement(Arc<Mutex<Option<oneshot::Sender<Result<(), String>>>>>);
+
+impl ModelEventAcknowledgement {
+    pub fn channel() -> (Self, oneshot::Receiver<Result<(), String>>) {
+        let (sender, receiver) = oneshot::channel();
+        (Self(Arc::new(Mutex::new(Some(sender)))), receiver)
+    }
+
+    pub fn complete(&self, result: Result<(), String>) {
+        if let Some(sender) = self
+            .0
+            .lock()
+            .expect("model acknowledgement poisoned")
+            .take()
+        {
+            let _ = sender.send(result);
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct ModelRunResult {
     /// Full provider history including the input history and accepted prompt.
@@ -121,6 +147,10 @@ pub struct ModelRunResult {
 }
 
 pub trait ModelToolExecutor: Send + Sync {
+    fn requires_tool_call_acknowledgement(&self) -> bool {
+        false
+    }
+
     fn validate_input(
         &self,
         _input: Vec<Value>,

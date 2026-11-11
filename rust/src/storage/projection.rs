@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use super::{
     error::{Result, StorageError, required},
@@ -76,6 +76,170 @@ pub(crate) fn validate_changes(
                 required(id, "extension.id")?;
             }
             _ => {}
+        }
+    }
+    validate_tool_contents(snapshot, changes)
+}
+
+fn validate_tool_contents(
+    snapshot: &ConversationSnapshot,
+    changes: &[JournalChange],
+) -> Result<()> {
+    let updates_content = changes.iter().any(|change| match change {
+        JournalChange::MessageUpserted { message } => !message.tool_content_refs.is_empty(),
+        JournalChange::MessagesReplaced { messages } => messages
+            .iter()
+            .any(|message| !message.tool_content_refs.is_empty()),
+        JournalChange::HistoryVersionStored { version } => version
+            .messages
+            .iter()
+            .any(|message| !message.tool_content_refs.is_empty()),
+        _ => false,
+    });
+    if !updates_content {
+        return Ok(());
+    }
+    let mut metadata: HashMap<&str, &AttachmentMetadata> = snapshot
+        .attachments
+        .iter()
+        .map(|attachment| (attachment.id.as_str(), attachment))
+        .collect();
+    let mut messages: HashMap<&str, &Message> = snapshot
+        .messages
+        .iter()
+        .map(|message| (message.id.as_str(), message))
+        .collect();
+    let mut histories: HashMap<&str, &HistoryVersion> = snapshot
+        .history_versions
+        .iter()
+        .map(|version| (version.id.as_str(), version))
+        .collect();
+    for change in changes {
+        match change {
+            JournalChange::ConversationReset { .. } => {
+                metadata.clear();
+                messages.clear();
+                histories.clear();
+            }
+            JournalChange::AttachmentUpserted { attachment } => {
+                metadata.insert(&attachment.id, attachment);
+            }
+            JournalChange::AttachmentRemoved { id } => {
+                metadata.remove(id.as_str());
+            }
+            JournalChange::MessageUpserted { message } => {
+                messages.insert(&message.id, message);
+            }
+            JournalChange::MessageRemoved { id } => {
+                messages.remove(id.as_str());
+            }
+            JournalChange::MessagesReplaced {
+                messages: replacement,
+            } => {
+                messages = replacement
+                    .iter()
+                    .map(|message| (message.id.as_str(), message))
+                    .collect();
+            }
+            JournalChange::HistoryVersionStored { version } => {
+                histories.insert(&version.id, version);
+            }
+            _ => {}
+        }
+    }
+    let check_message = |message: &Message| -> Result<()> {
+        if message.tool_content_refs.is_empty() {
+            return Ok(());
+        }
+        if message.role != MessageRole::Tool
+            || message.tool_call_id.as_deref().is_none_or(str::is_empty)
+        {
+            return Err(StorageError::Invalid(
+                "Tool content requires its original tool message and call".into(),
+            ));
+        }
+        unique(
+            message
+                .tool_content_refs
+                .iter()
+                .map(|content| content.id.as_str()),
+            "toolContent.id",
+        )?;
+        for content in &message.tool_content_refs {
+            required(&content.attachment_id, "toolContent.attachmentId")?;
+            let attachment = metadata
+                .get(content.attachment_id.as_str())
+                .ok_or_else(|| {
+                    StorageError::Invalid(format!(
+                        "Tool content attachment does not exist: {}",
+                        content.attachment_id
+                    ))
+                })?;
+            super::attachments::validate_tool_attachment(attachment)?;
+            if let Some(range) = content.text_range {
+                if content.kind != ToolContentKind::Text
+                    || range
+                        .offset
+                        .checked_add(range.length)
+                        .is_none_or(|end| end > attachment.byte_length)
+                {
+                    return Err(StorageError::Invalid(
+                        "Tool content text range is invalid".into(),
+                    ));
+                }
+            }
+            if content.source_resource.is_some() != content.source_version.is_some()
+                || (content.source_resource.is_some() && content.source_snapshot_id.is_none())
+            {
+                return Err(StorageError::Invalid(
+                    "Tool content source evidence is incomplete".into(),
+                ));
+            }
+            if let Some(id) = &content.source_snapshot_id {
+                required(id, "toolContent.sourceSnapshotId")?;
+            }
+            if let Some(resource) = &content.source_resource {
+                required(&resource.value, "toolContent.sourceResource.value")?;
+            }
+            if let Some(version) = &content.source_version {
+                required(&version.resource_id, "toolContent.sourceVersion.resourceId")?;
+                required(&version.version, "toolContent.sourceVersion.version")?;
+                if version.byte_length != Some(attachment.byte_length)
+                    || !version
+                        .sha256
+                        .as_ref()
+                        .is_some_and(|digest| digest.eq_ignore_ascii_case(&attachment.sha256))
+                {
+                    return Err(StorageError::Invalid(
+                        "Tool content source version differs from the saved bytes".into(),
+                    ));
+                }
+            }
+        }
+        Ok(())
+    };
+    let mut bindings = HashMap::new();
+    for message in messages
+        .values()
+        .copied()
+        .chain(histories.values().flat_map(|version| &version.messages))
+    {
+        check_message(message)?;
+        for content in &message.tool_content_refs {
+            let binding = (
+                message.id.as_str(),
+                message.tool_call_id.as_deref(),
+                content,
+            );
+            if bindings
+                .insert(content.id.as_str(), binding)
+                .is_some_and(|previous| previous != binding)
+            {
+                return Err(StorageError::Invalid(format!(
+                    "Tool content identity has conflicting owners or references: {}",
+                    content.id
+                )));
+            }
         }
     }
     Ok(())
@@ -251,6 +415,12 @@ pub(crate) fn referenced_attachments(snapshot: &ConversationSnapshot) -> HashSet
         .chain(snapshot.history_versions.iter().flat_map(|v| &v.messages))
     {
         ids.extend(message.attachment_ids.iter().map(String::as_str));
+        ids.extend(
+            message
+                .tool_content_refs
+                .iter()
+                .map(|content| content.attachment_id.as_str()),
+        );
         ids.extend(
             message
                 .context_references

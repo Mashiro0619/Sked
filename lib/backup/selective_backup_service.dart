@@ -620,12 +620,20 @@ class _NativeAgentParticipant implements BackupRestoreParticipant {
   };
 
   Map<String, Object?> _parts(BackupPreparedTarget target, String name) {
-    if (target.descriptor['agentVersion'] !=
-            SelectiveBackupCodec.agentVersion ||
-        target.descriptor[name] is! Map) {
+    _archiveVersion(target);
+    if (target.descriptor[name] is! Map) {
       backupInvalid('Unsupported native Agent restore target.');
     }
     return Map<String, Object?>.from(target.descriptor[name] as Map);
+  }
+
+  int _archiveVersion(BackupPreparedTarget target) {
+    final version = target.descriptor['agentVersion'];
+    if (version is! int ||
+        !SelectiveBackupCodec.nativeAgentVersions.contains(version)) {
+      backupInvalid('Unsupported native Agent restore target.');
+    }
+    return version;
   }
 
   @override
@@ -673,7 +681,11 @@ class _NativeAgentParticipant implements BackupRestoreParticipant {
   Future<BackupTargetState> readState(BackupPreparedTarget target) async {
     try {
       final parts = _parts(target, 'target');
-      if (await store.restored(parts, target.restoreId)) {
+      if (await store.restored(
+        parts,
+        target.restoreId,
+        agentVersion: _archiveVersion(target),
+      )) {
         return BackupTargetState.applied;
       }
       final current = _records(await _current());
@@ -685,6 +697,7 @@ class _NativeAgentParticipant implements BackupRestoreParticipant {
             await store.restored(
               nativeArchiveParts([record]),
               target.restoreId,
+              agentVersion: _archiveVersion(target),
             )) {
           continue;
         }
@@ -713,7 +726,11 @@ class _NativeAgentParticipant implements BackupRestoreParticipant {
         'The native Agent restore target changed.',
       );
     }
-    await store.restore(_parts(target, 'target'), target.restoreId);
+    await store.restore(
+      _parts(target, 'target'),
+      target.restoreId,
+      agentVersion: _archiveVersion(target),
+    );
   }
 
   @override
@@ -919,8 +936,9 @@ class _AttachmentParticipant implements BackupRestoreParticipant {
   BackupOwner get owner => BackupOwner.attachments;
 
   List<Map<String, Object?>> _files(BackupPreparedTarget target) {
-    if (target.descriptor['agentVersion'] !=
-        SelectiveBackupCodec.agentVersion) {
+    if (!SelectiveBackupCodec.nativeAgentVersions.contains(
+      target.descriptor['agentVersion'],
+    )) {
       backupInvalid('Unsupported native attachment restore target.');
     }
     return [

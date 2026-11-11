@@ -108,6 +108,10 @@ pub(super) fn source_entry(source: &SourceReader) -> Result<FileEntry> {
     super::snapshots::ordinary_entry(source)
 }
 
+pub(super) fn source_metadata(source: &SourceReader) -> Result<(FileEntry, Option<String>)> {
+    Ok((source_entry(source)?, None))
+}
+
 pub(super) fn source_read(
     source: &mut SourceReader,
     bytes: &mut [u8],
@@ -414,6 +418,15 @@ impl Parent {
         // Recovery after restart has no retained DELETE handle to pin the
         // target name. This reader itself denies both write and delete sharing.
         self.open_file(name, GENERIC_READ, FILE_SHARE_READ, FILE_OPEN)
+    }
+
+    pub fn open_child_shared(&self, name: &str) -> Result<File> {
+        self.open_file(
+            name,
+            GENERIC_READ,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            FILE_OPEN,
+        )
     }
 
     pub fn create_staged(&self, name: &str) -> Result<File> {

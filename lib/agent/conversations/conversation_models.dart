@@ -13,9 +13,11 @@ import '../operations/tool_outcome.dart';
 import '../references/agent_composer_reference.dart';
 import 'conversation_usage.dart';
 import 'conversation_title.dart';
+import 'conversation_tool_content.dart';
 
 export 'conversation_usage.dart';
 export 'conversation_title.dart';
+export 'conversation_tool_content.dart';
 export '../attachments/attachment_models.dart';
 
 enum ConversationStatus {
@@ -236,6 +238,7 @@ class ConversationMessage {
     this.providerProtocol,
     Iterable<String> attachmentIds = const [],
     Iterable<AgentComposerReference> contextReferences = const [],
+    Iterable<ConversationToolContentRef> toolContentRefs = const [],
     this.attachmentDelivery = AttachmentDelivery.local,
     Iterable<Map<String, Object?>> responseItems = const [],
   }) : toolCalls = List.unmodifiable(toolCalls),
@@ -243,6 +246,7 @@ class ConversationMessage {
        contextReferences = AgentComposerReference.validatedList(
          contextReferences,
        ),
+       toolContentRefs = List.unmodifiable(toolContentRefs),
        responseItems = _freezeResponseItems(responseItems) {
     if (this.responseItems.isNotEmpty && role != ConversationRole.assistant) {
       throw const FormatException(
@@ -272,6 +276,14 @@ class ConversationMessage {
         'Referenced files must be attached to the message.',
       );
     }
+    if (this.toolContentRefs.isNotEmpty &&
+            (role != ConversationRole.tool ||
+                toolCallId == null ||
+                toolCallId!.isEmpty) ||
+        this.toolContentRefs.map((reference) => reference.id).toSet().length !=
+            this.toolContentRefs.length) {
+      throw const FormatException('Invalid tool message content references.');
+    }
   }
 
   final String id;
@@ -284,7 +296,12 @@ class ConversationMessage {
   final AgentModelProtocol? providerProtocol;
   final List<String> attachmentIds;
   final List<AgentComposerReference> contextReferences;
+  final List<ConversationToolContentRef> toolContentRefs;
   final AttachmentDelivery attachmentDelivery;
+
+  Iterable<String> get referencedAttachmentIds => attachmentIds.followedBy(
+    toolContentRefs.map((reference) => reference.attachmentId),
+  );
 
   /// Decoding belongs to the immutable protocol record, shared by every view.
   late final ToolOutcome? toolOutcome = role == ConversationRole.tool
@@ -299,6 +316,7 @@ class ConversationMessage {
     Iterable<Map<String, Object?>>? responseItems,
     Iterable<String>? attachmentIds,
     Iterable<AgentComposerReference>? contextReferences,
+    Iterable<ConversationToolContentRef>? toolContentRefs,
     AttachmentDelivery? attachmentDelivery,
   }) => ConversationMessage(
     id: id,
@@ -314,6 +332,7 @@ class ConversationMessage {
     contextReferences:
         contextReferences ??
         _referencesForAttachments(this.contextReferences, attachmentIds),
+    toolContentRefs: toolContentRefs ?? this.toolContentRefs,
     attachmentDelivery: attachmentDelivery ?? this.attachmentDelivery,
   );
 
@@ -333,6 +352,10 @@ class ConversationMessage {
     if (modelSelection != null) 'modelSelection': modelSelection!.toJson(),
     if (providerProtocol != null) 'providerProtocol': providerProtocol!.name,
     if (attachmentIds.isNotEmpty) 'attachmentIds': attachmentIds,
+    if (toolContentRefs.isNotEmpty)
+      'toolContentRefs': toolContentRefs
+          .map((reference) => reference.toJson())
+          .toList(),
     if (contextReferences.isNotEmpty)
       'contextReferences': contextReferences
           .map((reference) => reference.toJson())
@@ -372,6 +395,10 @@ class ConversationMessage {
       contextReferences: AgentComposerReference.decodeList(
         json['contextReferences'],
       ),
+      toolContentRefs: _objects(
+        json,
+        'toolContentRefs',
+      ).map(ConversationToolContentRef.fromJson),
       attachmentDelivery: json['attachmentDelivery'] == null
           ? AttachmentDelivery.local
           : _enumValue(AttachmentDelivery.values, json['attachmentDelivery']),
@@ -1015,16 +1042,38 @@ class AgentConversation {
       }
     }
 
+    final contentBindings = <String, (String, String?, String)>{};
+    void validateMessage(ConversationMessage message) {
+      validate(message.contextReferences, message.referencedAttachmentIds);
+      for (final reference in message.toolContentRefs) {
+        reference.validateAttachment(metadata[reference.attachmentId]!);
+        final binding = (
+          message.id,
+          message.toolCallId,
+          jsonEncode(reference.toJson()),
+        );
+        final original = contentBindings.putIfAbsent(
+          reference.id,
+          () => binding,
+        );
+        if (original != binding) {
+          throw const FormatException(
+            'A tool content identity is bound to conflicting messages or content.',
+          );
+        }
+      }
+    }
+
     validate(draftReferences, draftAttachmentIds);
     for (final input in queuedInputs) {
       validate(input.contextReferences, input.attachmentIds);
     }
     for (final message in messages) {
-      validate(message.contextReferences, message.attachmentIds);
+      validateMessage(message);
     }
     for (final version in historyVersions) {
       for (final message in version.messages) {
-        validate(message.contextReferences, message.attachmentIds);
+        validateMessage(message);
       }
     }
     for (final batch in redoBatches) {
@@ -1073,10 +1122,10 @@ List<String> _attachmentIds(Object? value) {
 
 Set<String> conversationAttachmentIds(AgentConversation conversation) => {
   ...conversation.draftAttachmentIds,
-  ...conversation.messages.expand((message) => message.attachmentIds),
+  ...conversation.messages.expand((message) => message.referencedAttachmentIds),
   ...conversation.historyVersions
       .expand((version) => version.messages)
-      .expand((message) => message.attachmentIds),
+      .expand((message) => message.referencedAttachmentIds),
   ...conversation.redoBatches.expand((batch) => batch.attachmentIds),
   ...conversation.queuedInputs.expand((input) => input.attachmentIds),
 };

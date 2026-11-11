@@ -1118,6 +1118,7 @@ ViewMessage nativeMessageFixture({
   responseItems: const [],
   attachmentIds: const [],
   contextReferences: const [],
+  toolContentRefs: const [],
   attachmentDelivery: ViewAttachmentDelivery.local,
 );
 
@@ -1171,6 +1172,7 @@ ViewMessage copyNativeMessage(
   responseItems: responseItems ?? value.responseItems,
   attachmentIds: attachmentIds ?? value.attachmentIds,
   contextReferences: contextReferences ?? value.contextReferences,
+  toolContentRefs: value.toolContentRefs,
   attachmentDelivery: value.attachmentDelivery,
 );
 

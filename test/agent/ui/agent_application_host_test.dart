@@ -192,6 +192,7 @@ void main() {
               responseItems: const [],
               attachmentIds: const [],
               contextReferences: const [],
+              toolContentRefs: const [],
               attachmentDelivery: ViewAttachmentDelivery.local,
             ),
         ],

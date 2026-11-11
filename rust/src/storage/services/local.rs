@@ -312,6 +312,15 @@ impl AttachmentStore for AgentStorage {
         AgentStorage::write_attachment(self, metadata, bytes)
     }
 
+    fn copy_tool_attachment(
+        &mut self,
+        reader: &mut dyn std::io::Read,
+        metadata: AttachmentMetadata,
+        cancellation: &CancellationToken,
+    ) -> Result<AttachmentMetadata> {
+        AgentStorage::copy_tool_attachment(self, reader, metadata, cancellation)
+    }
+
     fn attachment_path(&self, metadata: &AttachmentMetadata) -> Result<PathBuf> {
         AgentStorage::attachment_path(self, metadata)
     }
@@ -322,6 +331,16 @@ impl AttachmentStore for AgentStorage {
 
     fn read_attachment(&self, metadata: &AttachmentMetadata) -> Result<Vec<u8>> {
         AgentStorage::read_attachment(self, metadata)
+    }
+
+    fn read_attachment_range(
+        &self,
+        metadata: &AttachmentMetadata,
+        offset: u64,
+        length: u64,
+        cancellation: &CancellationToken,
+    ) -> Result<Vec<u8>> {
+        AgentStorage::read_attachment_range(self, metadata, offset, length, cancellation)
     }
 
     fn collect_unreferenced_attachments(&mut self) -> Result<Vec<String>> {

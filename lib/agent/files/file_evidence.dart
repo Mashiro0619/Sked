@@ -50,6 +50,8 @@ Map<String, Object?> fileEntryJson(FileEntry value) => {
 
 Map<String, Object?> fileSnapshotJson(FileSnapshot value) => {
   'id': value.id,
+  'name': ?value.name,
+  'mediaType': ?value.mediaType,
   if (value.source case final source?) 'source': fileResourceJson(source),
   if (value.sourceVersion case final version?)
     'sourceVersion': fileVersionJson(version),

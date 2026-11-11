@@ -908,6 +908,95 @@ impl TryFrom<ViewToolCall> for stored::ToolCall {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ViewToolContentKind {
+    Text,
+    Native,
+}
+
+impl From<stored::ToolContentKind> for ViewToolContentKind {
+    fn from(value: stored::ToolContentKind) -> Self {
+        match value {
+            stored::ToolContentKind::Text => Self::Text,
+            stored::ToolContentKind::Native => Self::Native,
+        }
+    }
+}
+
+impl From<ViewToolContentKind> for stored::ToolContentKind {
+    fn from(value: ViewToolContentKind) -> Self {
+        match value {
+            ViewToolContentKind::Text => Self::Text,
+            ViewToolContentKind::Native => Self::Native,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[flutter_rust_bridge::frb(non_opaque)]
+pub struct ViewToolContentRange {
+    pub offset: u64,
+    pub length: u64,
+}
+
+impl From<stored::ToolContentRange> for ViewToolContentRange {
+    fn from(value: stored::ToolContentRange) -> Self {
+        Self {
+            offset: value.offset,
+            length: value.length,
+        }
+    }
+}
+
+impl From<ViewToolContentRange> for stored::ToolContentRange {
+    fn from(value: ViewToolContentRange) -> Self {
+        Self {
+            offset: value.offset,
+            length: value.length,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[flutter_rust_bridge::frb(non_opaque)]
+pub struct ViewToolContentRef {
+    pub id: String,
+    pub attachment_id: String,
+    pub kind: ViewToolContentKind,
+    pub source_snapshot_id: Option<String>,
+    pub source_resource: Option<super::file_contracts::FileResourceRef>,
+    pub source_version: Option<super::file_contracts::FileVersion>,
+    pub text_range: Option<ViewToolContentRange>,
+}
+
+impl From<stored::ToolContentRef> for ViewToolContentRef {
+    fn from(value: stored::ToolContentRef) -> Self {
+        Self {
+            id: value.id,
+            attachment_id: value.attachment_id,
+            kind: value.kind.into(),
+            source_snapshot_id: value.source_snapshot_id,
+            source_resource: value.source_resource.map(Into::into),
+            source_version: value.source_version.map(Into::into),
+            text_range: value.text_range.map(Into::into),
+        }
+    }
+}
+
+impl From<ViewToolContentRef> for stored::ToolContentRef {
+    fn from(value: ViewToolContentRef) -> Self {
+        Self {
+            id: value.id,
+            attachment_id: value.attachment_id,
+            kind: value.kind.into(),
+            source_snapshot_id: value.source_snapshot_id,
+            source_resource: value.source_resource.map(Into::into),
+            source_version: value.source_version.map(Into::into),
+            text_range: value.text_range.map(Into::into),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 #[flutter_rust_bridge::frb(non_opaque)]
 pub struct ViewMessage {
@@ -923,6 +1012,7 @@ pub struct ViewMessage {
     pub attachment_ids: Vec<String>,
     pub context_references: Vec<ViewContextReference>,
     pub attachment_delivery: ViewAttachmentDelivery,
+    pub tool_content_refs: Vec<ViewToolContentRef>,
 }
 impl From<stored::Message> for ViewMessage {
     fn from(value: stored::Message) -> Self {
@@ -957,6 +1047,11 @@ impl From<stored::Message> for ViewMessage {
                 .map(|value| value.into())
                 .collect(),
             attachment_delivery: value.attachment_delivery.into(),
+            tool_content_refs: value
+                .tool_content_refs
+                .into_iter()
+                .map(Into::into)
+                .collect(),
         }
     }
 }
@@ -1001,6 +1096,11 @@ impl TryFrom<ViewMessage> for stored::Message {
                 .map(|value| Ok(value.try_into()?))
                 .collect::<Result<_, String>>()?,
             attachment_delivery: value.attachment_delivery.into(),
+            tool_content_refs: value
+                .tool_content_refs
+                .into_iter()
+                .map(Into::into)
+                .collect(),
         })
     }
 }

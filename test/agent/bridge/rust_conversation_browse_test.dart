@@ -111,6 +111,7 @@ ViewConversationSnapshot _data() {
             responseItems: [],
             attachmentIds: ['old-file'],
             contextReferences: [],
+            toolContentRefs: [],
             attachmentDelivery: ViewAttachmentDelivery.local,
           ),
         ],

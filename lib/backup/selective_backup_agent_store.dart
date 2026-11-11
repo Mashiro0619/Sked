@@ -37,21 +37,27 @@ class NativeAgentBackupStore {
     };
   });
 
-  Future<bool> restored(Map<String, Object?> parts, String restoreId) =>
-      _translate(
-        () async => (await client.core).archiveRestoreState(
-          json: _encode(parts),
-          restoreId: restoreId,
-        ),
-      );
+  Future<bool> restored(
+    Map<String, Object?> parts,
+    String restoreId, {
+    int agentVersion = SelectiveBackupCodec.agentVersion,
+  }) => _translate(
+    () async => (await client.core).archiveRestoreState(
+      json: _encode(parts, agentVersion),
+      restoreId: restoreId,
+    ),
+  );
 
-  Future<void> restore(Map<String, Object?> parts, String restoreId) =>
-      _translate(
-        () async => (await client.core).importArchiveJson(
-          json: _encode(parts),
-          restoreId: restoreId,
-        ),
-      );
+  Future<void> restore(
+    Map<String, Object?> parts,
+    String restoreId, {
+    int agentVersion = SelectiveBackupCodec.agentVersion,
+  }) => _translate(
+    () async => (await client.core).importArchiveJson(
+      json: _encode(parts, agentVersion),
+      restoreId: restoreId,
+    ),
+  );
 
   Future<Uint8List> readAttachment(ConversationAttachment attachment) =>
       _translate(() async {
@@ -103,11 +109,16 @@ class NativeAgentBackupStore {
     );
   }
 
-  String _encode(Map<String, Object?> parts) => jsonEncode({
-    'schema': SelectiveBackupCodec.agentSchema,
-    'version': SelectiveBackupCodec.agentVersion,
-    ...parts,
-  });
+  String _encode(Map<String, Object?> parts, int agentVersion) {
+    if (!SelectiveBackupCodec.nativeAgentVersions.contains(agentVersion)) {
+      backupInvalid('Unsupported native Agent archive version.');
+    }
+    return jsonEncode({
+      ...parts,
+      'schema': SelectiveBackupCodec.agentSchema,
+      'version': agentVersion,
+    });
+  }
 
   Future<T> _translate<T>(Future<T> Function() action) async {
     try {

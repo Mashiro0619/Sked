@@ -85,6 +85,7 @@ impl AgentHost for Arc<SavingHost> {
                 model_payload: payload.clone(),
                 details: payload,
                 outcome: ToolOutcome::Success,
+                model_content: Vec::new(),
             })
         })
     }

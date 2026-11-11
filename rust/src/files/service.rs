@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    io::{Read, Seek, SeekFrom},
+    io::{self, Read, Seek, SeekFrom},
     panic::{AssertUnwindSafe, catch_unwind},
     path::PathBuf,
     sync::{
@@ -24,7 +24,7 @@ use super::{
     cursors::{Cursor, DirectoryCursor, SearchCursor},
     native, page_size,
     prepared::PreparedInner,
-    snapshots::{SnapshotStore, StagedContent, ordinary_entry},
+    snapshots::{LockedSnapshot, SnapshotRetention, SnapshotStore, StagedContent, ordinary_entry},
     validate_id, with_cleanup_error, write,
 };
 use crate::plugins::ServiceDefinition;
@@ -134,6 +134,39 @@ pub(super) struct Admission {
 pub struct FileService {
     store: Arc<SnapshotStore>,
     admission: Arc<Admission>,
+}
+
+/// A persistence job reads this already frozen private object from its own
+/// offset. The service waits for the job to release the lease before shutdown.
+pub struct SnapshotReadLease {
+    snapshot: Arc<LockedSnapshot>,
+    offset: u64,
+    _tracked: TaskTrackerToken,
+}
+
+impl SnapshotReadLease {
+    pub fn metadata(&self) -> &FileSnapshot {
+        &self.snapshot.metadata
+    }
+}
+
+impl Read for SnapshotReadLease {
+    fn read(&mut self, bytes: &mut [u8]) -> io::Result<usize> {
+        if bytes.is_empty() {
+            return Ok(0);
+        }
+        let mut file = self
+            .snapshot
+            .file
+            .lock()
+            .map_err(|_| io::Error::other("The immutable snapshot reader lock is poisoned."))?;
+        file.seek(SeekFrom::Start(self.offset))?;
+        let read = file.read(bytes)?;
+        self.offset = self.offset.checked_add(read as u64).ok_or_else(|| {
+            io::Error::other("The snapshot reader offset exceeds the filesystem range.")
+        })?;
+        Ok(read)
+    }
 }
 
 impl FileService {
@@ -430,12 +463,58 @@ impl FileService {
         cancellation: CancellationToken,
         on_register: impl Fn(String) + Send + 'static,
     ) -> Result<FileSnapshot> {
+        self.snapshot_retained(source, cancellation, on_register)
+            .await
+            .map(|(snapshot, _)| snapshot)
+    }
+
+    pub async fn snapshot_retained(
+        &self,
+        source: FileResourceRef,
+        cancellation: CancellationToken,
+        on_register: impl Fn(String) + Send + 'static,
+    ) -> Result<(FileSnapshot, SnapshotRetention)> {
         let store = self.store.clone();
         self.blocking_registered(cancellation, on_register, move |cancellation, _| {
             let mut source = native::open_source(&source, &cancellation)?;
-            store.capture_source(&mut source, &cancellation)
+            let captured = store.capture_source(&mut source, &cancellation)?;
+            Ok((captured.metadata, captured.retention))
         })
         .await
+    }
+
+    pub async fn retain_snapshot(
+        &self,
+        snapshot_id: String,
+        cancellation: CancellationToken,
+    ) -> Result<SnapshotRetention> {
+        let store = self.store.clone();
+        self.blocking(cancellation, move |cancellation| {
+            Ok(store.get(&snapshot_id, &cancellation)?.retention.clone())
+        })
+        .await
+    }
+
+    pub async fn lease_snapshot(
+        &self,
+        snapshot_id: String,
+        cancellation: CancellationToken,
+    ) -> Result<SnapshotReadLease> {
+        let (tracked, cancellation) = self.admit(cancellation)?;
+        let store = self.store.clone();
+        self.admission
+            .runtime
+            .spawn_blocking(move || {
+                let snapshot = store.get(&snapshot_id, &cancellation)?;
+                cancellation.check()?;
+                Ok(SnapshotReadLease {
+                    snapshot,
+                    offset: 0,
+                    _tracked: tracked,
+                })
+            })
+            .await
+            .map_err(join_error)?
     }
 
     pub async fn snapshot_info(
@@ -589,6 +668,16 @@ impl FileService {
         content_id: String,
         cancellation: CancellationToken,
     ) -> Result<FileSnapshot> {
+        self.finish_content_retained(content_id, cancellation)
+            .await
+            .map(|(snapshot, _)| snapshot)
+    }
+
+    pub async fn finish_content_retained(
+        &self,
+        content_id: String,
+        cancellation: CancellationToken,
+    ) -> Result<(FileSnapshot, SnapshotRetention)> {
         validate_id(&content_id)?;
         let admission = self.admission.clone();
         let store = self.store.clone();
@@ -600,11 +689,13 @@ impl FileService {
                 .get(&content_id)
                 .cloned();
             let Some(slot) = slot else {
-                return Ok(store.get(&content_id, &cancellation)?.metadata.clone());
+                let captured = store.get(&content_id, &cancellation)?.retained();
+                return Ok((captured.metadata, captured.retention));
             };
             let mut owned = slot.lock().expect("staged file content poisoned");
             let Some(staged) = owned.take() else {
-                return Ok(store.get(&content_id, &cancellation)?.metadata.clone());
+                let captured = store.get(&content_id, &cancellation)?.retained();
+                return Ok((captured.metadata, captured.retention));
             };
             // A close that claims this slot waits for the seal's real IO and
             // handle release before it can publish the shared cleanup result.
@@ -615,9 +706,34 @@ impl FileService {
                 .lock()
                 .expect("staged file contents poisoned")
                 .remove(&content_id);
-            result
+            result.map(|captured| (captured.metadata, captured.retention))
         })
         .await
+    }
+
+    pub async fn collect_snapshots(&self) -> Result<()> {
+        let tracked = {
+            let accepting = self
+                .admission
+                .accepting
+                .lock()
+                .expect("file admission poisoned");
+            if !*accepting {
+                // Shutdown performs its own pass after every real reader and
+                // accepted writer has released the service lifetime token.
+                return Ok(());
+            }
+            self.admission.tasks.token()
+        };
+        let store = self.store.clone();
+        self.admission
+            .runtime
+            .spawn_blocking(move || {
+                let _tracked = tracked;
+                store.collect_unused()
+            })
+            .await
+            .map_err(join_error)?
     }
 
     pub async fn discard_content(&self, content_id: String) -> Result<()> {
@@ -773,6 +889,21 @@ impl FileService {
             .map_err(join_error);
         self.admission.tasks.wait().await;
         let mut result = disposed;
+        let store = self.store.clone();
+        let tracked = self.admission.tasks.token();
+        let reclaimed = self
+            .admission
+            .runtime
+            .spawn_blocking(move || {
+                let _tracked = tracked;
+                // Admission is closed, every read lease released its token, and
+                // the earlier disposal worker released prepared/cache handles.
+                store.collect_after_shutdown()
+            })
+            .await
+            .map_err(join_error)
+            .and_then(|result| result);
+        collect_cleanup(&mut result, reclaimed);
         #[cfg(target_os = "android")]
         {
             let tracked = self.admission.tasks.token();

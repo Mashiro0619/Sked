@@ -12,7 +12,7 @@ use super::{
     FileWriteState, Result,
     ledger::{self, Evidence, Journal, Phase},
     native,
-    snapshots::{LockedSnapshot, SnapshotStore, frozen_version, ordinary_entry},
+    snapshots::{LockedSnapshot, SnapshotRetention, SnapshotStore, frozen_version, ordinary_entry},
 };
 
 pub(super) struct Backend {
@@ -22,6 +22,7 @@ pub(super) struct Backend {
     original: Option<File>,
     content: Arc<LockedSnapshot>,
     store: Arc<SnapshotStore>,
+    _original_retention: Option<SnapshotRetention>,
     // Keep the frozen OS resources inside the service's tracked lifetime.
     _tracked: TaskTrackerToken,
 }
@@ -91,7 +92,7 @@ pub(super) fn prepare(
         // opaque version, content digest and length against the request.
         request.expected = Some(observed);
         let snapshot = preparation_store.capture(file, cancellation)?;
-        if snapshot.source_version.as_ref() != request.expected.as_ref() {
+        if snapshot.metadata.source_version.as_ref() != request.expected.as_ref() {
             return Err(FileError::new(
                 FileErrorCode::Conflict,
                 "The original changed while its recovery snapshot was being saved.",
@@ -101,6 +102,10 @@ pub(super) fn prepare(
     } else {
         None
     };
+    let (original_snapshot, original_retention) = original_snapshot
+        .map_or((None, None), |captured| {
+            (Some(captured.metadata), Some(captured.retention))
+        });
     parent.verify_identity()?;
     cancellation.check()?;
     let mut preview = FileWritePreview {
@@ -122,6 +127,7 @@ pub(super) fn prepare(
         original,
         content,
         store: preparation_store,
+        _original_retention: original_retention,
         _tracked: preparation_token,
     })
 }

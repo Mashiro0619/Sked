@@ -374,11 +374,79 @@ pub enum HostOutcome {
 pub struct HostResult {
     pub request_id: String,
     pub model_payload: Option<JsonPayload>,
+    pub model_content: Vec<HostModelContent>,
     pub details: Option<JsonPayload>,
     pub outcome: HostOutcome,
     pub ticket: Option<ViewUndoTicket>,
     pub error_code: Option<String>,
     pub error_message: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HostContentKind {
+    Text,
+    Snapshot,
+}
+
+/// Typed host content stays separate from the dynamic tool payload. Each kind
+/// accepts only its own fields; the runtime verifies the snapshot evidence.
+#[derive(Debug, Clone)]
+pub struct HostModelContent {
+    pub kind: HostContentKind,
+    pub name: String,
+    pub text: Option<String>,
+    pub snapshot_id: Option<String>,
+    pub media_type: Option<String>,
+    pub byte_length: Option<u64>,
+    pub sha256: Option<String>,
+    pub text_range: Option<ViewToolContentRange>,
+}
+
+impl TryFrom<HostModelContent> for crate::runtime::HostModelContent {
+    type Error = String;
+
+    fn try_from(value: HostModelContent) -> Result<Self, Self::Error> {
+        if value.name.trim().is_empty() || value.name.contains('\0') {
+            return Err("Tool content requires a valid name".into());
+        }
+        match value.kind {
+            HostContentKind::Text => {
+                if value.snapshot_id.is_some()
+                    || value.media_type.is_some()
+                    || value.byte_length.is_some()
+                    || value.sha256.is_some()
+                    || value.text_range.is_some()
+                {
+                    return Err("Text content contains snapshot fields".into());
+                }
+                Ok(Self::Text {
+                    text: value.text.ok_or("Text content is missing its body")?,
+                    name: value.name,
+                })
+            }
+            HostContentKind::Snapshot => {
+                if value.text.is_some() {
+                    return Err("Snapshot content cannot contain an inline body".into());
+                }
+                Ok(Self::Snapshot {
+                    snapshot_id: value
+                        .snapshot_id
+                        .ok_or("Snapshot content is missing its identity")?,
+                    name: value.name,
+                    media_type: value
+                        .media_type
+                        .ok_or("Snapshot content is missing its media type")?,
+                    byte_length: value
+                        .byte_length
+                        .ok_or("Snapshot content is missing its length")?,
+                    sha256: value
+                        .sha256
+                        .ok_or("Snapshot content is missing its digest")?,
+                    text_range: value.text_range.map(Into::into),
+                })
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -6,10 +6,12 @@ use tokio_util::sync::CancellationToken;
 
 use super::*;
 use crate::model_client::{
-    ConnectionIdentity, ModelToolExecutor, PreparedRequestBody, ProviderProtocol, RequestFile,
+    ConnectionIdentity, CredentialGuard, ModelToolExecutor, PreparedRequestBody, ProviderProtocol,
+    RequestFile,
 };
 
 include!("attachment_media.rs");
+mod tool_content;
 
 struct TransportExecutor {
     manager: RuntimeManager,
@@ -17,7 +19,10 @@ struct TransportExecutor {
     run_id: Option<String>,
     connection: ConnectionIdentity,
     inner: Arc<dyn ModelToolExecutor>,
-    expected_attachments: Arc<StdMutex<Option<AttachmentExpectations>>>,
+    expected_attachments: Arc<StdMutex<Option<RequestMaterials>>>,
+    /// Regeneration uses these exact source messages as recorded history data.
+    source_message_ids: Option<Vec<String>>,
+    credential_guard: CredentialGuard,
 }
 
 impl RuntimeManager {
@@ -28,6 +33,17 @@ impl RuntimeManager {
         config: ConnectionConfig,
         inner: Arc<dyn ModelToolExecutor>,
     ) -> Arc<dyn ModelToolExecutor> {
+        self.transport_executor_with_sources(conversation_id, run_id, config, inner, None)
+    }
+
+    pub(super) fn transport_executor_with_sources(
+        &self,
+        conversation_id: String,
+        run_id: Option<String>,
+        config: ConnectionConfig,
+        inner: Arc<dyn ModelToolExecutor>,
+        source_message_ids: Option<Vec<String>>,
+    ) -> Arc<dyn ModelToolExecutor> {
         Arc::new(TransportExecutor {
             manager: self.clone(),
             conversation_id,
@@ -35,6 +51,8 @@ impl RuntimeManager {
             connection: ConnectionIdentity::from_config(&config),
             inner,
             expected_attachments: Arc::new(StdMutex::new(None)),
+            source_message_ids,
+            credential_guard: CredentialGuard::new(&config.api_key),
         })
     }
 
@@ -105,6 +123,10 @@ impl RuntimeManager {
 }
 
 impl ModelToolExecutor for TransportExecutor {
+    fn requires_tool_call_acknowledgement(&self) -> bool {
+        self.inner.requires_tool_call_acknowledgement()
+    }
+
     fn validate_input(
         &self,
         input: Vec<Value>,
@@ -112,9 +134,10 @@ impl ModelToolExecutor for TransportExecutor {
     ) -> BoxFuture<'static, std::result::Result<(), String>> {
         let manager = self.manager.clone();
         let id = self.conversation_id.clone();
+        let source_ids = self.source_message_ids.clone();
         Box::pin(async move {
             manager
-                .attachment_expectations(&id, input, protocol)
+                .request_materials(&id, input, protocol, source_ids.as_deref())
                 .await
                 .map(|_| ())
         })
@@ -162,6 +185,7 @@ impl ModelToolExecutor for TransportExecutor {
         let manager = self.manager.clone();
         let conversation_id = self.conversation_id.clone();
         let expected = self.connection.protocol;
+        let guard = self.credential_guard.clone();
         let attachments = self
             .expected_attachments
             .lock()
@@ -181,6 +205,7 @@ impl ModelToolExecutor for TransportExecutor {
                     protocol,
                     attachments,
                     cancellation,
+                    guard,
                 )
                 .await
         })
@@ -200,6 +225,7 @@ impl ModelToolExecutor for TransportExecutor {
         let protocol = self.connection.protocol;
         let inner = self.inner.clone();
         let expected = self.expected_attachments.clone();
+        let source_ids = self.source_message_ids.clone();
         Box::pin(async move {
             *expected
                 .lock()
@@ -208,7 +234,7 @@ impl ModelToolExecutor for TransportExecutor {
             // replay, including later tool turns and the current prompt. Text
             // containing a marker is not an attachment content block.
             let attachments = manager
-                .attachment_expectations(&id, history.clone(), protocol)
+                .request_materials(&id, history.clone(), protocol, source_ids.as_deref())
                 .await?;
             let paused = inner.prepare_model(history, request_index).await?;
             if !paused {
@@ -229,6 +255,12 @@ enum AttachmentMedia {
 }
 
 type AttachmentExpectations = BTreeMap<(AttachmentMedia, String), usize>;
+
+#[derive(Clone)]
+struct RequestMaterials {
+    attachments: AttachmentExpectations,
+    content: tool_content::RequestContentPlan,
+}
 
 #[derive(Clone, Copy)]
 enum AttachmentPart {
@@ -267,17 +299,19 @@ fn wire_attachment_marker(source: &str) -> Option<(&str, Option<&str>)> {
 }
 
 impl RuntimeManager {
-    async fn attachment_expectations(
+    async fn request_materials(
         &self,
         conversation_id: &str,
         input: Vec<Value>,
         protocol: ProviderProtocol,
-    ) -> std::result::Result<AttachmentExpectations, String> {
+        source_ids: Option<&[String]>,
+    ) -> std::result::Result<RequestMaterials, String> {
         let snapshot = self
             .read(conversation_id)
             .await
             .map_err(|error| error.to_string())?;
         let mut expected = AttachmentExpectations::new();
+        let content_plan = tool_content::plan(&snapshot, &input, source_ids)?;
         for value in input {
             let message: rig::message::Message =
                 serde_json::from_value(value).map_err(|error| error.to_string())?;
@@ -327,7 +361,22 @@ impl RuntimeManager {
                 }
             }
         }
-        Ok(expected)
+        for source in &content_plan.sources {
+            if source.reference.kind == ToolContentKind::Native
+                && crate::context::native_content_supported(&source.attachment.media_type, protocol)
+            {
+                *expected
+                    .entry((
+                        tool_content::media(&source.attachment),
+                        source.attachment.id.clone(),
+                    ))
+                    .or_default() += 1;
+            }
+        }
+        Ok(RequestMaterials {
+            attachments: expected,
+            content: content_plan,
+        })
     }
 
     async fn prepare_attachment_request(
@@ -335,9 +384,23 @@ impl RuntimeManager {
         conversation_id: String,
         mut body: Value,
         protocol: ProviderProtocol,
-        expected: AttachmentExpectations,
+        materials: RequestMaterials,
         cancellation: CancellationToken,
+        guard: CredentialGuard,
     ) -> std::result::Result<PreparedRequestBody, String> {
+        body = tool_content::inject(
+            self,
+            &conversation_id,
+            body,
+            protocol,
+            &materials.content,
+            &cancellation,
+        )
+        .await?;
+        if guard.contains_value(&body) {
+            return Err("会话内容包含当前连接凭据，已停止请求".into());
+        }
+        let expected = materials.attachments;
         let root = if protocol == ProviderProtocol::Responses {
             "input"
         } else {

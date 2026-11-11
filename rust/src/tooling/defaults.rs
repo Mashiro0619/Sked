@@ -30,7 +30,7 @@ impl ToolHandler for RuntimeToolHandler {
 fn builtin_group(name: &str) -> Option<RuntimeToolGroup> {
     match name {
         "ask_user" | "update_plan" => Some(RuntimeToolGroup::Interaction),
-        "conversation.get" | "conversation.history" | "conversation.read" => {
+        "conversation.get" | "conversation.history" | "conversation.read" | "content.read" => {
             Some(RuntimeToolGroup::Conversation)
         }
         "skills.search"
@@ -57,6 +57,7 @@ fn is_bootstrap(name: &str) -> bool {
             | "conversation.get"
             | "conversation.history"
             | "conversation.read"
+            | "content.read"
     )
 }
 

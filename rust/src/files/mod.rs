@@ -6,6 +6,7 @@ mod ledger;
 mod models;
 mod prepared;
 mod service;
+mod snapshot_gc;
 mod snapshots;
 #[cfg(not(target_os = "android"))]
 mod write;
@@ -34,7 +35,8 @@ use unavailable as native;
 
 pub use models::*;
 pub use prepared::PreparedFileWrite;
-pub use service::{FILES_SERVICE, FileService};
+pub use service::{FILES_SERVICE, FileService, SnapshotReadLease};
+pub use snapshots::SnapshotRetention;
 
 pub(super) fn digest(bytes: &[u8]) -> String {
     use sha2::{Digest, Sha256};

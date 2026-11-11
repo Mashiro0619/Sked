@@ -481,6 +481,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ViewTokenUsage dco_decode_box_autoadd_view_token_usage(dynamic raw);
 
   @protected
+  ViewToolContentRange dco_decode_box_autoadd_view_tool_content_range(
+    dynamic raw,
+  );
+
+  @protected
   ViewUndoTicket dco_decode_box_autoadd_view_undo_ticket(dynamic raw);
 
   @protected
@@ -668,6 +673,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   HistoryRecoveryTarget dco_decode_history_recovery_target(dynamic raw);
 
   @protected
+  HostContentKind dco_decode_host_content_kind(dynamic raw);
+
+  @protected
+  HostModelContent dco_decode_host_model_content(dynamic raw);
+
+  @protected
   HostOutcome dco_decode_host_outcome(dynamic raw);
 
   @protected
@@ -749,6 +760,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<HistoryRecoveryTarget> dco_decode_list_history_recovery_target(
     dynamic raw,
   );
+
+  @protected
+  List<HostModelContent> dco_decode_list_host_model_content(dynamic raw);
 
   @protected
   List<JsonPayload> dco_decode_list_json_payload(dynamic raw);
@@ -922,6 +936,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<ViewToolCall> dco_decode_list_view_tool_call(dynamic raw);
+
+  @protected
+  List<ViewToolContentRef> dco_decode_list_view_tool_content_ref(dynamic raw);
 
   @protected
   List<ViewToolUsage> dco_decode_list_view_tool_usage(dynamic raw);
@@ -1196,6 +1213,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ViewTokenUsage? dco_decode_opt_box_autoadd_view_token_usage(dynamic raw);
+
+  @protected
+  ViewToolContentRange? dco_decode_opt_box_autoadd_view_tool_content_range(
+    dynamic raw,
+  );
 
   @protected
   ViewUndoTicket? dco_decode_opt_box_autoadd_view_undo_ticket(dynamic raw);
@@ -1491,6 +1513,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ViewToolCall dco_decode_view_tool_call(dynamic raw);
+
+  @protected
+  ViewToolContentKind dco_decode_view_tool_content_kind(dynamic raw);
+
+  @protected
+  ViewToolContentRange dco_decode_view_tool_content_range(dynamic raw);
+
+  @protected
+  ViewToolContentRef dco_decode_view_tool_content_ref(dynamic raw);
 
   @protected
   ViewToolUsage dco_decode_view_tool_usage(dynamic raw);
@@ -2021,6 +2052,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ViewToolContentRange sse_decode_box_autoadd_view_tool_content_range(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   ViewUndoTicket sse_decode_box_autoadd_view_undo_ticket(
     SseDeserializer deserializer,
   );
@@ -2256,6 +2292,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  HostContentKind sse_decode_host_content_kind(SseDeserializer deserializer);
+
+  @protected
+  HostModelContent sse_decode_host_model_content(SseDeserializer deserializer);
+
+  @protected
   HostOutcome sse_decode_host_outcome(SseDeserializer deserializer);
 
   @protected
@@ -2345,6 +2387,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<HistoryRecoveryTarget> sse_decode_list_history_recovery_target(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<HostModelContent> sse_decode_list_host_model_content(
     SseDeserializer deserializer,
   );
 
@@ -2566,6 +2613,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<ViewToolCall> sse_decode_list_view_tool_call(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<ViewToolContentRef> sse_decode_list_view_tool_content_ref(
     SseDeserializer deserializer,
   );
 
@@ -2894,6 +2946,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ViewTokenUsage? sse_decode_opt_box_autoadd_view_token_usage(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ViewToolContentRange? sse_decode_opt_box_autoadd_view_tool_content_range(
     SseDeserializer deserializer,
   );
 
@@ -3315,6 +3372,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ViewToolCall sse_decode_view_tool_call(SseDeserializer deserializer);
+
+  @protected
+  ViewToolContentKind sse_decode_view_tool_content_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ViewToolContentRange sse_decode_view_tool_content_range(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ViewToolContentRef sse_decode_view_tool_content_ref(
+    SseDeserializer deserializer,
+  );
 
   @protected
   ViewToolUsage sse_decode_view_tool_usage(SseDeserializer deserializer);
@@ -3959,6 +4031,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_view_tool_content_range(
+    ViewToolContentRange self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_view_undo_ticket(
     ViewUndoTicket self,
     SseSerializer serializer,
@@ -4271,6 +4349,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_host_content_kind(
+    HostContentKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_host_model_content(
+    HostModelContent self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_host_outcome(HostOutcome self, SseSerializer serializer);
 
   @protected
@@ -4384,6 +4474,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_history_recovery_target(
     List<HistoryRecoveryTarget> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_host_model_content(
+    List<HostModelContent> self,
     SseSerializer serializer,
   );
 
@@ -4654,6 +4750,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_view_tool_call(
     List<ViewToolCall> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_view_tool_content_ref(
+    List<ViewToolContentRef> self,
     SseSerializer serializer,
   );
 
@@ -5047,6 +5149,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_view_token_usage(
     ViewTokenUsage? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_view_tool_content_range(
+    ViewToolContentRange? self,
     SseSerializer serializer,
   );
 
@@ -5568,6 +5676,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_view_tool_call(ViewToolCall self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_view_tool_content_kind(
+    ViewToolContentKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_view_tool_content_range(
+    ViewToolContentRange self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_view_tool_content_ref(
+    ViewToolContentRef self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_view_tool_usage(ViewToolUsage self, SseSerializer serializer);

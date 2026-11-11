@@ -107,10 +107,14 @@ impl RuntimeManager {
     ) -> Result<ModelRunResult> {
         let original = snapshot.messages[index].clone();
         let history = self
-            .provider_history_for(&snapshot, &snapshot.messages[..index])
+            .provider_history_for_reading(&snapshot, &snapshot.messages[..index])
             .await?;
         let (sender, mut receiver) = mpsc::unbounded_channel();
-        let model = self.inner.model_client.run(&accepted.config, "Regenerate the assistant's reply from the supplied conversation. Give the replacement text only. Do not run business operations or claim new changes occurred.".into(), ProviderMessage::user("请重新生成对此前请求的回复文字。"), history, Vec::new(), self.transport_executor(accepted.conversation_id.clone(), Some(accepted.run_id.clone()), accepted.config.clone(), Arc::new(context::NoTools)), accepted.control.cancellation.clone(), sender);
+        let sources = snapshot.messages[..index]
+            .iter()
+            .map(|message| message.id.clone())
+            .collect();
+        let model = self.inner.model_client.run(&accepted.config, "Regenerate the assistant's reply from the supplied conversation. Give the replacement text only. Do not run business operations or claim new changes occurred.".into(), ProviderMessage::user("请重新生成对此前请求的回复文字。"), history, Vec::new(), self.transport_executor_with_sources(accepted.conversation_id.clone(), Some(accepted.run_id.clone()), accepted.config.clone(), Arc::new(context::NoTools), Some(sources)), accepted.control.cancellation.clone(), sender);
         tokio::pin!(model);
         let result = loop {
             tokio::select! {
@@ -1055,20 +1059,34 @@ impl RuntimeManager {
         snapshot: &ConversationSnapshot,
         messages: &[Message],
     ) -> Result<Vec<Value>> {
+        self.project_provider_history(snapshot, messages, false)
+            .await
+    }
+
+    async fn provider_history_for_reading(
+        &self,
+        snapshot: &ConversationSnapshot,
+        messages: &[Message],
+    ) -> Result<Vec<Value>> {
+        self.project_provider_history(snapshot, messages, true)
+            .await
+    }
+
+    async fn project_provider_history(
+        &self,
+        snapshot: &ConversationSnapshot,
+        messages: &[Message],
+        historical_only: bool,
+    ) -> Result<Vec<Value>> {
         let mut history = Vec::new();
         for (index, message) in messages.iter().enumerate() {
-            if index < snapshot.conversation.execution_history_start {
-                let mut text = format!(
-                    "[Imported history; no current operation or permission]\n{}",
-                    message.text
-                );
-                if !message.tool_calls.is_empty() {
-                    text.push_str("\nRecorded tool calls:\n");
-                    text.push_str(
-                        &serde_json::to_string(&message.tool_calls)
-                            .map_err(|error| RuntimeError::Invalid(error.to_string()))?,
-                    );
-                }
+            let imported = index < snapshot.conversation.execution_history_start;
+            if imported || historical_only {
+                let text = if imported {
+                    crate::context::imported_message_text(message)
+                } else {
+                    crate::context::recorded_message_text(message)
+                };
                 let imported = match message.role {
                     MessageRole::User => {
                         let mut source = message.clone();

@@ -4,13 +4,14 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import 'file_contracts.dart';
 import 'management_contracts.dart';
 import 'models.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `empty`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `from`, `from`, `try_from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `from`, `from`, `try_from`, `try_from`
 
 /// Fields are selected by kind and validated at dispatch. This is a generated
 /// record, so adding an action never introduces an untyped command envelope.
@@ -493,6 +494,57 @@ enum EventKind {
   knowledgeChanged,
 }
 
+enum HostContentKind { text, snapshot }
+
+/// Typed host content stays separate from the dynamic tool payload. Each kind
+/// accepts only its own fields; the runtime verifies the snapshot evidence.
+class HostModelContent {
+  final HostContentKind kind;
+  final String name;
+  final String? text;
+  final String? snapshotId;
+  final String? mediaType;
+  final int? byteLength;
+  final String? sha256;
+  final ViewToolContentRange? textRange;
+
+  const HostModelContent({
+    required this.kind,
+    required this.name,
+    this.text,
+    this.snapshotId,
+    this.mediaType,
+    this.byteLength,
+    this.sha256,
+    this.textRange,
+  });
+
+  @override
+  int get hashCode =>
+      kind.hashCode ^
+      name.hashCode ^
+      text.hashCode ^
+      snapshotId.hashCode ^
+      mediaType.hashCode ^
+      byteLength.hashCode ^
+      sha256.hashCode ^
+      textRange.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HostModelContent &&
+          runtimeType == other.runtimeType &&
+          kind == other.kind &&
+          name == other.name &&
+          text == other.text &&
+          snapshotId == other.snapshotId &&
+          mediaType == other.mediaType &&
+          byteLength == other.byteLength &&
+          sha256 == other.sha256 &&
+          textRange == other.textRange;
+}
+
 enum HostOutcome { success, cancelled, error, unknown }
 
 enum HostPhase {
@@ -592,6 +644,7 @@ enum HostRequestKind {
 class HostResult {
   final String requestId;
   final JsonPayload? modelPayload;
+  final List<HostModelContent> modelContent;
   final JsonPayload? details;
   final HostOutcome outcome;
   final ViewUndoTicket? ticket;
@@ -601,6 +654,7 @@ class HostResult {
   const HostResult({
     required this.requestId,
     this.modelPayload,
+    required this.modelContent,
     this.details,
     required this.outcome,
     this.ticket,
@@ -612,6 +666,7 @@ class HostResult {
   int get hashCode =>
       requestId.hashCode ^
       modelPayload.hashCode ^
+      modelContent.hashCode ^
       details.hashCode ^
       outcome.hashCode ^
       ticket.hashCode ^
@@ -625,6 +680,7 @@ class HostResult {
           runtimeType == other.runtimeType &&
           requestId == other.requestId &&
           modelPayload == other.modelPayload &&
+          modelContent == other.modelContent &&
           details == other.details &&
           outcome == other.outcome &&
           ticket == other.ticket &&

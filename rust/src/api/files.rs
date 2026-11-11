@@ -1,7 +1,7 @@
 //! Cancellable file access with scope-owned cursors and staged content.
 
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     panic::AssertUnwindSafe,
     sync::{Arc, Mutex},
 };
@@ -69,6 +69,7 @@ struct AccessResources {
     closing: bool,
     cursors: HashSet<String>,
     contents: HashSet<String>,
+    snapshots: HashMap<String, runtime::SnapshotRetention>,
 }
 
 struct AccessState {
@@ -152,18 +153,19 @@ impl FileAccessHandle {
 
     pub async fn snapshot(&self, source: FileResourceRef) -> Result<FileSnapshot, String> {
         let _operation = self.admit()?;
-        let result = self
+        let (result, retention) = self
             .state
             .service
-            .snapshot_registered(source.into(), self.token(), self.cleanup_registration())
+            .snapshot_retained(source.into(), self.token(), self.cleanup_registration())
             .await
             .map_err(file_error)?;
-        self.check_active()?;
+        self.keep_snapshot(retention)?;
         Ok(result.into())
     }
 
     pub async fn snapshot_info(&self, snapshot_id: String) -> Result<FileSnapshot, String> {
         let _operation = self.admit()?;
+        self.retain_snapshot(&snapshot_id).await?;
         let result = self
             .state
             .service
@@ -181,6 +183,7 @@ impl FileAccessHandle {
         length: u32,
     ) -> Result<FileSnapshotChunk, String> {
         let _operation = self.admit()?;
+        self.retain_snapshot(&snapshot_id).await?;
         let result = self
             .state
             .service
@@ -244,10 +247,10 @@ impl FileAccessHandle {
     pub async fn finish_content(&self, content_id: String) -> Result<FileSnapshot, String> {
         let _operation = self.admit()?;
         self.check_content(&content_id)?;
-        let result = self
+        let (result, retention) = self
             .state
             .service
-            .finish_content(content_id.clone(), self.token())
+            .finish_content_retained(content_id.clone(), self.token())
             .await
             .map_err(file_error)?;
         self.state
@@ -256,7 +259,7 @@ impl FileAccessHandle {
             .expect("file access resources mutex poisoned")
             .contents
             .remove(&content_id);
-        self.check_active()?;
+        self.keep_snapshot(retention)?;
         Ok(result.into())
     }
 
@@ -369,7 +372,7 @@ impl FileAccessHandle {
             tokio::spawn(async move {
                 let result = AssertUnwindSafe(async {
                     state.operations.wait().await;
-                    let (cursors, contents) = {
+                    let (cursors, contents, snapshots) = {
                         let mut resources = state
                             .resources
                             .lock()
@@ -377,6 +380,7 @@ impl FileAccessHandle {
                         (
                             std::mem::take(&mut resources.cursors),
                             std::mem::take(&mut resources.contents),
+                            std::mem::take(&mut resources.snapshots),
                         )
                     };
                     let mut failures = Vec::new();
@@ -389,6 +393,10 @@ impl FileAccessHandle {
                         if let Err(error) = state.service.discard_content(content).await {
                             failures.push(error.to_string());
                         }
+                    }
+                    drop(snapshots);
+                    if let Err(error) = state.service.collect_snapshots().await {
+                        failures.push(error.to_string());
                     }
                     if failures.is_empty() {
                         Ok(())
@@ -466,6 +474,41 @@ impl FileAccessHandle {
         } else {
             Ok(())
         }
+    }
+
+    fn keep_snapshot(&self, retention: runtime::SnapshotRetention) -> Result<(), String> {
+        let mut resources = self
+            .state
+            .resources
+            .lock()
+            .expect("file access resources mutex poisoned");
+        if resources.closing || self.state.cancellation.is_cancelled() {
+            return Err(cancelled());
+        }
+        resources
+            .snapshots
+            .insert(retention.id().to_owned(), retention);
+        Ok(())
+    }
+
+    async fn retain_snapshot(&self, id: &str) -> Result<(), String> {
+        let retained = self
+            .state
+            .resources
+            .lock()
+            .expect("file access resources mutex poisoned")
+            .snapshots
+            .contains_key(id);
+        if !retained {
+            let retention = self
+                .state
+                .service
+                .retain_snapshot(id.to_owned(), self.token())
+                .await
+                .map_err(file_error)?;
+            self.keep_snapshot(retention)?;
+        }
+        self.check_active()
     }
 
     fn check_cursor(&self, cursor: Option<&str>) -> Result<(), String> {

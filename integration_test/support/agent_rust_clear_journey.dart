@@ -116,6 +116,7 @@ Future<void> runRustAgentClearJourney(
       firstCore.submitHostResult(
         result: native.HostResult(
           requestId: firstRequest!.id,
+          modelContent: const [],
           outcome: native.HostOutcome.success,
         ),
       ),
