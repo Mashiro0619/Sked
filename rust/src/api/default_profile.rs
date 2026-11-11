@@ -31,6 +31,9 @@ use std::{collections::HashSet, sync::Arc};
 use tokio::sync::{broadcast, watch};
 use tokio_util::sync::CancellationToken;
 
+#[cfg(any(windows, target_os = "android"))]
+use crate::web::{DefaultWebPlugin, WEB_SERVICE as WEB, WebToolPlugin};
+
 const BRIDGE: ServiceDefinition<BridgeHost> =
     ServiceDefinition::new("sked.business-host.bridge", 1);
 const EVENT_RELAY: ServiceDefinition<()> = ServiceDefinition::new("sked.runtime-events", 1);
@@ -134,6 +137,17 @@ impl DefaultAgentProfile {
                 Value::Null,
             ));
             profile.required_services.push(FILES.key());
+            profile.plugins.push(PluginSpec::new(
+                "default.web",
+                Arc::new(DefaultWebPlugin),
+                Value::Null,
+            ));
+            profile.plugins.push(PluginSpec::new(
+                "default.web-tools",
+                Arc::new(WebToolPlugin),
+                Value::Null,
+            ));
+            profile.required_services.push(WEB.key());
             profile
         };
         let plugins = PluginContainer::assemble(profile)
@@ -279,6 +293,8 @@ impl Plugin for RuntimePlugin {
                 TOOLS.key(),
                 #[cfg(any(windows, target_os = "android"))]
                 FILES.key(),
+                #[cfg(any(windows, target_os = "android"))]
+                WEB.key(),
             ],
         }
     }

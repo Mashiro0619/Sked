@@ -13,6 +13,7 @@ pub mod plugins;
 pub mod runtime;
 pub mod storage;
 pub mod tooling;
+pub mod web;
 
 #[cfg(target_os = "android")]
 mod android;
