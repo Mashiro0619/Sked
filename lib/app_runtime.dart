@@ -254,6 +254,7 @@ final class AppRuntime {
       dataClear: dataClear,
       quiescence: quiescence,
       onBeginShutdown: () => agent.freeze(drainAcceptedRuns: true),
+      finishAgentShutdown: agent.close,
     );
     developer = DeveloperCommands(
       session: session,

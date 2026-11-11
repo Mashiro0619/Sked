@@ -23,6 +23,7 @@ class AppShutdownController {
     required this._dataClear,
     required this._quiescence,
     this.onBeginShutdown,
+    this.finishAgentShutdown,
   });
 
   final AppSession _session;
@@ -35,11 +36,11 @@ class AppShutdownController {
   final AppDataClearController _dataClear;
   final AppQuiescence _quiescence;
   final VoidCallback? onBeginShutdown;
+  final Future<void> Function()? finishAgentShutdown;
 
   Future<bool> prepareForWindowClose() async {
     if (_dataClear.isCommitted) {
-      await quiesce();
-      return true;
+      return _finishWindowClose();
     }
     if (_maintenance.isReserved || _dataClear.isActive) return false;
     for (final mode in [..._workspace.enabledWorkspaces]) {
@@ -49,28 +50,52 @@ class AppShutdownController {
     await _session.repository.waitForPendingWrites(propagateErrors: true);
     await _secrets.ensurePersistenceKnown();
     await _schoolSites.waitForPendingOperations();
+    return _finishWindowClose();
+  }
+
+  Future<bool> _finishWindowClose() async {
+    // All cancellable save checks have passed. Keep the engine alive until
+    // accepted work and native providers finish their final cleanup attempts.
+    try {
+      await quiesce();
+    } catch (error, stackTrace) {
+      debugPrint('Final app shutdown reported an error: $error\n$stackTrace');
+    }
     return true;
   }
 
   Future<void> quiesce() async {
     // Final shutdown closes request and side-store gates before awaiting
     // accepted work. The earlier cancellable close checks do not freeze them.
-    onBeginShutdown?.call();
-    final clearing = _dataClear.inFlight;
-    if (clearing != null) {
-      try {
-        await clearing;
-      } catch (error, stackTrace) {
-        // The clear caller owns error reporting. Shutdown only needs the
-        // operation to settle before deciding which queues may be awaited.
-        debugPrint(
-          'Data clear settled with an error during shutdown: '
-          '$error\n$stackTrace',
-        );
+    (Object, StackTrace)? failure;
+    try {
+      onBeginShutdown?.call();
+      final clearing = _dataClear.inFlight;
+      if (clearing != null) {
+        try {
+          await clearing;
+        } catch (error, stackTrace) {
+          // The clear caller owns error reporting. Shutdown only needs the
+          // operation to settle before deciding which queues may be awaited.
+          debugPrint(
+            'Data clear settled with an error during shutdown: '
+            '$error\n$stackTrace',
+          );
+        }
       }
+      // A committed clear permanently owns its school-site lease. Waiting on
+      // that queue again would deadlock after the platform exit callback returns.
+      await _quiescence.drain(waitForSchoolSites: !_dataClear.isCommitted);
+    } catch (error, stack) {
+      failure = (error, stack);
     }
-    // A committed clear permanently owns its school-site lease. Waiting on
-    // that queue again would deadlock after the platform exit callback returns.
-    await _quiescence.drain(waitForSchoolSites: !_dataClear.isCommitted);
+    try {
+      await finishAgentShutdown?.call();
+    } catch (error, stack) {
+      failure ??= (error, stack);
+    }
+    if (failure case final failure?) {
+      Error.throwWithStackTrace(failure.$1, failure.$2);
+    }
   }
 }

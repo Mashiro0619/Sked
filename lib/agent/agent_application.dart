@@ -950,28 +950,44 @@ class AgentApplication extends ChangeNotifier {
   Future<void> quiesce() async {
     execution.invalidate();
     files.invalidate();
+    _cancelDiagnostics();
+    for (final step in _drainSteps()) {
+      await step();
+    }
+  }
+
+  void _cancelDiagnostics() {
     for (final token in _diagnosticTokens) {
       token.cancel();
     }
-    await _stopNative();
-    await _configurationTail;
-    await execution.waitForPending();
-    await files.waitForPending();
-    await mutations.waitForPendingWrites();
-    if (_maintenanceScope == null) await external.waitForPendingWrites();
-    if (_maintenanceScope == null) {
-      await conversationTools.waitForPendingOperations();
-    }
-    await connections.waitForPendingWrites();
-    await conversations.waitForPendingWrites();
-    await knowledge.waitForPendingOperations();
-    await _attachmentCollection;
-    if (_maintenance.isReserved || _suspended || _clearSuspended) {
-      await _freezeAttachments();
-    } else {
-      await binaryAttachments.waitForPendingOperations();
-    }
   }
+
+  List<FutureOr<void> Function()> _drainSteps() => [
+    _stopNative,
+    () => _configurationTail,
+    execution.waitForPending,
+    files.waitForPending,
+    mutations.waitForPendingWrites,
+    () async {
+      if (_maintenanceScope == null) await external.waitForPendingWrites();
+    },
+    () async {
+      if (_maintenanceScope == null) {
+        await conversationTools.waitForPendingOperations();
+      }
+    },
+    connections.waitForPendingWrites,
+    conversations.waitForPendingWrites,
+    knowledge.waitForPendingOperations,
+    () async => _attachmentCollection,
+    () async {
+      if (_maintenance.isReserved || _suspended || _clearSuspended) {
+        await _freezeAttachments();
+      } else {
+        await binaryAttachments.waitForPendingOperations();
+      }
+    },
+  ];
 
   void freeze({bool drainAcceptedRuns = false}) {
     _suspended = true;
@@ -1050,29 +1066,45 @@ class AgentApplication extends ChangeNotifier {
 
   Future<void> close() => _closing ??= _close();
   Future<void> _close() async {
-    execution.invalidate();
-    files.invalidate();
-    if (nativeClient.isInitialized && !_clearSuspended) {
-      await nativeClient.dispatch(
-        const native.AgentCommand(kind: native.CommandKind.quiesce),
-      );
+    _suspended = true;
+    (Object, StackTrace)? failure;
+    for (final step in <FutureOr<void> Function()>[
+      execution.invalidate,
+      files.invalidate,
+      _cancelDiagnostics,
+      () async {
+        if (nativeClient.isInitialized && !_clearSuspended) {
+          await nativeClient.dispatch(
+            const native.AgentCommand(kind: native.CommandKind.quiesce),
+          );
+        }
+      },
+      ..._drainSteps(),
+      historyMaintenance.close,
+      execution.close,
+      files.close,
+      fileAccess.close,
+      nativeClient.shutdown,
+      businessHost.dispose,
+      runtime.dispose,
+      binaryAttachments.close,
+      binaryAttachments.dispose,
+      conversations.dispose,
+      knowledge.dispose,
+      tools.dispose,
+      controlTools.dispose,
+      diagnostics.close,
+      _provider.close,
+    ]) {
+      try {
+        await step();
+      } catch (error, stack) {
+        failure ??= (error, stack);
+      }
     }
-    await quiesce();
-    await historyMaintenance.close();
-    await execution.close();
-    await files.close();
-    await fileAccess.close();
-    await nativeClient.shutdown();
-    await businessHost.dispose();
-    await runtime.dispose();
-    await binaryAttachments.close();
-    binaryAttachments.dispose();
-    conversations.dispose();
-    knowledge.dispose();
-    tools.dispose();
-    controlTools.dispose();
-    diagnostics.close();
-    _provider.close();
+    if (failure case final failure?) {
+      Error.throwWithStackTrace(failure.$1, failure.$2);
+    }
   }
 
   void _notify() {

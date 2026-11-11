@@ -26,30 +26,42 @@ class AppQuiescence {
   final Future<void> Function()? _drainAgent;
 
   Future<void> drain({required bool waitForSchoolSites}) async {
-    await _drainAgent?.call();
-    while (true) {
-      final dataEpoch = _session.mutationEpoch;
-      final secretEpoch = _secrets.mutationEpoch;
-      try {
-        await _persistence.flushPendingUiStateSaves();
-      } catch (error, stackTrace) {
-        debugPrint(
-          'Final deferred UI state save failed during shutdown: '
-          '$error\n$stackTrace',
-        );
+    (Object, StackTrace)? failure;
+    try {
+      await _drainAgent?.call();
+    } catch (error, stack) {
+      failure = (error, stack);
+    }
+    try {
+      while (true) {
+        final dataEpoch = _session.mutationEpoch;
+        final secretEpoch = _secrets.mutationEpoch;
+        try {
+          await _persistence.flushPendingUiStateSaves();
+        } catch (error, stackTrace) {
+          debugPrint(
+            'Final deferred UI state save failed during shutdown: '
+            '$error\n$stackTrace',
+          );
+        }
+        await Future.wait<void>([
+          _session.repository.waitForPendingWrites(),
+          _secrets.waitForPendingWrites(),
+          if (waitForSchoolSites) _schoolSites.waitForPendingOperations(),
+        ]);
+        await Future<void>.microtask(() {});
+        if (dataEpoch == _session.mutationEpoch &&
+            secretEpoch == _secrets.mutationEpoch &&
+            _persistence.isIdle &&
+            _transactions.isIdle) {
+          break;
+        }
       }
-      await Future.wait<void>([
-        _session.repository.waitForPendingWrites(),
-        _secrets.waitForPendingWrites(),
-        if (waitForSchoolSites) _schoolSites.waitForPendingOperations(),
-      ]);
-      await Future<void>.microtask(() {});
-      if (dataEpoch == _session.mutationEpoch &&
-          secretEpoch == _secrets.mutationEpoch &&
-          _persistence.isIdle &&
-          _transactions.isIdle) {
-        return;
-      }
+    } catch (error, stack) {
+      failure ??= (error, stack);
+    }
+    if (failure case final failure?) {
+      Error.throwWithStackTrace(failure.$1, failure.$2);
     }
   }
 }
