@@ -257,16 +257,6 @@ impl RuntimeManager {
         accepted: &AcceptedRun,
         history: Vec<Value>,
     ) -> Result<Vec<Value>> {
-        let snapshot = self.read(&accepted.conversation_id).await?;
-        let source_key = self
-            .estimate_context(accepted, &snapshot, &history)?
-            .source_key;
-        let saved = archive_history(history.clone(), &snapshot.attachments)?;
-        self.commit_context(
-            &accepted.conversation_id,
-            ContextMutation::SaveHistory { history: saved },
-        )
-        .await?;
         accepted
             .control
             .presentation
@@ -274,7 +264,22 @@ impl RuntimeManager {
             .expect("presentation mutex poisoned")
             .compacting = true;
         self.publish_presentation(accepted);
-        let result = self.perform_compaction_inner(accepted, history).await;
+        let mut source_key = None;
+        let result = async {
+            let snapshot = self.read(&accepted.conversation_id).await?;
+            source_key = Some(
+                self.estimate_context(accepted, &snapshot, &history)?
+                    .source_key,
+            );
+            let saved = archive_history(history.clone(), &snapshot.attachments)?;
+            self.commit_context(
+                &accepted.conversation_id,
+                ContextMutation::SaveHistory { history: saved },
+            )
+            .await?;
+            self.perform_compaction_inner(accepted, history).await
+        }
+        .await;
         accepted
             .control
             .presentation
@@ -288,28 +293,40 @@ impl RuntimeManager {
                     .control
                     .auto_compaction_suspended
                     .store(true, Ordering::Release);
-                self.commit_context(
+                if let Some(source_key) = source_key {
+                    self.commit_context(
+                        &accepted.conversation_id,
+                        ContextMutation::ClearFailure { source_key },
+                    )
+                    .await?;
+                }
+            }
+            Err(error) => {
+                let cancelled = accepted.control.cancellation.is_cancelled()
+                    || matches!(error, RuntimeError::Cancelled(_));
+                self.finish_compaction_controls(
                     &accepted.conversation_id,
-                    ContextMutation::ClearFailure { source_key },
+                    Some((cancelled, error.to_string())),
                 )
                 .await?;
+                if !cancelled {
+                    if let Some(source_key) = source_key {
+                        let failure = ContextFailure {
+                            source_key: source_key.clone(),
+                            model_id: accepted.config.model_config_id.clone(),
+                            protocol: accepted.config.protocol.as_str().into(),
+                            source_digest: source_key,
+                            error_code: error.to_string(),
+                            created_at: now_ms(),
+                        };
+                        self.commit_context(
+                            &accepted.conversation_id,
+                            ContextMutation::RecordFailure { failure },
+                        )
+                        .await?;
+                    }
+                }
             }
-            Err(error) if !accepted.control.cancellation.is_cancelled() => {
-                let failure = ContextFailure {
-                    source_key: source_key.clone(),
-                    model_id: accepted.config.model_config_id.clone(),
-                    protocol: accepted.config.protocol.as_str().into(),
-                    source_digest: source_key,
-                    error_code: error.to_string(),
-                    created_at: now_ms(),
-                };
-                self.commit_context(
-                    &accepted.conversation_id,
-                    ContextMutation::RecordFailure { failure },
-                )
-                .await?;
-            }
-            _ => {}
         }
         result
     }
@@ -424,11 +441,9 @@ impl RuntimeManager {
         .await?;
         if result.cancelled || result.error.is_some() {
             let error = result.error.unwrap_or_else(|| "压缩已取消".into());
-            self.finish_compaction_controls(
-                &accepted.conversation_id,
-                Some((result.cancelled, error.clone())),
-            )
-            .await?;
+            if result.cancelled {
+                return Err(RuntimeError::Cancelled(error));
+            }
             return Err(match result.provider_failure {
                 Some(failure) => RuntimeError::Provider(failure),
                 None => RuntimeError::Invalid(error),
