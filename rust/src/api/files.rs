@@ -93,7 +93,7 @@ impl FileAccessHandle {
         let result = self
             .state
             .service
-            .capabilities(resource.into(), self.token())
+            .capabilities_registered(resource.into(), self.token(), self.cleanup_registration())
             .await
             .map_err(file_error)?;
         self.check_active()?;
@@ -306,7 +306,7 @@ impl FileAccessHandle {
         let result = self
             .state
             .service
-            .inspect(identity.into(), self.token())
+            .inspect_registered(identity.into(), self.token(), self.cleanup_registration())
             .await
             .map_err(file_error)?;
         self.check_active()?;

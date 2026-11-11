@@ -185,7 +185,17 @@ impl FileService {
         resource: FileResourceRef,
         cancellation: CancellationToken,
     ) -> Result<FileResourceCapabilities> {
-        self.blocking(cancellation, move |cancellation| {
+        self.capabilities_registered(resource, cancellation, |_| {})
+            .await
+    }
+
+    pub async fn capabilities_registered(
+        &self,
+        resource: FileResourceRef,
+        cancellation: CancellationToken,
+        on_register: impl Fn(String) + Send + 'static,
+    ) -> Result<FileResourceCapabilities> {
+        self.blocking_registered(cancellation, on_register, move |cancellation, _| {
             native::capabilities(&resource, &cancellation)
         })
         .await
@@ -670,8 +680,18 @@ impl FileService {
         identity: FileWriteIdentity,
         cancellation: CancellationToken,
     ) -> Result<FileWriteReceipt> {
+        self.inspect_registered(identity, cancellation, |_| {})
+            .await
+    }
+
+    pub async fn inspect_registered(
+        &self,
+        identity: FileWriteIdentity,
+        cancellation: CancellationToken,
+        on_register: impl Fn(String) + Send + 'static,
+    ) -> Result<FileWriteReceipt> {
         let store = self.store.clone();
-        self.blocking(cancellation, move |cancellation| {
+        self.blocking_registered(cancellation, on_register, move |cancellation, _| {
             write::inspect(&store, identity, &cancellation)
         })
         .await

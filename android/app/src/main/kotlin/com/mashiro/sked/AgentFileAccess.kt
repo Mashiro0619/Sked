@@ -39,6 +39,9 @@ internal class AgentFileFailure(
     val cleanupIncomplete: Boolean = false,
 ) : Exception(message, cause)
 
+private class CursorCleanupFailure(cause: Exception? = null) :
+    Exception("The provider cursor could not be closed.", cause)
+
 /** Application-owned JNI bridge. No Activity or Flutter result crosses this boundary. */
 class AgentFileAccess(context: Context) {
     private class CallState {
@@ -51,10 +54,15 @@ class AgentFileAccess(context: Context) {
         val cursor: Cursor,
         val queryCancellation: CancellationSignal,
     ) {
+        val id = UUID.randomUUID().toString()
         val lock = ReentrantLock()
         var closing = false
         var closed = false
         var done = false
+    }
+
+    private class QueryScope {
+        val cursorIds = linkedSetOf<String>()
     }
 
     private class FdLease(val descriptor: ParcelFileDescriptor) {
@@ -70,6 +78,8 @@ class AgentFileAccess(context: Context) {
     private val calls = ConcurrentHashMap<String, CallState>()
     private val directories = ConcurrentHashMap<String, DirectoryLease>()
     private val descriptors = ConcurrentHashMap<String, FdLease>()
+    private val queryScope = ThreadLocal<QueryScope>()
+    private val pendingPickerCursors = ConcurrentHashMap<String, String>()
     private val retiredPickerCleanups = ConcurrentHashMap<String, PickerCleanup>()
     private val clearedSelectionEpoch = AtomicLong(-1)
     private val workers = Executors.newCachedThreadPool { task ->
@@ -77,11 +87,26 @@ class AgentFileAccess(context: Context) {
     }
 
     /** Rust brackets each call with beginCall/endCall before installing its cancel watcher. */
-    fun call(requestJson: String): String = try {
+    fun call(requestJson: String): String {
+        val scope = QueryScope()
+        return withQueryScope(scope) {
+            val reply = try {
+                JSONObject().put("ok", true).put("value", performCall(requestJson))
+            } catch (error: Exception) {
+                JSONObject().put("ok", false).put("error", errorJson(error))
+            }
+            if (scope.cursorIds.isNotEmpty()) {
+                reply.put("pendingCursorIds", JSONArray(scope.cursorIds.toList()))
+            }
+            reply.toString()
+        }
+    }
+
+    private fun performCall(requestJson: String): JSONObject {
         val request = JSONObject(requestJson)
         val callId = request.requiredString("callId")
         val operation = request.requiredString("op")
-        val value = when (operation) {
+        return when (operation) {
             "beginCall" -> {
                 if (calls.putIfAbsent(callId, CallState()) != null) {
                     throw AgentFileFailure("busy", "The native file call is already registered.")
@@ -111,9 +136,6 @@ class AgentFileAccess(context: Context) {
                 }
             }
         }
-        JSONObject().put("ok", true).put("value", value).toString()
-    } catch (error: Exception) {
-        JSONObject().put("ok", false).put("error", errorJson(error)).toString()
     }
 
     fun cancel(callId: String) {
@@ -166,12 +188,64 @@ class AgentFileAccess(context: Context) {
         val document = DocumentsContract.isDocumentUri(application, uri)
         val projection = if (document) DOCUMENT_COLUMNS else OPENABLE_COLUMNS
         val mimeType = if (document) null else resolver.getType(uri)
-        val cursor = resolver.query(uri, projection, null, null, null, cancellation)
-            ?: throw IOException("The provider returned no metadata cursor.")
-        return cursor.use {
+        val lease = queryCursor(uri, uri, projection, cancellation)
+        var failure: Exception? = null
+        try {
             cancellation.throwIfCanceled()
-            if (!it.moveToFirst()) throw FileNotFoundException("The requested URI no longer exists.")
-            metadata(uri, it, document, mimeType)
+            if (!lease.cursor.moveToFirst()) throw FileNotFoundException("The requested URI no longer exists.")
+            return metadata(uri, lease.cursor, document, mimeType)
+        } catch (error: Exception) {
+            failure = error
+            throw error
+        } finally {
+            closeQueryCursor(lease.id, failure)
+        }
+    }
+
+    private fun queryCursor(
+        parent: Uri,
+        queryUri: Uri,
+        projection: Array<String>,
+        cancellation: CancellationSignal,
+    ): DirectoryLease {
+        val scope = checkNotNull(queryScope.get()) { "A provider query requires a cleanup scope." }
+        val cursor = resolver.query(queryUri, projection, null, null, null, cancellation)
+            ?: throw IOException("The provider returned no query cursor.")
+        val lease = DirectoryLease(parent, cursor, cancellation)
+        directories[lease.id] = lease
+        scope.cursorIds.add(lease.id)
+        return lease
+    }
+
+    private fun closeQueryCursor(id: String, failure: Exception? = null) {
+        try {
+            closeCursor(id)
+        } catch (cleanup: Exception) {
+            throw CursorCleanupFailure(cleanup).apply { failure?.let { addSuppressed(it) } }
+        }
+    }
+
+    private fun <T> withQueryScope(scope: QueryScope, operation: () -> T): T {
+        val previous = queryScope.get()
+        queryScope.set(scope)
+        try {
+            return operation()
+        } finally {
+            if (previous == null) queryScope.remove() else queryScope.set(previous)
+        }
+    }
+
+    internal fun <T> withPickerQueries(ownerId: String, operation: () -> T): T {
+        val scope = QueryScope()
+        return withQueryScope(scope) {
+            try {
+                val result = operation()
+                if (scope.cursorIds.isNotEmpty()) throw CursorCleanupFailure()
+                result
+            } finally {
+                // Publish before the worker completion that a cleanup barrier waits for.
+                for (id in scope.cursorIds) pendingPickerCursors[id] = ownerId
+            }
         }
     }
 
@@ -245,18 +319,17 @@ class AgentFileAccess(context: Context) {
         } else {
             DocumentsContract.buildChildDocumentsUri(uri.authority, documentId)
         }
-        val cursor = resolver.query(children, DOCUMENT_COLUMNS, null, null, null, cancellation)
-            ?: throw IOException("The provider returned no directory cursor.")
+        val lease = queryCursor(uri, children, DOCUMENT_COLUMNS, cancellation)
         try {
-            requireDirectoryReady(cursor)
+            requireDirectoryReady(lease.cursor)
+            val result = JSONObject().put("cursorId", lease.id).put("directory", directory)
+            // Once returned, Rust owns this cursor even if cancellation has just arrived.
+            queryScope.get().cursorIds.remove(lease.id)
+            return result
         } catch (error: Exception) {
-            cursor.close()
+            closeQueryCursor(lease.id, error)
             throw error
         }
-        val id = UUID.randomUUID().toString()
-        directories[id] = DirectoryLease(uri, cursor, cancellation)
-        // Once returned, Rust owns this cursor even if cancellation has just arrived.
-        return JSONObject().put("cursorId", id).put("directory", directory)
     }
 
     private fun nextDirectory(
@@ -302,15 +375,19 @@ class AgentFileAccess(context: Context) {
     }
 
     private fun closeCursor(id: String) {
-        val lease = directories[id] ?: return
-        lease.lock.withLock {
-            lease.closing = true
-            if (!lease.closed) {
-                lease.cursor.close()
-                lease.closed = true
+        val lease = directories[id]
+        if (lease != null) {
+            lease.lock.withLock {
+                lease.closing = true
+                if (!lease.closed) {
+                    lease.cursor.close()
+                    lease.closed = true
+                }
             }
+            directories.remove(id, lease)
         }
-        directories.remove(id, lease)
+        queryScope.get()?.cursorIds?.remove(id)
+        pendingPickerCursors.remove(id)
     }
 
     private fun requireDirectoryReady(cursor: Cursor) {
@@ -408,17 +485,39 @@ class AgentFileAccess(context: Context) {
         workers.execute { work() }
     }
 
-    internal fun retainPickerCleanup(epoch: Long, completion: CompletableFuture<Unit>) {
-        val id = UUID.randomUUID().toString()
+    internal fun retainPickerCleanup(
+        ownerId: String,
+        epoch: Long,
+        completion: CompletableFuture<Unit>,
+    ): CompletableFuture<Unit> {
         val cleanup = PickerCleanup(epoch, completion)
-        retiredPickerCleanups[id] = cleanup
+        retiredPickerCleanups[ownerId] = cleanup
+        val closing = CompletableFuture<Unit>()
         completion.whenComplete { _, failure ->
-            if (failure == null || epoch < clearedSelectionEpoch.get()) {
-                retiredPickerCleanups.remove(id, cleanup)
+            try {
+                execute {
+                    try {
+                        retryPickerQueries(ownerId)
+                        if (failure != null && epoch >= clearedSelectionEpoch.get()) {
+                            closing.completeExceptionally(failure)
+                        } else {
+                            retiredPickerCleanups.remove(ownerId, cleanup)
+                            closing.complete(Unit)
+                        }
+                    } catch (error: Exception) {
+                        failure?.let { error.addSuppressed(it) }
+                        closing.completeExceptionally(error)
+                    }
+                }
+            } catch (error: Exception) {
+                closing.completeExceptionally(error)
             }
         }
+        return closing
     }
 
+    // These are the original worker/rollback completions. The caller retries
+    // their retained query cursors after this wait, including after a failed close.
     internal fun pendingPickerCleanups(): List<CompletableFuture<Unit>> =
         retiredPickerCleanups.values.map { cleanup ->
             cleanup.completion.handle { _, failure ->
@@ -426,6 +525,29 @@ class AgentFileAccess(context: Context) {
                 Unit
             }
         }
+
+    internal fun retryPickerQueries(ownerId: String, includeRetired: Boolean = false) {
+        val owners = mutableSetOf(ownerId)
+        if (includeRetired) {
+            owners.addAll(retiredPickerCleanups.filterValues { it.completion.isDone }.keys)
+        }
+        var failure: Exception? = null
+        val pending = pendingPickerCursors.filterValues { it in owners }.keys
+        for (id in pending) {
+            try {
+                closeCursor(id)
+            } catch (error: Exception) {
+                if (failure == null) failure = error else failure.addSuppressed(error)
+            }
+        }
+        failure?.let { throw CursorCleanupFailure(it) }
+        if (pendingPickerCursors.values.any { it in owners }) throw CursorCleanupFailure()
+        retiredPickerCleanups.entries.removeIf { entry ->
+            val cleanup = entry.value
+            entry.key in owners && cleanup.completion.isDone &&
+                (!cleanup.completion.isCompletedExceptionally || cleanup.epoch < clearedSelectionEpoch.get())
+        }
+    }
 
     internal fun selectionEpoch(): Long = grantStore.epoch()
 
@@ -442,6 +564,8 @@ class AgentFileAccess(context: Context) {
         val metadata = try {
             describe(resource, cancellation)
         } catch (error: OperationCanceledException) {
+            throw error
+        } catch (error: CursorCleanupFailure) {
             throw error
         } catch (_: Exception) {
             null
@@ -467,7 +591,8 @@ class AgentFileAccess(context: Context) {
         val clearedBefore = grantStore.clear()
         clearedSelectionEpoch.updateAndGet { previous -> maxOf(previous, clearedBefore) }
         retiredPickerCleanups.entries.removeIf {
-            it.value.epoch < clearedBefore && it.value.completion.isDone
+            it.value.epoch < clearedBefore && it.value.completion.isDone &&
+                !pendingPickerCursors.containsValue(it.key)
         }
         return clearedBefore
     }
@@ -492,6 +617,8 @@ class AgentFileAccess(context: Context) {
             val metadata = try {
                 describe(uri, cancellation)
             } catch (failure: OperationCanceledException) {
+                throw failure
+            } catch (failure: CursorCleanupFailure) {
                 throw failure
             } catch (failure: Exception) {
                 error = errorJson(failure)
@@ -589,6 +716,7 @@ class AgentFileAccess(context: Context) {
                 .filterIsInstance<ErrnoException>().firstOrNull()
             val code = when (error) {
                 is AgentFileFailure -> error.code
+                is CursorCleanupFailure -> "storageFailure"
                 is OperationCanceledException -> "cancelled"
                 is SecurityException -> "permissionDenied"
                 is FileNotFoundException -> "notFound"

@@ -16,6 +16,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import java.util.concurrent.atomic.AtomicBoolean
@@ -49,6 +50,7 @@ internal class AgentFilePicker(
     }
 
     private var activity: ComponentActivity? = activity
+    private val cleanupOwner = UUID.randomUUID().toString()
     private val handler = Handler(Looper.getMainLooper())
     private val pending = PendingActivityRequest<Selection>()
     private val selections = mutableSetOf<Selection>()
@@ -64,6 +66,9 @@ internal class AgentFilePicker(
             return
         }
         try {
+            if (clearing && call.method in listOf("status", "releaseGrant")) {
+                throw AgentFileFailure("busy", "The URI grants are being cleared.")
+            }
             when (call.method) {
                 "status" -> runWork(result) { access.status(it) }
                 "requestAccess" -> startRequest(call, result, Kind.ACCESS)
@@ -71,8 +76,13 @@ internal class AgentFilePicker(
                 "pickDirectory" -> startRequest(call, result, Kind.DIRECTORY)
                 "cancelPending" -> {
                     val completions = retireSelections(call.requiredString("ownerId"), completeCall = true) +
-                        access.pendingPickerCleanups()
-                    runWork(result, cancelOnDetach = false, waitFor = completions) { null }
+                        work.map { it.completion } + access.pendingPickerCleanups()
+                    runWork(
+                        result,
+                        cancelOnDetach = false,
+                        waitFor = completions,
+                        cleanupQueriesBefore = true,
+                    ) { null }
                 }
                 "releaseGrant" -> {
                     val id = call.requiredString("grantId")
@@ -87,7 +97,8 @@ internal class AgentFilePicker(
                     if (clearing) throw AgentFileFailure("busy", "The URI grants are already being cleared.")
                     clearing = true
                     access.invalidateSelections()
-                    val completions = retireSelections(completeCall = true) + access.pendingPickerCleanups()
+                    val completions = retireSelections(completeCall = true) +
+                        work.map { it.completion } + access.pendingPickerCleanups()
                     cancelReaders(completeCalls = true)
                     val clearedBefore = AtomicLong(-1)
                     runWork(
@@ -95,6 +106,7 @@ internal class AgentFilePicker(
                         cancelOnDetach = false,
                         waitFor = completions,
                         recoverWaitFailure = true,
+                        cleanupQueriesBefore = true,
                         onComplete = {
                             clearing = false
                             selections.removeAll { it.completion.isDone && it.epoch < clearedBefore.get() }
@@ -235,26 +247,28 @@ internal class AgentFilePicker(
     ) {
         var registration: AgentFileGrantStore.Registration? = null
         try {
-            selection.cancellation.throwIfCanceled()
-            if (!cancelled && uri != null) {
-                registration = access.rememberSelection(
-                    uri = uri,
-                    flags = flags,
-                    directory = selection.kind == Kind.DIRECTORY,
-                    epoch = selection.epoch,
-                    cancellation = selection.cancellation,
+            val response = access.withPickerQueries(cleanupOwner) {
+                selection.cancellation.throwIfCanceled()
+                if (!cancelled && uri != null) {
+                    registration = access.rememberSelection(
+                        uri = uri,
+                        flags = flags,
+                        directory = selection.kind == Kind.DIRECTORY,
+                        epoch = selection.epoch,
+                        cancellation = selection.cancellation,
+                    )
+                }
+                selection.cancellation.throwIfCanceled()
+                val status = access.status(selection.cancellation)
+                val id = registration?.record?.id
+                val resource = (status["resources"] as? List<*>)
+                    ?.filterIsInstance<Map<*, *>>()?.firstOrNull { it["grantId"] == id }
+                linkedMapOf(
+                    "cancelled" to cancelled,
+                    "status" to status,
+                    "resource" to resource,
                 )
             }
-            selection.cancellation.throwIfCanceled()
-            val status = access.status(selection.cancellation)
-            val id = registration?.record?.id
-            val resource = (status["resources"] as? List<*>)
-                ?.filterIsInstance<Map<*, *>>()?.firstOrNull { it["grantId"] == id }
-            val response = linkedMapOf(
-                "cancelled" to cancelled,
-                "status" to status,
-                "resource" to resource,
-            )
             val completedRegistration = registration
             handler.post {
                 if (disposed || selection.retired.get() || pending.peek(request) !== selection) {
@@ -386,6 +400,7 @@ internal class AgentFilePicker(
         cancelOnDetach: Boolean = true,
         waitFor: List<CompletableFuture<Unit>> = emptyList(),
         recoverWaitFailure: Boolean = false,
+        cleanupQueriesBefore: Boolean = false,
         onComplete: (() -> Unit)? = null,
         operation: (CancellationSignal) -> Any?,
     ) {
@@ -395,8 +410,14 @@ internal class AgentFilePicker(
             try {
                 access.execute {
                     val outcome: Result<Any?> = try {
-                        if (waitingError != null && !recoverWaitFailure) throw cleanupException(waitingError)
-                        Result.success(operation(task.cancellation))
+                        val value = access.withPickerQueries(cleanupOwner) {
+                            if (cleanupQueriesBefore) {
+                                access.retryPickerQueries(cleanupOwner, includeRetired = true)
+                            }
+                            if (waitingError != null && !recoverWaitFailure) throw cleanupException(waitingError)
+                            operation(task.cancellation)
+                        }
+                        Result.success(value)
                     } catch (error: Exception) {
                         Result.failure(error)
                     }
@@ -421,6 +442,8 @@ internal class AgentFilePicker(
                 )
             }
         } finally {
+            // Query cleanup identities were retained before posting this result.
+            // Cleanup barriers retry them after all original workers finish.
             task.completion.complete(Unit)
         }
     }
@@ -445,12 +468,16 @@ internal class AgentFilePicker(
         if (!completeCalls) {
             for (task in work) task.result = null
         }
-        closeCompletion?.let { return it }
-        val closing = CompletableFuture.allOf(
+        closeCompletion?.let { if (!it.isCompletedExceptionally) return it }
+        val drained = CompletableFuture.allOf(
             *(completions + work.map { it.completion }).toTypedArray(),
         ).thenApply { Unit }
+        val closing = access.retainPickerCleanup(
+            cleanupOwner,
+            selections.maxOfOrNull { it.epoch } ?: -1,
+            drained,
+        )
         closeCompletion = closing
-        access.retainPickerCleanup(selections.maxOfOrNull { it.epoch } ?: -1, closing)
         return closing
     }
 

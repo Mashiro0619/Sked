@@ -20,6 +20,8 @@ struct Reply {
     ok: bool,
     value: Option<Value>,
     error: Option<FileError>,
+    #[serde(default, rename = "pendingCursorIds")]
+    pending_cursor_ids: Vec<String>,
 }
 
 fn raw_call(request: &Value) -> Result<Value> {
@@ -31,6 +33,12 @@ fn raw_call(request: &Value) -> Result<Value> {
             format!("The Android file response could not be decoded: {error}"),
         )
     })?;
+    // A failed metadata query or directory constructor can retain a Kotlin
+    // cursor before returning any reader. Attach its identity to this work's
+    // CloseScope before propagating the provider error.
+    for id in reply.pending_cursor_ids {
+        defer_directory_close(id);
+    }
     if reply.ok {
         reply.value.ok_or_else(|| {
             FileError::new(
