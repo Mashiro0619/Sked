@@ -1056,8 +1056,13 @@ fn metadata(
                 .id
                 .as_ref()
                 .is_some_and(|id| primary_ids.contains(id));
-        if article.identity != PageIdentity::Other
-            && (primary || article.identity == PageIdentity::Current || single_article)
+        let identity = if primary {
+            article.explicit_page_identity
+        } else {
+            article.identity
+        };
+        if identity != PageIdentity::Other
+            && (primary || identity == PageIdentity::Current || single_article)
         {
             metadata.publications.extend(article.publications);
         }
@@ -1103,6 +1108,7 @@ enum PageIdentity {
 
 struct Article {
     identity: PageIdentity,
+    explicit_page_identity: PageIdentity,
     id: Option<String>,
     primary: bool,
     publications: Vec<WebPublication>,
@@ -1146,8 +1152,13 @@ fn identity_urls(value: &Value, base: &Url) -> Vec<Url> {
     urls
 }
 
-fn page_identity(value: &Value, base: &Url, pages: &HashSet<String>) -> PageIdentity {
-    for field in ["mainEntityOfPage", "url", "@id"] {
+fn page_identity(
+    value: &Value,
+    base: &Url,
+    pages: &HashSet<String>,
+    fields: &[&str],
+) -> PageIdentity {
+    for &field in fields {
         let Some(value) = value.get(field) else {
             continue;
         };
@@ -1194,7 +1205,7 @@ fn collect_articles(
         if let Some(graph) = value.get("@graph") {
             pending.push((graph, format!("{path}[\"@graph\"]"), false));
         }
-        let identity = page_identity(value, base, pages);
+        let identity = page_identity(value, base, pages, &["mainEntityOfPage", "url", "@id"]);
         if schema_type(value, &["WebPage", "ItemPage"])
             && identity != PageIdentity::Other
             && let Some(entity) = value.get("mainEntity")
@@ -1257,6 +1268,7 @@ fn collect_articles(
         }
         articles.push(Article {
             identity,
+            explicit_page_identity: page_identity(value, base, pages, &["mainEntityOfPage", "url"]),
             id: value
                 .get("@id")
                 .and_then(Value::as_str)
