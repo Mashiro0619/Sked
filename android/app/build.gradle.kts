@@ -5,6 +5,7 @@ import org.gradle.api.provider.ValueSourceParameters
 
 plugins {
     id("com.android.application")
+    id("com.chaquo.python")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -93,6 +94,9 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
+        }
     }
 
     signingConfigs {
@@ -156,4 +160,16 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+chaquopy {
+    defaultConfig {
+        version = "3.11"
+    }
+    sourceSets {
+        getByName("main") {
+            srcDir("../../tool/python")
+            include("sked_runtime.py", "android_bootstrap.py")
+        }
+    }
 }

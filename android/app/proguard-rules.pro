@@ -17,3 +17,12 @@
     public java.lang.String call(java.lang.String);
     public void cancel(java.lang.String);
 }
+
+-keep,includedescriptorclasses class com.mashiro.sked.AgentPythonHost {
+    public java.lang.String runtimeInfo();
+    public java.lang.String call(java.lang.String);
+    public void cancel(java.lang.String);
+}
+-keepclassmembers class com.mashiro.sked.AgentPythonService {
+    native <methods>;
+}

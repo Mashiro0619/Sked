@@ -31,8 +31,10 @@ use std::{collections::HashSet, sync::Arc};
 use tokio::sync::{broadcast, watch};
 use tokio_util::sync::CancellationToken;
 
+#[cfg(target_os = "android")]
+use crate::execution::AndroidExecutionPlugin as PlatformExecutionPlugin;
 #[cfg(windows)]
-use crate::execution::WindowsExecutionPlugin;
+use crate::execution::WindowsExecutionPlugin as PlatformExecutionPlugin;
 #[cfg(any(windows, target_os = "android"))]
 use crate::web::{DefaultWebPlugin, WEB_SERVICE as WEB, WebToolPlugin};
 
@@ -57,7 +59,7 @@ impl DefaultAgentProfile {
     pub(super) async fn open(config: CoreConfig) -> Result<Self, String> {
         #[cfg(any(windows, target_os = "android"))]
         let file_root = std::path::PathBuf::from(&config.data_directory).join("files");
-        #[cfg(windows)]
+        #[cfg(any(windows, target_os = "android"))]
         let execution_root = std::path::PathBuf::from(&config.data_directory).join("execution");
         let tools = descriptors(config.tools)?;
         let (events, _) = broadcast::channel(2048);
@@ -152,17 +154,14 @@ impl DefaultAgentProfile {
                 Value::Null,
             ));
             profile.required_services.push(WEB.key());
-            #[cfg(windows)]
-            {
-                profile.plugins.push(PluginSpec::new(
-                    "default.execution",
-                    Arc::new(WindowsExecutionPlugin {
-                        root: execution_root,
-                    }),
-                    Value::Null,
-                ));
-                profile.required_services.push(EXECUTION.key());
-            }
+            profile.plugins.push(PluginSpec::new(
+                "default.execution",
+                Arc::new(PlatformExecutionPlugin {
+                    root: execution_root,
+                }),
+                Value::Null,
+            ));
+            profile.required_services.push(EXECUTION.key());
             profile
         };
         let plugins = PluginContainer::assemble(profile)
@@ -310,7 +309,7 @@ impl Plugin for RuntimePlugin {
                 FILES.key(),
                 #[cfg(any(windows, target_os = "android"))]
                 WEB.key(),
-                #[cfg(windows)]
+                #[cfg(any(windows, target_os = "android"))]
                 EXECUTION.key(),
             ],
         }
