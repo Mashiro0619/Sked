@@ -390,7 +390,7 @@ async fn prepare_run(
         ledger::write_locked(&directory.join("source.py"), code.as_bytes())?,
         ledger::write_locked(&directory.join("invocation.json"), &invocation)?,
     ];
-    ledger::write_new(&directory.join("published.ndjson"), b"")?;
+    fs::create_dir(directory.join("publications")).map_err(io_error)?;
     Ok((directory, material))
 }
 
@@ -513,12 +513,44 @@ async fn observe_artifacts(
     files: &FileService,
     directory: &Path,
 ) -> Result<(Vec<Artifact>, Vec<ExecutionError>)> {
-    let records = fs::read_to_string(directory.join("published.ndjson")).map_err(io_error)?;
     let mut artifacts = Vec::new();
     let mut seen = HashSet::new();
     let mut errors = Vec::new();
-    for line in records.lines() {
-        let publication: Publication = match serde_json::from_str(line) {
+    let mut records = Vec::new();
+    match fs::read_dir(directory.join("publications")) {
+        Ok(entries) => {
+            let mut paths = Vec::new();
+            for entry in entries {
+                match entry {
+                    Ok(entry) => {
+                        let path = entry.path();
+                        if path
+                            .extension()
+                            .is_some_and(|extension| extension == "json")
+                        {
+                            paths.push(path);
+                        }
+                    }
+                    Err(failure) => errors.push(io_error(failure)),
+                }
+            }
+            paths.sort();
+            for path in paths {
+                match fs::read_to_string(path) {
+                    Ok(record) => records.push(record),
+                    Err(failure) => errors.push(io_error(failure)),
+                }
+            }
+        }
+        Err(failure) if failure.kind() == std::io::ErrorKind::NotFound => {
+            let legacy =
+                fs::read_to_string(directory.join("published.ndjson")).map_err(io_error)?;
+            records.extend(legacy.lines().map(str::to_owned));
+        }
+        Err(failure) => return Err(io_error(failure)),
+    }
+    for record in records {
+        let publication: Publication = match serde_json::from_str(&record) {
             Ok(publication) => publication,
             Err(failure) => {
                 errors.push(error(

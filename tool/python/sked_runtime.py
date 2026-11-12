@@ -3,20 +3,20 @@
 import json
 import os
 from pathlib import Path
-import threading
+import time
 from types import MappingProxyType
+import uuid
 
 inputs = MappingProxyType({})
 output_dir = None
 _published = None
-_publish_lock = threading.Lock()
 
 
 def _initialize(run_directory):
     global inputs, output_dir, _published
     inputs = MappingProxyType(json.loads(os.environ.get("SKED_INPUTS_JSON", "{}")))
     output_dir = run_directory / "artifacts"
-    _published = run_directory / "published.ndjson"
+    _published = run_directory / "publications"
 
 
 def publish(path, name=None, media_type=None):
@@ -31,11 +31,14 @@ def publish(path, name=None, media_type=None):
     if media_type is not None and not isinstance(media_type, str):
         raise TypeError("media_type must be a string")
     record = {"path": str(resolved), "name": name, "mediaType": media_type}
-    with _publish_lock:
-        with _published.open("a", encoding="utf-8", newline="\n") as target:
-            target.write(json.dumps(record, ensure_ascii=False) + "\n")
-            target.flush()
-            os.fsync(target.fileno())
+    publication = _published / f"{time.monotonic_ns():020d}-{uuid.uuid4().hex}.json"
+    temporary = publication.with_suffix(".tmp")
+    with temporary.open("x", encoding="utf-8", newline="\n") as target:
+        json.dump(record, target, ensure_ascii=False)
+        target.write("\n")
+        target.flush()
+        os.fsync(target.fileno())
+    os.replace(temporary, publication)
     return str(resolved)
 
 
