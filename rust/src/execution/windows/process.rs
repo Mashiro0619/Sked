@@ -380,11 +380,13 @@ async fn capture(
             .await;
         offset += count as u64;
     }
+    if let Err(flush) = file.flush().await {
+        failure
+            .get_or_insert_with(|| error(ExecutionErrorCode::OutputUnavailable, flush.to_string()));
+    }
     if let Err(sync) = file.sync_all().await {
-        failure = Some(error(
-            ExecutionErrorCode::OutputUnavailable,
-            sync.to_string(),
-        ));
+        failure
+            .get_or_insert_with(|| error(ExecutionErrorCode::OutputUnavailable, sync.to_string()));
     }
     CapturedOutput {
         stream,
