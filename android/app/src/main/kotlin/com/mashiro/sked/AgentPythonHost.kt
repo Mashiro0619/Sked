@@ -13,9 +13,11 @@ import android.os.Process
 import android.system.ErrnoException
 import android.system.Os
 import android.system.OsConstants
+import com.chaquo.python.internal.Common
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.IOException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutionException
@@ -40,10 +42,20 @@ class AgentPythonHost(context: Context) {
         val installed = application.packageManager.getPackageInfo(application.packageName, 0)
         val is64Bit = Process.is64Bit()
         val abis = if (is64Bit) Build.SUPPORTED_64_BIT_ABIS else Build.SUPPORTED_32_BIT_ABIS
+        val selectedAbi = abis.first { abi ->
+            try {
+                application.assets.open(
+                    "${Common.ASSET_DIR}/${Common.assetZip(Common.ASSET_STDLIB, abi)}",
+                ).use { }
+                true
+            } catch (_: IOException) {
+                false
+            }
+        }
         JSONObject()
             .put("pythonVersion", "3.11.17")
             .put("chaquopyVersion", "17.2.0")
-            .put("selectedAbi", abis.first())
+            .put("selectedAbi", selectedAbi)
             .put("osArch", System.getProperty("os.arch"))
             .put("is64Bit", is64Bit)
             .put("packageName", application.packageName)

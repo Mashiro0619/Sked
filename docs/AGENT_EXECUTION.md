@@ -45,6 +45,6 @@ Android 为每次调用启动新的解释器进程。工作目录通过已核对
 
 Windows 构建按 [运行时清单](../tool/python/runtime.json) 准备 CPython，并将解释器和配套脚本放入应用的 `data/python`。依赖在构建阶段固定，用户运行任务时使用随包环境。
 
-Android 使用 Chaquopy 17.2.0 和 Python 3.11.17，打包 `armeabi-v7a`、`arm64-v8a` 与 `x86_64`。主界面进程只注册原生桥接，解释器在执行获准后由独立 Service 按需初始化。执行预览固定当前安装包、解释器版本和实际环境。
+Android 使用 Chaquopy 17.2.0 和 Python 3.11.17，打包 `armeabi-v7a`、`arm64-v8a` 与 `x86_64`。ABI 按当前进程位数，从安装包实际包含的 Chaquopy 标准库中选择。主界面进程只注册原生桥接，解释器在执行获准后由独立 Service 按需初始化。执行预览固定当前安装包、解释器版本和实际环境。
 
 权限、持久回执和退出流程见[运行说明](AGENT_RUNTIME.md)，文件内容的保存与续读见[内容说明](AGENT_CONTENT.md)。平台接入进度见[插件架构](AGENT_PLUGIN_ARCHITECTURE.md)。
