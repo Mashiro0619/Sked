@@ -721,7 +721,7 @@ fn body_text(
                             }
                             collect_resources(element, base, links, cancellation)?;
                             if name == "a"
-                                && let Some(href) = element.attr("href")
+                                && let Some(href) = link_href(element)
                                 && let Some(link) = links.add(
                                     base,
                                     href,
@@ -855,6 +855,20 @@ impl Links {
     }
 }
 
+fn link_href<'a>(element: ElementRef<'a>) -> Option<&'a str> {
+    if let Some(href) = element.attr("href") {
+        return Some(href);
+    }
+    let element = element.value();
+    if element.name.ns.as_str() != "http://www.w3.org/2000/svg" {
+        return None;
+    }
+    element.attrs.iter().find_map(|(name, value)| {
+        (name.ns.as_str() == "http://www.w3.org/1999/xlink" && name.local.as_str() == "href")
+            .then_some(&**value)
+    })
+}
+
 fn collect_resources(
     element: ElementRef<'_>,
     base: &Url,
@@ -873,11 +887,16 @@ fn collect_resources(
         "source" | "audio" | "embed" | "iframe" => &["src"],
         "video" => &["src", "poster"],
         "object" => &["data"],
-        "image" => &["href", "xlink:href"],
+        "image" => &["href"],
         _ => &[],
     };
-    for attribute in attributes {
-        if let Some(reference) = element.attr(attribute) {
+    for &attribute in attributes {
+        let reference = if attribute == "href" {
+            link_href(element)
+        } else {
+            element.attr(attribute)
+        };
+        if let Some(reference) = reference {
             links.add(base, reference, label, element.attr("download"), media_type);
         }
     }
