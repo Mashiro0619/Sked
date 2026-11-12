@@ -88,6 +88,8 @@ abstract class AgentCore implements RustOpaqueInterface {
     required ExecutionIdentity identity,
   });
 
+  ExecutionPreparationCancellation openExecutionPreparation();
+
   /// The service owns native task lifetimes. Retained Dart access handles do
   /// not retain a plugin lease that would prevent its quiescence.
   FileAccessHandle openFileAccess();
@@ -105,6 +107,14 @@ abstract class AgentCore implements RustOpaqueInterface {
   /// calls the returned handle only after its existing admission checks.
   Future<PreparedExecutionHandle> preparePythonExecution({
     required PythonExecutionRequest request,
+  });
+
+  /// Resolve conversation-owned inputs before the existing execution service
+  /// freezes the provider and returns its approval preview.
+  Future<PreparedExecutionHandle> preparePythonTask({
+    required String conversationId,
+    required PythonTaskRequest request,
+    required ExecutionPreparationCancellation cancellation,
   });
 
   Future<List<String>> pruneHistory({required int cutoffMs});

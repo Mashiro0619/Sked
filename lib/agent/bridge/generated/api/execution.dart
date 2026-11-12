@@ -5,6 +5,7 @@
 
 import '../frb_generated.dart';
 import 'execution_contracts.dart';
+import 'file_contracts.dart';
 import 'models.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
@@ -21,6 +22,11 @@ abstract class ExecutionEventSubscription implements RustOpaqueInterface {
   /// fill late-subscription, lag and completion gaps; output references in a
   /// receipt remain the source for complete persisted output.
   Stream<ExecutionEvent> watch();
+}
+
+// Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<ExecutionPreparationCancellation>>
+abstract class ExecutionPreparationCancellation implements RustOpaqueInterface {
+  void cancel();
 }
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<PreparedExecutionHandle>>

@@ -27,6 +27,21 @@ class FileToolAdapters {
   Set<FileResourceKind> _resourceKinds = {};
   bool _registered = false;
 
+  /// Reuses the run's file access so returned content survives host settlement.
+  Future<Map<String, Object?>> readTextContent({
+    required OperationScope scope,
+    required FileResourceRef source,
+    String? expectedSha256,
+    int? expectedByteLength,
+  }) => _fileCall(
+    () => _read(
+      {'resource': fileResourceJson(source), 'format': 'text'},
+      scope,
+      expectedSha256: expectedSha256,
+      expectedByteLength: expectedByteLength,
+    ),
+  );
+
   /// Called after core initialization and before publishing the host catalog.
   void registerAvailable(FileAvailability availability) {
     _resourceKinds = availability.available
@@ -270,8 +285,10 @@ class FileToolAdapters {
 
   Future<Map<String, Object?>> _read(
     Map<String, Object?> args,
-    OperationScope scope,
-  ) async {
+    OperationScope scope, {
+    String? expectedSha256,
+    int? expectedByteLength,
+  }) async {
     _keys(args, {
       'resource',
       'snapshotId',
@@ -318,6 +335,13 @@ class FileToolAdapters {
     final (name, mediaType) = _contentMetadata(snapshot, args, format: format);
     final byteLength = snapshot.contentVersion.byteLength;
     final digest = snapshot.contentVersion.sha256;
+    if ((expectedSha256 != null && digest != expectedSha256) ||
+        (expectedByteLength != null && byteLength != expectedByteLength)) {
+      throw const OperationProblem(
+        OperationErrorCode.conflict,
+        'The execution output changed after its receipt was recorded.',
+      );
+    }
     if (byteLength == null ||
         byteLength < 0 ||
         digest == null ||

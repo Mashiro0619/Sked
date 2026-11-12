@@ -42,6 +42,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription;
 
   CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_ExecutionPreparationCancellationPtr => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionPreparationCancellation;
+
+  CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_FileAccessHandlePtr => wire
       .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle;
 
@@ -69,6 +73,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   ExecutionEventSubscription
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    dynamic raw,
+  );
+
+  @protected
+  ExecutionPreparationCancellation
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionPreparationCancellation(
     dynamic raw,
   );
 
@@ -105,6 +115,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   ExecutionEventSubscription
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    dynamic raw,
+  );
+
+  @protected
+  ExecutionPreparationCancellation
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionPreparationCancellation(
     dynamic raw,
   );
 
@@ -163,6 +179,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   ExecutionEventSubscription
   dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    dynamic raw,
+  );
+
+  @protected
+  ExecutionPreparationCancellation
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionPreparationCancellation(
     dynamic raw,
   );
 
@@ -351,6 +373,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PythonExecutionRequest dco_decode_box_autoadd_python_execution_request(
     dynamic raw,
   );
+
+  @protected
+  PythonTaskRequest dco_decode_box_autoadd_python_task_request(dynamic raw);
 
   @protected
   RunPresentation dco_decode_box_autoadd_run_presentation(dynamic raw);
@@ -777,6 +802,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
+
+  @protected
+  List<PythonTaskEnvironment> dco_decode_list_python_task_environment(
+    dynamic raw,
+  );
+
+  @protected
+  List<PythonTaskInput> dco_decode_list_python_task_input(dynamic raw);
 
   @protected
   List<(String, int)> dco_decode_list_record_string_casted_primitive_u_64(
@@ -1250,6 +1283,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PythonExecutionRequest dco_decode_python_execution_request(dynamic raw);
 
   @protected
+  PythonTaskEnvironment dco_decode_python_task_environment(dynamic raw);
+
+  @protected
+  PythonTaskInput dco_decode_python_task_input(dynamic raw);
+
+  @protected
+  PythonTaskRequest dco_decode_python_task_request(dynamic raw);
+
+  @protected
   QueryKind dco_decode_query_kind(dynamic raw);
 
   @protected
@@ -1556,6 +1598,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ExecutionPreparationCancellation
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionPreparationCancellation(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   FileAccessHandle
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
     SseDeserializer deserializer,
@@ -1588,6 +1636,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   ExecutionEventSubscription
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionPreparationCancellation
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionPreparationCancellation(
     SseDeserializer deserializer,
   );
 
@@ -1654,6 +1708,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   ExecutionEventSubscription
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExecutionPreparationCancellation
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionPreparationCancellation(
     SseDeserializer deserializer,
   );
 
@@ -1886,6 +1946,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PythonExecutionRequest sse_decode_box_autoadd_python_execution_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  PythonTaskRequest sse_decode_box_autoadd_python_task_request(
     SseDeserializer deserializer,
   );
 
@@ -2410,6 +2475,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
+
+  @protected
+  List<PythonTaskEnvironment> sse_decode_list_python_task_environment(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<PythonTaskInput> sse_decode_list_python_task_input(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<(String, int)> sse_decode_list_record_string_casted_primitive_u_64(
@@ -2993,6 +3068,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  PythonTaskEnvironment sse_decode_python_task_environment(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  PythonTaskInput sse_decode_python_task_input(SseDeserializer deserializer);
+
+  @protected
+  PythonTaskRequest sse_decode_python_task_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   QueryKind sse_decode_query_kind(SseDeserializer deserializer);
 
   @protected
@@ -3427,6 +3515,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionPreparationCancellation(
+    ExecutionPreparationCancellation self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
     FileAccessHandle self,
     SseSerializer serializer,
@@ -3464,6 +3559,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
     ExecutionEventSubscription self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionPreparationCancellation(
+    ExecutionPreparationCancellation self,
     SseSerializer serializer,
   );
 
@@ -3539,6 +3641,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
     ExecutionEventSubscription self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionPreparationCancellation(
+    ExecutionPreparationCancellation self,
     SseSerializer serializer,
   );
 
@@ -3831,6 +3940,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_python_execution_request(
     PythonExecutionRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_python_task_request(
+    PythonTaskRequest self,
     SseSerializer serializer,
   );
 
@@ -4503,6 +4618,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_python_task_environment(
+    List<PythonTaskEnvironment> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_python_task_input(
+    List<PythonTaskInput> self,
     SseSerializer serializer,
   );
 
@@ -5206,6 +5333,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_python_task_environment(
+    PythonTaskEnvironment self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_python_task_input(
+    PythonTaskInput self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_python_task_request(
+    PythonTaskRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_query_kind(QueryKind self, SseSerializer serializer);
 
   @protected
@@ -5760,6 +5905,22 @@ class RustLibWire implements BaseWire {
       );
 
   void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionPreparationCancellation(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionPreparationCancellation(
+        ptr,
+      );
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionPreparationCancellation(
+    int ptr,
+  ) => wasmModule
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionPreparationCancellation(
+        ptr,
+      );
+
+  void
   rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerFileAccessHandle(
     int ptr,
   ) => wasmModule
@@ -5847,6 +6008,16 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
 
   external void
   rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionEventSubscription(
+    int ptr,
+  );
+
+  external void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionPreparationCancellation(
+    int ptr,
+  );
+
+  external void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerExecutionPreparationCancellation(
     int ptr,
   );
 

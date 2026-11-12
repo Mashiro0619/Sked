@@ -64,6 +64,15 @@ impl ExecutionService {
     }
 
     pub async fn prepare(&self, specification: ExecutionSpec) -> Result<PreparedExecution> {
+        self.prepare_cancellable(specification, CancellationToken::new())
+            .await
+    }
+
+    pub async fn prepare_cancellable(
+        &self,
+        specification: ExecutionSpec,
+        cancellation: CancellationToken,
+    ) -> Result<PreparedExecution> {
         let _tracked = {
             let accepting = self
                 .admission
@@ -75,15 +84,28 @@ impl ExecutionService {
             }
             self.admission.tasks.token()
         };
+        if cancellation.is_cancelled() {
+            return Err(cancelled_preparation());
+        }
         let capabilities = self.provider.capabilities();
         validation::validate_request(&specification, &capabilities)?;
-        let mut prepared = self
+        let request_cancellation = cancellation.child_token();
+        let _cancel_waiter = request_cancellation.clone().drop_guard();
+        let preparation = self
             .provider
-            .prepare(
-                specification.clone(),
-                self.admission.cancellation.child_token(),
-            )
-            .await?;
+            .prepare(specification.clone(), request_cancellation.clone());
+        tokio::pin!(preparation);
+        let mut prepared = tokio::select! {
+            biased;
+            _ = self.admission.cancellation.cancelled() => {
+                request_cancellation.cancel();
+                preparation.await?
+            },
+            result = &mut preparation => result?,
+        };
+        if cancellation.is_cancelled() {
+            return Err(cancelled_preparation());
+        }
         validation::freeze(
             &specification,
             &mut prepared.specification,
@@ -128,6 +150,19 @@ impl ExecutionService {
             }
             self.admission.tasks.token()
         };
+        let prepared = self
+            .admission
+            .prepared
+            .lock()
+            .expect("prepared executions mutex poisoned")
+            .clone();
+        let current = prepared
+            .iter()
+            .filter_map(Weak::upgrade)
+            .find_map(|prepared| prepared.receipt_for(&identity));
+        if let Some(receipt) = current {
+            return Ok(receipt);
+        }
         Ok(
             match self
                 .provider
@@ -171,6 +206,13 @@ impl ExecutionService {
         drop(cleanup);
         self.admission.tasks.wait().await;
     }
+}
+
+fn cancelled_preparation() -> ExecutionError {
+    ExecutionError::new(
+        ExecutionErrorCode::CancelledBeforeStart,
+        "Preparation was cancelled before execution started.",
+    )
 }
 
 fn unavailable() -> ExecutionError {

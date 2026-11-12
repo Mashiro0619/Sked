@@ -37,6 +37,13 @@ typedef ApplicationToolAction = Future<Map<String, Object?>> Function(
   AgentApprovalRequester requestApproval,
 );
 
+typedef ApplicationToolCallAction = Future<Map<String, Object?>> Function(
+  ProviderToolCall call,
+  Map<String, Object?> arguments,
+  OperationScope scope,
+  AgentApprovalRequester requestApproval,
+);
+
 /// Typed tools are the only bridge between model calls and application state.
 /// Discovery and Skills expose schemas per run; neither grants permissions.
 class ApplicationToolHost {
@@ -68,8 +75,9 @@ class ApplicationToolHost {
   final SettingRegistry settings;
   final SkillAssetLoader _loadAsset;
   final FutureOr<SkillOverlaySnapshot> Function()? readSkillSnapshot;
-  final _tools = <String, (ToolDefinition, ApplicationToolAction)>{};
-  final _internalTools = <String, (ToolDefinition, ApplicationToolAction)>{};
+  final _tools = <String, (ToolDefinition, ApplicationToolCallAction)>{};
+  final _internalTools =
+      <String, (ToolDefinition, ApplicationToolCallAction)>{};
   final _preparations = <String, String>{};
   final _candidateDisposers =
       <String, List<FutureOr<void> Function(String planId)>>{};
@@ -210,6 +218,18 @@ class ApplicationToolHost {
     ToolDefinition definition,
     ApplicationToolAction action, {
     bool? readOnly,
+  }) => registerWithCall(
+    definition,
+    (_, arguments, scope, requestApproval) =>
+        action(arguments, scope, requestApproval),
+    readOnly: readOnly,
+  );
+
+  /// Execution adapters receive the original call used for progress and receipts.
+  void registerWithCall(
+    ToolDefinition definition,
+    ApplicationToolCallAction action, {
+    bool? readOnly,
   }) {
     if (_internalTools.containsKey(definition.name)) {
       throw StateError('Duplicate application tool: ${definition.name}');
@@ -319,26 +339,30 @@ class ApplicationToolHost {
         final result = await _operations.execute(
           call: call,
           scope: scope,
-          prepare: () =>
-              _normalizeToolErrors(() => tool.$2(args, scope, requestApproval)),
+          prepare: () => _normalizeToolErrors(
+            () => tool.$2(call, args, scope, requestApproval),
+          ),
           commit: (commitTool, planId) => _normalizeToolErrors(
-            () => _internalTools[commitTool]!.$2({'planId': planId}, scope, (
-              plan,
-            ) async {
-              final approval = await requestApproval(plan);
-              if (approval != null) {
-                await onOperationUpdate?.call(
-                  scope,
-                  AgentOperationUpdate(
-                    callId: call.id,
-                    toolName: call.name,
-                    phase: AgentOperationPhase.executing,
-                    details: plan.summary(),
-                  ),
-                );
-              }
-              return approval;
-            }),
+            () => _internalTools[commitTool]!.$2(
+              call,
+              {'planId': planId},
+              scope,
+              (plan) async {
+                final approval = await requestApproval(plan);
+                if (approval != null) {
+                  await onOperationUpdate?.call(
+                    scope,
+                    AgentOperationUpdate(
+                      callId: call.id,
+                      toolName: call.name,
+                      phase: AgentOperationPhase.executing,
+                      details: plan.summary(),
+                    ),
+                  );
+                }
+                return approval;
+              },
+            ),
           ),
           onPrepared: onOperationPrepared,
           onUpdate: (update) => onOperationUpdate?.call(scope, update),
@@ -351,6 +375,7 @@ class ApplicationToolHost {
         };
       }
       final result = await tool.$2(
+        call,
         call.decodedArguments,
         scope,
         requestApproval,

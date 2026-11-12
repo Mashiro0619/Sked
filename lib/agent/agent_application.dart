@@ -38,6 +38,7 @@ import 'skills/shared_skill_loader.dart';
 import 'tools/application_tool_host.dart';
 import 'tools/platform_tool_adapters.dart';
 import 'tools/file_tool_adapters.dart';
+import 'tools/python_tool_adapters.dart';
 import 'tools/workflow_tool_adapters.dart';
 import 'tools/conversation_tool_adapters.dart';
 import 'tools/agent_control_tool_adapters.dart';
@@ -194,6 +195,11 @@ class AgentApplication extends ChangeNotifier {
       files: files,
       fileAccess: fileAccess,
     );
+    pythonTools = PythonToolAdapters(
+      host: tools,
+      execution: execution,
+      files: fileTools,
+    );
     registerSchoolImportTools(tools);
     workflowTools = registerWorkflowTools(
       tools,
@@ -306,6 +312,7 @@ class AgentApplication extends ChangeNotifier {
   late final AgentFileAccessBridge fileAccess;
   late final PlatformToolAdapters platformTools;
   late final FileToolAdapters fileTools;
+  late final PythonToolAdapters pythonTools;
   late final WorkflowToolAdapters workflowTools;
   late final ConversationToolAdapters conversationTools;
   late final AgentControlToolAdapters controlTools;
@@ -401,6 +408,7 @@ class AgentApplication extends ChangeNotifier {
   Future<void> _prepareNative() async {
     final core = await nativeClient.ensureInitialized();
     fileTools.registerAvailable(core.fileAvailability());
+    pythonTools.registerAvailable(core.executionAvailability());
     await core.dispatch(
       command: native.AgentCommand(
         kind: native.CommandKind.setTools,

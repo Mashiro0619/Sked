@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 
-use super::models::JsonPayload;
+use super::{file_contracts::FileResourceRef, models::JsonPayload};
 use crate::execution as internal;
 
 #[derive(Clone)]
@@ -225,9 +225,31 @@ impl From<internal::ExecutionEnvironment> for ExecutionEnvironmentSnapshot {
 }
 
 #[derive(Clone)]
+pub struct PythonTaskInput {
+    pub name: String,
+    pub content_id: String,
+}
+
+#[derive(Clone)]
+pub struct PythonTaskEnvironment {
+    pub name: String,
+    pub value: String,
+}
+
+#[derive(Clone)]
+pub struct PythonTaskRequest {
+    pub code: String,
+    pub argv: Vec<String>,
+    pub cwd: FileResourceRef,
+    pub inputs: Vec<PythonTaskInput>,
+    pub environment: Vec<PythonTaskEnvironment>,
+}
+
+#[derive(Clone)]
 pub struct PythonExecutionRequest {
     pub code: String,
     pub argv: Vec<String>,
+    pub cwd_resource: FileResourceRef,
     pub cwd: ExecutionResourceVersion,
     pub environment: Vec<ExecutionEnvironmentVariable>,
     pub inputs: Vec<ExecutionInputSnapshot>,
@@ -240,6 +262,7 @@ impl TryFrom<PythonExecutionRequest> for internal::ExecutionSpec {
         Ok(Self::Python(internal::ScriptExecutionSpec {
             code: value.code,
             argv: value.argv,
+            cwd_resource: value.cwd_resource.into(),
             cwd: value.cwd.into(),
             environment: environment_from_input(value.environment)?,
             inputs: value.inputs.into_iter().map(Into::into).collect(),
@@ -283,6 +306,7 @@ pub struct ExecutionPreview {
     pub arguments: Option<JsonPayload>,
     pub arguments_digest: Option<String>,
     pub argv: Vec<String>,
+    pub cwd_resource: FileResourceRef,
     pub cwd: ExecutionResourceVersion,
     pub environment: ExecutionEnvironmentSnapshot,
     pub variables: Vec<ExecutionEnvironmentVariable>,
@@ -331,6 +355,7 @@ impl ExecutionPreview {
             arguments,
             arguments_digest,
             argv: value.argv,
+            cwd_resource: value.cwd_resource.into(),
             cwd: value.cwd.into(),
             environment: value.environment.into(),
             variables: environment_to_view(value.variables),
@@ -411,6 +436,7 @@ impl From<internal::OutputStream> for ExecutionOutputStream {
 #[derive(Clone)]
 pub struct ExecutionOutputReference {
     pub stream: ExecutionOutputStream,
+    pub file: FileResourceRef,
     pub resource: ExecutionResourceVersion,
     pub truncated: bool,
 }
@@ -419,6 +445,7 @@ impl From<internal::OutputReference> for ExecutionOutputReference {
     fn from(value: internal::OutputReference) -> Self {
         Self {
             stream: value.stream.into(),
+            file: value.file.into(),
             resource: value.resource.into(),
             truncated: value.truncated,
         }

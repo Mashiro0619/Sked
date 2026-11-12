@@ -76,6 +76,7 @@ pub(super) fn freeze(
         (ExecutionSpec::Python(input), FrozenExecutionKind::Python { code, code_digest }) => {
             if code.as_str() != input.code.as_str()
                 || candidate.argv != input.argv
+                || candidate.cwd_resource != input.cwd_resource
                 || candidate.cwd != input.cwd
                 || candidate.variables != input.environment
                 || candidate.inputs != input.inputs

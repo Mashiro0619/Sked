@@ -1,4 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
+
+import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart'
+    show AnyhowException;
 
 import '../../application/approval_plan.dart';
 import '../../application/external_operation_coordinator.dart';
@@ -46,11 +50,49 @@ class AgentExecutionCoordinator {
   Future<AgentPreparedExecution> preparePython({
     required OperationScope scope,
     required PythonExecutionRequest request,
-  }) => _track(() async {
-    final execution = await _prepare(
-      scope,
-      (core) => core.preparePythonExecution(request: request),
-    );
+  }) => _preparePython(
+    scope,
+    (core) => core.preparePythonExecution(request: request),
+  );
+
+  Future<AgentPreparedExecution> preparePythonTask({
+    required OperationScope scope,
+    required String conversationId,
+    required PythonTaskRequest request,
+  }) => _preparePython(scope, (core) async {
+    final cancellation = core.openExecutionPreparation();
+    ExecutionPreparationCancellation? active = cancellation;
+    unawaited(scope.whenCancelled.then((_) => active?.cancel()));
+    try {
+      scope.checkActive();
+      return await core.preparePythonTask(
+        conversationId: conversationId,
+        request: request,
+        cancellation: cancellation,
+      );
+    } on AnyhowException catch (error) {
+      final details = jsonDecode(error.message) as Map<String, Object?>;
+      throw OperationProblem(switch (details['code']) {
+        'invalidSpec' => OperationErrorCode.invalidArgument,
+        'staleSpec' || 'identityMismatch' => OperationErrorCode.conflict,
+        'providerUnavailable' ||
+        'unsupported' ||
+        'unknownReader' => OperationErrorCode.unsupported,
+        'cancelledBeforeStart' => OperationErrorCode.cancelled,
+        'outcomeUnknown' => OperationErrorCode.outcomeUnknown,
+        _ => OperationErrorCode.storageFailure,
+      }, details['message'] as String);
+    } finally {
+      active = null;
+      cancellation.dispose();
+    }
+  });
+
+  Future<AgentPreparedExecution> _preparePython(
+    OperationScope scope,
+    Future<PreparedExecutionHandle> Function(AgentCore) prepare,
+  ) => _track(() async {
+    final execution = await _prepare(scope, prepare);
     try {
       final preview = execution.preview;
       final plan = _external.prepare(
@@ -89,6 +131,49 @@ class AgentExecutionCoordinator {
     FutureOr<void> Function(AgentOperationUpdate)? onUpdate,
     void Function(ExecutionEvent)? onEvent,
     void Function(Object, StackTrace)? onEventError,
+  }) async => (await _executePython(
+    call: call,
+    scope: scope,
+    prepare: () => preparePython(scope: scope, request: request),
+    requestApproval: requestApproval,
+    onPrepared: onPrepared,
+    onUpdate: onUpdate,
+    onEvent: onEvent,
+    onEventError: onEventError,
+  )).result;
+
+  Future<({Map<String, Object?> result, ExecutionReceipt? receipt})>
+  executePythonTask({
+    required ProviderToolCall call,
+    required OperationScope scope,
+    required String conversationId,
+    required PythonTaskRequest request,
+    required AgentApprovalRequester requestApproval,
+    OperationPrepared? onPrepared,
+    FutureOr<void> Function(AgentOperationUpdate)? onUpdate,
+  }) => _executePython(
+    call: call,
+    scope: scope,
+    prepare: () => preparePythonTask(
+      scope: scope,
+      conversationId: conversationId,
+      request: request,
+    ),
+    requestApproval: requestApproval,
+    onPrepared: onPrepared,
+    onUpdate: onUpdate,
+  );
+
+  Future<({Map<String, Object?> result, ExecutionReceipt? receipt})>
+  _executePython({
+    required ProviderToolCall call,
+    required OperationScope scope,
+    required Future<AgentPreparedExecution> Function() prepare,
+    required AgentApprovalRequester requestApproval,
+    OperationPrepared? onPrepared,
+    FutureOr<void> Function(AgentOperationUpdate)? onUpdate,
+    void Function(ExecutionEvent)? onEvent,
+    void Function(Object, StackTrace)? onEventError,
   }) async {
     if (onEvent != null && onEventError == null) {
       throw ArgumentError.notNull('onEventError');
@@ -98,7 +183,7 @@ class AgentExecutionCoordinator {
       call: call,
       scope: scope,
       prepare: () async {
-        final value = await preparePython(scope: scope, request: request);
+        final value = await prepare();
         prepared = value;
         try {
           if (onEvent != null) {
@@ -121,6 +206,14 @@ class AgentExecutionCoordinator {
               'The user declined this execution.',
             );
           }
+          await onUpdate?.call(
+            AgentOperationUpdate(
+              callId: call.id,
+              toolName: call.name,
+              phase: AgentOperationPhase.executing,
+              details: value.summary(),
+            ),
+          );
         }
         return executionCommitResultJson(
           await commit(value, approval: approval),
@@ -131,14 +224,17 @@ class AgentExecutionCoordinator {
       onUpdate: onUpdate,
     );
     final cleanupError = prepared?._execution.cleanupError;
-    return {
-      ...result,
-      if (cleanupError != null)
-        'cleanupError': {
-          'code': 'executionCleanupFailed',
-          'message': cleanupError.toString(),
-        },
-    };
+    return (
+      result: {
+        ...result,
+        if (cleanupError != null)
+          'cleanupError': {
+            'code': 'executionCleanupFailed',
+            'message': cleanupError.toString(),
+          },
+      },
+      receipt: prepared?._execution.receipt,
+    );
   }
 
   Future<ExternalMutationCommitResult> commit(
@@ -373,6 +469,7 @@ class _NativeExecution {
   Future<void>? _closing;
   bool released = false;
   Object? cleanupError;
+  ExecutionReceipt? receipt;
 
   bool get admitted => _running != null;
 
@@ -396,11 +493,12 @@ class _NativeExecution {
       _running ??= _run(operationId);
 
   Future<ExecutionReceipt> _run(String operationId) async {
-    final receipt = await handle.startOnce(operationId: operationId);
+    final result = await handle.startOnce(operationId: operationId);
+    receipt = result;
     // The native driver has stopped producing output; drain its final event
     // before retiring listeners. Detached listeners do not stop this driver.
     await Future.wait(_observers.map((observer) => observer.done));
-    return receipt;
+    return result;
   }
 
   void cancel() {

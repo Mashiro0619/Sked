@@ -31,6 +31,8 @@ use std::{collections::HashSet, sync::Arc};
 use tokio::sync::{broadcast, watch};
 use tokio_util::sync::CancellationToken;
 
+#[cfg(windows)]
+use crate::execution::WindowsExecutionPlugin;
 #[cfg(any(windows, target_os = "android"))]
 use crate::web::{DefaultWebPlugin, WEB_SERVICE as WEB, WebToolPlugin};
 
@@ -55,6 +57,8 @@ impl DefaultAgentProfile {
     pub(super) async fn open(config: CoreConfig) -> Result<Self, String> {
         #[cfg(any(windows, target_os = "android"))]
         let file_root = std::path::PathBuf::from(&config.data_directory).join("files");
+        #[cfg(windows)]
+        let execution_root = std::path::PathBuf::from(&config.data_directory).join("execution");
         let tools = descriptors(config.tools)?;
         let (events, _) = broadcast::channel(2048);
         let events_closed = CancellationToken::new();
@@ -148,6 +152,17 @@ impl DefaultAgentProfile {
                 Value::Null,
             ));
             profile.required_services.push(WEB.key());
+            #[cfg(windows)]
+            {
+                profile.plugins.push(PluginSpec::new(
+                    "default.execution",
+                    Arc::new(WindowsExecutionPlugin {
+                        root: execution_root,
+                    }),
+                    Value::Null,
+                ));
+                profile.required_services.push(EXECUTION.key());
+            }
             profile
         };
         let plugins = PluginContainer::assemble(profile)
@@ -186,7 +201,7 @@ impl DefaultAgentProfile {
         self.plugins.ui_contributions()
     }
 
-    /// Execution is optional until a real platform provider is installed.
+    /// Platforms without an installed execution provider have no lease.
     pub(super) fn execution_service(&self) -> Option<ServiceLease<ExecutionService>> {
         self.plugins.lease(EXECUTION).ok()
     }
@@ -295,6 +310,8 @@ impl Plugin for RuntimePlugin {
                 FILES.key(),
                 #[cfg(any(windows, target_os = "android"))]
                 WEB.key(),
+                #[cfg(windows)]
+                EXECUTION.key(),
             ],
         }
     }

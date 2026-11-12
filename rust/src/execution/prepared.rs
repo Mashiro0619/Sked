@@ -246,6 +246,32 @@ impl PreparedExecution {
 }
 
 impl PreparedInner {
+    pub(super) fn receipt_for(&self, expected: &ExecutionIdentity) -> Option<ExecutionReceipt> {
+        if self.execution_id != expected.execution_id {
+            return None;
+        }
+        match &*self.state.lock().expect("execution state mutex poisoned") {
+            State::Running {
+                identity,
+                accepted_at_ms,
+                started_at_ms,
+            } if identity == expected => Some(pending_receipt(
+                identity,
+                Some(*accepted_at_ms),
+                *started_at_ms,
+            )),
+            State::Finished(receipt)
+                if receipt.execution_id == expected.execution_id
+                    && receipt.operation_id == expected.operation_id
+                    && receipt.spec_digest == expected.spec_digest
+                    && receipt.provider == expected.provider =>
+            {
+                Some(receipt.clone())
+            }
+            _ => None,
+        }
+    }
+
     pub(super) fn discard_prepared(&self) {
         let discarded = {
             let mut state = self.state.lock().expect("execution state mutex poisoned");

@@ -17,7 +17,7 @@ use tokio_util::{
 };
 
 use super::{
-    CHUNK_SIZE, Cancellation, FileDirectoryPage, FileError, FileErrorCode,
+    CHUNK_SIZE, Cancellation, FileDirectoryPage, FileEntry, FileError, FileErrorCode,
     FileResourceCapabilities, FileResourceKind, FileResourceRef, FileSearchPage, FileSearchRequest,
     FileSnapshot, FileSnapshotChunk, FileWriteIdentity, FileWriteReceipt, FileWriteRequest,
     PreparedFileWrite, Result, collect_cleanup,
@@ -211,6 +211,19 @@ impl FileService {
         } else {
             Vec::new()
         }
+    }
+
+    pub async fn stat(
+        &self,
+        resource: FileResourceRef,
+        cancellation: CancellationToken,
+    ) -> Result<FileEntry> {
+        self.blocking(cancellation, move |cancellation| {
+            let entry = native::stat(&resource)?;
+            cancellation.check()?;
+            Ok(entry)
+        })
+        .await
     }
 
     pub async fn capabilities(

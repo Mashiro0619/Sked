@@ -3,6 +3,8 @@ use std::{collections::BTreeMap, fmt};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::files::FileResourceRef;
+
 /// The exact provider generation selected for an execution. Recovery may use
 /// a newer instance of the same provider, but retains this original identity.
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -77,6 +79,7 @@ pub struct ExecutionEnvironment {
 pub struct ScriptExecutionSpec {
     pub code: String,
     pub argv: Vec<String>,
+    pub cwd_resource: FileResourceRef,
     pub cwd: ResourceVersion,
     pub environment: BTreeMap<String, EnvironmentValue>,
     pub inputs: Vec<InputSnapshot>,
@@ -130,6 +133,7 @@ pub enum FrozenExecutionKind {
 pub struct FrozenExecutionSpec {
     pub kind: FrozenExecutionKind,
     pub argv: Vec<String>,
+    pub cwd_resource: FileResourceRef,
     pub cwd: ResourceVersion,
     pub environment: ExecutionEnvironment,
     pub variables: BTreeMap<String, EnvironmentValue>,
@@ -179,6 +183,7 @@ pub enum OutputStream {
 #[serde(rename_all = "camelCase")]
 pub struct OutputReference {
     pub stream: OutputStream,
+    pub file: FileResourceRef,
     pub resource: ResourceVersion,
     pub truncated: bool,
 }

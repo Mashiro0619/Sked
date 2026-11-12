@@ -7,6 +7,13 @@ use super::{AgentCore, execution_contracts::*};
 use crate::{execution as runtime, frb_generated::StreamSink};
 
 impl AgentCore {
+    #[flutter_rust_bridge::frb(sync)]
+    pub fn open_execution_preparation(&self) -> ExecutionPreparationCancellation {
+        ExecutionPreparationCancellation {
+            token: self.closing.child_token(),
+        }
+    }
+
     /// Only an installed platform provider can advertise execution support.
     #[flutter_rust_bridge::frb(sync)]
     pub fn execution_availability(&self) -> ExecutionAvailability {
@@ -84,11 +91,23 @@ impl AgentCore {
     }
 }
 
+#[flutter_rust_bridge::frb(opaque)]
+pub struct ExecutionPreparationCancellation {
+    pub(super) token: CancellationToken,
+}
+
+impl ExecutionPreparationCancellation {
+    #[flutter_rust_bridge::frb(sync)]
+    pub fn cancel(&self) {
+        self.token.cancel();
+    }
+}
+
 /// The backend captured by preparation cannot be reconstructed from a preview.
 /// No approval token is minted here; Dart retains its single approval authority.
 #[flutter_rust_bridge::frb(opaque)]
 pub struct PreparedExecutionHandle {
-    prepared: runtime::PreparedExecution,
+    pub(super) prepared: runtime::PreparedExecution,
 }
 
 impl PreparedExecutionHandle {

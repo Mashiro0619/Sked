@@ -91,6 +91,28 @@ install(FILES "${FLUTTER_ICU_DATA_FILE}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}
 install(FILES "${FLUTTER_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"
   COMPONENT Runtime)
 
+find_program(SKED_POWERSHELL NAMES pwsh powershell)
+if(NOT SKED_POWERSHELL)
+  message(FATAL_ERROR "PowerShell is required to prepare the bundled Python runtime")
+endif()
+set(SKED_PYTHON_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/../tool/python")
+set(SKED_PYTHON_RUNTIME "${CMAKE_CURRENT_BINARY_DIR}/python")
+add_custom_command(
+  OUTPUT "${SKED_PYTHON_RUNTIME}/manifest.json"
+  COMMAND "${SKED_POWERSHELL}" -NoProfile -NonInteractive -ExecutionPolicy Bypass
+    -File "${SKED_PYTHON_SOURCE}/prepare_windows.ps1"
+    -OutputDirectory "${SKED_PYTHON_RUNTIME}"
+  DEPENDS "${SKED_PYTHON_SOURCE}/prepare_windows.ps1"
+    "${SKED_PYTHON_SOURCE}/runtime.json"
+    "${SKED_PYTHON_SOURCE}/bootstrap.py"
+    "${SKED_PYTHON_SOURCE}/sked_runtime.py"
+  COMMENT "Preparing bundled CPython"
+  VERBATIM)
+add_custom_target(sked_python_runtime ALL DEPENDS "${SKED_PYTHON_RUNTIME}/manifest.json")
+add_dependencies(${BINARY_NAME} sked_python_runtime)
+install(DIRECTORY "${SKED_PYTHON_RUNTIME}" DESTINATION "${INSTALL_BUNDLE_DATA_DIR}"
+  COMPONENT Runtime)
+
 if(PLUGIN_BUNDLED_LIBRARIES)
   install(FILES "${PLUGIN_BUNDLED_LIBRARIES}"
     DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"

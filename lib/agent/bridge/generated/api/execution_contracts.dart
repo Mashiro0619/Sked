@@ -4,6 +4,7 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import 'file_contracts.dart';
 import 'models.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
@@ -386,17 +387,20 @@ enum ExecutionKind { python, controlledRead }
 
 class ExecutionOutputReference {
   final ExecutionOutputStream stream;
+  final FileResourceRef file;
   final ExecutionResourceVersion resource;
   final bool truncated;
 
   const ExecutionOutputReference({
     required this.stream,
+    required this.file,
     required this.resource,
     required this.truncated,
   });
 
   @override
-  int get hashCode => stream.hashCode ^ resource.hashCode ^ truncated.hashCode;
+  int get hashCode =>
+      stream.hashCode ^ file.hashCode ^ resource.hashCode ^ truncated.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -404,6 +408,7 @@ class ExecutionOutputReference {
       other is ExecutionOutputReference &&
           runtimeType == other.runtimeType &&
           stream == other.stream &&
+          file == other.file &&
           resource == other.resource &&
           truncated == other.truncated;
 }
@@ -420,6 +425,7 @@ class ExecutionPreview {
   final JsonPayload? arguments;
   final String? argumentsDigest;
   final List<String> argv;
+  final FileResourceRef cwdResource;
   final ExecutionResourceVersion cwd;
   final ExecutionEnvironmentSnapshot environment;
   final List<ExecutionEnvironmentVariable> variables;
@@ -436,6 +442,7 @@ class ExecutionPreview {
     this.arguments,
     this.argumentsDigest,
     required this.argv,
+    required this.cwdResource,
     required this.cwd,
     required this.environment,
     required this.variables,
@@ -454,6 +461,7 @@ class ExecutionPreview {
       arguments.hashCode ^
       argumentsDigest.hashCode ^
       argv.hashCode ^
+      cwdResource.hashCode ^
       cwd.hashCode ^
       environment.hashCode ^
       variables.hashCode ^
@@ -474,6 +482,7 @@ class ExecutionPreview {
           arguments == other.arguments &&
           argumentsDigest == other.argumentsDigest &&
           argv == other.argv &&
+          cwdResource == other.cwdResource &&
           cwd == other.cwd &&
           environment == other.environment &&
           variables == other.variables &&
@@ -611,6 +620,7 @@ enum ExecutionTerminal { notStarted, exited, cancelled, lost }
 class PythonExecutionRequest {
   final String code;
   final List<String> argv;
+  final FileResourceRef cwdResource;
   final ExecutionResourceVersion cwd;
   final List<ExecutionEnvironmentVariable> environment;
   final List<ExecutionInputSnapshot> inputs;
@@ -618,6 +628,7 @@ class PythonExecutionRequest {
   const PythonExecutionRequest({
     required this.code,
     required this.argv,
+    required this.cwdResource,
     required this.cwd,
     required this.environment,
     required this.inputs,
@@ -627,6 +638,7 @@ class PythonExecutionRequest {
   int get hashCode =>
       code.hashCode ^
       argv.hashCode ^
+      cwdResource.hashCode ^
       cwd.hashCode ^
       environment.hashCode ^
       inputs.hashCode;
@@ -638,7 +650,79 @@ class PythonExecutionRequest {
           runtimeType == other.runtimeType &&
           code == other.code &&
           argv == other.argv &&
+          cwdResource == other.cwdResource &&
           cwd == other.cwd &&
           environment == other.environment &&
           inputs == other.inputs;
+}
+
+class PythonTaskEnvironment {
+  final String name;
+  final String value;
+
+  const PythonTaskEnvironment({required this.name, required this.value});
+
+  @override
+  int get hashCode => name.hashCode ^ value.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PythonTaskEnvironment &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          value == other.value;
+}
+
+class PythonTaskInput {
+  final String name;
+  final String contentId;
+
+  const PythonTaskInput({required this.name, required this.contentId});
+
+  @override
+  int get hashCode => name.hashCode ^ contentId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PythonTaskInput &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          contentId == other.contentId;
+}
+
+class PythonTaskRequest {
+  final String code;
+  final List<String> argv;
+  final FileResourceRef cwd;
+  final List<PythonTaskInput> inputs;
+  final List<PythonTaskEnvironment> environment;
+
+  const PythonTaskRequest({
+    required this.code,
+    required this.argv,
+    required this.cwd,
+    required this.inputs,
+    required this.environment,
+  });
+
+  @override
+  int get hashCode =>
+      code.hashCode ^
+      argv.hashCode ^
+      cwd.hashCode ^
+      inputs.hashCode ^
+      environment.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PythonTaskRequest &&
+          runtimeType == other.runtimeType &&
+          code == other.code &&
+          argv == other.argv &&
+          cwd == other.cwd &&
+          inputs == other.inputs &&
+          environment == other.environment;
 }

@@ -12,6 +12,7 @@ pub mod management_contracts;
 pub mod models;
 #[cfg(test)]
 mod provider_failure_tests;
+pub mod python_task;
 pub mod ui;
 pub mod ui_contracts;
 #[cfg(test)]

@@ -7,6 +7,8 @@ mod models;
 mod prepared;
 mod service;
 mod validation;
+#[cfg(windows)]
+mod windows;
 
 pub use contracts::{
     ControlledReaderRegistration, ExecutionCapabilities, ExecutionPreparation, ExecutionProvider,
@@ -15,3 +17,5 @@ pub use contracts::{
 pub use models::*;
 pub use prepared::PreparedExecution;
 pub use service::{EXECUTION_SERVICE, ExecutionService};
+#[cfg(windows)]
+pub use windows::WindowsExecutionPlugin;

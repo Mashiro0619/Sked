@@ -5,6 +5,8 @@ import 'dart:typed_data';
 
 import 'package:sked/agent/bridge/generated/api.dart';
 import 'package:sked/agent/bridge/generated/api/contracts.dart';
+import 'package:sked/agent/bridge/generated/api/execution_contracts.dart'
+    show ExecutionAvailability;
 import 'package:sked/agent/bridge/generated/api/file_contracts.dart'
     show FileAvailability;
 import 'package:sked/agent/bridge/generated/api/history.dart';
@@ -32,6 +34,13 @@ class MemoryAgentCore implements AgentCore {
   @override
   FileAvailability fileAvailability() =>
       const FileAvailability(available: false, resourceKinds: []);
+
+  @override
+  ExecutionAvailability executionAvailability() => const ExecutionAvailability(
+    available: false,
+    python: false,
+    controlledReaders: [],
+  );
 
   final snapshots = <String, ViewConversationSnapshot>{};
   final knowledge = <String, ViewKnowledgeRecord>{};

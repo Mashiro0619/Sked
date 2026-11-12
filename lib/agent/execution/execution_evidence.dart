@@ -4,6 +4,7 @@ import '../../application/external_operation_coordinator.dart';
 import '../../application/mutation_draft.dart';
 import '../../application/operation_contracts.dart';
 import '../bridge/generated/api/execution_contracts.dart';
+import '../files/file_evidence.dart' show fileResourceJson;
 import '../operations/tool_outcome.dart';
 
 const pythonExecutionAction = 'execution.python';
@@ -23,6 +24,7 @@ Map<String, Object?> executionPreviewJson(ExecutionPreview value) =>
       'argumentsDigest': ?value.argumentsDigest,
       'argv': value.argv,
       'cwd': _resource(value.cwd),
+      'cwdResource': fileResourceJson(value.cwdResource),
       'environment': {
         'provider': _provider(value.environment.provider),
         'platform': value.environment.platform,
@@ -109,6 +111,7 @@ Map<String, Object?> executionReceiptJson(ExecutionReceipt value) => {
       {
         'stream': item.stream.name,
         'resource': _resource(item.resource),
+        'file': fileResourceJson(item.file),
         'truncated': item.truncated,
       },
   ],
