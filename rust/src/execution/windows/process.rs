@@ -33,7 +33,7 @@ use windows_sys::Win32::{
 use super::{error, io_error, ledger, now_ms, runtime::RuntimeBundle};
 use crate::execution::{
     EnvironmentValue, ExecutionError, ExecutionErrorCode, ExecutionEventKind, ExecutionReceipt,
-    FrozenExecutionSpec, OutputStream, Result,
+    FrozenExecutionSpec, OutputStream, Result, environment_names_equal,
 };
 
 struct Job {
@@ -183,7 +183,7 @@ pub(super) async fn run(
             };
             if let Some(previous) = variables
                 .keys()
-                .find(|key| key.eq_ignore_ascii_case(name))
+                .find(|key| environment_names_equal(key, name))
                 .cloned()
             {
                 variables.remove(&previous);

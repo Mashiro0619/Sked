@@ -215,6 +215,22 @@ fn validate_variables(variables: &BTreeMap<String, EnvironmentValue>) -> Result<
     Ok(())
 }
 
+/// Compare names after the environment entrypoint has rejected embedded NULs.
+pub(crate) fn environment_names_equal(left: &str, right: &str) -> bool {
+    #[cfg(windows)]
+    {
+        use windows_sys::Win32::Globalization::{CSTR_EQUAL, CompareStringOrdinal};
+
+        let left: Vec<_> = left.encode_utf16().chain(std::iter::once(0)).collect();
+        let right: Vec<_> = right.encode_utf16().chain(std::iter::once(0)).collect();
+        unsafe { CompareStringOrdinal(left.as_ptr(), -1, right.as_ptr(), -1, 1) == CSTR_EQUAL }
+    }
+    #[cfg(not(windows))]
+    {
+        left == right
+    }
+}
+
 fn validate_json(value: &Value) -> Result<()> {
     match value {
         Value::String(value) => no_nul(value, "reader argument")?,

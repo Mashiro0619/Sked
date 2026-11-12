@@ -22,6 +22,7 @@ use super::{
     ExecutionProviderIdentity, ExecutionReceipt, ExecutionService, ExecutionSpec,
     ExecutionStartRequest, ExecutionTerminal, FrozenExecutionKind, FrozenExecutionSpec,
     OutputReference, OutputStream, PreparedExecutionBackend, ResourceVersion, Result,
+    environment_names_equal,
 };
 use crate::{
     files::{
@@ -136,19 +137,19 @@ impl ExecutionProvider for WindowsProvider {
             if input
                 .environment
                 .keys()
-                .any(|name| name.eq_ignore_ascii_case("_SKED_EXECUTION_DIR"))
+                .any(|name| environment_names_equal(name, "_SKED_EXECUTION_DIR"))
             {
                 return Err(error(
                     ExecutionErrorCode::InvalidSpec,
                     "_SKED_EXECUTION_DIR is set by the execution runtime.",
                 ));
             }
-            let mut variable_names = HashSet::new();
-            if input
-                .environment
-                .keys()
-                .any(|name| !variable_names.insert(name.to_ascii_uppercase()))
-            {
+            let variable_names = input.environment.keys().collect::<Vec<_>>();
+            if variable_names.iter().enumerate().any(|(index, name)| {
+                variable_names[..index]
+                    .iter()
+                    .any(|previous| environment_names_equal(name, previous))
+            }) {
                 return Err(error(
                     ExecutionErrorCode::InvalidSpec,
                     "Windows environment variable names are case-insensitive; each name must occur once.",

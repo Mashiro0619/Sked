@@ -11,6 +11,7 @@ use super::{
 use crate::{
     execution::{
         EnvironmentValue, ExecutionSpec, InputSnapshot, ResourceVersion, ScriptExecutionSpec,
+        environment_names_equal,
     },
     files::{FileKind, FileResourceKind, FileResourceRef, FileVersion},
     storage::StorageError,
@@ -196,26 +197,28 @@ fn task_environment(
     values: Vec<PythonTaskEnvironment>,
 ) -> Result<BTreeMap<String, EnvironmentValue>, String> {
     let mut environment = BTreeMap::new();
-    let mut names = HashSet::new();
     for variable in values {
-        let name = if cfg!(windows) {
-            variable.name.to_ascii_uppercase()
-        } else {
-            variable.name.clone()
-        };
-        if name == INPUTS_VARIABLE {
+        if variable.name.contains('\0') {
+            return Err(task_error(
+                "invalidSpec",
+                "An environment variable name cannot contain NUL.",
+            ));
+        }
+        if environment_names_equal(&variable.name, INPUTS_VARIABLE) {
             return Err(task_error(
                 "invalidSpec",
                 "SKED_INPUTS_JSON is supplied by the Python task.",
             ));
         }
-        if !names.insert(name) {
+        if environment
+            .insert(variable.name, EnvironmentValue::Plain(variable.value))
+            .is_some()
+        {
             return Err(task_error(
                 "invalidSpec",
                 "Python environment variable names must be unique.",
             ));
         }
-        environment.insert(variable.name, EnvironmentValue::Plain(variable.value));
     }
     Ok(environment)
 }

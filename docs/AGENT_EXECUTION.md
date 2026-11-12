@@ -6,6 +6,8 @@ Windows 的 `python.execute` 使用应用随包提供的 CPython 3.11。模型�
 
 调用提供 `code` 和工作目录 `cwd`，按需提供 `argv`、`environment` 及 `inputs`。工作目录使用设备文件工具相同的资源格式；环境变量为字符串键值。
 
+Windows 环境变量名按系统 Unicode 大小写规则比较，同名变量只能提供一次，任务变量覆盖继承值。
+
 `inputs` 的每项包含 `name` 和已有的 `contentId`。准备时读取该会话保存的完整附件，生成供本次执行使用的文件快照。网页正文的第一页或 `content.read` 的分页范围不限制脚本能够读取的文件内容。
 
 脚本通过 `sked_runtime.inputs` 按名称取得这些文件路径。工作目录的真实位置、版本、代码、参数、环境和输入快照一起进入执行预览。

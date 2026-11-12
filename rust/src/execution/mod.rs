@@ -17,5 +17,6 @@ pub use contracts::{
 pub use models::*;
 pub use prepared::PreparedExecution;
 pub use service::{EXECUTION_SERVICE, ExecutionService};
+pub(crate) use validation::environment_names_equal;
 #[cfg(windows)]
 pub use windows::WindowsExecutionPlugin;

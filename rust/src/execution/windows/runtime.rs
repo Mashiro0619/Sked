@@ -16,6 +16,7 @@ use windows_sys::Win32::Storage::FileSystem::{
 use super::{error, io_error};
 use crate::execution::{
     ExecutionEnvironment, ExecutionErrorCode, ExecutionProviderIdentity, Result,
+    environment_names_equal,
 };
 
 #[derive(Deserialize)]
@@ -132,7 +133,7 @@ impl RuntimeBundle {
             .collect::<Result<BTreeMap<String, String>>>()?;
         let path_key = system_variables
             .keys()
-            .find(|name| name.eq_ignore_ascii_case("PATH"))
+            .find(|name| environment_names_equal(name, "PATH"))
             .cloned()
             .unwrap_or_else(|| "PATH".into());
         let inherited_path = system_variables.remove(&path_key).unwrap_or_default();
