@@ -40,7 +40,8 @@ try {
     [IO.File]::WriteAllText((Join-Path $runtimePath 'manifest.json'), ($manifest | ConvertTo-Json -Depth 8), $utf8)
     if (Test-Path -LiteralPath $outputPath) {
         $previousManifest = Join-Path $outputPath 'manifest.json'
-        if (-not (Test-Path -LiteralPath $previousManifest)) {
+        if (-not (Test-Path -LiteralPath $previousManifest) -and
+            (Get-ChildItem -LiteralPath $outputPath -Force | Select-Object -First 1)) {
             throw 'The output directory already exists and is not a generated Sked Python bundle.'
         }
         Remove-Item -LiteralPath $outputPath -Recurse -Force
