@@ -691,29 +691,31 @@ fn body_text(
                             writer.line_break(1);
                             rows.push(0);
                         }
-                        if rendering.visible {
-                            if matches!(name, "td" | "th") {
-                                let first = rows.last().is_none_or(|count| *count == 0);
-                                frame.cell_flow = Some(writer.start_cell(first));
-                                if let Some(count) = rows.last_mut() {
-                                    *count += 1;
-                                }
+                        if matches!(name, "td" | "th") {
+                            let first = rows.last().is_none_or(|count| *count == 0);
+                            frame.cell_flow = Some(writer.start_cell(first));
+                            if let Some(count) = rows.last_mut() {
+                                *count += 1;
                             }
-                            if name == "li" {
-                                let marker = if let Some(counter) = lists.last_mut()
-                                    && let Some(next) = counter.next
-                                {
-                                    let value = element
-                                        .attr("value")
-                                        .and_then(|value| value.trim().parse().ok())
-                                        .unwrap_or(next);
-                                    counter.next = Some(value.saturating_add(counter.step));
-                                    format!("{value}. ")
-                                } else {
-                                    "- ".to_owned()
-                                };
+                        }
+                        if name == "li" {
+                            let marker = if let Some(counter) = lists.last_mut()
+                                && let Some(next) = counter.next
+                            {
+                                let value = element
+                                    .attr("value")
+                                    .and_then(|value| value.trim().parse().ok())
+                                    .unwrap_or(next);
+                                counter.next = Some(value.saturating_add(counter.step));
+                                format!("{value}. ")
+                            } else {
+                                "- ".to_owned()
+                            };
+                            if rendering.visible {
                                 writer.text(&marker, false, cancellation)?;
                             }
+                        }
+                        if rendering.visible {
                             if name == "br" {
                                 writer.explicit_break();
                             }
