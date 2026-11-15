@@ -17,6 +17,8 @@ A = "http://schemas.openxmlformats.org/drawingml/2006/main"
 R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 M = "http://schemas.openxmlformats.org/officeDocument/2006/math"
 C = "http://schemas.openxmlformats.org/drawingml/2006/chart"
+CT = "http://schemas.openxmlformats.org/package/2006/content-types"
+PR = "http://schemas.openxmlformats.org/package/2006/relationships"
 TEXT_TAGS = {f"{{{namespace}}}t" for namespace in (W, A, M)} | {f"{{{W}}}delText"}
 REMOVED_REVISIONS = {f"{{{W}}}del", f"{{{W}}}moveFrom"}
 REVISION_KINDS = {
@@ -46,11 +48,11 @@ class Package:
         self.archive = ZipFile(path)
         self.types = {}
         self.extensions = {}
-        for item in self.xml("[Content_Types].xml"):
-            if "PartName" in item.attrib:
-                self.types[item.attrib["PartName"].lstrip("/")] = item.attrib["ContentType"]
-            else:
-                self.extensions[item.attrib["Extension"].lower()] = item.attrib["ContentType"]
+        content_types = self.xml("[Content_Types].xml")
+        for item in content_types.findall(f"{{{CT}}}Override"):
+            self.types[item.attrib["PartName"].lstrip("/")] = item.attrib["ContentType"]
+        for item in content_types.findall(f"{{{CT}}}Default"):
+            self.extensions[item.attrib["Extension"].lower()] = item.attrib["ContentType"]
         self.relationships = {}
         for name in self.archive.namelist():
             if not name.endswith(".rels"):
@@ -60,7 +62,7 @@ class Package:
             if name == "_rels/.rels":
                 source = ""
             entries = {}
-            for relation in self.xml(name):
+            for relation in self.xml(name).findall(f"{{{PR}}}Relationship"):
                 target = relation.attrib["Target"]
                 external = relation.attrib.get("TargetMode") == "External"
                 entries[relation.attrib["Id"]] = {
@@ -186,7 +188,7 @@ def word_blocks(element, package, source):
                             "properties": {
                                 etree.QName(prop).localname: dict(prop.attrib)
                                 for properties in cell.findall(f"{{{W}}}tcPr")
-                                for prop in properties
+                                for prop in properties.xpath("*")
                             },
                         }
                         for cell in row if cell.tag == f"{{{W}}}tc"
