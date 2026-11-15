@@ -8375,6 +8375,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Run Python'**
   String get agentRunPython;
+
+  /// No description provided for @agentActivityCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get agentActivityCancelled;
 }
 
 class _AppLocalizationsDelegate

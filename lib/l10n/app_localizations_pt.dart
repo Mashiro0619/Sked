@@ -4742,4 +4742,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get agentRunPython => 'Executar Python';
+
+  @override
+  String get agentActivityCancelled => 'Cancelado';
 }

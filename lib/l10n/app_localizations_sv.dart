@@ -4714,4 +4714,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get agentRunPython => 'Kör Python';
+
+  @override
+  String get agentActivityCancelled => 'Avbrutet';
 }

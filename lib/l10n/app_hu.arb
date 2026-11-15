@@ -2179,5 +2179,7 @@
   "agentReadOffice": "Irodai dokumentum olvasása",
   "@agentReadOffice": {},
   "agentRunPython": "Python futtatása",
-  "@agentRunPython": {}
+  "@agentRunPython": {},
+  "agentActivityCancelled": "Megszakítva",
+  "@agentActivityCancelled": {}
 }

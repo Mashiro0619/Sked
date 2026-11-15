@@ -2179,5 +2179,7 @@
   "agentReadOffice": "Citește documentul Office",
   "@agentReadOffice": {},
   "agentRunPython": "Rulează Python",
-  "@agentRunPython": {}
+  "@agentRunPython": {},
+  "agentActivityCancelled": "Anulat",
+  "@agentActivityCancelled": {}
 }

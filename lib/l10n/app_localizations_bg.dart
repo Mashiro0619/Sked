@@ -4756,4 +4756,7 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get agentRunPython => 'Изпълнение на Python';
+
+  @override
+  String get agentActivityCancelled => 'Отменено';
 }

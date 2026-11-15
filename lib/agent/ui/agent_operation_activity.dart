@@ -44,6 +44,8 @@ class AgentOperationActivity extends StatelessWidget {
         ? l.agentApprovalRequired
         : operation.status == AgentToolActivityStatus.running
         ? agentToolActivityLabel(operation.tools.first, l)
+        : operation.status == AgentToolActivityStatus.cancelled
+        ? l.agentActivityCancelled
         : operation.status == AgentToolActivityStatus.notStarted
         ? l.agentActivityNotStarted
         : saved

@@ -4733,4 +4733,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get agentRunPython => 'Python uitvoeren';
+
+  @override
+  String get agentActivityCancelled => 'Geannuleerd';
 }

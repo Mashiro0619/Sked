@@ -4599,4 +4599,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get agentRunPython => 'Python 실행';
+
+  @override
+  String get agentActivityCancelled => '취소됨';
 }

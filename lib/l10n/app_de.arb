@@ -2177,5 +2177,7 @@
   "agentReadOffice": "Office-Dokument lesen",
   "@agentReadOffice": {},
   "agentRunPython": "Python ausführen",
-  "@agentRunPython": {}
+  "@agentRunPython": {},
+  "agentActivityCancelled": "Abgebrochen",
+  "@agentActivityCancelled": {}
 }

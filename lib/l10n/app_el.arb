@@ -2179,5 +2179,7 @@
   "agentReadOffice": "Ανάγνωση εγγράφου Office",
   "@agentReadOffice": {},
   "agentRunPython": "Εκτέλεση Python",
-  "@agentRunPython": {}
+  "@agentRunPython": {},
+  "agentActivityCancelled": "Ακυρώθηκε",
+  "@agentActivityCancelled": {}
 }

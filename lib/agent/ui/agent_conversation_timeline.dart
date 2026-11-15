@@ -35,6 +35,7 @@ enum AgentToolActivityStatus {
   failed,
   uncertain,
   notStarted,
+  cancelled,
   corrected,
 }
 
@@ -107,6 +108,9 @@ class AgentTimelineActivity extends AgentTimelineEntry {
     if (tools.any((tool) => tool.status == AgentToolActivityStatus.running)) {
       return AgentToolActivityStatus.running;
     }
+    if (tools.any((tool) => tool.status == AgentToolActivityStatus.cancelled)) {
+      return AgentToolActivityStatus.cancelled;
+    }
     if (tools.any(
       (tool) => tool.status == AgentToolActivityStatus.notStarted,
     )) {
@@ -163,7 +167,7 @@ class AgentTimelineOperation extends AgentTimelineEntry {
     AgentOperationPhase.waitingApproval => AgentToolActivityStatus.running,
     AgentOperationPhase.previewed ||
     AgentOperationPhase.completed => AgentToolActivityStatus.completed,
-    AgentOperationPhase.cancelled => AgentToolActivityStatus.notStarted,
+    AgentOperationPhase.cancelled => _cancelledStatus(outcome?.payload),
     AgentOperationPhase.failed => AgentToolActivityStatus.failed,
     AgentOperationPhase.unresolved => AgentToolActivityStatus.uncertain,
     null => tools.last.status,
@@ -188,16 +192,34 @@ class AgentTimelinePlan extends AgentTimelineEntry {
 bool isAgentVisibleToolResult(ConversationMessage message) =>
     message.toolOutcome?.operationId != null;
 
-AgentToolActivityStatus? _resultStatus(ConversationMessage? message) =>
-    switch (message?.toolOutcome?.kind) {
+AgentToolActivityStatus? _resultStatus(ConversationMessage? message) {
+  final outcome = message?.toolOutcome;
+  return outcome == null ? null : agentToolOutcomeStatus(outcome);
+}
+
+AgentToolActivityStatus agentToolOutcomeStatus(ToolOutcome outcome) =>
+    switch (outcome.kind) {
       ToolOutcomeKind.needsReconciliation => AgentToolActivityStatus.uncertain,
-      ToolOutcomeKind.cancelled => AgentToolActivityStatus.notStarted,
+      ToolOutcomeKind.cancelled => _cancelledStatus(outcome.payload),
       ToolOutcomeKind.correctableError => AgentToolActivityStatus.failed,
       ToolOutcomeKind.query ||
       ToolOutcomeKind.preview ||
       ToolOutcomeKind.saved => AgentToolActivityStatus.completed,
-      null => null,
     };
+
+AgentToolActivityStatus _cancelledStatus(Map<String, Object?>? result) {
+  final effect = result?['effectResult'];
+  final execution =
+      result?['execution'] ?? (effect is Map ? effect['execution'] : null);
+  final file = effect is Map ? effect['file'] : null;
+  final notStarted =
+      result?['status'] == 'not_executed' ||
+      (execution is Map && execution['terminal'] == 'notStarted') ||
+      (file is Map && file['state'] == 'notStarted');
+  return notStarted
+      ? AgentToolActivityStatus.notStarted
+      : AgentToolActivityStatus.cancelled;
+}
 
 class _ActivitySource {
   _ActivitySource({
@@ -512,7 +534,7 @@ List<AgentTimelineEntry> projectAgentConversationTimeline(
             ConversationAttemptOutcome.notStarted =>
               AgentToolActivityStatus.notStarted,
             ConversationAttemptOutcome.cancelled =>
-              AgentToolActivityStatus.notStarted,
+              AgentToolActivityStatus.cancelled,
             ConversationAttemptOutcome.pending =>
               active
                   ? AgentToolActivityStatus.running

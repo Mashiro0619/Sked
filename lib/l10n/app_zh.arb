@@ -3125,5 +3125,7 @@
   "agentReadOffice": "读取办公文档",
   "@agentReadOffice": {},
   "agentRunPython": "运行 Python",
-  "@agentRunPython": {}
+  "@agentRunPython": {},
+  "agentActivityCancelled": "已取消",
+  "@agentActivityCancelled": {}
 }

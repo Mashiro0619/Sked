@@ -4724,4 +4724,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get agentRunPython => 'Uruchom Python';
+
+  @override
+  String get agentActivityCancelled => 'Anulowano';
 }

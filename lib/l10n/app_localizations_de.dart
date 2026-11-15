@@ -4745,4 +4745,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get agentRunPython => 'Python ausführen';
+
+  @override
+  String get agentActivityCancelled => 'Abgebrochen';
 }

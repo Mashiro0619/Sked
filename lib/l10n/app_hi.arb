@@ -2179,5 +2179,7 @@
   "agentReadOffice": "ऑफ़िस दस्तावेज़ पढ़ें",
   "@agentReadOffice": {},
   "agentRunPython": "Python चलाएँ",
-  "@agentRunPython": {}
+  "@agentRunPython": {},
+  "agentActivityCancelled": "रद्द किया गया",
+  "@agentActivityCancelled": {}
 }

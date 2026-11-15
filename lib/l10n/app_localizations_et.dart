@@ -4706,4 +4706,7 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String get agentRunPython => 'Käivita Python';
+
+  @override
+  String get agentActivityCancelled => 'Tühistatud';
 }

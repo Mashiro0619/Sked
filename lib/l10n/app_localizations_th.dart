@@ -4684,4 +4684,7 @@ class AppLocalizationsTh extends AppLocalizations {
 
   @override
   String get agentRunPython => 'เรียกใช้ Python';
+
+  @override
+  String get agentActivityCancelled => 'ยกเลิกแล้ว';
 }

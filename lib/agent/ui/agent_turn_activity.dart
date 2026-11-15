@@ -23,6 +23,7 @@ String agentToolActivityStatusLabel(
   AgentToolActivityStatus.failed => l.agentActivityFailed,
   AgentToolActivityStatus.uncertain => l.agentActivityUncertain,
   AgentToolActivityStatus.notStarted => l.agentActivityNotStarted,
+  AgentToolActivityStatus.cancelled => l.agentActivityCancelled,
   AgentToolActivityStatus.corrected => l.agentActivityCorrected,
 };
 
@@ -31,6 +32,7 @@ IconData agentActivityStatusIcon(AgentToolActivityStatus status) =>
       AgentToolActivityStatus.failed => Icons.error_outline_rounded,
       AgentToolActivityStatus.uncertain => Icons.pending_outlined,
       AgentToolActivityStatus.notStarted => Icons.pause_circle_outline_rounded,
+      AgentToolActivityStatus.cancelled => Icons.stop_circle_outlined,
       _ => Icons.terminal_rounded,
     };
 
@@ -267,6 +269,7 @@ class AgentTurnActivity extends StatelessWidget {
           AgentToolActivityStatus.failed ||
           AgentToolActivityStatus.uncertain ||
           AgentToolActivityStatus.notStarted ||
+          AgentToolActivityStatus.cancelled ||
           AgentToolActivityStatus.corrected => agentToolActivityStatusLabel(
             tool.status,
             l,
@@ -293,7 +296,8 @@ class AgentTurnActivity extends StatelessWidget {
       statusIcon: Icons.list_alt_rounded,
       statusLabel:
           activity.status == AgentToolActivityStatus.failed ||
-              activity.status == AgentToolActivityStatus.uncertain
+              activity.status == AgentToolActivityStatus.uncertain ||
+              activity.status == AgentToolActivityStatus.cancelled
           ? agentToolActivityStatusLabel(activity.status, l)
           : null,
       initiallyExpanded: activity.status == AgentToolActivityStatus.running,

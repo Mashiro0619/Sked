@@ -3195,5 +3195,7 @@
   "agentReadOffice": "Read office document",
   "@agentReadOffice": {},
   "agentRunPython": "Run Python",
-  "@agentRunPython": {}
+  "@agentRunPython": {},
+  "agentActivityCancelled": "Cancelled",
+  "@agentActivityCancelled": {}
 }

@@ -2194,5 +2194,7 @@
   "agentReadOffice": "อ่านเอกสารสำนักงาน",
   "@agentReadOffice": {},
   "agentRunPython": "เรียกใช้ Python",
-  "@agentRunPython": {}
+  "@agentRunPython": {},
+  "agentActivityCancelled": "ยกเลิกแล้ว",
+  "@agentActivityCancelled": {}
 }

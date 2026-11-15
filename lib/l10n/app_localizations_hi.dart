@@ -4692,4 +4692,7 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get agentRunPython => 'Python चलाएँ';
+
+  @override
+  String get agentActivityCancelled => 'रद्द किया गया';
 }

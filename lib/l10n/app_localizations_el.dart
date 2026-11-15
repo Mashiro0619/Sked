@@ -4764,4 +4764,7 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get agentRunPython => 'Εκτέλεση Python';
+
+  @override
+  String get agentActivityCancelled => 'Ακυρώθηκε';
 }

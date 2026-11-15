@@ -2179,5 +2179,7 @@
   "agentReadOffice": "Прочитать офисный документ",
   "@agentReadOffice": {},
   "agentRunPython": "Запустить Python",
-  "@agentRunPython": {}
+  "@agentRunPython": {},
+  "agentActivityCancelled": "Отменено",
+  "@agentActivityCancelled": {}
 }

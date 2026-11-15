@@ -4415,6 +4415,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentRunPython => '运行 Python';
+
+  @override
+  String get agentActivityCancelled => '已取消';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -8830,4 +8833,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentRunPython => '執行 Python';
+
+  @override
+  String get agentActivityCancelled => '已取消';
 }

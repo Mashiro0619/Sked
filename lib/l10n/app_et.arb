@@ -2179,5 +2179,7 @@
   "agentReadOffice": "Loe kontoridokumenti",
   "@agentReadOffice": {},
   "agentRunPython": "Käivita Python",
-  "@agentRunPython": {}
+  "@agentRunPython": {},
+  "agentActivityCancelled": "Tühistatud",
+  "@agentActivityCancelled": {}
 }

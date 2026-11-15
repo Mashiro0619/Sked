@@ -4590,4 +4590,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get agentRunPython => 'Python を実行';
+
+  @override
+  String get agentActivityCancelled => 'キャンセル済み';
 }

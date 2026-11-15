@@ -4733,4 +4733,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get agentRunPython => 'Запустить Python';
+
+  @override
+  String get agentActivityCancelled => 'Отменено';
 }

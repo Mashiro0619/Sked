@@ -4733,4 +4733,7 @@ class AppLocalizationsHu extends AppLocalizations {
 
   @override
   String get agentRunPython => 'Python futtatása';
+
+  @override
+  String get agentActivityCancelled => 'Megszakítva';
 }

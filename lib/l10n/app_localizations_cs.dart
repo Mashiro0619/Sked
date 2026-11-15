@@ -4715,4 +4715,7 @@ class AppLocalizationsCs extends AppLocalizations {
 
   @override
   String get agentRunPython => 'Spustit Python';
+
+  @override
+  String get agentActivityCancelled => 'Zrušeno';
 }

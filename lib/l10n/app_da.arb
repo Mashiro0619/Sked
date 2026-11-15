@@ -2179,5 +2179,7 @@
   "agentReadOffice": "Læs Office-dokument",
   "@agentReadOffice": {},
   "agentRunPython": "Kør Python",
-  "@agentRunPython": {}
+  "@agentRunPython": {},
+  "agentActivityCancelled": "Annulleret",
+  "@agentActivityCancelled": {}
 }

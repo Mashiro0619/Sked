@@ -2179,5 +2179,7 @@
   "agentReadOffice": "오피스 문서 읽기",
   "@agentReadOffice": {},
   "agentRunPython": "Python 실행",
-  "@agentRunPython": {}
+  "@agentRunPython": {},
+  "agentActivityCancelled": "취소됨",
+  "@agentActivityCancelled": {}
 }

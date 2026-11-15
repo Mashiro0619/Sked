@@ -9,6 +9,7 @@ import '../../models/school_site_models.dart' show validSchoolSiteId;
 import '../delivery/agent_delivery.dart';
 import '../operations/tool_outcome.dart';
 import 'agent_conversation_receipt.dart';
+import 'agent_conversation_timeline.dart';
 import 'agent_delivery_view.dart';
 import 'agent_setting_labels.dart';
 import 'agent_selectable_text.dart';
@@ -70,6 +71,10 @@ class _AgentOperationCardState extends State<AgentOperationCard> {
     final prepared = outcome.kind == ToolOutcomeKind.preview;
     final uncertain = outcome.kind == ToolOutcomeKind.needsReconciliation;
     final queried = outcome.kind == ToolOutcomeKind.query;
+    final cancelled = outcome.kind == ToolOutcomeKind.cancelled;
+    final notStarted =
+        cancelled &&
+        agentToolOutcomeStatus(outcome) == AgentToolActivityStatus.notStarted;
     final delivery = AgentDelivery.fromToolResult(
       toolName: widget.toolName,
       outcome: outcome,
@@ -84,6 +89,8 @@ class _AgentOperationCardState extends State<AgentOperationCard> {
               : l.agentChangesSaved)
         : queried
         ? l.agentActivityCompleted
+        : cancelled
+        ? (notStarted ? l.agentActivityNotStarted : l.agentActivityCancelled)
         : l.agentActionFailed;
     final storedChanges = delivery.businessChanges;
     var presentsSchoolSites = false;
@@ -139,11 +146,15 @@ class _AgentOperationCardState extends State<AgentOperationCard> {
                           ? Icons.check_circle_outline
                           : prepared
                           ? Icons.preview_outlined
+                          : cancelled
+                          ? (notStarted
+                                ? Icons.pause_circle_outline_rounded
+                                : Icons.stop_circle_outlined)
                           : Icons.error_outline,
                       size: 20,
                       color: uncertain
                           ? Theme.of(context).colorScheme.tertiary
-                          : !applied && !prepared && !queried
+                          : !applied && !prepared && !queried && !cancelled
                           ? Theme.of(context).colorScheme.error
                           : Theme.of(context).colorScheme.onSurfaceVariant,
                     ),

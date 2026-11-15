@@ -2179,5 +2179,7 @@
   "agentReadOffice": "Office 文書を読み取る",
   "@agentReadOffice": {},
   "agentRunPython": "Python を実行",
-  "@agentRunPython": {}
+  "@agentRunPython": {},
+  "agentActivityCancelled": "キャンセル済み",
+  "@agentActivityCancelled": {}
 }

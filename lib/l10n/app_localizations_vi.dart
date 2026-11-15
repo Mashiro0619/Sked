@@ -4705,4 +4705,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get agentRunPython => 'Chạy Python';
+
+  @override
+  String get agentActivityCancelled => 'Đã hủy';
 }

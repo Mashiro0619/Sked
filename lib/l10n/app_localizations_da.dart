@@ -4700,4 +4700,7 @@ class AppLocalizationsDa extends AppLocalizations {
 
   @override
   String get agentRunPython => 'Kør Python';
+
+  @override
+  String get agentActivityCancelled => 'Annulleret';
 }

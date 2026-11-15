@@ -4718,4 +4718,7 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get agentRunPython => 'Suorita Python';
+
+  @override
+  String get agentActivityCancelled => 'Peruttu';
 }

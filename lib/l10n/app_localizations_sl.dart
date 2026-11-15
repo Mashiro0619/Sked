@@ -4722,4 +4722,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get agentRunPython => 'Zaženi Python';
+
+  @override
+  String get agentActivityCancelled => 'Preklicano';
 }
