@@ -18,11 +18,20 @@ R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
 M = "http://schemas.openxmlformats.org/officeDocument/2006/math"
 C = "http://schemas.openxmlformats.org/drawingml/2006/chart"
 TEXT_TAGS = {f"{{{namespace}}}t" for namespace in (W, A, M)} | {f"{{{W}}}delText"}
+REMOVED_REVISIONS = {f"{{{W}}}del", f"{{{W}}}moveFrom"}
+REVISION_KINDS = {
+    f"{{{W}}}ins": "insertion",
+    f"{{{W}}}del": "deletion",
+    f"{{{W}}}moveFrom": "moveFrom",
+    f"{{{W}}}moveTo": "moveTo",
+}
 
 
 def xml_text(element):
     parts = []
     for node in element.iter():
+        if any(parent.tag in REMOVED_REVISIONS for parent in node.iterancestors()):
+            continue
         if node.tag in TEXT_TAGS:
             parts.append(node.text or "")
         elif node.tag == f"{{{W}}}tab":
@@ -124,8 +133,8 @@ class Package:
                     continue
                 entry = {"location": tree.getpath(node), "text": node.text}
                 for ancestor in node.iterancestors():
-                    if ancestor.tag in (f"{{{W}}}ins", f"{{{W}}}del"):
-                        entry["revision"] = "insertion" if ancestor.tag == f"{{{W}}}ins" else "deletion"
+                    if ancestor.tag in REVISION_KINDS:
+                        entry["revision"] = REVISION_KINDS[ancestor.tag]
                         break
                 text.append(entry)
             if text:
@@ -157,6 +166,8 @@ class Package:
 def word_blocks(element, package, source):
     blocks = []
     for child in element:
+        if child.tag in REMOVED_REVISIONS:
+            continue
         if child.tag == f"{{{W}}}p":
             style = child.find(f"{{{W}}}pPr/{{{W}}}pStyle")
             blocks.append({
