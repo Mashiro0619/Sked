@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:path/path.dart' as paths;
 
 import '../bridge/generated/api/file_contracts.dart';
@@ -229,7 +231,7 @@ AgentDeliveryFile? _file({
   }
   final file = FileResourceRef(kind: kind, value: value);
   return AgentDeliveryFile(
-    id: '$owner:$resourceId:$revision',
+    id: jsonEncode([owner, kind.name, value, resourceId, revision]),
     name: name ?? _fileName(file),
     resource: file,
     version: AgentDeliveryFileVersion(
