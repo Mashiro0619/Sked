@@ -1,4 +1,5 @@
 import '../conversations/conversation_models.dart';
+import '../delivery/agent_delivery.dart';
 import '../history/conversation_history.dart';
 import '../interactions/agent_task_plan.dart';
 import '../operations/operation_executor.dart';
@@ -710,15 +711,21 @@ List<AgentTimelineEntry> _projectOperations(
     final turn = activity.turnId ?? activity.id;
     for (final tool in activity.tools) {
       final result = results[tool.id];
-      // A rejected invocation has not become a business operation. Keep its
-      // actual error in the activity trail without creating a failed save row.
+      final delivery = result == null
+          ? null
+          : AgentDelivery.fromToolResult(toolName: tool.name, outcome: result);
+      final hasDelivery = delivery?.hasItems == true;
+      // A failed read may still have real extracted files. Other rejected
+      // invocations remain in the activity trail without a failed save row.
       if (result?.kind == ToolOutcomeKind.correctableError &&
-          result?.operationId == null) {
+          result?.operationId == null &&
+          !hasDelivery) {
         continue;
       }
       if (!_isBusinessTool(tool.name) &&
           !updates.containsKey(tool.id) &&
-          result?.operationId == null) {
+          result?.operationId == null &&
+          !hasDelivery) {
         continue;
       }
       final operationId =

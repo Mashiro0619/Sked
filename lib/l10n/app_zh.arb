@@ -3093,5 +3093,37 @@
   "agentFileAccessRefresh": "刷新状态",
   "@agentFileAccessRefresh": {},
   "agentFileAccessFailed": "无法读取或更新文件访问，请重试。",
-  "@agentFileAccessFailed": {}
+  "@agentFileAccessFailed": {},
+  "agentDeliverySaved": "已保存",
+  "@agentDeliverySaved": {},
+  "agentDeliveryObserved": "已记录文件",
+  "@agentDeliveryObserved": {},
+  "agentDeliveryRecovery": "恢复文件",
+  "@agentDeliveryRecovery": {},
+  "agentDeliveryOpenCopy": "打开查看副本",
+  "@agentDeliveryOpenCopy": {},
+  "agentDeliverySourceDate": "来源日期：{value}",
+  "@agentDeliverySourceDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryFetchedAt": "获取时间：{value}",
+  "@agentDeliveryFetchedAt": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryOpenSource": "打开来源",
+  "@agentDeliveryOpenSource": {},
+  "agentDeliveryNoViewer": "系统没有可打开此文件的应用。",
+  "@agentDeliveryNoViewer": {},
+  "agentReadOffice": "读取办公文档",
+  "@agentReadOffice": {},
+  "agentRunPython": "运行 Python",
+  "@agentRunPython": {}
 }

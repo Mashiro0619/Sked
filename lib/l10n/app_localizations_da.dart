@@ -4666,4 +4666,38 @@ class AppLocalizationsDa extends AppLocalizations {
   @override
   String get agentFileAccessFailed =>
       'Could not read or update file access. Try again.';
+
+  @override
+  String get agentDeliverySaved => 'Gemt';
+
+  @override
+  String get agentDeliveryObserved => 'Registreret fil';
+
+  @override
+  String get agentDeliveryRecovery => 'Gendannelsesfil';
+
+  @override
+  String get agentDeliveryOpenCopy => 'Åbn en kopi til visning';
+
+  @override
+  String agentDeliverySourceDate(String value) {
+    return 'Kildedato: $value';
+  }
+
+  @override
+  String agentDeliveryFetchedAt(String value) {
+    return 'Hentet: $value';
+  }
+
+  @override
+  String get agentDeliveryOpenSource => 'Åbn kilde';
+
+  @override
+  String get agentDeliveryNoViewer => 'Ingen app kan åbne denne fil.';
+
+  @override
+  String get agentReadOffice => 'Læs Office-dokument';
+
+  @override
+  String get agentRunPython => 'Kør Python';
 }

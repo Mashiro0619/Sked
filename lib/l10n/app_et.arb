@@ -2147,5 +2147,37 @@
   "notificationHandledAction": "Märgi käsitletuks",
   "developerTestNotificationTitle": "Skedi testteavitus",
   "developerTestNotificationCourseBody": "Kursuste meeldetuletuste kanal töötab.",
-  "developerTestNotificationScheduleBody": "Sündmuste meeldetuletuste kanal töötab."
+  "developerTestNotificationScheduleBody": "Sündmuste meeldetuletuste kanal töötab.",
+  "agentDeliverySaved": "Salvestatud",
+  "@agentDeliverySaved": {},
+  "agentDeliveryObserved": "Registreeritud fail",
+  "@agentDeliveryObserved": {},
+  "agentDeliveryRecovery": "Taastefail",
+  "@agentDeliveryRecovery": {},
+  "agentDeliveryOpenCopy": "Ava vaatamiskoopia",
+  "@agentDeliveryOpenCopy": {},
+  "agentDeliverySourceDate": "Allika kuupäev: {value}",
+  "@agentDeliverySourceDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryFetchedAt": "Hangitud: {value}",
+  "@agentDeliveryFetchedAt": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryOpenSource": "Ava allikas",
+  "@agentDeliveryOpenSource": {},
+  "agentDeliveryNoViewer": "Selle faili avamiseks pole saadaval ühtegi rakendust.",
+  "@agentDeliveryNoViewer": {},
+  "agentReadOffice": "Loe kontoridokumenti",
+  "@agentReadOffice": {},
+  "agentRunPython": "Käivita Python",
+  "@agentRunPython": {}
 }

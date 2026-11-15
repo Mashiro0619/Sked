@@ -4381,6 +4381,40 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentFileAccessFailed => '无法读取或更新文件访问，请重试。';
+
+  @override
+  String get agentDeliverySaved => '已保存';
+
+  @override
+  String get agentDeliveryObserved => '已记录文件';
+
+  @override
+  String get agentDeliveryRecovery => '恢复文件';
+
+  @override
+  String get agentDeliveryOpenCopy => '打开查看副本';
+
+  @override
+  String agentDeliverySourceDate(String value) {
+    return '来源日期：$value';
+  }
+
+  @override
+  String agentDeliveryFetchedAt(String value) {
+    return '获取时间：$value';
+  }
+
+  @override
+  String get agentDeliveryOpenSource => '打开来源';
+
+  @override
+  String get agentDeliveryNoViewer => '系统没有可打开此文件的应用。';
+
+  @override
+  String get agentReadOffice => '读取办公文档';
+
+  @override
+  String get agentRunPython => '运行 Python';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -8762,4 +8796,38 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get agentFileAccessFailed => '無法讀取或更新檔案存取，請重試。';
+
+  @override
+  String get agentDeliverySaved => '已儲存';
+
+  @override
+  String get agentDeliveryObserved => '已記錄檔案';
+
+  @override
+  String get agentDeliveryRecovery => '復原檔案';
+
+  @override
+  String get agentDeliveryOpenCopy => '開啟檢視副本';
+
+  @override
+  String agentDeliverySourceDate(String value) {
+    return '來源日期：$value';
+  }
+
+  @override
+  String agentDeliveryFetchedAt(String value) {
+    return '取得時間：$value';
+  }
+
+  @override
+  String get agentDeliveryOpenSource => '開啟來源';
+
+  @override
+  String get agentDeliveryNoViewer => '系統沒有可開啟此檔案的應用程式。';
+
+  @override
+  String get agentReadOffice => '讀取辦公文件';
+
+  @override
+  String get agentRunPython => '執行 Python';
 }

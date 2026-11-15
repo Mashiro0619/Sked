@@ -15,20 +15,24 @@ class AgentToolResultViewData {
   const AgentToolResultViewData({
     required this.outcome,
     required this.isSourceCurrent,
+    this.isDeliverySourceCurrent,
     this.embedded = true,
     this.onUndo,
     this.onOpenResource,
     this.canOpenConversation,
     this.onOpenConversation,
+    this.toolName = '',
   });
 
   final ToolOutcome outcome;
   final bool Function() isSourceCurrent;
+  final bool Function()? isDeliverySourceCurrent;
   final bool embedded;
   final VoidCallback? onUndo;
   final void Function(Map<String, Object?> ref)? onOpenResource;
   final bool Function(String id)? canOpenConversation;
   final ValueChanged<String>? onOpenConversation;
+  final String toolName;
 }
 
 Widget? buildAgentToolResultContribution(
@@ -49,6 +53,10 @@ Widget buildAgentOperationReceipt(
   bool current() => lease?.isCurrent != false && data.isSourceCurrent();
   return AgentOperationCard(
     outcome: data.outcome,
+    toolName: data.toolName,
+    isSourceCurrent: () =>
+        lease?.isCurrent != false &&
+        (data.isDeliverySourceCurrent ?? data.isSourceCurrent)(),
     embedded: data.embedded,
     onUndo: data.onUndo == null
         ? null
@@ -137,6 +145,8 @@ AgentInspectorSectionView? buildAgentInspectorSectionContribution(
                         ? const SizedBox.shrink()
                         : AgentOperationCard(
                             outcome: operation.outcome!,
+                            toolName: operation.tools.first.name,
+                            isSourceCurrent: data.isSourceCurrent,
                             embedded: true,
                           ),
                   ),

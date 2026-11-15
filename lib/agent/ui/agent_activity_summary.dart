@@ -183,6 +183,14 @@ String? _date(Object? value, AppLocalizations l) {
 }
 
 String _actionLabel(String name, AppLocalizations l) {
+  if (name == 'office.read') return l.agentReadOffice;
+  if (name == 'python.execute') return l.agentRunPython;
+  if (name == 'web.fetch') return l.agentActivityRead;
+  if (name.startsWith('files.')) {
+    return name == 'files.write' || name == 'files.new'
+        ? l.agentActivityCommit
+        : l.agentActivityRead;
+  }
   if (name == 'ask_user') return l.agentToolAskUser;
   if (name == 'update_plan') return l.agentToolUpdatePlan;
   if (name == 'capabilities.describe' || name == 'resources.describe') {

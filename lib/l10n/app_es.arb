@@ -2147,5 +2147,37 @@
   "notificationHandledAction": "Marcar como gestionado",
   "developerTestNotificationTitle": "Prueba de notificaciones de Sked",
   "developerTestNotificationCourseBody": "El canal de recordatorios de cursos funciona.",
-  "developerTestNotificationScheduleBody": "El canal de recordatorios de eventos funciona."
+  "developerTestNotificationScheduleBody": "El canal de recordatorios de eventos funciona.",
+  "agentDeliverySaved": "Guardado",
+  "@agentDeliverySaved": {},
+  "agentDeliveryObserved": "Archivo registrado",
+  "@agentDeliveryObserved": {},
+  "agentDeliveryRecovery": "Archivo de recuperación",
+  "@agentDeliveryRecovery": {},
+  "agentDeliveryOpenCopy": "Abrir una copia para visualizar",
+  "@agentDeliveryOpenCopy": {},
+  "agentDeliverySourceDate": "Fecha de la fuente: {value}",
+  "@agentDeliverySourceDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryFetchedAt": "Obtenido: {value}",
+  "@agentDeliveryFetchedAt": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryOpenSource": "Abrir fuente",
+  "@agentDeliveryOpenSource": {},
+  "agentDeliveryNoViewer": "No hay ninguna aplicación disponible para abrir este archivo.",
+  "@agentDeliveryNoViewer": {},
+  "agentReadOffice": "Leer documento de Office",
+  "@agentReadOffice": {},
+  "agentRunPython": "Ejecutar Python",
+  "@agentRunPython": {}
 }

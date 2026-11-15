@@ -2147,5 +2147,37 @@
   "notificationHandledAction": "Σήμανση ως διεκπεραιωμένο",
   "developerTestNotificationTitle": "Δοκιμαστική ειδοποίηση Sked",
   "developerTestNotificationCourseBody": "Το κανάλι υπενθυμίσεων μαθημάτων λειτουργεί.",
-  "developerTestNotificationScheduleBody": "Το κανάλι υπενθυμίσεων συμβάντων λειτουργεί."
+  "developerTestNotificationScheduleBody": "Το κανάλι υπενθυμίσεων συμβάντων λειτουργεί.",
+  "agentDeliverySaved": "Αποθηκεύτηκε",
+  "@agentDeliverySaved": {},
+  "agentDeliveryObserved": "Καταγεγραμμένο αρχείο",
+  "@agentDeliveryObserved": {},
+  "agentDeliveryRecovery": "Αρχείο ανάκτησης",
+  "@agentDeliveryRecovery": {},
+  "agentDeliveryOpenCopy": "Άνοιγμα αντιγράφου για προβολή",
+  "@agentDeliveryOpenCopy": {},
+  "agentDeliverySourceDate": "Ημερομηνία πηγής: {value}",
+  "@agentDeliverySourceDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryFetchedAt": "Ανακτήθηκε: {value}",
+  "@agentDeliveryFetchedAt": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryOpenSource": "Άνοιγμα πηγής",
+  "@agentDeliveryOpenSource": {},
+  "agentDeliveryNoViewer": "Δεν υπάρχει διαθέσιμη εφαρμογή για το άνοιγμα αυτού του αρχείου.",
+  "@agentDeliveryNoViewer": {},
+  "agentReadOffice": "Ανάγνωση εγγράφου Office",
+  "@agentReadOffice": {},
+  "agentRunPython": "Εκτέλεση Python",
+  "@agentRunPython": {}
 }

@@ -2147,5 +2147,37 @@
   "notificationHandledAction": "Oznacz jako obsłużone",
   "developerTestNotificationTitle": "Powiadomienie testowe Sked",
   "developerTestNotificationCourseBody": "Kanał przypomnień o kursach działa.",
-  "developerTestNotificationScheduleBody": "Kanał przypomnień o wydarzeniach działa."
+  "developerTestNotificationScheduleBody": "Kanał przypomnień o wydarzeniach działa.",
+  "agentDeliverySaved": "Zapisano",
+  "@agentDeliverySaved": {},
+  "agentDeliveryObserved": "Zarejestrowany plik",
+  "@agentDeliveryObserved": {},
+  "agentDeliveryRecovery": "Plik odzyskiwania",
+  "@agentDeliveryRecovery": {},
+  "agentDeliveryOpenCopy": "Otwórz kopię do podglądu",
+  "@agentDeliveryOpenCopy": {},
+  "agentDeliverySourceDate": "Data źródła: {value}",
+  "@agentDeliverySourceDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryFetchedAt": "Pobrano: {value}",
+  "@agentDeliveryFetchedAt": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryOpenSource": "Otwórz źródło",
+  "@agentDeliveryOpenSource": {},
+  "agentDeliveryNoViewer": "Brak aplikacji umożliwiającej otwarcie tego pliku.",
+  "@agentDeliveryNoViewer": {},
+  "agentReadOffice": "Odczytaj dokument biurowy",
+  "@agentReadOffice": {},
+  "agentRunPython": "Uruchom Python",
+  "@agentRunPython": {}
 }

@@ -14,10 +14,15 @@ class SavedDesktopFile {
 
   static SavedDesktopFile? fromResult(ExportSaveResult result) {
     final savedPath = result.path;
-    if (!platform.desktopFilesSupported ||
-        !result.isSuccess ||
-        savedPath == null ||
-        !paths.isAbsolute(savedPath)) {
+    if (!result.isSuccess || savedPath == null) {
+      return null;
+    }
+    return fromConfirmedPath(savedPath);
+  }
+
+  /// The caller obtained this location from a saved-file receipt.
+  static SavedDesktopFile? fromConfirmedPath(String savedPath) {
+    if (!platform.desktopFilesSupported || !paths.isAbsolute(savedPath)) {
       return null;
     }
     return SavedDesktopFile._(paths.normalize(savedPath));

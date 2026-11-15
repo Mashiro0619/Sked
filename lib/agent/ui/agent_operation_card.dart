@@ -6,8 +6,10 @@ import 'package:material_ui/material_ui.dart';
 import '../../application/resource_contracts.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/school_site_models.dart' show validSchoolSiteId;
+import '../delivery/agent_delivery.dart';
 import '../operations/tool_outcome.dart';
 import 'agent_conversation_receipt.dart';
+import 'agent_delivery_view.dart';
 import 'agent_setting_labels.dart';
 import 'agent_selectable_text.dart';
 
@@ -21,6 +23,8 @@ class AgentOperationCard extends StatefulWidget {
     this.onOpenResource,
     this.canOpenConversation,
     this.onOpenConversation,
+    this.toolName = '',
+    this.isSourceCurrent,
     this.embedded = false,
   });
 
@@ -31,6 +35,8 @@ class AgentOperationCard extends StatefulWidget {
   final bool Function(String id)? canOpenConversation;
   final ValueChanged<String>? onOpenConversation;
   final bool embedded;
+  final String toolName;
+  final bool Function()? isSourceCurrent;
 
   @override
   State<AgentOperationCard> createState() => _AgentOperationCardState();
@@ -59,6 +65,11 @@ class _AgentOperationCardState extends State<AgentOperationCard> {
     final applied = outcome.kind == ToolOutcomeKind.saved;
     final prepared = outcome.kind == ToolOutcomeKind.preview;
     final uncertain = outcome.kind == ToolOutcomeKind.needsReconciliation;
+    final queried = outcome.kind == ToolOutcomeKind.query;
+    final delivery = AgentDelivery.fromToolResult(
+      toolName: widget.toolName,
+      outcome: outcome,
+    );
     final title = uncertain
         ? l.agentActionUncertain
         : prepared
@@ -67,10 +78,10 @@ class _AgentOperationCardState extends State<AgentOperationCard> {
         ? (receipt['kind'] == 'external'
               ? l.agentActionApplied
               : l.agentChangesSaved)
+        : queried
+        ? l.agentActivityCompleted
         : l.agentActionFailed;
-    final storedChanges = (receipt['changes'] as List? ?? const [])
-        .whereType<Map>()
-        .toList();
+    final storedChanges = delivery.businessChanges;
     var presentsSchoolSites = false;
     var presentsConversations = false;
     final changes = <Map>[];
@@ -120,7 +131,7 @@ class _AgentOperationCardState extends State<AgentOperationCard> {
                     Icon(
                       uncertain
                           ? Icons.pending_outlined
-                          : applied
+                          : applied || queried
                           ? Icons.check_circle_outline
                           : prepared
                           ? Icons.preview_outlined
@@ -128,7 +139,7 @@ class _AgentOperationCardState extends State<AgentOperationCard> {
                       size: 20,
                       color: uncertain
                           ? Theme.of(context).colorScheme.tertiary
-                          : !applied && !prepared
+                          : !applied && !prepared && !queried
                           ? Theme.of(context).colorScheme.error
                           : Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -186,6 +197,11 @@ class _AgentOperationCardState extends State<AgentOperationCard> {
                   ],
                 ),
               ],
+              if (delivery.files.isNotEmpty || delivery.sources.isNotEmpty)
+                AgentDeliveryView(
+                  delivery: delivery,
+                  isSourceCurrent: widget.isSourceCurrent ?? () => mounted,
+                ),
               if (receipt['hasMoreChanges'] == true) Text(l.agentMoreChanges),
               if (receipt['stoppedAfterCommit'] == true) Text(l.agentStopped),
               Wrap(

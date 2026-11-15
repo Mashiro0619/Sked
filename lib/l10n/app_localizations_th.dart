@@ -4650,4 +4650,38 @@ class AppLocalizationsTh extends AppLocalizations {
   @override
   String get agentFileAccessFailed =>
       'Could not read or update file access. Try again.';
+
+  @override
+  String get agentDeliverySaved => 'บันทึกแล้ว';
+
+  @override
+  String get agentDeliveryObserved => 'ไฟล์ที่ลงทะเบียน';
+
+  @override
+  String get agentDeliveryRecovery => 'ไฟล์กู้คืน';
+
+  @override
+  String get agentDeliveryOpenCopy => 'เปิดสำเนาสำหรับดู';
+
+  @override
+  String agentDeliverySourceDate(String value) {
+    return 'วันที่ของแหล่งข้อมูล: $value';
+  }
+
+  @override
+  String agentDeliveryFetchedAt(String value) {
+    return 'เวลาที่ดึงข้อมูล: $value';
+  }
+
+  @override
+  String get agentDeliveryOpenSource => 'เปิดแหล่งข้อมูล';
+
+  @override
+  String get agentDeliveryNoViewer => 'ไม่มีแอปที่สามารถเปิดไฟล์นี้ได้';
+
+  @override
+  String get agentReadOffice => 'อ่านเอกสารสำนักงาน';
+
+  @override
+  String get agentRunPython => 'เรียกใช้ Python';
 }

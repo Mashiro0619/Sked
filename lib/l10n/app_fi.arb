@@ -2147,5 +2147,37 @@
   "notificationHandledAction": "Merkitse käsitellyksi",
   "developerTestNotificationTitle": "Skedin testi-ilmoitus",
   "developerTestNotificationCourseBody": "Kurssimuistutusten kanava toimii.",
-  "developerTestNotificationScheduleBody": "Tapahtumamuistutusten kanava toimii."
+  "developerTestNotificationScheduleBody": "Tapahtumamuistutusten kanava toimii.",
+  "agentDeliverySaved": "Tallennettu",
+  "@agentDeliverySaved": {},
+  "agentDeliveryObserved": "Kirjattu tiedosto",
+  "@agentDeliveryObserved": {},
+  "agentDeliveryRecovery": "Palautustiedosto",
+  "@agentDeliveryRecovery": {},
+  "agentDeliveryOpenCopy": "Avaa kopio katselua varten",
+  "@agentDeliveryOpenCopy": {},
+  "agentDeliverySourceDate": "Lähteen päivämäärä: {value}",
+  "@agentDeliverySourceDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryFetchedAt": "Haettu: {value}",
+  "@agentDeliveryFetchedAt": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryOpenSource": "Avaa lähde",
+  "@agentDeliveryOpenSource": {},
+  "agentDeliveryNoViewer": "Tämän tiedoston avaamiseen ei ole sovellusta.",
+  "@agentDeliveryNoViewer": {},
+  "agentReadOffice": "Lue toimistoasiakirja",
+  "@agentReadOffice": {},
+  "agentRunPython": "Suorita Python",
+  "@agentRunPython": {}
 }

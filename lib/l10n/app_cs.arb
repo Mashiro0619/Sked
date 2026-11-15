@@ -2147,5 +2147,37 @@
   "notificationHandledAction": "Označit jako vyřízené",
   "developerTestNotificationTitle": "Test oznámení Sked",
   "developerTestNotificationCourseBody": "Kanál připomenutí kurzů funguje.",
-  "developerTestNotificationScheduleBody": "Kanál připomenutí událostí funguje."
+  "developerTestNotificationScheduleBody": "Kanál připomenutí událostí funguje.",
+  "agentDeliverySaved": "Uloženo",
+  "@agentDeliverySaved": {},
+  "agentDeliveryObserved": "Zaznamenaný soubor",
+  "@agentDeliveryObserved": {},
+  "agentDeliveryRecovery": "Soubor pro obnovení",
+  "@agentDeliveryRecovery": {},
+  "agentDeliveryOpenCopy": "Otevřít kopii k prohlížení",
+  "@agentDeliveryOpenCopy": {},
+  "agentDeliverySourceDate": "Datum zdroje: {value}",
+  "@agentDeliverySourceDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryFetchedAt": "Načteno: {value}",
+  "@agentDeliveryFetchedAt": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryOpenSource": "Otevřít zdroj",
+  "@agentDeliveryOpenSource": {},
+  "agentDeliveryNoViewer": "K otevření tohoto souboru není dostupná žádná aplikace.",
+  "@agentDeliveryNoViewer": {},
+  "agentReadOffice": "Přečíst kancelářský dokument",
+  "@agentReadOffice": {},
+  "agentRunPython": "Spustit Python",
+  "@agentRunPython": {}
 }

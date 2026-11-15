@@ -2147,5 +2147,37 @@
   "notificationHandledAction": "처리됨으로 표시",
   "developerTestNotificationTitle": "Sked 알림 테스트",
   "developerTestNotificationCourseBody": "수업 알림 채널이 정상적으로 작동합니다.",
-  "developerTestNotificationScheduleBody": "일정 알림 채널이 정상적으로 작동합니다."
+  "developerTestNotificationScheduleBody": "일정 알림 채널이 정상적으로 작동합니다.",
+  "agentDeliverySaved": "저장됨",
+  "@agentDeliverySaved": {},
+  "agentDeliveryObserved": "기록된 파일",
+  "@agentDeliveryObserved": {},
+  "agentDeliveryRecovery": "복구 파일",
+  "@agentDeliveryRecovery": {},
+  "agentDeliveryOpenCopy": "보기용 사본 열기",
+  "@agentDeliveryOpenCopy": {},
+  "agentDeliverySourceDate": "출처 날짜: {value}",
+  "@agentDeliverySourceDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryFetchedAt": "가져온 시간: {value}",
+  "@agentDeliveryFetchedAt": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryOpenSource": "출처 열기",
+  "@agentDeliveryOpenSource": {},
+  "agentDeliveryNoViewer": "이 파일을 열 수 있는 앱이 없습니다.",
+  "@agentDeliveryNoViewer": {},
+  "agentReadOffice": "오피스 문서 읽기",
+  "@agentReadOffice": {},
+  "agentRunPython": "Python 실행",
+  "@agentRunPython": {}
 }

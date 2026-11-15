@@ -4671,4 +4671,39 @@ class AppLocalizationsEt extends AppLocalizations {
   @override
   String get agentFileAccessFailed =>
       'Could not read or update file access. Try again.';
+
+  @override
+  String get agentDeliverySaved => 'Salvestatud';
+
+  @override
+  String get agentDeliveryObserved => 'Registreeritud fail';
+
+  @override
+  String get agentDeliveryRecovery => 'Taastefail';
+
+  @override
+  String get agentDeliveryOpenCopy => 'Ava vaatamiskoopia';
+
+  @override
+  String agentDeliverySourceDate(String value) {
+    return 'Allika kuupäev: $value';
+  }
+
+  @override
+  String agentDeliveryFetchedAt(String value) {
+    return 'Hangitud: $value';
+  }
+
+  @override
+  String get agentDeliveryOpenSource => 'Ava allikas';
+
+  @override
+  String get agentDeliveryNoViewer =>
+      'Selle faili avamiseks pole saadaval ühtegi rakendust.';
+
+  @override
+  String get agentReadOffice => 'Loe kontoridokumenti';
+
+  @override
+  String get agentRunPython => 'Käivita Python';
 }

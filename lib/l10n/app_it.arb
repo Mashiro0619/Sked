@@ -2147,5 +2147,37 @@
   "notificationHandledAction": "Segna come gestito",
   "developerTestNotificationTitle": "Notifica di prova di Sked",
   "developerTestNotificationCourseBody": "Il canale dei promemoria dei corsi funziona.",
-  "developerTestNotificationScheduleBody": "Il canale dei promemoria degli eventi funziona."
+  "developerTestNotificationScheduleBody": "Il canale dei promemoria degli eventi funziona.",
+  "agentDeliverySaved": "Salvato",
+  "@agentDeliverySaved": {},
+  "agentDeliveryObserved": "File registrato",
+  "@agentDeliveryObserved": {},
+  "agentDeliveryRecovery": "File di recupero",
+  "@agentDeliveryRecovery": {},
+  "agentDeliveryOpenCopy": "Apri una copia per la visualizzazione",
+  "@agentDeliveryOpenCopy": {},
+  "agentDeliverySourceDate": "Data della fonte: {value}",
+  "@agentDeliverySourceDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryFetchedAt": "Recuperato: {value}",
+  "@agentDeliveryFetchedAt": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryOpenSource": "Apri fonte",
+  "@agentDeliveryOpenSource": {},
+  "agentDeliveryNoViewer": "Nessuna app disponibile per aprire questo file.",
+  "@agentDeliveryNoViewer": {},
+  "agentReadOffice": "Leggi documento Office",
+  "@agentReadOffice": {},
+  "agentRunPython": "Esegui Python",
+  "@agentRunPython": {}
 }

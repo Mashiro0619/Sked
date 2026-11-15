@@ -4657,4 +4657,39 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get agentFileAccessFailed =>
       'Could not read or update file access. Try again.';
+
+  @override
+  String get agentDeliverySaved => 'सहेजा गया';
+
+  @override
+  String get agentDeliveryObserved => 'दर्ज की गई फ़ाइल';
+
+  @override
+  String get agentDeliveryRecovery => 'पुनर्प्राप्ति फ़ाइल';
+
+  @override
+  String get agentDeliveryOpenCopy => 'देखने के लिए एक प्रति खोलें';
+
+  @override
+  String agentDeliverySourceDate(String value) {
+    return 'स्रोत की तारीख: $value';
+  }
+
+  @override
+  String agentDeliveryFetchedAt(String value) {
+    return 'प्राप्त: $value';
+  }
+
+  @override
+  String get agentDeliveryOpenSource => 'स्रोत खोलें';
+
+  @override
+  String get agentDeliveryNoViewer =>
+      'इस फ़ाइल को खोलने के लिए कोई ऐप उपलब्ध नहीं है।';
+
+  @override
+  String get agentReadOffice => 'ऑफ़िस दस्तावेज़ पढ़ें';
+
+  @override
+  String get agentRunPython => 'Python चलाएँ';
 }

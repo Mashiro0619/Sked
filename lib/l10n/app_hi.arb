@@ -2147,5 +2147,37 @@
   "notificationHandledAction": "पूर्ण के रूप में चिह्नित करें",
   "developerTestNotificationTitle": "Sked परीक्षण सूचना",
   "developerTestNotificationCourseBody": "पाठ्यक्रम रिमाइंडर चैनल काम कर रहा है।",
-  "developerTestNotificationScheduleBody": "इवेंट रिमाइंडर चैनल काम कर रहा है।"
+  "developerTestNotificationScheduleBody": "इवेंट रिमाइंडर चैनल काम कर रहा है।",
+  "agentDeliverySaved": "सहेजा गया",
+  "@agentDeliverySaved": {},
+  "agentDeliveryObserved": "दर्ज की गई फ़ाइल",
+  "@agentDeliveryObserved": {},
+  "agentDeliveryRecovery": "पुनर्प्राप्ति फ़ाइल",
+  "@agentDeliveryRecovery": {},
+  "agentDeliveryOpenCopy": "देखने के लिए एक प्रति खोलें",
+  "@agentDeliveryOpenCopy": {},
+  "agentDeliverySourceDate": "स्रोत की तारीख: {value}",
+  "@agentDeliverySourceDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryFetchedAt": "प्राप्त: {value}",
+  "@agentDeliveryFetchedAt": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryOpenSource": "स्रोत खोलें",
+  "@agentDeliveryOpenSource": {},
+  "agentDeliveryNoViewer": "इस फ़ाइल को खोलने के लिए कोई ऐप उपलब्ध नहीं है।",
+  "@agentDeliveryNoViewer": {},
+  "agentReadOffice": "ऑफ़िस दस्तावेज़ पढ़ें",
+  "@agentReadOffice": {},
+  "agentRunPython": "Python चलाएँ",
+  "@agentRunPython": {}
 }

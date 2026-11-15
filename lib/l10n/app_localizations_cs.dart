@@ -4680,4 +4680,39 @@ class AppLocalizationsCs extends AppLocalizations {
   @override
   String get agentFileAccessFailed =>
       'Could not read or update file access. Try again.';
+
+  @override
+  String get agentDeliverySaved => 'Uloženo';
+
+  @override
+  String get agentDeliveryObserved => 'Zaznamenaný soubor';
+
+  @override
+  String get agentDeliveryRecovery => 'Soubor pro obnovení';
+
+  @override
+  String get agentDeliveryOpenCopy => 'Otevřít kopii k prohlížení';
+
+  @override
+  String agentDeliverySourceDate(String value) {
+    return 'Datum zdroje: $value';
+  }
+
+  @override
+  String agentDeliveryFetchedAt(String value) {
+    return 'Načteno: $value';
+  }
+
+  @override
+  String get agentDeliveryOpenSource => 'Otevřít zdroj';
+
+  @override
+  String get agentDeliveryNoViewer =>
+      'K otevření tohoto souboru není dostupná žádná aplikace.';
+
+  @override
+  String get agentReadOffice => 'Přečíst kancelářský dokument';
+
+  @override
+  String get agentRunPython => 'Spustit Python';
 }

@@ -2162,5 +2162,37 @@
   "notificationHandledAction": "Đánh dấu đã xử lý",
   "developerTestNotificationTitle": "Thông báo thử nghiệm Sked",
   "developerTestNotificationCourseBody": "Kênh nhắc nhở môn học đang hoạt động.",
-  "developerTestNotificationScheduleBody": "Kênh nhắc nhở sự kiện đang hoạt động."
+  "developerTestNotificationScheduleBody": "Kênh nhắc nhở sự kiện đang hoạt động.",
+  "agentDeliverySaved": "Đã lưu",
+  "@agentDeliverySaved": {},
+  "agentDeliveryObserved": "Tệp đã ghi nhận",
+  "@agentDeliveryObserved": {},
+  "agentDeliveryRecovery": "Tệp khôi phục",
+  "@agentDeliveryRecovery": {},
+  "agentDeliveryOpenCopy": "Mở bản sao để xem",
+  "@agentDeliveryOpenCopy": {},
+  "agentDeliverySourceDate": "Ngày của nguồn: {value}",
+  "@agentDeliverySourceDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryFetchedAt": "Thời gian lấy: {value}",
+  "@agentDeliveryFetchedAt": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryOpenSource": "Mở nguồn",
+  "@agentDeliveryOpenSource": {},
+  "agentDeliveryNoViewer": "Không có ứng dụng nào có thể mở tệp này.",
+  "@agentDeliveryNoViewer": {},
+  "agentReadOffice": "Đọc tài liệu văn phòng",
+  "@agentReadOffice": {},
+  "agentRunPython": "Chạy Python",
+  "@agentRunPython": {}
 }

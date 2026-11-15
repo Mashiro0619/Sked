@@ -2147,5 +2147,37 @@
   "notificationHandledAction": "処理済みとしてマーク",
   "developerTestNotificationTitle": "Sked 通知テスト",
   "developerTestNotificationCourseBody": "授業リマインダーの通知チャンネルは正常です。",
-  "developerTestNotificationScheduleBody": "予定リマインダーの通知チャンネルは正常です。"
+  "developerTestNotificationScheduleBody": "予定リマインダーの通知チャンネルは正常です。",
+  "agentDeliverySaved": "保存済み",
+  "@agentDeliverySaved": {},
+  "agentDeliveryObserved": "記録されたファイル",
+  "@agentDeliveryObserved": {},
+  "agentDeliveryRecovery": "復元用ファイル",
+  "@agentDeliveryRecovery": {},
+  "agentDeliveryOpenCopy": "閲覧用のコピーを開く",
+  "@agentDeliveryOpenCopy": {},
+  "agentDeliverySourceDate": "出典の日付：{value}",
+  "@agentDeliverySourceDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryFetchedAt": "取得日時：{value}",
+  "@agentDeliveryFetchedAt": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryOpenSource": "出典を開く",
+  "@agentDeliveryOpenSource": {},
+  "agentDeliveryNoViewer": "このファイルを開けるアプリがありません。",
+  "@agentDeliveryNoViewer": {},
+  "agentReadOffice": "Office 文書を読み取る",
+  "@agentReadOffice": {},
+  "agentRunPython": "Python を実行",
+  "@agentRunPython": {}
 }

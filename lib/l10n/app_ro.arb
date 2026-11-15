@@ -2147,5 +2147,37 @@
   "notificationHandledAction": "Marchează ca finalizat",
   "developerTestNotificationTitle": "Notificare de test Sked",
   "developerTestNotificationCourseBody": "Canalul de mementouri pentru cursuri funcționează.",
-  "developerTestNotificationScheduleBody": "Canalul de mementouri pentru evenimente funcționează."
+  "developerTestNotificationScheduleBody": "Canalul de mementouri pentru evenimente funcționează.",
+  "agentDeliverySaved": "Salvat",
+  "@agentDeliverySaved": {},
+  "agentDeliveryObserved": "Fișier înregistrat",
+  "@agentDeliveryObserved": {},
+  "agentDeliveryRecovery": "Fișier de recuperare",
+  "@agentDeliveryRecovery": {},
+  "agentDeliveryOpenCopy": "Deschide o copie pentru vizualizare",
+  "@agentDeliveryOpenCopy": {},
+  "agentDeliverySourceDate": "Data sursei: {value}",
+  "@agentDeliverySourceDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryFetchedAt": "Preluat: {value}",
+  "@agentDeliveryFetchedAt": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryOpenSource": "Deschide sursa",
+  "@agentDeliveryOpenSource": {},
+  "agentDeliveryNoViewer": "Nu există nicio aplicație disponibilă pentru deschiderea acestui fișier.",
+  "@agentDeliveryNoViewer": {},
+  "agentReadOffice": "Citește documentul Office",
+  "@agentReadOffice": {},
+  "agentRunPython": "Rulează Python",
+  "@agentRunPython": {}
 }

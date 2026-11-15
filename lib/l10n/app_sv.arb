@@ -2162,5 +2162,37 @@
   "notificationHandledAction": "Markera som hanterad",
   "developerTestNotificationTitle": "Sked-testavisering",
   "developerTestNotificationCourseBody": "Kanalen för kurspåminnelser fungerar.",
-  "developerTestNotificationScheduleBody": "Kanalen för händelsepåminnelser fungerar."
+  "developerTestNotificationScheduleBody": "Kanalen för händelsepåminnelser fungerar.",
+  "agentDeliverySaved": "Sparad",
+  "@agentDeliverySaved": {},
+  "agentDeliveryObserved": "Registrerad fil",
+  "@agentDeliveryObserved": {},
+  "agentDeliveryRecovery": "Återställningsfil",
+  "@agentDeliveryRecovery": {},
+  "agentDeliveryOpenCopy": "Öppna en kopia för visning",
+  "@agentDeliveryOpenCopy": {},
+  "agentDeliverySourceDate": "Källans datum: {value}",
+  "@agentDeliverySourceDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryFetchedAt": "Hämtad: {value}",
+  "@agentDeliveryFetchedAt": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryOpenSource": "Öppna källa",
+  "@agentDeliveryOpenSource": {},
+  "agentDeliveryNoViewer": "Det finns ingen app som kan öppna den här filen.",
+  "@agentDeliveryNoViewer": {},
+  "agentReadOffice": "Läs Office-dokument",
+  "@agentReadOffice": {},
+  "agentRunPython": "Kör Python",
+  "@agentRunPython": {}
 }

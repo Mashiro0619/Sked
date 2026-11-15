@@ -23,6 +23,7 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugin.common.StandardMethodCodec
 import java.io.IOException
 import java.util.ArrayDeque
 import java.util.concurrent.atomic.AtomicBoolean
@@ -89,6 +90,8 @@ class MainActivity : FlutterFragmentActivity() {
     private var productivityChannel: MethodChannel? = null
     private var agentFileAccessChannel: MethodChannel? = null
     private var agentFilePicker: AgentFilePicker? = null
+    private var agentFileActionsChannel: MethodChannel? = null
+    private var agentFileActions: AgentFileActions? = null
     private val pendingSave = PendingActivityRequest<SaveFileRequest>()
     private val binaryExportStaging by lazy { BinaryExportStaging(cacheDir) }
     private var binaryCopyInFlight: SaveFileRequest? = null
@@ -111,6 +114,7 @@ class MainActivity : FlutterFragmentActivity() {
         // first close on its worker; teardown never reports it saved early.
         cancelFileExports(completeCall = true)
         agentFilePicker?.close(completeCalls = true)
+        agentFileActions?.close()
         super.onDestroy()
     }
 
@@ -130,6 +134,15 @@ class MainActivity : FlutterFragmentActivity() {
             flutterEngine.dartExecutor.binaryMessenger,
             AgentFilePicker.CHANNEL,
         ).also { channel -> channel.setMethodCallHandler(filePicker::handle) }
+        agentFileActions?.close()
+        val fileActions = AgentFileActions(this)
+        agentFileActions = fileActions
+        agentFileActionsChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            AgentFileActions.CHANNEL,
+            StandardMethodCodec.INSTANCE,
+            flutterEngine.dartExecutor.binaryMessenger.makeBackgroundTaskQueue(),
+        ).also { channel -> channel.setMethodCallHandler(fileActions::handle) }
         exportFileChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             EXPORT_FILE_CHANNEL,
@@ -249,6 +262,10 @@ class MainActivity : FlutterFragmentActivity() {
         agentFileAccessChannel = null
         agentFilePicker?.close(completeCalls = false)
         agentFilePicker = null
+        agentFileActionsChannel?.setMethodCallHandler(null)
+        agentFileActionsChannel = null
+        agentFileActions?.close()
+        agentFileActions = null
         exportFileChannel?.setMethodCallHandler(null)
         exportFileChannel = null
         appInstanceLeaseChannel?.setMethodCallHandler(null)

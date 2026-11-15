@@ -4687,4 +4687,39 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String get agentFileAccessFailed =>
       'Could not read or update file access. Try again.';
+
+  @override
+  String get agentDeliverySaved => 'Shranjeno';
+
+  @override
+  String get agentDeliveryObserved => 'Zabeležena datoteka';
+
+  @override
+  String get agentDeliveryRecovery => 'Datoteka za obnovitev';
+
+  @override
+  String get agentDeliveryOpenCopy => 'Odpri kopijo za ogled';
+
+  @override
+  String agentDeliverySourceDate(String value) {
+    return 'Datum vira: $value';
+  }
+
+  @override
+  String agentDeliveryFetchedAt(String value) {
+    return 'Pridobljeno: $value';
+  }
+
+  @override
+  String get agentDeliveryOpenSource => 'Odpri vir';
+
+  @override
+  String get agentDeliveryNoViewer =>
+      'Za odpiranje te datoteke ni na voljo nobena aplikacija.';
+
+  @override
+  String get agentReadOffice => 'Preberi pisarniški dokument';
+
+  @override
+  String get agentRunPython => 'Zaženi Python';
 }

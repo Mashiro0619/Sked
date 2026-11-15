@@ -2145,5 +2145,37 @@
   "notificationHandledAction": "Als erledigt markieren",
   "developerTestNotificationTitle": "Sked-Benachrichtigungstest",
   "developerTestNotificationCourseBody": "Der Kanal für Kurserinnerungen funktioniert.",
-  "developerTestNotificationScheduleBody": "Der Kanal für Terminerinnerungen funktioniert."
+  "developerTestNotificationScheduleBody": "Der Kanal für Terminerinnerungen funktioniert.",
+  "agentDeliverySaved": "Gespeichert",
+  "@agentDeliverySaved": {},
+  "agentDeliveryObserved": "Erfasste Datei",
+  "@agentDeliveryObserved": {},
+  "agentDeliveryRecovery": "Wiederherstellungsdatei",
+  "@agentDeliveryRecovery": {},
+  "agentDeliveryOpenCopy": "Kopie zum Anzeigen öffnen",
+  "@agentDeliveryOpenCopy": {},
+  "agentDeliverySourceDate": "Quelldatum: {value}",
+  "@agentDeliverySourceDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryFetchedAt": "Abgerufen: {value}",
+  "@agentDeliveryFetchedAt": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryOpenSource": "Quelle öffnen",
+  "@agentDeliveryOpenSource": {},
+  "agentDeliveryNoViewer": "Es ist keine App zum Öffnen dieser Datei verfügbar.",
+  "@agentDeliveryNoViewer": {},
+  "agentReadOffice": "Office-Dokument lesen",
+  "@agentReadOffice": {},
+  "agentRunPython": "Python ausführen",
+  "@agentRunPython": {}
 }

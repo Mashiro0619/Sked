@@ -4683,4 +4683,39 @@ class AppLocalizationsFi extends AppLocalizations {
   @override
   String get agentFileAccessFailed =>
       'Could not read or update file access. Try again.';
+
+  @override
+  String get agentDeliverySaved => 'Tallennettu';
+
+  @override
+  String get agentDeliveryObserved => 'Kirjattu tiedosto';
+
+  @override
+  String get agentDeliveryRecovery => 'Palautustiedosto';
+
+  @override
+  String get agentDeliveryOpenCopy => 'Avaa kopio katselua varten';
+
+  @override
+  String agentDeliverySourceDate(String value) {
+    return 'Lähteen päivämäärä: $value';
+  }
+
+  @override
+  String agentDeliveryFetchedAt(String value) {
+    return 'Haettu: $value';
+  }
+
+  @override
+  String get agentDeliveryOpenSource => 'Avaa lähde';
+
+  @override
+  String get agentDeliveryNoViewer =>
+      'Tämän tiedoston avaamiseen ei ole sovellusta.';
+
+  @override
+  String get agentReadOffice => 'Lue toimistoasiakirja';
+
+  @override
+  String get agentRunPython => 'Suorita Python';
 }

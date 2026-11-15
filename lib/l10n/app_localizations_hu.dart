@@ -4698,4 +4698,39 @@ class AppLocalizationsHu extends AppLocalizations {
   @override
   String get agentFileAccessFailed =>
       'Could not read or update file access. Try again.';
+
+  @override
+  String get agentDeliverySaved => 'Mentve';
+
+  @override
+  String get agentDeliveryObserved => 'Rögzített fájl';
+
+  @override
+  String get agentDeliveryRecovery => 'Helyreállítási fájl';
+
+  @override
+  String get agentDeliveryOpenCopy => 'Másolat megnyitása megtekintéshez';
+
+  @override
+  String agentDeliverySourceDate(String value) {
+    return 'Forrás dátuma: $value';
+  }
+
+  @override
+  String agentDeliveryFetchedAt(String value) {
+    return 'Lekérve: $value';
+  }
+
+  @override
+  String get agentDeliveryOpenSource => 'Forrás megnyitása';
+
+  @override
+  String get agentDeliveryNoViewer =>
+      'Nincs elérhető alkalmazás a fájl megnyitásához.';
+
+  @override
+  String get agentReadOffice => 'Irodai dokumentum olvasása';
+
+  @override
+  String get agentRunPython => 'Python futtatása';
 }

@@ -2147,5 +2147,37 @@
   "notificationHandledAction": "Отметить выполненным",
   "developerTestNotificationTitle": "Тестовое уведомление Sked",
   "developerTestNotificationCourseBody": "Канал напоминаний о курсах работает.",
-  "developerTestNotificationScheduleBody": "Канал напоминаний о событиях работает."
+  "developerTestNotificationScheduleBody": "Канал напоминаний о событиях работает.",
+  "agentDeliverySaved": "Сохранено",
+  "@agentDeliverySaved": {},
+  "agentDeliveryObserved": "Зарегистрированный файл",
+  "@agentDeliveryObserved": {},
+  "agentDeliveryRecovery": "Файл восстановления",
+  "@agentDeliveryRecovery": {},
+  "agentDeliveryOpenCopy": "Открыть копию для просмотра",
+  "@agentDeliveryOpenCopy": {},
+  "agentDeliverySourceDate": "Дата источника: {value}",
+  "@agentDeliverySourceDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryFetchedAt": "Получено: {value}",
+  "@agentDeliveryFetchedAt": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryOpenSource": "Открыть источник",
+  "@agentDeliveryOpenSource": {},
+  "agentDeliveryNoViewer": "Нет приложения для открытия этого файла.",
+  "@agentDeliveryNoViewer": {},
+  "agentReadOffice": "Прочитать офисный документ",
+  "@agentReadOffice": {},
+  "agentRunPython": "Запустить Python",
+  "@agentRunPython": {}
 }

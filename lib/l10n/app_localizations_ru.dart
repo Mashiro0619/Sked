@@ -4698,4 +4698,39 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get agentFileAccessFailed =>
       'Could not read or update file access. Try again.';
+
+  @override
+  String get agentDeliverySaved => 'Сохранено';
+
+  @override
+  String get agentDeliveryObserved => 'Зарегистрированный файл';
+
+  @override
+  String get agentDeliveryRecovery => 'Файл восстановления';
+
+  @override
+  String get agentDeliveryOpenCopy => 'Открыть копию для просмотра';
+
+  @override
+  String agentDeliverySourceDate(String value) {
+    return 'Дата источника: $value';
+  }
+
+  @override
+  String agentDeliveryFetchedAt(String value) {
+    return 'Получено: $value';
+  }
+
+  @override
+  String get agentDeliveryOpenSource => 'Открыть источник';
+
+  @override
+  String get agentDeliveryNoViewer =>
+      'Нет приложения для открытия этого файла.';
+
+  @override
+  String get agentReadOffice => 'Прочитать офисный документ';
+
+  @override
+  String get agentRunPython => 'Запустить Python';
 }

@@ -2147,5 +2147,37 @@
   "notificationHandledAction": "Markér som håndteret",
   "developerTestNotificationTitle": "Sked-testmeddelelse",
   "developerTestNotificationCourseBody": "Kanalen til kursuspåmindelser virker.",
-  "developerTestNotificationScheduleBody": "Kanalen til begivenhedspåmindelser virker."
+  "developerTestNotificationScheduleBody": "Kanalen til begivenhedspåmindelser virker.",
+  "agentDeliverySaved": "Gemt",
+  "@agentDeliverySaved": {},
+  "agentDeliveryObserved": "Registreret fil",
+  "@agentDeliveryObserved": {},
+  "agentDeliveryRecovery": "Gendannelsesfil",
+  "@agentDeliveryRecovery": {},
+  "agentDeliveryOpenCopy": "Åbn en kopi til visning",
+  "@agentDeliveryOpenCopy": {},
+  "agentDeliverySourceDate": "Kildedato: {value}",
+  "@agentDeliverySourceDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryFetchedAt": "Hentet: {value}",
+  "@agentDeliveryFetchedAt": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryOpenSource": "Åbn kilde",
+  "@agentDeliveryOpenSource": {},
+  "agentDeliveryNoViewer": "Ingen app kan åbne denne fil.",
+  "@agentDeliveryNoViewer": {},
+  "agentReadOffice": "Læs Office-dokument",
+  "@agentReadOffice": {},
+  "agentRunPython": "Kør Python",
+  "@agentRunPython": {}
 }

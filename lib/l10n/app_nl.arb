@@ -2129,5 +2129,37 @@
   "notificationHandledAction": "Als afgehandeld markeren",
   "developerTestNotificationTitle": "Sked-testmelding",
   "developerTestNotificationCourseBody": "Het kanaal voor cursusherinneringen werkt.",
-  "developerTestNotificationScheduleBody": "Het kanaal voor afspraakherinneringen werkt."
+  "developerTestNotificationScheduleBody": "Het kanaal voor afspraakherinneringen werkt.",
+  "agentDeliverySaved": "Opgeslagen",
+  "@agentDeliverySaved": {},
+  "agentDeliveryObserved": "Geregistreerd bestand",
+  "@agentDeliveryObserved": {},
+  "agentDeliveryRecovery": "Herstelbestand",
+  "@agentDeliveryRecovery": {},
+  "agentDeliveryOpenCopy": "Een kopie openen om te bekijken",
+  "@agentDeliveryOpenCopy": {},
+  "agentDeliverySourceDate": "Datum van de bron: {value}",
+  "@agentDeliverySourceDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryFetchedAt": "Opgehaald: {value}",
+  "@agentDeliveryFetchedAt": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryOpenSource": "Bron openen",
+  "@agentDeliveryOpenSource": {},
+  "agentDeliveryNoViewer": "Er is geen app beschikbaar om dit bestand te openen.",
+  "@agentDeliveryNoViewer": {},
+  "agentReadOffice": "Office-document lezen",
+  "@agentReadOffice": {},
+  "agentRunPython": "Python uitvoeren",
+  "@agentRunPython": {}
 }

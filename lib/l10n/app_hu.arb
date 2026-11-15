@@ -2147,5 +2147,37 @@
   "notificationHandledAction": "Megjelölés kezeltként",
   "developerTestNotificationTitle": "Sked tesztértesítés",
   "developerTestNotificationCourseBody": "A kurzusemlékeztetők csatornája működik.",
-  "developerTestNotificationScheduleBody": "Az eseményemlékeztetők csatornája működik."
+  "developerTestNotificationScheduleBody": "Az eseményemlékeztetők csatornája működik.",
+  "agentDeliverySaved": "Mentve",
+  "@agentDeliverySaved": {},
+  "agentDeliveryObserved": "Rögzített fájl",
+  "@agentDeliveryObserved": {},
+  "agentDeliveryRecovery": "Helyreállítási fájl",
+  "@agentDeliveryRecovery": {},
+  "agentDeliveryOpenCopy": "Másolat megnyitása megtekintéshez",
+  "@agentDeliveryOpenCopy": {},
+  "agentDeliverySourceDate": "Forrás dátuma: {value}",
+  "@agentDeliverySourceDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryFetchedAt": "Lekérve: {value}",
+  "@agentDeliveryFetchedAt": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryOpenSource": "Forrás megnyitása",
+  "@agentDeliveryOpenSource": {},
+  "agentDeliveryNoViewer": "Nincs elérhető alkalmazás a fájl megnyitásához.",
+  "@agentDeliveryNoViewer": {},
+  "agentReadOffice": "Irodai dokumentum olvasása",
+  "@agentReadOffice": {},
+  "agentRunPython": "Python futtatása",
+  "@agentRunPython": {}
 }

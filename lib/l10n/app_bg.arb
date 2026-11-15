@@ -2147,5 +2147,37 @@
   "notificationHandledAction": "Маркиране като обработено",
   "developerTestNotificationTitle": "Тестово известие на Sked",
   "developerTestNotificationCourseBody": "Каналът за напомняния за курсове работи.",
-  "developerTestNotificationScheduleBody": "Каналът за напомняния за събития работи."
+  "developerTestNotificationScheduleBody": "Каналът за напомняния за събития работи.",
+  "agentDeliverySaved": "Запазено",
+  "@agentDeliverySaved": {},
+  "agentDeliveryObserved": "Регистриран файл",
+  "@agentDeliveryObserved": {},
+  "agentDeliveryRecovery": "Файл за възстановяване",
+  "@agentDeliveryRecovery": {},
+  "agentDeliveryOpenCopy": "Отваряне на копие за преглед",
+  "@agentDeliveryOpenCopy": {},
+  "agentDeliverySourceDate": "Дата на източника: {value}",
+  "@agentDeliverySourceDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryFetchedAt": "Получено: {value}",
+  "@agentDeliveryFetchedAt": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryOpenSource": "Отваряне на източника",
+  "@agentDeliveryOpenSource": {},
+  "agentDeliveryNoViewer": "Няма приложение, което да отвори този файл.",
+  "@agentDeliveryNoViewer": {},
+  "agentReadOffice": "Четене на офис документ",
+  "@agentReadOffice": {},
+  "agentRunPython": "Изпълнение на Python",
+  "@agentRunPython": {}
 }

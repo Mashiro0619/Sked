@@ -4565,4 +4565,38 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get agentFileAccessFailed =>
       'Could not read or update file access. Try again.';
+
+  @override
+  String get agentDeliverySaved => '저장됨';
+
+  @override
+  String get agentDeliveryObserved => '기록된 파일';
+
+  @override
+  String get agentDeliveryRecovery => '복구 파일';
+
+  @override
+  String get agentDeliveryOpenCopy => '보기용 사본 열기';
+
+  @override
+  String agentDeliverySourceDate(String value) {
+    return '출처 날짜: $value';
+  }
+
+  @override
+  String agentDeliveryFetchedAt(String value) {
+    return '가져온 시간: $value';
+  }
+
+  @override
+  String get agentDeliveryOpenSource => '출처 열기';
+
+  @override
+  String get agentDeliveryNoViewer => '이 파일을 열 수 있는 앱이 없습니다.';
+
+  @override
+  String get agentReadOffice => '오피스 문서 읽기';
+
+  @override
+  String get agentRunPython => 'Python 실행';
 }

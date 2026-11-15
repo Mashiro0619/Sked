@@ -2147,5 +2147,37 @@
   "notificationHandledAction": "Marquer comme traité",
   "developerTestNotificationTitle": "Test de notification Sked",
   "developerTestNotificationCourseBody": "Le canal de rappel des cours fonctionne.",
-  "developerTestNotificationScheduleBody": "Le canal de rappel des événements fonctionne."
+  "developerTestNotificationScheduleBody": "Le canal de rappel des événements fonctionne.",
+  "agentDeliverySaved": "Enregistré",
+  "@agentDeliverySaved": {},
+  "agentDeliveryObserved": "Fichier enregistré",
+  "@agentDeliveryObserved": {},
+  "agentDeliveryRecovery": "Fichier de récupération",
+  "@agentDeliveryRecovery": {},
+  "agentDeliveryOpenCopy": "Ouvrir une copie pour consultation",
+  "@agentDeliveryOpenCopy": {},
+  "agentDeliverySourceDate": "Date de la source : {value}",
+  "@agentDeliverySourceDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryFetchedAt": "Récupéré : {value}",
+  "@agentDeliveryFetchedAt": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryOpenSource": "Ouvrir la source",
+  "@agentDeliveryOpenSource": {},
+  "agentDeliveryNoViewer": "Aucune application n’est disponible pour ouvrir ce fichier.",
+  "@agentDeliveryNoViewer": {},
+  "agentReadOffice": "Lire un document Office",
+  "@agentReadOffice": {},
+  "agentRunPython": "Exécuter Python",
+  "@agentRunPython": {}
 }

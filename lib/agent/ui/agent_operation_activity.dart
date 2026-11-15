@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../delivery/agent_delivery.dart';
 import 'agent_conversation_timeline.dart';
 import 'agent_turn_activity.dart';
 import 'agent_setting_labels.dart';
@@ -30,6 +31,15 @@ class AgentOperationActivity extends StatelessWidget {
     final outcome = operation.outcome;
     final saved = outcome?.kind == ToolOutcomeKind.saved;
     final preview = outcome?.kind == ToolOutcomeKind.preview;
+    final delivery = outcome == null
+        ? null
+        : AgentDelivery.fromToolResult(
+            toolName: operation.tools.first.name,
+            outcome: outcome,
+          );
+    final visibleDelivery =
+        delivery?.files.isNotEmpty == true ||
+        delivery?.sources.isNotEmpty == true;
     final title = operation.waitingApproval || interaction != null
         ? l.agentApprovalRequired
         : operation.status == AgentToolActivityStatus.running
@@ -60,7 +70,7 @@ class AgentOperationActivity extends StatelessWidget {
         if (label is String && label.isNotEmpty) labels.add(label);
       }
     }
-    return AgentActivityDisclosure(
+    final activity = AgentActivityDisclosure(
       id: 'operation-${operation.id}',
       title: title,
       subtitle: operation.reminderSchedulingFailed
@@ -71,6 +81,8 @@ class AgentOperationActivity extends StatelessWidget {
       status: operation.status,
       statusIcon: operation.waitingApproval || interaction != null
           ? Icons.help_outline_rounded
+          : visibleDelivery
+          ? Icons.description_outlined
           : Icons.edit_note_rounded,
       initiallyExpanded: interaction != null,
       active: active,
@@ -80,7 +92,7 @@ class AgentOperationActivity extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              details,
+              if (!visibleDelivery) details,
               for (final tool in operation.tools)
                 AgentActivityDisclosure(
                   id: 'operation-technical-${tool.id}',
@@ -96,6 +108,11 @@ class AgentOperationActivity extends StatelessWidget {
                 ),
             ],
           ),
+    );
+    if (!visibleDelivery || interaction != null) return activity;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [activity, details],
     );
   }
 }

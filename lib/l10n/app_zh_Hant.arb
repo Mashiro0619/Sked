@@ -3095,5 +3095,37 @@
   "agentFileAccessRefresh": "重新整理狀態",
   "@agentFileAccessRefresh": {},
   "agentFileAccessFailed": "無法讀取或更新檔案存取，請重試。",
-  "@agentFileAccessFailed": {}
+  "@agentFileAccessFailed": {},
+  "agentDeliverySaved": "已儲存",
+  "@agentDeliverySaved": {},
+  "agentDeliveryObserved": "已記錄檔案",
+  "@agentDeliveryObserved": {},
+  "agentDeliveryRecovery": "復原檔案",
+  "@agentDeliveryRecovery": {},
+  "agentDeliveryOpenCopy": "開啟檢視副本",
+  "@agentDeliveryOpenCopy": {},
+  "agentDeliverySourceDate": "來源日期：{value}",
+  "@agentDeliverySourceDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryFetchedAt": "取得時間：{value}",
+  "@agentDeliveryFetchedAt": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryOpenSource": "開啟來源",
+  "@agentDeliveryOpenSource": {},
+  "agentDeliveryNoViewer": "系統沒有可開啟此檔案的應用程式。",
+  "@agentDeliveryNoViewer": {},
+  "agentReadOffice": "讀取辦公文件",
+  "@agentReadOffice": {},
+  "agentRunPython": "執行 Python",
+  "@agentRunPython": {}
 }

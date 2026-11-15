@@ -4721,4 +4721,39 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get agentFileAccessFailed =>
       'Could not read or update file access. Try again.';
+
+  @override
+  String get agentDeliverySaved => 'Запазено';
+
+  @override
+  String get agentDeliveryObserved => 'Регистриран файл';
+
+  @override
+  String get agentDeliveryRecovery => 'Файл за възстановяване';
+
+  @override
+  String get agentDeliveryOpenCopy => 'Отваряне на копие за преглед';
+
+  @override
+  String agentDeliverySourceDate(String value) {
+    return 'Дата на източника: $value';
+  }
+
+  @override
+  String agentDeliveryFetchedAt(String value) {
+    return 'Получено: $value';
+  }
+
+  @override
+  String get agentDeliveryOpenSource => 'Отваряне на източника';
+
+  @override
+  String get agentDeliveryNoViewer =>
+      'Няма приложение, което да отвори този файл.';
+
+  @override
+  String get agentReadOffice => 'Четене на офис документ';
+
+  @override
+  String get agentRunPython => 'Изпълнение на Python';
 }

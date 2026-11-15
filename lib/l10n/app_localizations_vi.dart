@@ -4670,4 +4670,39 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get agentFileAccessFailed =>
       'Could not read or update file access. Try again.';
+
+  @override
+  String get agentDeliverySaved => 'Đã lưu';
+
+  @override
+  String get agentDeliveryObserved => 'Tệp đã ghi nhận';
+
+  @override
+  String get agentDeliveryRecovery => 'Tệp khôi phục';
+
+  @override
+  String get agentDeliveryOpenCopy => 'Mở bản sao để xem';
+
+  @override
+  String agentDeliverySourceDate(String value) {
+    return 'Ngày của nguồn: $value';
+  }
+
+  @override
+  String agentDeliveryFetchedAt(String value) {
+    return 'Thời gian lấy: $value';
+  }
+
+  @override
+  String get agentDeliveryOpenSource => 'Mở nguồn';
+
+  @override
+  String get agentDeliveryNoViewer =>
+      'Không có ứng dụng nào có thể mở tệp này.';
+
+  @override
+  String get agentReadOffice => 'Đọc tài liệu văn phòng';
+
+  @override
+  String get agentRunPython => 'Chạy Python';
 }

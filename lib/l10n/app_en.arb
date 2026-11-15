@@ -3163,5 +3163,37 @@
   "agentFileAccessRefresh": "Refresh status",
   "@agentFileAccessRefresh": {},
   "agentFileAccessFailed": "Could not read or update file access. Try again.",
-  "@agentFileAccessFailed": {}
+  "@agentFileAccessFailed": {},
+  "agentDeliverySaved": "Saved",
+  "@agentDeliverySaved": {},
+  "agentDeliveryObserved": "Recorded file",
+  "@agentDeliveryObserved": {},
+  "agentDeliveryRecovery": "Recovery file",
+  "@agentDeliveryRecovery": {},
+  "agentDeliveryOpenCopy": "Open a viewing copy",
+  "@agentDeliveryOpenCopy": {},
+  "agentDeliverySourceDate": "Source date: {value}",
+  "@agentDeliverySourceDate": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryFetchedAt": "Retrieved: {value}",
+  "@agentDeliveryFetchedAt": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "agentDeliveryOpenSource": "Open source",
+  "@agentDeliveryOpenSource": {},
+  "agentDeliveryNoViewer": "No app is available to open this file.",
+  "@agentDeliveryNoViewer": {},
+  "agentReadOffice": "Read office document",
+  "@agentReadOffice": {},
+  "agentRunPython": "Run Python",
+  "@agentRunPython": {}
 }

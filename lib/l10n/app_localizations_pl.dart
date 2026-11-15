@@ -4689,4 +4689,39 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get agentFileAccessFailed =>
       'Could not read or update file access. Try again.';
+
+  @override
+  String get agentDeliverySaved => 'Zapisano';
+
+  @override
+  String get agentDeliveryObserved => 'Zarejestrowany plik';
+
+  @override
+  String get agentDeliveryRecovery => 'Plik odzyskiwania';
+
+  @override
+  String get agentDeliveryOpenCopy => 'Otwórz kopię do podglądu';
+
+  @override
+  String agentDeliverySourceDate(String value) {
+    return 'Data źródła: $value';
+  }
+
+  @override
+  String agentDeliveryFetchedAt(String value) {
+    return 'Pobrano: $value';
+  }
+
+  @override
+  String get agentDeliveryOpenSource => 'Otwórz źródło';
+
+  @override
+  String get agentDeliveryNoViewer =>
+      'Brak aplikacji umożliwiającej otwarcie tego pliku.';
+
+  @override
+  String get agentReadOffice => 'Odczytaj dokument biurowy';
+
+  @override
+  String get agentRunPython => 'Uruchom Python';
 }

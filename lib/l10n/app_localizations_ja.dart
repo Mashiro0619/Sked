@@ -4556,4 +4556,38 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get agentFileAccessFailed =>
       'Could not read or update file access. Try again.';
+
+  @override
+  String get agentDeliverySaved => '保存済み';
+
+  @override
+  String get agentDeliveryObserved => '記録されたファイル';
+
+  @override
+  String get agentDeliveryRecovery => '復元用ファイル';
+
+  @override
+  String get agentDeliveryOpenCopy => '閲覧用のコピーを開く';
+
+  @override
+  String agentDeliverySourceDate(String value) {
+    return '出典の日付：$value';
+  }
+
+  @override
+  String agentDeliveryFetchedAt(String value) {
+    return '取得日時：$value';
+  }
+
+  @override
+  String get agentDeliveryOpenSource => '出典を開く';
+
+  @override
+  String get agentDeliveryNoViewer => 'このファイルを開けるアプリがありません。';
+
+  @override
+  String get agentReadOffice => 'Office 文書を読み取る';
+
+  @override
+  String get agentRunPython => 'Python を実行';
 }

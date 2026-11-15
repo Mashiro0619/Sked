@@ -4713,4 +4713,39 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get agentFileAccessFailed =>
       'Could not read or update file access. Try again.';
+
+  @override
+  String get agentDeliverySaved => 'Salvat';
+
+  @override
+  String get agentDeliveryObserved => 'Fișier înregistrat';
+
+  @override
+  String get agentDeliveryRecovery => 'Fișier de recuperare';
+
+  @override
+  String get agentDeliveryOpenCopy => 'Deschide o copie pentru vizualizare';
+
+  @override
+  String agentDeliverySourceDate(String value) {
+    return 'Data sursei: $value';
+  }
+
+  @override
+  String agentDeliveryFetchedAt(String value) {
+    return 'Preluat: $value';
+  }
+
+  @override
+  String get agentDeliveryOpenSource => 'Deschide sursa';
+
+  @override
+  String get agentDeliveryNoViewer =>
+      'Nu există nicio aplicație disponibilă pentru deschiderea acestui fișier.';
+
+  @override
+  String get agentReadOffice => 'Citește documentul Office';
+
+  @override
+  String get agentRunPython => 'Rulează Python';
 }

@@ -8315,6 +8315,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not read or update file access. Try again.'**
   String get agentFileAccessFailed;
+
+  /// No description provided for @agentDeliverySaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get agentDeliverySaved;
+
+  /// No description provided for @agentDeliveryObserved.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded file'**
+  String get agentDeliveryObserved;
+
+  /// No description provided for @agentDeliveryRecovery.
+  ///
+  /// In en, this message translates to:
+  /// **'Recovery file'**
+  String get agentDeliveryRecovery;
+
+  /// No description provided for @agentDeliveryOpenCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Open a viewing copy'**
+  String get agentDeliveryOpenCopy;
+
+  /// No description provided for @agentDeliverySourceDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Source date: {value}'**
+  String agentDeliverySourceDate(String value);
+
+  /// No description provided for @agentDeliveryFetchedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Retrieved: {value}'**
+  String agentDeliveryFetchedAt(String value);
+
+  /// No description provided for @agentDeliveryOpenSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Open source'**
+  String get agentDeliveryOpenSource;
+
+  /// No description provided for @agentDeliveryNoViewer.
+  ///
+  /// In en, this message translates to:
+  /// **'No app is available to open this file.'**
+  String get agentDeliveryNoViewer;
+
+  /// No description provided for @agentReadOffice.
+  ///
+  /// In en, this message translates to:
+  /// **'Read office document'**
+  String get agentReadOffice;
+
+  /// No description provided for @agentRunPython.
+  ///
+  /// In en, this message translates to:
+  /// **'Run Python'**
+  String get agentRunPython;
 }
 
 class _AppLocalizationsDelegate

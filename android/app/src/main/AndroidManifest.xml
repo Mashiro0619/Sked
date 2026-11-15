@@ -81,6 +81,15 @@
             android:name=".AgentPythonService"
             android:exported="false"
             android:process=":agent_python" />
+        <provider
+            android:name=".AgentOpenedFileProvider"
+            android:authorities="${applicationId}.agent_open_files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/agent_open_file_paths" />
+        </provider>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

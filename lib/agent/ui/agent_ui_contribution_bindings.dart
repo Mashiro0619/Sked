@@ -52,60 +52,70 @@ extension _AgentUiContributionBindings on _AgentConversationViewState {
     AgentToolResultViewData data(
       BuildContext sourceContext,
       AgentUiContributionLease? lease,
-    ) => AgentToolResultViewData(
-      outcome: outcome,
-      isSourceCurrent: () =>
-          ownerCurrent() && (modalCurrent?.call() ?? _uiActive),
-      onUndo:
-          !readOnly &&
-              widget.onUndoOperation != null &&
-              !state.isActive &&
-              !state.recoveryRequired &&
-              writable &&
-              operation.operationId != null &&
-              !_busy.contains('undo-${operation.id}')
-          ? () => unawaited(
-              _perform(
-                'undo-${operation.id}',
-                () => widget.onUndoOperation!(
-                  conversation.id,
-                  operation.operationId!,
+    ) {
+      final sourceRoute = ModalRoute.of(sourceContext);
+      return AgentToolResultViewData(
+        outcome: outcome,
+        toolName: operation.tools.first.name,
+        isSourceCurrent: () =>
+            ownerCurrent() && (modalCurrent?.call() ?? _uiActive),
+        isDeliverySourceCurrent: () =>
+            ownerCurrent() &&
+            (modalCurrent?.call() ??
+                (sourceContext.mounted && sourceRoute?.isActive != false)),
+        onUndo:
+            !readOnly &&
+                widget.onUndoOperation != null &&
+                !state.isActive &&
+                !state.recoveryRequired &&
+                writable &&
+                operation.operationId != null &&
+                !_busy.contains('undo-${operation.id}')
+            ? () => unawaited(
+                _perform(
+                  'undo-${operation.id}',
+                  () => widget.onUndoOperation!(
+                    conversation.id,
+                    operation.operationId!,
+                  ),
+                  isCurrent: () =>
+                      lease?.isCurrent != false &&
+                      ownerCurrent() &&
+                      (modalCurrent?.call() ?? _uiActive),
                 ),
-                isCurrent: () =>
-                    lease?.isCurrent != false &&
-                    ownerCurrent() &&
-                    (modalCurrent?.call() ?? _uiActive),
-              ),
-            )
-          : null,
-      canOpenConversation: (id) => writable && _repository.find(id) != null,
-      onOpenConversation: (id) => unawaited(_select(id)),
-      onOpenResource:
-          widget.onOpenResource == null &&
-              widget.onOpenContributionResource == null
-          ? null
-          : (ref) {
-              if (lease != null && widget.onOpenContributionResource != null) {
-                unawaited(
-                  _openContributionResource(
-                    sourceContext,
-                    lease,
-                    operation.id,
-                    ref,
-                    ownerCurrent,
-                  ),
-                );
-              } else if (widget.onOpenResource != null) {
-                unawaited(
-                  _perform(
-                    'view-${operation.id}',
-                    () => widget.onOpenResource!(ref),
-                    isCurrent: modalCurrent,
-                  ),
-                );
-              }
-            },
-    );
+              )
+            : null,
+        canOpenConversation: (id) => writable && _repository.find(id) != null,
+        onOpenConversation: (id) => unawaited(_select(id)),
+        onOpenResource:
+            widget.onOpenResource == null &&
+                widget.onOpenContributionResource == null
+            ? null
+            : (ref) {
+                if (lease != null &&
+                    widget.onOpenContributionResource != null) {
+                  unawaited(
+                    _openContributionResource(
+                      sourceContext,
+                      lease,
+                      operation.id,
+                      ref,
+                      ownerCurrent,
+                    ),
+                  );
+                } else if (widget.onOpenResource != null) {
+                  unawaited(
+                    _perform(
+                      'view-${operation.id}',
+                      () => widget.onOpenResource!(ref),
+                      isCurrent: modalCurrent,
+                    ),
+                  );
+                }
+              },
+      );
+    }
+
     if (registry == null) {
       return buildAgentOperationReceipt(data(context, null));
     }

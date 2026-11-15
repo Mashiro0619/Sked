@@ -4679,4 +4679,39 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get agentFileAccessFailed =>
       'Could not read or update file access. Try again.';
+
+  @override
+  String get agentDeliverySaved => 'Sparad';
+
+  @override
+  String get agentDeliveryObserved => 'Registrerad fil';
+
+  @override
+  String get agentDeliveryRecovery => 'Återställningsfil';
+
+  @override
+  String get agentDeliveryOpenCopy => 'Öppna en kopia för visning';
+
+  @override
+  String agentDeliverySourceDate(String value) {
+    return 'Källans datum: $value';
+  }
+
+  @override
+  String agentDeliveryFetchedAt(String value) {
+    return 'Hämtad: $value';
+  }
+
+  @override
+  String get agentDeliveryOpenSource => 'Öppna källa';
+
+  @override
+  String get agentDeliveryNoViewer =>
+      'Det finns ingen app som kan öppna den här filen.';
+
+  @override
+  String get agentReadOffice => 'Läs Office-dokument';
+
+  @override
+  String get agentRunPython => 'Kör Python';
 }
