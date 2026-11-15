@@ -156,7 +156,7 @@ fn decode_chunks(
 ) -> Result<()> {
     let mut decoder = encoding.new_decoder_without_bom_handling();
     let mut output = String::new();
-    let mut offset = 0;
+    let mut offset: usize = 0;
     loop {
         check_cancelled(cancellation)?;
         let end = bytes.len().min(offset.saturating_add(DECODE_CHUNK_BYTES));
