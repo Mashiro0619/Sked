@@ -27,6 +27,8 @@ flowchart TD
 | `OperationExecutor` | 在一次调用内完成领域编译、权限决定与提交 |
 | `RustHistoryMaintenance` | 在各存储逆变更期间持有主库维护租约 |
 
+默认 Profile 装配存储、业务宿主、模型、上下文、工具、运行管理器和事件转发。Windows 和 Android 另接入设备文件、网页与 Python 执行 Provider；`office.read` 使用执行 Provider 登记的固定读取器。工具按实际能力开放，插件实例负责自身资源和退出收尾，详见[插件架构](AGENT_PLUGIN_ARCHITECTURE.md)。
+
 ## 执行与权限
 
 每个会话有一个运行拥有者。页面关闭只释放订阅；停止立即取消尚未接纳的步骤，已接纳的业务保存继续等待真实回执。普通任务没有 Token、轮次、工具次数或时限配额。
@@ -55,6 +57,6 @@ HTTP 传输确认与业务权限分别处理。询问和计划模式等待具体
 
 附件先核验私有文件，再原子发布草稿引用。上传按协议从文件分块编码；历史保留私有文件身份，不写入 Base64。知识编辑器只缓存生效记录，提交预期版本，由 Rust 保存变更和回执。
 
-新 Agent 归档由 Rust 编解码，Dart 负责 ZIP、对象选择与原有跨库恢复 journal。恢复的聊天是只读历史，运行、队列和审批不重放。只有全局恢复完成后才结束旧内存草稿。
+新 Agent 归档由 Rust 编解码，Dart 负责 ZIP、对象选择与原有跨库恢复 journal。归档中已有的消息作为只读历史导入，原运行、队列和审批不重放；导入后发送的新消息正常执行。只有全局恢复完成后才结束旧内存草稿。
 
-Windows、Android 提供完整 Agent；其他平台保留普通功能并显示 Agent 暂不可用。实现与验收进度见 [Rust 迁移](AGENT_RUST_MIGRATION.md)，运行细节见 [运行行为](AGENT_RUNTIME.md)、[附件](AGENT_ATTACHMENTS.md)、[知识](AGENT_KNOWLEDGE.md)和[历史](AGENT_HISTORY.md)。
+Windows 和 Android 提供 Agent；其他平台保留普通功能并显示 Agent 暂不可用。验收场景与发布条件见 [Agent 验收](AGENT_ACCEPTANCE.md)。运行细节见[运行行为](AGENT_RUNTIME.md)、[设备文件](AGENT_FILES.md)、[Python 执行](AGENT_EXECUTION.md)、[办公文档](AGENT_OFFICE.md)和[结果交付](AGENT_DELIVERY.md)，持久数据规则见[附件](AGENT_ATTACHMENTS.md)、[知识](AGENT_KNOWLEDGE.md)和[历史](AGENT_HISTORY.md)。

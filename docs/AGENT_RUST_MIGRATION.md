@@ -1,6 +1,6 @@
 # Agent Rust 重构与依赖整理
 
-执行基线：`c8edd681`。本次只迁移 Agent 核心，Flutter 界面、课表日程、导入导出及平台功能继续由 Dart 维护。
+迁移基线：`c8edd681`。这次迁移将 Agent 核心改为 Rust，Flutter 界面、课表日程、导入导出及平台功能继续由 Dart 维护。
 
 ## 已确定的方案
 
@@ -47,7 +47,9 @@ Flutter 3.47.7／Dart 3.13.5 和现有 Android 工具链保持。新增 Cargo.lo
 
 已删除 drift、drift_dev、build_runner、旧 Agent 数据库生成代码及专用 Web worker／Wasm 资产。http、crypto、html、archive、Markdown 和平台依赖仍被保留的功能使用。
 
-## 实施进度
+## 迁移阶段结果
+
+以下结果记录于 2026-11-10 的迁移收口提交 `19c3c27e9384127a553f04fa2074c4df052ca276`，对应当时的 Rust 迁移版本。后续插件、文件、网页、Python、Office 与结果交付能力，按[通用 Agent 验收](AGENT_ACCEPTANCE.md)记录候选版本的完整包、平台和任务结果。
 
 | 阶段 | 完成条件 | 状态 |
 | --- | --- | --- |
@@ -69,7 +71,7 @@ Flutter 3.47.7／Dart 3.13.5 和现有 Android 工具链保持。新增 Cargo.lo
 
 `rust/src/api` 提供生成桥接，`AgentRustClient` 等待原生事件订阅就绪后开放命令。停止或退出先关闭新请求入口，宿主仍可提交已接纳保存的最终回执；重复退出调用等待同一收尾过程。
 
-后续插件化已将默认装配迁入 `rust/src/api/default_profile.rs`，由 `rust/src/plugins` 管理服务租约与异步清理，公开 FRB 命令保持一致。该次改造的实施与验收状态单独记录在[插件架构计划](AGENT_PLUGIN_ARCHITECTURE.md)。
+默认装配现位于 `rust/src/api/default_profile.rs`，由 `rust/src/plugins` 管理服务租约与异步清理，公开 FRB 命令保持一致。默认能力和实施状态见[插件架构计划](AGENT_PLUGIN_ARCHITECTURE.md)，完整包与平台验收见[通用 Agent 验收](AGENT_ACCEPTANCE.md)。
 
 `RustAgentBusinessHost` 为每次运行持有业务作用域，复用 `ApplicationToolHost` 和 `MutationCoordinator`。准备记录持久化后才进入业务保存；待审批对象建立后才发布允许／拒绝入口。历史主库撤销通过 `RustAgentMainUndo` 读取原始回执并复用领域撤销入口。
 
@@ -83,12 +85,12 @@ Flutter 3.47.7／Dart 3.13.5 和现有 Android 工具链保持。新增 Cargo.lo
 
 离线验证入口为 `integration_test/agent_rust_offline_journey_test.dart`：模型使用预置回包，FRB、Rust 核心、业务工具、主库文件和 JSONL 使用正式实现。流程覆盖工具发现、三种权限、流式回复、已接纳保存期间的页面关闭、排队、停止继续、退出及重新打开数据。
 
-Rust 工具链版本与目标维护在 `rust/rust-toolchain.toml`；手动 Cargo 命令从 `rust/` 目录运行。Flutter native assets hook 使用同一工具链，Android 编译使用项目当前最低 API，不提升 Android 基线。Android 的 `SkedApplication` 在启动时加载原生库并初始化系统证书验证器，AAR 版本取自 `Cargo.lock` 中的配套发布版本。Android Release 已在模拟器启动，确认原生库加载与系统证书初始化成功。
+Rust 工具链版本与目标维护在 `rust/rust-toolchain.toml`；手动 Cargo 命令从 `rust/` 目录运行。Flutter native assets hook 使用同一工具链，Android 编译使用项目当前最低 API，不提升 Android 基线。Android 的 `SkedApplication` 在启动时加载原生库并初始化系统证书验证器，AAR 版本取自 `Cargo.lock` 中的配套发布版本。2026-11-10 的迁移收口记录包含 Android Release 在模拟器启动、原生库加载和系统证书初始化成功的结果。
 
-## 验收与提交
+## 迁移阶段的验收与提交约定
 
 离线模型替身只替换模型回包，Rust、FRB、Dart 业务保存及本地存储使用正式实现。完整旅程包括：新会话及附件；查询／创建／批量／重复实例修改、参数纠错和三种权限；问答、计划、队列、补充和停止继续；压缩、模型切换、重生成及历史重做；知识与附件管理、备份恢复、删除清空。
 
-检查 Windows 普通／Store MSIX 和 Android APK／AAB，保留当前界面布局。使用编译、静态检查、现有功能回归和实际离线操作，不增加防御性测试矩阵，不机械移植旧实现内部测试。
+迁移阶段检查 Windows 普通／Store MSIX 和 Android APK／AAB，保留既有界面布局，采用编译、静态检查、现有功能回归和实际离线操作。后续开发检查与执行安排以[通用 Agent 验收](AGENT_ACCEPTANCE.md)为准。
 
 Rust 工具链、缓存、临时工作副本、构建、日志和演示数据放 F 盘。开发在 main 分阶段进行，保留既有未提交改动；每个原子提交使用中文消息、SSH 签名并验签。每阶段同步当前行为文档。

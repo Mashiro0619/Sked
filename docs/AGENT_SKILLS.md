@@ -35,6 +35,10 @@ Manifest 记录稳定 ID、内容版本、用途、触发提示、资源路径�
 
 更新内置 Skill 时同步 manifest 摘要和依赖，核对公开工具名称及权限说明；更新工具契约时同时修订相关技能，移除已退役调用。
 
-`office-docx`、`office-xlsx`、`office-pptx` 共享技能分别指导 Word、Excel、PowerPoint 的内容读取、创建和常规修改。读取使用 `office.read`，写文件使用 `python.execute`，完整内容通过 `content.read` 继续读取。库和平台行为见[办公文档](AGENT_OFFICE.md)。
+`office-docx`、`office-xlsx`、`office-pptx` 共享技能分别指导 Word、Excel、PowerPoint 的内容读取、创建和常规修改。输入使用 `source: {kind, id}`：`attachment` 对应已发送的会话附件，`content` 对应文件或网页工具保存的 `contentId`。设备文档先通过 `files.read` 的 `format: native` 保存完整内容。
 
-验证入口：[资产打包](../test/agent/skills/bundled_skill_assets_test.dart)、[装载器](../test/agent/skills/shared_skill_loader_test.dart)、[发现与加载](../test/agent/tools/skill_discovery_contract_test.dart)、[原生技能快照与工具旅程](../rust/src/runtime/journey.rs)。真实模型任务按[Rust 迁移方案](AGENT_RUST_MIGRATION.md)保持暂停。
+读取使用 `office.read`，长正文通过 `content.read` 继续读取。创建和修改使用 `python.execute`，同样的来源放入 `inputs`，脚本按名称取得本次冻结的完整文件。模型协议支持时保留 Office 原生输入；不支持时提供文件身份和读取工具入口，当前消息与历史消息采用同一规则。库和平台行为见[办公文档](AGENT_OFFICE.md)。
+
+技能指导 Agent 用 `sked_runtime.publish` 登记已经生成的文件，并按实际回执说明结果。[结果交付界面](AGENT_DELIVERY.md)为文件和恢复材料提供当前平台支持的打开、定位或复制动作，网页来源可打开实际访问地址；失败与取消后的已登记文件仍保留原操作状态。
+
+验证入口：[资产打包](../test/agent/skills/bundled_skill_assets_test.dart)、[装载器](../test/agent/skills/shared_skill_loader_test.dart)、[发现与加载](../test/agent/tools/skill_discovery_contract_test.dart)、[原生技能快照与工具旅程](../rust/src/runtime/journey.rs)。当前真实模型任务与性能采样保持暂停，后续检查与证据要求见[Agent 验收](AGENT_ACCEPTANCE.md)。
