@@ -165,11 +165,14 @@ flutter {
 chaquopy {
     defaultConfig {
         version = "3.11"
+        pip {
+            install("-r", file("../../tool/python/requirements-android.txt").absolutePath)
+        }
     }
     sourceSets {
         getByName("main") {
             srcDir("../../tool/python")
-            include("sked_runtime.py", "android_bootstrap.py")
+            include("sked_runtime.py", "android_bootstrap.py", "office_inspect.py")
         }
     }
 }

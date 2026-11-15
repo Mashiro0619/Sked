@@ -16,7 +16,8 @@ def main():
     invocation = json.loads((run_directory / "invocation.json").read_text("utf-8"))
     source = run_directory / "source.py"
     sys.argv = [str(source), *invocation["argv"]]
-    sys.path.insert(0, os.getcwd())
+    if not invocation.get("controlledReader", False):
+        sys.path.insert(0, os.getcwd())
     runpy.run_path(str(source), run_name="__main__")
 
 

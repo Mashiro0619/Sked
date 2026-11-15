@@ -59,17 +59,31 @@ class AgentExecutionCoordinator {
     required OperationScope scope,
     required String conversationId,
     required PythonTaskRequest request,
-  }) => _preparePython(scope, (core) async {
+  }) => _preparePython(
+    scope,
+    (core) => _prepareTask(
+      core,
+      scope,
+      (cancellation) => core.preparePythonTask(
+        conversationId: conversationId,
+        request: request,
+        cancellation: cancellation,
+      ),
+    ),
+  );
+
+  Future<PreparedExecutionHandle> _prepareTask(
+    AgentCore core,
+    OperationScope scope,
+    Future<PreparedExecutionHandle> Function(ExecutionPreparationCancellation)
+    prepare,
+  ) async {
     final cancellation = core.openExecutionPreparation();
     ExecutionPreparationCancellation? active = cancellation;
     unawaited(scope.whenCancelled.then((_) => active?.cancel()));
     try {
       scope.checkActive();
-      return await core.preparePythonTask(
-        conversationId: conversationId,
-        request: request,
-        cancellation: cancellation,
-      );
+      return await prepare(cancellation);
     } on AnyhowException catch (error) {
       final details = jsonDecode(error.message) as Map<String, Object?>;
       throw OperationProblem(switch (details['code']) {
@@ -86,7 +100,7 @@ class AgentExecutionCoordinator {
       active = null;
       cancellation.dispose();
     }
-  });
+  }
 
   Future<AgentPreparedExecution> _preparePython(
     OperationScope scope,
@@ -264,11 +278,37 @@ class AgentExecutionCoordinator {
     required ControlledReadExecutionRequest request,
     void Function(ExecutionEvent)? onEvent,
     void Function(Object, StackTrace)? onEventError,
-  }) => _track(() async {
-    final execution = await _prepare(
+  }) => _readControlled(
+    scope: scope,
+    prepare: (core) => core.prepareControlledReadExecution(request: request),
+    onEvent: onEvent,
+    onEventError: onEventError,
+  );
+
+  Future<ExecutionReceipt> readOfficeTask({
+    required OperationScope scope,
+    required String conversationId,
+    required OfficeReadTaskRequest request,
+  }) => _readControlled(
+    scope: scope,
+    prepare: (core) => _prepareTask(
+      core,
       scope,
-      (core) => core.prepareControlledReadExecution(request: request),
-    );
+      (cancellation) => core.prepareOfficeReadTask(
+        conversationId: conversationId,
+        request: request,
+        cancellation: cancellation,
+      ),
+    ),
+  );
+
+  Future<ExecutionReceipt> _readControlled({
+    required OperationScope scope,
+    required Future<PreparedExecutionHandle> Function(AgentCore) prepare,
+    void Function(ExecutionEvent)? onEvent,
+    void Function(Object, StackTrace)? onEventError,
+  }) => _track(() async {
+    final execution = await _prepare(scope, prepare);
     try {
       if (onEvent != null) {
         if (onEventError == null) {

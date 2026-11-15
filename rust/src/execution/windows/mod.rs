@@ -22,7 +22,7 @@ use super::{
     ExecutionProviderIdentity, ExecutionReceipt, ExecutionService, ExecutionSpec,
     ExecutionStartRequest, ExecutionTerminal, FrozenExecutionKind, FrozenExecutionSpec,
     OutputReference, OutputStream, PreparedExecutionBackend, ResourceVersion, Result,
-    environment_names_equal,
+    environment_names_equal, office,
 };
 use crate::{
     files::{
@@ -100,7 +100,11 @@ impl ExecutionProvider for WindowsProvider {
     fn capabilities(&self) -> ExecutionCapabilities {
         ExecutionCapabilities {
             python: self.inner.directory.join("manifest.json").is_file(),
-            controlled_readers: Vec::new(),
+            controlled_readers: if runtime::office_available(&self.inner.directory) {
+                vec![office::registration()]
+            } else {
+                Vec::new()
+            },
         }
     }
 
@@ -111,11 +115,23 @@ impl ExecutionProvider for WindowsProvider {
     ) -> BoxFuture<'static, Result<ExecutionPreparation>> {
         let provider = self.inner.clone();
         Box::pin(async move {
-            let ExecutionSpec::Python(input) = specification else {
-                return Err(error(
-                    ExecutionErrorCode::UnknownReader,
-                    "This provider has no controlled document reader.",
-                ));
+            let (input, kind) = match specification {
+                ExecutionSpec::Python(mut input) => {
+                    let kind = FrozenExecutionKind::Python {
+                        code: std::mem::take(&mut input.code),
+                        code_digest: String::new(),
+                    };
+                    (input, kind)
+                }
+                ExecutionSpec::ControlledRead(input) => {
+                    office::prepare(
+                        input,
+                        &provider.files,
+                        path_resource(&provider.directory),
+                        cancellation.clone(),
+                    )
+                    .await?
+                }
             };
             if input.cwd_resource.kind != FileResourceKind::WindowsPath {
                 return Err(error(
@@ -165,6 +181,14 @@ impl ExecutionProvider for WindowsProvider {
             })
             .await
             .map_err(join_error)??;
+            if office::is_controlled(&kind)
+                && bundle.environment.dependencies != *office::bundled_dependencies()
+            {
+                return Err(error(
+                    ExecutionErrorCode::ProviderUnavailable,
+                    "The bundled Office libraries do not match this application build.",
+                ));
+            }
             check_cwd(
                 &provider.files,
                 &input.cwd_resource,
@@ -196,10 +220,7 @@ impl ExecutionProvider for WindowsProvider {
             }
             runtime::check_cancelled(&cancellation)?;
             let specification = FrozenExecutionSpec {
-                kind: FrozenExecutionKind::Python {
-                    code: input.code,
-                    code_digest: String::new(),
-                },
+                kind,
                 argv: input.argv,
                 cwd: input.cwd,
                 cwd_resource: input.cwd_resource,
@@ -271,6 +292,7 @@ impl PreparedExecutionBackend for Backend {
         Box::pin(async move {
             let provider = &resources.provider;
             let mut receipt = ledger::pending(&request.identity);
+            office::mark_read(&request.specification.kind, &mut receipt);
             let prepared = prepare_run(&resources, &request).await;
             let (directory, _material) = match prepared {
                 Ok(prepared) => prepared,
@@ -346,7 +368,12 @@ impl PreparedExecutionBackend for Backend {
                             receipt.error.get_or_insert_with(|| failure.clone());
                             receipt.effects.state = EffectsState::Unknown;
                         }
-                        receipt.effects.detail = json!({"scope":"Files registered with sked_runtime.publish", "files":files, "errors":errors});
+                        office::record_outputs(
+                            &mut receipt,
+                            "Files registered with sked_runtime.publish",
+                            files,
+                            errors,
+                        );
                     }
                     Err(failure) => {
                         receipt.error.get_or_insert(failure);
@@ -377,15 +404,13 @@ async fn prepare_run(
         request.cancellation.clone(),
     )
     .await?;
-    let FrozenExecutionKind::Python { code, .. } = &request.specification.kind else {
-        return Err(error(
-            ExecutionErrorCode::InvalidSpec,
-            "The prepared task is not Python source.",
-        ));
-    };
+    let code = office::source(&request.specification.kind)?;
     let directory = ledger::create(&resources.provider.root, &request.identity)?;
-    let invocation = serde_json::to_vec(&json!({"argv":request.specification.argv}))
-        .map_err(|failure| error(ExecutionErrorCode::InvalidSpec, failure.to_string()))?;
+    let invocation = serde_json::to_vec(&json!({
+        "argv":request.specification.argv,
+        "controlledReader": office::is_controlled(&request.specification.kind),
+    }))
+    .map_err(|failure| error(ExecutionErrorCode::InvalidSpec, failure.to_string()))?;
     let material = vec![
         ledger::write_locked(&directory.join("source.py"), code.as_bytes())?,
         ledger::write_locked(&directory.join("invocation.json"), &invocation)?,
@@ -482,12 +507,21 @@ async fn recover_outputs(files: &FileService, directory: &Path, receipt: &mut Ex
                 .iter()
                 .map(|artifact| artifact.version.clone())
                 .collect();
-            receipt.effects.detail = json!({"scope":"Files observed after the interrupted execution", "files":artifacts, "errors":errors});
+            office::record_outputs(
+                receipt,
+                "Files observed after the interrupted execution",
+                artifacts,
+                errors,
+            );
         }
         Err(failure) => {
             errors.push(failure);
-            receipt.effects.detail =
-                json!({"scope":"Files observed after the interrupted execution", "errors":errors});
+            office::record_outputs(
+                receipt,
+                "Files observed after the interrupted execution",
+                Vec::<Artifact>::new(),
+                errors,
+            );
         }
     }
 }

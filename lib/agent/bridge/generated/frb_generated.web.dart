@@ -370,6 +370,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ModelConnection dco_decode_box_autoadd_model_connection(dynamic raw);
 
   @protected
+  OfficeReadTaskRequest dco_decode_box_autoadd_office_read_task_request(
+    dynamic raw,
+  );
+
+  @protected
   PythonExecutionRequest dco_decode_box_autoadd_python_execution_request(
     dynamic raw,
   );
@@ -994,6 +999,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ModelProtocol dco_decode_model_protocol(dynamic raw);
 
   @protected
+  OfficeDocumentFormat dco_decode_office_document_format(dynamic raw);
+
+  @protected
+  OfficeReadTaskRequest dco_decode_office_read_task_request(dynamic raw);
+
+  @protected
   OfflineModelReply dco_decode_offline_model_reply(dynamic raw);
 
   @protected
@@ -1312,6 +1323,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RunPresentation dco_decode_run_presentation(dynamic raw);
+
+  @protected
+  TaskInputSource dco_decode_task_input_source(dynamic raw);
+
+  @protected
+  TaskInputSourceKind dco_decode_task_input_source_kind(dynamic raw);
 
   @protected
   ToolDefinition dco_decode_tool_definition(dynamic raw);
@@ -1941,6 +1958,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   ModelConnection sse_decode_box_autoadd_model_connection(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  OfficeReadTaskRequest sse_decode_box_autoadd_office_read_task_request(
     SseDeserializer deserializer,
   );
 
@@ -2723,6 +2745,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ModelProtocol sse_decode_model_protocol(SseDeserializer deserializer);
 
   @protected
+  OfficeDocumentFormat sse_decode_office_document_format(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  OfficeReadTaskRequest sse_decode_office_read_task_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   OfflineModelReply sse_decode_offline_model_reply(
     SseDeserializer deserializer,
   );
@@ -3109,6 +3141,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RunPresentation sse_decode_run_presentation(SseDeserializer deserializer);
+
+  @protected
+  TaskInputSource sse_decode_task_input_source(SseDeserializer deserializer);
+
+  @protected
+  TaskInputSourceKind sse_decode_task_input_source_kind(
+    SseDeserializer deserializer,
+  );
 
   @protected
   ToolDefinition sse_decode_tool_definition(SseDeserializer deserializer);
@@ -3934,6 +3974,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_model_connection(
     ModelConnection self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_office_read_task_request(
+    OfficeReadTaskRequest self,
     SseSerializer serializer,
   );
 
@@ -4919,6 +4965,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_model_protocol(ModelProtocol self, SseSerializer serializer);
 
   @protected
+  void sse_encode_office_document_format(
+    OfficeDocumentFormat self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_office_read_task_request(
+    OfficeReadTaskRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_offline_model_reply(
     OfflineModelReply self,
     SseSerializer serializer,
@@ -5383,6 +5441,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_run_presentation(
     RunPresentation self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_task_input_source(
+    TaskInputSource self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_task_input_source_kind(
+    TaskInputSourceKind self,
     SseSerializer serializer,
   );
 

@@ -531,8 +531,8 @@ pub(super) async fn inject(
         {
             parts.push(native_part(&source.attachment, protocol));
         } else {
-            parts.push(text_part(format!("Content delivery unavailable: this protocol does not accept {}. The file is saved as contentId {}. Use content.read with format text for UTF-8 data, or an available content extraction tool. The file bytes have not been sent in this request.",
-                source.attachment.media_type, source.reference.id), protocol));
+            parts.push(text_part(format!("Saved file available to content tools: {}. Use office.read with source and format docx, xlsx or pptx for Office files, content.read with format text for UTF-8 data, or source in python.execute inputs for full-file processing. Read the file before using its contents.",
+                crate::context::task_file_metadata(&source.attachment, "content", &source.reference.id)), protocol));
         }
     }
     let messages = body.get_mut(root).and_then(Value::as_array_mut).unwrap();

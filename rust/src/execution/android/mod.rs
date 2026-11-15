@@ -26,7 +26,7 @@ use super::{
     ExecutionProvider, ExecutionProviderIdentity, ExecutionReceipt, ExecutionService,
     ExecutionSpec, ExecutionStartRequest, ExecutionTerminal, FrozenExecutionKind,
     FrozenExecutionSpec, OutputReference, OutputStream, PreparedExecutionBackend, ResourceVersion,
-    Result,
+    Result, office,
 };
 use crate::{
     files::{
@@ -92,9 +92,14 @@ impl ExecutionProvider for AndroidProvider {
         self.inner.identity.clone()
     }
     fn capabilities(&self) -> ExecutionCapabilities {
+        let available = crate::android::python_bridge_available();
         ExecutionCapabilities {
-            python: crate::android::python_bridge_available(),
-            controlled_readers: Vec::new(),
+            python: available,
+            controlled_readers: if available {
+                vec![office::registration()]
+            } else {
+                Vec::new()
+            },
         }
     }
     fn prepare(
@@ -104,11 +109,23 @@ impl ExecutionProvider for AndroidProvider {
     ) -> BoxFuture<'static, Result<ExecutionPreparation>> {
         let provider = self.inner.clone();
         Box::pin(async move {
-            let ExecutionSpec::Python(input) = specification else {
-                return Err(error(
-                    ExecutionErrorCode::UnknownReader,
-                    "This provider has no controlled document reader.",
-                ));
+            let (input, kind) = match specification {
+                ExecutionSpec::Python(mut input) => {
+                    let kind = FrozenExecutionKind::Python {
+                        code: std::mem::take(&mut input.code),
+                        code_digest: String::new(),
+                    };
+                    (input, kind)
+                }
+                ExecutionSpec::ControlledRead(input) => {
+                    office::prepare(
+                        input,
+                        &provider.files,
+                        path_resource(Path::new("/")),
+                        cancellation.clone(),
+                    )
+                    .await?
+                }
             };
             if input.cwd_resource.kind != FileResourceKind::AndroidPath {
                 return Err(error(
@@ -177,10 +194,7 @@ impl ExecutionProvider for AndroidProvider {
             }
             runtime::check_cancelled(&cancellation)?;
             let specification = FrozenExecutionSpec {
-                kind: FrozenExecutionKind::Python {
-                    code: input.code,
-                    code_digest: String::new(),
-                },
+                kind,
                 argv: input.argv,
                 cwd: input.cwd,
                 cwd_resource: input.cwd_resource,
@@ -254,6 +268,7 @@ impl PreparedExecutionBackend for Backend {
         let resources = self.resources.clone();
         Box::pin(async move {
             let mut receipt = ledger::pending(&request.identity);
+            office::mark_read(&request.specification.kind, &mut receipt);
             let prepared = prepare_run(&resources, &request);
             let (directory, _material) = match prepared {
                 Ok(prepared) => prepared,
@@ -301,12 +316,7 @@ fn prepare_run(
     request: &ExecutionStartRequest,
 ) -> Result<(PathBuf, Vec<File>)> {
     runtime::check_cancelled(&request.cancellation)?;
-    let FrozenExecutionKind::Python { code, .. } = &request.specification.kind else {
-        return Err(error(
-            ExecutionErrorCode::InvalidSpec,
-            "The prepared task is not Python source.",
-        ));
-    };
+    let code = office::source(&request.specification.kind)?;
     let directory = ledger::create(&resources.provider.root, &request.identity)?;
     let mut environment = resources.runtime.variables.clone();
     for (name, value) in &request.specification.variables {
@@ -323,6 +333,7 @@ fn prepare_run(
         "cwd": request.specification.cwd_resource.value,
         "argv": request.specification.argv,
         "environment": environment,
+        "controlledReader": office::is_controlled(&request.specification.kind),
     }))
     .map_err(|failure| error(ExecutionErrorCode::InvalidSpec, failure.to_string()))?;
     let material = vec![
@@ -653,7 +664,12 @@ async fn observe_outputs(
         .iter()
         .map(|artifact| artifact.version.clone())
         .collect();
-    receipt.effects.detail = json!({"scope":"Files registered with sked_runtime.publish", "files":artifacts,"errors":errors});
+    office::record_outputs(
+        receipt,
+        "Files registered with sked_runtime.publish",
+        artifacts,
+        errors,
+    );
 }
 
 async fn emit_output(

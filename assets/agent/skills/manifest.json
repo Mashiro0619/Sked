@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "packVersion": "2.0.0",
+  "packVersion": "2.1.0",
   "runtimeContractVersion": 1,
   "toolApiCompatibility": ">=2.0.0 <3.0.0",
   "skills": [
@@ -652,6 +652,93 @@
         "conversation.read"
       ],
       "optionalTools": [
+        "ask_user"
+      ]
+    },
+    {
+      "id": "office-docx",
+      "version": "2.0.0",
+      "title": "处理 Word 文档",
+      "summary": "读取、创建和修改 Word 文档，保留内容来源并交付实际文件。",
+      "triggers": [
+        "DOCX",
+        "Word文档",
+        "修改文档",
+        "生成报告"
+      ],
+      "asset": "office-docx/SKILL.md",
+      "contentSha256": "216e6d12973753e14d370a1afcabc233753573bb59b1daa31da26748fd434042",
+      "sourceKinds": [],
+      "requiredTools": [
+        "office.read",
+        "python.execute",
+        "content.read",
+        "files.read",
+        "files.new",
+        "files.write"
+      ],
+      "optionalTools": [
+        "conversation.get",
+        "files.list",
+        "files.info",
+        "ask_user"
+      ]
+    },
+    {
+      "id": "office-xlsx",
+      "version": "2.0.0",
+      "title": "处理 Excel 工作簿",
+      "summary": "读取和整理 Excel 工作簿，保留单元格类型、公式和真实保存结果。",
+      "triggers": [
+        "XLSX",
+        "Excel表格",
+        "整理工作簿",
+        "表格公式"
+      ],
+      "asset": "office-xlsx/SKILL.md",
+      "contentSha256": "3573d39d1043a4c6ff8c44f0b6623d168b83fb439a5069c5ed1fb82478edd205",
+      "sourceKinds": [],
+      "requiredTools": [
+        "office.read",
+        "python.execute",
+        "content.read",
+        "files.read",
+        "files.new",
+        "files.write"
+      ],
+      "optionalTools": [
+        "conversation.get",
+        "files.list",
+        "files.info",
+        "ask_user"
+      ]
+    },
+    {
+      "id": "office-pptx",
+      "version": "2.0.0",
+      "title": "处理 PowerPoint 演示文稿",
+      "summary": "读取、创建和修改 PowerPoint 演示文稿，保留页序、素材与编辑能力。",
+      "triggers": [
+        "PPTX",
+        "PowerPoint",
+        "演示文稿",
+        "制作幻灯片"
+      ],
+      "asset": "office-pptx/SKILL.md",
+      "contentSha256": "f1fe8cbc49690f960959fb5f0afa637b7886caa434bc150a04ed0f0876c8c65a",
+      "sourceKinds": [],
+      "requiredTools": [
+        "office.read",
+        "python.execute",
+        "content.read",
+        "files.read",
+        "files.new",
+        "files.write"
+      ],
+      "optionalTools": [
+        "conversation.get",
+        "files.list",
+        "files.info",
         "ask_user"
       ]
     }

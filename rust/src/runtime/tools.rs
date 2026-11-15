@@ -1405,9 +1405,28 @@ impl RuntimeManager {
     ) -> Result<Value> {
         let snapshot = self.read(&accepted.conversation_id).await?;
         match name {
-            "conversation.get" => Ok(
-                json!({"conversation":snapshot.conversation,"plan":snapshot.plan,"question":snapshot.current_question,"queue":snapshot.queued_inputs}),
-            ),
+            "conversation.get" => {
+                let sent: HashSet<_> = snapshot
+                    .messages
+                    .iter()
+                    .chain(
+                        snapshot
+                            .history_versions
+                            .iter()
+                            .flat_map(|version| &version.messages),
+                    )
+                    .flat_map(|message| &message.attachment_ids)
+                    .collect();
+                let attachments: Vec<_> = snapshot
+                    .attachments
+                    .iter()
+                    .filter(|metadata| sent.contains(&metadata.id))
+                    .map(crate::context::attachment_tool_metadata)
+                    .collect();
+                Ok(
+                    json!({"conversation":snapshot.conversation,"plan":snapshot.plan,"question":snapshot.current_question,"queue":snapshot.queued_inputs,"attachments":attachments}),
+                )
+            }
             "conversation.read" => {
                 let id = required_string(&args, "messageId")?;
                 let message = snapshot

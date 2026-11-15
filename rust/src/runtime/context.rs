@@ -375,7 +375,7 @@ impl RuntimeManager {
             .await?;
         plan.prompt.push_str(&source_text);
         plan.prompt.push_str(&plan.content_index);
-        let mut attachment_ids = Vec::new();
+        let mut attachment_ids = plan.summarized_attachment_ids.clone();
         for source in &plan.summarized_content {
             if source.reference.kind != ToolContentKind::Native {
                 continue;

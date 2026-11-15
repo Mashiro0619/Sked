@@ -114,7 +114,8 @@ def run(run_directory, cwd_fd):
 
         source = run_directory / "source.py"
         sys.argv = [str(source), *invocation["argv"]]
-        sys.path.insert(0, os.getcwd())
+        if not invocation.get("controlledReader", False):
+            sys.path.insert(0, os.getcwd())
         runpy.run_path(str(source), run_name="__main__")
     except SystemExit as error:
         exit_code = _system_exit_code(error.code, stderr, output_failures)

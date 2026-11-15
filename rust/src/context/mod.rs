@@ -1,6 +1,7 @@
 //! Context assembly, estimation and compaction strategy with durable summaries.
 //! Runtime retains admission, cancellation, presentation and execution ownership.
 
+mod attachments;
 mod contracts;
 mod history;
 mod local;
@@ -8,6 +9,7 @@ mod provider;
 mod service;
 mod sources;
 
+pub(crate) use attachments::{attachment_tool_metadata, project_attachments, task_file_metadata};
 pub use contracts::{
     CompactionPlan, ContextEstimate, ContextEstimateInput, ContextMutation, ContextProvider,
     SummaryRequest,

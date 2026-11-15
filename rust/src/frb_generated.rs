@@ -43,7 +43,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 2101649313;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 2119559783;
 
 // Section: executor
 
@@ -1172,6 +1172,89 @@ fn wire__crate__api__AgentCore_prepare_controlled_read_execution_impl(
                         let output_ok = crate::api::AgentCore::prepare_controlled_read_execution(
                             &*api_that_guard,
                             api_request,
+                        )
+                        .await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__AgentCore_prepare_office_read_task_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "AgentCore_prepare_office_read_task",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<AgentCore>,
+            >>::sse_decode(&mut deserializer);
+            let api_conversation_id = <String>::sse_decode(&mut deserializer);
+            let api_request = <crate::api::execution_contracts::OfficeReadTaskRequest>::sse_decode(
+                &mut deserializer,
+            );
+            let api_cancellation = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<
+                    ExecutionPreparationCancellation,
+                >,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, String>(
+                    (move || async move {
+                        let mut api_that_guard = None;
+                        let mut api_cancellation_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![
+                                    flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                        &api_that, 0, false,
+                                    ),
+                                    flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                        &api_cancellation,
+                                        1,
+                                        false,
+                                    ),
+                                ],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => {
+                                    api_that_guard =
+                                        Some(api_that.lockable_decode_async_ref().await)
+                                }
+                                1 => {
+                                    api_cancellation_guard =
+                                        Some(api_cancellation.lockable_decode_async_ref().await)
+                                }
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_that_guard = api_that_guard.unwrap();
+                        let api_cancellation_guard = api_cancellation_guard.unwrap();
+                        let output_ok = crate::api::AgentCore::prepare_office_read_task(
+                            &*api_that_guard,
+                            api_conversation_id,
+                            api_request,
+                            &*api_cancellation_guard,
                         )
                         .await?;
                         std::result::Result::Ok(output_ok)
@@ -6925,6 +7008,33 @@ impl SseDecode for crate::api::contracts::ModelProtocol {
     }
 }
 
+impl SseDecode for crate::api::execution_contracts::OfficeDocumentFormat {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::execution_contracts::OfficeDocumentFormat::Docx,
+            1 => crate::api::execution_contracts::OfficeDocumentFormat::Xlsx,
+            2 => crate::api::execution_contracts::OfficeDocumentFormat::Pptx,
+            _ => unreachable!("Invalid variant for OfficeDocumentFormat: {}", inner),
+        };
+    }
+}
+
+impl SseDecode for crate::api::execution_contracts::OfficeReadTaskRequest {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_source =
+            <crate::api::execution_contracts::TaskInputSource>::sse_decode(deserializer);
+        let mut var_format =
+            <crate::api::execution_contracts::OfficeDocumentFormat>::sse_decode(deserializer);
+        return crate::api::execution_contracts::OfficeReadTaskRequest {
+            source: var_source,
+            format: var_format,
+        };
+    }
+}
+
 impl SseDecode for crate::api::contracts::OfflineModelReply {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -7879,10 +7989,11 @@ impl SseDecode for crate::api::execution_contracts::PythonTaskInput {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_name = <String>::sse_decode(deserializer);
-        let mut var_contentId = <String>::sse_decode(deserializer);
+        let mut var_source =
+            <crate::api::execution_contracts::TaskInputSource>::sse_decode(deserializer);
         return crate::api::execution_contracts::PythonTaskInput {
             name: var_name,
-            content_id: var_contentId,
+            source: var_source,
         };
     }
 }
@@ -8095,6 +8206,31 @@ impl SseDecode for crate::api::contracts::RunPresentation {
             context_usage: var_contextUsage,
             compacting: var_compacting,
             reply_target_message_id: var_replyTargetMessageId,
+        };
+    }
+}
+
+impl SseDecode for crate::api::execution_contracts::TaskInputSource {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_kind =
+            <crate::api::execution_contracts::TaskInputSourceKind>::sse_decode(deserializer);
+        let mut var_id = <String>::sse_decode(deserializer);
+        return crate::api::execution_contracts::TaskInputSource {
+            kind: var_kind,
+            id: var_id,
+        };
+    }
+}
+
+impl SseDecode for crate::api::execution_contracts::TaskInputSourceKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::api::execution_contracts::TaskInputSourceKind::Content,
+            1 => crate::api::execution_contracts::TaskInputSourceKind::Attachment,
+            _ => unreachable!("Invalid variant for TaskInputSourceKind: {}", inner),
         };
     }
 }
@@ -9994,174 +10130,180 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        21 => wire__crate__api__AgentCore_prepare_python_execution_impl(
+        21 => wire__crate__api__AgentCore_prepare_office_read_task_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        22 => {
+        22 => wire__crate__api__AgentCore_prepare_python_execution_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        23 => {
             wire__crate__api__AgentCore_prepare_python_task_impl(port, ptr, rust_vec_len, data_len)
         }
-        23 => wire__crate__api__AgentCore_prune_history_impl(port, ptr, rust_vec_len, data_len),
-        24 => wire__crate__api__AgentCore_query_impl(port, ptr, rust_vec_len, data_len),
-        25 => {
+        24 => wire__crate__api__AgentCore_prune_history_impl(port, ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__AgentCore_query_impl(port, ptr, rust_vec_len, data_len),
+        26 => {
             wire__crate__api__AgentCore_recover_history_undo_impl(port, ptr, rust_vec_len, data_len)
         }
-        26 => {
+        27 => {
             wire__crate__api__AgentCore_recover_operations_impl(port, ptr, rust_vec_len, data_len)
         }
-        27 => wire__crate__api__AgentCore_register_builtin_skills_impl(
+        28 => wire__crate__api__AgentCore_register_builtin_skills_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        28 => wire__crate__api__AgentCore_remove_draft_attachment_impl(
+        29 => wire__crate__api__AgentCore_remove_draft_attachment_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        29 => wire__crate__api__AgentCore_replace_pending_redo_references_impl(
+        30 => wire__crate__api__AgentCore_replace_pending_redo_references_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        30 => wire__crate__api__AgentCore_run_host_tool_impl(port, ptr, rust_vec_len, data_len),
-        31 => wire__crate__api__AgentCore_shutdown_impl(port, ptr, rust_vec_len, data_len),
-        32 => wire__crate__api__AgentCore_shutdown_for_data_clear_impl(
+        31 => wire__crate__api__AgentCore_run_host_tool_impl(port, ptr, rust_vec_len, data_len),
+        32 => wire__crate__api__AgentCore_shutdown_impl(port, ptr, rust_vec_len, data_len),
+        33 => wire__crate__api__AgentCore_shutdown_for_data_clear_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        33 => {
+        34 => {
             wire__crate__api__AgentCore_submit_host_progress_impl(port, ptr, rust_vec_len, data_len)
         }
-        34 => {
+        35 => {
             wire__crate__api__AgentCore_submit_host_result_impl(port, ptr, rust_vec_len, data_len)
         }
-        35 => wire__crate__api__AgentCore_tool_definitions_impl(port, ptr, rust_vec_len, data_len),
-        36 => {
+        36 => wire__crate__api__AgentCore_tool_definitions_impl(port, ptr, rust_vec_len, data_len),
+        37 => {
             wire__crate__api__AgentCore_use_draft_attachment_impl(port, ptr, rust_vec_len, data_len)
         }
-        37 => wire__crate__api__AgentCore_verify_attachment_impl(port, ptr, rust_vec_len, data_len),
-        38 => wire__crate__api__AgentCore_watch_events_impl(port, ptr, rust_vec_len, data_len),
-        39 => wire__crate__api__AgentCore_write_attachment_impl(port, ptr, rust_vec_len, data_len),
-        41 => wire__crate__api__execution__ExecutionEventSubscription_watch_impl(
+        38 => wire__crate__api__AgentCore_verify_attachment_impl(port, ptr, rust_vec_len, data_len),
+        39 => wire__crate__api__AgentCore_watch_events_impl(port, ptr, rust_vec_len, data_len),
+        40 => wire__crate__api__AgentCore_write_attachment_impl(port, ptr, rust_vec_len, data_len),
+        42 => wire__crate__api__execution__ExecutionEventSubscription_watch_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        43 => wire__crate__api__files__FileAccessHandle_append_content_impl(
+        44 => wire__crate__api__files__FileAccessHandle_append_content_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        44 => wire__crate__api__files__FileAccessHandle_begin_content_impl(
+        45 => wire__crate__api__files__FileAccessHandle_begin_content_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        46 => wire__crate__api__files__FileAccessHandle_capabilities_impl(
+        47 => wire__crate__api__files__FileAccessHandle_capabilities_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        47 => {
+        48 => {
             wire__crate__api__files__FileAccessHandle_close_impl(port, ptr, rust_vec_len, data_len)
         }
-        48 => wire__crate__api__files__FileAccessHandle_close_cursor_impl(
+        49 => wire__crate__api__files__FileAccessHandle_close_cursor_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        49 => wire__crate__api__files__FileAccessHandle_discard_content_impl(
+        50 => wire__crate__api__files__FileAccessHandle_discard_content_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        50 => wire__crate__api__files__FileAccessHandle_finish_content_impl(
+        51 => wire__crate__api__files__FileAccessHandle_finish_content_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        51 => wire__crate__api__files__FileAccessHandle_inspect_impl(
+        52 => wire__crate__api__files__FileAccessHandle_inspect_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        52 => {
+        53 => {
             wire__crate__api__files__FileAccessHandle_list_impl(port, ptr, rust_vec_len, data_len)
         }
-        53 => wire__crate__api__files__FileAccessHandle_prepare_write_impl(
+        54 => wire__crate__api__files__FileAccessHandle_prepare_write_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        54 => wire__crate__api__files__FileAccessHandle_read_snapshot_impl(
+        55 => wire__crate__api__files__FileAccessHandle_read_snapshot_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        55 => {
+        56 => {
             wire__crate__api__files__FileAccessHandle_search_impl(port, ptr, rust_vec_len, data_len)
         }
-        56 => wire__crate__api__files__FileAccessHandle_snapshot_impl(
+        57 => wire__crate__api__files__FileAccessHandle_snapshot_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        57 => wire__crate__api__files__FileAccessHandle_snapshot_info_impl(
+        58 => wire__crate__api__files__FileAccessHandle_snapshot_info_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        63 => wire__crate__api__execution__PreparedExecutionHandle_start_once_impl(
+        64 => wire__crate__api__execution__PreparedExecutionHandle_start_once_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        67 => wire__crate__api__files__PreparedFileWriteHandle_start_once_impl(
+        68 => wire__crate__api__files__PreparedFileWriteHandle_start_once_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        70 => wire__crate__api__ui__UiContributionSubscription_watch_impl(
+        71 => wire__crate__api__ui__UiContributionSubscription_watch_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        71 => wire__crate__api__contracts__command_result_default_impl(
+        72 => wire__crate__api__contracts__command_result_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        72 => wire__crate__api__management_contracts__conversation_selection_default_impl(
+        73 => wire__crate__api__management_contracts__conversation_selection_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        73 => wire__crate__api__contracts__query_result_default_impl(
+        74 => wire__crate__api__contracts__query_result_default_impl(
             port,
             ptr,
             rust_vec_len,
@@ -10186,63 +10328,63 @@ fn pde_ffi_dispatcher_sync_impl(
         }
         18 => wire__crate__api__AgentCore_open_file_access_impl(ptr, rust_vec_len, data_len),
         19 => wire__crate__api__AgentCore_open_ui_contributions_impl(ptr, rust_vec_len, data_len),
-        40 => wire__crate__api__execution__ExecutionEventSubscription_close_impl(
+        41 => wire__crate__api__execution__ExecutionEventSubscription_close_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        42 => wire__crate__api__execution__ExecutionPreparationCancellation_cancel_impl(
+        43 => wire__crate__api__execution__ExecutionPreparationCancellation_cancel_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        45 => wire__crate__api__files__FileAccessHandle_cancel_impl(ptr, rust_vec_len, data_len),
-        58 => wire__crate__api__execution__PreparedExecutionHandle_cancel_impl(
+        46 => wire__crate__api__files__FileAccessHandle_cancel_impl(ptr, rust_vec_len, data_len),
+        59 => wire__crate__api__execution__PreparedExecutionHandle_cancel_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        59 => wire__crate__api__execution__PreparedExecutionHandle_execution_id_impl(
+        60 => wire__crate__api__execution__PreparedExecutionHandle_execution_id_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        60 => wire__crate__api__execution__PreparedExecutionHandle_open_events_impl(
+        61 => wire__crate__api__execution__PreparedExecutionHandle_open_events_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        61 => wire__crate__api__execution__PreparedExecutionHandle_preview_impl(
+        62 => wire__crate__api__execution__PreparedExecutionHandle_preview_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        62 => wire__crate__api__execution__PreparedExecutionHandle_receipt_impl(
+        63 => wire__crate__api__execution__PreparedExecutionHandle_receipt_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        64 => wire__crate__api__files__PreparedFileWriteHandle_cancel_impl(
+        65 => wire__crate__api__files__PreparedFileWriteHandle_cancel_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        65 => wire__crate__api__files__PreparedFileWriteHandle_preview_impl(
+        66 => wire__crate__api__files__PreparedFileWriteHandle_preview_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        66 => wire__crate__api__files__PreparedFileWriteHandle_receipt_impl(
+        67 => wire__crate__api__files__PreparedFileWriteHandle_receipt_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        68 => wire__crate__api__files__PreparedFileWriteHandle_write_id_impl(
+        69 => wire__crate__api__files__PreparedFileWriteHandle_write_id_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        69 => {
+        70 => {
             wire__crate__api__ui__UiContributionSubscription_close_impl(ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
@@ -12273,6 +12415,49 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::contracts::ModelProtocol>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::execution_contracts::OfficeDocumentFormat {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Docx => 0.into_dart(),
+            Self::Xlsx => 1.into_dart(),
+            Self::Pptx => 2.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::execution_contracts::OfficeDocumentFormat
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::execution_contracts::OfficeDocumentFormat>
+    for crate::api::execution_contracts::OfficeDocumentFormat
+{
+    fn into_into_dart(self) -> crate::api::execution_contracts::OfficeDocumentFormat {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::execution_contracts::OfficeReadTaskRequest {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.source.into_into_dart().into_dart(),
+            self.format.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::execution_contracts::OfficeReadTaskRequest
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::execution_contracts::OfficeReadTaskRequest>
+    for crate::api::execution_contracts::OfficeReadTaskRequest
+{
+    fn into_into_dart(self) -> crate::api::execution_contracts::OfficeReadTaskRequest {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::contracts::OfflineModelReply {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -12345,7 +12530,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::execution_contracts::PythonTa
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.name.into_into_dart().into_dart(),
-            self.content_id.into_into_dart().into_dart(),
+            self.source.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -12503,6 +12688,48 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::contracts::RunPresentation>
     for crate::api::contracts::RunPresentation
 {
     fn into_into_dart(self) -> crate::api::contracts::RunPresentation {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::execution_contracts::TaskInputSource {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.kind.into_into_dart().into_dart(),
+            self.id.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::execution_contracts::TaskInputSource
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::execution_contracts::TaskInputSource>
+    for crate::api::execution_contracts::TaskInputSource
+{
+    fn into_into_dart(self) -> crate::api::execution_contracts::TaskInputSource {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::execution_contracts::TaskInputSourceKind {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Content => 0.into_dart(),
+            Self::Attachment => 1.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::execution_contracts::TaskInputSourceKind
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::execution_contracts::TaskInputSourceKind>
+    for crate::api::execution_contracts::TaskInputSourceKind
+{
+    fn into_into_dart(self) -> crate::api::execution_contracts::TaskInputSourceKind {
         self
     }
 }
@@ -16790,6 +17017,34 @@ impl SseEncode for crate::api::contracts::ModelProtocol {
     }
 }
 
+impl SseEncode for crate::api::execution_contracts::OfficeDocumentFormat {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::execution_contracts::OfficeDocumentFormat::Docx => 0,
+                crate::api::execution_contracts::OfficeDocumentFormat::Xlsx => 1,
+                crate::api::execution_contracts::OfficeDocumentFormat::Pptx => 2,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::api::execution_contracts::OfficeReadTaskRequest {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::execution_contracts::TaskInputSource>::sse_encode(self.source, serializer);
+        <crate::api::execution_contracts::OfficeDocumentFormat>::sse_encode(
+            self.format,
+            serializer,
+        );
+    }
+}
+
 impl SseEncode for crate::api::contracts::OfflineModelReply {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -17545,7 +17800,7 @@ impl SseEncode for crate::api::execution_contracts::PythonTaskInput {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.name, serializer);
-        <String>::sse_encode(self.content_id, serializer);
+        <crate::api::execution_contracts::TaskInputSource>::sse_encode(self.source, serializer);
     }
 }
 
@@ -17728,6 +17983,30 @@ impl SseEncode for crate::api::contracts::RunPresentation {
         );
         <bool>::sse_encode(self.compacting, serializer);
         <Option<String>>::sse_encode(self.reply_target_message_id, serializer);
+    }
+}
+
+impl SseEncode for crate::api::execution_contracts::TaskInputSource {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::api::execution_contracts::TaskInputSourceKind>::sse_encode(self.kind, serializer);
+        <String>::sse_encode(self.id, serializer);
+    }
+}
+
+impl SseEncode for crate::api::execution_contracts::TaskInputSourceKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::api::execution_contracts::TaskInputSourceKind::Content => 0,
+                crate::api::execution_contracts::TaskInputSourceKind::Attachment => 1,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
     }
 }
 

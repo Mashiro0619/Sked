@@ -16,7 +16,7 @@ use windows_sys::Win32::Storage::FileSystem::{
 use super::{error, io_error};
 use crate::execution::{
     ExecutionEnvironment, ExecutionErrorCode, ExecutionProviderIdentity, Result,
-    environment_names_equal,
+    environment_names_equal, office,
 };
 
 #[derive(Deserialize)]
@@ -28,6 +28,16 @@ struct Manifest {
     archive_digest: String,
     dependencies: BTreeMap<String, String>,
     files: BTreeMap<String, String>,
+}
+
+pub(super) fn office_available(directory: &Path) -> bool {
+    std::fs::read(directory.join("manifest.json"))
+        .ok()
+        .and_then(|bytes| serde_json::from_slice::<Manifest>(&bytes).ok())
+        .is_some_and(|manifest| {
+            manifest.dependencies == *office::bundled_dependencies()
+                && manifest.files.contains_key("office_inspect.py")
+        })
 }
 
 pub(super) struct RuntimeBundle {

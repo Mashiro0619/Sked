@@ -42,6 +42,27 @@ class FileToolAdapters {
     ),
   );
 
+  Future<Map<String, Object?>> readNativeContent({
+    required OperationScope scope,
+    required FileResourceRef source,
+    required String name,
+    required String mediaType,
+    required String expectedSha256,
+    required int expectedByteLength,
+  }) => _fileCall(
+    () => _read(
+      {
+        'resource': fileResourceJson(source),
+        'format': 'native',
+        'name': name,
+        'mediaType': mediaType,
+      },
+      scope,
+      expectedSha256: expectedSha256,
+      expectedByteLength: expectedByteLength,
+    ),
+  );
+
   /// Called after core initialization and before publishing the host catalog.
   void registerAvailable(FileAvailability availability) {
     _resourceKinds = availability.available

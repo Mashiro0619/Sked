@@ -103,6 +103,13 @@ abstract class AgentCore implements RustOpaqueInterface {
     required ControlledReadExecutionRequest request,
   });
 
+  /// Freeze an existing conversation file for the provider's fixed reader.
+  Future<PreparedExecutionHandle> prepareOfficeReadTask({
+    required String conversationId,
+    required OfficeReadTaskRequest request,
+    required ExecutionPreparationCancellation cancellation,
+  });
+
   /// Captures a preview; the Dart operation coordinator owns approval and
   /// calls the returned handle only after its existing admission checks.
   Future<PreparedExecutionHandle> preparePythonExecution({

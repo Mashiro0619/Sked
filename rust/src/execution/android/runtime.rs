@@ -6,7 +6,7 @@ use tokio_util::sync::CancellationToken;
 
 use super::{bridge, error, io_error};
 use crate::execution::{
-    ExecutionEnvironment, ExecutionErrorCode, ExecutionProviderIdentity, Result,
+    ExecutionEnvironment, ExecutionErrorCode, ExecutionProviderIdentity, Result, office,
 };
 
 #[derive(Clone, PartialEq, Eq, Deserialize, Serialize)]
@@ -116,13 +116,15 @@ impl Runtime {
         variables.insert("CHAQUOPY_PROCESS_TYPE".into(), "java".into());
         let material = serde_json::to_vec(&("sked.android-python/1", &info, &digests, &variables))
             .map_err(|failure| error(ExecutionErrorCode::InvalidSpec, failure.to_string()))?;
+        let mut dependencies = office::bundled_dependencies().clone();
+        dependencies.insert("chaquopy".into(), info.chaquopy_version.clone());
         let environment = ExecutionEnvironment {
             provider,
             platform: "android".into(),
             architecture: std::env::consts::ARCH.into(),
             interpreter: "CPython".into(),
             interpreter_version: info.python_version.clone(),
-            dependencies: BTreeMap::from([("chaquopy".into(), info.chaquopy_version.clone())]),
+            dependencies,
             environment_digest: format!("{:x}", Sha256::digest(material)),
         };
         Ok(Self {

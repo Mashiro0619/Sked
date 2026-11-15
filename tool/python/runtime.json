@@ -3,5 +3,78 @@
   "architecture": "x86_64",
   "url": "https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip",
   "sha256": "009d6bf7e3b2ddca3d784fa09f90fe54336d5b60f0e0f305c37f400bf83cfd3b",
-  "dependencies": {}
+  "dependencies": {
+    "python-docx": "1.2.0",
+    "openpyxl": "3.1.5",
+    "python-pptx": "1.0.2",
+    "lxml": "5.3.0",
+    "pillow": "11.0.0",
+    "typing-extensions": "4.15.0",
+    "et-xmlfile": "2.0.0",
+    "xlsxwriter": "3.2.5"
+  },
+  "androidDependencies": {
+    "python-docx": "1.2.0",
+    "openpyxl": "3.1.5",
+    "python-pptx": "1.0.2",
+    "lxml": "5.3.0",
+    "pillow": "11.0.0",
+    "typing-extensions": "4.15.0",
+    "et-xmlfile": "2.0.0",
+    "xlsxwriter": "3.2.5",
+    "chaquopy-libxslt": "1.1.32",
+    "chaquopy-libxml2": "2.9.8",
+    "chaquopy-freetype": "2.9.1",
+    "chaquopy-libjpeg": "1.5.3"
+  },
+  "windowsWheels": [
+    {
+      "package": "python-docx",
+      "file": "python_docx-1.2.0-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/d0/00/1e03a4989fa5795da308cd774f05b704ace555a70f9bf9d3be057b680bcf/python_docx-1.2.0-py3-none-any.whl",
+      "sha256": "3fd478f3250fbbbfd3b94fe1e985955737c145627498896a8a6bf81f4baf66c7"
+    },
+    {
+      "package": "openpyxl",
+      "file": "openpyxl-3.1.5-py2.py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/c0/da/977ded879c29cbd04de313843e76868e6e13408a94ed6b987245dc7c8506/openpyxl-3.1.5-py2.py3-none-any.whl",
+      "sha256": "5282c12b107bffeef825f4617dc029afaf41d0ea60823bbb665ef3079dc79de2"
+    },
+    {
+      "package": "python-pptx",
+      "file": "python_pptx-1.0.2-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/d9/4f/00be2196329ebbff56ce564aa94efb0fbc828d00de250b1980de1a34ab49/python_pptx-1.0.2-py3-none-any.whl",
+      "sha256": "160838e0b8565a8b1f67947675886e9fea18aa5e795db7ae531606d68e785cba"
+    },
+    {
+      "package": "lxml",
+      "file": "lxml-5.3.0-cp311-cp311-win_amd64.whl",
+      "url": "https://files.pythonhosted.org/packages/c3/b5/91c2249bfac02ee514ab135e9304b89d55967be7e53e94a879b74eec7a5c/lxml-5.3.0-cp311-cp311-win_amd64.whl",
+      "sha256": "9c52100e2c2dbb0649b90467935c4b0de5528833c76a35ea1a2691ec9f1ee7a1"
+    },
+    {
+      "package": "pillow",
+      "file": "pillow-11.0.0-cp311-cp311-win_amd64.whl",
+      "url": "https://files.pythonhosted.org/packages/dc/83/1470c220a4ff06cd75fc609068f6605e567ea51df70557555c2ab6516b2c/pillow-11.0.0-cp311-cp311-win_amd64.whl",
+      "sha256": "52a2d8323a465f84faaba5236567d212c3668f2ab53e1c74c15583cf507a0291"
+    },
+    {
+      "package": "typing-extensions",
+      "file": "typing_extensions-4.15.0-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/18/67/36e9267722cc04a6b9f15c7f3441c2363321a3ea07da7ae0c0707beb2a9c/typing_extensions-4.15.0-py3-none-any.whl",
+      "sha256": "f0fa19c6845758ab08074a0cfa8b7aecb71c999ca73d62883bc25cc018c4e548"
+    },
+    {
+      "package": "et-xmlfile",
+      "file": "et_xmlfile-2.0.0-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/c1/8b/5fe2cc11fee489817272089c4203e679c63b570a5aaeb18d852ae3cbba6a/et_xmlfile-2.0.0-py3-none-any.whl",
+      "sha256": "7a91720bc756843502c3b7504c77b8fe44217c85c537d85037f0f536151b2caa"
+    },
+    {
+      "package": "xlsxwriter",
+      "file": "xlsxwriter-3.2.5-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/fa/34/a22e6664211f0c8879521328000bdcae9bf6dbafa94a923e531f6d5b3f73/xlsxwriter-3.2.5-py3-none-any.whl",
+      "sha256": "4f4824234e1eaf9d95df9a8fe974585ff91d0f5e3d3f12ace5b71e443c1c6abd"
+    }
+  ]
 }

@@ -60,7 +60,7 @@ pub(super) fn descriptors() -> Vec<ToolDescriptor> {
         ),
         descriptor(
             "conversation.get",
-            "Read the current conversation's metadata, plan, pending question, and queue.",
+            "Read the current conversation's metadata, plan, pending question, queue, and sent attachment IDs and file metadata for office.read or python.execute.",
             json!({}),
             &[],
         ),

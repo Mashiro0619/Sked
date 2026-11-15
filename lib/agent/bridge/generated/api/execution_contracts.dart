@@ -617,6 +617,26 @@ class ExecutionResourceVersion {
 
 enum ExecutionTerminal { notStarted, exited, cancelled, lost }
 
+enum OfficeDocumentFormat { docx, xlsx, pptx }
+
+class OfficeReadTaskRequest {
+  final TaskInputSource source;
+  final OfficeDocumentFormat format;
+
+  const OfficeReadTaskRequest({required this.source, required this.format});
+
+  @override
+  int get hashCode => source.hashCode ^ format.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is OfficeReadTaskRequest &&
+          runtimeType == other.runtimeType &&
+          source == other.source &&
+          format == other.format;
+}
+
 class PythonExecutionRequest {
   final String code;
   final List<String> argv;
@@ -676,12 +696,12 @@ class PythonTaskEnvironment {
 
 class PythonTaskInput {
   final String name;
-  final String contentId;
+  final TaskInputSource source;
 
-  const PythonTaskInput({required this.name, required this.contentId});
+  const PythonTaskInput({required this.name, required this.source});
 
   @override
-  int get hashCode => name.hashCode ^ contentId.hashCode;
+  int get hashCode => name.hashCode ^ source.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -689,7 +709,7 @@ class PythonTaskInput {
       other is PythonTaskInput &&
           runtimeType == other.runtimeType &&
           name == other.name &&
-          contentId == other.contentId;
+          source == other.source;
 }
 
 class PythonTaskRequest {
@@ -726,3 +746,23 @@ class PythonTaskRequest {
           inputs == other.inputs &&
           environment == other.environment;
 }
+
+class TaskInputSource {
+  final TaskInputSourceKind kind;
+  final String id;
+
+  const TaskInputSource({required this.kind, required this.id});
+
+  @override
+  int get hashCode => kind.hashCode ^ id.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TaskInputSource &&
+          runtimeType == other.runtimeType &&
+          kind == other.kind &&
+          id == other.id;
+}
+
+enum TaskInputSourceKind { content, attachment }

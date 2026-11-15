@@ -35,4 +35,6 @@ Manifest 记录稳定 ID、内容版本、用途、触发提示、资源路径�
 
 更新内置 Skill 时同步 manifest 摘要和依赖，核对公开工具名称及权限说明；更新工具契约时同时修订相关技能，移除已退役调用。
 
+`office-docx`、`office-xlsx`、`office-pptx` 共享技能分别指导 Word、Excel、PowerPoint 的内容读取、创建和常规修改。读取使用 `office.read`，写文件使用 `python.execute`，完整内容通过 `content.read` 继续读取。库和平台行为见[办公文档](AGENT_OFFICE.md)。
+
 验证入口：[资产打包](../test/agent/skills/bundled_skill_assets_test.dart)、[装载器](../test/agent/skills/shared_skill_loader_test.dart)、[发现与加载](../test/agent/tools/skill_discovery_contract_test.dart)、[原生技能快照与工具旅程](../rust/src/runtime/journey.rs)。真实模型任务按[Rust 迁移方案](AGENT_RUST_MIGRATION.md)保持暂停。

@@ -106,6 +106,7 @@ add_custom_command(
     "${SKED_PYTHON_SOURCE}/runtime.json"
     "${SKED_PYTHON_SOURCE}/bootstrap.py"
     "${SKED_PYTHON_SOURCE}/sked_runtime.py"
+    "${SKED_PYTHON_SOURCE}/office_inspect.py"
   COMMENT "Preparing bundled CPython"
   VERBATIM)
 add_custom_target(sked_python_runtime ALL DEPENDS "${SKED_PYTHON_RUNTIME}/manifest.json")

@@ -10,9 +10,11 @@ mod host;
 pub mod management;
 pub mod management_contracts;
 pub mod models;
+pub mod office_task;
 #[cfg(test)]
 mod provider_failure_tests;
 pub mod python_task;
+mod task_inputs;
 pub mod ui;
 pub mod ui_contracts;
 #[cfg(test)]

@@ -43,6 +43,7 @@ pub struct CompactionPlan {
     pub retained_history: Vec<Value>,
     pub attachments: Vec<AttachmentMetadata>,
     pub summarized_content: Vec<super::ContextContent>,
+    pub summarized_attachment_ids: Vec<String>,
     pub content_index: String,
     pub tokens_before: u64,
 }

@@ -101,6 +101,7 @@ Agent 纳入现有功能管理，使用一个开关控制启用与入口显示�
 | 工具内容 | 保存原文件与来源、按内容 ID 继续读取正文、发送支持的完整媒体 | `files.read` 将内容关联原工具消息；`content.read` 从当前会话及其历史引用重读已保存附件。同运行注入、压缩、重生成、备份和回收共用[持久内容](AGENT_CONTENT.md)。 |
 | 公开网页与附件 | 抓取正文、提取链接、继续访问链接及下载附件 | `web.fetch` 使用独立网页 Provider，记录原始与最终地址、抓取时间及网站提供的发布日期证据。正文、链接索引和附件接入同一内容保存链，后续通过 `content.read` 读取原内容；详见[网页与来源](AGENT_WEB.md)。 |
 | Windows／Android Python | 执行脚本、读取完整文件输入、生成与登记文件、保存标准输出和错误输出 | `python.execute` 通过现有三种权限启动随包 CPython；Android 使用独立 Service。准备、排队与执行均响应停止，恢复查询原回执。文件输入、产物位置和输出续读见[Python 执行](AGENT_EXECUTION.md)。 |
+| Office 文档 | 读取、创建和常规修改 DOCX、XLSX、PPTX | `office.read` 使用固定只读入口；创建与修改通过 `python.execute` 使用随包库。共享 Skills 指导处理、检查与文件登记，见[办公文档](AGENT_OFFICE.md)。 |
 | 选择性备份 | 按对象生成 ZIP、读取备份清单和依赖、选择恢复、查询恢复进度及待恢复状态 | [AppBackupController](../lib/controllers/app_backup_controller.dart)与[选择性备份服务](../lib/backup/selective_backup_service.dart)共用应用维护门禁。主库、站点、设备偏好、知识、聊天和附件分别记录固定目标及阶段；未选对象保留，聊天只恢复历史，密钥与执行授权不导出。旧 JSON 进入同一选择页，兼容整体恢复 API 另行保留。 |
 | 应用数据清除 | 描述清除范围、执行清除和退出、回报实际清除/退出状态 | [AppDataClearCoordinator](../lib/services/app_data_clear_coordinator.dart)。涉及主存档、侧存储、学校网页、设备偏好与通知；不能只写一个空 AppData 后回报全部清除成功。 |
 | 恢复与维护 | 读取诊断、重试加载、导出受控恢复工件、按既有条件开始新存档、重建通知投影 | [AppLifecycle](../lib/controllers/app_lifecycle.dart)、`AppRepository` 及现有维护服务。只暴露语义动作，不允许改写恢复阶段、文件候选顺序或写门禁状态。 |

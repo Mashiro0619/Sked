@@ -8,6 +8,7 @@ import '../provider/provider_models.dart';
 import 'application_tool_host.dart';
 import 'application_tool_result.dart';
 import 'file_tool_adapters.dart';
+import 'task_input_source.dart';
 
 class PythonToolAdapters {
   PythonToolAdapters({
@@ -31,7 +32,7 @@ class PythonToolAdapters {
         name: 'python.execute',
         description:
             'Run Python with the bundled interpreter. The host previews the exact code and inputs in plan mode, asks once in confirmation mode, and executes in full mode. '
-            'cwd is an existing directory. inputs names map to complete saved contentId files through from sked_runtime import inputs. '
+            'cwd is an existing directory. inputs names map to complete saved files through from sked_runtime import inputs. Each source uses kind content with a contentId, or kind attachment with an ID from a sent message. '
             'Use from sked_runtime import output_dir, publish to create and register result files; publish(path, name=None, media_type=None) records their actual location. '
             'stdout and stderr are saved as durable content; use content.read for further text. A nonzero exit or cancellation does not undo file changes.',
         parameters: {
@@ -64,16 +65,13 @@ class PythonToolAdapters {
               'items': {
                 'type': 'object',
                 'additionalProperties': false,
-                'required': ['name', 'contentId'],
+                'required': ['name', 'source'],
                 'properties': {
                   'name': {
                     'type': 'string',
                     'description': 'Input key used as inputs[name] in Python.',
                   },
-                  'contentId': {
-                    'type': 'string',
-                    'description': 'Saved contentId from files.read, web.fetch, or content.read. The complete file is supplied, including text beyond the displayed page.',
-                  },
+                  'source': taskInputSourceSchema,
                 },
               },
             },
@@ -190,10 +188,10 @@ PythonTaskRequest _request(Map<String, Object?> args) {
 
 PythonTaskInput _input(Object? value, String field) {
   final input = _object(value, field);
-  _keys(input, {'name', 'contentId'}, field: field);
+  _keys(input, {'name', 'source'}, field: field);
   return PythonTaskInput(
     name: _string(input['name'], '$field.name'),
-    contentId: _string(input['contentId'], '$field.contentId'),
+    source: parseTaskInputSource(input['source'], '$field.source'),
   );
 }
 

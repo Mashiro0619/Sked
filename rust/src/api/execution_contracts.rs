@@ -227,7 +227,32 @@ impl From<internal::ExecutionEnvironment> for ExecutionEnvironmentSnapshot {
 #[derive(Clone)]
 pub struct PythonTaskInput {
     pub name: String,
-    pub content_id: String,
+    pub source: TaskInputSource,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum TaskInputSourceKind {
+    Content,
+    Attachment,
+}
+
+#[derive(Clone)]
+pub struct TaskInputSource {
+    pub kind: TaskInputSourceKind,
+    pub id: String,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum OfficeDocumentFormat {
+    Docx,
+    Xlsx,
+    Pptx,
+}
+
+#[derive(Clone)]
+pub struct OfficeReadTaskRequest {
+    pub source: TaskInputSource,
+    pub format: OfficeDocumentFormat,
 }
 
 #[derive(Clone)]

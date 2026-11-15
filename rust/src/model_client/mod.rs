@@ -122,7 +122,26 @@ impl RigModelClient {
         if input.iter().any(|value| guard.contains_value(value)) {
             return Err("会话内容包含当前连接凭据，已停止请求".into());
         }
-        executor.validate_input(input, config.protocol).await?;
+        executor
+            .validate_input(input.clone(), config.protocol)
+            .await?;
+        let original_input = Arc::new(OriginalInput(
+            input
+                .iter()
+                .cloned()
+                .map(serde_json::from_value)
+                .collect::<Result<Vec<Message>, _>>()
+                .map_err(|error| error.to_string())?,
+        ));
+        let mut projected = executor.project_input(input, config.protocol).await?;
+        if projected.len() != original_input.0.len() {
+            return Err("附件投影改变了输入消息数量".into());
+        }
+        if projected.iter().any(|value| guard.contains_value(value)) {
+            return Err("附件元数据包含当前连接凭据，已停止请求".into());
+        }
+        let prompt: Message = serde_json::from_value(projected.pop().expect("input has a prompt"))
+            .map_err(|error| error.to_string())?;
         let transport = EndpointTransport {
             inner: self.transport.clone(),
             endpoint,
@@ -136,14 +155,13 @@ impl RigModelClient {
             ProviderProtocol::ChatCompletions => client.chat(config.model.clone()).into(),
             ProviderProtocol::Responses => client.responses(config.model.clone()).into(),
         };
-        let native_history: Vec<Message> = history
-            .iter()
-            .cloned()
+        let native_history: Vec<Message> = projected
+            .into_iter()
             .map(serde_json::from_value)
             .collect::<Result<_, _>>()
             .map_err(|e| format!("会话模型历史无法读取：{e}"))?;
         let state = Arc::new(Mutex::new(RunObservation {
-            history: native_history.clone(),
+            history: original_input.0[..original_input.0.len() - 1].to_vec(),
             dispatch: None,
             call_scope: String::new(),
         }));
@@ -208,6 +226,7 @@ impl RigModelClient {
                 executor,
                 connection: ConnectionIdentity::from_config(config),
                 guard,
+                original_input: original_input.clone(),
             });
         if let Some(effort) = config.reasoning_effort.as_ref().filter(|e| !e.is_empty()) {
             builder = builder.additional_params(match config.protocol {
@@ -271,17 +290,15 @@ impl RigModelClient {
                     let _ = events.send(ModelEvent::Reset);
                 }
                 Ok(MultiTurnStreamItem::FinalResponse(response)) => {
-                    let mut full_history = history;
-                    full_history.extend(
-                        response
-                            .messages
+                    let mut full_history = original_input.0[..original_input.0.len() - 1].to_vec();
+                    full_history.extend(response.messages.iter().cloned());
+                    original_input.restore(&mut full_history);
+                    return Ok(ModelRunResult {
+                        history: full_history
                             .iter()
                             .map(serde_json::to_value)
                             .collect::<Result<Vec<_>, _>>()
-                            .map_err(|e| e.to_string())?,
-                    );
-                    return Ok(ModelRunResult {
-                        history: full_history,
+                            .map_err(|error| error.to_string())?,
                         text: response.output(),
                         usage: token_usage(response.usage),
                         cancelled: cancellation.is_cancelled(),
@@ -292,7 +309,7 @@ impl RigModelClient {
                 }
                 Err(error) => {
                     let provider_failure = provider_failure::from_prompt(&error, &config.api_key);
-                    let history = match &error {
+                    let mut history = match &error {
                         PromptError::Cancelled { chat_history, .. }
                         | PromptError::UnknownToolCall { chat_history, .. }
                         | PromptError::MaxTurns { chat_history, .. } => chat_history.clone(),
@@ -302,6 +319,7 @@ impl RigModelClient {
                             .history
                             .clone(),
                     };
+                    original_input.restore(&mut history);
                     let paused_for_compaction = matches!(&error, PromptError::Cancelled { reason, .. } if reason == "sked_context_compaction");
                     return Ok(ModelRunResult {
                         history: history
@@ -325,6 +343,18 @@ impl RigModelClient {
             }
         }
         Err("模型流在终态前结束".into())
+    }
+}
+
+/// Rig sends a projected copy of the initial input. Events and returned history
+/// retain the caller's original prefix, including every saved media reference.
+struct OriginalInput(Vec<Message>);
+
+impl OriginalInput {
+    fn restore(&self, history: &mut [Message]) {
+        for (message, original) in history.iter_mut().zip(&self.0) {
+            *message = original.clone();
+        }
     }
 }
 
@@ -355,6 +385,7 @@ struct RunHook {
     executor: Arc<dyn ModelToolExecutor>,
     connection: ConnectionIdentity,
     guard: CredentialGuard,
+    original_input: Arc<OriginalInput>,
 }
 
 impl RunHook {
@@ -392,12 +423,13 @@ impl AgentHook for RunHook {
         ctx: &HookContext,
         event: CompletionCallEvent<'_>,
     ) -> CompletionCallAction {
-        let history: Vec<Message> = event
+        let mut history: Vec<Message> = event
             .history
             .iter()
             .map(|message| (**message).clone())
             .chain(std::iter::once(event.prompt.clone()))
             .collect();
+        self.original_input.restore(&mut history);
         {
             let mut state = self.state.lock().expect("model observation mutex poisoned");
             state.history = history.clone();
@@ -489,6 +521,7 @@ impl AgentHook for RunHook {
                     let mut state = self.state.lock().expect("model observation mutex poisoned");
                     state.call_scope = format!("{}:{}", ctx.run_id(), ctx.turn());
                     state.history = event.chat_history.clone();
+                    self.original_input.restore(&mut state.history);
                     assistant
                         .tool_calls()
                         .map(|call| state.local_call_id(&call.id.to_string()))

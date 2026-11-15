@@ -159,6 +159,16 @@ pub trait ModelToolExecutor: Send + Sync {
         Box::pin(async { Ok(()) })
     }
 
+    /// Keep message order and count while projecting application-owned media
+    /// into the input accepted by this protocol. Stored history stays original.
+    fn project_input(
+        &self,
+        input: Vec<Value>,
+        _protocol: ProviderProtocol,
+    ) -> BoxFuture<'static, Result<Vec<Value>, String>> {
+        Box::pin(async move { Ok(input) })
+    }
+
     fn execute(
         &self,
         name: String,

@@ -21,7 +21,44 @@ try {
     }
     $runtimePath = Join-Path $stagingPath 'python'
     Expand-Archive -LiteralPath $archivePath -DestinationPath $runtimePath
-    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'bootstrap.py'), (Join-Path $PSScriptRoot 'sked_runtime.py') -Destination $runtimePath
+    $sitePackages = Join-Path $runtimePath 'Lib/site-packages'
+    New-Item -ItemType Directory -Path $sitePackages -Force | Out-Null
+    foreach ($wheel in $configuration.windowsWheels) {
+        $wheelPath = Join-Path $stagingPath $wheel.file
+        Invoke-WebRequest -Uri $wheel.url -OutFile $wheelPath
+        if ((Get-FileHash -LiteralPath $wheelPath -Algorithm SHA256).Hash.ToLowerInvariant() -ne $wheel.sha256) {
+            throw "The downloaded $($wheel.package) wheel does not match runtime.json."
+        }
+        $wheelArchive = [IO.Compression.ZipFile]::OpenRead($wheelPath)
+        try {
+            foreach ($entry in $wheelArchive.Entries) {
+                if ($entry.FullName.EndsWith('/')) { continue }
+                $destinationRoot = $sitePackages
+                $relativePath = $entry.FullName
+                if ($relativePath -match '^[^/]+\.data/([^/]+)/(.*)$') {
+                    $relativePath = $Matches[2]
+                    switch ($Matches[1]) {
+                        'scripts' { $destinationRoot = Join-Path $runtimePath 'Scripts' }
+                        'purelib' { }
+                        'platlib' { }
+                        default { throw "Unsupported wheel installation directory: $($entry.FullName)" }
+                    }
+                }
+                $destination = [IO.Path]::GetFullPath((Join-Path $destinationRoot $relativePath))
+                if (-not $destination.StartsWith($destinationRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+                    throw "Wheel entry is outside its installation directory: $($entry.FullName)"
+                }
+                New-Item -ItemType Directory -Path ([IO.Path]::GetDirectoryName($destination)) -Force | Out-Null
+                $sourceStream = $entry.Open()
+                try {
+                    $destinationStream = [IO.File]::Create($destination)
+                    try { $sourceStream.CopyTo($destinationStream) }
+                    finally { $destinationStream.Dispose() }
+                } finally { $sourceStream.Dispose() }
+            }
+        } finally { $wheelArchive.Dispose() }
+    }
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'bootstrap.py'), (Join-Path $PSScriptRoot 'sked_runtime.py'), (Join-Path $PSScriptRoot 'office_inspect.py') -Destination $runtimePath
     $utf8 = New-Object Text.UTF8Encoding($false)
     [IO.File]::WriteAllText((Join-Path $runtimePath 'python311._pth'), "python311.zip`n.`nLib/site-packages`n", $utf8)
     $files = [ordered]@{}

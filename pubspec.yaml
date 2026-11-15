@@ -122,6 +122,9 @@ flutter:
     - assets/agent/skills/manage-school-access/
     - assets/agent/skills/configure-agent-connection/
     - assets/agent/skills/recover-and-undo/
+    - assets/agent/skills/office-docx/
+    - assets/agent/skills/office-xlsx/
+    - assets/agent/skills/office-pptx/
     - NOTICE
 
 flutter_launcher_icons:

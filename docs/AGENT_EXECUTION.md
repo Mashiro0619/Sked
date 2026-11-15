@@ -10,7 +10,7 @@ Windows 环境变量名按系统 Unicode 大小写规则比较，同名变量只
 
 Android 环境变量名区分大小写。执行环境包含 Chaquopy 的应用目录、临时目录和模块环境，任务变量覆盖对应值。模块搜索使用随包依赖与本次工作目录；脚本可通过 `sys.path` 添加其他模块目录。
 
-`inputs` 的每项包含 `name` 和已有的 `contentId`。准备时读取该会话保存的完整附件，生成供本次执行使用的文件快照。网页正文的第一页或 `content.read` 的分页范围不限制脚本能够读取的文件内容。
+`inputs` 的每项包含 `name` 和 `source: {kind, id}`。`kind: content` 对应工具结果中的 `contentId`，`kind: attachment` 对应已经发送的会话附件 ID。准备时读取该会话及历史版本保存的完整文件，生成供本次执行使用的快照。网页正文的第一页或 `content.read` 的分页范围不限制脚本能够读取的文件内容。
 
 脚本通过 `sked_runtime.inputs` 按名称取得这些文件路径。工作目录的真实位置、版本、代码、参数、环境和输入快照一起进入执行预览。
 
@@ -48,3 +48,5 @@ Windows 构建按 [运行时清单](../tool/python/runtime.json) 准备 CPython�
 Android 使用 Chaquopy 17.2.0 和 Python 3.11.17，打包 `armeabi-v7a`、`arm64-v8a` 与 `x86_64`。ABI 按当前进程位数，从安装包实际包含的 Chaquopy 标准库中选择。主界面进程只注册原生桥接，解释器在执行获准后由独立 Service 按需初始化。执行预览固定当前安装包、解释器版本和实际环境。
 
 权限、持久回执和退出流程见[运行说明](AGENT_RUNTIME.md)，文件内容的保存与续读见[内容说明](AGENT_CONTENT.md)。平台接入进度见[插件架构](AGENT_PLUGIN_ARCHITECTURE.md)。
+
+随包 Office 库支持 DOCX、XLSX、PPTX。固定的 `office.read` 在三种权限模式下均可读取文档；创建与修改使用 `python.execute`。参数、内容范围和技能入口见[办公文档](AGENT_OFFICE.md)。

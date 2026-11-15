@@ -143,6 +143,37 @@ impl ModelToolExecutor for TransportExecutor {
         })
     }
 
+    fn project_input(
+        &self,
+        input: Vec<Value>,
+        protocol: ProviderProtocol,
+    ) -> BoxFuture<'static, std::result::Result<Vec<Value>, String>> {
+        let manager = self.manager.clone();
+        let id = self.conversation_id.clone();
+        Box::pin(async move {
+            let snapshot = manager.read(&id).await.map_err(|error| error.to_string())?;
+            let content_sources = snapshot
+                .messages
+                .iter()
+                .chain(
+                    snapshot
+                        .history_versions
+                        .iter()
+                        .flat_map(|version| &version.messages),
+                )
+                .flat_map(|message| &message.tool_content_refs)
+                .map(|reference| (reference.attachment_id.clone(), reference.id.clone()))
+                .collect();
+            crate::context::project_attachments(
+                input,
+                &snapshot.attachments,
+                protocol,
+                &content_sources,
+            )
+            .map_err(|error| error.to_string())
+        })
+    }
+
     fn execute(
         &self,
         name: String,
@@ -328,6 +359,9 @@ impl RuntimeManager {
                         .find(|attachment| attachment.id == id)
                         .ok_or_else(|| format!("attachment_missing: 附件 {id} 不存在"))?;
                     let media = metadata.media_type.as_str();
+                    if !crate::context::native_content_supported(media, protocol) {
+                        continue;
+                    }
                     let kind = match &content {
                         rig::message::UserContent::Image(_)
                             if matches!(

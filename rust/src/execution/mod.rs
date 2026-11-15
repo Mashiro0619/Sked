@@ -6,6 +6,8 @@
 mod android;
 mod contracts;
 mod models;
+#[cfg(any(windows, target_os = "android"))]
+mod office;
 mod prepared;
 mod service;
 mod validation;
