@@ -6,8 +6,8 @@ import 'package:path_provider/path_provider.dart';
 bool get isWindows => Platform.isWindows;
 bool get isAndroid => Platform.isAndroid;
 
-class AndroidOpenCopy {
-  AndroidOpenCopy._(this.path, this._directory);
+class AgentOpenCopy {
+  AgentOpenCopy._(this.path, this._directory);
 
   final String path;
   final Directory _directory;
@@ -15,16 +15,13 @@ class AndroidOpenCopy {
   Future<void> discard() async => _directory.delete(recursive: true);
 }
 
-/// A viewer receives a private copy under the one directory exposed by the
-/// FileProvider. Successful copies stay in the system-managed application cache.
-Future<AndroidOpenCopy> prepareAndroidOpenCopy(
-  String source,
-  String name,
-) async {
-  if (!Platform.isAndroid) {
-    throw UnsupportedError('Android file opening is unavailable.');
+/// A viewer receives a named copy in the application cache. Android exposes
+/// only this directory through its FileProvider; successful copies stay cached.
+Future<AgentOpenCopy> prepareOpenCopy(String source, String name) async {
+  if (!Platform.isAndroid && !Platform.isWindows) {
+    throw UnsupportedError('File viewing copies are unavailable.');
   }
-  if (!paths.posix.isAbsolute(source) ||
+  if (!paths.isAbsolute(source) ||
       name.isEmpty ||
       name == '.' ||
       name == '..' ||
@@ -38,7 +35,7 @@ Future<AndroidOpenCopy> prepareAndroidOpenCopy(
   try {
     final destination = paths.join(directory.path, name);
     await File(source).copy(destination);
-    return AndroidOpenCopy._(destination, directory);
+    return AgentOpenCopy._(destination, directory);
   } catch (_) {
     await directory.delete(recursive: true);
     rethrow;

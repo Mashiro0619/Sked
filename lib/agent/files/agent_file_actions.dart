@@ -26,11 +26,12 @@ class AgentFileActions {
     required FileResourceRef resource,
     required String name,
     String? mediaType,
+    bool useViewingCopy = false,
   }) async {
     if (!supportsOpen(resource)) {
       throw UnsupportedError('This file cannot be opened on this platform.');
     }
-    if (resource.kind == FileResourceKind.windowsPath) {
+    if (resource.kind == FileResourceKind.windowsPath && !useViewingCopy) {
       await _desktop.open(_desktopFile(resource));
       return;
     }
@@ -38,7 +39,18 @@ class AgentFileActions {
       await _openAndroid(resource, name, mediaType);
       return;
     }
-    final copy = await platform.prepareAndroidOpenCopy(resource.value, name);
+    final copy = await platform.prepareOpenCopy(resource.value, name);
+    if (resource.kind == FileResourceKind.windowsPath) {
+      try {
+        await _desktop.open(
+          _desktopFile(FileResourceRef(kind: resource.kind, value: copy.path)),
+        );
+      } on StateError {
+        await copy.discard();
+        rethrow;
+      }
+      return;
+    }
     try {
       await _openAndroid(
         FileResourceRef(kind: FileResourceKind.androidPath, value: copy.path),

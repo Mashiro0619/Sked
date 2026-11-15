@@ -123,7 +123,8 @@ class _FileDeliveryRowState extends State<_FileDeliveryRow> {
           AgentFileActions.supportsOpen(file.resource))
         action(
           'open',
-          file.resource.kind == FileResourceKind.androidPath
+          file.resource.kind == FileResourceKind.androidPath ||
+                  file.state == AgentDeliveryFileState.recovery
               ? l.agentDeliveryOpenCopy
               : l.desktopOpenFile,
           Icons.open_in_new,
@@ -131,6 +132,7 @@ class _FileDeliveryRowState extends State<_FileDeliveryRow> {
             resource: file.resource,
             name: file.name,
             mediaType: file.mediaType,
+            useViewingCopy: file.state == AgentDeliveryFileState.recovery,
           ),
         ),
       if (widget.canOpenLocalFiles &&

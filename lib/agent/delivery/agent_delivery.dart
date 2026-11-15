@@ -151,6 +151,7 @@ Iterable<AgentDeliveryFile> _fileWriteDeliveries(
   final identity = _object(receipt['identity']);
   final writeId = _text(identity?['writeId']);
   if (writeId == null) return;
+  final write = _boundFileWrite(outcome.payload, identity!);
   if (receipt['state'] == 'published' &&
       receipt['effect'] == 'observed' &&
       receipt['settled'] == true) {
@@ -166,16 +167,116 @@ Iterable<AgentDeliveryFile> _fileWriteDeliveries(
   }
   for (final entry in _objects(receipt['recoveryResources'])) {
     if (entry['kind'] != 'file') continue;
+    final metadata = _recoveryMetadata(
+      entry,
+      original: _object(receipt['originalSnapshot']),
+      write: write,
+    );
     final file = _file(
       owner: writeId,
       resource: entry['resource'],
       version: entry['version'],
-      name: _text(entry['name']),
+      name: metadata?.name ?? _text(entry['name']),
+      mediaType: metadata?.mediaType,
       state: AgentDeliveryFileState.recovery,
     );
     if (file != null) yield file;
   }
 }
+
+Map<String, Object?>? _boundFileWrite(
+  Map<String, Object?> result,
+  Map<String, Object?> identity,
+) {
+  final arguments = _object(result['arguments']);
+  final write = _object(arguments?['write']);
+  final digest = _text(identity['specDigest']);
+  final operationId = _text(identity['operationId']);
+  return write != null &&
+          write['writeId'] == identity['writeId'] &&
+          digest != null &&
+          write['specDigest'] == digest &&
+          operationId != null &&
+          result['operationId'] == operationId
+      ? write
+      : null;
+}
+
+({String? name, String? mediaType})? _recoveryMetadata(
+  Map<String, Object?> entry, {
+  required Map<String, Object?>? original,
+  required Map<String, Object?>? write,
+}) {
+  final version = _object(entry['version']);
+  if (original != null &&
+      (_snapshotContentMatches(entry, original) ||
+          _sameFileVersion(version, _object(original['sourceVersion'])))) {
+    return (
+      name: _text(original['name']),
+      mediaType: _text(original['mediaType']),
+    );
+  }
+  final content = _object(write?['content']);
+  if (content == null ||
+      !(_snapshotContentMatches(entry, content) ||
+          _object(entry['resource'])?['kind'] == 'windowsPath' &&
+              _sameFileContent(version, _object(content['contentVersion'])))) {
+    return null;
+  }
+  final destination = _object(write?['destination']);
+  final target = _object(write?['resolvedTarget'] ?? write?['target']);
+  final targetValue = _text(target?['value']);
+  final targetName = switch ((target?['kind'], targetValue)) {
+    ('windowsPath', final String value) => paths.windows.basename(value),
+    ('androidPath', final String value) => paths.posix.basename(value),
+    _ => null,
+  };
+  return (
+    name:
+        _text(content['name']) ??
+        _text(destination?['name']) ??
+        _text(original?['name']) ??
+        targetName,
+    mediaType:
+        _text(content['mediaType']) ??
+        _text(destination?['mimeType']) ??
+        _text(original?['mediaType']),
+  );
+}
+
+bool _snapshotContentMatches(
+  Map<String, Object?> entry,
+  Map<String, Object?> snapshot,
+) {
+  final resource = _object(entry['resource']);
+  final content = _object(snapshot['content']);
+  return resource != null &&
+      content != null &&
+      resource['kind'] == content['kind'] &&
+      resource['value'] == content['value'] &&
+      _sameFileVersion(
+        _object(entry['version']),
+        _object(snapshot['contentVersion']),
+      );
+}
+
+bool _sameFileVersion(
+  Map<String, Object?>? first,
+  Map<String, Object?>? second,
+) =>
+    _text(first?['resourceId']) != null &&
+    _text(first?['version']) != null &&
+    first?['resourceId'] == second?['resourceId'] &&
+    first?['version'] == second?['version'];
+
+bool _sameFileContent(
+  Map<String, Object?>? first,
+  Map<String, Object?>? second,
+) =>
+    _text(first?['sha256']) != null &&
+    first?['byteLength'] is int &&
+    first?['sha256'] == second?['sha256'] &&
+    first?['byteLength'] == second?['byteLength'];
 
 Iterable<AgentDeliveryFile> _executionDeliveries(
   Map<String, Object?> receipt,
