@@ -112,9 +112,19 @@ class AgentOperationActivity extends StatelessWidget {
           ),
     );
     if (!visibleDelivery || interaction != null) return activity;
+    final enabled = active && interactive;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [activity, details],
+      children: [
+        activity,
+        ExcludeFocus(
+          excluding: !enabled,
+          child: ExcludeSemantics(
+            excluding: !enabled,
+            child: IgnorePointer(ignoring: !enabled, child: details),
+          ),
+        ),
+      ],
     );
   }
 }
