@@ -78,7 +78,7 @@ class AgentFileActions(private val activity: Activity) {
             )
             ?: "application/octet-stream"
         return Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, mimeType)
+            setDataAndTypeAndNormalize(uri, mimeType)
             clipData = ClipData.newRawUri(name, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
