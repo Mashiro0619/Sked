@@ -16,6 +16,7 @@ class AgentToolResultViewData {
     required this.outcome,
     required this.isSourceCurrent,
     this.isDeliverySourceCurrent,
+    this.sourceIdentity,
     this.embedded = true,
     this.onUndo,
     this.onOpenResource,
@@ -27,6 +28,7 @@ class AgentToolResultViewData {
   final ToolOutcome outcome;
   final bool Function() isSourceCurrent;
   final bool Function()? isDeliverySourceCurrent;
+  final Object? sourceIdentity;
   final bool embedded;
   final VoidCallback? onUndo;
   final void Function(Map<String, Object?> ref)? onOpenResource;
@@ -54,6 +56,7 @@ Widget buildAgentOperationReceipt(
   return AgentOperationCard(
     outcome: data.outcome,
     toolName: data.toolName,
+    sourceIdentity: (data.sourceIdentity, lease?.entry),
     isSourceCurrent: () =>
         lease?.isCurrent != false &&
         (data.isDeliverySourceCurrent ?? data.isSourceCurrent)(),

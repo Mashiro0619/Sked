@@ -16,10 +16,12 @@ class AgentDeliveryView extends StatelessWidget {
     super.key,
     required this.delivery,
     required this.isSourceCurrent,
+    this.sourceIdentity,
   });
 
   final AgentDelivery delivery;
   final bool Function() isSourceCurrent;
+  final Object? sourceIdentity;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -27,13 +29,14 @@ class AgentDeliveryView extends StatelessWidget {
     children: [
       for (final file in delivery.files)
         _FileDeliveryRow(
-          key: ValueKey(('delivery-file', file.id)),
+          key: ValueKey(('delivery-file', sourceIdentity, file.id)),
           file: file,
           isSourceCurrent: isSourceCurrent,
+          sourceIdentity: sourceIdentity,
         ),
       for (final source in delivery.sources)
         _SourceDeliveryRow(
-          key: ValueKey(('delivery-source', source.id)),
+          key: ValueKey(('delivery-source', sourceIdentity, source.id)),
           source: source,
           isSourceCurrent: isSourceCurrent,
         ),
@@ -46,10 +49,12 @@ class _FileDeliveryRow extends StatefulWidget {
     super.key,
     required this.file,
     required this.isSourceCurrent,
+    required this.sourceIdentity,
   });
 
   final AgentDeliveryFile file;
   final bool Function() isSourceCurrent;
+  final Object? sourceIdentity;
 
   @override
   State<_FileDeliveryRow> createState() => _FileDeliveryRowState();
@@ -63,11 +68,12 @@ class _FileDeliveryRowState extends State<_FileDeliveryRow> {
 
   List<DesktopAction> _menu([DesktopActionContext? invocation]) {
     final file = widget.file;
+    final isSourceCurrent = widget.isSourceCurrent;
     final l = AppLocalizations.of(context);
     bool current() =>
         mounted &&
         widget.file.id == file.id &&
-        widget.isSourceCurrent() &&
+        isSourceCurrent() &&
         invocation?.isCurrent() != false;
     DesktopAction action(
       String id,
@@ -150,7 +156,7 @@ class _FileDeliveryRowState extends State<_FileDeliveryRow> {
       AgentDeliveryFileState.recovery => l.agentDeliveryRecovery,
     };
     return DesktopContextMenuRegion(
-      target: file.id,
+      target: (widget.sourceIdentity, file.id),
       isOwnerCurrent: widget.isSourceCurrent,
       actionsBuilder: _menu,
       child: Padding(
@@ -240,6 +246,7 @@ class _SourceDeliveryRowState extends State<_SourceDeliveryRow> {
   Future<void> _open() async {
     if (_busy || !widget.isSourceCurrent()) return;
     final source = widget.source;
+    final isSourceCurrent = widget.isSourceCurrent;
     setState(() {
       _busy = true;
       _failed = false;
@@ -249,9 +256,7 @@ class _SourceDeliveryRowState extends State<_SourceDeliveryRow> {
         throw StateError('The system could not open the source.');
       }
     } catch (_) {
-      if (mounted &&
-          widget.isSourceCurrent() &&
-          widget.source.id == source.id) {
+      if (mounted && isSourceCurrent() && widget.source.id == source.id) {
         setState(() => _failed = true);
       }
     } finally {

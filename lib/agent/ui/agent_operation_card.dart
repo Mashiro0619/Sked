@@ -25,6 +25,7 @@ class AgentOperationCard extends StatefulWidget {
     this.onOpenConversation,
     this.toolName = '',
     this.isSourceCurrent,
+    this.sourceIdentity,
     this.embedded = false,
   });
 
@@ -37,6 +38,7 @@ class AgentOperationCard extends StatefulWidget {
   final bool embedded;
   final String toolName;
   final bool Function()? isSourceCurrent;
+  final Object? sourceIdentity;
 
   @override
   State<AgentOperationCard> createState() => _AgentOperationCardState();
@@ -201,6 +203,7 @@ class _AgentOperationCardState extends State<AgentOperationCard> {
                 AgentDeliveryView(
                   delivery: delivery,
                   isSourceCurrent: widget.isSourceCurrent ?? () => mounted,
+                  sourceIdentity: widget.sourceIdentity,
                 ),
               if (receipt['hasMoreChanges'] == true) Text(l.agentMoreChanges),
               if (receipt['stoppedAfterCommit'] == true) Text(l.agentStopped),

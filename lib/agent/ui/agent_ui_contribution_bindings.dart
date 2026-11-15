@@ -57,6 +57,13 @@ extension _AgentUiContributionBindings on _AgentConversationViewState {
       return AgentToolResultViewData(
         outcome: outcome,
         toolName: operation.tools.first.name,
+        sourceIdentity: (
+          ObjectKey(repository),
+          ObjectKey(delegate),
+          generation,
+          conversation.id,
+          dataGeneration,
+        ),
         isSourceCurrent: () =>
             ownerCurrent() && (modalCurrent?.call() ?? _uiActive),
         isDeliverySourceCurrent: () =>
