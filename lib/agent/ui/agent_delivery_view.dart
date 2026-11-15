@@ -17,11 +17,13 @@ class AgentDeliveryView extends StatelessWidget {
     required this.delivery,
     required this.isSourceCurrent,
     this.sourceIdentity,
+    this.canOpenLocalFiles = false,
   });
 
   final AgentDelivery delivery;
   final bool Function() isSourceCurrent;
   final Object? sourceIdentity;
+  final bool canOpenLocalFiles;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -33,6 +35,7 @@ class AgentDeliveryView extends StatelessWidget {
           file: file,
           isSourceCurrent: isSourceCurrent,
           sourceIdentity: sourceIdentity,
+          canOpenLocalFiles: canOpenLocalFiles,
         ),
       for (final source in delivery.sources)
         _SourceDeliveryRow(
@@ -50,11 +53,13 @@ class _FileDeliveryRow extends StatefulWidget {
     required this.file,
     required this.isSourceCurrent,
     required this.sourceIdentity,
+    required this.canOpenLocalFiles,
   });
 
   final AgentDeliveryFile file;
   final bool Function() isSourceCurrent;
   final Object? sourceIdentity;
+  final bool canOpenLocalFiles;
 
   @override
   State<_FileDeliveryRow> createState() => _FileDeliveryRowState();
@@ -114,7 +119,8 @@ class _FileDeliveryRowState extends State<_FileDeliveryRow> {
       },
     );
     return [
-      if (AgentFileActions.supportsOpen(file.resource))
+      if (widget.canOpenLocalFiles &&
+          AgentFileActions.supportsOpen(file.resource))
         action(
           'open',
           file.resource.kind == FileResourceKind.androidPath
@@ -127,7 +133,8 @@ class _FileDeliveryRowState extends State<_FileDeliveryRow> {
             mediaType: file.mediaType,
           ),
         ),
-      if (AgentFileActions.supportsReveal(file.resource))
+      if (widget.canOpenLocalFiles &&
+          AgentFileActions.supportsReveal(file.resource))
         action(
           'reveal',
           l.desktopRevealFile,

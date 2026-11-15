@@ -38,6 +38,16 @@ extension _AgentUiContributionBindings on _AgentConversationViewState {
     final delegate = widget.delegate;
     final generation = _uiGeneration;
     final dataGeneration = widget.readDatasetGeneration?.call();
+    final resultMessageId = operation.tools.reversed
+        .map((tool) => tool.resultMessageId)
+        .whereType<String>()
+        .firstOrNull;
+    final resultIndex = conversation.messages.indexWhere(
+      (message) => message.id == (resultMessageId ?? operation.anchorMessageId),
+    );
+    // Portable archives keep old receipts but reset their local execution
+    // boundary. Compaction keeps this boundary and the original messages.
+    final canOpenLocalFiles = resultIndex >= conversation.executionHistoryStart;
     bool ownerCurrent() =>
         mounted &&
         widget.active &&
@@ -57,6 +67,7 @@ extension _AgentUiContributionBindings on _AgentConversationViewState {
       return AgentToolResultViewData(
         outcome: outcome,
         toolName: operation.tools.first.name,
+        canOpenLocalFiles: canOpenLocalFiles,
         sourceIdentity: (
           ObjectKey(repository),
           ObjectKey(delegate),

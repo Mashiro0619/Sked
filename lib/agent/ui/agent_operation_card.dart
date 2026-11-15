@@ -26,6 +26,7 @@ class AgentOperationCard extends StatefulWidget {
     this.toolName = '',
     this.isSourceCurrent,
     this.sourceIdentity,
+    this.canOpenLocalFiles = false,
     this.embedded = false,
   });
 
@@ -39,6 +40,7 @@ class AgentOperationCard extends StatefulWidget {
   final String toolName;
   final bool Function()? isSourceCurrent;
   final Object? sourceIdentity;
+  final bool canOpenLocalFiles;
 
   @override
   State<AgentOperationCard> createState() => _AgentOperationCardState();
@@ -204,6 +206,7 @@ class _AgentOperationCardState extends State<AgentOperationCard> {
                   delivery: delivery,
                   isSourceCurrent: widget.isSourceCurrent ?? () => mounted,
                   sourceIdentity: widget.sourceIdentity,
+                  canOpenLocalFiles: widget.canOpenLocalFiles,
                 ),
               if (receipt['hasMoreChanges'] == true) Text(l.agentMoreChanges),
               if (receipt['stoppedAfterCommit'] == true) Text(l.agentStopped),

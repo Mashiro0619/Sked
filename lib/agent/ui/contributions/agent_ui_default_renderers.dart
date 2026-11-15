@@ -17,6 +17,7 @@ class AgentToolResultViewData {
     required this.isSourceCurrent,
     this.isDeliverySourceCurrent,
     this.sourceIdentity,
+    this.canOpenLocalFiles = false,
     this.embedded = true,
     this.onUndo,
     this.onOpenResource,
@@ -29,6 +30,7 @@ class AgentToolResultViewData {
   final bool Function() isSourceCurrent;
   final bool Function()? isDeliverySourceCurrent;
   final Object? sourceIdentity;
+  final bool canOpenLocalFiles;
   final bool embedded;
   final VoidCallback? onUndo;
   final void Function(Map<String, Object?> ref)? onOpenResource;
@@ -57,6 +59,7 @@ Widget buildAgentOperationReceipt(
     outcome: data.outcome,
     toolName: data.toolName,
     sourceIdentity: (data.sourceIdentity, lease?.entry),
+    canOpenLocalFiles: data.canOpenLocalFiles,
     isSourceCurrent: () =>
         lease?.isCurrent != false &&
         (data.isDeliverySourceCurrent ?? data.isSourceCurrent)(),
